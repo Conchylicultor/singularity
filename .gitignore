@@ -8,6 +8,9 @@ node_modules/
 .env*
 *.pem
 
+# Build output
+dist/
+
 # TypeScript
 *.tsbuildinfo
 

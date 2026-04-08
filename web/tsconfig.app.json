@@ -17,9 +17,12 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "baseUrl": ".",
+    "typeRoots": ["./node_modules/@types"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@core": ["../plugin-core"],
+      "@plugins/*": ["../plugins/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "../plugin-core", "../plugins/*/web"]
 }

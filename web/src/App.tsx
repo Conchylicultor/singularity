@@ -1,9 +1,21 @@
-function App() {
+import { PluginProvider, Core } from "@core";
+import { plugins } from "./plugins";
+
+function RootRenderer() {
+  const roots = Core.Root.useContributions();
   return (
-    <div className="flex min-h-svh items-center justify-center">
-      <h1 className="text-4xl font-bold text-foreground">Singularity</h1>
-    </div>
+    <>
+      {roots.map((r, i) => (
+        <r.component key={i} />
+      ))}
+    </>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <PluginProvider plugins={plugins}>
+      <RootRenderer />
+    </PluginProvider>
+  );
+}
