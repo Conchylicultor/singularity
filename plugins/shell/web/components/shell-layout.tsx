@@ -17,7 +17,7 @@ export function ShellLayout() {
 
   ShellCommands.OpenPane.useHandler((descriptor) => {
     const id = `pane-${nextPaneId++}`;
-    setPanels((prev) => [...prev, { id, ...descriptor }]);
+    setPanels([{ id, ...descriptor }]);
     return id;
   });
 
