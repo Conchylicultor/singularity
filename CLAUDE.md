@@ -28,6 +28,20 @@ Every feature is a **plugin**. The core app is thin plumbing that connects plugi
 
 - `shell` — App layout (sidebar, toolbar, main area, status bar). Defines the standard slots other plugins contribute to.
 
+## Deploy
+
+```sh
+cd web
+bun install
+bun run build
+bunx vite preview --port 9000
+```
+
+## Ports
+
+- Port range: **9000–10000**
+- The head namespace (agent manager app) is always deployed at **port 9000**
+
 ## Instructions
 
 When working on this project, follow these instructions thoughtfully:
