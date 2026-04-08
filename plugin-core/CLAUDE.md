@@ -147,12 +147,16 @@ plugin-core/              # This package — framework primitives
 
 plugins/
 └── {plugin-name}/
-    └── web/
-        ├── index.ts      # Default export: PluginDefinition
-        ├── slots.ts      # Optional: slots this plugin defines for others to extend
-        ├── commands.ts   # Optional: commands this plugin handles
-        ├── views.tsx     # Optional: view factories returning PaneDescriptor
-        └── components/   # Internal React components (never imported by other plugins)
+    ├── web/              # Frontend code (compiled by web tsconfig)
+    │   ├── index.ts      # Default export: PluginDefinition
+    │   ├── slots.ts      # Optional: slots this plugin defines for others to extend
+    │   ├── commands.ts   # Optional: commands this plugin handles
+    │   ├── views.tsx     # Optional: view factories returning PaneDescriptor
+    │   └── components/   # Internal React components (never imported by other plugins)
+    ├── server/           # Backend code (compiled by server tsconfig)
+    │   └── index.ts      # Exports HTTP/WS handlers
+    └── shared/           # Types shared between web and server
+        └── protocol.ts   # e.g. WebSocket message types
 
 web/src/
 ├── plugins.ts            # Hardcoded plugin registry (static imports)

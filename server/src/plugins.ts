@@ -1,4 +1,5 @@
 import type { ServerWebSocket } from "bun";
+import { wsHandler as terminalWs } from "@plugins/terminal/server";
 
 export interface WsData {
   path: string;
@@ -17,4 +18,6 @@ export const httpRoutes: Record<
 > = {};
 
 // WebSocket routes: "/path" → handler
-export const wsRoutes: Record<string, WsHandler> = {};
+export const wsRoutes: Record<string, WsHandler> = {
+  "/ws/terminal": terminalWs,
+};

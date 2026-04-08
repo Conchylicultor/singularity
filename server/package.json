@@ -9,5 +9,8 @@
   "devDependencies": {
     "@types/bun": "latest",
     "typescript": "~5.8.3"
+  },
+  "dependencies": {
+    "bun-pty": "^0.4.8"
   }
 }

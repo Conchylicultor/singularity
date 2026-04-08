@@ -70,7 +70,9 @@ Configured in `tsconfig.json`:
 
 - `@plugins/*` → `../plugins/*/`
 
-The `include` field covers `../plugins/*/server` so plugin server code is type-checked together with the server.
+The `include` field covers `../plugins/*/server` and `../plugins/*/shared` so plugin server code and shared types are type-checked together with the server.
+
+Packages used by plugins (like `bun-pty`) need a path alias in `tsconfig.json` because plugin code lives outside `server/node_modules`'s ancestor chain. See the `bun-pty` entry as an example.
 
 ## Dev Proxy
 

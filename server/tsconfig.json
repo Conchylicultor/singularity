@@ -12,8 +12,9 @@
     "types": ["bun-types"],
     "baseUrl": ".",
     "paths": {
-      "@plugins/*": ["../plugins/*"]
+      "@plugins/*": ["../plugins/*"],
+      "bun-pty": ["./node_modules/bun-pty"]
     }
   },
-  "include": ["src", "../plugins/*/server"]
+  "include": ["src", "../plugins/*/server", "../plugins/*/shared"]
 }

@@ -26,5 +26,5 @@
       "lucide-react": ["./node_modules/lucide-react"]
     }
   },
-  "include": ["src", "../plugin-core", "../plugins/*/web"]
+  "include": ["src", "../plugin-core", "../plugins/*/web", "../plugins/*/shared"]
 }
