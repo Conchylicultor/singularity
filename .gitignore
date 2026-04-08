@@ -13,3 +13,6 @@ node_modules/
 
 # v1 (Next.js) - extra lock file (uses bun.lock)
 v1/package-lock.json
+
+# Claude Code
+skills-lock.json

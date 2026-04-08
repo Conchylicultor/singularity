@@ -31,6 +31,18 @@ This app is composed of self-contained independent modules:
 
 ### Plugins
 
+Each feature of the app is added as a separated plugin. The frontend and backend code only do the plumbing to connect plugins togethers.
+
+Plugins are structured as:
+
+```
+├── plugins/
+│   └── {plugin-name}/
+│       ├── web/          # Frontend code
+│       ├── server/       # Backend code
+```
+
+
 ## Instructions
 
 When working on this project, follow those instructions thoughtfully:
