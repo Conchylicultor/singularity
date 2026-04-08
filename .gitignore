@@ -3,3 +3,13 @@
 
 # Dependencies
 node_modules/
+
+# Secrets
+.env*
+*.pem
+
+# TypeScript
+*.tsbuildinfo
+
+# v1 (Next.js) - extra lock file (uses bun.lock)
+v1/package-lock.json
