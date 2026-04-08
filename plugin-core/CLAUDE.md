@@ -122,6 +122,16 @@ Empty regions are not rendered (collapsed). Most plugins will contribute to thes
 4. Register it in `web/src/plugins.ts`
 5. Optionally define your own slots in `plugins/{name}/web/slots.ts` for other plugins to extend
 
+## Icons
+
+Use **Material Design icons** from `react-icons/md`. Import them from `"react-icons/md"`:
+
+```typescript
+import { MdSettings } from "react-icons/md";
+```
+
+These icons accept `{ className?: string }` and are compatible with all slot icon props.
+
 ## Key Design Decisions
 
 - **No dynamic loading** — plugins are statically imported, known at build time

@@ -21,7 +21,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@core": ["../plugin-core"],
-      "@plugins/*": ["../plugins/*"]
+      "@plugins/*": ["../plugins/*"],
+      "react-icons/*": ["./node_modules/react-icons/*"]
     }
   },
   "include": ["src", "../plugin-core", "../plugins/*/web"]
