@@ -1,5 +1,10 @@
 import { Shell } from "@plugins/shell/web/commands";
 import { dummyDetailPane } from "@plugins/dummy-detail/web/views";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
 
 const items = [
   { id: "1", label: "Alpha" },
@@ -9,20 +14,20 @@ const items = [
 
 export function DummyList() {
   return (
-    <div className="p-4">
-      <h2 className="text-sm font-semibold mb-3">Items</h2>
-      <ul className="space-y-1">
-        {items.map((item) => (
-          <li key={item.id}>
-            <button
-              className="w-full text-left px-3 py-1.5 rounded hover:bg-accent text-sm"
-              onClick={() => Shell.OpenPane(dummyDetailPane({ itemId: item.id, label: item.label }))}
-            >
-              {item.label}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <SidebarMenu>
+      {items.map((item) => (
+        <SidebarMenuItem key={item.id}>
+          <SidebarMenuButton
+            onClick={() =>
+              Shell.OpenPane(
+                dummyDetailPane({ itemId: item.id, label: item.label })
+              )
+            }
+          >
+            {item.label}
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      ))}
+    </SidebarMenu>
   );
 }

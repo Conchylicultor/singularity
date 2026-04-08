@@ -186,15 +186,22 @@ Empty regions are not rendered (collapsed). Most plugins will contribute to thes
 4. Register it in `web/src/plugins.ts`
 5. Optionally define your own slots in `plugins/{name}/web/slots.ts` for other plugins to extend
 
-## Icons
+## Styling
 
-Use **Material Design icons** from `react-icons/md`. Import them from `"react-icons/md"`:
+The app uses **Tailwind CSS v4** with **shadcn/ui** components. Theme tokens are defined in `web/src/app.css` using CSS variables.
 
-```typescript
-import { MdSettings } from "react-icons/md";
-```
+**All plugins must follow the styling guide: [`docs/styling.md`](docs/styling.md).** It covers colors, typography, spacing, component usage, and things to avoid. Read it before writing any UI code.
 
-These icons accept `{ className?: string }` and are compatible with all slot icon props.
+### Quick reference
+
+- **Components**: Import shadcn from `@/components/ui/*`. Install new ones with `bunx shadcn@latest add <name>` from `web/`.
+- **Colors**: Semantic tokens only (`bg-background`, `text-muted-foreground`, etc.) — never hardcode.
+- **Icons**: `react-icons/md` — Material Design, accepts `{ className?: string }`.
+- **Conditional classes**: Use `cn()` from `@/lib/utils`, not template literals.
+
+### External dependencies
+
+Packages installed in `web/` are not automatically resolvable from `plugins/`. If a plugin needs a package from `web/node_modules`, add path aliases in both `web/vite.config.ts` and `web/tsconfig.app.json` (see existing `react-icons` and `lucide-react` entries as examples).
 
 ## Key Design Decisions
 

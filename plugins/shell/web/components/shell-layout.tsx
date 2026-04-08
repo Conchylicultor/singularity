@@ -1,7 +1,21 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Shell as ShellCommands } from "../commands";
 import { Shell } from "../slots";
 import type { PaneDescriptor } from "../commands";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeToggle } from "./theme-toggle";
 
 let nextPaneId = 0;
 
@@ -22,48 +36,64 @@ export function ShellLayout() {
   });
 
   return (
-    <div className="flex h-screen flex-col">
-      {toolbarItems.length > 0 && (
-        <header className="flex items-center border-b px-4 h-12">
-          {toolbarItems.map((item) => (
-            <button
-              key={item.label}
-              className="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-accent text-sm"
-              onClick={item.onClick}
-            >
-              <item.icon className="size-4" />
-              {item.label}
-            </button>
-          ))}
-        </header>
-      )}
-
-      <div className="flex flex-1 overflow-hidden">
-        {sidebars.length > 0 && (
-          <aside className="w-64 border-r overflow-y-auto">
-            {sidebars.map((pane) => (
-              <pane.component key={pane.title} />
+    <TooltipProvider>
+      <SidebarProvider>
+        <Sidebar>
+          <SidebarContent>
+            {sidebars.map((pane, i) => (
+              <Fragment key={pane.title}>
+                {i > 0 && <Separator className="mx-2 w-auto bg-sidebar-border" />}
+                <SidebarGroup>
+                  <SidebarGroupLabel>
+                    <pane.icon className="size-4 mr-2" />
+                    {pane.title}
+                  </SidebarGroupLabel>
+                  <pane.component />
+                </SidebarGroup>
+              </Fragment>
             ))}
-          </aside>
-        )}
+          </SidebarContent>
+        </Sidebar>
 
-        <main className="flex-1 overflow-hidden">
-          {mains.map((panel) => (
-            <panel.component key={panel.title} />
-          ))}
-          {panels.map((panel) => (
-            <panel.component key={panel.id} />
-          ))}
-        </main>
-      </div>
+        <SidebarInset>
+          <header className="flex items-center justify-between border-b px-4 h-12">
+            <div className="flex items-center gap-1">
+              <SidebarTrigger />
+              {toolbarItems.map((item) => (
+                <Button
+                  key={item.label}
+                  variant="ghost"
+                  size="sm"
+                  onClick={item.onClick}
+                >
+                  <item.icon className="size-4" />
+                  {item.label}
+                </Button>
+              ))}
+            </div>
+            <ThemeToggle />
+          </header>
 
-      {statusBarItems.length > 0 && (
-        <footer className="flex items-center border-t px-4 h-6 text-xs text-muted-foreground">
-          {statusBarItems.map((item, i) => (
-            <item.component key={i} />
-          ))}
-        </footer>
-      )}
-    </div>
+          <main className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
+              {mains.map((panel) => (
+                <panel.component key={panel.title} />
+              ))}
+              {panels.map((panel) => (
+                <panel.component key={panel.id} />
+              ))}
+            </ScrollArea>
+          </main>
+
+          {statusBarItems.length > 0 && (
+            <footer className="flex items-center border-t px-4 h-6 text-xs text-muted-foreground">
+              {statusBarItems.map((item, i) => (
+                <item.component key={i} />
+              ))}
+            </footer>
+          )}
+        </SidebarInset>
+      </SidebarProvider>
+    </TooltipProvider>
   );
 }
