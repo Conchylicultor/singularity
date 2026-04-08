@@ -1,50 +1,36 @@
 # Singularity
 
-Singularity is an agent manager app whose goal is to fix todos faster than they are created.
+Agent manager app whose goal is to fix todos faster than they are created.
 
-## Core idea
-
-The app is just a todo nested list of tasks agents need to execute.
-Each agent execute the task in it's own isolated `worktree` and deploy it to its own `namespace`.
-
-The UI allow to seamlessly switch between namespace to inspect the agent work.
-
-(This is the core idea, in practice many features are added on top of this)
+The app is a todo nested list of tasks agents need to execute. Each agent executes in its own isolated `worktree` and deploys to its own `namespace`. The UI allows seamlessly switching between namespaces to inspect agent work.
 
 ## Architecture
 
-### Status
+Every feature is a **plugin**. The core app is thin plumbing that connects plugins together via a slot-based extension system. See [`plugin-core/CLAUDE.md`](plugin-core/CLAUDE.md) for the plugin API.
 
-The project is just getting started, not much as yet been build in this version.
-
-### Folder structure
-
-This app is composed of self-contained independent modules:
-
-- `gateway/`: Proxy to manage the various `namespace` instances and redirect the trafic to the correct one. (`Go`)
-- `cli/`: Agent CLI to build and deploy the app (`Python`)
-- `web/`: Frontend core code (`TypeScript`)
-- `server/`: Backend code (`Go`)
-- `plugins/`: Individual components
-- `ide/`: Theia based IDE
-- `artifacts/`: Agent documentation and memory
-
-### Plugins
-
-Each feature of the app is added as a separated plugin. The frontend and backend code only do the plumbing to connect plugins togethers.
-
-Plugins are structured as:
+### Folder Structure
 
 ```
-├── plugins/
-│   └── {plugin-name}/
-│       ├── web/          # Frontend code
-│       ├── server/       # Backend code
+├── plugin-core/      # Plugin framework primitives (slots, contributions)
+├── plugins/          # All features, each as a self-contained plugin
+│   └── {name}/
+│       ├── web/      # Frontend code
+│       └── server/   # Backend code (future)
+├── web/              # Frontend bootstrap (SPA shell, plugin registry)
+├── gateway/          # Namespace proxy (Go, future)
+├── server/           # Backend (Go, future)
+├── cli/              # Agent CLI (Python, future)
+├── ide/              # Theia-based IDE
+└── artifacts/        # Research docs, plans, agent memory
 ```
 
+### Key Plugins
+
+- `shell` — App layout (sidebar, toolbar, main area, status bar). Defines the standard slots other plugins contribute to.
 
 ## Instructions
 
-When working on this project, follow those instructions thoughtfully:
+When working on this project, follow these instructions thoughtfully:
 
-- Most features first require a thoughfull design phase. Use the project `plan` SKILL for this phase. This is important to correctly write the plan doc at the right location. Do NOT use `EnterPlanMode` tool.
+- Most features first require a thoughtful design phase. Use the project `plan` SKILL for this phase. This is important to correctly write the plan doc at the right location. Do NOT use `EnterPlanMode` tool.
+- New features should be implemented as plugins in `plugins/`. See [`plugin-core/CLAUDE.md`](plugin-core/CLAUDE.md) for how to create one.
