@@ -126,7 +126,7 @@ Shell.OpenPane.useHandler((descriptor) => {
 **Terminal plugin** exposes a factory:
 
 ```typescript
-// plugins/terminal/web/views.ts (public API)
+// plugins/terminal/web/views.tsx (public API)
 import type { PaneDescriptor } from "@plugins/shell/web/commands";
 import { TerminalComponent } from "./components/terminal"; // internal
 
@@ -177,7 +177,7 @@ Shell.OpenPane(descriptor)   TS checks: PaneDescriptor ✓
 
 ```
 plugins/terminal/web/
-├── views.ts          ← public: terminalPane() factory function
+├── views.tsx         ← public: view factory (uses JSX to bind internal components)
 ├── commands.ts       ← public: commands this plugin handles (if any)
 ├── slots.ts          ← public: slots this plugin defines (if any)
 └── components/       ← private: never imported by other plugins
@@ -194,7 +194,7 @@ Each plugin can expose up to three public API files. All are optional:
 |---|---|---|
 | `slots.ts` | Static extension points for others to contribute to | `defineSlot` |
 | `commands.ts` | Imperative actions this plugin handles | `defineCommand` |
-| `views.ts` | View factories returning `PaneDescriptor` | Plain functions |
+| `views.tsx` | View factories returning `PaneDescriptor` | Plain functions (`.tsx` because they use JSX) |
 
 ## Changes to plugin-core
 

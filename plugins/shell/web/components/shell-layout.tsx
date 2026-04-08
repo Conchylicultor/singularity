@@ -1,10 +1,25 @@
+import { useState } from "react";
+import { Shell as ShellCommands } from "../commands";
 import { Shell } from "../slots";
+import type { PaneDescriptor } from "../commands";
+
+let nextPaneId = 0;
 
 export function ShellLayout() {
   const sidebars = Shell.Sidebar.useContributions();
   const mains = Shell.Main.useContributions();
   const toolbarItems = Shell.Toolbar.useContributions();
   const statusBarItems = Shell.StatusBar.useContributions();
+
+  const [panels, setPanels] = useState<
+    Array<{ id: string } & PaneDescriptor>
+  >([]);
+
+  ShellCommands.OpenPane.useHandler((descriptor) => {
+    const id = `pane-${nextPaneId++}`;
+    setPanels((prev) => [...prev, { id, ...descriptor }]);
+    return id;
+  });
 
   return (
     <div className="flex h-screen flex-col">
@@ -35,6 +50,9 @@ export function ShellLayout() {
         <main className="flex-1 overflow-hidden">
           {mains.map((panel) => (
             <panel.component key={panel.title} />
+          ))}
+          {panels.map((panel) => (
+            <panel.component key={panel.id} />
           ))}
         </main>
       </div>
