@@ -18,7 +18,7 @@ Every feature is a **plugin**. The core app is thin plumbing that connects plugi
 │       └── server/   # Backend code (future)
 ├── web/              # Frontend bootstrap (SPA shell, plugin registry)
 ├── gateway/          # Namespace proxy (Go, future)
-├── server/           # Backend (Go, future)
+├── server/           # Backend (TypeScript/Bun)
 ├── cli/              # Agent CLI (Python, future)
 ├── ide/              # Theia-based IDE
 └── artifacts/        # Research docs, plans, agent memory

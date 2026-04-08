@@ -1,0 +1,13 @@
+{
+  "name": "@singularity/server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "~5.8.3"
+  }
+}

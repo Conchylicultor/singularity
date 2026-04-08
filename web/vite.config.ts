@@ -13,4 +13,10 @@ export default defineConfig({
       "react-icons": path.resolve(__dirname, "node_modules/react-icons"),
     },
   },
+  server: {
+    proxy: {
+      "/ws": { target: "ws://localhost:9001", ws: true },
+      "/api": { target: "http://localhost:9001" },
+    },
+  },
 });
