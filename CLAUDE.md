@@ -6,7 +6,7 @@ The app is a todo nested list of tasks agents need to execute. Each agent execut
 
 ## Architecture
 
-Every feature is a **plugin**. The core app is thin plumbing that connects plugins together via a slot-based extension system. See [`plugin-core/CLAUDE.md`](plugin-core/CLAUDE.md) for the plugin API.
+Every feature is a **plugin**. The core app is thin plumbing that connects plugins together via a slot-based extension system. See [`plugin-core/CLAUDE.md`](plugin-core/CLAUDE.md) for the frontend plugin API and [`server/CLAUDE.md`](server/CLAUDE.md) for the backend.
 
 ### Folder Structure
 
