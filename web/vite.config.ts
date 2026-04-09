@@ -12,6 +12,9 @@ export default defineConfig({
       "@plugins": path.resolve(__dirname, "../plugins"),
       "react-icons": path.resolve(__dirname, "node_modules/react-icons"),
       "lucide-react": path.resolve(__dirname, "node_modules/lucide-react"),
+      "@xterm/xterm": path.resolve(__dirname, "node_modules/@xterm/xterm"),
+      "@xterm/addon-fit": path.resolve(__dirname, "node_modules/@xterm/addon-fit"),
+      "@xterm/addon-web-links": path.resolve(__dirname, "node_modules/@xterm/addon-web-links"),
     },
   },
   server: {

@@ -96,8 +96,8 @@ Call `.useHandler(fn)` inside a mounted React component. The handler typically c
 
 ```typescript
 Shell.OpenPane.useHandler((descriptor) => {
-  const id = crypto.randomUUID();
-  setPanels((prev) => [...prev, { id, ...descriptor }]);
+  const id = ...;
+  setPanels((prev) => { id, descriptor });
   return id;
 });
 ```
@@ -151,7 +151,7 @@ plugins/
     │   ├── index.ts      # Default export: PluginDefinition
     │   ├── slots.ts      # Optional: slots this plugin defines for others to extend
     │   ├── commands.ts   # Optional: commands this plugin handles
-    │   ├── views.tsx     # Optional: view factories returning PaneDescriptor
+    │   ├── views.tsx     # Optional: view factories returning descriptor for commands
     │   └── components/   # Internal React components (never imported by other plugins)
     ├── server/           # Backend code (compiled by server tsconfig)
     │   └── index.ts      # Exports HTTP/WS handlers
