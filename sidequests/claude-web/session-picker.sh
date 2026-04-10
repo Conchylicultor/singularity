@@ -8,10 +8,18 @@ WORKDIR="/Users/admin/__A__/dev/singularity"
 PREFIX="claude"
 TMUX="/opt/homebrew/bin/tmux"
 CLAUDE="/Users/admin/.local/bin/claude"
+GIT=/usr/bin/git
+WORKTREE_DIR="$WORKDIR/.claude/worktrees"
 
 create_new() {
   local name="${PREFIX}-$(date +%s)"
-  $TMUX -u new-session -d -s "$name" -c "$WORKDIR" "zsh -l -c '$CLAUDE'"
+  local branch="claude-web/$name"
+  local wt_path="$WORKTREE_DIR/$name"
+
+  # Create a new worktree with a fresh branch off main
+  $GIT -C "$WORKDIR" worktree add -b "$branch" "$wt_path" main 2>/dev/null
+
+  $TMUX -u new-session -d -s "$name" -c "$wt_path" "zsh -l -c '$CLAUDE'"
   exec $TMUX -u attach -t "$name"
 }
 
