@@ -7,7 +7,7 @@ import type { ClientMessage, ServerMessage } from "../../shared/protocol";
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/terminal`;
 
-export function TerminalView() {
+export function TerminalView({ command }: { command?: string[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
 
@@ -41,6 +41,7 @@ export function TerminalView() {
         type: "session.create",
         cols: term.cols,
         rows: term.rows,
+        ...(command && { command }),
       };
       ws.send(JSON.stringify(msg));
     });

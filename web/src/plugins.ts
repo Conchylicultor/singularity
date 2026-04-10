@@ -6,6 +6,7 @@ import dummyDetailPlugin from "@plugins/dummy-detail/web";
 import terminalPlugin from "@plugins/terminal/web";
 import dummyTerminalPlugin from "@plugins/dummy-terminal/web";
 import buildPlugin from "@plugins/build/web";
+import claudeSessionsPlugin from "@plugins/claude-sessions/web";
 
 export const plugins: PluginDefinition[] = [
   shellPlugin,
@@ -15,4 +16,5 @@ export const plugins: PluginDefinition[] = [
   terminalPlugin,
   dummyTerminalPlugin,
   buildPlugin,
+  claudeSessionsPlugin,
 ];
