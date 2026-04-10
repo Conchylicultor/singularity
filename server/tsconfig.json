@@ -9,7 +9,7 @@
     "isolatedModules": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "types": ["bun-types"],
+    "types": ["@types/bun"],
     "paths": {
       "@plugins/*": ["../plugins/*"]
     }
