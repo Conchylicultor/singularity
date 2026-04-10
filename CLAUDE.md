@@ -17,7 +17,7 @@ Every feature is a **plugin**. The core app is thin plumbing that connects plugi
 │       ├── web/      # Frontend code
 │       └── server/   # Backend code (future)
 ├── web/              # Frontend bootstrap (SPA shell, plugin registry)
-├── gateway/          # Namespace proxy (Go, future)
+├── gateway/          # Namespace proxy (Go). See [`gateway/CLAUDE.md`](gateway/CLAUDE.md)
 ├── server/           # Backend (TypeScript/Bun)
 ├── cli/              # Agent CLI (Python, future)
 ├── ide/              # Theia-based IDE

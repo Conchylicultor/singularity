@@ -1,7 +1,11 @@
 import { httpRoutes, wsRoutes, type WsData } from "./plugins";
 
 const server = Bun.serve<WsData>({
-  port: 9001,
+  port: (() => {
+    const p = Bun.env.PORT;
+    if (!p) throw new Error("PORT env var is required");
+    return parseInt(p, 10);
+  })(),
   fetch(req, server) {
     const url = new URL(req.url);
 

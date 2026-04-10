@@ -1,0 +1,225 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/fsnotify/fsnotify"
+)
+
+var nameRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
+
+// Registry is the in-memory collection of worktrees, populated from JSON
+// files in cfg.RegistryDir and kept in sync via fsnotify.
+type Registry struct {
+	cfg  *Config
+	pool *PortPool
+
+	mu     sync.RWMutex
+	byName map[string]*Worktree
+}
+
+func NewRegistry(cfg *Config, pool *PortPool) *Registry {
+	return &Registry{
+		cfg:    cfg,
+		pool:   pool,
+		byName: make(map[string]*Worktree),
+	}
+}
+
+// Get returns the worktree with the given name, or nil if absent.
+func (r *Registry) Get(name string) *Worktree {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.byName[name]
+}
+
+// List returns a snapshot of all known worktrees.
+func (r *Registry) List() []*Worktree {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]*Worktree, 0, len(r.byName))
+	for _, w := range r.byName {
+		out = append(out, w)
+	}
+	return out
+}
+
+// LoadAll scans cfg.RegistryDir once at startup, populating the registry.
+// Creates the directory if missing.
+func (r *Registry) LoadAll() error {
+	if err := os.MkdirAll(r.cfg.RegistryDir, 0o755); err != nil {
+		return fmt.Errorf("create registry dir: %w", err)
+	}
+	entries, err := os.ReadDir(r.cfg.RegistryDir)
+	if err != nil {
+		return fmt.Errorf("read registry dir: %w", err)
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		r.loadFile(filepath.Join(r.cfg.RegistryDir, e.Name()))
+	}
+	slog.Info("registry loaded", "count", len(r.byName), "dir", r.cfg.RegistryDir)
+	return nil
+}
+
+// Watch blocks until ctx is done, calling Upsert/Remove in response to
+// fsnotify events on the registry directory. Writes are debounced 100ms to
+// handle editors that perform write-rename-close.
+func (r *Registry) Watch(ctx context.Context) error {
+	w, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+	if err := w.Add(r.cfg.RegistryDir); err != nil {
+		return err
+	}
+
+	debounce := make(map[string]*time.Timer)
+	var debounceMu sync.Mutex
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case ev, ok := <-w.Events:
+			if !ok {
+				return nil
+			}
+			if !strings.HasSuffix(ev.Name, ".json") {
+				continue
+			}
+			if ev.Op&(fsnotify.Create|fsnotify.Write) != 0 {
+				path := ev.Name
+				debounceMu.Lock()
+				if t, exists := debounce[path]; exists {
+					t.Stop()
+				}
+				debounce[path] = time.AfterFunc(100*time.Millisecond, func() {
+					r.loadFile(path)
+				})
+				debounceMu.Unlock()
+			} else if ev.Op&(fsnotify.Remove|fsnotify.Rename) != 0 {
+				r.remove(nameFromPath(ev.Name))
+			}
+		case werr, ok := <-w.Errors:
+			if !ok {
+				return nil
+			}
+			slog.Warn("watcher error", "err", werr)
+		}
+	}
+}
+
+// Sweep blocks until ctx is done, periodically tearing down idle backends.
+func (r *Registry) Sweep(ctx context.Context) {
+	t := time.NewTicker(r.cfg.SweepInterval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			for _, wt := range r.List() {
+				if wt.ShouldSweep(r.cfg.IdleTimeout) {
+					slog.Info("sweeping idle worktree", "worktree", wt.Name)
+					if err := wt.Stop(ctx); err != nil {
+						slog.Warn("sweep stop failed", "worktree", wt.Name, "err", err)
+					}
+				}
+			}
+		}
+	}
+}
+
+// StopAll stops every running worktree, called from main on shutdown.
+func (r *Registry) StopAll(ctx context.Context) error {
+	var wg sync.WaitGroup
+	for _, wt := range r.List() {
+		wg.Add(1)
+		go func(wt *Worktree) {
+			defer wg.Done()
+			_ = wt.Stop(ctx)
+		}(wt)
+	}
+	wg.Wait()
+	return nil
+}
+
+// ─── internal ────────────────────────────────────────────────
+
+func (r *Registry) loadFile(path string) {
+	name := nameFromPath(path)
+	if !nameRegex.MatchString(name) {
+		slog.Warn("invalid worktree name", "name", name, "path", path)
+		return
+	}
+	spec, err := loadSpec(path)
+	if err != nil {
+		slog.Warn("failed to load spec", "path", path, "err", err)
+		return
+	}
+	r.upsert(name, spec)
+}
+
+func (r *Registry) upsert(name string, spec *Spec) {
+	r.mu.Lock()
+	wt, exists := r.byName[name]
+	if !exists {
+		wt = NewWorktree(name, spec, r.pool, r.cfg)
+		r.byName[name] = wt
+		r.mu.Unlock()
+		slog.Info("worktree registered", "name", name, "server", spec.Server, "web", spec.Web)
+		return
+	}
+	r.mu.Unlock()
+	wt.UpdateSpec(spec)
+	slog.Info("worktree spec updated", "name", name)
+}
+
+func (r *Registry) remove(name string) {
+	r.mu.Lock()
+	wt, exists := r.byName[name]
+	if !exists {
+		r.mu.Unlock()
+		return
+	}
+	delete(r.byName, name)
+	r.mu.Unlock()
+	slog.Info("worktree unregistered", "name", name)
+	go func() { _ = wt.Stop(context.Background()) }()
+}
+
+func loadSpec(path string) (*Spec, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var spec Spec
+	if err := json.Unmarshal(data, &spec); err != nil {
+		return nil, fmt.Errorf("parse: %w", err)
+	}
+	if spec.Server == "" || spec.Web == "" {
+		return nil, errors.New("server and web are required")
+	}
+	if !filepath.IsAbs(spec.Server) || !filepath.IsAbs(spec.Web) {
+		return nil, errors.New("server and web must be absolute paths")
+	}
+	return &spec, nil
+}
+
+func nameFromPath(p string) string {
+	return strings.TrimSuffix(filepath.Base(p), ".json")
+}

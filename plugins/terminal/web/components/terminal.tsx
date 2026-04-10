@@ -5,7 +5,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import type { ClientMessage, ServerMessage } from "../../shared/protocol";
 
-const WS_URL = `ws://${window.location.hostname}:9001/ws/terminal`;
+const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/terminal`;
 
 export function TerminalView() {
   const containerRef = useRef<HTMLDivElement>(null);
