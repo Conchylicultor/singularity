@@ -17,10 +17,4 @@ export default defineConfig({
       "@xterm/addon-web-links": path.resolve(__dirname, "node_modules/@xterm/addon-web-links"),
     },
   },
-  server: {
-    proxy: {
-      "/ws": { target: "ws://localhost:9001", ws: true },
-      "/api": { target: "http://localhost:9001" },
-    },
-  },
 });

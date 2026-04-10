@@ -1,6 +1,6 @@
 # Singularity
 
-Agent manager app whose goal is to fix todos faster than they are created.
+Agent manager app whose goal is to fix todos faster than they are created. The app will be used to improve itself.
 
 The app is a todo nested list of tasks agents need to execute. Each agent executes in its own isolated `worktree` and deploys to its own `namespace`. The UI allows seamlessly switching between namespaces to inspect agent work.
 
