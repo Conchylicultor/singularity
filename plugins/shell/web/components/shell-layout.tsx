@@ -1,7 +1,9 @@
 import { Fragment, useState } from "react";
+import { toast } from "sonner";
 import { Shell as ShellCommands } from "../commands";
 import { Shell } from "../slots";
 import type { PaneDescriptor } from "../commands";
+import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -35,7 +37,15 @@ export function ShellLayout() {
     return id;
   });
 
+  ShellCommands.Toast.useHandler(({ title, description, variant }) => {
+    const opts = { description: title ? description : undefined };
+    const message = title ?? description;
+    const fn = variant && variant !== "default" ? toast[variant] : toast;
+    fn(message, opts);
+  });
+
   return (
+    <>
     <TooltipProvider>
       <SidebarProvider>
         <Sidebar>
@@ -95,5 +105,7 @@ export function ShellLayout() {
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>
+    <Toaster />
+    </>
   );
 }

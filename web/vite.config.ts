@@ -15,6 +15,7 @@ export default defineConfig({
       "@xterm/xterm": path.resolve(__dirname, "node_modules/@xterm/xterm"),
       "@xterm/addon-fit": path.resolve(__dirname, "node_modules/@xterm/addon-fit"),
       "@xterm/addon-web-links": path.resolve(__dirname, "node_modules/@xterm/addon-web-links"),
+      "sonner": path.resolve(__dirname, "node_modules/sonner"),
     },
   },
 });
