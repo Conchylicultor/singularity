@@ -20,7 +20,7 @@ Every feature is a **plugin**. The core app is thin plumbing that connects plugi
 ├── gateway/          # Namespace proxy (Go). See [`gateway/CLAUDE.md`](gateway/CLAUDE.md)
 ├── server/           # Backend (TypeScript/Bun)
 ├── cli/              # Agent CLI (Python, future)
-├── sidequests/       # Other independant projects (not directly related to singularity). See each subfolder's CLAUDE.md
+├── sidequests/       # Independent side projects (see Sidequests section below)
 └── artifacts/        # Research docs, plans, agent memory
 ```
 
@@ -45,6 +45,12 @@ bunx vite preview --port 9000
 
 - Port range: **9000–10000**
 - The head namespace (agent manager app) is always deployed at **port 9000**
+
+## Sidequests
+
+Independent projects that live in `sidequests/`, not directly related to Singularity. Each has its own `CLAUDE.md`.
+
+- **`claude-web`** — Browser-based Claude Code sessions via ttyd + tmux. See [`sidequests/claude-web/CLAUDE.md`](sidequests/claude-web/CLAUDE.md).
 
 ## Instructions
 

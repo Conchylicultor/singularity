@@ -47,6 +47,19 @@ launchctl load ~/Library/LaunchAgents/com.epot.claude-new.plist
 launchctl load ~/Library/LaunchAgents/com.epot.claude-picker.plist
 ```
 
+## Copy-paste
+
+ttyd uses xterm.js which intercepts mouse events, so normal browser text selection doesn't work when tmux mouse mode is on. The fix is to bind tmux's `MouseDragEnd1Pane` to pipe the selection to `pbcopy`:
+
+```bash
+# ~/.tmux.conf
+set -g mouse on
+bind-key -T copy-mode-vi MouseDragEnd1Pane send-keys -X copy-pipe-and-cancel "pbcopy"
+bind-key -T copy-mode    MouseDragEnd1Pane send-keys -X copy-pipe-and-cancel "pbcopy"
+```
+
+Workflow: click-drag to select text, release mouse button, `Cmd+V` to paste anywhere.
+
 ## Dependencies
 
 - `ttyd` — `brew install ttyd`

@@ -15,6 +15,13 @@ create_new() {
   exec $TMUX -u attach -t "$name"
 }
 
+resume_session() {
+  local query="$1"
+  local name="${PREFIX}-$(date +%s)"
+  $TMUX -u new-session -d -s "$name" -c "$WORKDIR" "zsh -l -c '$CLAUDE --resume \"$query\"'"
+  exec $TMUX -u attach -t "$name"
+}
+
 # Collect existing sessions
 existing=$($TMUX list-sessions -F "#{session_name}" -f "#{m:${PREFIX}-*,#{session_name}}" 2>/dev/null)
 
@@ -37,13 +44,18 @@ labels[$i]="+ New session"
 
 while IFS= read -r s; do
   created=$($TMUX display-message -t "$s" -p "#{t:session_created}" 2>/dev/null)
-  preview=$($TMUX capture-pane -t "$s" -p 2>/dev/null | grep -v "^$" | tail -1 | cut -c1-60)
+  title=$($TMUX display-message -t "$s" -p "#{pane_title}" 2>/dev/null)
+  # Strip leading "_ " prefix that Claude Code sets in pane title
+  title="${title#_ }"
   names[$i]="$s"
-  label="$s  [$created]"
-  [[ -n "$preview" ]] && label="$label  $preview"
+  label="[$created] ${title:-$s}"
   labels[$i]="$label"
   ((i++))
 done <<< "$existing"
+
+names[$i]="__resume__"
+labels[$i]="↩ Resume session (enter id or name)"
+((i++))
 
 total=${#names[@]}
 selected=0
@@ -96,6 +108,14 @@ while true; do
       chosen="${names[$selected]}"
       if [[ "$chosen" == "__new__" ]]; then
         create_new
+      elif [[ "$chosen" == "__resume__" ]]; then
+        tput cnorm 2>/dev/null
+        echo ""
+        echo ""
+        read -rp "  Session id or name: " query
+        if [[ -n "$query" ]]; then
+          resume_session "$query"
+        fi
       else
         exec $TMUX -u attach -t "$chosen"
       fi
