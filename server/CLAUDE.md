@@ -29,8 +29,10 @@ server/
 
 ## Adding a Plugin's Server Component
 
-1. Create `plugins/{name}/server/index.ts` — export handler functions or a `WsHandler` object
-2. Import them in `server/src/plugins.ts` and add entries to the route tables:
+1. Create `plugins/{name}/server/` with:
+   - `api.ts` — **public API**. Types, factories, service objects that other plugins may import. This is the only file other plugins should import from.
+   - `index.ts` — **internal**. HTTP/WS handlers, business logic. Never imported by other plugins.
+2. Import handlers in `server/src/plugins.ts` and add entries to the route tables:
 
 ```typescript
 // server/src/plugins.ts

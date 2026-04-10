@@ -7,6 +7,16 @@ description: >
 
 # API and Abstraction Design
 
+## Start by writing the end-user experience
+
+Write the exact command, config line, or function call the user will type. If
+you can't state the user experience in one concrete example, you don't yet
+understand the feature.
+
+Do this BEFORE starting to think about internal logic, or technical details. The
+end user experience do not have to be realistic. It's the aspiration which will
+guide the design.
+
 ## Code should match high-level semantics
 
 -   Each line of business logic should map to one clear, high-level action (e.g.

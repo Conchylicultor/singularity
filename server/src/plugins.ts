@@ -1,5 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import { wsHandler as terminalWs } from "@plugins/terminal/server";
+import { handleBuild } from "@plugins/build/server";
 
 export interface WsData {
   path: string;
@@ -15,7 +16,9 @@ export interface WsHandler {
 export const httpRoutes: Record<
   string,
   (req: Request) => Response | Promise<Response>
-> = {};
+> = {
+  "POST /api/build": handleBuild,
+};
 
 // WebSocket routes: "/path" → handler
 export const wsRoutes: Record<string, WsHandler> = {

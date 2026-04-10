@@ -5,6 +5,7 @@ import dummyListPlugin from "@plugins/dummy-list/web";
 import dummyDetailPlugin from "@plugins/dummy-detail/web";
 import terminalPlugin from "@plugins/terminal/web";
 import dummyTerminalPlugin from "@plugins/dummy-terminal/web";
+import buildPlugin from "@plugins/build/web";
 
 export const plugins: PluginDefinition[] = [
   shellPlugin,
@@ -13,4 +14,5 @@ export const plugins: PluginDefinition[] = [
   dummyDetailPlugin,
   terminalPlugin,
   dummyTerminalPlugin,
+  buildPlugin,
 ];
