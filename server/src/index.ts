@@ -1,4 +1,14 @@
-import { httpRoutes, wsRoutes, type WsData } from "./plugins";
+import type { WsData, HttpHandler, WsHandler } from "./types";
+import { plugins } from "./plugins";
+
+// Flatten plugin routes into lookup tables
+const httpRoutes: Record<string, HttpHandler> = {};
+const wsRoutes: Record<string, WsHandler> = {};
+
+for (const plugin of plugins) {
+  if (plugin.httpRoutes) Object.assign(httpRoutes, plugin.httpRoutes);
+  if (plugin.wsRoutes) Object.assign(wsRoutes, plugin.wsRoutes);
+}
 
 const server = Bun.serve<WsData>({
   port: (() => {

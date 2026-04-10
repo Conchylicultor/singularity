@@ -4,17 +4,14 @@ Shared backend for Singularity. A single Bun process that routes HTTP requests a
 
 See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`plugin-core/CLAUDE.md`](../plugin-core/CLAUDE.md) for the frontend plugin system.
 
-## Why No Framework
-
-The frontend needs a plugin framework (slots + contributions) because multiple plugins compose UI fragments into a shared layout. The server has no equivalent problem — each plugin owns its URL paths outright. URL routing is already a natural extension mechanism, so the server is just a plain Bun app that imports handlers from plugin folders.
-
 ## How It Works
 
 1. `src/index.ts` starts `Bun.serve()` on port 9001
-2. Incoming requests are matched against two route tables defined in `src/plugins.ts`:
+2. Each plugin declares its routes via a `ServerPluginDefinition` (defined in `src/types.ts`)
+3. `src/plugins.ts` is a flat list of plugin imports — structurally identical to `web/src/plugins.ts`
+4. At startup, the entry point flattens all plugin routes into two lookup tables:
    - `httpRoutes` — `"METHOD /path"` → handler function
    - `wsRoutes` — `"/path"` → `WsHandler` object (open/message/close)
-3. Plugins populate these tables by adding imports and entries in `src/plugins.ts`
 
 ## File Structure
 
@@ -23,32 +20,30 @@ server/
 ├── package.json          # @singularity/server
 ├── tsconfig.json
 └── src/
-    ├── index.ts          # Bun.serve entry — routes to plugin handlers
-    └── plugins.ts        # Route tables + WsHandler type
+    ├── index.ts          # Bun.serve entry — collects routes from plugins
+    ├── plugins.ts        # Plugin registry (list of imports)
+    └── types.ts          # ServerPluginDefinition, WsHandler, HttpHandler
 ```
 
-## Adding a Plugin's Server Component
+## ServerPluginDefinition
 
-1. Create `plugins/{name}/server/` with:
-   - `api.ts` — **public API**. Types, factories, service objects that other plugins may import. This is the only file other plugins should import from.
-   - `index.ts` — **internal**. HTTP/WS handlers, business logic. Never imported by other plugins.
-2. Import handlers in `server/src/plugins.ts` and add entries to the route tables:
+Each server plugin default-exports a `ServerPluginDefinition`:
 
 ```typescript
-// server/src/plugins.ts
-import { wsHandler as terminalWs } from "@plugins/terminal/server";
-import { listItems } from "@plugins/tasks/server";
+import type { ServerPluginDefinition } from "../../../server/src/types";
+import { wsHandler } from "./internal/ws-handler";
 
-export const httpRoutes = {
-  "GET /api/tasks": listItems,
+const plugin: ServerPluginDefinition = {
+  id: "terminal",
+  name: "Terminal",
+  wsRoutes: {
+    "/ws/terminal": wsHandler,
+  },
 };
-
-export const wsRoutes = {
-  "/ws/terminal": terminalWs,
-};
+export default plugin;
 ```
 
-That's it. No base class, no setup function, no registration ceremony.
+The type is intentionally flat — no base classes, no lifecycle hooks. A plugin is just a data object with optional route maps.
 
 ### WsHandler Interface
 
@@ -65,6 +60,46 @@ interface WsHandler {
 ### HTTP Handlers
 
 Plain functions: `(req: Request) => Response | Promise<Response>`. No wrapper types needed — these are standard Web API types.
+
+## Adding a Plugin's Server Component
+
+1. Create the plugin directory with this structure:
+
+```
+plugins/{name}/server/
+  index.ts        # Default export: ServerPluginDefinition (routes declared here)
+  api.ts          # Optional: public API for other plugins to import
+  internal/       # Handler implementations, business logic (never imported externally)
+```
+
+2. Declare routes in `index.ts`:
+
+```typescript
+import type { ServerPluginDefinition } from "../../../server/src/types";
+import { handleList } from "./internal/handle-list";
+
+const plugin: ServerPluginDefinition = {
+  id: "tasks",
+  name: "Tasks",
+  httpRoutes: {
+    "GET /api/tasks": handleList,
+  },
+};
+export default plugin;
+```
+
+3. Register in `server/src/plugins.ts`:
+
+```typescript
+import tasksPlugin from "@plugins/tasks/server";
+
+export const plugins: ServerPluginDefinition[] = [
+  // ...existing plugins
+  tasksPlugin,
+];
+```
+
+That's it. No base class, no setup function, no registration ceremony.
 
 ## Path Aliases
 
@@ -95,8 +130,9 @@ bun start     # Start without watch
 
 ## Key Design Decisions
 
-- **No server-side plugin framework** — URL paths are the extension mechanism; no slots/contributions abstraction
+- **Plugins own their routes** — each plugin declares routes in its `ServerPluginDefinition`, not in a central file
 - **No middleware** — plugins own their paths entirely; shared concerns (auth, logging) can be added as utilities later
 - **No dynamic route matching** — exact path match only; plugins parse sub-paths from the URL themselves
+- **Internal/public separation** — `index.ts` and `api.ts` are public; `internal/` is never imported by other plugins
 - **Plugin dependencies go in their own `package.json`** — resolved via bun workspaces
 - **Bun runs TypeScript directly** — no build step needed

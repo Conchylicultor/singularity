@@ -1,0 +1,20 @@
+import type { ServerWebSocket } from "bun";
+
+export interface WsData {
+  path: string;
+}
+
+export interface WsHandler {
+  open(ws: ServerWebSocket<WsData>): void;
+  message(ws: ServerWebSocket<WsData>, msg: string | Buffer): void;
+  close(ws: ServerWebSocket<WsData>, code: number, reason: string): void;
+}
+
+export type HttpHandler = (req: Request) => Response | Promise<Response>;
+
+export interface ServerPluginDefinition {
+  id: string;
+  name: string;
+  httpRoutes?: Record<string, HttpHandler>;
+  wsRoutes?: Record<string, WsHandler>;
+}
