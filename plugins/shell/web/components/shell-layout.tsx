@@ -1,5 +1,6 @@
 import { Fragment, useState } from "react";
 import { toast } from "sonner";
+import { PluginErrorBoundary } from "@core";
 import { Shell as ShellCommands } from "../commands";
 import { Shell } from "../slots";
 import type { PaneDescriptor } from "../commands";
@@ -25,6 +26,7 @@ export function ShellLayout() {
   const sidebars = Shell.Sidebar.useContributions();
   const mains = Shell.Main.useContributions();
   const toolbarItems = Shell.Toolbar.useContributions();
+  const toolbarWidgets = Shell.ToolbarWidget.useContributions();
   const statusBarItems = Shell.StatusBar.useContributions();
 
   const [panels, setPanels] = useState<
@@ -53,13 +55,15 @@ export function ShellLayout() {
             {sidebars.map((pane, i) => (
               <Fragment key={pane.title}>
                 {i > 0 && <Separator className="mx-2 w-auto bg-sidebar-border" />}
-                <SidebarGroup>
-                  <SidebarGroupLabel>
-                    <pane.icon className="size-4 mr-2" />
-                    {pane.title}
-                  </SidebarGroupLabel>
-                  <pane.component />
-                </SidebarGroup>
+                <PluginErrorBoundary slot="shell.sidebar" label={pane.title}>
+                  <SidebarGroup>
+                    <SidebarGroupLabel>
+                      <pane.icon className="size-4 mr-2" />
+                      {pane.title}
+                    </SidebarGroupLabel>
+                    <pane.component />
+                  </SidebarGroup>
+                </PluginErrorBoundary>
               </Fragment>
             ))}
           </SidebarContent>
@@ -70,27 +74,39 @@ export function ShellLayout() {
             <div className="flex items-center gap-1">
               <SidebarTrigger />
               {toolbarItems.map((item) => (
-                <Button
-                  key={item.label}
-                  variant="ghost"
-                  size="sm"
-                  onClick={item.onClick}
-                >
-                  <item.icon className="size-4" />
-                  {item.label}
-                </Button>
+                <PluginErrorBoundary key={item.label} slot="shell.toolbar" label={item.label}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={item.onClick}
+                  >
+                    <item.icon className="size-4" />
+                    {item.label}
+                  </Button>
+                </PluginErrorBoundary>
               ))}
             </div>
-            <ThemeToggle />
+            <div className="flex items-center gap-1">
+              {toolbarWidgets.map((widget, i) => (
+                <PluginErrorBoundary key={i} slot="shell.toolbar-widget">
+                  <widget.component />
+                </PluginErrorBoundary>
+              ))}
+              <ThemeToggle />
+            </div>
           </header>
 
           <main className="flex-1 overflow-hidden">
             <ScrollArea className="h-full">
               {mains.map((panel) => (
-                <panel.component key={panel.title} />
+                <PluginErrorBoundary key={panel.title} slot="shell.main" label={panel.title}>
+                  <panel.component />
+                </PluginErrorBoundary>
               ))}
               {panels.map((panel) => (
-                <panel.component key={panel.id} />
+                <PluginErrorBoundary key={panel.id} slot="shell.pane" label={panel.id}>
+                  <panel.component />
+                </PluginErrorBoundary>
               ))}
             </ScrollArea>
           </main>
@@ -98,7 +114,9 @@ export function ShellLayout() {
           {statusBarItems.length > 0 && (
             <footer className="flex items-center border-t px-4 h-6 text-xs text-muted-foreground">
               {statusBarItems.map((item, i) => (
-                <item.component key={i} />
+                <PluginErrorBoundary key={i} slot="shell.statusbar">
+                  <item.component />
+                </PluginErrorBoundary>
               ))}
             </footer>
           )}
