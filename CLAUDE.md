@@ -20,9 +20,13 @@ Every feature is a **plugin**. The core app is thin plumbing that connects plugi
 ├── gateway/          # Namespace proxy (Go). See [`gateway/CLAUDE.md`](gateway/CLAUDE.md)
 ├── server/           # Backend (TypeScript/Bun)
 ├── cli/              # Agent CLI (Python, future)
-├── ide/              # Theia-based IDE
+├── sidequests/       # Other independant projects (not directly related to singularity). See each subfolder's CLAUDE.md
 └── artifacts/        # Research docs, plans, agent memory
 ```
+
+### Workspaces
+
+The project uses bun workspaces (defined in root `package.json`). Run `bun install` from the repo root. Shared dependencies (react, icons, types) live in the root `package.json`. Plugin-specific dependencies live in each plugin's `package.json`.
 
 ### Key Plugins
 
@@ -31,8 +35,8 @@ Every feature is a **plugin**. The core app is thin plumbing that connects plugi
 ## Deploy
 
 ```sh
-cd web
 bun install
+cd web
 bun run build
 bunx vite preview --port 9000
 ```

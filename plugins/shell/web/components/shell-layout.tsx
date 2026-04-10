@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Shell as ShellCommands } from "../commands";
 import { Shell } from "../slots";
 import type { PaneDescriptor } from "../commands";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "./toaster";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";

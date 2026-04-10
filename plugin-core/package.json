@@ -1,0 +1,8 @@
+{
+  "name": "@singularity/plugin-core",
+  "private": true,
+  "version": "0.0.1",
+  "peerDependencies": {
+    "react": "^19.1.0"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "name": "@singularity/plugin-shell",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "sonner": "^2.0.7"
+  }
+}

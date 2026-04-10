@@ -11,8 +11,7 @@
     "noUnusedParameters": true,
     "types": ["bun-types"],
     "paths": {
-      "@plugins/*": ["../plugins/*"],
-      "bun-pty": ["./node_modules/bun-pty"]
+      "@plugins/*": ["../plugins/*"]
     }
   },
   "include": ["src", "../plugins/*/server", "../plugins/*/shared"]

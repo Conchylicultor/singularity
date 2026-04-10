@@ -205,7 +205,7 @@ The app uses **Tailwind CSS v4** with **shadcn/ui** components. Theme tokens are
 
 ### External dependencies
 
-Packages installed in `web/` are not automatically resolvable from `plugins/`. If a plugin needs a package from `web/node_modules`, add path aliases in both `web/vite.config.ts` and `web/tsconfig.app.json` (see existing `react-icons` and `lucide-react` entries as examples).
+The project uses bun workspaces. Shared dependencies (react, react-icons, lucide-react, types) are declared in the root `package.json` and available to all workspaces. Plugin-specific dependencies (e.g., `sonner` for the shell plugin, `@xterm/*` for the terminal plugin) are declared in that plugin's own `package.json`. Run `bun install` from the repo root.
 
 ## Key Design Decisions
 

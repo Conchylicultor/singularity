@@ -16,17 +16,10 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
-    "typeRoots": ["./node_modules/@types"],
     "paths": {
       "@/*": ["./src/*"],
       "@core": ["../plugin-core"],
-      "@plugins/*": ["../plugins/*"],
-      "react-icons/*": ["./node_modules/react-icons/*"],
-      "lucide-react": ["./node_modules/lucide-react"],
-      "@xterm/xterm": ["./node_modules/@xterm/xterm"],
-      "@xterm/addon-fit": ["./node_modules/@xterm/addon-fit"],
-      "@xterm/addon-web-links": ["./node_modules/@xterm/addon-web-links"],
-      "sonner": ["./node_modules/sonner"]
+      "@plugins/*": ["../plugins/*"]
     }
   },
   "include": ["src", "../plugin-core", "../plugins/*/web", "../plugins/*/shared"]

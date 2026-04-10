@@ -72,7 +72,7 @@ Configured in `tsconfig.json`:
 
 The `include` field covers `../plugins/*/server` and `../plugins/*/shared` so plugin server code and shared types are type-checked together with the server.
 
-Packages used by plugins (like `bun-pty`) need a path alias in `tsconfig.json` because plugin code lives outside `server/node_modules`'s ancestor chain. See the `bun-pty` entry as an example.
+Server-side plugin dependencies (like `bun-pty`) are declared in the plugin's own `package.json` and resolved via bun workspaces. No path aliases are needed for third-party packages.
 
 ## Dev Proxy
 
@@ -96,5 +96,5 @@ bun start     # Start without watch
 - **No server-side plugin framework** — URL paths are the extension mechanism; no slots/contributions abstraction
 - **No middleware** — plugins own their paths entirely; shared concerns (auth, logging) can be added as utilities later
 - **No dynamic route matching** — exact path match only; plugins parse sub-paths from the URL themselves
-- **Plugins don't have their own package.json** — dependencies go in `server/package.json`
+- **Plugin dependencies go in their own `package.json`** — resolved via bun workspaces
 - **Bun runs TypeScript directly** — no build step needed
