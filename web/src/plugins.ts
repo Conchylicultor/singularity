@@ -8,6 +8,7 @@ import dummyTerminalPlugin from "@plugins/dummy-terminal/web";
 import buildPlugin from "@plugins/build/web";
 import logsPlugin from "@plugins/logs/web";
 import claudeSessionsPlugin from "@plugins/claude-sessions/web";
+import worktreeSwitcherPlugin from "@plugins/worktree-switcher/web";
 
 export const plugins: PluginDefinition[] = [
   shellPlugin,
@@ -19,4 +20,5 @@ export const plugins: PluginDefinition[] = [
   buildPlugin,
   logsPlugin,
   claudeSessionsPlugin,
+  worktreeSwitcherPlugin,
 ];

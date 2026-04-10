@@ -19,6 +19,10 @@ export const Shell = {
     onClick: () => void;
   }>("shell.toolbar"),
 
+  ToolbarWidget: defineSlot<{
+    component: ComponentType;
+  }>("shell.toolbar-widget"),
+
   StatusBar: defineSlot<{
     component: ComponentType;
   }>("shell.statusbar"),

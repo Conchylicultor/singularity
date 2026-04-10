@@ -47,16 +47,18 @@ The project uses bun workspaces (defined in root `package.json`). Run `bun insta
 
 ## Deploy
 
-```sh
-bun install
-cd web
-bun run build
-bunx vite preview --port 9000
+Always deploy after all changes, fixes, implementations:
+
+```bash
+./singularity build
 ```
+
+This will build the frontend and backend, as well as notifying the gateway the app is available.
+The gateway serve the app automatically at `http://<name>.localhost:9000`.
 
 ## Ports
 
-- Port range: **9000–10000**
+- Port range: **9000–10000** (Those are handled automatically by the gateway. Make sure to run the `build` CLI command)
 - The head namespace (agent manager app) is always deployed at **port 9000**
 
 ## Sidequests

@@ -1,4 +1,4 @@
-import { PluginProvider, Core } from "@core";
+import { PluginProvider, PluginErrorBoundary, Core } from "@core";
 import { plugins } from "./plugins";
 
 function RootRenderer() {
@@ -6,7 +6,9 @@ function RootRenderer() {
   return (
     <>
       {roots.map((r, i) => (
-        <r.component key={i} />
+        <PluginErrorBoundary key={i} slot="core.root">
+          <r.component />
+        </PluginErrorBoundary>
       ))}
     </>
   );
