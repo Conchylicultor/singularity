@@ -10,7 +10,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "types": ["bun-types"],
-    "baseUrl": ".",
     "paths": {
       "@plugins/*": ["../plugins/*"],
       "bun-pty": ["./node_modules/bun-pty"]
