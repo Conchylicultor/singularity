@@ -14,7 +14,7 @@ Agents work in isolated git worktrees. The end-to-end flow:
 2. Enter a worktree using `EnterWorktree` with an explicit feature name
 3. Make code changes in the worktree
 4. Run `./singularity build` to deploy (build both the frontend and server and register the gateway)
-5. The app becomes available at `<name>.localhost:9000`
+5. The app becomes available at `http://<name>.localhost:9000` (always include `http://` so the URL is clickable)
 
 
 ## Architecture
