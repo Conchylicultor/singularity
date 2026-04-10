@@ -4,6 +4,19 @@ Agent manager app whose goal is to fix todos faster than they are created. The a
 
 The app is a todo nested list of tasks agents need to execute. Each agent executes in its own isolated `worktree` and deploys to its own `namespace`. The UI allows seamlessly switching between namespaces to inspect agent work.
 
+## Agent Workflow
+
+Follow this workflow for all tasks (design, bug fix, ...)
+
+Agents work in isolated git worktrees. The end-to-end flow:
+
+1. Start with a prompt (design a feature, fix a bug, ...)
+2. Enter a worktree using `EnterWorktree` with an explicit feature name
+3. Make code changes in the worktree
+4. Run `bun cli/src/index.ts build` to deploy (build both the frontend and server and register the gateway)
+5. The app becomes available at `<name>.localhost:9000`
+
+
 ## Architecture
 
 Every feature is a **plugin**. The core app is thin plumbing that connects plugins together via a slot-based extension system. See [`plugin-core/CLAUDE.md`](plugin-core/CLAUDE.md) for the frontend plugin API and [`server/CLAUDE.md`](server/CLAUDE.md) for the backend.
@@ -19,7 +32,7 @@ Every feature is a **plugin**. The core app is thin plumbing that connects plugi
 ├── web/              # Frontend bootstrap (SPA shell, plugin registry)
 ├── gateway/          # Namespace proxy (Go). See [`gateway/CLAUDE.md`](gateway/CLAUDE.md)
 ├── server/           # Backend (TypeScript/Bun)
-├── cli/              # Agent CLI (Python, future)
+├── cli/              # Agent CLI (TypeScript, Commander.js)
 ├── sidequests/       # Independent side projects (see Sidequests section below)
 └── artifacts/        # Research docs, plans, agent memory
 ```
