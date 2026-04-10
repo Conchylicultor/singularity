@@ -1,4 +1,9 @@
 {
+  "compilerOptions": {
+    "paths": {
+      "@plugins/*": ["./plugins/*"]
+    }
+  },
   "files": [],
   "references": [
     { "path": "./web" },
