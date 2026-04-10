@@ -2,6 +2,9 @@
   "name": "@singularity/cli",
   "private": true,
   "type": "module",
+  "bin": {
+    "singularity": "src/index.ts"
+  },
   "dependencies": {
     "commander": "^13.1.0"
   },
