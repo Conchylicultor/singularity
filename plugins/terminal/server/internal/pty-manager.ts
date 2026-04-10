@@ -9,6 +9,7 @@ export interface CreateSessionOptions {
   cols: number;
   rows: number;
   cwd?: string;
+  command?: string[];
   onOutput: (sessionId: string, data: string) => void;
   onExit: (sessionId: string, exitCode: number) => void;
 }
@@ -17,10 +18,11 @@ const sessions = new Map<string, Session>();
 
 export function createSession(options: CreateSessionOptions): string {
   const id = crypto.randomUUID();
-  const shell = process.env.SHELL || "bash";
+  const cmd = options.command?.[0] ?? (process.env.SHELL || "bash");
+  const args = options.command?.slice(1) ?? [];
   const cwd = options.cwd || process.env.HOME || "/";
 
-  const p = spawn(shell, [], {
+  const p = spawn(cmd, args, {
     name: "xterm-256color",
     cols: options.cols,
     rows: options.rows,

@@ -45,6 +45,7 @@ export const wsHandler: WsHandler = {
             cols: parsed.cols,
             rows: parsed.rows,
             cwd: parsed.cwd,
+            command: parsed.command,
             onOutput(sid, data) {
               const targetWs = sessionToWs.get(sid);
               if (targetWs) {
