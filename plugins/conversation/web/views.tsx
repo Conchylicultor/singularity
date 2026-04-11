@@ -6,5 +6,6 @@ export function conversationPane(opts: { session_id: string }): PaneDescriptor {
   return {
     title: opts.session_id,
     component: Component,
+    path: `/c/${opts.session_id}`,
   };
 }

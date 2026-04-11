@@ -1,8 +1,9 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { PluginErrorBoundary } from "@core";
 import { Shell as ShellCommands } from "../commands";
 import { Shell } from "../slots";
+import { matchRoute } from "../routing";
 import type { PaneDescriptor } from "../commands";
 import { Toaster } from "./toaster";
 import { Button } from "@/components/ui/button";
@@ -48,16 +49,63 @@ export function ShellLayout() {
   const mains = Shell.Main.useContributions();
   const toolbarItems = Shell.Toolbar.useContributions();
   const statusBarItems = Shell.StatusBar.useContributions();
+  const routes = Shell.Route.useContributions();
 
   const [panels, setPanels] = useState<
     Array<{ id: string } & PaneDescriptor>
   >([]);
 
-  ShellCommands.OpenPane.useHandler((descriptor) => {
+  const openPane = (descriptor: PaneDescriptor) => {
     const id = `pane-${nextPaneId++}`;
     setPanels([{ id, ...descriptor }]);
     return id;
+  };
+
+  ShellCommands.OpenPane.useHandler((descriptor) => {
+    const id = openPane(descriptor);
+    if (descriptor.path) {
+      history.pushState({}, "", descriptor.path);
+    }
+    return id;
   });
+
+  // Resolve current URL on mount
+  const initialRouteResolved = useRef(false);
+  useEffect(() => {
+    if (initialRouteResolved.current || routes.length === 0) return;
+    initialRouteResolved.current = true;
+
+    const pathname = window.location.pathname;
+    if (pathname === "/" || pathname === "") return;
+
+    for (const route of routes) {
+      const params = matchRoute(route.pattern, pathname);
+      if (params) {
+        openPane(route.resolve(params));
+        return;
+      }
+    }
+  }, [routes]);
+
+  // Handle back/forward navigation
+  useEffect(() => {
+    const onPopState = () => {
+      const pathname = window.location.pathname;
+      if (pathname === "/" || pathname === "") {
+        setPanels([]);
+        return;
+      }
+      for (const route of routes) {
+        const params = matchRoute(route.pattern, pathname);
+        if (params) {
+          openPane(route.resolve(params));
+          return;
+        }
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [routes]);
 
   ShellCommands.Toast.useHandler(({ title, description, variant }) => {
     const opts = { description: title ? description : undefined };
