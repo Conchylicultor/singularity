@@ -9,9 +9,11 @@ import conversationVscodePlugin from "@plugins/conversation/plugins/vscode/web";
 import conversationOpenAppPlugin from "@plugins/conversation/plugins/open-app/web";
 import worktreeSwitcherPlugin from "@plugins/worktree-switcher/web";
 import themePlugin from "@plugins/theme/web";
+import welcomePlugin from "@plugins/welcome/web";
 
 export const plugins: PluginDefinition[] = [
   shellPlugin,
+  welcomePlugin,
   terminalPlugin,
   buildPlugin,
   logsPlugin,

@@ -9,11 +9,6 @@ export const Shell = {
     component: ComponentType;
   }>("shell.sidebar"),
 
-  Main: defineSlot<{
-    title: string;
-    component: ComponentType;
-  }>("shell.main"),
-
   Toolbar: defineSlot<{
     label?: string;
     icon?: ComponentType<{ className?: string }>;

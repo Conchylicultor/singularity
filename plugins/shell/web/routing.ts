@@ -2,8 +2,9 @@ export function matchRoute(
   pattern: string,
   pathname: string,
 ): Record<string, string> | null {
-  const patternParts = pattern.split("/");
-  const pathParts = pathname.replace(/\/$/, "").split("/");
+  const normalize = (p: string) => (p === "/" ? p : p.replace(/\/$/, ""));
+  const patternParts = normalize(pattern).split("/");
+  const pathParts = normalize(pathname).split("/");
   if (patternParts.length !== pathParts.length) return null;
   const params: Record<string, string> = {};
   for (let i = 0; i < patternParts.length; i++) {

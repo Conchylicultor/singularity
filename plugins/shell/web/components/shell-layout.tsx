@@ -46,7 +46,6 @@ let nextPaneId = 0;
 
 export function ShellLayout() {
   const sidebars = Shell.Sidebar.useContributions();
-  const mains = Shell.Main.useContributions();
   const toolbarItems = Shell.Toolbar.useContributions();
   const statusBarItems = Shell.StatusBar.useContributions();
   const routes = Shell.Route.useContributions();
@@ -76,7 +75,6 @@ export function ShellLayout() {
     initialRouteResolved.current = true;
 
     const pathname = window.location.pathname;
-    if (pathname === "/" || pathname === "") return;
 
     for (const route of routes) {
       const params = matchRoute(route.pattern, pathname);
@@ -91,10 +89,6 @@ export function ShellLayout() {
   useEffect(() => {
     const onPopState = () => {
       const pathname = window.location.pathname;
-      if (pathname === "/" || pathname === "") {
-        setPanels([]);
-        return;
-      }
       for (const route of routes) {
         const params = matchRoute(route.pattern, pathname);
         if (params) {
@@ -166,11 +160,6 @@ export function ShellLayout() {
 
           <main className="flex-1 overflow-hidden bg-muted/30">
             <ScrollArea className="h-full">
-              {mains.map((panel) => (
-                <PluginErrorBoundary key={panel.title} slot="shell.main" label={panel.title}>
-                  <panel.component />
-                </PluginErrorBoundary>
-              ))}
               {panels.map((panel) => (
                 <PluginErrorBoundary key={panel.id} slot="shell.pane" label={panel.id}>
                   <panel.component />
