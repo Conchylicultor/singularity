@@ -83,31 +83,30 @@ export function registerPush(program: Command) {
         process.exit(1);
       }
 
-      // 2. Push the branch to remote
-      console.log(`Pushing branch ${branch}...`);
-      await exec(["git", "push", "-u", "origin", branch]);
-
-      // 3. Pull main to ensure it's up to date before merging
+      // 2. Pull main to ensure it's up to date before merging
       const mainWorktree = await getMainWorktree();
       console.log("Pulling main...");
       await exec(["git", "pull", "--ff-only"], mainWorktree);
 
-      // 4. Fast-forward merge into main (no conflict possible)
-      console.log(`Merging ${branch} into main...`);
-      const { exitCode: mergeExit } = await run(
-        ["git", "merge", "--ff-only", branch],
-        mainWorktree,
-      );
-      if (mergeExit !== 0) {
+      // 3. Rebase onto main so the merge is always a fast-forward
+      const { exitCode: rebaseExit } = await run(["git", "rebase", "main"]);
+      if (rebaseExit !== 0) {
         console.error(
-          `Cannot fast-forward main to ${branch}. Main has diverged.\n` +
-            `Rebase your branch onto main first:\n` +
-            `  git rebase main`,
+          `Rebase of ${branch} onto main failed. Resolve conflicts and retry.`,
         );
+        await run(["git", "rebase", "--abort"]);
         process.exit(1);
       }
 
-      // 5. Push main
+      // 4. Push the branch (force since rebase rewrites history — safe for single-owner worktree branches)
+      console.log(`Pushing branch ${branch}...`);
+      await exec(["git", "push", "--force-with-lease", "-u", "origin", branch]);
+
+      // 5. Fast-forward merge into main
+      console.log(`Merging ${branch} into main...`);
+      await exec(["git", "merge", "--ff-only", branch], mainWorktree);
+
+      // 6. Push main
       console.log("Pushing main...");
       await exec(["git", "push"], mainWorktree);
 
