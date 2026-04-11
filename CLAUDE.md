@@ -13,6 +13,11 @@ Agents work in isolated git worktrees automatically created before starting. The
 3. The app becomes available at `http://<worktree>.localhost:9000` (always include `http://` so the URL is clickable)
 4. Once changes are reviewed and ready, commit and run `./singularity push` to merge back to main (pulls main first, merges, pushes). NEVER run `git commit`, always use the CLI. NEVER push unless the user explicitly said so.
 
+RULES:
+
+- NEVER run `./singularity push` unless instructed to. The user need to review your code before.
+- NEVER commit files yourself (this will create branches conflicts). Always use `./singularity push -m "commit message"`
+
 ## Architecture
 
 Every feature is a **plugin**. The core app is thin plumbing that connects plugins together via a slot-based extension system. See [`plugin-core/CLAUDE.md`](plugin-core/CLAUDE.md) for the frontend plugin API and [`server/CLAUDE.md`](server/CLAUDE.md) for the backend.
