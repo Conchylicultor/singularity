@@ -36,7 +36,7 @@ export async function listClaudeSessions(): Promise<ClaudeSession[]> {
       TMUX,
       "list-sessions",
       "-F",
-      "#{session_name}|#{session_created}|#{pane_title}|#{session_attached}",
+      "#{session_name}|#{session_created}|#{pane_title}|#{session_attached}|#{session_path}",
       "-f",
       `#{m:${PREFIX}-*,#{session_name}}`,
     ],
@@ -53,7 +53,7 @@ export async function listClaudeSessions(): Promise<ClaudeSession[]> {
     .split("\n")
     .filter(Boolean)
     .map((line) => {
-      const [name, createdEpoch, rawTitle, attached] = line.split("|");
+      const [name, createdEpoch, rawTitle, attached, sessionPath] = line.split("|");
       const { task, idle } = cleanPaneTitle(rawTitle ?? "");
       return {
         name,
@@ -61,6 +61,7 @@ export async function listClaudeSessions(): Promise<ClaudeSession[]> {
         task,
         idle,
         attached: attached === "1",
+        cwd: sessionPath ?? "",
       };
     })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -89,6 +90,7 @@ export async function createClaudeSession(): Promise<ClaudeSession> {
     task: "",
     idle: true,
     attached: false,
+    cwd: wtPath,
   };
 }
 

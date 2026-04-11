@@ -4,4 +4,5 @@ export interface ClaudeSession {
   task: string;
   idle: boolean;
   attached: boolean;
+  cwd: string;
 }
