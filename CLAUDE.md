@@ -74,10 +74,9 @@ This will:
 4. Merge the branch into main (from the main worktree)
 5. Push main to remote
 
-> **CRITICAL — Do NOT commit or push without explicit user approval.**
-> "push", "publish", "ship" all mean `./singularity push` — never raw git commands.
-> Even when the user says one of these words, **ask for confirmation** before running.
-> Do NOT commit code on your own initiative either — wait for the user to ask.
+> **CRITICAL — NEVER push or commit on your own initiative.** Wait for the user to ask.
+> NEVER use raw git commands (`git commit`, `git push`). Always use `./singularity push -m "message"`.
+> "push", "publish", "ship" all mean `./singularity push`.
 
 ## Ports
 
