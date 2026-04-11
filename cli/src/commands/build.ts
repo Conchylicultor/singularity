@@ -73,6 +73,25 @@ export function registerBuild(program: Command) {
         JSON.stringify(spec, null, 2) + "\n",
       );
 
-      console.log(`Deployed to ${name}.localhost:9000`);
+      // 4. Restart the backend if the gateway has it running
+      console.log("Restarting backend...");
+      try {
+        const resp = await fetch(
+          `http://localhost:9000/gateway/worktrees/${name}/restart`,
+          { method: "POST" },
+        );
+        if (resp.ok) {
+          console.log("Backend restarted (will respawn on next request)");
+        } else if (resp.status === 404) {
+          console.log("No running backend to restart");
+        } else {
+          console.warn(`Backend restart returned ${resp.status}`);
+        }
+      } catch {
+        // Gateway not running — that's fine, backend will start on first request
+        console.log("Gateway not reachable, skipping backend restart");
+      }
+
+      console.log(`Deployed to http://${name}.localhost:9000`);
     });
 }

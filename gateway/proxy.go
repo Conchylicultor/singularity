@@ -153,7 +153,7 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Work
 	<-errc
 }
 
-// handleGatewayAPI serves /gateway/* endpoints. v1 ships only the worktree list.
+// handleGatewayAPI serves /gateway/* endpoints.
 func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/gateway/worktrees" && r.Method == http.MethodGet {
 		list := p.reg.List()
@@ -165,6 +165,31 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(out)
 		return
 	}
+
+	// POST /gateway/worktrees/<name>/restart — stop the running backend so the
+	// next request spawns a fresh process with the latest code.
+	const restartPrefix = "/gateway/worktrees/"
+	if r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, restartPrefix) && strings.HasSuffix(r.URL.Path, "/restart") {
+		name := strings.TrimPrefix(r.URL.Path, restartPrefix)
+		name = strings.TrimSuffix(name, "/restart")
+		if name == "" || strings.Contains(name, "/") {
+			http.NotFound(w, r)
+			return
+		}
+		wt := p.reg.Get(name)
+		if wt == nil {
+			http.Error(w, "unknown worktree: "+name, http.StatusNotFound)
+			return
+		}
+		if err := wt.Stop(r.Context()); err != nil {
+			http.Error(w, "stop failed: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"restarted":true}` + "\n"))
+		return
+	}
+
 	http.NotFound(w, r)
 }
 
