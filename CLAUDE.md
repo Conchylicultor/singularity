@@ -85,8 +85,6 @@ This will:
 
 Independent projects that live in `sidequests/`, not directly related to Singularity. Each has its own `CLAUDE.md`.
 
-- **`claude-web`** — Browser-based Claude Code sessions via ttyd + tmux. See [`sidequests/claude-web/CLAUDE.md`](sidequests/claude-web/CLAUDE.md).
-
 ## Instructions
 
 When working on this project, follow these instructions thoughtfully:
