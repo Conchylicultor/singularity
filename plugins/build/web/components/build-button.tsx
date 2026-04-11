@@ -8,7 +8,7 @@ export function BuildButton() {
 
   return (
     <Button
-      variant="ghost"
+      variant="outline"
       size="sm"
       disabled={building}
       onClick={async () => {

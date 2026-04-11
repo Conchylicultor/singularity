@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MdTerminal } from "react-icons/md";
 import { Shell } from "@plugins/shell/web/commands";
 import {
   SidebarMenu,
@@ -23,7 +24,8 @@ export function LogsSidebar() {
           <SidebarMenuButton
             onClick={() => Shell.OpenPane(logPane({ channel: ch }))}
           >
-            {ch}
+            <MdTerminal className="size-3.5 text-muted-foreground" />
+            <span className="text-xs">{ch}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       ))}

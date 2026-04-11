@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { MdDeviceHub } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -59,8 +58,8 @@ export function WorktreeDropdown() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" size="sm">
-            <MdDeviceHub className="size-4" />
+          <Button variant="outline" size="sm">
+            <span className="size-1.5 rounded-full bg-primary" />
             {currentWorktree ?? "head"}
           </Button>
         }

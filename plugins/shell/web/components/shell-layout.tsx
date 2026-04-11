@@ -13,6 +13,7 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
@@ -70,6 +71,17 @@ export function ShellLayout() {
     <TooltipProvider>
       <SidebarProvider>
         <Sidebar>
+          <SidebarHeader className="px-4 py-3">
+            <div className="flex items-center gap-2">
+              <div className="size-7 rounded-lg bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground text-xs font-bold">S</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold tracking-tight">Singularity</span>
+                <span className="text-[10px] text-muted-foreground leading-none">Agent Manager</span>
+              </div>
+            </div>
+          </SidebarHeader>
           <SidebarContent>
             {sidebars.map((pane, i) => (
               <Fragment key={pane.title}>
@@ -89,8 +101,9 @@ export function ShellLayout() {
         </Sidebar>
 
         <SidebarInset>
-          <header className="flex items-center border-b px-4 h-12 gap-1">
+          <header className="flex items-center border-b px-3 h-12 gap-2 bg-background">
             <SidebarTrigger />
+            <Separator orientation="vertical" className="h-5" />
             {toolbarItems.map((item, i) => (
               <Fragment key={i}>
                 {i > 0 && item.group !== toolbarItems[i - 1]!.group && (
@@ -103,7 +116,7 @@ export function ShellLayout() {
             ))}
           </header>
 
-          <main className="flex-1 overflow-hidden">
+          <main className="flex-1 overflow-hidden bg-muted/30">
             <ScrollArea className="h-full">
               {mains.map((panel) => (
                 <PluginErrorBoundary key={panel.title} slot="shell.main" label={panel.title}>
@@ -118,15 +131,17 @@ export function ShellLayout() {
             </ScrollArea>
           </main>
 
-          {statusBarItems.length > 0 && (
-            <footer className="flex items-center border-t px-4 h-6 text-xs text-muted-foreground">
-              {statusBarItems.map((item, i) => (
+          <footer className="flex items-center border-t px-4 h-7 text-xs text-muted-foreground gap-3">
+            {statusBarItems.length > 0 ? (
+              statusBarItems.map((item, i) => (
                 <PluginErrorBoundary key={i} slot="shell.statusbar">
                   <item.component />
                 </PluginErrorBoundary>
-              ))}
-            </footer>
-          )}
+              ))
+            ) : (
+              <span className="opacity-50">Singularity</span>
+            )}
+          </footer>
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>

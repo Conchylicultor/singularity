@@ -65,7 +65,7 @@ export function SessionList() {
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1 px-2">
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           className="flex-1 justify-start gap-2 text-xs"
           onClick={createSession}
@@ -92,18 +92,24 @@ export function SessionList() {
               className="h-auto py-1.5"
               onClick={() => openSession(session.name)}
             >
-              <div className="flex flex-col gap-0.5 overflow-hidden">
-                <span
-                  className={cn(
-                    "truncate text-xs",
-                    session.idle && "text-muted-foreground italic",
-                  )}
-                >
-                  {session.task || "Idle"}
-                </span>
-                <span className="truncate text-[10px] text-muted-foreground">
-                  {formatRelativeTime(session.createdAt)}
-                </span>
+              <div className="flex items-start gap-2 overflow-hidden">
+                <span className={cn(
+                  "mt-1.5 size-1.5 shrink-0 rounded-full",
+                  session.idle ? "bg-muted-foreground/40" : "bg-primary"
+                )} />
+                <div className="flex flex-col gap-0.5 overflow-hidden">
+                  <span
+                    className={cn(
+                      "truncate text-xs",
+                      session.idle ? "text-muted-foreground" : "font-medium",
+                    )}
+                  >
+                    {session.task || "Idle"}
+                  </span>
+                  <span className="truncate text-[10px] text-muted-foreground">
+                    {formatRelativeTime(session.createdAt)}
+                  </span>
+                </div>
               </div>
             </SidebarMenuButton>
             <SidebarMenuAction
