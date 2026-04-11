@@ -78,7 +78,7 @@ export function registerPush(program: Command) {
         }
       } else if (status) {
         console.error(
-          "You have uncommitted changes. Commit or stash them first, or use -m to commit.",
+          'Missing `-m "commit message"` flag. You have uncommitted changes.',
         );
         process.exit(1);
       }

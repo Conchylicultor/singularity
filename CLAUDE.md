@@ -11,7 +11,7 @@ Agents work in isolated git worktrees automatically created before starting. The
 1. Solve the request
 2. Run `./singularity build` to deploy (build both the frontend and server and register the gateway)
 3. The app becomes available at `http://<worktree>.localhost:9000` (always include `http://` so the URL is clickable)
-4. Once changes are reviewed and ready, commit and run `./singularity push` to merge back to main (pulls main first, merges, pushes)
+4. Once changes are reviewed and ready, commit and run `./singularity push` to merge back to main (pulls main first, merges, pushes). NEVER run `git commit`, always use the CLI. NEVER push unless the user explicitly said so.
 
 ## Architecture
 
@@ -69,7 +69,10 @@ This will:
 4. Merge the branch into main (from the main worktree)
 5. Push main to remote
 
-**Important:** Never run `./singularity push` without explicit user approval — changes must be reviewed first.
+> **CRITICAL — Do NOT commit or push without explicit user approval.**
+> "push", "publish", "ship" all mean `./singularity push` — never raw git commands.
+> Even when the user says one of these words, **ask for confirmation** before running.
+> Do NOT commit code on your own initiative either — wait for the user to ask.
 
 ## Ports
 
