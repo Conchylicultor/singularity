@@ -84,6 +84,14 @@ This will:
 - Port range: **9000–10000** (Those are handled automatically by the gateway. Make sure to run the `build` CLI command)
 - The head namespace (agent manager app) is always deployed at **port 9000**
 
+## Screenshots
+
+Take screenshots of the app using Playwright (Chromium is pre-installed):
+
+```bash
+bunx playwright screenshot --wait-for-timeout 3000 --viewport-size "1280,800" http://<worktree>.localhost:9000 /tmp/screenshot.png
+```
+
 ## Sidequests
 
 Independent projects that live in `sidequests/`, not directly related to Singularity. Each has its own `CLAUDE.md`.
