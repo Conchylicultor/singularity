@@ -62,7 +62,8 @@ export async function listClaudeSessions(): Promise<ClaudeSession[]> {
         idle,
         attached: attached === "1",
       };
-    });
+    })
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function createClaudeSession(): Promise<ClaudeSession> {
