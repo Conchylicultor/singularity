@@ -12,6 +12,7 @@ const buildPlugin: PluginDefinition = {
       onClick: () => {
         fetch("/api/build", { method: "POST" });
       },
+      group: "actions",
     }),
   ],
 };

@@ -14,14 +14,12 @@ export const Shell = {
   }>("shell.main"),
 
   Toolbar: defineSlot<{
-    label: string;
-    icon: ComponentType<{ className?: string }>;
-    onClick: () => void;
+    label?: string;
+    icon?: ComponentType<{ className?: string }>;
+    onClick?: () => void;
+    component?: ComponentType;
+    group?: string;
   }>("shell.toolbar"),
-
-  ToolbarWidget: defineSlot<{
-    component: ComponentType;
-  }>("shell.toolbar-widget"),
 
   StatusBar: defineSlot<{
     component: ComponentType;

@@ -10,6 +10,7 @@ import logsPlugin from "@plugins/logs/web";
 import claudeSessionsPlugin from "@plugins/claude-sessions/web";
 import conversationPlugin from "@plugins/conversation/web";
 import worktreeSwitcherPlugin from "@plugins/worktree-switcher/web";
+import themePlugin from "@plugins/theme/web";
 
 export const plugins: PluginDefinition[] = [
   shellPlugin,
@@ -23,4 +24,5 @@ export const plugins: PluginDefinition[] = [
   conversationPlugin,
   claudeSessionsPlugin,
   worktreeSwitcherPlugin,
+  themePlugin,
 ];

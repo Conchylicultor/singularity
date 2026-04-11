@@ -18,7 +18,27 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ThemeToggle } from "./theme-toggle";
+
+function ToolbarItem(item: {
+  label?: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  onClick?: () => void;
+  component?: React.ComponentType;
+}) {
+  if (item.component) {
+    const Comp = item.component;
+    return <Comp />;
+  }
+  if (item.onClick) {
+    return (
+      <Button variant="ghost" size="sm" onClick={item.onClick}>
+        {item.icon && <item.icon className="size-4" />}
+        {item.label}
+      </Button>
+    );
+  }
+  return null;
+}
 
 let nextPaneId = 0;
 
@@ -26,7 +46,6 @@ export function ShellLayout() {
   const sidebars = Shell.Sidebar.useContributions();
   const mains = Shell.Main.useContributions();
   const toolbarItems = Shell.Toolbar.useContributions();
-  const toolbarWidgets = Shell.ToolbarWidget.useContributions();
   const statusBarItems = Shell.StatusBar.useContributions();
 
   const [panels, setPanels] = useState<
@@ -70,30 +89,18 @@ export function ShellLayout() {
         </Sidebar>
 
         <SidebarInset>
-          <header className="flex items-center justify-between border-b px-4 h-12">
-            <div className="flex items-center gap-1">
-              <SidebarTrigger />
-              {toolbarItems.map((item) => (
-                <PluginErrorBoundary key={item.label} slot="shell.toolbar" label={item.label}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={item.onClick}
-                  >
-                    <item.icon className="size-4" />
-                    {item.label}
-                  </Button>
+          <header className="flex items-center border-b px-4 h-12 gap-1">
+            <SidebarTrigger />
+            {toolbarItems.map((item, i) => (
+              <Fragment key={i}>
+                {i > 0 && item.group !== toolbarItems[i - 1]!.group && (
+                  <div className="flex-1" />
+                )}
+                <PluginErrorBoundary slot="shell.toolbar">
+                  <ToolbarItem {...item} />
                 </PluginErrorBoundary>
-              ))}
-            </div>
-            <div className="flex items-center gap-1">
-              {toolbarWidgets.map((widget, i) => (
-                <PluginErrorBoundary key={i} slot="shell.toolbar-widget">
-                  <widget.component />
-                </PluginErrorBoundary>
-              ))}
-              <ThemeToggle />
-            </div>
+              </Fragment>
+            ))}
           </header>
 
           <main className="flex-1 overflow-hidden">
