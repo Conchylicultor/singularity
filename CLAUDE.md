@@ -15,6 +15,7 @@ Agents work in isolated git worktrees. The end-to-end flow:
 3. Make code changes in the worktree
 4. Run `./singularity build` to deploy (build both the frontend and server and register the gateway)
 5. The app becomes available at `http://<name>.localhost:9000` (always include `http://` so the URL is clickable)
+6. Once changes are reviewed and ready, commit and run `./singularity push` to merge back to main (pulls main first, merges, pushes)
 
 
 ## Architecture
@@ -45,7 +46,9 @@ The project uses bun workspaces (defined in root `package.json`). Run `bun insta
 
 - `shell` — App layout (sidebar, toolbar, main area, status bar). Defines the standard slots other plugins contribute to.
 
-## Deploy
+## CLI
+
+### Deploy
 
 Always deploy after all changes, fixes, implementations:
 
@@ -55,6 +58,23 @@ Always deploy after all changes, fixes, implementations:
 
 This will build the frontend and backend, as well as notifying the gateway the app is available.
 The gateway serve the app automatically at `http://<name>.localhost:9000`.
+
+### Push
+
+Once changes are committed and reviewed, merge back to main:
+
+```bash
+./singularity push
+```
+
+This will:
+1. Check for uncommitted changes (fails if dirty)
+2. Push the worktree branch to remote
+3. Pull main (`--ff-only`) to ensure it's up to date
+4. Merge the branch into main (from the main worktree)
+5. Push main to remote
+
+**Important:** Never run `./singularity push` without explicit user approval — changes must be reviewed first.
 
 ## Ports
 

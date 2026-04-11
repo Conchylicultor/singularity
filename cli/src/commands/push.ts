@@ -54,8 +54,9 @@ async function getCurrentBranch(): Promise<string> {
 export function registerPush(program: Command) {
   program
     .command("push")
-    .description("Merge the current worktree branch into main and push")
-    .action(async () => {
+    .description("Commit (if -m provided), merge into main, and push")
+    .option("-m, --message <msg>", "Commit message — stages and commits all changes before pushing")
+    .action(async (opts: { message?: string }) => {
       const branch = await getCurrentBranch();
 
       if (branch === "main") {
@@ -63,11 +64,21 @@ export function registerPush(program: Command) {
         process.exit(1);
       }
 
-      // 1. Check for uncommitted changes
+      // 1. Commit if -m provided, otherwise require clean tree
       const { stdout: status } = await run(["git", "status", "--porcelain"]);
-      if (status) {
+      if (opts.message) {
+        if (status) {
+          const files = status.split("\n").map((l) => l.trim());
+          console.log(`Committing ${files.length} file(s):`);
+          for (const f of files) console.log(`  ${f}`);
+          await exec(["git", "add", "-A"]);
+          await exec(["git", "commit", "-m", opts.message]);
+        } else {
+          console.log("No files to commit.");
+        }
+      } else if (status) {
         console.error(
-          "You have uncommitted changes. Commit or stash them first.",
+          "You have uncommitted changes. Commit or stash them first, or use -m to commit.",
         );
         process.exit(1);
       }
@@ -76,12 +87,27 @@ export function registerPush(program: Command) {
       console.log(`Pushing branch ${branch}...`);
       await exec(["git", "push", "-u", "origin", branch]);
 
-      // 3. Merge into main from the main worktree
+      // 3. Pull main to ensure it's up to date before merging
       const mainWorktree = await getMainWorktree();
-      console.log(`Merging ${branch} into main...`);
-      await exec(["git", "merge", branch], mainWorktree);
+      console.log("Pulling main...");
+      await exec(["git", "pull", "--ff-only"], mainWorktree);
 
-      // 4. Push main
+      // 4. Fast-forward merge into main (no conflict possible)
+      console.log(`Merging ${branch} into main...`);
+      const { exitCode: mergeExit } = await run(
+        ["git", "merge", "--ff-only", branch],
+        mainWorktree,
+      );
+      if (mergeExit !== 0) {
+        console.error(
+          `Cannot fast-forward main to ${branch}. Main has diverged.\n` +
+            `Rebase your branch onto main first:\n` +
+            `  git rebase main`,
+        );
+        process.exit(1);
+      }
+
+      // 5. Push main
       console.log("Pushing main...");
       await exec(["git", "push"], mainWorktree);
 
