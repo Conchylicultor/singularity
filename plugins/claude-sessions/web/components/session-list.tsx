@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { MdAdd, MdRefresh, MdClose } from "react-icons/md";
 import { Shell } from "@plugins/shell/web/commands";
-import { terminalPane } from "@plugins/terminal/web/views";
+import { conversationPane } from "@plugins/conversation/web/views";
 import type { ClaudeSession } from "../../shared/types";
 import { cn } from "@/lib/utils";
 import {
@@ -11,8 +11,6 @@ import {
   SidebarMenuAction,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-
-const TMUX = "/opt/homebrew/bin/tmux";
 
 function formatRelativeTime(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -26,12 +24,7 @@ function formatRelativeTime(iso: string): string {
 }
 
 function openSession(name: string) {
-  Shell.OpenPane(
-    terminalPane({
-      command: [TMUX, "-u", "attach", "-t", name],
-      title: name,
-    }),
-  );
+  Shell.OpenPane(conversationPane({ session_id: name }));
 }
 
 export function SessionList() {

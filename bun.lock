@@ -42,6 +42,10 @@
       "name": "@singularity/plugin-claude-sessions",
       "version": "0.0.1",
     },
+    "plugins/conversation": {
+      "name": "@singularity/plugin-conversation",
+      "version": "0.0.1",
+    },
     "plugins/dummy-button": {
       "name": "@singularity/plugin-dummy-button",
       "version": "0.0.1",
@@ -486,6 +490,8 @@
     "@singularity/plugin-build": ["@singularity/plugin-build@workspace:plugins/build"],
 
     "@singularity/plugin-claude-sessions": ["@singularity/plugin-claude-sessions@workspace:plugins/claude-sessions"],
+
+    "@singularity/plugin-conversation": ["@singularity/plugin-conversation@workspace:plugins/conversation"],
 
     "@singularity/plugin-core": ["@singularity/plugin-core@workspace:plugin-core"],
 
