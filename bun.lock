@@ -46,22 +46,6 @@
       "name": "@singularity/plugin-conversation",
       "version": "0.0.1",
     },
-    "plugins/dummy-button": {
-      "name": "@singularity/plugin-dummy-button",
-      "version": "0.0.1",
-    },
-    "plugins/dummy-detail": {
-      "name": "@singularity/plugin-dummy-detail",
-      "version": "0.0.1",
-    },
-    "plugins/dummy-list": {
-      "name": "@singularity/plugin-dummy-list",
-      "version": "0.0.1",
-    },
-    "plugins/dummy-terminal": {
-      "name": "@singularity/plugin-dummy-terminal",
-      "version": "0.0.1",
-    },
     "plugins/shell": {
       "name": "@singularity/plugin-shell",
       "version": "0.0.1",
@@ -494,14 +478,6 @@
     "@singularity/plugin-conversation": ["@singularity/plugin-conversation@workspace:plugins/conversation"],
 
     "@singularity/plugin-core": ["@singularity/plugin-core@workspace:plugin-core"],
-
-    "@singularity/plugin-dummy-button": ["@singularity/plugin-dummy-button@workspace:plugins/dummy-button"],
-
-    "@singularity/plugin-dummy-detail": ["@singularity/plugin-dummy-detail@workspace:plugins/dummy-detail"],
-
-    "@singularity/plugin-dummy-list": ["@singularity/plugin-dummy-list@workspace:plugins/dummy-list"],
-
-    "@singularity/plugin-dummy-terminal": ["@singularity/plugin-dummy-terminal@workspace:plugins/dummy-terminal"],
 
     "@singularity/plugin-shell": ["@singularity/plugin-shell@workspace:plugins/shell"],
 
