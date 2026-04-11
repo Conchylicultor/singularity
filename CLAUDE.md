@@ -2,21 +2,16 @@
 
 Agent manager app whose goal is to fix todos faster than they are created. The app will be used to improve itself.
 
-The app is a todo nested list of tasks agents need to execute. Each agent executes in its own isolated `worktree` and deploys to its own `namespace`. The UI allows seamlessly switching between namespaces to inspect agent work.
+The app is a todo nested list of tasks agents need to execute. Each agent executes in its own isolated `worktree` (including this current session) and deploys to `http://<worktree>.localhost:9000`. The UI allows seamlessly switching between namespaces to inspect agent work.
 
 ## Agent Workflow
 
-Follow this workflow for all tasks (design, bug fix, ...)
+Agents work in isolated git worktrees automatically created before starting. The end-to-end flow:
 
-Agents work in isolated git worktrees. The end-to-end flow:
-
-1. Start with a prompt (design a feature, fix a bug, ...)
-2. Enter a worktree using `EnterWorktree` with an explicit feature name
-3. Make code changes in the worktree
-4. Run `./singularity build` to deploy (build both the frontend and server and register the gateway)
-5. The app becomes available at `http://<name>.localhost:9000` (always include `http://` so the URL is clickable)
-6. Once changes are reviewed and ready, commit and run `./singularity push` to merge back to main (pulls main first, merges, pushes)
-
+1. Solve the request
+2. Run `./singularity build` to deploy (build both the frontend and server and register the gateway)
+3. The app becomes available at `http://<worktree>.localhost:9000` (always include `http://` so the URL is clickable)
+4. Once changes are reviewed and ready, commit and run `./singularity push` to merge back to main (pulls main first, merges, pushes)
 
 ## Architecture
 
