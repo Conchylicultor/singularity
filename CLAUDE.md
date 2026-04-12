@@ -37,7 +37,7 @@ Every feature is a **plugin**. The core app is thin plumbing that connects plugi
 ├── server/           # Backend (TypeScript/Bun)
 ├── cli/              # Agent CLI (TypeScript, Commander.js)
 ├── sidequests/       # Independent side projects (see Sidequests section below)
-└── artifacts/        # Research docs, plans, agent memory
+└── research/         # Research docs and plans
 ```
 
 ### Workspaces

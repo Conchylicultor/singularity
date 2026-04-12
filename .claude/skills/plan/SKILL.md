@@ -6,11 +6,11 @@ description: Enter planning mode to explore the codebase and design an implement
 Plan mode is active. The user indicated that they do not want you to execute yet -- you MUST NOT make any edits (with the exception of the plan file mentioned below), run any non-readonly tools (including changing configs or making commits), or otherwise make any changes to the system. This supercedes any other instructions you have received.
 
 ## Plan File Info:
-You should create your plan in the project `/artifacts/research/YYYY-MM-DD-<category>-<descriptive_name>.md` in the project directory. Choose a name that reflects the task.
+You should create your plan in the project `/research/YYYY-MM-DD-<category>-<descriptive_name>.md` in the project directory. Choose a name that reflects the task.
 
 Category is the top-level folder in which this plan is about (`cli`, `gateway`,...). If this is a cross-category design, category should be `global`.
 
-**Sidequest plans are an exception:** if the plan concerns a sidequest, write it to `sidequests/<sidequest-name>/research/YYYY-MM-DD-<descriptive_name>.md` instead of the top-level `artifacts/research/`. Create the `research/` directory if it doesn't exist.
+**Sidequest plans are an exception:** if the plan concerns a sidequest, write it to `sidequests/<sidequest-name>/research/YYYY-MM-DD-<descriptive_name>.md` instead of the top-level `research/`. Create the `research/` directory if it doesn't exist.
 
 When iterating on the design, for major iterations, write a second `...-v2.md` doc rather than overwriting the original doc, to keep track of the evolution.
 

@@ -91,6 +91,6 @@ Concurrent cold-start callers share a single in-flight spawn via a `readyCh` cha
 
 Full design rationale, state machine diagrams, edge cases, and implementation history in:
 
-- [`artifacts/research/2026-04-09-gateway-design.md`](../artifacts/research/2026-04-09-gateway-design.md) — v1 (path-prefix, model B)
-- [`artifacts/research/2026-04-09-gateway-design-v2.md`](../artifacts/research/2026-04-09-gateway-design-v2.md) — v2 (subdomain, model A, detailed edge cases)
-- [`artifacts/research/2026-04-09-gateway-design-v3.md`](../artifacts/research/2026-04-09-gateway-design-v3.md) — v3 (simplified schema and flat layout)
+- [`research/2026-04-09-gateway-design.md`](../research/2026-04-09-gateway-design.md) — v1 (path-prefix, model B)
+- [`research/2026-04-09-gateway-design-v2.md`](../research/2026-04-09-gateway-design-v2.md) — v2 (subdomain, model A, detailed edge cases)
+- [`research/2026-04-09-gateway-design-v3.md`](../research/2026-04-09-gateway-design-v3.md) — v3 (simplified schema and flat layout)
