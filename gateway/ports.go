@@ -60,8 +60,13 @@ func (p *PortPool) Release(port int) {
 	p.free = append(p.free, port)
 }
 
+// portFree probes whether a backend can bind the port. It must match the bind
+// shape the backend uses (Bun.serve binds dual-stack `*:port`), otherwise the
+// probe can succeed against the IPv4 half while a listener already owns the
+// IPv6 wildcard — macOS keeps AF_INET and AF_INET6 sockets separate when
+// IPV6_V6ONLY is set, so a narrow 127.0.0.1 probe is a false negative.
 func portFree(port int) bool {
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return false
 	}
