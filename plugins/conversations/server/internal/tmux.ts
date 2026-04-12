@@ -1,4 +1,4 @@
-import type { ClaudeSession } from "../../shared/types";
+import type { Conversation } from "../../shared/types";
 
 const TMUX = "/opt/homebrew/bin/tmux";
 const GIT = "/usr/bin/git";
@@ -30,7 +30,7 @@ function cleanPaneTitle(raw: string): { task: string; idle: boolean } {
   return { task: isIdle ? "" : cleaned, idle: isIdle };
 }
 
-export async function listClaudeSessions(): Promise<ClaudeSession[]> {
+export async function listConversations(): Promise<Conversation[]> {
   const proc = Bun.spawn(
     [
       TMUX,
@@ -67,7 +67,7 @@ export async function listClaudeSessions(): Promise<ClaudeSession[]> {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export async function createClaudeSession(): Promise<ClaudeSession> {
+export async function createConversation(): Promise<Conversation> {
   const repoRoot = await getRepoRoot();
   const worktreeDir = `${repoRoot}/.claude/worktrees`;
   const name = `${PREFIX}-${Math.floor(Date.now() / 1000)}`;
@@ -94,7 +94,7 @@ export async function createClaudeSession(): Promise<ClaudeSession> {
   };
 }
 
-export async function deleteClaudeSession(name: string): Promise<void> {
+export async function deleteConversation(name: string): Promise<void> {
   await Bun.spawn([TMUX, "kill-session", "-t", name], {
     stdout: "pipe",
     stderr: "pipe",

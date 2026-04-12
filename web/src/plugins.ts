@@ -3,7 +3,7 @@ import shellPlugin from "@plugins/shell/web";
 import terminalPlugin from "@plugins/terminal/web";
 import buildPlugin from "@plugins/build/web";
 import logsPlugin from "@plugins/logs/web";
-import claudeSessionsPlugin from "@plugins/claude-sessions/web";
+import conversationsPlugin from "@plugins/conversations/web";
 import conversationPlugin from "@plugins/conversation/web";
 import conversationVscodePlugin from "@plugins/conversation/plugins/vscode/web";
 import conversationOpenAppPlugin from "@plugins/conversation/plugins/open-app/web";
@@ -20,7 +20,7 @@ export const plugins: PluginDefinition[] = [
   conversationPlugin,
   conversationVscodePlugin,
   conversationOpenAppPlugin,
-  claudeSessionsPlugin,
+  conversationsPlugin,
   worktreeSwitcherPlugin,
   themePlugin,
 ];

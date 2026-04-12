@@ -34,9 +34,9 @@ Defines the slots and commands most other plugins extend.
   - `open-app` — `Conversation.Toolbar` "Open" (`MdOpenInNew`) → opens `http://<id>.localhost:9000/`
   - `vscode` — `Conversation.Toolbar` "VSCode" (`MdCode`) → opens session cwd in VSCode
 
-### `claude-sessions`
+### `conversations`
 
-- Contributes: `Shell.Sidebar` "Claude Sessions" (`MdSmartToy`) → `SessionList`
+- Contributes: `Shell.Sidebar` "Conversations" (`MdSmartToy`) → `ConversationList`
 
 ### `logs`
 

@@ -1,4 +1,4 @@
-export interface ClaudeSession {
+export interface Conversation {
   name: string;
   createdAt: string;
   task: string;

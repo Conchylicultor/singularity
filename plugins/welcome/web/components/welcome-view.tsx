@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { MdAdd, MdRefresh, MdArrowForward } from "react-icons/md";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversation/web/views";
-import type { ClaudeSession } from "@plugins/claude-sessions/shared/types";
+import type { Conversation } from "@plugins/conversations/shared/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -18,14 +18,14 @@ function formatRelativeTime(iso: string): string {
 }
 
 export function WelcomeView() {
-  const [sessions, setSessions] = useState<ClaudeSession[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/claude-sessions");
-      setSessions(await res.json());
+      const res = await fetch("/api/conversations");
+      setConversations(await res.json());
     } finally {
       setLoading(false);
     }
@@ -35,20 +35,20 @@ export function WelcomeView() {
     refresh();
   }, [refresh]);
 
-  const activeCount = sessions.filter((s) => !s.idle).length;
-  const idleCount = sessions.filter((s) => s.idle).length;
+  const activeCount = conversations.filter((c) => !c.idle).length;
+  const idleCount = conversations.filter((c) => c.idle).length;
 
-  const createSession = async () => {
-    const res = await fetch("/api/claude-sessions", { method: "POST" });
-    const session: ClaudeSession = await res.json();
-    Shell.OpenPane(conversationPane({ session_id: session.name }));
+  const createConversation = async () => {
+    const res = await fetch("/api/conversations", { method: "POST" });
+    const conversation: Conversation = await res.json();
+    Shell.OpenPane(conversationPane({ session_id: conversation.name }));
   };
 
-  const openSession = (name: string) => {
+  const openConversation = (name: string) => {
     Shell.OpenPane(conversationPane({ session_id: name }));
   };
 
-  const recentSessions = sessions.slice(0, 5);
+  const recentConversations = conversations.slice(0, 5);
 
   return (
     <div className="flex h-full items-center justify-center p-8">
@@ -62,10 +62,10 @@ export function WelcomeView() {
         </div>
 
         {/* Stats */}
-        {!loading && sessions.length > 0 && (
+        {!loading && conversations.length > 0 && (
           <div className="flex w-full gap-3">
             {[
-              { label: "Total", value: sessions.length },
+              { label: "Total", value: conversations.length },
               { label: "Active", value: activeCount },
               { label: "Idle", value: idleCount },
             ].map((stat) => (
@@ -84,18 +84,18 @@ export function WelcomeView() {
           </div>
         )}
 
-        {/* New Session */}
-        <Button className="w-full gap-2" onClick={createSession}>
+        {/* New Conversation */}
+        <Button className="w-full gap-2" onClick={createConversation}>
           <MdAdd className="size-4" />
-          New Session
+          New Conversation
         </Button>
 
-        {/* Recent Sessions */}
-        {!loading && recentSessions.length > 0 && (
+        {/* Recent Conversations */}
+        {!loading && recentConversations.length > 0 && (
           <div className="w-full">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-muted-foreground">
-                Recent sessions
+                Recent conversations
               </span>
               <Button
                 variant="ghost"
@@ -110,16 +110,16 @@ export function WelcomeView() {
               </Button>
             </div>
             <div className="flex flex-col rounded-lg border bg-card overflow-hidden divide-y">
-              {recentSessions.map((session) => (
+              {recentConversations.map((conversation) => (
                 <button
-                  key={session.name}
+                  key={conversation.name}
                   className="flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent transition-colors"
-                  onClick={() => openSession(session.name)}
+                  onClick={() => openConversation(conversation.name)}
                 >
                   <span
                     className={cn(
                       "size-1.5 shrink-0 rounded-full",
-                      session.idle
+                      conversation.idle
                         ? "bg-muted-foreground/40"
                         : "bg-primary",
                     )}
@@ -128,15 +128,15 @@ export function WelcomeView() {
                     <span
                       className={cn(
                         "truncate text-xs",
-                        session.idle
+                        conversation.idle
                           ? "text-muted-foreground"
                           : "font-medium text-foreground",
                       )}
                     >
-                      {session.task || "Idle"}
+                      {conversation.task || "Idle"}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
-                      {formatRelativeTime(session.createdAt)}
+                      {formatRelativeTime(conversation.createdAt)}
                     </span>
                   </div>
                   <MdArrowForward className="size-3.5 text-muted-foreground/50 shrink-0" />

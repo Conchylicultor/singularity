@@ -38,12 +38,12 @@
       "name": "@singularity/plugin-build",
       "version": "0.0.1",
     },
-    "plugins/claude-sessions": {
-      "name": "@singularity/plugin-claude-sessions",
-      "version": "0.0.1",
-    },
     "plugins/conversation": {
       "name": "@singularity/plugin-conversation",
+      "version": "0.0.1",
+    },
+    "plugins/conversations": {
+      "name": "@singularity/plugin-conversations",
       "version": "0.0.1",
     },
     "plugins/shell": {
@@ -473,9 +473,9 @@
 
     "@singularity/plugin-build": ["@singularity/plugin-build@workspace:plugins/build"],
 
-    "@singularity/plugin-claude-sessions": ["@singularity/plugin-claude-sessions@workspace:plugins/claude-sessions"],
-
     "@singularity/plugin-conversation": ["@singularity/plugin-conversation@workspace:plugins/conversation"],
+
+    "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
 
     "@singularity/plugin-core": ["@singularity/plugin-core@workspace:plugin-core"],
 

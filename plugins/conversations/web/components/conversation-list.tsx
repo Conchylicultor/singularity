@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { MdAdd, MdRefresh, MdClose } from "react-icons/md";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversation/web/views";
-import type { ClaudeSession } from "../../shared/types";
+import type { Conversation } from "../../shared/types";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -23,19 +23,19 @@ function formatRelativeTime(iso: string): string {
   return `${days}d ago`;
 }
 
-function openSession(name: string) {
+function openConversation(name: string) {
   Shell.OpenPane(conversationPane({ session_id: name }));
 }
 
-export function SessionList() {
-  const [sessions, setSessions] = useState<ClaudeSession[]>([]);
+export function ConversationList() {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/claude-sessions");
-      setSessions(await res.json());
+      const res = await fetch("/api/conversations");
+      setConversations(await res.json());
     } finally {
       setLoading(false);
     }
@@ -45,19 +45,19 @@ export function SessionList() {
     refresh();
   }, [refresh]);
 
-  const createSession = async () => {
-    const res = await fetch("/api/claude-sessions", { method: "POST" });
-    const session: ClaudeSession = await res.json();
+  const createConversation = async () => {
+    const res = await fetch("/api/conversations", { method: "POST" });
+    const conversation: Conversation = await res.json();
     await refresh();
-    openSession(session.name);
+    openConversation(conversation.name);
   };
 
-  const deleteSession = async (
+  const deleteConversation = async (
     name: string,
     e: React.MouseEvent<HTMLButtonElement>,
   ) => {
     e.stopPropagation();
-    await fetch(`/api/claude-sessions?name=${name}`, { method: "DELETE" });
+    await fetch(`/api/conversations?name=${name}`, { method: "DELETE" });
     await refresh();
   };
 
@@ -68,10 +68,10 @@ export function SessionList() {
           variant="outline"
           size="sm"
           className="flex-1 justify-start gap-2 text-xs"
-          onClick={createSession}
+          onClick={createConversation}
         >
           <MdAdd className="size-4" />
-          New session
+          New conversation
         </Button>
         <Button
           variant="ghost"
@@ -86,43 +86,43 @@ export function SessionList() {
         </Button>
       </div>
       <SidebarMenu>
-        {sessions.map((session) => (
-          <SidebarMenuItem key={session.name}>
+        {conversations.map((conversation) => (
+          <SidebarMenuItem key={conversation.name}>
             <SidebarMenuButton
               className="h-auto py-1.5"
-              onClick={() => openSession(session.name)}
+              onClick={() => openConversation(conversation.name)}
             >
               <div className="flex items-start gap-2 overflow-hidden">
                 <span className={cn(
                   "mt-1.5 size-1.5 shrink-0 rounded-full",
-                  session.idle ? "bg-muted-foreground/40" : "bg-primary"
+                  conversation.idle ? "bg-muted-foreground/40" : "bg-primary"
                 )} />
                 <div className="flex flex-col gap-0.5 overflow-hidden">
                   <span
                     className={cn(
                       "truncate text-xs",
-                      session.idle ? "text-muted-foreground" : "font-medium",
+                      conversation.idle ? "text-muted-foreground" : "font-medium",
                     )}
                   >
-                    {session.task || "Idle"}
+                    {conversation.task || "Idle"}
                   </span>
                   <span className="truncate text-[10px] text-muted-foreground">
-                    {formatRelativeTime(session.createdAt)}
+                    {formatRelativeTime(conversation.createdAt)}
                   </span>
                 </div>
               </div>
             </SidebarMenuButton>
             <SidebarMenuAction
-              onClick={(e) => deleteSession(session.name, e)}
+              onClick={(e) => deleteConversation(conversation.name, e)}
               className="opacity-0 group-hover/menu-item:opacity-100"
             >
               <MdClose className="size-3.5" />
             </SidebarMenuAction>
           </SidebarMenuItem>
         ))}
-        {sessions.length === 0 && !loading && (
+        {conversations.length === 0 && !loading && (
           <div className="px-4 py-2 text-xs text-muted-foreground">
-            No sessions
+            No conversations
           </div>
         )}
       </SidebarMenu>

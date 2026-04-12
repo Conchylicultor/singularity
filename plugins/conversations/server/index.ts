@@ -4,12 +4,12 @@ import { handleCreate } from "./internal/handle-create";
 import { handleDelete } from "./internal/handle-delete";
 
 const plugin: ServerPluginDefinition = {
-  id: "claude-sessions",
-  name: "Claude Sessions",
+  id: "conversations",
+  name: "Conversations",
   httpRoutes: {
-    "GET /api/claude-sessions": handleList,
-    "POST /api/claude-sessions": handleCreate,
-    "DELETE /api/claude-sessions": handleDelete,
+    "GET /api/conversations": handleList,
+    "POST /api/conversations": handleCreate,
+    "DELETE /api/conversations": handleDelete,
   },
 };
 export default plugin;
