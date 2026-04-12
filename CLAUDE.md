@@ -4,6 +4,8 @@ Agent manager app whose goal is to fix todos faster than they are created. The a
 
 The app is a todo nested list of tasks agents need to execute. Each agent executes in its own isolated `worktree` (including this current session) and deploys to `http://<worktree>.localhost:9000`. The UI allows seamlessly switching between namespaces to inspect agent work.
 
+Progressively, the project will become a mono-repo where the agent manager app is used to develop independent projects, while sharing primitives, designs patterns and experiences across projects. Projects will also ultimately move outside of coding to the physical world.
+
 ## Agent Workflow
 
 Agents work in isolated git worktrees automatically created before starting. The end-to-end flow:
@@ -94,6 +96,8 @@ bunx playwright screenshot --wait-for-timeout 3000 --viewport-size "1280,800" ht
 ## Sidequests
 
 Independent projects that live in `sidequests/`, not directly related to Singularity. Each has its own `CLAUDE.md`.
+
+- [`sidequests/ui-mastery/`](sidequests/ui-mastery/CLAUDE.md) — Research and tooling to make agents produce professional UI. **Read before any UI polish work.** Feature agents build functionality; polish agents apply UI Mastery knowledge separately.
 
 ## Instructions
 
