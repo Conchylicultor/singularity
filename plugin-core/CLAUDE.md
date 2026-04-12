@@ -180,7 +180,6 @@ Configured in `web/vite.config.ts` and `web/tsconfig.app.json`:
 - `Shell.Sidebar` — `{ title, icon, component }`
 - `Shell.Main` — `{ title, component }`
 - `Shell.Toolbar` — `{ label, icon, onClick }`
-- `Shell.StatusBar` — `{ component }`
 
 Empty regions are not rendered (collapsed). Most plugins will contribute to these Shell slots.
 

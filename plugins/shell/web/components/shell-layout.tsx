@@ -47,7 +47,6 @@ let nextPaneId = 0;
 export function ShellLayout() {
   const sidebars = Shell.Sidebar.useContributions();
   const toolbarItems = Shell.Toolbar.useContributions();
-  const statusBarItems = Shell.StatusBar.useContributions();
   const routes = Shell.Route.useContributions();
 
   const [panels, setPanels] = useState<
@@ -163,17 +162,6 @@ export function ShellLayout() {
             </ScrollArea>
           </main>
 
-          <footer className="flex items-center border-t px-4 h-7 text-xs text-muted-foreground gap-3">
-            {statusBarItems.length > 0 ? (
-              statusBarItems.map((item, i) => (
-                <PluginErrorBoundary key={i} slot="shell.statusbar">
-                  <item.component />
-                </PluginErrorBoundary>
-              ))
-            ) : (
-              <span className="opacity-50">Singularity</span>
-            )}
-          </footer>
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>

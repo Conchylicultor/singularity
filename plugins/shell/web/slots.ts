@@ -17,10 +17,6 @@ export const Shell = {
     group?: string;
   }>("shell.toolbar"),
 
-  StatusBar: defineSlot<{
-    component: ComponentType;
-  }>("shell.statusbar"),
-
   Route: defineSlot<{
     pattern: string;
     resolve: (params: Record<string, string>) => PaneDescriptor;
