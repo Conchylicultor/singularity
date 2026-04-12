@@ -1,4 +1,5 @@
 import type { Conversation } from "../../shared/types";
+import { forkDatabase } from "./db-fork";
 
 const TMUX = "/opt/homebrew/bin/tmux";
 const GIT = "/usr/bin/git";
@@ -78,6 +79,8 @@ export async function createConversation(): Promise<Conversation> {
     stdout: "pipe",
     stderr: "pipe",
   }).exited;
+
+  await forkDatabase(name);
 
   await Bun.spawn(
     [TMUX, "-u", "new-session", "-d", "-s", name, "-c", wtPath, `zsh -l -c '${CLAUDE}'`],

@@ -9,11 +9,13 @@ const WORKTREES_DIR = join(homedir(), ".singularity", "worktrees");
 async function exec(
   cmd: string[],
   cwd: string,
+  env?: Record<string, string>,
 ): Promise<void> {
   const proc = Bun.spawn(cmd, {
     cwd,
     stdout: "inherit",
     stderr: "inherit",
+    env: env ? { ...process.env, ...env } : undefined,
   });
   const exitCode = await proc.exited;
   if (exitCode !== 0) {
@@ -56,7 +58,15 @@ export function registerBuild(program: Command) {
       console.log("Installing dependencies...");
       await exec(["bun", "install"], root);
 
-      // 2. Build frontend
+      // 2. Regenerate DB migrations from schema.ts
+      console.log("Generating DB migrations...");
+      await exec(
+        ["bunx", "drizzle-kit", "generate"],
+        resolve(root, "server"),
+        { SINGULARITY_WORKTREE: name },
+      );
+
+      // 3. Build frontend
       console.log("Building frontend...");
       await exec(["bun", "run", "build"], resolve(root, "web"));
 

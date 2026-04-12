@@ -336,7 +336,10 @@ func (w *Worktree) ShouldSweep(idleTimeout time.Duration) bool {
 func (w *Worktree) startBackend(spec *Spec, port int) (*exec.Cmd, chan struct{}, error) {
 	cmd := exec.Command("bun", "src/index.ts")
 	cmd.Dir = spec.Server
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PORT=%d", port))
+	cmd.Env = append(os.Environ(),
+		fmt.Sprintf("PORT=%d", port),
+		fmt.Sprintf("SINGULARITY_WORKTREE=%s", w.Name),
+	)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	stdout, err := cmd.StdoutPipe()

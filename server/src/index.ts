@@ -1,5 +1,8 @@
 import type { WsData, HttpHandler, WsHandler } from "./types";
 import { plugins } from "./plugins";
+import { runMigrations } from "./db/migrate";
+
+await runMigrations();
 
 // Flatten plugin routes into lookup tables
 const httpRoutes: Record<string, HttpHandler> = {};
