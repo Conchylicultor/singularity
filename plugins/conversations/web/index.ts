@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { Shell } from "@plugins/shell/web/slots";
-import { MdSmartToy } from "react-icons/md";
+import { MdForum } from "react-icons/md";
 import { ConversationList } from "./components/conversation-list";
 
 const conversationsPlugin: PluginDefinition = {
@@ -9,7 +9,7 @@ const conversationsPlugin: PluginDefinition = {
   contributions: [
     Shell.Sidebar({
       title: "Conversations",
-      icon: MdSmartToy,
+      icon: MdForum,
       component: ConversationList,
     }),
   ],
