@@ -15,9 +15,10 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
   });
 
   return (
-    <div className="flex h-full flex-col">
-      {toolbarItems.length > 0 && (
-        <div className="flex items-center gap-1 border-b px-4 h-10">
+    <div className="flex h-full flex-col p-4 space-y-4">
+      <div className="flex items-center gap-2">
+        <div className="flex-1 truncate font-medium text-sm">{sessionId}</div>
+        <div className="flex items-center gap-1">
           {toolbarItems.map((item) => (
             <Button
               key={item.label}
@@ -30,8 +31,8 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
             </Button>
           ))}
         </div>
-      )}
-      <div className="flex-1 overflow-hidden">
+      </div>
+      <div className="flex-1 overflow-hidden rounded-md border bg-muted/30">
         <TerminalComponent />
       </div>
     </div>

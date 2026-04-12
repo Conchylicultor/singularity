@@ -7,6 +7,11 @@ import type { ClientMessage, ServerMessage } from "../../shared/protocol";
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/terminal`;
 
+const THEME = {
+  background: "#1e1e1e",
+  foreground: "#d4d4d4",
+};
+
 export function TerminalView({ command }: { command?: string[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -19,10 +24,7 @@ export function TerminalView({ command }: { command?: string[] }) {
       cursorBlink: true,
       fontSize: 14,
       fontFamily: "monospace",
-      theme: {
-        background: "#1e1e1e",
-        foreground: "#d4d4d4",
-      },
+      theme: THEME,
     });
     terminalRef.current = term;
 
@@ -113,10 +115,8 @@ export function TerminalView({ command }: { command?: string[] }) {
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      className="h-full w-full"
-      style={{ minHeight: "300px" }}
-    />
+    <div className="h-full w-full p-2" style={{ background: THEME.background }}>
+      <div ref={containerRef} className="h-full w-full" />
+    </div>
   );
 }
