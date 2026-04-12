@@ -115,9 +115,7 @@ export function ShellLayout() {
         <Sidebar>
           <SidebarHeader className="px-4 py-3">
             <div className="flex items-center gap-2">
-              <div className="size-7 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground text-xs font-bold">S</span>
-              </div>
+              <img src="/icon.svg" alt="Singularity" className="size-7" />
               <div className="flex flex-col">
                 <span className="text-sm font-semibold tracking-tight">Singularity</span>
                 <span className="text-[10px] text-muted-foreground leading-none">Agent Manager</span>

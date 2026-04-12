@@ -55,9 +55,7 @@ export function WelcomeView() {
       <div className="flex w-full max-w-sm flex-col items-center gap-8">
         {/* Branding */}
         <div className="flex flex-col items-center gap-2">
-          <div className="size-12 rounded-xl bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground text-lg font-bold">S</span>
-          </div>
+          <img src="/icon.svg" alt="Singularity" className="size-12" />
           <div className="flex flex-col items-center gap-0.5">
             <span className="text-lg font-semibold tracking-tight">
               Singularity
