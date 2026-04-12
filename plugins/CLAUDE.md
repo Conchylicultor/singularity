@@ -14,7 +14,7 @@ Quick index of each plugin, the slots/commands it defines, and what it contribut
 Defines the slots and commands most other plugins extend.
 
 - **Slots defined**
-  - `Shell.Sidebar` — `{ title, icon, component }`
+  - `Shell.Sidebar` — `{ title, icon, onClick?, component?, group? }`
   - `Shell.Toolbar` — `{ label?, icon?, onClick?, component?, group? }`
   - `Shell.Route` — `{ pattern, resolve(params) → PaneDescriptor }`
 - **Commands defined**
@@ -31,16 +31,16 @@ Defines the slots and commands most other plugins extend.
 - **Slots defined**: `Conversation.Toolbar` — `{ label, icon, onClick(ConversationState) }`
 - Contributes: `Shell.Route` `/c/:id` → `conversationPane({ session_id })`
 - **Sub-plugins** (`plugins/conversation/plugins/*`): nested plugins that extend the parent's own slots. Registered separately in `web/src/plugins.ts`.
-  - `open-app` — `Conversation.Toolbar` "Open" (`MdOpenInNew`) → opens `http://<id>.localhost:9000/`
-  - `vscode` — `Conversation.Toolbar` "VSCode" (`MdCode`) → opens session cwd in VSCode
+  - `open-app` — `Conversation.Toolbar` "Open" → opens `http://<id>.localhost:9000/`
+  - `vscode` — `Conversation.Toolbar` "VSCode" → opens session cwd in VSCode
 
 ### `conversations`
 
-- Contributes: `Shell.Sidebar` "Conversations" (`MdSmartToy`) → `ConversationList`
+- Contributes: `Shell.Sidebar` "Conversations" → `ConversationList`
 
 ### `logs`
 
-- Contributes: `Shell.Sidebar` "Logs" (`MdSubject`) → `LogsSidebar`
+- Contributes: `Shell.Sidebar` button "Logs" (group `System`) → opens logs pane
 
 ### `worktree-switcher`
 

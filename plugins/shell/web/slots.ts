@@ -6,7 +6,9 @@ export const Shell = {
   Sidebar: defineSlot<{
     title: string;
     icon: ComponentType<{ className?: string }>;
-    component: ComponentType;
+    onClick?: () => void;
+    component?: ComponentType;
+    group?: string;
   }>("shell.sidebar"),
 
   Toolbar: defineSlot<{

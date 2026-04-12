@@ -1,5 +1,14 @@
 import { Fragment, useEffect, useRef, useState } from "react";
+import type { ComponentType } from "react";
+import { MdTune } from "react-icons/md";
 import { toast } from "sonner";
+
+const SIDEBAR_GROUPS: Record<
+  string,
+  { icon: ComponentType<{ className?: string }> }
+> = {
+  System: { icon: MdTune },
+};
 import { PluginErrorBoundary } from "@core";
 import { Shell as ShellCommands } from "../commands";
 import { Shell } from "../slots";
@@ -15,6 +24,9 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
@@ -46,6 +58,15 @@ let nextPaneId = 0;
 
 export function ShellLayout() {
   const sidebars = Shell.Sidebar.useContributions();
+  const sidebarPanes = sidebars.filter((s) => s.component);
+  const sidebarButtons = sidebars.filter((s) => s.onClick && !s.component);
+  const buttonGroups = new Map<string, typeof sidebarButtons>();
+  for (const btn of sidebarButtons) {
+    const key = btn.group ?? "";
+    const list = buttonGroups.get(key) ?? [];
+    list.push(btn);
+    buttonGroups.set(key, list);
+  }
   const toolbarItems = Shell.Toolbar.useContributions();
   const routes = Shell.Route.useContributions();
 
@@ -119,16 +140,50 @@ export function ShellLayout() {
             </div>
           </SidebarHeader>
           <SidebarContent>
-            {sidebars.map((pane, i) => (
+            {Array.from(buttonGroups.entries()).map(([groupName, btns], gi) => (
+              <Fragment key={`btn-group-${groupName}`}>
+                {gi > 0 && <Separator className="mx-2 w-auto bg-sidebar-border" />}
+                <SidebarGroup>
+                  {groupName && (() => {
+                    const GroupIcon = SIDEBAR_GROUPS[groupName]?.icon;
+                    return (
+                      <SidebarGroupLabel>
+                        {GroupIcon && <GroupIcon className="size-4 mr-2" />}
+                        {groupName}
+                      </SidebarGroupLabel>
+                    );
+                  })()}
+                  <SidebarMenu>
+                    {btns.map((btn) => (
+                      <PluginErrorBoundary
+                        key={btn.title}
+                        slot="shell.sidebar"
+                        label={btn.title}
+                      >
+                        <SidebarMenuItem>
+                          <SidebarMenuButton onClick={btn.onClick}>
+                            <btn.icon className="size-4" />
+                            <span>{btn.title}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      </PluginErrorBoundary>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroup>
+              </Fragment>
+            ))}
+            {sidebarPanes.map((pane, i) => (
               <Fragment key={pane.title}>
-                {i > 0 && <Separator className="mx-2 w-auto bg-sidebar-border" />}
+                {(i > 0 || buttonGroups.size > 0) && (
+                  <Separator className="mx-2 w-auto bg-sidebar-border" />
+                )}
                 <PluginErrorBoundary slot="shell.sidebar" label={pane.title}>
                   <SidebarGroup>
                     <SidebarGroupLabel>
                       <pane.icon className="size-4 mr-2" />
                       {pane.title}
                     </SidebarGroupLabel>
-                    <pane.component />
+                    {pane.component && <pane.component />}
                   </SidebarGroup>
                 </PluginErrorBoundary>
               </Fragment>
