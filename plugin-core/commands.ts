@@ -14,6 +14,11 @@ export function defineCommand<Args, Return = void>(id: string) {
         const ref = useRef(fn);
         ref.current = fn;
         useEffect(() => {
+          if (handler !== null) {
+            console.error(
+              `Command "${id}" already has a handler. Two components called useHandler for the same command — this is a bug.`,
+            );
+          }
           handler = (args) => ref.current(args);
           return () => {
             handler = null;

@@ -16,9 +16,9 @@ export function defineSlot<P>(id: string): Slot<P> {
     if (!ctx) {
       throw new Error("useContributions must be used within PluginProvider");
     }
-    return ctx.contributions
-      .filter((c: Contribution) => c._slotId === id)
-      .map(({ _slotId: _, ...rest }: Contribution) => rest as P);
+    return (ctx.bySlot.get(id) ?? []).map(
+      ({ _slotId: _, ...rest }: Contribution) => rest as P,
+    );
   };
 
   return slot;
