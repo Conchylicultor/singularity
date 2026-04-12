@@ -56,12 +56,9 @@ export function WelcomeView() {
         {/* Branding */}
         <div className="flex flex-col items-center gap-2">
           <img src="/icon.svg" alt="Singularity" className="size-12" />
-          <div className="flex flex-col items-center gap-0.5">
-            <span className="text-lg font-semibold tracking-tight">
-              Singularity
-            </span>
-            <span className="text-xs text-muted-foreground">Agent Manager</span>
-          </div>
+          <span className="text-lg font-semibold tracking-tight">
+            Singularity
+          </span>
         </div>
 
         {/* Stats */}
