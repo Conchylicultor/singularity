@@ -15,12 +15,12 @@ export const plugins: PluginDefinition[] = [
   shellPlugin,
   welcomePlugin,
   terminalPlugin,
+  worktreeSwitcherPlugin,
   buildPlugin,
   logsPlugin,
   conversationPlugin,
   conversationVscodePlugin,
   conversationOpenAppPlugin,
   conversationsPlugin,
-  worktreeSwitcherPlugin,
   themePlugin,
 ];

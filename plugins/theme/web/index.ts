@@ -6,7 +6,7 @@ const themePlugin: PluginDefinition = {
   id: "theme",
   name: "Theme",
   contributions: [
-    Shell.Toolbar({ component: ThemeToggle, group: "widgets" }),
+    Shell.Toolbar({ component: ThemeToggle, group: "actions" }),
   ],
 };
 

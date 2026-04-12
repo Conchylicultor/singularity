@@ -8,7 +8,7 @@ const worktreeSwitcherPlugin: PluginDefinition = {
   contributions: [
     Shell.Toolbar({
       component: WorktreeDropdown,
-      group: "widgets",
+      group: "namespace",
     }),
   ],
 };

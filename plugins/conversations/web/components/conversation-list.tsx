@@ -63,11 +63,11 @@ export function ConversationList() {
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-1 px-2">
+      <div className="flex items-center gap-1.5 px-2">
         <Button
           variant="outline"
           size="sm"
-          className="flex-1 justify-start gap-2 text-xs"
+          className="flex-1 gap-2"
           onClick={createConversation}
         >
           <MdAdd className="size-4" />
@@ -76,7 +76,7 @@ export function ConversationList() {
         <Button
           variant="ghost"
           size="icon"
-          className="size-6"
+          className="size-7 shrink-0"
           onClick={refresh}
           disabled={loading}
         >
@@ -106,7 +106,7 @@ export function ConversationList() {
                   >
                     {conversation.task || "Idle"}
                   </span>
-                  <span className="truncate text-[10px] text-muted-foreground">
+                  <span className="truncate text-[10px] tabular-nums text-muted-foreground">
                     {formatRelativeTime(conversation.createdAt)}
                   </span>
                 </div>

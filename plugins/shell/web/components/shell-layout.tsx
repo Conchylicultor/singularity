@@ -133,10 +133,10 @@ export function ShellLayout() {
     <TooltipProvider>
       <SidebarProvider>
         <Sidebar>
-          <SidebarHeader className="px-4 py-3">
+          <SidebarHeader className="h-12 justify-center border-b px-4 py-0">
             <div className="flex items-center gap-2">
-              <img src="/icon.svg" alt="Singularity" className="size-7" />
-              <span className="text-sm font-semibold tracking-tight">Singularity</span>
+              <img src="/icon.svg" alt="Singularity" className="size-6" />
+              <span className="text-base font-semibold tracking-tight">Singularity</span>
             </div>
           </SidebarHeader>
           <SidebarContent>
