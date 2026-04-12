@@ -10,6 +10,8 @@ You should create your plan in the project `/artifacts/research/YYYY-MM-DD-<cate
 
 Category is the top-level folder in which this plan is about (`cli`, `gateway`,...). If this is a cross-category design, category should be `global`.
 
+**Sidequest plans are an exception:** if the plan concerns a sidequest, write it to `sidequests/<sidequest-name>/research/YYYY-MM-DD-<descriptive_name>.md` instead of the top-level `artifacts/research/`. Create the `research/` directory if it doesn't exist.
+
 When iterating on the design, for major iterations, write a second `...-v2.md` doc rather than overwriting the original doc, to keep track of the evolution.
 
 NOTE that this is the only file you are allowed to edit - other than this you are only allowed to take READ-ONLY actions.
