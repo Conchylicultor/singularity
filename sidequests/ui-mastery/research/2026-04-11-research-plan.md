@@ -155,6 +155,28 @@ A proposal doc recommending:
 
 ---
 
+## Track 5: Component showcase / review dashboard
+
+A tool to visualize and compare component variants produced by different agents. Storybook-like, but oriented around reviewing agent proposals side-by-side rather than documenting a stable library.
+
+### Why
+
+Reviewing UI work today means building the app, clicking through to the right screen, and swapping branches to compare. That friction makes it hard to evaluate multiple agent proposals in parallel, or to iterate on polish.
+
+### Shape (rough, not scoped yet)
+
+- A dashboard app (probably its own plugin or sidequest app) that renders component/screen variants in isolation
+- Toggleable/dynamic configuration: props, states (empty/loading/error), themes, viewport sizes, mock data
+- Side-by-side comparison of N variants (same component, different agents or iterations)
+- Works for mocks too — not just shipped components
+- Could tie into Track 1 (pairwise LLM judgment) by feeding it variant pairs automatically
+
+### Status
+
+Idea only. Track here; design later once Tracks 1 & 4 clarify what primitives even look like.
+
+---
+
 ## Execution order
 
 1. **Track 1 first** — Baseline LLM visual judgment. No point building a knowledge base agents can't use. Run the pairwise comparison experiment and measure the ceiling.

@@ -32,13 +32,12 @@ This separation is critical. Feature agents should not be distracted by aestheti
 ```
 sidequests/ui-mastery/
 ├── CLAUDE.md                    # This file
-├── research/                    # All research, plans, audits, screenshots
-│   ├── screenshots/             # UI screenshots for reference/comparison
-│   └── *.md                     # Research docs (dated: YYYY-MM-DD-topic.md)
+├── screenshots/                 # UI screenshots for reference/comparison
+├── research/                    # Research docs, plans, audits (dated: YYYY-MM-DD-topic.md)
 └── (future: patterns/, tools/)  # Code artifacts when we get there
 ```
 
-All research docs, plans, audits, and screenshots live in `research/` — this sidequest does not use the top-level `artifacts/` folder.
+Research docs live in `research/`; screenshots live at the top level. This sidequest does not use the top-level `artifacts/` folder.
 
 ## Current status
 
