@@ -1,3 +1,10 @@
+export type ConversationStatus =
+  | "starting"
+  | "working"
+  | "needs_attention"
+  | "completed"
+  | "obsolete";
+
 export interface Conversation {
   name: string;
   createdAt: string;
@@ -5,4 +12,6 @@ export interface Conversation {
   idle: boolean;
   attached: boolean;
   cwd: string;
+  title: string | null;
+  status: ConversationStatus;
 }

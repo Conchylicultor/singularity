@@ -1,10 +1,19 @@
-import type { Conversation } from "../../shared/types";
+import { db } from "../../../../server/src/db/client";
+import { conversations } from "../schema";
+import type { Conversation, ConversationStatus } from "../../shared/types";
 import { forkDatabase } from "./db-fork";
 
 const TMUX = "/opt/homebrew/bin/tmux";
 const GIT = "/usr/bin/git";
 const CLAUDE = "/Users/admin/.local/bin/claude";
 const PREFIX = "claude";
+
+interface TmuxInfo {
+  task: string;
+  idle: boolean;
+  attached: boolean;
+  cwd: string;
+}
 
 async function getRepoRoot(): Promise<string> {
   const proc = Bun.spawn([GIT, "rev-parse", "--show-toplevel"], {
@@ -31,38 +40,56 @@ function cleanPaneTitle(raw: string): { task: string; idle: boolean } {
   return { task: isIdle ? "" : cleaned, idle: isIdle };
 }
 
-export async function listConversations(): Promise<Conversation[]> {
+async function listTmuxSessions(): Promise<Map<string, TmuxInfo>> {
   const proc = Bun.spawn(
     [
       TMUX,
       "list-sessions",
       "-F",
-      "#{session_name}|#{session_created}|#{pane_title}|#{session_attached}|#{session_path}",
+      "#{session_name}|#{pane_title}|#{session_attached}|#{session_path}",
       "-f",
       `#{m:${PREFIX}-*,#{session_name}}`,
     ],
     { stdout: "pipe", stderr: "pipe" },
   );
-
   const stdout = await new Response(proc.stdout).text();
   const exitCode = await proc.exited;
+  const map = new Map<string, TmuxInfo>();
+  if (exitCode !== 0) return map;
 
-  if (exitCode !== 0) return [];
+  for (const line of stdout.trim().split("\n").filter(Boolean)) {
+    const [name, rawTitle, attached, sessionPath] = line.split("|");
+    const { task, idle } = cleanPaneTitle(rawTitle ?? "");
+    map.set(name, {
+      task,
+      idle,
+      attached: attached === "1",
+      cwd: sessionPath ?? "",
+    });
+  }
+  return map;
+}
 
-  return stdout
-    .trim()
-    .split("\n")
-    .filter(Boolean)
-    .map((line) => {
-      const [name, createdEpoch, rawTitle, attached, sessionPath] = line.split("|");
-      const { task, idle } = cleanPaneTitle(rawTitle ?? "");
+export async function listConversations(): Promise<Conversation[]> {
+  const [rows, live] = await Promise.all([
+    db.select().from(conversations),
+    listTmuxSessions(),
+  ]);
+
+  const repoRoot = await getRepoRoot();
+
+  return rows
+    .map((row): Conversation => {
+      const tmux = live.get(row.id);
       return {
-        name,
-        createdAt: new Date(parseInt(createdEpoch, 10) * 1000).toISOString(),
-        task,
-        idle,
-        attached: attached === "1",
-        cwd: sessionPath ?? "",
+        name: row.id,
+        createdAt: row.createdAt.toISOString(),
+        task: tmux?.task ?? "",
+        idle: tmux?.idle ?? true,
+        attached: tmux?.attached ?? false,
+        cwd: tmux?.cwd ?? `${repoRoot}/.claude/worktrees/${row.id}`,
+        title: row.title,
+        status: row.status as ConversationStatus,
       };
     })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -87,13 +114,20 @@ export async function createConversation(): Promise<Conversation> {
     { stdout: "pipe", stderr: "pipe" },
   ).exited;
 
+  const [row] = await db
+    .insert(conversations)
+    .values({ id: name, worktree: name })
+    .returning();
+
   return {
-    name,
-    createdAt: new Date().toISOString(),
+    name: row.id,
+    createdAt: row.createdAt.toISOString(),
     task: "",
     idle: true,
     attached: false,
     cwd: wtPath,
+    title: row.title,
+    status: row.status as ConversationStatus,
   };
 }
 

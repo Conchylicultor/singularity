@@ -129,7 +129,54 @@ Drizzle ORM + Postgres, one DB per worktree (`SINGULARITY_WORKTREE` env var pick
 - `server/src/db/client.ts` exports a typed `db` aggregating all plugin schemas.
 - Migrations live in `server/src/db/migrations/` (committed to git).
 
-Workflow when changing schema: edit `schema.ts` → run `./singularity build`. The build runs `drizzle-kit generate` (writes a new SQL migration if the schema changed) and restarts the server, which applies pending migrations on startup. There is no separate `db:generate` step — always go through `./singularity build`.
+### Schema change workflow
+
+Edit `schema.ts` → run `./singularity build`. The build runs `drizzle-kit generate` (writes a new SQL migration if the schema changed, renamed to `YYYYMMDD_HHMMSS_<hash>__<slug>.sql`) and restarts the server, which applies pending migrations on startup. There is no separate `db:generate` step — always go through `./singularity build`. First build after a schema change requires `--migration-name <slug>`; subsequent builds with no schema change don't.
+
+### Migration runner
+
+`server/src/db/migrate.ts` runs on every server start. The algorithm is deliberately simple:
+
+1. Ensure `__singularity_migrations (hash PRIMARY KEY, file, applied_at)` exists.
+2. Read applied hashes from that table.
+3. Warn (don't error) on any applied hash with no corresponding file on disk — this means a migration was rebased away after running, and the DB has silently drifted.
+4. Loop over migration files sorted by filename timestamp; for each whose hash is not applied, run its SQL and insert the hash in a single transaction.
+
+No bootstrap, no legacy-drizzle branch, no auto-seeding. A DB's applied set is whatever `__singularity_migrations` says it is.
+
+### Worktree DB lifecycle
+
+- On worktree creation, `plugins/conversations/server/internal/db-fork.ts` forks the main `singularity` DB via `pg_dump | pg_restore`. The fork carries forward both **data** and **migration state** (`__singularity_migrations` is a regular public table, so it's copied).
+- Fresh forks therefore start with every main-applied hash already recorded — the runner no-ops on first start. Only migrations committed to git *after* the fork timestamp will actually execute in the worktree.
+- Forks defensively `DROP SCHEMA IF EXISTS drizzle CASCADE` to strip any remnants of the pre-hash migration system.
+
+### Sync / rebase / multi-build behavior
+
+The runner is safe across the workflows agents actually use:
+
+- **Multiple builds without schema change** — no-op; all hashes already applied.
+- **Pull new migrations from main, then build** — loop picks up un-applied hashes and runs them.
+- **Parallel agents merging migrations** — hash-based filenames means two agents can add migrations in parallel without filename collision. After merge, each worktree applies whichever hashes are new to it. Application order within a given DB may differ from a fresh DB, but the applied *set* converges. This only matters for non-commutative migrations.
+- **Generate locally, then rebase, then build** — local hash is already applied in the worktree DB; rebased-in hashes are not. Next build applies only the latter.
+
+### Gotchas
+
+- **Forks copy data, not just schema.** A migration that runs *after* a fork sees whatever rows the source DB had at fork time. Drizzle-generated DDL is idempotent (`CREATE TABLE IF NOT EXISTS`, `DO $$ … EXCEPTION WHEN duplicate_object`), but hand-written data migrations (seed inserts, backfills) can double-apply relative to forked data. Prefer idempotent statements (`INSERT … ON CONFLICT DO NOTHING`, `UPDATE … WHERE …` guarded on current state) for any DML migration.
+- **Rebased-away migrations drift silently.** If you apply a migration locally, then rebase onto a main where it was never merged, the DB keeps whatever it did. The runner logs a warning on next start (`applied hash X has no matching file on disk`) but does not roll back. If this happens, either reinstate the file or drop + refork the worktree DB.
+- **Non-commutative migrations under parallel merges.** If two agents ship migrations that touch the same object in order-dependent ways, one worktree may apply them in the reverse order of a fresh fork. Avoid this by keeping migrations additive — new tables, new columns — rather than reshaping shared objects in parallel branches.
+- **Ordering within a single build is by filename timestamp.** `YYYYMMDD_HHMMSS_<hash>` prefixes determine sort order; the hash is content-addressed and stable. Don't hand-edit prefixes or hashes.
+- **DB state is the source of truth for "applied".** Don't try to infer applied-ness from anything else (drizzle's legacy `drizzle.__drizzle_migrations` table, file presence, etc.). Those are ignored.
+
+### Resetting a worktree DB
+
+If a worktree's DB is in a bad state, the cheapest fix is to drop and re-fork:
+
+```bash
+psql -d postgres -c 'DROP DATABASE IF EXISTS "claude-<timestamp>" WITH (FORCE)'
+./singularity build    # recreates the worktree DB via fork + migrations
+```
+
+Do **not** manually edit `__singularity_migrations` to "fix" drift — re-fork instead.
 
 ## Commands
 
