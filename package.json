@@ -9,9 +9,6 @@
     "lucide-react": "^1.7.0",
     "drizzle-orm": "^0.36.0"
   },
-  "scripts": {
-    "build": "bun cli/src/index.ts build"
-  },
   "devDependencies": {
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",

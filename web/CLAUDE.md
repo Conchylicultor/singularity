@@ -20,8 +20,4 @@ Single-page application (SPA). No SSR, no SEO concerns.
 
 ## Commands
 
-```sh
-bun dev      # Start dev server
-bun build    # Type-check + build
-bun preview  # Preview production build
-```
+Always go through `./singularity build` from the repo root — it runs `bun run build` here as part of the deploy. `bun run test` for vitest.

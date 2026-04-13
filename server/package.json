@@ -2,12 +2,6 @@
   "name": "@singularity/server",
   "private": true,
   "type": "module",
-  "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "start": "bun src/index.ts",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "bun src/db/migrate.ts"
-  },
   "dependencies": {
     "postgres": "^3.4.4"
   },

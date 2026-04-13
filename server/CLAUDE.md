@@ -120,13 +120,20 @@ The Vite dev server (`web/vite.config.ts`) proxies to the backend:
 
 In production, a reverse proxy or the backend itself serves the static frontend.
 
+## Database
+
+Drizzle ORM + Postgres, one DB per worktree (`SINGULARITY_WORKTREE` env var picks the database name).
+
+- Each plugin defines its tables in `plugins/{name}/server/schema.ts`.
+- `server/src/db/schema.ts` is a typed barrel: one `export * from "@plugins/{name}/server/schema"` line per plugin with tables.
+- `server/src/db/client.ts` exports a typed `db` aggregating all plugin schemas.
+- Migrations live in `server/src/db/migrations/` (committed to git).
+
+Workflow when changing schema: edit `schema.ts` → run `./singularity build`. The build runs `drizzle-kit generate` (writes a new SQL migration if the schema changed) and restarts the server, which applies pending migrations on startup. There is no separate `db:generate` step — always go through `./singularity build`.
+
 ## Commands
 
-```sh
-bun install   # Install dependencies
-bun dev       # Start with --watch (auto-restart on changes)
-bun start     # Start without watch
-```
+The server is spawned and supervised by the gateway (`bun src/index.ts` with `PORT=<allocated>`); never start it manually. Always go through `./singularity build` from the repo root to deploy changes.
 
 ## Key Design Decisions
 

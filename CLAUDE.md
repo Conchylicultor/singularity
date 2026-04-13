@@ -19,6 +19,7 @@ RULES:
 
 - NEVER run `./singularity push` unless instructed to. The user need to review your code before.
 - NEVER commit files yourself (this will create branches conflicts). Always use `./singularity push -m "commit message"`
+- NEVER run `drizzle-kit generate` or `bun src/db/migrate.ts` manually — always go through `./singularity build`.
 
 ## Architecture
 
@@ -58,8 +59,14 @@ Always deploy after all changes, fixes, implementations:
 ./singularity build
 ```
 
-This will build the frontend and backend, as well as notifying the gateway the app is available.
-The gateway serve the app automatically at `http://<name>.localhost:9000`.
+This will:
+
+- Regenerate DB migrations from `schema.ts` (server applies them on restart)
+- Build the frontend
+- Build and restart the server
+- Notifying the gateway the app is available for this worktree.
+
+The gateway serve the app automatically at `http://<worktree>.localhost:9000`.
 
 ### Push
 

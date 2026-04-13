@@ -1,1 +1,1 @@
-export * from "../../../plugins/db-smoketest/server/schema";
+export * from "@plugins/db-smoketest/server/schema";
