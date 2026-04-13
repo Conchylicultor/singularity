@@ -15,11 +15,5 @@ export async function handleGet(
     .where(eq(conversations.id, id))
     .limit(1);
   if (!row) return new Response("Not found", { status: 404 });
-
-  return Response.json({
-    name: row.id,
-    createdAt: row.createdAt.toISOString(),
-    title: row.title,
-    status: row.status,
-  });
+  return Response.json(row);
 }

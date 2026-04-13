@@ -15,6 +15,20 @@
       "tag": "20260413_140440_80202aa3__conversations_and_pushes",
       "hash": "80202aa3",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776103745000,
+      "tag": "20260413_180905_30e2b38e__drop_worktree_column",
+      "hash": "30e2b38e",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776106241000,
+      "tag": "20260413_185041_c5cc4283__add_worktree_path",
+      "hash": "c5cc4283",
+      "breakpoints": true
     }
   ]
 }

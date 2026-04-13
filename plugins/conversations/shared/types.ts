@@ -6,12 +6,15 @@ export type ConversationStatus =
   | "obsolete";
 
 export interface Conversation {
-  name: string;
-  createdAt: string;
-  task: string;
-  idle: boolean;
-  attached: boolean;
-  cwd: string;
+  id: string;
+  worktreePath: string;
   title: string | null;
   status: ConversationStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TmuxLive {
+  task: string;
+  idle: boolean;
 }

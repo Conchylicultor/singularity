@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { MdAdd, MdRefresh, MdClose } from "react-icons/md";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
-import type { Conversation } from "@plugins/conversations/shared/types";
+import type { Conversation, TmuxLive } from "@plugins/conversations/shared/types";
+import type { ConversationEvent } from "@plugins/conversations/shared/protocol";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -29,6 +30,7 @@ function openConversation(name: string) {
 
 export function ConversationList() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [live, setLive] = useState<Record<string, TmuxLive>>({});
   const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -45,11 +47,44 @@ export function ConversationList() {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const es = new EventSource("/api/conversations/stream");
+    es.onmessage = (ev) => {
+      let parsed: ConversationEvent;
+      try {
+        parsed = JSON.parse(ev.data);
+      } catch {
+        return;
+      }
+      if (parsed.type === "title") {
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === parsed.id ? { ...c, title: parsed.title } : c,
+          ),
+        );
+      } else if (parsed.type === "tmux") {
+        if ("gone" in parsed) {
+          setLive((prev) => {
+            const next = { ...prev };
+            delete next[parsed.id];
+            return next;
+          });
+        } else {
+          setLive((prev) => ({
+            ...prev,
+            [parsed.id]: { task: parsed.task, idle: parsed.idle },
+          }));
+        }
+      }
+    };
+    return () => es.close();
+  }, []);
+
   const createConversation = async () => {
     const res = await fetch("/api/conversations", { method: "POST" });
     const conversation: Conversation = await res.json();
     await refresh();
-    openConversation(conversation.name);
+    openConversation(conversation.id);
   };
 
   const deleteConversation = async (
@@ -86,40 +121,45 @@ export function ConversationList() {
         </Button>
       </div>
       <SidebarMenu>
-        {conversations.map((conversation) => (
-          <SidebarMenuItem key={conversation.name}>
-            <SidebarMenuButton
-              className="h-auto py-1.5"
-              onClick={() => openConversation(conversation.name)}
-            >
-              <div className="flex items-start gap-2 overflow-hidden">
-                <span className={cn(
-                  "mt-1.5 size-1.5 shrink-0 rounded-full",
-                  conversation.idle ? "bg-muted-foreground/40" : "bg-primary"
-                )} />
-                <div className="flex flex-col gap-0.5 overflow-hidden">
-                  <span
-                    className={cn(
-                      "truncate text-xs",
-                      conversation.idle ? "text-muted-foreground" : "font-medium",
-                    )}
-                  >
-                    {conversation.task || "Idle"}
-                  </span>
-                  <span className="truncate text-[10px] tabular-nums text-muted-foreground">
-                    {formatRelativeTime(conversation.createdAt)}
-                  </span>
+        {conversations.map((conversation) => {
+          const tmux = live[conversation.id];
+          const idle = tmux?.idle ?? true;
+          const label = conversation.title ?? tmux?.task ?? "Idle";
+          return (
+            <SidebarMenuItem key={conversation.id}>
+              <SidebarMenuButton
+                className="h-auto py-1.5"
+                onClick={() => openConversation(conversation.id)}
+              >
+                <div className="flex items-start gap-2 overflow-hidden">
+                  <span className={cn(
+                    "mt-1.5 size-1.5 shrink-0 rounded-full",
+                    idle ? "bg-muted-foreground/40" : "bg-primary"
+                  )} />
+                  <div className="flex flex-col gap-0.5 overflow-hidden">
+                    <span
+                      className={cn(
+                        "truncate text-xs",
+                        idle ? "text-muted-foreground" : "font-medium",
+                      )}
+                    >
+                      {label}
+                    </span>
+                    <span className="truncate text-[10px] tabular-nums text-muted-foreground">
+                      {formatRelativeTime(conversation.createdAt)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </SidebarMenuButton>
-            <SidebarMenuAction
-              onClick={(e) => deleteConversation(conversation.name, e)}
-              className="opacity-0 group-hover/menu-item:opacity-100"
-            >
-              <MdClose className="size-3.5" />
-            </SidebarMenuAction>
-          </SidebarMenuItem>
-        ))}
+              </SidebarMenuButton>
+              <SidebarMenuAction
+                onClick={(e) => deleteConversation(conversation.id, e)}
+                className="opacity-0 group-hover/menu-item:opacity-100"
+              >
+                <MdClose className="size-3.5" />
+              </SidebarMenuAction>
+            </SidebarMenuItem>
+          );
+        })}
         {conversations.length === 0 && !loading && (
           <div className="px-4 py-2 text-xs text-muted-foreground">
             No conversations

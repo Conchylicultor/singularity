@@ -10,7 +10,9 @@ import {
 import { join, resolve } from "path";
 
 const NEW_FORMAT = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
-const DRIZZLE_FORMAT = /^(\d{4})_(.+)\.sql$/;
+// Drizzle-kit normally numbers files (0000, 0001, …) but emits "0NaN" when
+// it can't derive the next index from existing (non-matching) filenames.
+const DRIZZLE_FORMAT = /^(\d{4}|0NaN)_(.+)\.sql$/;
 const MIGRATION_NAME_REGEX = /^[a-z0-9_]+$/;
 
 /**

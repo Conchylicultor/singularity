@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { MdAdd, MdRefresh, MdArrowForward } from "react-icons/md";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
-import type { Conversation } from "@plugins/conversations/shared/types";
+import type { Conversation, TmuxLive } from "@plugins/conversations/shared/types";
+import type { ConversationEvent } from "@plugins/conversations/shared/protocol";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -19,6 +20,7 @@ function formatRelativeTime(iso: string): string {
 
 export function WelcomeView() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [live, setLive] = useState<Record<string, TmuxLive>>({});
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -35,13 +37,47 @@ export function WelcomeView() {
     refresh();
   }, [refresh]);
 
-  const activeCount = conversations.filter((c) => !c.idle).length;
-  const idleCount = conversations.filter((c) => c.idle).length;
+  useEffect(() => {
+    const es = new EventSource("/api/conversations/stream");
+    es.onmessage = (ev) => {
+      let parsed: ConversationEvent;
+      try {
+        parsed = JSON.parse(ev.data);
+      } catch {
+        return;
+      }
+      if (parsed.type === "title") {
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === parsed.id ? { ...c, title: parsed.title } : c,
+          ),
+        );
+      } else if (parsed.type === "tmux") {
+        if ("gone" in parsed) {
+          setLive((prev) => {
+            const next = { ...prev };
+            delete next[parsed.id];
+            return next;
+          });
+        } else {
+          setLive((prev) => ({
+            ...prev,
+            [parsed.id]: { task: parsed.task, idle: parsed.idle },
+          }));
+        }
+      }
+    };
+    return () => es.close();
+  }, []);
+
+  const isIdle = (name: string) => live[name]?.idle ?? true;
+  const activeCount = conversations.filter((c) => !isIdle(c.id)).length;
+  const idleCount = conversations.filter((c) => isIdle(c.id)).length;
 
   const createConversation = async () => {
     const res = await fetch("/api/conversations", { method: "POST" });
     const conversation: Conversation = await res.json();
-    Shell.OpenPane(conversationPane({ session_id: conversation.name }));
+    Shell.OpenPane(conversationPane({ session_id: conversation.id }));
   };
 
   const openConversation = (name: string) => {
@@ -112,14 +148,14 @@ export function WelcomeView() {
             <div className="flex flex-col rounded-lg border bg-card overflow-hidden divide-y">
               {recentConversations.map((conversation) => (
                 <button
-                  key={conversation.name}
+                  key={conversation.id}
                   className="flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent transition-colors"
-                  onClick={() => openConversation(conversation.name)}
+                  onClick={() => openConversation(conversation.id)}
                 >
                   <span
                     className={cn(
                       "size-1.5 shrink-0 rounded-full",
-                      conversation.idle
+                      isIdle(conversation.id)
                         ? "bg-muted-foreground/40"
                         : "bg-primary",
                     )}
@@ -128,12 +164,12 @@ export function WelcomeView() {
                     <span
                       className={cn(
                         "truncate text-xs",
-                        conversation.idle
+                        isIdle(conversation.id)
                           ? "text-muted-foreground"
                           : "font-medium text-foreground",
                       )}
                     >
-                      {conversation.task || "Idle"}
+                      {conversation.title ?? live[conversation.id]?.task ?? "Idle"}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
                       {formatRelativeTime(conversation.createdAt)}

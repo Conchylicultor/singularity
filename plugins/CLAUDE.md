@@ -18,6 +18,7 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
     - DB schema: `plugins/conversations/server/schema.ts`
   - Server:
     - `GET /api/conversations`
+    - `GET /api/conversations/stream`
     - `GET /api/conversations/:id`
     - `POST /api/conversations`
     - `DELETE /api/conversations`
@@ -34,7 +35,7 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Contributes:
             - `Conversation.Toolbar` (group `status`) → `StatusBadge`
-        - **`vscode`** — Opens the conversation's session cwd in VSCode.
+        - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:
             - `Conversation.Toolbar` "VSCode"
     - **`conversations-view`** — Sidebar list of all conversations.

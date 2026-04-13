@@ -1,10 +1,11 @@
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import type { ConversationStatus } from "../shared/types";
 
 export const conversations = pgTable("conversations", {
   id: text("id").primaryKey(),
-  worktree: text("worktree").notNull(),
+  worktreePath: text("worktree_path").notNull(),
   title: text("title"),
-  status: text("status").notNull().default("starting"),
+  status: text("status").$type<ConversationStatus>().notNull().default("starting"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
