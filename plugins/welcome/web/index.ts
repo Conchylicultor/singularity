@@ -5,6 +5,7 @@ import { welcomePane } from "./views";
 const welcomePlugin: PluginDefinition = {
   id: "welcome",
   name: "Welcome",
+  description: "Landing pane shown at `/`.",
   contributions: [
     Shell.Route({
       pattern: "/",

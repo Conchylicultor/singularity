@@ -15,6 +15,7 @@ export type HttpHandler = (req: Request) => Response | Promise<Response>;
 export interface ServerPluginDefinition {
   id: string;
   name: string;
+  description?: string;
   httpRoutes?: Record<string, HttpHandler>;
   wsRoutes?: Record<string, WsHandler>;
 }

@@ -5,11 +5,13 @@ import type { ComponentType } from "react";
 
 export interface Slot<P> {
   (props: P): Contribution;
+  id: string;
   useContributions(): P[];
 }
 
 export function defineSlot<P>(id: string): Slot<P> {
   const slot = ((props: P) => ({ _slotId: id, ...props })) as unknown as Slot<P>;
+  slot.id = id;
 
   slot.useContributions = () => {
     const ctx = useContext(PluginRuntimeContext);

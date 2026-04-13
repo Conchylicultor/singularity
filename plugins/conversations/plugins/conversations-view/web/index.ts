@@ -6,6 +6,7 @@ import { ConversationList } from "./components/conversation-list";
 const conversationsPlugin: PluginDefinition = {
   id: "conversations",
   name: "Conversations",
+  description: "Sidebar list of all conversations.",
   contributions: [
     Shell.Sidebar({
       title: "Conversations",

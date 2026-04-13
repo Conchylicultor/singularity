@@ -1,7 +1,8 @@
 import { migrationsInSync } from "./migrations-in-sync";
+import { pluginsDocInSync } from "./plugins-doc-in-sync";
 import type { Check } from "./types";
 
-export const CHECKS: Check[] = [migrationsInSync];
+export const CHECKS: Check[] = [migrationsInSync, pluginsDocInSync];
 
 export type { Check, CheckResult } from "./types";
 

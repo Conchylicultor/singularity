@@ -7,6 +7,7 @@ import { logPane } from "./views";
 const logsPlugin: PluginDefinition = {
   id: "logs",
   name: "Logs",
+  description: "System logs pane, opened from a sidebar button.",
   contributions: [
     Shell.Sidebar({
       title: "Logs",

@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "fs";
 import { basename, join, resolve } from "path";
 import { homedir } from "os";
 import { generateMigration } from "../migrations";
+import { generatePluginDocs } from "../docgen";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const WORKTREES_DIR = join(homedir(), ".singularity", "worktrees");
@@ -71,7 +72,11 @@ export function registerBuild(program: Command) {
         migrationName: opts.migrationName,
       });
 
-      // 3. Build frontend
+      // 3. Regenerate plugins/CLAUDE.md
+      console.log("Generating plugins doc...");
+      await generatePluginDocs({ root });
+
+      // 4. Build frontend
       console.log("Building frontend...");
       await exec(["bun", "run", "build"], resolve(root, "web"));
 

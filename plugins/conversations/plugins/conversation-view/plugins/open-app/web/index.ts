@@ -5,6 +5,7 @@ import { MdOpenInNew } from "react-icons/md";
 const openAppPlugin: PluginDefinition = {
   id: "conversation-open-app",
   name: "Conversation: Open App",
+  description: "Opens the conversation's namespace at `http://<id>.localhost:9000/`.",
   contributions: [
     Conversation.Toolbar({
       label: "Open",

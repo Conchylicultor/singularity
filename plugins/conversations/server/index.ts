@@ -6,6 +6,7 @@ import { handleDelete } from "./internal/handle-delete";
 const plugin: ServerPluginDefinition = {
   id: "conversations",
   name: "Conversations",
+  description: "Conversation domain: shared server code and types; view plugins live under `plugins/`.",
   httpRoutes: {
     "GET /api/conversations": handleList,
     "POST /api/conversations": handleCreate,

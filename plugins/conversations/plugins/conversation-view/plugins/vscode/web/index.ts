@@ -6,6 +6,7 @@ import { MdCode } from "react-icons/md";
 const vscodePlugin: PluginDefinition = {
   id: "conversation-vscode",
   name: "Conversation: VSCode",
+  description: "Opens the conversation's session cwd in VSCode.",
   contributions: [
     Conversation.Toolbar({
       label: "VSCode",
