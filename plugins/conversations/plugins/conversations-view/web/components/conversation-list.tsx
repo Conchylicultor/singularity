@@ -128,7 +128,13 @@ export function ConversationList() {
         </Button>
       </div>
       <SidebarMenu>
-        {conversations.map((conversation) => {
+        {[...conversations]
+          .sort((a, b) => {
+            const aIdle = live[a.id]?.idle ?? true;
+            const bIdle = live[b.id]?.idle ?? true;
+            return Number(aIdle) - Number(bIdle);
+          })
+          .map((conversation) => {
           const tmux = live[conversation.id];
           const idle = tmux?.idle ?? true;
           const label = conversation.title ?? tmux?.task ?? "Idle";
