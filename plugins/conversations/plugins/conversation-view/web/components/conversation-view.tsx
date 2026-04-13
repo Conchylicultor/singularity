@@ -12,7 +12,7 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
   const toolbarItems = Conversation.Toolbar.useContributions();
   const [conversation, setConversation] = useState<ConversationRecord | null>(null);
 
-  const fetchTitle = useCallback(() => {
+  const fetchConversation = useCallback(() => {
     let cancelled = false;
     setConversation(null);
     fetch(`/api/conversations/${sessionId}`)
@@ -26,13 +26,11 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
     };
   }, [sessionId]);
 
-  useEffect(() => fetchTitle(), [fetchTitle]);
+  useEffect(() => fetchConversation(), [fetchConversation]);
 
   useConversationStream(useCallback((parsed) => {
     if (parsed.type === "title" && parsed.id === sessionId) {
       setConversation((prev) => (prev ? { ...prev, title: parsed.title } : prev));
-    } else if (parsed.type === "created" && parsed.conversation.id === sessionId) {
-      setConversation(parsed.conversation);
     }
   }, [sessionId]));
 
@@ -43,10 +41,10 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
       if (status === "reconnecting") wasReconnecting = true;
       else if (status === "open" && wasReconnecting) {
         wasReconnecting = false;
-        fetchTitle();
+        fetchConversation();
       }
     });
-  }, [fetchTitle]);
+  }, [fetchConversation]);
 
   const { component: TerminalComponent } = terminalPane({
     command: [TMUX, "-u", "attach", "-t", sessionId],
