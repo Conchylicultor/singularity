@@ -15,7 +15,9 @@ export interface TmuxInfo {
 // The main worktree root (parent of all `.claude/worktrees/*`), not the
 // current worktree — `git rev-parse --show-toplevel` would return the latter
 // when the server runs inside a worktree.
+let cachedRepoRoot: string | null = null;
 export async function getMainWorktreeRoot(): Promise<string> {
+  if (cachedRepoRoot) return cachedRepoRoot;
   const proc = Bun.spawn([GIT, "worktree", "list", "--porcelain"], {
     stdout: "pipe",
   });
@@ -23,7 +25,13 @@ export async function getMainWorktreeRoot(): Promise<string> {
   await proc.exited;
   const firstLine = text.split("\n").find((l) => l.startsWith("worktree "));
   if (!firstLine) throw new Error("Could not determine main worktree root");
-  return firstLine.slice("worktree ".length).trim();
+  cachedRepoRoot = firstLine.slice("worktree ".length).trim();
+  return cachedRepoRoot;
+}
+
+export async function worktreePathFor(id: string): Promise<string> {
+  const root = await getMainWorktreeRoot();
+  return `${root}/.claude/worktrees/${id}`;
 }
 
 export function cleanPaneTitle(raw: string): { task: string; idle: boolean } {
@@ -71,7 +79,7 @@ export async function createConversation() {
   const repoRoot = await getMainWorktreeRoot();
   const id = `${PREFIX}-${Math.floor(Date.now() / 1000)}`;
   const branch = `claude-web/${id}`;
-  const wtPath = `${repoRoot}/.claude/worktrees/${id}`;
+  const wtPath = await worktreePathFor(id);
 
   await Bun.spawn([GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"], {
     stdout: "pipe",
