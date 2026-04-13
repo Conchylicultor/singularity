@@ -32,13 +32,9 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// No subdomain → redirect to head if registered, else 404 with a hint.
+	// No subdomain → no app to serve. Tell the user to use a named worktree.
 	if worktreeName == "" {
-		if p.reg.Get("head") != nil {
-			http.Redirect(w, r, "//head."+r.Host+r.URL.RequestURI(), http.StatusFound)
-		} else {
-			http.Error(w, "Singularity gateway. Use <name>.localhost.", http.StatusNotFound)
-		}
+		http.Error(w, "Singularity gateway. Use <name>.localhost.", http.StatusNotFound)
 		return
 	}
 

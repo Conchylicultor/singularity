@@ -107,7 +107,7 @@ This will:
 ## Ports
 
 - Port range: **9000–10000** (Those are handled automatically by the gateway. Make sure to run the `build` CLI command)
-- The head namespace (agent manager app) is always deployed at **port 9000**
+- The main namespace (agent manager app, served from `main`) is always deployed at **port 9000** as `singularity.localhost:9000`
 
 ## Screenshots
 

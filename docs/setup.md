@@ -12,7 +12,7 @@ One-time environment setup for developing Singularity.
 
 ## PostgreSQL
 
-Singularity uses a local Postgres server. Each conversation (worktree) gets its own database, forked from `main` via `CREATE DATABASE ... TEMPLATE`.
+Singularity uses a local Postgres server. Each conversation (worktree) gets its own database, forked from the `singularity` database at conversation-creation time via `pg_dump | pg_restore`.
 
 ```sh
 brew install postgresql@18
@@ -20,7 +20,7 @@ brew services start postgresql@18
 createdb singularity
 ```
 
-The `singularity` database is the head namespace's DB (the app deployed at port 9000 off `main`). It is also the **fork template** — new conversations get their own database cloned from it via `CREATE DATABASE <conv> TEMPLATE singularity`.
+The `singularity` database is the main namespace's DB (the app served at `singularity.localhost:9000` off `main`) and the **fork source**. New conversations get their own database with a point-in-time snapshot of `singularity`'s data via `pg_dump -Fc singularity | pg_restore -d <conv>`. `pg_dump` works against a live DB, so the main backend stays connected throughout.
 
 Default connection uses Unix-socket trust auth with your OS user — no password needed. Override via env if your setup differs:
 
