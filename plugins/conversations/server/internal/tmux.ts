@@ -14,8 +14,8 @@ export interface TmuxInfo {
 
 // The main worktree root (parent of all `.claude/worktrees/*`), not the
 // current worktree — `git rev-parse --show-toplevel` would return the latter
-// when the server runs inside a worktree. Only used at conversation creation.
-async function getMainWorktreeRoot(): Promise<string> {
+// when the server runs inside a worktree.
+export async function getMainWorktreeRoot(): Promise<string> {
   const proc = Bun.spawn([GIT, "worktree", "list", "--porcelain"], {
     stdout: "pipe",
   });
@@ -80,15 +80,18 @@ export async function createConversation() {
 
   await forkDatabase(id);
 
+  // Insert the DB row BEFORE spawning tmux so the poller never observes a
+  // tmux session without a matching DB row (which would trigger orphan adoption).
+  const [row] = await db
+    .insert(conversations)
+    .values({ id, worktreePath: wtPath })
+    .returning();
+
   await Bun.spawn(
     [TMUX, "-u", "new-session", "-d", "-s", id, "-c", wtPath, `zsh -l -c '${CLAUDE}'`],
     { stdout: "pipe", stderr: "pipe" },
   ).exited;
 
-  const [row] = await db
-    .insert(conversations)
-    .values({ id, worktreePath: wtPath })
-    .returning();
   return row!;
 }
 

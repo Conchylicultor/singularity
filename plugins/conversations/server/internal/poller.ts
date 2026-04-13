@@ -1,8 +1,14 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { conversations } from "../schema";
-import { listTmuxSessions, type TmuxInfo } from "./tmux";
+import { getMainWorktreeRoot, listTmuxSessions, type TmuxInfo } from "./tmux";
 import { broadcast } from "./sse";
+
+let cachedRepoRoot: string | null = null;
+async function repoRoot(): Promise<string> {
+  if (!cachedRepoRoot) cachedRepoRoot = await getMainWorktreeRoot();
+  return cachedRepoRoot;
+}
 
 const TICK_MS = 1000;
 
@@ -18,6 +24,24 @@ async function tick(): Promise<void> {
     db.select({ id: conversations.id, title: conversations.title }).from(conversations),
   ]);
   const currentTitles = new Map(rows.map((r) => [r.id, r.title]));
+
+  // Adopt orphans: tmux sessions with no DB row (e.g. sessions surviving a DB
+  // reset, or created out-of-band). Insert idempotently and broadcast.
+  const orphans = [...next.keys()].filter((id) => !currentTitles.has(id));
+  if (orphans.length > 0) {
+    const root = await repoRoot();
+    for (const id of orphans) {
+      const [inserted] = await db
+        .insert(conversations)
+        .values({ id, worktreePath: `${root}/.claude/worktrees/${id}` })
+        .onConflictDoNothing()
+        .returning();
+      if (inserted) {
+        currentTitles.set(inserted.id, inserted.title);
+        broadcast({ type: "created", conversation: JSON.parse(JSON.stringify(inserted)) });
+      }
+    }
+  }
 
   for (const [id, info] of next) {
     const prev = snapshot.get(id);
