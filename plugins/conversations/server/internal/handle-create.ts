@@ -1,6 +1,9 @@
 import { createConversation } from "./tmux";
+import { broadcast } from "./sse";
 
 export async function handleCreate(_req: Request): Promise<Response> {
   const session = await createConversation();
-  return Response.json(session);
+  const conversation = JSON.parse(JSON.stringify(session));
+  broadcast({ type: "created", conversation });
+  return Response.json(conversation);
 }

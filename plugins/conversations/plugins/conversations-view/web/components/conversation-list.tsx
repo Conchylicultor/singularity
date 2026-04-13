@@ -62,6 +62,14 @@ export function ConversationList() {
             c.id === parsed.id ? { ...c, title: parsed.title } : c,
           ),
         );
+      } else if (parsed.type === "created") {
+        setConversations((prev) =>
+          prev.some((c) => c.id === parsed.conversation.id)
+            ? prev
+            : [parsed.conversation, ...prev],
+        );
+      } else if (parsed.type === "deleted") {
+        setConversations((prev) => prev.filter((c) => c.id !== parsed.id));
       } else if (parsed.type === "tmux") {
         if ("gone" in parsed) {
           setLive((prev) => {
@@ -83,7 +91,6 @@ export function ConversationList() {
   const createConversation = async () => {
     const res = await fetch("/api/conversations", { method: "POST" });
     const conversation: Conversation = await res.json();
-    await refresh();
     openConversation(conversation.id);
   };
 
