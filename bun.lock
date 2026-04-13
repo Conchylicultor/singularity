@@ -39,10 +39,6 @@
       "name": "@singularity/plugin-build",
       "version": "0.0.1",
     },
-    "plugins/conversation": {
-      "name": "@singularity/plugin-conversation",
-      "version": "0.0.1",
-    },
     "plugins/conversations": {
       "name": "@singularity/plugin-conversations",
       "version": "0.0.1",
@@ -487,8 +483,6 @@
     "@singularity/cli": ["@singularity/cli@workspace:cli"],
 
     "@singularity/plugin-build": ["@singularity/plugin-build@workspace:plugins/build"],
-
-    "@singularity/plugin-conversation": ["@singularity/plugin-conversation@workspace:plugins/conversation"],
 
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
 

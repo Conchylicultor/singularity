@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { Conversation } from "@plugins/conversation/web/slots";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/web/slots";
 import { MdOpenInNew } from "react-icons/md";
 
 const openAppPlugin: PluginDefinition = {

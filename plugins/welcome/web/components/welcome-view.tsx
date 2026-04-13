@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { MdAdd, MdRefresh, MdArrowForward } from "react-icons/md";
 import { Shell } from "@plugins/shell/web/commands";
-import { conversationPane } from "@plugins/conversation/web/views";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
 import type { Conversation } from "@plugins/conversations/shared/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";

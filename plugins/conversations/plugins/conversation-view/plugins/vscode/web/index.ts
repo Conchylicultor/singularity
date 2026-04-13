@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import type { Conversation as ConversationRecord } from "@plugins/conversations/shared/types";
-import { Conversation } from "@plugins/conversation/web/slots";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/web/slots";
 import { MdCode } from "react-icons/md";
 
 const vscodePlugin: PluginDefinition = {

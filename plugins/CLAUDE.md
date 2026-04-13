@@ -26,18 +26,20 @@ Defines the slots and commands most other plugins extend.
 
 - Contributes: `Shell.Route` `/` → `welcomePane()`
 
-### `conversation`
+### `conversations` — conversation domain
 
-- **Slots defined**: `Conversation.Toolbar` — `{ label, icon, onClick(ConversationState) }`
-- Contributes: `Shell.Route` `/c/:id` → `conversationPane({ session_id })`
-- **Sub-plugins** (`plugins/conversation/plugins/*`): nested plugins that extend the parent's own slots. Registered separately in `web/src/plugins.ts`.
-  - `open-app` — `Conversation.Toolbar` "Open" → opens `http://<id>.localhost:9000/`
-  - `vscode` — `Conversation.Toolbar` "VSCode" → opens session cwd in VSCode
+Unified plugin: shared server code (tmux, db-fork) in `server/`, shared types in `shared/`, and view plugins under `plugins/`.
 
-### `conversations`
-
-- Contributes: `Shell.Sidebar` "Conversations" → `ConversationList`
 - **Server routes**: `GET /api/conversations`, `POST /api/conversations`, `DELETE /api/conversations`
+- **Inner plugins** (`plugins/conversations/plugins/*`, registered separately in `web/src/plugins.ts`):
+  - `conversation-view` — single-conversation pane.
+    - **Slots defined**: `Conversation.Toolbar` — `{ label, icon, onClick(ConversationState) }`
+    - Contributes: `Shell.Route` `/c/:id` → `conversationPane({ session_id })`
+    - **Sub-plugins** (`.../conversation-view/plugins/*`): nested plugins extending its own slots.
+      - `open-app` — `Conversation.Toolbar` "Open" → opens `http://<id>.localhost:9000/`
+      - `vscode` — `Conversation.Toolbar` "VSCode" → opens session cwd in VSCode
+  - `conversations-view` — sidebar list.
+    - Contributes: `Shell.Sidebar` "Conversations" → `ConversationList`
 
 ### `logs`
 
