@@ -103,10 +103,22 @@ export function registerPush(program: Command) {
       // 3. Rebase onto main so the merge is always a fast-forward
       const { exitCode: rebaseExit } = await run(["git", "rebase", "main"]);
       if (rebaseExit !== 0) {
-        console.error(
-          `Rebase of ${branch} onto main failed. Resolve conflicts and retry.`,
-        );
         await run(["git", "rebase", "--abort"]);
+        console.error(
+          [
+            `Rebase of ${branch} onto main failed (aborted).`,
+            ``,
+            `To resolve:`,
+            `  1. git fetch origin main`,
+            `  2. git rebase origin/main     (NEVER 'git merge' — push re-rebases and a merge commit produces churn)`,
+            `  3. Resolve conflicts, then 'git add <files>' and 'git rebase --continue'`,
+            `     (or 'git rebase --abort' to bail out)`,
+            `  4. Re-run ./singularity push`,
+            ``,
+            `If main's shape has diverged enough that your commit no longer makes sense,`,
+            `'git reset --hard origin/main' + reapply as a fresh commit is cleaner than rebasing.`,
+          ].join("\n"),
+        );
         process.exit(1);
       }
 
