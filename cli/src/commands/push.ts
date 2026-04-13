@@ -134,6 +134,13 @@ export function registerPush(program: Command) {
       console.log("Pushing main...");
       await exec(["git", "push"], mainWorktree);
 
+      // 7. Install deps in main so its long-running backend matches the code
+      //    it will respawn with. Without this, a dependency added in a worktree
+      //    lands in main's package.json but not its node_modules, and the
+      //    next backend respawn (via gateway restart or idle sweep) crashes.
+      console.log("Installing deps in main...");
+      await exec(["bun", "install"], mainWorktree);
+
       console.log(`Done. ${branch} merged into main and pushed.`);
     });
 }

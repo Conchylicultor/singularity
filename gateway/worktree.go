@@ -93,13 +93,19 @@ type Worktree struct {
 	brokenUntil  time.Time
 	readyCh      chan struct{} // signal-only; waiters re-check state
 	lastSpawnErr error
+
+	// logBuf is a per-worktree ring of backend stdout/stderr lines. It
+	// persists across respawns so crash output remains visible after the
+	// process exits. Its own mutex; not guarded by w.mu.
+	logBuf *logRing
 }
 
 func NewWorktree(name string, spec *Spec, pool *PortPool, cfg *Config) *Worktree {
 	w := &Worktree{
-		Name: name,
-		pool: pool,
-		cfg:  cfg,
+		Name:   name,
+		pool:   pool,
+		cfg:    cfg,
+		logBuf: newLogRing(cfg.LogBufferLines),
 	}
 	w.spec.Store(spec)
 	return w
@@ -356,8 +362,8 @@ func (w *Worktree) startBackend(spec *Spec, port int) (*exec.Cmd, chan struct{},
 
 	exitCh := make(chan struct{})
 	log := slog.With("worktree", w.Name, "pid", cmd.Process.Pid, "port", port)
-	go pumpLog(stdout, log, "stdout")
-	go pumpLog(stderr, log, "stderr")
+	go pumpLog(stdout, log, "stdout", w.logBuf)
+	go pumpLog(stderr, log, "stderr", w.logBuf)
 	go func() {
 		err := cmd.Wait()
 		w.onProcExit(err)
@@ -431,11 +437,15 @@ func newReverseProxy(port int) *httputil.ReverseProxy {
 	return rp
 }
 
-func pumpLog(r io.ReadCloser, log *slog.Logger, stream string) {
+func pumpLog(r io.ReadCloser, log *slog.Logger, stream string, ring *logRing) {
 	defer r.Close()
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 4096), 1024*1024)
 	for scanner.Scan() {
-		log.Info(scanner.Text(), "stream", stream)
+		line := scanner.Text()
+		log.Info(line, "stream", stream)
+		if ring != nil {
+			ring.Append(stream, line, time.Now().UnixMilli())
+		}
 	}
 }

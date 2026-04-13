@@ -24,6 +24,7 @@ type Config struct {
 	BrokenCooldown time.Duration
 	LogLevel       string
 	LogFormat      string
+	LogBufferLines int
 	RegistryDir    string
 }
 
@@ -39,6 +40,7 @@ func parseFlags() Config {
 	flag.DurationVar(&cfg.BrokenCooldown, "broken-cooldown", 10*time.Second, "wait before retrying a failed spawn")
 	flag.StringVar(&cfg.LogLevel, "log-level", "info", "log level: debug|info|warn|error")
 	flag.StringVar(&cfg.LogFormat, "log-format", "text", "log format: text|json")
+	flag.IntVar(&cfg.LogBufferLines, "log-buffer-lines", 1000, "per-worktree backend log ring capacity")
 
 	home, _ := os.UserHomeDir()
 	defaultRegistry := filepath.Join(home, ".singularity", "worktrees")

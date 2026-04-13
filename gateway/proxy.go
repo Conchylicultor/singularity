@@ -162,12 +162,16 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// POST /gateway/worktrees/<name>/restart — stop the running backend so the
-	// next request spawns a fresh process with the latest code.
-	const restartPrefix = "/gateway/worktrees/"
-	if r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, restartPrefix) && strings.HasSuffix(r.URL.Path, "/restart") {
-		name := strings.TrimPrefix(r.URL.Path, restartPrefix)
-		name = strings.TrimSuffix(name, "/restart")
+	const prefix = "/gateway/worktrees/"
+	if strings.HasPrefix(r.URL.Path, prefix) {
+		rest := strings.TrimPrefix(r.URL.Path, prefix)
+		slash := strings.Index(rest, "/")
+		if slash <= 0 {
+			http.NotFound(w, r)
+			return
+		}
+		name := rest[:slash]
+		action := rest[slash+1:]
 		if name == "" || strings.Contains(name, "/") {
 			http.NotFound(w, r)
 			return
@@ -177,16 +181,80 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "unknown worktree: "+name, http.StatusNotFound)
 			return
 		}
-		if err := wt.Stop(r.Context()); err != nil {
-			http.Error(w, "stop failed: "+err.Error(), http.StatusInternalServerError)
+
+		switch {
+		case action == "restart" && r.Method == http.MethodPost:
+			if err := wt.Stop(r.Context()); err != nil {
+				http.Error(w, "stop failed: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"restarted":true}` + "\n"))
+			return
+
+		case action == "logs" && r.Method == http.MethodGet:
+			streamBackendLogs(w, r, wt)
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"restarted":true}` + "\n"))
-		return
 	}
 
 	http.NotFound(w, r)
+}
+
+// streamBackendLogs serves a Server-Sent Events stream of a worktree's
+// backend stdout/stderr. On connect, one `event: history` message delivers
+// the current ring buffer contents; each subsequent log line is sent as
+// `event: entry`. The stream ends when the client disconnects.
+func streamBackendLogs(w http.ResponseWriter, r *http.Request, wt *Worktree) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	snapshot, ch, unsub := wt.logBuf.Subscribe()
+	defer unsub()
+
+	historyPayload, err := json.Marshal(map[string]any{"entries": snapshot})
+	if err != nil {
+		return
+	}
+	if _, err := fmt.Fprintf(w, "event: history\ndata: %s\n\n", historyPayload); err != nil {
+		return
+	}
+	flusher.Flush()
+
+	pingTick := time.NewTicker(25 * time.Second)
+	defer pingTick.Stop()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case e, ok := <-ch:
+			if !ok {
+				return
+			}
+			payload, err := json.Marshal(e)
+			if err != nil {
+				continue
+			}
+			if _, err := fmt.Fprintf(w, "event: entry\ndata: %s\n\n", payload); err != nil {
+				return
+			}
+			flusher.Flush()
+		case <-pingTick.C:
+			if _, err := fmt.Fprintf(w, ": ping\n\n"); err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
 }
 
 // ─── pure helpers ────────────────────────────────────────────

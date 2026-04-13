@@ -12,23 +12,66 @@ import type { ClientMessage, ServerMessage, LogEntryWire } from "../../shared/pr
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
 
+type ChannelRef =
+  | { source: "backend"; id: string; label: string }
+  | { source: "gateway"; worktree: string; label: string };
+
+function channelKey(c: ChannelRef): string {
+  return c.source === "backend" ? `backend:${c.id}` : `gateway:${c.worktree}`;
+}
+
+function currentWorktreeName(): string | null {
+  const host = window.location.hostname;
+  if (!host.endsWith(".localhost")) return null;
+  const name = host.slice(0, -".localhost".length);
+  if (!name || name.includes(".")) return null;
+  return name;
+}
+
 export function LogViewer({ initialChannel }: { initialChannel?: string }) {
-  const [channels, setChannels] = useState<string[]>([]);
-  const [selected, setSelected] = useState<string | null>(initialChannel ?? null);
+  const [channels, setChannels] = useState<ChannelRef[]>([]);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [entries, setEntries] = useState<LogEntryWire[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
   const lastSeqRef = useRef<number>(0);
-  const selectedRef = useRef<string | null>(selected);
+
+  const selected = channels.find((c) => channelKey(c) === selectedKey) ?? null;
+  const selectedRef = useRef<ChannelRef | null>(selected);
   selectedRef.current = selected;
 
   useEffect(() => {
+    const gatewayChannels: ChannelRef[] = [];
+    const wt = currentWorktreeName();
+    if (wt) {
+      gatewayChannels.push({
+        source: "gateway",
+        worktree: wt,
+        label: `backend (${wt})`,
+      });
+    }
+
     fetchWithRetry("/api/logs/channels")
       .then((r) => r.json())
       .then((data: { channels: string[] }) => {
-        setChannels(data.channels);
-        if (!initialChannel && data.channels.length > 0 && data.channels[0]) {
-          setSelected(data.channels[0]);
+        const backendChannels: ChannelRef[] = data.channels.map((id) => ({
+          source: "backend",
+          id,
+          label: id,
+        }));
+        const all = [...backendChannels, ...gatewayChannels];
+        setChannels(all);
+
+        const preferredKey = initialChannel
+          ? all.find((c) => c.source === "backend" && c.id === initialChannel)
+          : all[0];
+        if (preferredKey) setSelectedKey(channelKey(preferredKey));
+      })
+      .catch(() => {
+        // Backend unreachable (e.g. crash-looping): still show gateway channels.
+        setChannels(gatewayChannels);
+        if (gatewayChannels.length > 0 && gatewayChannels[0]) {
+          setSelectedKey(channelKey(gatewayChannels[0]));
         }
       });
   }, [initialChannel]);
@@ -57,17 +100,21 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
   useEffect(() => {
     lastSeqRef.current = 0;
     setEntries([]);
-  }, [selected]);
+  }, [selectedKey]);
 
+  const isBackendSource = selected?.source === "backend";
+  const isGatewaySource = selected?.source === "gateway";
+
+  // Backend-sourced channels: WebSocket to the app's /ws/logs.
   const wsHandle = useReconnectingWebSocket({
     url: WS_URL,
-    enabled: selected !== null,
+    enabled: isBackendSource,
     onOpen: (ws) => {
-      const channel = selectedRef.current;
-      if (!channel) return;
+      const sel = selectedRef.current;
+      if (!sel || sel.source !== "backend") return;
       const msg: ClientMessage = {
         type: "subscribe",
-        channel,
+        channel: sel.id,
         ...(lastSeqRef.current > 0 && { fromSequence: lastSeqRef.current }),
       };
       ws.send(JSON.stringify(msg));
@@ -94,25 +141,56 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
 
   // Re-subscribe when channel changes on an already-open socket
   useEffect(() => {
-    if (!selected) return;
+    if (!isBackendSource || !selected || selected.source !== "backend") return;
     const handle = wsHandle.current;
     if (!handle) return;
-    const msg: ClientMessage = { type: "subscribe", channel: selected };
+    const msg: ClientMessage = { type: "subscribe", channel: selected.id };
     handle.send(JSON.stringify(msg));
-  }, [selected, wsHandle]);
+  }, [selectedKey, wsHandle, isBackendSource, selected]);
+
+  // Gateway-sourced channel: SSE stream of backend stdout/stderr.
+  useEffect(() => {
+    if (!isGatewaySource || !selected || selected.source !== "gateway") return;
+    const url = `/gateway/worktrees/${encodeURIComponent(selected.worktree)}/logs`;
+    const es = new EventSource(url);
+
+    es.addEventListener("history", (ev) => {
+      const { entries: hist } = JSON.parse((ev as MessageEvent).data) as {
+        entries: LogEntryWire[];
+      };
+      if (hist.length === 0) return;
+      setEntries((prev) => [...prev, ...hist]);
+      lastSeqRef.current = Math.max(lastSeqRef.current, hist[hist.length - 1]!.seq);
+    });
+
+    es.addEventListener("entry", (ev) => {
+      const entry = JSON.parse((ev as MessageEvent).data) as LogEntryWire;
+      if (entry.seq <= lastSeqRef.current) return;
+      lastSeqRef.current = entry.seq;
+      setEntries((prev) => [...prev, entry]);
+    });
+
+    return () => es.close();
+  }, [selectedKey, isGatewaySource, selected]);
 
   return (
     <div className="flex h-full flex-col p-6 space-y-4">
-      <Select value={selected ?? undefined} onValueChange={(val: string | null) => setSelected(val)}>
+      <Select
+        value={selectedKey ?? undefined}
+        onValueChange={(val: string | null) => setSelectedKey(val)}
+      >
         <SelectTrigger>
           <SelectValue placeholder="Select channel" />
         </SelectTrigger>
         <SelectContent>
-          {channels.map((ch) => (
-            <SelectItem key={ch} value={ch}>
-              {ch}
-            </SelectItem>
-          ))}
+          {channels.map((c) => {
+            const key = channelKey(c);
+            return (
+              <SelectItem key={key} value={key}>
+                {c.label}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
 
