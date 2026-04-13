@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { MdAdd, MdRefresh, MdClose } from "react-icons/md";
+import { subscribeWsStatus } from "@core";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
 import type { Conversation, TmuxLive } from "@plugins/conversations/shared/types";
-import type { ConversationEvent } from "@plugins/conversations/shared/protocol";
+import { useConversationStream } from "@plugins/conversations/web/stream";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -47,46 +48,50 @@ export function ConversationList() {
     refresh();
   }, [refresh]);
 
+  useConversationStream(useCallback((parsed) => {
+    if (parsed.type === "title") {
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === parsed.id ? { ...c, title: parsed.title } : c,
+        ),
+      );
+    } else if (parsed.type === "created") {
+      setConversations((prev) =>
+        prev.some((c) => c.id === parsed.conversation.id)
+          ? prev
+          : [parsed.conversation, ...prev],
+      );
+    } else if (parsed.type === "deleted") {
+      setConversations((prev) => prev.filter((c) => c.id !== parsed.id));
+    } else if (parsed.type === "tmux") {
+      if ("gone" in parsed) {
+        setLive((prev) => {
+          const next = { ...prev };
+          delete next[parsed.id];
+          return next;
+        });
+      } else {
+        setLive((prev) => ({
+          ...prev,
+          [parsed.id]: { task: parsed.task, idle: parsed.idle },
+        }));
+      }
+    }
+  }, []));
+
+  // After the SSE reconnects (e.g. server restart), DB-backed list state may
+  // have drifted. Re-fetch once we see open-after-reconnecting.
   useEffect(() => {
-    const es = new EventSource("/api/conversations/stream");
-    es.onmessage = (ev) => {
-      let parsed: ConversationEvent;
-      try {
-        parsed = JSON.parse(ev.data);
-      } catch {
-        return;
+    let wasReconnecting = false;
+    return subscribeWsStatus(({ url, status }) => {
+      if (url !== "/api/conversations/stream") return;
+      if (status === "reconnecting") wasReconnecting = true;
+      else if (status === "open" && wasReconnecting) {
+        wasReconnecting = false;
+        refresh();
       }
-      if (parsed.type === "title") {
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === parsed.id ? { ...c, title: parsed.title } : c,
-          ),
-        );
-      } else if (parsed.type === "created") {
-        setConversations((prev) =>
-          prev.some((c) => c.id === parsed.conversation.id)
-            ? prev
-            : [parsed.conversation, ...prev],
-        );
-      } else if (parsed.type === "deleted") {
-        setConversations((prev) => prev.filter((c) => c.id !== parsed.id));
-      } else if (parsed.type === "tmux") {
-        if ("gone" in parsed) {
-          setLive((prev) => {
-            const next = { ...prev };
-            delete next[parsed.id];
-            return next;
-          });
-        } else {
-          setLive((prev) => ({
-            ...prev,
-            [parsed.id]: { task: parsed.task, idle: parsed.idle },
-          }));
-        }
-      }
-    };
-    return () => es.close();
-  }, []);
+    });
+  }, [refresh]);
 
   const createConversation = async () => {
     const res = await fetch("/api/conversations", { method: "POST" });

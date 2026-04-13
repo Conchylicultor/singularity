@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { subscribeWsStatus } from "@core";
 import { Conversation } from "../slots";
 import { terminalPane } from "@plugins/terminal/web/views";
-import type { ConversationEvent } from "@plugins/conversations/shared/protocol";
 import type { Conversation as ConversationRecord } from "@plugins/conversations/shared/types";
+import { useConversationStream } from "@plugins/conversations/web/stream";
 import { Button } from "@/components/ui/button";
 
 const TMUX = "/opt/homebrew/bin/tmux";
@@ -11,7 +12,7 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
   const toolbarItems = Conversation.Toolbar.useContributions();
   const [conversation, setConversation] = useState<ConversationRecord | null>(null);
 
-  useEffect(() => {
+  const fetchTitle = useCallback(() => {
     let cancelled = false;
     setConversation(null);
     fetch(`/api/conversations/${sessionId}`)
@@ -20,28 +21,32 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
         if (!cancelled && row) setConversation(row);
       })
       .catch(() => {});
-    const es = new EventSource("/api/conversations/stream");
-    es.onmessage = (ev) => {
-      let parsed: ConversationEvent;
-      try {
-        parsed = JSON.parse(ev.data);
-      } catch {
-        return;
-      }
-      if (parsed.type === "title" && parsed.id === sessionId) {
-        setConversation((prev) => (prev ? { ...prev, title: parsed.title } : prev));
-      } else if (
-        parsed.type === "created" &&
-        parsed.conversation.id === sessionId
-      ) {
-        setConversation(parsed.conversation);
-      }
-    };
     return () => {
       cancelled = true;
-      es.close();
     };
   }, [sessionId]);
+
+  useEffect(() => fetchTitle(), [fetchTitle]);
+
+  useConversationStream(useCallback((parsed) => {
+    if (parsed.type === "title" && parsed.id === sessionId) {
+      setConversation((prev) => (prev ? { ...prev, title: parsed.title } : prev));
+    } else if (parsed.type === "created" && parsed.conversation.id === sessionId) {
+      setConversation(parsed.conversation);
+    }
+  }, [sessionId]));
+
+  useEffect(() => {
+    let wasReconnecting = false;
+    return subscribeWsStatus(({ url, status }) => {
+      if (url !== "/api/conversations/stream") return;
+      if (status === "reconnecting") wasReconnecting = true;
+      else if (status === "open" && wasReconnecting) {
+        wasReconnecting = false;
+        fetchTitle();
+      }
+    });
+  }, [fetchTitle]);
 
   const { component: TerminalComponent } = terminalPane({
     command: [TMUX, "-u", "attach", "-t", sessionId],

@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { MdAdd, MdRefresh, MdArrowForward } from "react-icons/md";
+import { subscribeWsStatus } from "@core";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
 import type { Conversation, TmuxLive } from "@plugins/conversations/shared/types";
-import type { ConversationEvent } from "@plugins/conversations/shared/protocol";
+import { useConversationStream } from "@plugins/conversations/web/stream";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -37,38 +38,40 @@ export function WelcomeView() {
     refresh();
   }, [refresh]);
 
+  useConversationStream(useCallback((parsed) => {
+    if (parsed.type === "title") {
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === parsed.id ? { ...c, title: parsed.title } : c,
+        ),
+      );
+    } else if (parsed.type === "tmux") {
+      if ("gone" in parsed) {
+        setLive((prev) => {
+          const next = { ...prev };
+          delete next[parsed.id];
+          return next;
+        });
+      } else {
+        setLive((prev) => ({
+          ...prev,
+          [parsed.id]: { task: parsed.task, idle: parsed.idle },
+        }));
+      }
+    }
+  }, []));
+
   useEffect(() => {
-    const es = new EventSource("/api/conversations/stream");
-    es.onmessage = (ev) => {
-      let parsed: ConversationEvent;
-      try {
-        parsed = JSON.parse(ev.data);
-      } catch {
-        return;
+    let wasReconnecting = false;
+    return subscribeWsStatus(({ url, status }) => {
+      if (url !== "/api/conversations/stream") return;
+      if (status === "reconnecting") wasReconnecting = true;
+      else if (status === "open" && wasReconnecting) {
+        wasReconnecting = false;
+        refresh();
       }
-      if (parsed.type === "title") {
-        setConversations((prev) =>
-          prev.map((c) =>
-            c.id === parsed.id ? { ...c, title: parsed.title } : c,
-          ),
-        );
-      } else if (parsed.type === "tmux") {
-        if ("gone" in parsed) {
-          setLive((prev) => {
-            const next = { ...prev };
-            delete next[parsed.id];
-            return next;
-          });
-        } else {
-          setLive((prev) => ({
-            ...prev,
-            [parsed.id]: { task: parsed.task, idle: parsed.idle },
-          }));
-        }
-      }
-    };
-    return () => es.close();
-  }, []);
+    });
+  }, [refresh]);
 
   const isIdle = (name: string) => live[name]?.idle ?? true;
   const activeCount = conversations.filter((c) => !isIdle(c.id)).length;
