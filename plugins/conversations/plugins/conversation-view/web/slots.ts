@@ -1,9 +1,8 @@
 import { defineSlot } from "@core";
 import type { ComponentType } from "react";
+import type { Conversation as ConversationRecord } from "@plugins/conversations/shared/types";
 
-export interface ConversationState {
-  id: string;
-}
+export type ConversationState = ConversationRecord;
 
 export const Conversation = {
   Toolbar: defineSlot<{

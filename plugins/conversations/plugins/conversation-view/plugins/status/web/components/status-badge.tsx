@@ -1,9 +1,5 @@
-import { useEffect, useState } from "react";
 import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web/slots";
-import type {
-  Conversation,
-  ConversationStatus,
-} from "@plugins/conversations/shared/types";
+import type { ConversationStatus } from "@plugins/conversations/shared/types";
 
 const STATUS_CLASSES: Record<ConversationStatus, string> = {
   starting: "bg-muted text-muted-foreground",
@@ -22,28 +18,11 @@ export function StatusBadge({
 }: {
   conversation: ConversationState;
 }) {
-  const [status, setStatus] = useState<ConversationStatus | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const res = await fetch(`/api/conversations/${conversation.id}`);
-      if (!res.ok) return;
-      const data = (await res.json()) as Conversation;
-      if (!cancelled) setStatus(data.status);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [conversation.id]);
-
-  if (!status) return null;
-
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[status]}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[conversation.status]}`}
     >
-      {prettify(status)}
+      {prettify(conversation.status)}
     </span>
   );
 }
