@@ -1,6 +1,7 @@
 export type LogStream = "stdout" | "stderr";
 
 export interface LogEntry {
+  seq: number;
   line: string;
   stream: LogStream;
   timestamp: number;
@@ -10,6 +11,7 @@ interface InternalChannel {
   id: string;
   entries: LogEntry[];
   listeners: Set<(entry: LogEntry) => void>;
+  nextSeq: number;
 }
 
 export interface LogChannel {
@@ -26,12 +28,18 @@ export function createChannel(id: string): LogChannel {
     id,
     entries: [],
     listeners: new Set(),
+    nextSeq: 1,
   };
   registry.set(id, internal);
 
   return {
     publish(line: string, stream: LogStream = "stdout") {
-      const entry: LogEntry = { line, stream, timestamp: Date.now() };
+      const entry: LogEntry = {
+        seq: internal.nextSeq++,
+        line,
+        stream,
+        timestamp: Date.now(),
+      };
       internal.entries.push(entry);
       if (internal.entries.length > MAX_HISTORY) internal.entries.shift();
       for (const fn of internal.listeners) fn(entry);
@@ -46,11 +54,15 @@ export function getChannelIds(): string[] {
 export function subscribe(
   id: string,
   listener: (entry: LogEntry) => void,
+  fromSequence?: number,
 ): { history: LogEntry[]; unsubscribe: () => void } {
   const internal = registry.get(id);
   if (!internal) throw new Error(`Log channel "${id}" not found`);
 
-  const history = [...internal.entries];
+  const history =
+    fromSequence === undefined
+      ? [...internal.entries]
+      : internal.entries.filter((e) => e.seq > fromSequence);
   internal.listeners.add(listener);
 
   return {

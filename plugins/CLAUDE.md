@@ -48,6 +48,12 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
     - `POST /api/smoketest`
     - `GET /api/smoketest`
 
+- **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
+  - Contributes:
+    - `Core.Root` → `ReconnectWatcher`
+  - Server:
+    - `GET /api/health`
+
 - **`logs`** — System logs pane, opened from a sidebar button.
   - Contributes:
     - `Shell.Sidebar` "Logs" (group `System`)

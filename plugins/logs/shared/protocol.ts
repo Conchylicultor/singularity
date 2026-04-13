@@ -3,6 +3,7 @@
 export type SubscribeMsg = {
   type: "subscribe";
   channel: string;
+  fromSequence?: number;
 };
 
 export type ClientMessage = SubscribeMsg;
@@ -10,6 +11,7 @@ export type ClientMessage = SubscribeMsg;
 // Server → Client
 
 export interface LogEntryWire {
+  seq: number;
   line: string;
   stream: "stdout" | "stderr";
   timestamp: number;

@@ -11,7 +11,12 @@ function send(ws: ServerWebSocket<WsData>, msg: ServerMessage): void {
 }
 
 function toWire(entry: LogEntry) {
-  return { line: entry.line, stream: entry.stream, timestamp: entry.timestamp };
+  return {
+    seq: entry.seq,
+    line: entry.line,
+    stream: entry.stream,
+    timestamp: entry.timestamp,
+  };
 }
 
 export const wsHandler: WsHandler = {
@@ -33,9 +38,13 @@ export const wsHandler: WsHandler = {
       if (prev) prev();
 
       try {
-        const { history, unsubscribe } = subscribe(parsed.channel, (entry) => {
-          send(ws, { type: "entry", ...toWire(entry) });
-        });
+        const { history, unsubscribe } = subscribe(
+          parsed.channel,
+          (entry) => {
+            send(ws, { type: "entry", ...toWire(entry) });
+          },
+          parsed.fromSequence,
+        );
 
         subscriptions.set(ws, unsubscribe);
         send(ws, { type: "history", entries: history.map(toWire) });

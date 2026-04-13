@@ -3,6 +3,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
+import { useReconnectingWebSocket } from "@core";
 import type { ClientMessage, ServerMessage } from "../../shared/protocol";
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/terminal`;
@@ -15,6 +16,44 @@ const THEME = {
 export function TerminalView({ command }: { command?: string[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
+  const commandRef = useRef(command);
+  commandRef.current = command;
+
+  const wsHandle = useReconnectingWebSocket({
+    url: WS_URL,
+    onOpen: (ws) => {
+      sessionIdRef.current = null;
+      const term = terminalRef.current;
+      if (!term) return;
+      const msg: ClientMessage = {
+        type: "session.create",
+        cols: term.cols,
+        rows: term.rows,
+        ...(commandRef.current && { command: commandRef.current }),
+      };
+      ws.send(JSON.stringify(msg));
+    },
+    onMessage: (event) => {
+      const term = terminalRef.current;
+      if (!term) return;
+      const msg: ServerMessage = JSON.parse(event.data);
+      switch (msg.type) {
+        case "session.created":
+          sessionIdRef.current = msg.sessionId;
+          break;
+        case "session.output":
+          term.write(msg.data);
+          break;
+        case "session.exited":
+          term.write(`\r\n[Process exited with code ${msg.exitCode}]`);
+          break;
+        case "session.error":
+          term.write(`\r\n[Error: ${msg.error}]`);
+          break;
+      }
+    },
+  });
 
   useEffect(() => {
     const container = containerRef.current;
@@ -35,62 +74,18 @@ export function TerminalView({ command }: { command?: string[] }) {
     term.open(container);
     fitAddon.fit();
 
-    const ws = new WebSocket(WS_URL);
-    let sessionId: string | null = null;
-
-    ws.addEventListener("open", () => {
-      const msg: ClientMessage = {
-        type: "session.create",
-        cols: term.cols,
-        rows: term.rows,
-        ...(command && { command }),
-      };
-      ws.send(JSON.stringify(msg));
-    });
-
-    ws.addEventListener("message", (event) => {
-      const msg: ServerMessage = JSON.parse(event.data);
-      switch (msg.type) {
-        case "session.created":
-          sessionId = msg.sessionId;
-          break;
-        case "session.output":
-          term.write(msg.data);
-          break;
-        case "session.exited":
-          term.write(`\r\n[Process exited with code ${msg.exitCode}]`);
-          break;
-        case "session.error":
-          term.write(`\r\n[Error: ${msg.error}]`);
-          break;
-      }
-    });
-
-    ws.addEventListener("close", () => {
-      term.write("\r\n[Connection closed]");
-    });
-
     const inputDisposable = term.onData((data) => {
-      if (sessionId && ws.readyState === WebSocket.OPEN) {
-        const msg: ClientMessage = {
-          type: "session.input",
-          sessionId,
-          data,
-        };
-        ws.send(JSON.stringify(msg));
-      }
+      const sessionId = sessionIdRef.current;
+      if (!sessionId) return;
+      const msg: ClientMessage = { type: "session.input", sessionId, data };
+      wsHandle.current?.send(JSON.stringify(msg));
     });
 
     const resizeDisposable = term.onResize(({ cols, rows }) => {
-      if (sessionId && ws.readyState === WebSocket.OPEN) {
-        const msg: ClientMessage = {
-          type: "session.resize",
-          sessionId,
-          cols,
-          rows,
-        };
-        ws.send(JSON.stringify(msg));
-      }
+      const sessionId = sessionIdRef.current;
+      if (!sessionId) return;
+      const msg: ClientMessage = { type: "session.resize", sessionId, cols, rows };
+      wsHandle.current?.send(JSON.stringify(msg));
     });
 
     const observer = new ResizeObserver(() => fitAddon.fit());
@@ -100,19 +95,10 @@ export function TerminalView({ command }: { command?: string[] }) {
       observer.disconnect();
       inputDisposable.dispose();
       resizeDisposable.dispose();
-      if (ws.readyState === WebSocket.OPEN) {
-        if (sessionId) {
-          const msg: ClientMessage = {
-            type: "session.destroy",
-            sessionId,
-          };
-          ws.send(JSON.stringify(msg));
-        }
-        ws.close();
-      }
+      terminalRef.current = null;
       term.dispose();
     };
-  }, []);
+  }, [wsHandle]);
 
   return (
     <div className="h-full w-full p-2" style={{ background: THEME.background }}>

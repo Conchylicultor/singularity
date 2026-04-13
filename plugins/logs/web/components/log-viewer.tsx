@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { fetchWithRetry, useReconnectingWebSocket } from "@core";
 import type { ClientMessage, ServerMessage, LogEntryWire } from "../../shared/protocol";
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
@@ -15,13 +16,14 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
   const [channels, setChannels] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(initialChannel ?? null);
   const [entries, setEntries] = useState<LogEntryWire[]>([]);
-  const wsRef = useRef<WebSocket | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
+  const lastSeqRef = useRef<number>(0);
+  const selectedRef = useRef<string | null>(selected);
+  selectedRef.current = selected;
 
-  // Fetch available channels
   useEffect(() => {
-    fetch("/api/logs/channels")
+    fetchWithRetry("/api/logs/channels")
       .then((r) => r.json())
       .then((data: { channels: string[] }) => {
         setChannels(data.channels);
@@ -31,7 +33,6 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
       });
   }, [initialChannel]);
 
-  // Track whether user is near bottom
   useEffect(() => {
     const sentinel = bottomRef.current;
     if (!sentinel) return;
@@ -46,54 +47,59 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
     return () => observer.disconnect();
   }, []);
 
-  // Auto-scroll when near bottom and new entries arrive
   useEffect(() => {
     if (nearBottomRef.current) {
       bottomRef.current?.scrollIntoView({ behavior: "instant" });
     }
   }, [entries]);
 
-  // WebSocket connection and subscription
-  const subscribeToChannel = useCallback((channel: string) => {
-    // Reuse existing connection if open
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      const msg: ClientMessage = { type: "subscribe", channel };
-      wsRef.current.send(JSON.stringify(msg));
-      return;
-    }
+  // Reset on channel change
+  useEffect(() => {
+    lastSeqRef.current = 0;
+    setEntries([]);
+  }, [selected]);
 
-    const ws = new WebSocket(WS_URL);
-    wsRef.current = ws;
-
-    ws.addEventListener("open", () => {
-      const msg: ClientMessage = { type: "subscribe", channel };
+  const wsHandle = useReconnectingWebSocket({
+    url: WS_URL,
+    enabled: selected !== null,
+    onOpen: (ws) => {
+      const channel = selectedRef.current;
+      if (!channel) return;
+      const msg: ClientMessage = {
+        type: "subscribe",
+        channel,
+        ...(lastSeqRef.current > 0 && { fromSequence: lastSeqRef.current }),
+      };
       ws.send(JSON.stringify(msg));
-    });
-
-    ws.addEventListener("message", (event) => {
+    },
+    onMessage: (event) => {
       const msg: ServerMessage = JSON.parse(event.data);
       switch (msg.type) {
         case "history":
-          setEntries(msg.entries);
+          if (msg.entries.length === 0) break;
+          setEntries((prev) => [...prev, ...msg.entries]);
+          lastSeqRef.current = Math.max(
+            lastSeqRef.current,
+            msg.entries[msg.entries.length - 1]!.seq,
+          );
           break;
         case "entry":
+          if (msg.seq <= lastSeqRef.current) break;
+          lastSeqRef.current = msg.seq;
           setEntries((prev) => [...prev, msg]);
           break;
       }
-    });
-  }, []);
+    },
+  });
 
+  // Re-subscribe when channel changes on an already-open socket
   useEffect(() => {
-    if (selected) {
-      subscribeToChannel(selected);
-    }
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-    };
-  }, [selected, subscribeToChannel]);
+    if (!selected) return;
+    const handle = wsHandle.current;
+    if (!handle) return;
+    const msg: ClientMessage = { type: "subscribe", channel: selected };
+    handle.send(JSON.stringify(msg));
+  }, [selected, wsHandle]);
 
   return (
     <div className="flex h-full flex-col p-6 space-y-4">
@@ -112,9 +118,9 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
 
       <ScrollArea className="flex-1 rounded-md border bg-muted/30">
         <div className="p-4 font-mono text-xs leading-5">
-          {entries.map((entry, i) => (
+          {entries.map((entry) => (
             <div
-              key={i}
+              key={entry.seq}
               className={
                 entry.stream === "stderr"
                   ? "text-destructive"
