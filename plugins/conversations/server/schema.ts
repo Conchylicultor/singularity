@@ -6,8 +6,8 @@ export const conversations = pgTable("conversations", {
   worktreePath: text("worktree_path").notNull(),
   title: text("title"),
   status: text("status").$type<ConversationStatus>().notNull().default("starting"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const pushes = pgTable("pushes", {
@@ -17,5 +17,5 @@ export const pushes = pgTable("pushes", {
     .references(() => conversations.id, { onDelete: "cascade" }),
   sha: text("sha").notNull(),
   message: text("message").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
