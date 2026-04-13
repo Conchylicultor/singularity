@@ -2,6 +2,7 @@ import type { Command } from "commander";
 import { mkdirSync, writeFileSync } from "fs";
 import { basename, join, resolve } from "path";
 import { homedir } from "os";
+import { generateMigration } from "../migrations";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const WORKTREES_DIR = join(homedir(), ".singularity", "worktrees");
@@ -43,7 +44,11 @@ export function registerBuild(program: Command) {
     .description(
       "Build the frontend and register the worktree with the gateway",
     )
-    .action(async () => {
+    .option(
+      "--migration-name <slug>",
+      "Name for a new migration (required if schema.ts has changed)",
+    )
+    .action(async (opts: { migrationName?: string }) => {
       const root = await getWorktreeRoot();
       const name = basename(root);
 
@@ -60,11 +65,11 @@ export function registerBuild(program: Command) {
 
       // 2. Regenerate DB migrations from schema.ts
       console.log("Generating DB migrations...");
-      await exec(
-        ["bunx", "drizzle-kit", "generate"],
-        resolve(root, "server"),
-        { SINGULARITY_WORKTREE: name },
-      );
+      await generateMigration({
+        serverDir: resolve(root, "server"),
+        worktreeName: name,
+        migrationName: opts.migrationName,
+      });
 
       // 3. Build frontend
       console.log("Building frontend...");
