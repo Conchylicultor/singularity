@@ -10,7 +10,10 @@ export interface WsHandler {
   close(ws: ServerWebSocket<WsData>, code: number, reason: string): void;
 }
 
-export type HttpHandler = (req: Request) => Response | Promise<Response>;
+export type HttpHandler = (
+  req: Request,
+  params: Record<string, string>,
+) => Response | Promise<Response>;
 
 export interface ServerPluginDefinition {
   id: string;

@@ -18,6 +18,7 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
     - DB schema: `plugins/conversations/server/schema.ts`
   - Server:
     - `GET /api/conversations`
+    - `GET /api/conversations/:id`
     - `POST /api/conversations`
     - `DELETE /api/conversations`
   - Plugins:
@@ -30,6 +31,9 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
           - Contributes:
             - `Conversation.Toolbar` "Open"
+        - **`status`** — Displays the conversation status as a colored badge in the toolbar.
+          - Contributes:
+            - `Conversation.Toolbar` (group `status`) → `StatusBadge`
         - **`vscode`** — Opens the conversation's session cwd in VSCode.
           - Contributes:
             - `Conversation.Toolbar` "VSCode"

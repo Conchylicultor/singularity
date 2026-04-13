@@ -7,8 +7,10 @@ export interface ConversationState {
 
 export const Conversation = {
   Toolbar: defineSlot<{
-    label: string;
-    icon: ComponentType<{ className?: string }>;
-    onClick: (conversation: ConversationState) => void;
+    label?: string;
+    icon?: ComponentType<{ className?: string }>;
+    onClick?: (conversation: ConversationState) => void;
+    component?: ComponentType<{ conversation: ConversationState }>;
+    group?: string;
   }>("conversation.toolbar"),
 };

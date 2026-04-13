@@ -7,6 +7,7 @@ import conversationsPlugin from "@plugins/conversations/plugins/conversations-vi
 import conversationPlugin from "@plugins/conversations/plugins/conversation-view/web";
 import conversationVscodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/vscode/web";
 import conversationOpenAppPlugin from "@plugins/conversations/plugins/conversation-view/plugins/open-app/web";
+import conversationStatusPlugin from "@plugins/conversations/plugins/conversation-view/plugins/status/web";
 import worktreeSwitcherPlugin from "@plugins/worktree-switcher/web";
 import themePlugin from "@plugins/theme/web";
 import welcomePlugin from "@plugins/welcome/web";
@@ -21,6 +22,7 @@ export const plugins: PluginDefinition[] = [
   conversationPlugin,
   conversationVscodePlugin,
   conversationOpenAppPlugin,
+  conversationStatusPlugin,
   conversationsPlugin,
   themePlugin,
 ];

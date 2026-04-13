@@ -19,17 +19,29 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
       <div className="flex items-center gap-2">
         <div className="flex-1 truncate font-medium text-sm">{sessionId}</div>
         <div className="flex items-center gap-1">
-          {toolbarItems.map((item) => (
-            <Button
-              key={item.label}
-              variant="ghost"
-              size="sm"
-              onClick={() => item.onClick(conversation)}
-            >
-              <item.icon className="size-4" />
-              {item.label}
-            </Button>
-          ))}
+          {toolbarItems.map((item, idx) => {
+            if (item.component) {
+              const Component = item.component;
+              return (
+                <Component
+                  key={item.label ?? `toolbar-${idx}`}
+                  conversation={conversation}
+                />
+              );
+            }
+            const Icon = item.icon;
+            return (
+              <Button
+                key={item.label ?? `toolbar-${idx}`}
+                variant="ghost"
+                size="sm"
+                onClick={() => item.onClick?.(conversation)}
+              >
+                {Icon ? <Icon className="size-4" /> : null}
+                {item.label}
+              </Button>
+            );
+          })}
         </div>
       </div>
       <div className="flex-1 overflow-hidden rounded-md border bg-muted/30">

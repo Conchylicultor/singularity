@@ -186,7 +186,7 @@ The server is spawned and supervised by the gateway (`bun src/index.ts` with `PO
 
 - **Plugins own their routes** — each plugin declares routes in its `ServerPluginDefinition`, not in a central file
 - **No middleware** — plugins own their paths entirely; shared concerns (auth, logging) can be added as utilities later
-- **No dynamic route matching** — exact path match only; plugins parse sub-paths from the URL themselves
+- **Route matching** — literal paths are matched exactly (O(1) map). Paths with `:param` segments (e.g. `GET /api/conversations/:id`) are matched linearly in registration order; captured params are passed as the second argument to the handler
 - **Internal/public separation** — `index.ts` and `api.ts` are public; `internal/` is never imported by other plugins
 - **Plugin dependencies go in their own `package.json`** — resolved via bun workspaces
 - **Bun runs TypeScript directly** — no build step needed
