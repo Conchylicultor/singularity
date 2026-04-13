@@ -29,10 +29,28 @@ function openConversation(name: string) {
   Shell.OpenPane(conversationPane({ session_id: name }));
 }
 
+function activeIdFromPath(pathname: string): string | null {
+  const m = pathname.match(/^\/c\/([^/]+)/);
+  return m ? decodeURIComponent(m[1]!) : null;
+}
+
 export function ConversationList() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [live, setLive] = useState<Record<string, TmuxLive>>({});
   const [loading, setLoading] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(() =>
+    activeIdFromPath(window.location.pathname),
+  );
+
+  useEffect(() => {
+    const sync = () => setActiveId(activeIdFromPath(window.location.pathname));
+    window.addEventListener("popstate", sync);
+    window.addEventListener("shell:navigate", sync);
+    return () => {
+      window.removeEventListener("popstate", sync);
+      window.removeEventListener("shell:navigate", sync);
+    };
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -147,7 +165,11 @@ export function ConversationList() {
             <SidebarMenuItem key={conversation.id}>
               <SidebarMenuButton
                 className="h-auto py-1.5"
-                onClick={() => openConversation(conversation.id)}
+                isActive={conversation.id === activeId}
+                onClick={() => {
+                  openConversation(conversation.id);
+                  setActiveId(conversation.id);
+                }}
               >
                 <div className="flex items-start gap-2 overflow-hidden">
                   <span className={cn(
