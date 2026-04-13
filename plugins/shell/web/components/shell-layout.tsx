@@ -134,10 +134,19 @@ export function ShellLayout() {
       <SidebarProvider>
         <Sidebar>
           <SidebarHeader className="h-12 justify-center border-b px-4 py-0">
-            <div className="flex items-center gap-2">
+            <a
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                if (window.location.pathname === "/") return;
+                history.pushState({}, "", "/");
+                window.dispatchEvent(new PopStateEvent("popstate"));
+              }}
+              className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
               <img src="/icon.svg" alt="Singularity" className="size-6" />
               <span className="text-base font-semibold tracking-tight">Singularity</span>
-            </div>
+            </a>
           </SidebarHeader>
           <SidebarContent>
             {Array.from(buttonGroups.entries()).map(([groupName, btns], gi) => (
