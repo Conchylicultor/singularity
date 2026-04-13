@@ -29,6 +29,13 @@
       "tag": "20260413_185041_c5cc4283__add_worktree_path",
       "hash": "c5cc4283",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776108517000,
+      "tag": "20260413_192837_6f61b7c1__remove_db_smoketest",
+      "hash": "6f61b7c1",
+      "breakpoints": true
     }
   ]
 }

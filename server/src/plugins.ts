@@ -3,7 +3,6 @@ import logsPlugin from "@plugins/logs/server";
 import buildPlugin from "@plugins/build/server";
 import terminalPlugin from "@plugins/terminal/server";
 import conversationsPlugin from "@plugins/conversations/server";
-import dbSmoketestPlugin from "@plugins/db-smoketest/server";
 import healthPlugin from "@plugins/health/server";
 
 export const plugins: ServerPluginDefinition[] = [
@@ -11,6 +10,5 @@ export const plugins: ServerPluginDefinition[] = [
   buildPlugin,
   terminalPlugin,
   conversationsPlugin,
-  dbSmoketestPlugin,
   healthPlugin,
 ];

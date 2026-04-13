@@ -42,13 +42,6 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
       - Contributes:
         - `Shell.Sidebar` "Conversations" → `ConversationList`
 
-- **`db-smoketest`** — Smoke-tests the DB schema barrel.
-  - Defines:
-    - DB schema: `plugins/db-smoketest/server/schema.ts`
-  - Server:
-    - `POST /api/smoketest`
-    - `GET /api/smoketest`
-
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Contributes:
     - `Core.Root` → `ReconnectWatcher`
