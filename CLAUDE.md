@@ -68,6 +68,22 @@ This will:
 
 The gateway serve the app automatically at `http://<worktree>.localhost:9000`.
 
+### Check
+
+Run repo validation checks (e.g. `schema.ts` matches committed migrations):
+
+```bash
+./singularity check                       # run all checks
+./singularity check --list                # list available checks
+./singularity check --migrations-in-sync  # run a single check
+```
+
+Checks also run automatically as the first step of `push`. New checks are added in `cli/src/checks/` and registered in `cli/src/checks/index.ts`.
+
+Available checks:
+
+- `migrations-in-sync` — fails if `server/src/db/schema.ts` would generate a new migration not yet committed. Fix by running `./singularity build` and committing the generated file.
+
 ### Push
 
 Once changes are committed and reviewed, merge back to main:
@@ -77,8 +93,9 @@ Once changes are committed and reviewed, merge back to main:
 ```
 
 This will:
-1. Check for uncommitted changes (fails if dirty)
-2. Push the worktree branch to remote
+1. Run validation checks (skip with `--skip-checks`)
+2. Check for uncommitted changes (fails if dirty)
+3. Push the worktree branch to remote
 3. Pull main (`--ff-only`) to ensure it's up to date
 4. Merge the branch into main (from the main worktree)
 5. Push main to remote

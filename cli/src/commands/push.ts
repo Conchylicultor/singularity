@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import { runChecks } from "../checks";
 
 async function run(
   cmd: string[],
@@ -56,12 +57,23 @@ export function registerPush(program: Command) {
     .command("push")
     .description("Commit (if -m provided), merge into main, and push")
     .option("-m, --message <msg>", "Commit message — stages and commits all changes before pushing")
-    .action(async (opts: { message?: string }) => {
+    .option("--skip-checks", "Skip pre-push validation checks (unsafe)")
+    .action(async (opts: { message?: string; skipChecks?: boolean }) => {
       const branch = await getCurrentBranch();
 
       if (branch === "main") {
         console.error("Already on main — nothing to merge.");
         process.exit(1);
+      }
+
+      // 0. Run validation checks
+      if (!opts.skipChecks) {
+        console.log("Running checks...");
+        const ok = await runChecks();
+        if (!ok) {
+          console.error("Checks failed. Fix issues or re-run with --skip-checks.");
+          process.exit(1);
+        }
       }
 
       // 1. Commit if -m provided, otherwise require clean tree
