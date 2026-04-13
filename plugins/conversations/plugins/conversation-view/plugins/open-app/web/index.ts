@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/web/slots";
-import { MdOpenInNew } from "react-icons/md";
+import { MdRocketLaunch } from "react-icons/md";
 
 const openAppPlugin: PluginDefinition = {
   id: "conversation-open-app",
@@ -9,7 +9,7 @@ const openAppPlugin: PluginDefinition = {
   contributions: [
     Conversation.Toolbar({
       label: "Open",
-      icon: MdOpenInNew,
+      icon: MdRocketLaunch,
       onClick: (conversation) => {
         window.open(
           `http://${conversation.id}.localhost:9000/`,

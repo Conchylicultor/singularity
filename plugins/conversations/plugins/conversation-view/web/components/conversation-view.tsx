@@ -54,34 +54,52 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
   return (
     <div className="flex h-full flex-col p-4 space-y-4">
       <div className="flex items-center gap-2">
-        <div className="flex-1 truncate font-medium text-sm">
-          {conversation?.title ?? sessionId}
-        </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="truncate font-medium text-sm">
+            {conversation?.title ?? sessionId}
+          </div>
           {conversation &&
-            toolbarItems.map((item, idx) => {
-              if (item.component) {
+            toolbarItems
+              .filter((item) => item.group === "status")
+              .map((item, idx) => {
+                if (!item.component) return null;
                 const Component = item.component;
                 return (
                   <Component
-                    key={item.label ?? `toolbar-${idx}`}
+                    key={item.label ?? `status-${idx}`}
                     conversation={conversation}
                   />
                 );
-              }
-              const Icon = item.icon;
-              return (
-                <Button
-                  key={item.label ?? `toolbar-${idx}`}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => item.onClick?.(conversation)}
-                >
-                  {Icon ? <Icon className="size-4" /> : null}
-                  {item.label}
-                </Button>
-              );
-            })}
+              })}
+        </div>
+        <div className="flex items-center gap-1">
+          {conversation &&
+            toolbarItems
+              .filter((item) => item.group !== "status")
+              .map((item, idx) => {
+                if (item.component) {
+                  const Component = item.component;
+                  return (
+                    <Component
+                      key={item.label ?? `toolbar-${idx}`}
+                      conversation={conversation}
+                    />
+                  );
+                }
+                const Icon = item.icon;
+                return (
+                  <Button
+                    key={item.label ?? `toolbar-${idx}`}
+                    variant="ghost"
+                    size="icon"
+                    title={item.label}
+                    aria-label={item.label}
+                    onClick={() => item.onClick?.(conversation)}
+                  >
+                    {Icon ? <Icon className="size-4" /> : null}
+                  </Button>
+                );
+              })}
         </div>
       </div>
       <div className="flex-1 overflow-hidden rounded-md border bg-muted/30">
