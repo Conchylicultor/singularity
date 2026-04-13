@@ -37,10 +37,12 @@ Defines the slots and commands most other plugins extend.
 ### `conversations`
 
 - Contributes: `Shell.Sidebar` "Conversations" → `ConversationList`
+- **Server routes**: `GET /api/conversations`, `POST /api/conversations`, `DELETE /api/conversations`
 
 ### `logs`
 
 - Contributes: `Shell.Sidebar` button "Logs" (group `System`) → opens logs pane
+- **Server routes**: `GET /api/logs/channels`, `WS /ws/logs`
 
 ### `worktree-switcher`
 
@@ -53,7 +55,15 @@ Defines the slots and commands most other plugins extend.
 ### `build`
 
 - Contributes: `Shell.Toolbar` (group `actions`) → `BuildButton`
+- **Server routes**: `POST /api/build`
 
 ### `terminal`
 
-- No web contributions yet (server/shared only). Exposes view factories for terminal panes.
+- No web contributions yet. Exposes view factories for terminal panes.
+- **Server routes**: `WS /ws/terminal`
+
+### `db-smoketest`
+
+- No web contributions. Smoke-tests the DB schema barrel.
+- **Server routes**: `GET /api/smoketest`, `POST /api/smoketest`
+- **DB schema**: `plugins/db-smoketest/server/schema.ts`
