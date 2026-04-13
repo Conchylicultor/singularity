@@ -22,15 +22,6 @@ export async function forkDatabase(name: string, source = "singularity"): Promis
     await adminSql.unsafe(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
     throw new Error(`forkDatabase(${name}) failed: ${err}`);
   }
-
-  // Strip legacy drizzle migration state if the source DB still carries it.
-  // The hash-based runner uses __singularity_migrations only; keeping the old
-  // drizzle schema around invites confusion and blocks a clean fork.
-  const psql = Bun.spawn(
-    ["psql", "-d", name, "-c", "DROP SCHEMA IF EXISTS drizzle CASCADE"],
-    { stdout: "pipe", stderr: "pipe" },
-  );
-  await psql.exited;
 }
 
 export async function dropDatabase(name: string): Promise<void> {

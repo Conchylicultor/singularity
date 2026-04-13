@@ -14,6 +14,8 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
     - `POST /api/build`
 
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
+  - Defines:
+    - DB schema: `plugins/conversations/server/schema.ts`
   - Server:
     - `GET /api/conversations`
     - `POST /api/conversations`
