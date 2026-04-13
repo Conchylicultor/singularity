@@ -49,7 +49,8 @@ export function registerBuild(program: Command) {
       "--migration-name <slug>",
       "Name for a new migration (required if schema.ts has changed)",
     )
-    .action(async (opts: { migrationName?: string }) => {
+    .option("--no-restart", "Skip asking the gateway to restart the backend")
+    .action(async (opts: { migrationName?: string; restart: boolean }) => {
       const root = await getWorktreeRoot();
       const name = basename(root);
 
@@ -94,6 +95,10 @@ export function registerBuild(program: Command) {
       );
 
       // 4. Restart the backend if the gateway has it running
+      if (!opts.restart) {
+        console.log(`Deployed to http://${name}.localhost:9000 (restart skipped)`);
+        return;
+      }
       console.log("Restarting backend...");
       try {
         const resp = await fetch(

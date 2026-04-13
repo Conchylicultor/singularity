@@ -3,8 +3,8 @@ import { Log } from "@plugins/logs/server/api";
 const buildLog = Log.channel("build");
 
 export async function handleBuild(_req: Request): Promise<Response> {
-  const proc = Bun.spawn(["bun", "run", "build"], {
-    cwd: import.meta.dir + "/../../../../web",
+  const proc = Bun.spawn(["./singularity", "build", "--no-restart"], {
+    cwd: import.meta.dir + "/../../../..",
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -30,6 +30,16 @@ export async function handleBuild(_req: Request): Promise<Response> {
 
   const exitCode = await proc.exited;
   buildLog.publish(exitCode === 0 ? "Build succeeded" : `Build failed (exit ${exitCode})`);
+
+  if (exitCode === 0) {
+    const worktree = process.env.SINGULARITY_WORKTREE;
+    if (worktree) {
+      buildLog.publish("Restarting backend...");
+      fetch(`http://localhost:9000/gateway/worktrees/${worktree}/restart`, {
+        method: "POST",
+      }).catch(() => {});
+    }
+  }
 
   return Response.json({ exitCode });
 }
