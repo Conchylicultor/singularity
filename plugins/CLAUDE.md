@@ -62,6 +62,21 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
   - Contributes:
     - `Core.Root` → `ShellLayout`
 
+- **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
+  - Defines:
+    - Slots: `Stats.Chart`
+  - Contributes:
+    - `Shell.Sidebar` "Stats" (group `System`)
+    - `Shell.Route` `/stats`
+  - Plugins:
+    - **`commits`** — Commit-based stats: cumulative total and per-period rate.
+      - Contributes:
+        - `Stats.Chart` "Commits over time" → `CumulativeCommitsChart`
+        - `Stats.Chart` "Commits per period" → `CommitsRateChart`
+      - Server:
+        - `GET /api/stats/commits/cumulative`
+        - `GET /api/stats/commits/rate`
+
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Server:
     - `WS /ws/terminal`

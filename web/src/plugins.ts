@@ -12,6 +12,8 @@ import worktreeSwitcherPlugin from "@plugins/worktree-switcher/web";
 import themePlugin from "@plugins/theme/web";
 import welcomePlugin from "@plugins/welcome/web";
 import healthPlugin from "@plugins/health/web";
+import statsPlugin from "@plugins/stats/web";
+import statsCommitsPlugin from "@plugins/stats/plugins/commits/web";
 
 export const plugins: PluginDefinition[] = [
   shellPlugin,
@@ -27,4 +29,6 @@ export const plugins: PluginDefinition[] = [
   conversationsPlugin,
   themePlugin,
   healthPlugin,
+  statsPlugin,
+  statsCommitsPlugin,
 ];
