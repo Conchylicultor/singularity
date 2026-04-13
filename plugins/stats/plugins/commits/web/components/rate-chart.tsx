@@ -1,13 +1,24 @@
 import { useState } from "react";
-import { Bar, BarChart, ResponsiveContainer } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { cn } from "@/lib/utils";
 import {
   ChartState,
-  ThemedGrid,
-  ThemedTooltip,
-  ThemedXAxis,
-  ThemedYAxis,
+  axisProps,
+  barCursor,
+  gridProps,
+  tooltipContentStyle,
+  tooltipLabelStyle,
+  tooltipNumberFormatter,
   useFetchJson,
+  yAxisFormatter,
 } from "./chart-primitives";
 
 type Bucket = "hour" | "day" | "week" | "month" | "year";
@@ -24,10 +35,16 @@ interface Point {
   count: number;
 }
 
-export function CommitsRateChart() {
+export function RateChart({
+  baseUrl,
+  valueLabel,
+}: {
+  baseUrl: string;
+  valueLabel: string;
+}) {
   const [bucket, setBucket] = useState<Bucket>("day");
   const { data, error } = useFetchJson<{ points: Point[] }>(
-    `/api/stats/commits/rate?bucket=${bucket}`,
+    `${baseUrl}?bucket=${bucket}`,
   );
 
   return (
@@ -43,10 +60,24 @@ export function CommitsRateChart() {
               data={data?.points ?? []}
               margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
             >
-              <ThemedGrid />
-              <ThemedXAxis dataKey="bucket" />
-              <ThemedYAxis />
-              <ThemedTooltip cursorFill />
+              <CartesianGrid {...gridProps} />
+              <XAxis dataKey="bucket" {...axisProps} minTickGap={32} />
+              <YAxis
+                {...axisProps}
+                allowDecimals={false}
+                width={48}
+                tickFormatter={yAxisFormatter}
+              />
+              <Tooltip
+                isAnimationActive={false}
+                contentStyle={tooltipContentStyle}
+                labelStyle={tooltipLabelStyle}
+                cursor={barCursor}
+                formatter={(value: number) => [
+                  tooltipNumberFormatter(value),
+                  valueLabel,
+                ]}
+              />
               <Bar
                 dataKey="count"
                 fill="var(--primary)"
@@ -76,4 +107,8 @@ export function CommitsRateChart() {
       </div>
     </div>
   );
+}
+
+export function CommitsRateChart() {
+  return <RateChart baseUrl="/api/stats/commits/rate" valueLabel="Commits" />;
 }

@@ -1,11 +1,22 @@
-import { Line, LineChart, ResponsiveContainer } from "recharts";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   ChartState,
-  ThemedGrid,
-  ThemedTooltip,
-  ThemedXAxis,
-  ThemedYAxis,
+  axisProps,
+  gridProps,
+  lineCursor,
+  tooltipContentStyle,
+  tooltipLabelStyle,
+  tooltipNumberFormatter,
   useFetchJson,
+  yAxisFormatter,
 } from "./chart-primitives";
 
 interface Point {
@@ -13,10 +24,14 @@ interface Point {
   count: number;
 }
 
-export function CumulativeCommitsChart() {
-  const { data, error } = useFetchJson<{ points: Point[] }>(
-    "/api/stats/commits/cumulative",
-  );
+export function CumulativeChart({
+  url,
+  valueLabel,
+}: {
+  url: string;
+  valueLabel: string;
+}) {
+  const { data, error } = useFetchJson<{ points: Point[] }>(url);
   return (
     <div className="h-64 w-full">
       <ChartState
@@ -29,16 +44,31 @@ export function CumulativeCommitsChart() {
             data={data?.points ?? []}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
           >
-            <ThemedGrid />
-            <ThemedXAxis dataKey="date" />
-            <ThemedYAxis />
-            <ThemedTooltip />
+            <CartesianGrid {...gridProps} />
+            <XAxis dataKey="date" {...axisProps} minTickGap={32} />
+            <YAxis
+              {...axisProps}
+              allowDecimals={false}
+              width={48}
+              tickFormatter={yAxisFormatter}
+            />
+            <Tooltip
+              isAnimationActive={false}
+              contentStyle={tooltipContentStyle}
+              labelStyle={tooltipLabelStyle}
+              cursor={lineCursor}
+              formatter={(value: number) => [
+                tooltipNumberFormatter(value),
+                valueLabel,
+              ]}
+            />
             <Line
               type="monotone"
               dataKey="count"
               stroke="var(--primary)"
               strokeWidth={2}
               dot={false}
+              activeDot={{ r: 4 }}
               isAnimationActive={false}
             />
           </LineChart>
@@ -46,4 +76,8 @@ export function CumulativeCommitsChart() {
       </ChartState>
     </div>
   );
+}
+
+export function CumulativeCommitsChart() {
+  return <CumulativeChart url="/api/stats/commits/cumulative" valueLabel="Commits" />;
 }

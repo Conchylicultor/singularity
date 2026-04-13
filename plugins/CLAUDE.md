@@ -69,13 +69,17 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
     - `Shell.Sidebar` "Stats" (group `System`)
     - `Shell.Route` `/stats`
   - Plugins:
-    - **`commits`** — Commit-based stats: cumulative total and per-period rate.
+    - **`commits`** — Commit-based stats: commits and lines of change over time.
       - Contributes:
         - `Stats.Chart` "Commits over time" → `CumulativeCommitsChart`
         - `Stats.Chart` "Commits per period" → `CommitsRateChart`
+        - `Stats.Chart` "Lines changed over time" → `CumulativeLinesChart`
+        - `Stats.Chart` "Lines changed per period" → `LinesRateChart`
       - Server:
         - `GET /api/stats/commits/cumulative`
         - `GET /api/stats/commits/rate`
+        - `GET /api/stats/commits/lines/cumulative`
+        - `GET /api/stats/commits/lines/rate`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Server:

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 import { fetchWithRetry } from "@core";
 
 export function useFetchJson<T>(url: string): {
@@ -44,35 +43,41 @@ export function ChartState({
   return <>{children}</>;
 }
 
-const axisProps = {
+export const axisProps = {
   stroke: "var(--muted-foreground)",
   tick: { fontSize: 11 },
 } as const;
 
-export function ThemedXAxis(props: { dataKey: string }) {
-  return <XAxis dataKey={props.dataKey} {...axisProps} minTickGap={32} />;
-}
+const compactFormatter = new Intl.NumberFormat(undefined, {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+export const yAxisFormatter = (v: number) => compactFormatter.format(v);
 
-export function ThemedYAxis() {
-  return <YAxis {...axisProps} allowDecimals={false} />;
-}
+const numberFormatter = new Intl.NumberFormat();
+export const tooltipNumberFormatter = (v: number) => numberFormatter.format(v);
 
-export function ThemedGrid() {
-  return <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />;
-}
+export const tooltipContentStyle = {
+  background: "var(--popover)",
+  border: "1px solid var(--border)",
+  borderRadius: 6,
+  color: "var(--popover-foreground)",
+  fontSize: 12,
+} as const;
 
-export function ThemedTooltip({ cursorFill }: { cursorFill?: boolean } = {}) {
-  return (
-    <Tooltip
-      contentStyle={{
-        background: "var(--popover)",
-        border: "1px solid var(--border)",
-        borderRadius: 6,
-        color: "var(--popover-foreground)",
-        fontSize: 12,
-      }}
-      labelStyle={{ color: "var(--foreground)" }}
-      {...(cursorFill ? { cursor: { fill: "var(--muted)", opacity: 0.3 } } : {})}
-    />
-  );
-}
+export const tooltipLabelStyle = {
+  color: "var(--foreground)",
+  fontWeight: 500,
+} as const;
+
+export const lineCursor = {
+  stroke: "var(--muted-foreground)",
+  strokeDasharray: "3 3" as const,
+};
+
+export const barCursor = { fill: "var(--muted)", opacity: 0.3 };
+
+export const gridProps = {
+  strokeDasharray: "3 3",
+  stroke: "var(--border)",
+} as const;
