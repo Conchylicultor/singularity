@@ -3,13 +3,18 @@ import { MdAdd, MdRefresh, MdArrowForward } from "react-icons/md";
 import { subscribeWsStatus } from "@core";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
-import type { Conversation, TmuxLive } from "@plugins/conversations/shared/types";
+import { z } from "zod";
+import {
+  ConversationSchema,
+  type Conversation,
+  type TmuxLive,
+} from "@plugins/conversations/shared/types";
 import { useConversationStream } from "@plugins/conversations/web/stream";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
-function formatRelativeTime(iso: string): string {
-  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+function formatRelativeTime(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
   if (seconds < 60) return "just now";
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
@@ -28,7 +33,7 @@ export function WelcomeView() {
     setLoading(true);
     try {
       const res = await fetch("/api/conversations");
-      setConversations(await res.json());
+      setConversations(z.array(ConversationSchema).parse(await res.json()));
     } finally {
       setLoading(false);
     }
@@ -79,7 +84,7 @@ export function WelcomeView() {
 
   const createConversation = async () => {
     const res = await fetch("/api/conversations", { method: "POST" });
-    const conversation: Conversation = await res.json();
+    const conversation = ConversationSchema.parse(await res.json());
     Shell.OpenPane(conversationPane({ session_id: conversation.id }));
   };
 

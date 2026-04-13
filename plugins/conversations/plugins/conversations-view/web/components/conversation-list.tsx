@@ -3,7 +3,12 @@ import { MdAdd, MdRefresh, MdClose } from "react-icons/md";
 import { subscribeWsStatus } from "@core";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
-import type { Conversation, TmuxLive } from "@plugins/conversations/shared/types";
+import { z } from "zod";
+import {
+  ConversationSchema,
+  type Conversation,
+  type TmuxLive,
+} from "@plugins/conversations/shared/types";
 import { useConversationStream } from "@plugins/conversations/web/stream";
 import { cn } from "@/lib/utils";
 import {
@@ -14,8 +19,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 
-function formatRelativeTime(iso: string): string {
-  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+function formatRelativeTime(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
   if (seconds < 60) return "just now";
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
@@ -56,7 +61,7 @@ export function ConversationList() {
     setLoading(true);
     try {
       const res = await fetch("/api/conversations");
-      setConversations(await res.json());
+      setConversations(z.array(ConversationSchema).parse(await res.json()));
     } finally {
       setLoading(false);
     }
@@ -74,10 +79,9 @@ export function ConversationList() {
         ),
       );
     } else if (parsed.type === "created") {
+      const conv = ConversationSchema.parse(parsed.conversation);
       setConversations((prev) =>
-        prev.some((c) => c.id === parsed.conversation.id)
-          ? prev
-          : [parsed.conversation, ...prev],
+        prev.some((c) => c.id === conv.id) ? prev : [conv, ...prev],
       );
     } else if (parsed.type === "deleted") {
       setConversations((prev) => prev.filter((c) => c.id !== parsed.id));
@@ -113,7 +117,7 @@ export function ConversationList() {
 
   const createConversation = async () => {
     const res = await fetch("/api/conversations", { method: "POST" });
-    const conversation: Conversation = await res.json();
+    const conversation = ConversationSchema.parse(await res.json());
     openConversation(conversation.id);
   };
 

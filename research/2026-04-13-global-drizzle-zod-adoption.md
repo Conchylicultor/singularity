@@ -53,13 +53,13 @@ tree-shakable. Runtime `.parse()` calls stay on whichever side does validation
 
 ## Scope of adoption
 
-This is a codebase-wide change, not conversations-specific. Plugins that define
-tables today and would benefit:
+Pilot scope is `plugins/conversations/server/schema.ts` only. Broader rollout
+to other table-defining plugins is deferred until the original triggers fire
+(see "Status" below).
 
-- `plugins/conversations/server/schema.ts` (conversations, pushes)
-- `plugins/db-smoketest/server/schema.ts`
-
-Plus any plugin that accepts a POST body and currently casts `await req.json()`.
+Note: the `createInsertSchema` POST-body angle below has no target in the
+pilot — `conversations` has no JSON request bodies today (`handleDelete` uses
+a `?name=` query param). Kept for reference for future plugins.
 
 ## Cost
 
@@ -77,15 +77,12 @@ Plus any plugin that accepts a POST body and currently casts `await req.json()`.
 - Changing the wire format. Dates remain ISO strings; only the client-side
   parsed type changes.
 
-## Why defer
+## Status
 
-- No production traffic, single-user dev; the lie is currently harmless.
-- Adding Zod meaningfully affects how every plugin defines its DTO — worth
-  doing deliberately as a cross-cutting pass, not mid-feature.
-- drizzle-zod's API has churned (v4 → v5 overrides syntax). Worth waiting for
-  the codebase to stabilize a bit more before committing.
+**Executing for `conversations` only.** Broader repo-wide rollout remains
+deferred pending the triggers below.
 
-## Trigger to revisit
+## Trigger to revisit (for broader rollout)
 
 - First external API consumer (agent sending data back), OR
 - First bug caused by the Date-string / Date type mismatch, OR
