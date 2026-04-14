@@ -36,7 +36,7 @@ export async function getEditedFiles(worktreePath: string): Promise<EditedFile[]
     }
   }
 
-  const status = await run(["status", "--porcelain"], worktreePath);
+  const status = await run(["status", "--porcelain", "--untracked-files=all"], worktreePath);
   if (status) {
     for (const line of status.split("\n")) {
       if (!line) continue;
