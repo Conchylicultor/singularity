@@ -79,8 +79,8 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
   return (
     <MiddlePaneContext.Provider value={middlePane}>
     <RightPaneContext.Provider value={rightPane}>
-    <div className="flex h-[calc(100svh-3rem)] min-h-0 flex-col overflow-hidden p-4 space-y-4">
-      <div className="flex items-center gap-2">
+    <div className="flex h-[calc(100svh-3rem)] min-h-0 flex-col overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <div className="truncate font-medium text-sm">
             {conversation?.title ?? sessionId}
@@ -131,21 +131,21 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
         <Group orientation="horizontal" className="flex h-full min-h-0">
-          <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col gap-4 overflow-hidden">
+          <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
             {MiddlePaneComponent && conversation && (
-              <div className="max-h-[50%] shrink-0 overflow-y-auto rounded-md border bg-muted/30">
+              <div className="max-h-[50%] shrink-0 overflow-y-auto">
                 <MiddlePaneComponent conversation={conversation} />
               </div>
             )}
-            <div className="min-h-0 flex-1 overflow-hidden rounded-md border bg-muted/30">
+            <div className="min-h-0 flex-1 overflow-hidden">
               <TerminalComponent />
             </div>
           </Panel>
           {RightPaneComponent && conversation && (
             <>
-              <Separator className="mx-2 w-px bg-border transition-colors data-[separator-state=hover]:bg-foreground/20 data-[separator-state=drag]:bg-foreground/30" />
+              <Separator className="w-px bg-border transition-colors data-[separator-state=hover]:bg-foreground/20 data-[separator-state=drag]:bg-foreground/30" />
               <Panel minSize="25%" className="min-h-0 min-w-0 overflow-hidden">
-                <div className="h-full min-h-0 overflow-hidden rounded-md border bg-muted/30">
+                <div className="h-full min-h-0 overflow-hidden">
                   <RightPaneComponent conversation={conversation} />
                 </div>
               </Panel>
