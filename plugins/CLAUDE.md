@@ -30,6 +30,17 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
       - Contributes:
         - `Shell.Route` `/c/:id`
       - Plugins:
+        - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Streams edited files in the conversation's worktree via SSE.
+          - Defines:
+            - Slots: `Code.ToolbarButton`
+          - Contributes:
+            - `Conversation.Toolbar` → `CodeToolbarSlot`
+          - Server:
+            - `GET /api/conversations/:id/edited-files/stream`
+          - Plugins:
+            - **`edited-files-button`** — Toolbar button showing the number of files edited in the conversation's worktree.
+              - Contributes:
+                - `Code.ToolbarButton` → `EditedFilesButton`
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
           - Contributes:
             - `Conversation.Toolbar` "Open"

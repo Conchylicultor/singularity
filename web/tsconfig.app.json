@@ -22,5 +22,16 @@
       "@plugins/*": ["../plugins/*"]
     }
   },
-  "include": ["src", "../plugin-core", "../plugins/*/web", "../plugins/*/shared"]
+  "include": [
+    "src",
+    "../plugin-core",
+    "../plugins/*/web",
+    "../plugins/*/shared",
+    "../plugins/*/plugins/*/web",
+    "../plugins/*/plugins/*/shared",
+    "../plugins/*/plugins/*/plugins/*/web",
+    "../plugins/*/plugins/*/plugins/*/shared",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/web",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/shared"
+  ]
 }

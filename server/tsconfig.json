@@ -18,6 +18,9 @@
     "src",
     "../plugins/*/server",
     "../plugins/*/shared",
-    "../plugins/*/plugins/*/server"
+    "../plugins/*/plugins/*/server",
+    "../plugins/*/plugins/*/shared",
+    "../plugins/*/plugins/*/plugins/*/server",
+    "../plugins/*/plugins/*/plugins/*/shared"
   ]
 }

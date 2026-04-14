@@ -8,6 +8,8 @@ import conversationPlugin from "@plugins/conversations/plugins/conversation-view
 import conversationVscodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/vscode/web";
 import conversationOpenAppPlugin from "@plugins/conversations/plugins/conversation-view/plugins/open-app/web";
 import conversationStatusPlugin from "@plugins/conversations/plugins/conversation-view/plugins/status/web";
+import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
+import conversationCodeEditedFilesButtonPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/edited-files-button/web";
 import worktreeSwitcherPlugin from "@plugins/worktree-switcher/web";
 import themePlugin from "@plugins/theme/web";
 import welcomePlugin from "@plugins/welcome/web";
@@ -26,6 +28,8 @@ export const plugins: PluginDefinition[] = [
   conversationVscodePlugin,
   conversationOpenAppPlugin,
   conversationStatusPlugin,
+  conversationCodePlugin,
+  conversationCodeEditedFilesButtonPlugin,
   conversationsPlugin,
   themePlugin,
   healthPlugin,

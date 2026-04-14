@@ -5,6 +5,7 @@ import terminalPlugin from "@plugins/terminal/server";
 import conversationsPlugin from "@plugins/conversations/server";
 import conversationsRuntimeTmuxPlugin from "@plugins/conversations/plugins/runtime-tmux/server";
 import conversationsRuntimeApiPlugin from "@plugins/conversations/plugins/runtime-api/server";
+import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import healthPlugin from "@plugins/health/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
 
@@ -17,6 +18,7 @@ export const plugins: ServerPluginDefinition[] = [
   conversationsRuntimeTmuxPlugin,
   conversationsRuntimeApiPlugin,
   conversationsPlugin,
+  conversationCodePlugin,
   healthPlugin,
   statsCommitsPlugin,
 ];
