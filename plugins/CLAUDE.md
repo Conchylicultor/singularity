@@ -11,6 +11,7 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `BuildButton`
   - Server:
+    - Uses: `logs.Log`
     - `POST /api/build`
 
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
@@ -54,6 +55,7 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
   - Contributes:
     - `Shell.Sidebar` "Logs" (group `System`)
   - Server:
+    - API: `Log`
     - `GET /api/logs/channels`
     - `WS /ws/logs`
 

@@ -32,6 +32,8 @@ interface PluginInfo {
   contributions: Contribution[];
   httpRoutes: string[];
   wsRoutes: string[];
+  apiExports: string[];
+  apiUses: string[];
   children: PluginInfo[];
 }
 
@@ -262,6 +264,88 @@ function parseRouteMap(src: string, field: "httpRoutes" | "wsRoutes"): string[] 
   return keys;
 }
 
+function parseApiExports(src: string): string[] {
+  const names = new Set<string>();
+  const declRe =
+    /export\s+(?:default\s+)?(?:async\s+)?(?:const|let|var|function|class|type|interface|enum)\s+([A-Za-z_$][\w$]*)/g;
+  let m: RegExpExecArray | null;
+  while ((m = declRe.exec(src))) names.add(m[1]!);
+  const listRe = /export\s+(?:type\s+)?\{([^}]+)\}/g;
+  while ((m = listRe.exec(src))) {
+    for (const raw of m[1]!.split(",")) {
+      let s = raw.trim();
+      if (!s) continue;
+      s = s.replace(/^type\s+/, "");
+      const asMatch = s.match(/^\w+\s+as\s+(\w+)$/);
+      if (asMatch) names.add(asMatch[1]!);
+      else if (/^\w+$/.test(s)) names.add(s);
+    }
+  }
+  return Array.from(names).sort();
+}
+
+function walkFiles(dir: string, out: string[]): void {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const e of entries) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) {
+      if (e.name === "node_modules" || e.name === "plugins") continue;
+      walkFiles(p, out);
+    } else if (e.isFile() && /\.(ts|tsx)$/.test(e.name)) {
+      out.push(p);
+    }
+  }
+}
+
+function parseServerApiUses(serverDir: string, selfName: string): string[] {
+  const files: string[] = [];
+  walkFiles(serverDir, files);
+  const uses = new Set<string>();
+  const modRe = /@plugins\/([^/"'`]+)\/server\/api(?:\/index)?$/;
+  const namedRe =
+    /import\s+(?:([A-Za-z_$][\w$]*)\s*,\s*)?\{([^}]+)\}\s*from\s*["']([^"']+)["']/g;
+  const nsRe =
+    /import\s+\*\s+as\s+[A-Za-z_$][\w$]*\s+from\s*["']([^"']+)["']/g;
+  const defRe = /import\s+[A-Za-z_$][\w$]*\s+from\s*["']([^"']+)["']/g;
+  const sideRe = /import\s*["']([^"']+)["']/g;
+
+  for (const f of files) {
+    const src = readIfExists(f);
+    if (!src) continue;
+    let m: RegExpExecArray | null;
+    while ((m = namedRe.exec(src))) {
+      const mod = m[3]!;
+      const hit = mod.match(modRe);
+      if (!hit) continue;
+      const plug = hit[1]!;
+      if (plug === selfName) continue;
+      for (const raw of m[2]!.split(",")) {
+        let s = raw.trim();
+        if (!s) continue;
+        s = s.replace(/^type\s+/, "");
+        const asMatch = s.match(/^(\w+)\s+as\s+\w+$/);
+        const orig = asMatch ? asMatch[1]! : s;
+        if (/^\w+$/.test(orig)) uses.add(`${plug}.${orig}`);
+      }
+    }
+    for (const re of [nsRe, defRe, sideRe]) {
+      re.lastIndex = 0;
+      while ((m = re.exec(src))) {
+        const hit = m[1]!.match(modRe);
+        if (!hit) continue;
+        const plug = hit[1]!;
+        if (plug !== selfName) uses.add(plug);
+      }
+    }
+  }
+  return Array.from(uses).sort();
+}
+
 function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
   const webIndex = readIfExists(join(dir, "web", "index.ts"));
   const serverIndex = readIfExists(join(dir, "server", "index.ts"));
@@ -309,6 +393,11 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
   const httpRoutes = serverSrc ? parseRouteMap(serverSrc, "httpRoutes") : [];
   const wsRoutes = serverSrc ? parseRouteMap(serverSrc, "wsRoutes") : [];
 
+  const apiSrc = readIfExists(join(dir, "server", "api.ts"));
+  const apiExports = apiSrc ? parseApiExports(stripTypes(apiSrc)) : [];
+  const serverDir = join(dir, "server");
+  const apiUses = existsSync(serverDir) ? parseServerApiUses(serverDir, basename(dir)) : [];
+
   const rel = relative(pluginsRoot, dir);
   const segs = rel.split(/[\\/]+/);
   let parentDir: string | null = null;
@@ -327,6 +416,8 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
     contributions,
     httpRoutes,
     wsRoutes,
+    apiExports,
+    apiUses,
     children: [],
   };
 }
@@ -385,8 +476,18 @@ function renderPlugin(p: PluginInfo, depth: number, root: string): string[] {
   }
 
   const serverEntries = [...p.httpRoutes, ...p.wsRoutes.map((r) => `WS ${r}`)];
-  if (serverEntries.length > 0) {
+  if (serverEntries.length > 0 || p.apiExports.length > 0 || p.apiUses.length > 0) {
     lines.push(`${indent}  - Server:`);
+    if (p.apiExports.length > 0) {
+      lines.push(
+        `${indent}    - API: ${p.apiExports.map((n) => `\`${n}\``).join(", ")}`,
+      );
+    }
+    if (p.apiUses.length > 0) {
+      lines.push(
+        `${indent}    - Uses: ${p.apiUses.map((n) => `\`${n}\``).join(", ")}`,
+      );
+    }
     for (const r of serverEntries) lines.push(`${indent}    - \`${r}\``);
   }
 
