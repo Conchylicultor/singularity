@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
-import { MdArrowBack } from "react-icons/md";
+import { MdClose } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web/slots";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/web/commands";
 import type { EditedFileStatus } from "../../../../shared/protocol";
-import { editedFileListPane } from "../../../file-list/web/views";
 import { FilePane, resolveRenderers } from "../slots";
 
 export function FilePaneView({
@@ -39,11 +38,11 @@ export function FilePaneView({
           variant="ghost"
           size="icon"
           className="size-7 shrink-0"
-          title="Back to file list"
-          aria-label="Back to file list"
-          onClick={() => Conversation.OpenMiddlePane(editedFileListPane())}
+          title="Close file"
+          aria-label="Close file"
+          onClick={() => Conversation.OpenRightPane(null)}
         >
-          <MdArrowBack className="size-4" />
+          <MdClose className="size-4" />
         </Button>
         <div className="flex min-w-0 flex-1 items-baseline text-sm">
           <span className="truncate text-muted-foreground">{dir}</span>

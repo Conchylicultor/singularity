@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Group, Panel, Separator } from "react-resizable-panels";
 import { subscribeWsStatus } from "@core";
 import { Conversation } from "../slots";
 import {
   Conversation as ConversationCommands,
   MiddlePaneContext,
+  RightPaneContext,
   type MiddlePaneDescriptor,
+  type RightPaneDescriptor,
 } from "../commands";
 import { terminalPane } from "@plugins/terminal/web/views";
 import type { Conversation as ConversationRecord } from "@plugins/conversations/shared/types";
@@ -17,8 +20,13 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
   const toolbarItems = Conversation.Toolbar.useContributions();
   const [conversation, setConversation] = useState<ConversationRecord | null>(null);
   const [middlePane, setMiddlePane] = useState<MiddlePaneDescriptor | null>(null);
+  const [rightPane, setRightPane] = useState<RightPaneDescriptor | null>(null);
   ConversationCommands.OpenMiddlePane.useHandler((d) => setMiddlePane(d));
-  useEffect(() => setMiddlePane(null), [sessionId]);
+  ConversationCommands.OpenRightPane.useHandler((d) => setRightPane(d));
+  useEffect(() => {
+    setMiddlePane(null);
+    setRightPane(null);
+  }, [sessionId]);
 
   const fetchConversation = useCallback(() => {
     let cancelled = false;
@@ -65,9 +73,13 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
     [sessionId],
   );
 
+  const MiddlePaneComponent = middlePane?.component;
+  const RightPaneComponent = rightPane?.component;
+
   return (
     <MiddlePaneContext.Provider value={middlePane}>
-    <div className="flex h-full flex-col p-4 space-y-4">
+    <RightPaneContext.Provider value={rightPane}>
+    <div className="flex h-[calc(100svh-3rem)] min-h-0 flex-col overflow-hidden p-4 space-y-4">
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <div className="truncate font-medium text-sm">
@@ -117,18 +129,32 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
               })}
         </div>
       </div>
-      {middlePane && conversation && (() => {
-        const MiddlePaneComponent = middlePane.component;
-        return (
-          <div className="max-h-[50%] shrink-0 overflow-y-auto rounded-md border bg-muted/30">
-            <MiddlePaneComponent conversation={conversation} />
-          </div>
-        );
-      })()}
-      <div className="flex-1 overflow-hidden rounded-md border bg-muted/30">
-        <TerminalComponent />
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <Group orientation="horizontal" className="flex h-full min-h-0">
+          <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col gap-4 overflow-hidden">
+            {MiddlePaneComponent && conversation && (
+              <div className="max-h-[50%] shrink-0 overflow-y-auto rounded-md border bg-muted/30">
+                <MiddlePaneComponent conversation={conversation} />
+              </div>
+            )}
+            <div className="min-h-0 flex-1 overflow-hidden rounded-md border bg-muted/30">
+              <TerminalComponent />
+            </div>
+          </Panel>
+          {RightPaneComponent && conversation && (
+            <>
+              <Separator className="mx-2 w-px bg-border transition-colors data-[separator-state=hover]:bg-foreground/20 data-[separator-state=drag]:bg-foreground/30" />
+              <Panel minSize="25%" className="min-h-0 min-w-0 overflow-hidden">
+                <div className="h-full min-h-0 overflow-hidden rounded-md border bg-muted/30">
+                  <RightPaneComponent conversation={conversation} />
+                </div>
+              </Panel>
+            </>
+          )}
+        </Group>
       </div>
     </div>
+    </RightPaneContext.Provider>
     </MiddlePaneContext.Provider>
   );
 }

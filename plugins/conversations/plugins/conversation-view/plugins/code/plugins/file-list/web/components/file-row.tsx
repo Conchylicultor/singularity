@@ -26,7 +26,7 @@ export function FileRow({
     <button
       type="button"
       disabled={muted}
-      onClick={() => Conversation.OpenMiddlePane(filePane({ path, status }))}
+      onClick={() => Conversation.OpenRightPane(filePane({ path, status }))}
       className={`flex w-full items-center gap-1.5 px-2 py-0.5 text-left text-xs hover:bg-muted/60 disabled:cursor-not-allowed ${
         muted ? "opacity-60" : ""
       }`}
