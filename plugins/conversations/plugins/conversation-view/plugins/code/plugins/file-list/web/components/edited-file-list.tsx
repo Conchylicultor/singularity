@@ -30,7 +30,7 @@ export function EditedFileList({
 
   if (sorted && sorted.length === 0) {
     return (
-      <div className="px-3 py-2 text-sm text-muted-foreground">
+      <div className="px-2 py-1 text-xs text-muted-foreground">
         No edited files
       </div>
     );

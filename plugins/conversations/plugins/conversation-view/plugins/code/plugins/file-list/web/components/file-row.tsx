@@ -22,13 +22,13 @@ export function FileRow({
 
   return (
     <div
-      className={`flex items-center gap-2 px-3 py-1 text-sm ${muted ? "opacity-60" : ""}`}
+      className={`flex items-center gap-1.5 px-2 py-0.5 text-xs ${muted ? "opacity-60" : ""}`}
       title={`${status} — ${path}`}
     >
       <span
         className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[status]}`}
       />
-      <MdInsertDriveFile className="size-3.5 shrink-0 text-muted-foreground" />
+      <MdInsertDriveFile className="size-3 shrink-0 text-muted-foreground" />
       <span className="truncate text-muted-foreground">{dir}</span>
       <span className={`truncate ${muted ? "" : "font-medium"}`}>{basename}</span>
     </div>
