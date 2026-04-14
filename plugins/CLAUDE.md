@@ -104,6 +104,14 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
         - `GET /api/stats/commits/lines/cumulative`
         - `GET /api/stats/commits/lines/rate`
 
+- **`tasks`** — Nested tasks with attempts; meta-plugin hosting sub-pane contributions. Nested tasks with attempts linking to conversations.
+  - Defines:
+    - Slots: `Tasks.PanePanel`
+    - DB schema: `plugins/tasks/server/schema.ts`
+  - Contributes:
+    - `Shell.Sidebar` "Tasks" (group `System`)
+    - `Shell.Route` `/tasks`
+
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Server:
     - `WS /ws/terminal`

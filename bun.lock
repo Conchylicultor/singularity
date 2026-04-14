@@ -63,6 +63,10 @@
         "recharts": "^2.15.0",
       },
     },
+    "plugins/tasks": {
+      "name": "@singularity/plugin-tasks",
+      "version": "0.0.1",
+    },
     "plugins/terminal": {
       "name": "@singularity/plugin-terminal",
       "version": "0.0.1",
@@ -502,6 +506,8 @@
     "@singularity/plugin-shell": ["@singularity/plugin-shell@workspace:plugins/shell"],
 
     "@singularity/plugin-stats": ["@singularity/plugin-stats@workspace:plugins/stats"],
+
+    "@singularity/plugin-tasks": ["@singularity/plugin-tasks@workspace:plugins/tasks"],
 
     "@singularity/plugin-terminal": ["@singularity/plugin-terminal@workspace:plugins/terminal"],
 

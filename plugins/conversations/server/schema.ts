@@ -1,6 +1,7 @@
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+import { taskAttempts } from "@plugins/tasks/server/schema";
 
 export const ConversationStatusSchema = z.enum([
   "starting",
@@ -18,6 +19,9 @@ export const conversations = pgTable("conversations", {
   status: text("status").$type<ConversationStatus>().notNull().default("starting"),
   runtime: text("runtime").notNull().default("tmux"),
   claudeSessionId: text("claude_session_id"),
+  taskAttemptId: text("task_attempt_id").references(() => taskAttempts.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

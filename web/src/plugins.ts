@@ -16,6 +16,7 @@ import welcomePlugin from "@plugins/welcome/web";
 import healthPlugin from "@plugins/health/web";
 import statsPlugin from "@plugins/stats/web";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/web";
+import tasksPlugin from "@plugins/tasks/web";
 
 export const plugins: PluginDefinition[] = [
   shellPlugin,
@@ -35,4 +36,5 @@ export const plugins: PluginDefinition[] = [
   healthPlugin,
   statsPlugin,
   statsCommitsPlugin,
+  tasksPlugin,
 ];

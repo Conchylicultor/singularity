@@ -8,6 +8,7 @@ import conversationsRuntimeApiPlugin from "@plugins/conversations/plugins/runtim
 import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import healthPlugin from "@plugins/health/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
+import tasksPlugin from "@plugins/tasks/server";
 
 // Runtime plugins must load before `conversationsPlugin` so they register
 // with the `Runtime` registry before the poller starts ticking on its import.
@@ -21,4 +22,5 @@ export const plugins: ServerPluginDefinition[] = [
   conversationCodePlugin,
   healthPlugin,
   statsCommitsPlugin,
+  tasksPlugin,
 ];
