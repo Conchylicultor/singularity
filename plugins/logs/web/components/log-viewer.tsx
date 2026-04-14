@@ -1,11 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { fetchWithRetry, ReconnectingEventSource, useReconnectingWebSocket } from "@core";
 import type { ClientMessage, ServerMessage, LogEntryWire } from "../../shared/protocol";
@@ -59,13 +53,13 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
           id,
           label: id,
         }));
-        const all = [...backendChannels, ...gatewayChannels];
+        const all = [...gatewayChannels, ...backendChannels];
         setChannels(all);
 
-        const preferredKey = initialChannel
+        const preferred = initialChannel
           ? all.find((c) => c.source === "backend" && c.id === initialChannel)
           : all[0];
-        if (preferredKey) setSelectedKey(channelKey(preferredKey));
+        if (preferred) setSelectedKey(channelKey(preferred));
       })
       .catch(() => {
         // Backend unreachable (e.g. crash-looping): still show gateway channels.
@@ -175,24 +169,29 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
 
   return (
     <div className="flex h-full flex-col p-6 space-y-4">
-      <Select
-        value={selectedKey ?? undefined}
-        onValueChange={(val: string | null) => setSelectedKey(val)}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Select channel" />
-        </SelectTrigger>
-        <SelectContent>
-          {channels.map((c) => {
-            const key = channelKey(c);
-            return (
-              <SelectItem key={key} value={key}>
-                {c.label}
-              </SelectItem>
-            );
-          })}
-        </SelectContent>
-      </Select>
+      <div role="tablist" className="flex items-center gap-1 border-b">
+        {channels.map((c) => {
+          const key = channelKey(c);
+          const active = key === selectedKey;
+          return (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setSelectedKey(key)}
+              className={cn(
+                "relative -mb-px px-3 py-1.5 text-sm border-b-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                active
+                  ? "border-foreground text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {c.label}
+            </button>
+          );
+        })}
+      </div>
 
       <ScrollArea className="flex-1 rounded-md border bg-muted/30">
         <div className="p-4 font-mono text-xs leading-5">
