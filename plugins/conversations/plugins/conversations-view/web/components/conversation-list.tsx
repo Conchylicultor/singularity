@@ -117,6 +117,7 @@ export function ConversationList() {
     const res = await fetch("/api/conversations", { method: "POST" });
     const conversation = ConversationSchema.parse(await res.json());
     openConversation(conversation.id);
+    setActiveId(conversation.id);
   };
 
   const deleteConversation = async (
