@@ -15,6 +15,7 @@ export async function handleUpdate(
     title?: string;
     description?: string | null;
     status?: string;
+    expanded?: boolean;
   };
   const patch: Record<string, unknown> = { updatedAt: new Date() };
   if (typeof body.title === "string") patch.title = body.title;
@@ -27,6 +28,7 @@ export async function handleUpdate(
     }
     patch.status = body.status;
   }
+  if (typeof body.expanded === "boolean") patch.expanded = body.expanded;
   const [row] = await db
     .update(tasks)
     .set(patch)

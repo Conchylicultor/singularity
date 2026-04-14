@@ -8,6 +8,7 @@ type Task = {
   id: string;
   parentId: string | null;
   title: string;
+  expanded: boolean;
 };
 
 type TreeNode = Task & { children: TreeNode[] };
@@ -26,9 +27,16 @@ function buildTree(rows: Task[]): TreeNode[] {
   return roots;
 }
 
+async function patchExpanded(id: string, expanded: boolean) {
+  await fetch(`/api/tasks/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ expanded }),
+  });
+}
+
 export function TasksList({ selectedId }: { selectedId?: string }) {
   const [rows, setRows] = useState<Task[]>([]);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     const res = await fetch("/api/tasks");
@@ -54,21 +62,25 @@ export function TasksList({ selectedId }: { selectedId?: string }) {
         body: JSON.stringify({ parentId }),
       });
       const task = (await res.json()) as Task;
-      setRows((prev) => [...prev, task]);
-      if (parentId) {
-        setExpanded((prev) => new Set(prev).add(parentId));
-      }
+      setRows((prev) => {
+        const next = [...prev, task];
+        return parentId
+          ? next.map((r) => (r.id === parentId ? { ...r, expanded: true } : r))
+          : next;
+      });
+      if (parentId) void patchExpanded(parentId, true);
       TasksCommands.OpenTask({ id: task.id });
     },
     [],
   );
 
   const toggle = useCallback((id: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+    setRows((prev) => {
+      const target = prev.find((r) => r.id === id);
+      if (!target) return prev;
+      const nextExpanded = !target.expanded;
+      void patchExpanded(id, nextExpanded);
+      return prev.map((r) => (r.id === id ? { ...r, expanded: nextExpanded } : r));
     });
   }, []);
 
@@ -81,7 +93,6 @@ export function TasksList({ selectedId }: { selectedId?: string }) {
           key={node.id}
           node={node}
           depth={0}
-          expanded={expanded}
           selectedId={selectedId}
           onToggle={toggle}
           onAdd={createTask}
@@ -102,19 +113,17 @@ export function TasksList({ selectedId }: { selectedId?: string }) {
 function TaskNode({
   node,
   depth,
-  expanded,
   selectedId,
   onToggle,
   onAdd,
 }: {
   node: TreeNode;
   depth: number;
-  expanded: Set<string>;
   selectedId?: string;
   onToggle: (id: string) => void;
   onAdd: (parentId: string | null) => void;
 }) {
-  const isOpen = expanded.has(node.id);
+  const isOpen = node.expanded;
   const hasChildren = node.children.length > 0;
   const isSelected = selectedId === node.id;
 
@@ -162,7 +171,6 @@ function TaskNode({
               key={child.id}
               node={child}
               depth={depth + 1}
-              expanded={expanded}
               selectedId={selectedId}
               onToggle={onToggle}
               onAdd={onAdd}

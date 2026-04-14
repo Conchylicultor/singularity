@@ -1,0 +1,1 @@
+ALTER TABLE "tasks" ADD COLUMN "expanded" boolean DEFAULT false NOT NULL;

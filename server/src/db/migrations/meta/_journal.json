@@ -64,6 +64,13 @@
       "tag": "20260414_204457_e1c27056__tasks_status",
       "hash": "e1c27056",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776202620000,
+      "tag": "20260414_213700_2624d0ed__add_task_expanded",
+      "hash": "2624d0ed",
+      "breakpoints": true
     }
   ]
 }
