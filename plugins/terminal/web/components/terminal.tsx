@@ -17,31 +17,58 @@ export function TerminalView({ command }: { command?: string[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  // Holds the latest {cols,rows} observed before `session.created` arrives.
+  // Flushed as a `session.resize` once the server acknowledges the session,
+  // so the PTY dims always converge to what xterm is actually rendering.
+  const pendingResizeRef = useRef<{ cols: number; rows: number } | null>(null);
   const commandRef = useRef(command);
   commandRef.current = command;
+
+  // Single source of truth for "tell the server about the current dims".
+  // - No session yet → send `session.create` (spawns the PTY at this size).
+  // - Session exists → send `session.resize`.
+  // Any resize that arrives before `session.created` is parked in
+  // `pendingResizeRef` and flushed on ack. On WS reconnect the old PTY is
+  // gone; `sessionIdRef` is reset in onOpen so we cleanly re-create.
+  const syncDims = (
+    ws: { send: (data: string) => void },
+    cols: number,
+    rows: number,
+  ) => {
+    const sessionId = sessionIdRef.current;
+    const msg: ClientMessage = sessionId
+      ? { type: "session.resize", sessionId, cols, rows }
+      : {
+          type: "session.create",
+          cols,
+          rows,
+          ...(commandRef.current && { command: commandRef.current }),
+        };
+    ws.send(JSON.stringify(msg));
+  };
 
   const wsHandle = useReconnectingWebSocket({
     url: WS_URL,
     onOpen: (ws) => {
       sessionIdRef.current = null;
+      pendingResizeRef.current = null;
       const term = terminalRef.current;
       if (!term) return;
-      const msg: ClientMessage = {
-        type: "session.create",
-        cols: term.cols,
-        rows: term.rows,
-        ...(commandRef.current && { command: commandRef.current }),
-      };
-      ws.send(JSON.stringify(msg));
+      syncDims(ws, term.cols, term.rows);
     },
     onMessage: (event) => {
       const term = terminalRef.current;
       if (!term) return;
       const msg: ServerMessage = JSON.parse(event.data);
       switch (msg.type) {
-        case "session.created":
+        case "session.created": {
           sessionIdRef.current = msg.sessionId;
+          const pending = pendingResizeRef.current;
+          pendingResizeRef.current = null;
+          const ws = wsHandle.current;
+          if (pending && ws) syncDims(ws, pending.cols, pending.rows);
           break;
+        }
         case "session.output":
           term.write(msg.data);
           break;
@@ -82,10 +109,16 @@ export function TerminalView({ command }: { command?: string[] }) {
     });
 
     const resizeDisposable = term.onResize(({ cols, rows }) => {
-      const sessionId = sessionIdRef.current;
-      if (!sessionId) return;
-      const msg: ClientMessage = { type: "session.resize", sessionId, cols, rows };
-      wsHandle.current?.send(JSON.stringify(msg));
+      const ws = wsHandle.current;
+      // Before `session.created` arrives, a naive send would be silently
+      // dropped server-side ("No active session"), leaving the PTY stuck at
+      // its initial dims while xterm renders at the new size — the shifted-
+      // display bug. Park the dims so `session.created` can flush them.
+      if (!sessionIdRef.current) {
+        pendingResizeRef.current = { cols, rows };
+        return;
+      }
+      if (ws) syncDims(ws, cols, rows);
     });
 
     const observer = new ResizeObserver(() => fitAddon.fit());
