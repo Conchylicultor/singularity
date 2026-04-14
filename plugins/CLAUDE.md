@@ -28,6 +28,7 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
     - **`conversation-view`** — Conversation pane and toolbar host; nested plugins extend `Conversation.Toolbar`.
       - Defines:
         - Slots: `Conversation.Toolbar`
+        - Commands: `Conversation.OpenMiddlePane`
       - Contributes:
         - `Shell.Route` `/c/:id`
       - Plugins:

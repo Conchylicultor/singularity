@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { subscribeWsStatus } from "@core";
 import { Conversation } from "../slots";
+import {
+  Conversation as ConversationCommands,
+  MiddlePaneContext,
+  type MiddlePaneDescriptor,
+} from "../commands";
 import { terminalPane } from "@plugins/terminal/web/views";
 import type { Conversation as ConversationRecord } from "@plugins/conversations/shared/types";
 import { useConversationStream } from "@plugins/conversations/web/stream";
@@ -11,6 +16,9 @@ const TMUX = "/opt/homebrew/bin/tmux";
 export function ConversationView({ sessionId }: { sessionId: string }) {
   const toolbarItems = Conversation.Toolbar.useContributions();
   const [conversation, setConversation] = useState<ConversationRecord | null>(null);
+  const [middlePane, setMiddlePane] = useState<MiddlePaneDescriptor | null>(null);
+  ConversationCommands.OpenMiddlePane.useHandler((d) => setMiddlePane(d));
+  useEffect(() => setMiddlePane(null), [sessionId]);
 
   const fetchConversation = useCallback(() => {
     let cancelled = false;
@@ -52,6 +60,7 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
   });
 
   return (
+    <MiddlePaneContext.Provider value={middlePane}>
     <div className="flex h-full flex-col p-4 space-y-4">
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -102,9 +111,18 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
               })}
         </div>
       </div>
+      {middlePane && conversation && (() => {
+        const MiddlePaneComponent = middlePane.component;
+        return (
+          <div className="max-h-[50%] shrink-0 overflow-y-auto rounded-md border bg-muted/30">
+            <MiddlePaneComponent conversation={conversation} />
+          </div>
+        );
+      })()}
       <div className="flex-1 overflow-hidden rounded-md border bg-muted/30">
         <TerminalComponent />
       </div>
     </div>
+    </MiddlePaneContext.Provider>
   );
 }
