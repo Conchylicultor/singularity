@@ -1,11 +1,13 @@
 import { useState } from "react";
 import {
   Area,
-  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
+  ComposedChart,
   Legend,
+  Line,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -27,17 +29,19 @@ import {
 
 const ADDED_COLOR = "var(--chart-added, #16a34a)";
 const REMOVED_COLOR = "var(--chart-removed, #dc2626)";
+const NET_COLOR = "var(--chart-net, #2563eb)";
 
-type SeriesKey = "added" | "removed";
+type SeriesKey = "added" | "removed" | "net";
 
 function useToggleable() {
   const [hidden, setHidden] = useState<Record<SeriesKey, boolean>>({
     added: false,
     removed: false,
+    net: false,
   });
   const onLegendClick = (e: any) => {
     const k = e?.dataKey as SeriesKey | undefined;
-    if (k === "added" || k === "removed") {
+    if (k === "added" || k === "removed" || k === "net") {
       setHidden((h) => ({ ...h, [k]: !h[k] }));
     }
   };
@@ -70,6 +74,12 @@ export function CumulativeLinesChart() {
     "/api/stats/commits/lines/cumulative",
   );
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
+  const points = (data?.points ?? []).map((p) => ({
+    date: p.date,
+    added: p.added,
+    removed: -p.removed,
+    net: p.added - p.removed,
+  }));
   return (
     <div className="h-64 w-full">
       <ChartState
@@ -78,8 +88,8 @@ export function CumulativeLinesChart() {
         empty={!!data && data.points.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={data?.points ?? []}
+          <ComposedChart
+            data={points}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
           >
             <CartesianGrid {...gridProps} />
@@ -90,13 +100,14 @@ export function CumulativeLinesChart() {
               width={48}
               tickFormatter={yAxisFormatter}
             />
+            <ReferenceLine y={0} stroke="var(--border)" strokeWidth={1} />
             <Tooltip
               isAnimationActive={false}
               contentStyle={tooltipContentStyle}
               labelStyle={tooltipLabelStyle}
               cursor={lineCursor}
               formatter={(value: number, name: string) => [
-                tooltipNumberFormatter(value),
+                tooltipNumberFormatter(Math.abs(value)),
                 name,
               ]}
             />
@@ -129,7 +140,18 @@ export function CumulativeLinesChart() {
               isAnimationActive={false}
               hide={hidden.removed}
             />
-          </AreaChart>
+            <Line
+              type="monotone"
+              dataKey="net"
+              name="Net"
+              stroke={NET_COLOR}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+              isAnimationActive={false}
+              hide={hidden.net}
+            />
+          </ComposedChart>
         </ResponsiveContainer>
       </ChartState>
     </div>

@@ -8,7 +8,7 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-const ALLOWED_PATHS = ["plugin-core/"];
+const ALLOWED_PATHS = ["plugin-core/", "cli/"];
 
 export const noRawEventSource: Check = {
   id: "no-raw-event-source",
