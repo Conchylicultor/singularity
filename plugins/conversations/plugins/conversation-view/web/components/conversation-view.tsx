@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { subscribeWsStatus } from "@core";
 import { Conversation } from "../slots";
 import {
@@ -56,10 +56,14 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
     });
   }, [fetchConversation]);
 
-  const { component: TerminalComponent } = terminalPane({
-    command: [TMUX, "-u", "attach", "-t", sessionId],
-    title: sessionId,
-  });
+  const TerminalComponent = useMemo(
+    () =>
+      terminalPane({
+        command: [TMUX, "-u", "attach", "-t", sessionId],
+        title: sessionId,
+      }).component,
+    [sessionId],
+  );
 
   return (
     <MiddlePaneContext.Provider value={middlePane}>
