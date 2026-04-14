@@ -18,6 +18,7 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
   - Defines:
     - DB schema: `plugins/conversations/server/schema.ts`
   - Server:
+    - API: `Runtime`
     - `GET /api/conversations`
     - `GET /api/conversations/stream`
     - `GET /api/conversations/:id`
@@ -54,7 +55,11 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
       - Contributes:
         - `Shell.Sidebar` "Conversations" → `ConversationList`
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
+      - Server:
+        - Uses: `conversations.ConversationRuntime`, `conversations.Runtime`, `conversations.RuntimeInfo`
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
+      - Server:
+        - Uses: `conversations.Runtime`
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Contributes:
