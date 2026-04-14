@@ -70,6 +70,8 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
 - **`logs`** — System logs pane, opened from a sidebar button.
   - Contributes:
     - `Shell.Sidebar` "Logs" (group `System`)
+    - `Shell.Route` `/logs`
+    - `Shell.Route` `/logs/:channel`
   - Server:
     - API: `Log`
     - `GET /api/logs/channels`

@@ -82,9 +82,7 @@ export function ShellLayout() {
 
   ShellCommands.OpenPane.useHandler((descriptor) => {
     const id = openPane(descriptor);
-    if (descriptor.path) {
-      history.pushState({}, "", descriptor.path);
-    }
+    history.pushState({}, "", descriptor.path);
     return id;
   });
 

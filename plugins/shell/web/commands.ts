@@ -4,7 +4,7 @@ import type { ComponentType } from "react";
 export interface PaneDescriptor {
   title: string;
   component: ComponentType;
-  path?: string;
+  path: string;
 }
 
 export type ToastVariant = "default" | "success" | "error" | "warning" | "info";

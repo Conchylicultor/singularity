@@ -15,6 +15,14 @@ const logsPlugin: PluginDefinition = {
       group: "System",
       onClick: () => ShellCommands.OpenPane(logPane()),
     }),
+    Shell.Route({
+      pattern: "/logs",
+      resolve: () => logPane(),
+    }),
+    Shell.Route({
+      pattern: "/logs/:channel",
+      resolve: (params) => logPane({ channel: params.channel }),
+    }),
   ],
 };
 
