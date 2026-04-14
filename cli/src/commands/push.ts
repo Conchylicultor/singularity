@@ -86,16 +86,6 @@ export function registerPush(program: Command) {
         process.exit(1);
       }
 
-      // 0. Run validation checks
-      if (!opts.skipChecks) {
-        console.log("Running checks...");
-        const ok = await runChecks();
-        if (!ok) {
-          console.error("Checks failed. Fix issues or re-run with --skip-checks.");
-          process.exit(1);
-        }
-      }
-
       // 1. Commit if -m provided, otherwise require clean tree
       const { stdout: status } = await run(["git", "status", "--porcelain"]);
       if (opts.message) {
@@ -122,6 +112,18 @@ export function registerPush(program: Command) {
       if (opts.fromMain) {
         console.log("Pulling main...");
         await exec(["git", "pull", "--rebase"]);
+        if (!opts.skipChecks) {
+          console.log("Running checks...");
+          const ok = await runChecks();
+          if (!ok) {
+            console.error(
+              "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
+                "(your commit is still on HEAD; use `git reset --soft HEAD~1` to unstage it if needed), " +
+                "or re-run with --skip-checks.",
+            );
+            process.exit(1);
+          }
+        }
         console.log("Pushing main...");
         await exec(["git", "push"]);
         console.log("Done. Pushed directly from main.");
@@ -155,7 +157,22 @@ export function registerPush(program: Command) {
         process.exit(1);
       }
 
-      // 4. Push the branch (force since rebase rewrites history — safe for single-owner worktree branches)
+      // 4. Run checks on the rebased tree — this is exactly what will land on main.
+      if (!opts.skipChecks) {
+        console.log("Running checks...");
+        const ok = await runChecks();
+        if (!ok) {
+          console.error(
+            `Checks failed after rebasing ${branch} onto main. ` +
+              `Fix the issue and re-run ./singularity push ` +
+              `(your commits are on ${branch}; use \`git reset --soft HEAD~1\` to unstage the last one if needed), ` +
+              `or re-run with --skip-checks.`,
+          );
+          process.exit(1);
+        }
+      }
+
+      // 5. Push the branch (force since rebase rewrites history — safe for single-owner worktree branches)
       console.log(`Pushing branch ${branch}...`);
       await exec(["git", "push", "--force-with-lease", "-u", "origin", branch]);
 
