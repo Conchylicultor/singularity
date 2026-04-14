@@ -118,6 +118,9 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
     - `Shell.Sidebar` "Tasks" (group `System`)
     - `Shell.Route` `/tasks`
     - `Shell.Route` `/tasks/:id`
+  - Server:
+    - `GET /api/tasks`
+    - `POST /api/tasks`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Server:

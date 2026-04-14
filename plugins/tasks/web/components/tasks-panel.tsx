@@ -8,6 +8,7 @@ import { Tasks as TasksSlots } from "../slots";
 import { Tasks as TasksCommands } from "../commands";
 import { tasksPane } from "../views";
 import { TaskView } from "./task-view";
+import { TasksList } from "./tasks-list";
 
 export function TasksPanel({ selectedId }: { selectedId?: string }) {
   const lists = TasksSlots.List.useContributions();
@@ -20,11 +21,10 @@ export function TasksPanel({ selectedId }: { selectedId?: string }) {
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full">
       <ResizablePanel defaultSize={55} minSize={25}>
-        <div className="h-full overflow-auto p-6">
-          {lists.length === 0 ? (
-            <div className="text-muted-foreground text-sm">No tasks yet.</div>
-          ) : (
-            <div className="flex flex-col gap-4">
+        <div className="h-full overflow-auto p-4">
+          <TasksList selectedId={selectedId} />
+          {lists.length > 0 && (
+            <div className="mt-6 flex flex-col gap-4">
               {lists.map((l) => (
                 <l.component key={l.id} />
               ))}
