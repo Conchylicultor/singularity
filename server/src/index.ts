@@ -4,6 +4,15 @@ import { runMigrations } from "./db/migrate";
 
 await runMigrations();
 
+// Exit when orphaned (parent gateway died and we were reparented to init).
+// macOS has no PR_SET_PDEATHSIG equivalent, so poll. Without this, old
+// backends survive gateway crashes, leak PTYs, and hold onto ports.
+if (process.ppid !== 1) {
+  setInterval(() => {
+    if (process.ppid === 1) process.exit(0);
+  }, 2000).unref();
+}
+
 // Flatten plugin routes into lookup tables.
 // Literal routes go in an O(1) map; routes with :param segments are matched
 // linearly in registration order.

@@ -58,13 +58,62 @@ export function registerPush(program: Command) {
     .description("Commit (if -m provided), merge into main, and push")
     .option("-m, --message <msg>", "Commit message — stages and commits all changes before pushing")
     .option("--skip-checks", "Skip pre-push validation checks (unsafe)")
-    .action(async (opts: { message?: string; skipChecks?: boolean }) => {
-      const branch = await getCurrentBranch();
+    .option(
+      "--from-main",
+      "DANGER: commit and push directly from main, bypassing the worktree-merge flow. " +
+        "Agents MUST NOT pass this flag without explicit user approval in the current conversation. " +
+        "Intended only when a human is driving and the worktree detour would be pure churn " +
+        "(e.g. small fixes already staged on main). Still runs checks.",
+    )
+    .action(
+      async (opts: {
+        message?: string;
+        skipChecks?: boolean;
+        fromMain?: boolean;
+      }) => {
+        const branch = await getCurrentBranch();
 
-      if (branch === "main") {
-        console.error("Already on main — nothing to merge.");
-        process.exit(1);
-      }
+        if (branch === "main" && !opts.fromMain) {
+          console.error("Already on main — nothing to merge.");
+          process.exit(1);
+        }
+
+        if (opts.fromMain) {
+          if (branch !== "main") {
+            console.error(
+              `--from-main requires being on main (currently on ${branch}).`,
+            );
+            process.exit(1);
+          }
+          if (!opts.message) {
+            console.error('--from-main requires -m "commit message".');
+            process.exit(1);
+          }
+          if (!opts.skipChecks) {
+            console.log("Running checks...");
+            const ok = await runChecks();
+            if (!ok) {
+              console.error(
+                "Checks failed. Fix issues or re-run with --skip-checks.",
+              );
+              process.exit(1);
+            }
+          }
+          const { stdout: status } = await run(["git", "status", "--porcelain"]);
+          if (!status) {
+            console.error("Nothing to commit.");
+            process.exit(1);
+          }
+          const files = status.split("\n").map((l) => l.trim());
+          console.log(`Committing ${files.length} file(s) on main:`);
+          for (const f of files) console.log(`  ${f}`);
+          await exec(["git", "pull", "--ff-only"]);
+          await exec(["git", "add", "-A"]);
+          await exec(["git", "commit", "-m", opts.message]);
+          await exec(["git", "push"]);
+          console.log("Done. Pushed directly from main.");
+          return;
+        }
 
       // 0. Run validation checks
       if (!opts.skipChecks) {

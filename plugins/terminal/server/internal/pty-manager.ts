@@ -34,7 +34,13 @@ export function createSession(options: CreateSessionOptions): string {
 
   p.onData((data) => options.onOutput(id, data));
   p.onExit(({ exitCode }) => {
+    // bun-pty's read loop fires onExit on natural child exit without closing
+    // the master fd — only kill() calls bun_pty_close. Force it here to
+    // release /dev/ptmx; the session-map guard prevents re-entry since
+    // kill() re-fires onExit.
+    if (!sessions.has(id)) return;
     sessions.delete(id);
+    p.kill();
     options.onExit(id, exitCode);
   });
 

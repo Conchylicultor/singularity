@@ -104,6 +104,10 @@ This will:
 > NEVER use raw git commands (`git commit`, `git push`). Always use `./singularity push -m "message"`.
 > "push", "publish", "ship" all mean `./singularity push`.
 
+### `--from-main` (dangerous)
+
+`./singularity push --from-main -m "…"` commits and pushes straight from main, skipping the worktree-merge flow. **Agents must never pass this flag without explicit user approval in the current conversation** — not from memory, not from a prior session, not from a CLAUDE.md rule. The user must say so, in this conversation, for this push. If you're on main and no worktree branch exists for the changes, stop and ask rather than reaching for this flag.
+
 ## Ports
 
 - Port range: **9000–10000** (Those are handled automatically by the gateway. Make sure to run the `build` CLI command)

@@ -99,7 +99,9 @@ func main() {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
+	shutdownDone := make(chan struct{})
 	go func() {
+		defer close(shutdownDone)
 		<-ctx.Done()
 		slog.Info("shutdown signal received")
 		shutCtx, shutCancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -113,5 +115,10 @@ func main() {
 		slog.Error("server error", "err", err)
 		os.Exit(1)
 	}
+	// Block until the shutdown goroutine finishes stopping all backends.
+	// srv.Shutdown returns ErrServerClosed immediately, not when done, so
+	// without this wait main returns and the process exits mid-StopAll —
+	// leaving bun children reparented to init instead of terminated.
+	<-shutdownDone
 	slog.Info("gateway stopped")
 }
