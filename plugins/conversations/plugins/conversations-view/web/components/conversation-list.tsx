@@ -163,12 +163,13 @@ export function ConversationList() {
         {conversations.map((conversation) => {
           const working = live[conversation.id]?.working ?? false;
           const needsAttention = conversation.status === "needs_attention";
+          const gone = conversation.status === "gone";
           const muted = !working && !needsAttention;
           const label = conversation.title ?? "Starting...";
           return (
             <SidebarMenuItem
               key={conversation.id}
-              style={{ order: working ? 0 : needsAttention ? 1 : 2 }}
+              style={{ order: gone ? 1 : 0 }}
             >
               <SidebarMenuButton
                 className="h-auto py-1.5"
