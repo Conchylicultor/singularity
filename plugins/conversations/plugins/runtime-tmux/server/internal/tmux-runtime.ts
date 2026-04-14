@@ -8,22 +8,32 @@ const TMUX = "/opt/homebrew/bin/tmux";
 const CLAUDE = "/Users/admin/.local/bin/claude";
 const PREFIX = "claude";
 
-function cleanPaneTitle(raw: string): { title: string; idle: boolean } {
-  const cleaned = raw
-    .replace(/^_ /, "")
-    .replace(/^[✳⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈]\s*/, "")
-    .trim();
+const SPINNER_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈]\s*/;
+const READY_RE = /^✳\s*/;
 
-  const isIdle =
-    !cleaned ||
-    /^[a-zA-Z0-9-]+\.(local|internal|lan)$/.test(cleaned) ||
-    /^claude-\d+$/.test(cleaned);
+function cleanPaneTitle(raw: string): { title: string; working: boolean } {
+  const trimmed = raw.replace(/^_ /, "").trim();
 
-  return { title: isIdle ? "" : cleaned, idle: isIdle };
+  // Prefix convention from Claude Code's tmux title:
+  //   spinner glyph (⠋⠙…) → actively processing
+  //   ✳                   → finished, waiting for user input
+  //   anything else       → default pane state
+  const working = SPINNER_RE.test(trimmed);
+  const title = trimmed.replace(SPINNER_RE, "").replace(READY_RE, "").trim();
+
+  const isDefault =
+    !title ||
+    /^[a-zA-Z0-9-]+\.(local|internal|lan)$/.test(title) ||
+    /^claude-\d+$/.test(title);
+
+  return {
+    title: isDefault ? "" : title,
+    working,
+  };
 }
 
 async function listPanes(): Promise<
-  Map<string, { rawTitle: string; panePid: number }>
+  Map<string, { rawTitle: string; panePid: number; dead: boolean }>
 > {
   const proc = Bun.spawn(
     [
@@ -31,7 +41,7 @@ async function listPanes(): Promise<
       "list-panes",
       "-a",
       "-F",
-      "#{session_name}|#{pane_pid}|#{pane_title}",
+      "#{session_name}|#{pane_pid}|#{pane_dead}|#{pane_title}",
       "-f",
       `#{m:${PREFIX}-*,#{session_name}}`,
     ],
@@ -39,16 +49,22 @@ async function listPanes(): Promise<
   );
   const stdout = await new Response(proc.stdout).text();
   const exit = await proc.exited;
-  const map = new Map<string, { rawTitle: string; panePid: number }>();
+  const map = new Map<
+    string,
+    { rawTitle: string; panePid: number; dead: boolean }
+  >();
   if (exit !== 0) return map;
   for (const line of stdout.trim().split("\n").filter(Boolean)) {
-    const [name, pidStr, ...rest] = line.split("|");
+    const [name, pidStr, deadStr, ...rest] = line.split("|");
     if (!name || !pidStr) continue;
-    // Only first pane per session; duplicates (multi-pane sessions) collapse.
     if (map.has(name)) continue;
     const pid = Number(pidStr);
     if (!Number.isFinite(pid)) continue;
-    map.set(name, { panePid: pid, rawTitle: rest.join("|") });
+    map.set(name, {
+      panePid: pid,
+      dead: deadStr === "1",
+      rawTitle: rest.join("|"),
+    });
   }
   return map;
 }
@@ -64,9 +80,14 @@ export const tmuxRuntime: ConversationRuntime = {
     );
     const out = new Map<string, RuntimeInfo>();
     ids.forEach((id, i) => {
-      const { rawTitle } = panes.get(id)!;
-      const { title, idle } = cleanPaneTitle(rawTitle ?? "");
-      out.set(id, { title, idle, claudeSessionId: sessionIds[i] ?? null });
+      const { rawTitle, dead } = panes.get(id)!;
+      const { title, working } = cleanPaneTitle(rawTitle ?? "");
+      out.set(id, {
+        title,
+        working: working && !dead,
+        dead,
+        claudeSessionId: sessionIds[i] ?? null,
+      });
     });
     return out;
   },

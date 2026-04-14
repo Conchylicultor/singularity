@@ -1,6 +1,9 @@
 export interface RuntimeInfo {
   title: string;
-  idle: boolean;
+  /** True while Claude is actively processing (spinner visible). False when waiting for user input or in a default/unused pane state. */
+  working: boolean;
+  /** True when the underlying process has exited but the pane/session shell still lingers. */
+  dead: boolean;
   claudeSessionId: string | null;
 }
 

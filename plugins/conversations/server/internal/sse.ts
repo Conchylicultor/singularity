@@ -38,7 +38,7 @@ export function handleStream(_req: Request): Response {
       controller.enqueue(encoder.encode(": ok\n\n"));
       for (const [id, info] of getSnapshot()) {
         controller.enqueue(
-          frame({ type: "idle", id, idle: info.idle }),
+          frame({ type: "working", id, working: info.working }),
         );
       }
     },

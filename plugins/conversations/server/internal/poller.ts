@@ -2,8 +2,14 @@ import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { Runtime, type RuntimeInfo } from "../api";
 import { conversations } from "../schema";
+import type { ConversationStatus } from "../../shared/types";
 import { worktreePathFor } from "./worktree";
 import { broadcast } from "./sse";
+
+function statusFor(info: RuntimeInfo): ConversationStatus {
+  if (info.dead) return "completed";
+  return info.working ? "working" : "needs_attention";
+}
 
 const TICK_MS = 1000;
 
@@ -47,6 +53,7 @@ async function tick(): Promise<void> {
         id: conversations.id,
         title: conversations.title,
         claudeSessionId: conversations.claudeSessionId,
+        status: conversations.status,
       })
       .from(conversations),
   ]);
@@ -64,6 +71,8 @@ async function tick(): Promise<void> {
           id,
           worktreePath: await worktreePathFor(id),
           runtime: live.runtime,
+          status: statusFor(live),
+          title: live.title || null,
         })
         .onConflictDoNothing()
         .returning();
@@ -72,6 +81,7 @@ async function tick(): Promise<void> {
           id: inserted.id,
           title: inserted.title,
           claudeSessionId: inserted.claudeSessionId,
+          status: inserted.status,
         });
         broadcast({
           type: "created",
@@ -83,8 +93,8 @@ async function tick(): Promise<void> {
 
   for (const [id, info] of next) {
     const prev = snapshot.get(id);
-    if (!prev || prev.idle !== info.idle) {
-      broadcast({ type: "idle", id, idle: info.idle });
+    if (!prev || prev.working !== info.working) {
+      broadcast({ type: "working", id, working: info.working });
     }
   }
   for (const id of snapshot.keys()) {
@@ -95,14 +105,19 @@ async function tick(): Promise<void> {
   for (const [id, info] of next) {
     const dbRow = dbById.get(id);
     if (!dbRow) continue;
-    const desiredTitle = info.idle ? null : info.title;
+    // Only overwrite title when the runtime reports a real one; preserve the
+    // last known title when the pane is in a default/waiting state.
+    const desiredTitle = info.title ? info.title : dbRow.title;
+    const desiredStatus = statusFor(info);
     const titleChanged = desiredTitle !== dbRow.title;
     const sessionChanged = info.claudeSessionId !== dbRow.claudeSessionId;
-    if (!titleChanged && !sessionChanged) continue;
+    const statusChanged = desiredStatus !== dbRow.status;
+    if (!titleChanged && !sessionChanged && !statusChanged) continue;
 
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     if (titleChanged) patch.title = desiredTitle;
     if (sessionChanged) patch.claudeSessionId = info.claudeSessionId;
+    if (statusChanged) patch.status = desiredStatus;
     await db.update(conversations).set(patch).where(eq(conversations.id, id));
     if (titleChanged) broadcast({ type: "title", id, title: desiredTitle });
     if (sessionChanged) {
@@ -112,6 +127,7 @@ async function tick(): Promise<void> {
         claudeSessionId: info.claudeSessionId,
       });
     }
+    if (statusChanged) broadcast({ type: "status", id, status: desiredStatus });
   }
 }
 

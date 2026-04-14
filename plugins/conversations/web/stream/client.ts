@@ -83,8 +83,8 @@ class ConversationStreamClient {
   }
 
   private applyEvent(event: ConversationEvent) {
-    if (event.type === "idle") {
-      this.liveCache.set(event.id, { idle: event.idle });
+    if (event.type === "working") {
+      this.liveCache.set(event.id, { working: event.working });
     } else if (event.type === "gone") {
       this.liveCache.delete(event.id);
     }
@@ -122,7 +122,7 @@ class ConversationStreamClient {
     } else if (env.kind === "snapshot") {
       this.liveCache = new Map(env.live);
       for (const [id, info] of this.liveCache) {
-        this.fanOut({ type: "idle", id, idle: info.idle });
+        this.fanOut({ type: "working", id, working: info.working });
       }
     } else if (env.kind === "reset") {
       this.liveCache.clear();

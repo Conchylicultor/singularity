@@ -50,10 +50,16 @@ export function WelcomeView() {
           c.id === parsed.id ? { ...c, title: parsed.title } : c,
         ),
       );
-    } else if (parsed.type === "idle") {
+    } else if (parsed.type === "status") {
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === parsed.id ? { ...c, status: parsed.status } : c,
+        ),
+      );
+    } else if (parsed.type === "working") {
       setLive((prev) => ({
         ...prev,
-        [parsed.id]: { idle: parsed.idle },
+        [parsed.id]: { working: parsed.working },
       }));
     } else if (parsed.type === "gone") {
       setLive((prev) => {
@@ -76,9 +82,9 @@ export function WelcomeView() {
     });
   }, [refresh]);
 
-  const isIdle = (name: string) => live[name]?.idle ?? true;
-  const activeCount = conversations.filter((c) => !isIdle(c.id)).length;
-  const idleCount = conversations.filter((c) => isIdle(c.id)).length;
+  const isWorking = (name: string) => live[name]?.working ?? false;
+  const activeCount = conversations.filter((c) => isWorking(c.id)).length;
+  const idleCount = conversations.filter((c) => !isWorking(c.id)).length;
 
   const createConversation = async () => {
     const res = await fetch("/api/conversations", { method: "POST" });
@@ -161,7 +167,7 @@ export function WelcomeView() {
                   <span
                     className={cn(
                       "size-1.5 shrink-0 rounded-full",
-                      isIdle(conversation.id)
+                      !isWorking(conversation.id)
                         ? "bg-muted-foreground/40"
                         : "bg-primary",
                     )}
@@ -170,12 +176,12 @@ export function WelcomeView() {
                     <span
                       className={cn(
                         "truncate text-xs",
-                        isIdle(conversation.id)
+                        !isWorking(conversation.id)
                           ? "text-muted-foreground"
                           : "font-medium text-foreground",
                       )}
                     >
-                      {conversation.title ?? "Idle"}
+                      {conversation.title ?? "Starting..."}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
                       {formatRelativeTime(conversation.createdAt)}

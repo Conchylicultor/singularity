@@ -78,6 +78,12 @@ export function ConversationList() {
           c.id === parsed.id ? { ...c, title: parsed.title } : c,
         ),
       );
+    } else if (parsed.type === "status") {
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id === parsed.id ? { ...c, status: parsed.status } : c,
+        ),
+      );
     } else if (parsed.type === "created") {
       const conv = ConversationSchema.parse(parsed.conversation);
       setConversations((prev) =>
@@ -85,10 +91,10 @@ export function ConversationList() {
       );
     } else if (parsed.type === "deleted") {
       setConversations((prev) => prev.filter((c) => c.id !== parsed.id));
-    } else if (parsed.type === "idle") {
+    } else if (parsed.type === "working") {
       setLive((prev) => ({
         ...prev,
-        [parsed.id]: { idle: parsed.idle },
+        [parsed.id]: { working: parsed.working },
       }));
     } else if (parsed.type === "gone") {
       setLive((prev) => {
@@ -155,13 +161,14 @@ export function ConversationList() {
       </div>
       <SidebarMenu>
         {conversations.map((conversation) => {
-          const liveInfo = live[conversation.id];
-          const idle = liveInfo?.idle ?? true;
-          const label = conversation.title ?? "Idle";
+          const working = live[conversation.id]?.working ?? false;
+          const needsAttention = conversation.status === "needs_attention";
+          const muted = !working && !needsAttention;
+          const label = conversation.title ?? "Starting...";
           return (
             <SidebarMenuItem
               key={conversation.id}
-              style={{ order: idle ? 1 : 0 }}
+              style={{ order: working ? 0 : needsAttention ? 1 : 2 }}
             >
               <SidebarMenuButton
                 className="h-auto py-1.5"
@@ -174,13 +181,17 @@ export function ConversationList() {
                 <div className="flex items-start gap-2 overflow-hidden">
                   <span className={cn(
                     "mt-1.5 size-1.5 shrink-0 rounded-full",
-                    idle ? "bg-muted-foreground/40" : "bg-primary"
+                    working
+                      ? "bg-primary"
+                      : needsAttention
+                        ? "bg-amber-500"
+                        : "bg-muted-foreground/40",
                   )} />
                   <div className="flex flex-col gap-0.5 overflow-hidden">
                     <span
                       className={cn(
                         "truncate text-xs",
-                        idle ? "text-muted-foreground" : "font-medium",
+                        muted ? "text-muted-foreground" : "font-medium",
                       )}
                     >
                       {label}

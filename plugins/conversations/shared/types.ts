@@ -6,5 +6,5 @@ export {
 } from "../server/schema";
 
 export interface RuntimeLive {
-  idle: boolean;
+  working: boolean;
 }
