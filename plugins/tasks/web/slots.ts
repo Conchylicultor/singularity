@@ -2,9 +2,13 @@ import { defineSlot } from "@core";
 import type { ComponentType } from "react";
 
 export const Tasks = {
-  PanePanel: defineSlot<{
+  List: defineSlot<{
     id: string;
-    title: string;
     component: ComponentType;
-  }>("tasks.pane-panel"),
+  }>("tasks.list"),
+  View: defineSlot<{
+    id: string;
+    title?: string;
+    component: ComponentType<{ taskId: string }>;
+  }>("tasks.view"),
 };

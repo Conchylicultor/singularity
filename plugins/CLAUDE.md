@@ -111,11 +111,13 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
 
 - **`tasks`** — Nested tasks with attempts; meta-plugin hosting sub-pane contributions. Nested tasks with attempts linking to conversations.
   - Defines:
-    - Slots: `Tasks.PanePanel`
+    - Slots: `Tasks.List`, `Tasks.View`
+    - Commands: `Tasks.OpenTask`
     - DB schema: `plugins/tasks/server/schema.ts`
   - Contributes:
     - `Shell.Sidebar` "Tasks" (group `System`)
     - `Shell.Route` `/tasks`
+    - `Shell.Route` `/tasks/:id`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Server:

@@ -19,6 +19,10 @@ const tasksPlugin: PluginDefinition = {
       pattern: "/tasks",
       resolve: () => tasksPane(),
     }),
+    Shell.Route({
+      pattern: "/tasks/:id",
+      resolve: (params) => tasksPane({ id: params.id }),
+    }),
   ],
 };
 
