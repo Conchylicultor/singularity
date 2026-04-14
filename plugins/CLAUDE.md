@@ -41,6 +41,8 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
     - **`conversations-view`** — Sidebar list of all conversations.
       - Contributes:
         - `Shell.Sidebar` "Conversations" → `ConversationList`
+    - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
+    - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Contributes:

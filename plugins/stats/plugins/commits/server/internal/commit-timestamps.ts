@@ -1,4 +1,4 @@
-import { getMainWorktreeRoot } from "@plugins/conversations/server/internal/tmux";
+import { getMainWorktreeRoot } from "@plugins/conversations/server/internal/worktree";
 
 const GIT = "/usr/bin/git";
 const TTL_MS = 30_000;

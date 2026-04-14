@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { conversations } from "../schema";
-import { deleteConversation } from "./tmux";
+import { deleteConversation } from "./lifecycle";
 import { broadcast } from "./sse";
 
 export async function handleDelete(req: Request): Promise<Response> {

@@ -5,7 +5,6 @@ export {
   type ConversationStatus,
 } from "../server/schema";
 
-export interface TmuxLive {
-  task: string;
+export interface RuntimeLive {
   idle: boolean;
 }

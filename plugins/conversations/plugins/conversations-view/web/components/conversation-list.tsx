@@ -7,7 +7,7 @@ import { z } from "zod";
 import {
   ConversationSchema,
   type Conversation,
-  type TmuxLive,
+  type RuntimeLive,
 } from "@plugins/conversations/shared/types";
 import { useConversationStream } from "@plugins/conversations/web/stream";
 import { cn } from "@/lib/utils";
@@ -41,7 +41,7 @@ function activeIdFromPath(pathname: string): string | null {
 
 export function ConversationList() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [live, setLive] = useState<Record<string, TmuxLive>>({});
+  const [live, setLive] = useState<Record<string, RuntimeLive>>({});
   const [loading, setLoading] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(() =>
     activeIdFromPath(window.location.pathname),
@@ -85,19 +85,17 @@ export function ConversationList() {
       );
     } else if (parsed.type === "deleted") {
       setConversations((prev) => prev.filter((c) => c.id !== parsed.id));
-    } else if (parsed.type === "tmux") {
-      if ("gone" in parsed) {
-        setLive((prev) => {
-          const next = { ...prev };
-          delete next[parsed.id];
-          return next;
-        });
-      } else {
-        setLive((prev) => ({
-          ...prev,
-          [parsed.id]: { task: parsed.task, idle: parsed.idle },
-        }));
-      }
+    } else if (parsed.type === "idle") {
+      setLive((prev) => ({
+        ...prev,
+        [parsed.id]: { idle: parsed.idle },
+      }));
+    } else if (parsed.type === "gone") {
+      setLive((prev) => {
+        const next = { ...prev };
+        delete next[parsed.id];
+        return next;
+      });
     }
   }, []));
 
@@ -156,9 +154,9 @@ export function ConversationList() {
       </div>
       <SidebarMenu>
         {conversations.map((conversation) => {
-          const tmux = live[conversation.id];
-          const idle = tmux?.idle ?? true;
-          const label = conversation.title ?? tmux?.task ?? "Idle";
+          const liveInfo = live[conversation.id];
+          const idle = liveInfo?.idle ?? true;
+          const label = conversation.title ?? "Idle";
           return (
             <SidebarMenuItem
               key={conversation.id}

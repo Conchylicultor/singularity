@@ -7,7 +7,7 @@ import { z } from "zod";
 import {
   ConversationSchema,
   type Conversation,
-  type TmuxLive,
+  type RuntimeLive,
 } from "@plugins/conversations/shared/types";
 import { useConversationStream } from "@plugins/conversations/web/stream";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,7 @@ function formatRelativeTime(date: Date): string {
 
 export function WelcomeView() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [live, setLive] = useState<Record<string, TmuxLive>>({});
+  const [live, setLive] = useState<Record<string, RuntimeLive>>({});
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
@@ -50,19 +50,17 @@ export function WelcomeView() {
           c.id === parsed.id ? { ...c, title: parsed.title } : c,
         ),
       );
-    } else if (parsed.type === "tmux") {
-      if ("gone" in parsed) {
-        setLive((prev) => {
-          const next = { ...prev };
-          delete next[parsed.id];
-          return next;
-        });
-      } else {
-        setLive((prev) => ({
-          ...prev,
-          [parsed.id]: { task: parsed.task, idle: parsed.idle },
-        }));
-      }
+    } else if (parsed.type === "idle") {
+      setLive((prev) => ({
+        ...prev,
+        [parsed.id]: { idle: parsed.idle },
+      }));
+    } else if (parsed.type === "gone") {
+      setLive((prev) => {
+        const next = { ...prev };
+        delete next[parsed.id];
+        return next;
+      });
     }
   }, []));
 
@@ -177,7 +175,7 @@ export function WelcomeView() {
                           : "font-medium text-foreground",
                       )}
                     >
-                      {conversation.title ?? live[conversation.id]?.task ?? "Idle"}
+                      {conversation.title ?? "Idle"}
                     </span>
                     <span className="text-[10px] text-muted-foreground">
                       {formatRelativeTime(conversation.createdAt)}

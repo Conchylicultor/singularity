@@ -1,13 +1,13 @@
 import { ReconnectingEventSource } from "@core";
 import type { ConversationEvent } from "@plugins/conversations/shared/protocol";
-import type { TmuxLive } from "@plugins/conversations/shared/types";
+import type { RuntimeLive } from "@plugins/conversations/shared/types";
 
 // Inter-tab envelope sent over BroadcastChannel between leader and followers.
 // Never traverses the network.
 type LeaderEnvelope =
   | { kind: "event"; event: ConversationEvent }
   | { kind: "request-snapshot" }
-  | { kind: "snapshot"; tmux: Array<[string, TmuxLive]> }
+  | { kind: "snapshot"; live: Array<[string, RuntimeLive]> }
   | { kind: "reset" };
 
 const STREAM_URL = "/api/conversations/stream";
@@ -21,7 +21,7 @@ class ConversationStreamClient {
   private channel: BroadcastChannel;
   private isLeader = false;
   private es: ReconnectingEventSource | null = null;
-  private tmuxCache = new Map<string, TmuxLive>();
+  private liveCache = new Map<string, RuntimeLive>();
   private snapshotRequested = false;
 
   constructor() {
@@ -73,10 +73,8 @@ class ConversationStreamClient {
       },
       onStatusChange: (status) => {
         if (status === "open" && this.es) {
-          // Reconnect (or first connect): drop stale snapshot, server will
-          // replay its own. Notify followers to do the same.
-          if (this.tmuxCache.size > 0) {
-            this.tmuxCache.clear();
+          if (this.liveCache.size > 0) {
+            this.liveCache.clear();
             this.broadcast({ kind: "reset" });
           }
         }
@@ -85,12 +83,10 @@ class ConversationStreamClient {
   }
 
   private applyEvent(event: ConversationEvent) {
-    if (event.type === "tmux") {
-      if ("gone" in event) {
-        this.tmuxCache.delete(event.id);
-      } else {
-        this.tmuxCache.set(event.id, { task: event.task, idle: event.idle });
-      }
+    if (event.type === "idle") {
+      this.liveCache.set(event.id, { idle: event.idle });
+    } else if (event.type === "gone") {
+      this.liveCache.delete(event.id);
     }
     this.fanOut(event);
   }
@@ -115,7 +111,7 @@ class ConversationStreamClient {
       if (this.isLeader) {
         this.broadcast({
           kind: "snapshot",
-          tmux: Array.from(this.tmuxCache.entries()),
+          live: Array.from(this.liveCache.entries()),
         });
       }
       return;
@@ -124,12 +120,12 @@ class ConversationStreamClient {
     if (env.kind === "event") {
       this.applyEvent(env.event);
     } else if (env.kind === "snapshot") {
-      this.tmuxCache = new Map(env.tmux);
-      for (const [id, info] of this.tmuxCache) {
-        this.fanOut({ type: "tmux", id, task: info.task, idle: info.idle });
+      this.liveCache = new Map(env.live);
+      for (const [id, info] of this.liveCache) {
+        this.fanOut({ type: "idle", id, idle: info.idle });
       }
     } else if (env.kind === "reset") {
-      this.tmuxCache.clear();
+      this.liveCache.clear();
       this.snapshotRequested = false;
       this.requestSnapshot();
     }

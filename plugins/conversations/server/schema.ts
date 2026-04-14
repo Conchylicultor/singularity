@@ -16,6 +16,8 @@ export const conversations = pgTable("conversations", {
   worktreePath: text("worktree_path").notNull(),
   title: text("title"),
   status: text("status").$type<ConversationStatus>().notNull().default("starting"),
+  runtime: text("runtime").notNull().default("tmux"),
+  claudeSessionId: text("claude_session_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

@@ -4,5 +4,6 @@ export type ConversationEvent =
   | { type: "created"; conversation: Conversation }
   | { type: "deleted"; id: string }
   | { type: "title"; id: string; title: string | null }
-  | { type: "tmux"; id: string; task: string; idle: boolean }
-  | { type: "tmux"; id: string; gone: true };
+  | { type: "claude-session"; id: string; claudeSessionId: string | null }
+  | { type: "idle"; id: string; idle: boolean }
+  | { type: "gone"; id: string };

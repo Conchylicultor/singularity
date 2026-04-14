@@ -43,6 +43,13 @@
       "tag": "20260413_204139_091d5f7a__timestamps_with_tz",
       "hash": "091d5f7a",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776142997000,
+      "tag": "20260414_050317_6fc4016b__conversations_runtime_and_session_id",
+      "hash": "6fc4016b",
+      "breakpoints": true
     }
   ]
 }

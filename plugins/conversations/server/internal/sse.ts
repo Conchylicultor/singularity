@@ -26,7 +26,7 @@ export function handleStream(_req: Request): Response {
       controller.enqueue(encoder.encode(": ok\n\n"));
       for (const [id, info] of getSnapshot()) {
         controller.enqueue(
-          frame({ type: "tmux", id, task: info.task, idle: info.idle }),
+          frame({ type: "idle", id, idle: info.idle }),
         );
       }
     },

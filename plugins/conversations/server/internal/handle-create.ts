@@ -1,4 +1,4 @@
-import { createConversation } from "./tmux";
+import { createConversation } from "./lifecycle";
 import { broadcast } from "./sse";
 
 export async function handleCreate(_req: Request): Promise<Response> {

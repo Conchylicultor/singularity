@@ -14,5 +14,10 @@
       "@plugins/*": ["../plugins/*"]
     }
   },
-  "include": ["src", "../plugins/*/server", "../plugins/*/shared"]
+  "include": [
+    "src",
+    "../plugins/*/server",
+    "../plugins/*/shared",
+    "../plugins/*/plugins/*/server"
+  ]
 }
