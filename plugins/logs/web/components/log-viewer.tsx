@@ -7,7 +7,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { fetchWithRetry, useReconnectingWebSocket } from "@core";
+import { fetchWithRetry, ReconnectingEventSource, useReconnectingWebSocket } from "@core";
 import type { ClientMessage, ServerMessage, LogEntryWire } from "../../shared/protocol";
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
@@ -152,22 +152,22 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
   useEffect(() => {
     if (!isGatewaySource || !selected || selected.source !== "gateway") return;
     const url = `/gateway/worktrees/${encodeURIComponent(selected.worktree)}/logs`;
-    const es = new EventSource(url);
-
-    es.addEventListener("history", (ev) => {
-      const { entries: hist } = JSON.parse((ev as MessageEvent).data) as {
-        entries: LogEntryWire[];
-      };
-      if (hist.length === 0) return;
-      setEntries((prev) => [...prev, ...hist]);
-      lastSeqRef.current = Math.max(lastSeqRef.current, hist[hist.length - 1]!.seq);
-    });
-
-    es.addEventListener("entry", (ev) => {
-      const entry = JSON.parse((ev as MessageEvent).data) as LogEntryWire;
-      if (entry.seq <= lastSeqRef.current) return;
-      lastSeqRef.current = entry.seq;
-      setEntries((prev) => [...prev, entry]);
+    const es = new ReconnectingEventSource({
+      url,
+      events: ["history", "entry"],
+      onMessage: (data, eventName) => {
+        if (eventName === "history") {
+          const { entries: hist } = JSON.parse(data) as { entries: LogEntryWire[] };
+          if (hist.length === 0) return;
+          setEntries((prev) => [...prev, ...hist]);
+          lastSeqRef.current = Math.max(lastSeqRef.current, hist[hist.length - 1]!.seq);
+        } else if (eventName === "entry") {
+          const entry = JSON.parse(data) as LogEntryWire;
+          if (entry.seq <= lastSeqRef.current) return;
+          lastSeqRef.current = entry.seq;
+          setEntries((prev) => [...prev, entry]);
+        }
+      },
     });
 
     return () => es.close();
