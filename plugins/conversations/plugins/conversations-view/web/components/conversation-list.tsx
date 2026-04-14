@@ -163,8 +163,8 @@ export function ConversationList() {
         {conversations.map((conversation) => {
           const working = live[conversation.id]?.working ?? false;
           const needsAttention = conversation.status === "needs_attention";
-          const gone = conversation.status === "gone";
           const muted = !working && !needsAttention;
+          const gone = muted;
           const label = conversation.title ?? "Starting...";
           return (
             <SidebarMenuItem
