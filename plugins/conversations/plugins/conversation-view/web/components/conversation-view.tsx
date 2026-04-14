@@ -39,6 +39,8 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
   useConversationStream(useCallback((parsed) => {
     if (parsed.type === "title" && parsed.id === sessionId) {
       setConversation((prev) => (prev ? { ...prev, title: parsed.title } : prev));
+    } else if (parsed.type === "status" && parsed.id === sessionId) {
+      setConversation((prev) => (prev ? { ...prev, status: parsed.status } : prev));
     }
   }, [sessionId]));
 
