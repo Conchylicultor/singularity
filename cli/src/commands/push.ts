@@ -65,55 +65,26 @@ export function registerPush(program: Command) {
         "Intended only when a human is driving and the worktree detour would be pure churn " +
         "(e.g. small fixes already staged on main). Still runs checks.",
     )
-    .action(
-      async (opts: {
-        message?: string;
-        skipChecks?: boolean;
-        fromMain?: boolean;
-      }) => {
-        const branch = await getCurrentBranch();
+    .action(async (opts: {
+      message?: string;
+      skipChecks?: boolean;
+      fromMain?: boolean;
+    }) => {
+      const branch = await getCurrentBranch();
+      const onMain = branch === "main";
 
-        if (branch === "main" && !opts.fromMain) {
-          console.error("Already on main — nothing to merge.");
-          process.exit(1);
-        }
-
-        if (opts.fromMain) {
-          if (branch !== "main") {
-            console.error(
-              `--from-main requires being on main (currently on ${branch}).`,
-            );
-            process.exit(1);
-          }
-          if (!opts.message) {
-            console.error('--from-main requires -m "commit message".');
-            process.exit(1);
-          }
-          if (!opts.skipChecks) {
-            console.log("Running checks...");
-            const ok = await runChecks();
-            if (!ok) {
-              console.error(
-                "Checks failed. Fix issues or re-run with --skip-checks.",
-              );
-              process.exit(1);
-            }
-          }
-          const { stdout: status } = await run(["git", "status", "--porcelain"]);
-          if (!status) {
-            console.error("Nothing to commit.");
-            process.exit(1);
-          }
-          const files = status.split("\n").map((l) => l.trim());
-          console.log(`Committing ${files.length} file(s) on main:`);
-          for (const f of files) console.log(`  ${f}`);
-          await exec(["git", "pull", "--ff-only"]);
-          await exec(["git", "add", "-A"]);
-          await exec(["git", "commit", "-m", opts.message]);
-          await exec(["git", "push"]);
-          console.log("Done. Pushed directly from main.");
-          return;
-        }
+      if (onMain && !opts.fromMain) {
+        console.error("Already on main — nothing to merge.");
+        process.exit(1);
+      }
+      if (opts.fromMain && !onMain) {
+        console.error(`--from-main requires being on main (currently on ${branch}).`);
+        process.exit(1);
+      }
+      if (opts.fromMain && !opts.message) {
+        console.error('--from-main requires -m "commit message".');
+        process.exit(1);
+      }
 
       // 0. Run validation checks
       if (!opts.skipChecks) {
@@ -130,10 +101,13 @@ export function registerPush(program: Command) {
       if (opts.message) {
         if (status) {
           const files = status.split("\n").map((l) => l.trim());
-          console.log(`Committing ${files.length} file(s):`);
+          console.log(`Committing ${files.length} file(s)${opts.fromMain ? " on main" : ""}:`);
           for (const f of files) console.log(`  ${f}`);
           await exec(["git", "add", "-A"]);
           await exec(["git", "commit", "-m", opts.message]);
+        } else if (opts.fromMain) {
+          console.error("Nothing to commit.");
+          process.exit(1);
         } else {
           console.log("No files to commit.");
         }
@@ -142,6 +116,16 @@ export function registerPush(program: Command) {
           'Missing `-m "commit message"` flag. You have uncommitted changes.',
         );
         process.exit(1);
+      }
+
+      // --from-main: rebase onto origin/main and push. No worktree merge.
+      if (opts.fromMain) {
+        console.log("Pulling main...");
+        await exec(["git", "pull", "--rebase"]);
+        console.log("Pushing main...");
+        await exec(["git", "push"]);
+        console.log("Done. Pushed directly from main.");
+        return;
       }
 
       // 2. Pull main to ensure it's up to date before merging

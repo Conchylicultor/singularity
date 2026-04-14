@@ -21,3 +21,4 @@ v1/package-lock.json
 # Claude Code
 skills-lock.json
 .claude/worktrees/
+.claude/scheduled_tasks.lock
