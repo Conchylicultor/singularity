@@ -39,6 +39,7 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
             - `Conversation.Toolbar` → `CodeToolbarSlot`
           - Server:
             - `GET /api/conversations/:id/edited-files/stream`
+            - `GET /api/conversations/:id/file`
           - Plugins:
             - **`edited-files-button`** — Toolbar button showing the number of files edited in the conversation's worktree.
               - Contributes:
@@ -77,6 +78,10 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
     - API: `Log`
     - `GET /api/logs/channels`
     - `WS /ws/logs`
+
+- **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
+  - Contributes:
+    - `FilePane.Renderer` "Raw" → `RawView`
 
 - **`shell`** — Foundational app layout; defines the slots and commands most other plugins extend.
   - Defines:

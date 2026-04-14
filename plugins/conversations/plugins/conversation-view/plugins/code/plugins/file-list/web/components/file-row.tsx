@@ -1,4 +1,6 @@
 import { MdInsertDriveFile } from "react-icons/md";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/web/commands";
+import { filePane } from "../../../file-pane/web/views";
 import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared/protocol";
 
 const STATUS_DOT: Record<EditedFileStatus, string> = {
@@ -21,8 +23,13 @@ export function FileRow({
   const muted = status === "deleted";
 
   return (
-    <div
-      className={`flex items-center gap-1.5 px-2 py-0.5 text-xs ${muted ? "opacity-60" : ""}`}
+    <button
+      type="button"
+      disabled={muted}
+      onClick={() => Conversation.OpenMiddlePane(filePane({ path, status }))}
+      className={`flex w-full items-center gap-1.5 px-2 py-0.5 text-left text-xs hover:bg-muted/60 disabled:cursor-not-allowed ${
+        muted ? "opacity-60" : ""
+      }`}
       title={`${status} — ${path}`}
     >
       <span
@@ -31,6 +38,6 @@ export function FileRow({
       <MdInsertDriveFile className="size-3 shrink-0 text-muted-foreground" />
       <span className="truncate text-muted-foreground">{dir}</span>
       <span className={`truncate ${muted ? "" : "font-medium"}`}>{basename}</span>
-    </div>
+    </button>
   );
 }

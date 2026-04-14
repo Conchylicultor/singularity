@@ -1,0 +1,42 @@
+import { resolve, sep } from "node:path";
+
+const MAX_BYTES = 2 * 1024 * 1024;
+
+export type FileReadResult =
+  | { kind: "ok"; content: string }
+  | { kind: "invalid-path" }
+  | { kind: "not-found" }
+  | { kind: "too-large"; size: number }
+  | { kind: "binary" };
+
+function isPathInside(root: string, target: string): boolean {
+  const rootNorm = root.endsWith(sep) ? root : root + sep;
+  return target === root || target.startsWith(rootNorm);
+}
+
+function looksBinary(bytes: Uint8Array): boolean {
+  const sample = bytes.subarray(0, Math.min(bytes.length, 8000));
+  for (const b of sample) {
+    if (b === 0) return true;
+  }
+  return false;
+}
+
+export async function getFileContent(
+  worktreePath: string,
+  relPath: string,
+): Promise<FileReadResult> {
+  if (!relPath || relPath.includes("\0")) return { kind: "invalid-path" };
+
+  const absRoot = resolve(worktreePath);
+  const absTarget = resolve(absRoot, relPath);
+  if (!isPathInside(absRoot, absTarget)) return { kind: "invalid-path" };
+
+  const file = Bun.file(absTarget);
+  if (!(await file.exists())) return { kind: "not-found" };
+  if (file.size > MAX_BYTES) return { kind: "too-large", size: file.size };
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (looksBinary(bytes)) return { kind: "binary" };
+  return { kind: "ok", content: new TextDecoder().decode(bytes) };
+}
