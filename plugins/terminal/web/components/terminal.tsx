@@ -100,6 +100,7 @@ export function TerminalView({ command }: { command?: string[] }) {
 
     term.open(container);
     fitAddon.fit();
+    term.focus();
 
     const inputDisposable = term.onData((data) => {
       const sessionId = sessionIdRef.current;
