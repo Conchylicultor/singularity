@@ -84,6 +84,7 @@ const server = Bun.serve<WsData>({
     if (!p) throw new Error("PORT env var is required");
     return parseInt(p, 10);
   })(),
+  idleTimeout: 255,
   fetch(req, server) {
     const url = new URL(req.url);
 

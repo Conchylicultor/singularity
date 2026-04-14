@@ -133,3 +133,4 @@ When working on this project, follow these instructions thoughtfully:
 
 - Most features first require a thoughtful design phase. Use the project `plan` SKILL for this phase. This is important to correctly write the plan doc at the right location. Do NOT use `EnterPlanMode` tool.
 - New features should be implemented as plugins in `plugins/`. See [`plugin-core/CLAUDE.md`](plugin-core/CLAUDE.md) for how to create one.
+- Always edit files in your worktree, not the main branch.
