@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { MdChevronRight, MdAdd } from "react-icons/md";
+import { ReconnectingEventSource } from "@core";
 import { Tasks as TasksCommands } from "../commands";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +37,13 @@ export function TasksList({ selectedId }: { selectedId?: string }) {
 
   useEffect(() => {
     void load();
+    const es = new ReconnectingEventSource({
+      url: "/api/tasks/stream",
+      onMessage: () => {
+        void load();
+      },
+    });
+    return () => es.close();
   }, [load]);
 
   const createTask = useCallback(

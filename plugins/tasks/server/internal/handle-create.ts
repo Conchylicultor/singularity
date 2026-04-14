@@ -1,5 +1,6 @@
 import { db } from "../../../../server/src/db/client";
 import { tasks } from "../schema";
+import { broadcastChanged } from "./sse";
 
 export async function handleCreate(req: Request): Promise<Response> {
   const body = (await req.json().catch(() => ({}))) as {
@@ -15,5 +16,6 @@ export async function handleCreate(req: Request): Promise<Response> {
       title: body.title ?? "Untitled",
     })
     .returning();
+  broadcastChanged();
   return Response.json(row);
 }

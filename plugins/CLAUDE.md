@@ -120,6 +120,7 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
     - `Shell.Route` `/tasks/:id`
   - Server:
     - `GET /api/tasks`
+    - `GET /api/tasks/stream`
     - `POST /api/tasks`
     - `GET /api/tasks/:id`
     - `PATCH /api/tasks/:id`
