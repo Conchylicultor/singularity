@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { TaskDetail } from "./task-detail";
 
 type ViewContribution = {
   id: string;
@@ -20,25 +21,21 @@ export function TaskView({
       </div>
     );
   }
-  if (views.length === 0) {
-    return (
-      <div className="text-muted-foreground flex h-full items-center justify-center p-6 text-sm">
-        No task view yet.
-      </div>
-    );
-  }
   return (
-    <div className="h-full overflow-auto p-6">
-      <div className="flex flex-col gap-4">
-        {views.map((v) => (
-          <section key={v.id} className="bg-card rounded-lg border p-4">
-            {v.title ? (
-              <h2 className="mb-4 text-sm font-medium">{v.title}</h2>
-            ) : null}
-            <v.component taskId={taskId} />
-          </section>
-        ))}
-      </div>
+    <div className="h-full overflow-auto">
+      <TaskDetail key={taskId} taskId={taskId} />
+      {views.length > 0 && (
+        <div className="flex flex-col gap-4 px-6 pb-6">
+          {views.map((v) => (
+            <section key={v.id} className="bg-card rounded-lg border p-4">
+              {v.title ? (
+                <h2 className="mb-4 text-sm font-medium">{v.title}</h2>
+              ) : null}
+              <v.component taskId={taskId} />
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

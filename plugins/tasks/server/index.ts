@@ -1,6 +1,8 @@
 import type { ServerPluginDefinition } from "../../../server/src/types";
 import { handleList } from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";
+import { handleGet } from "./internal/handle-get";
+import { handleUpdate } from "./internal/handle-update";
 
 const plugin: ServerPluginDefinition = {
   id: "tasks",
@@ -9,6 +11,8 @@ const plugin: ServerPluginDefinition = {
   httpRoutes: {
     "GET /api/tasks": handleList,
     "POST /api/tasks": handleCreate,
+    "GET /api/tasks/:id": handleGet,
+    "PATCH /api/tasks/:id": handleUpdate,
   },
 };
 export default plugin;

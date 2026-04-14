@@ -121,6 +121,8 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
   - Server:
     - `GET /api/tasks`
     - `POST /api/tasks`
+    - `GET /api/tasks/:id`
+    - `PATCH /api/tasks/:id`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Server:
