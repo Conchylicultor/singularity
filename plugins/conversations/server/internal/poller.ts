@@ -129,6 +129,23 @@ async function tick(): Promise<void> {
     }
     if (statusChanged) broadcast({ type: "status", id, status: desiredStatus });
   }
+
+  // Mark DB rows whose runtime entry has vanished (e.g. tmux session killed)
+  // as "gone". Skip rows still in a pre-live state to avoid racing with creation.
+  for (const [id, dbRow] of dbById) {
+    if (next.has(id)) continue;
+    if (
+      dbRow.status === "gone" ||
+      dbRow.status === "obsolete" ||
+      dbRow.status === "starting"
+    )
+      continue;
+    await db
+      .update(conversations)
+      .set({ status: "gone", updatedAt: new Date() })
+      .where(eq(conversations.id, id));
+    broadcast({ type: "status", id, status: "gone" });
+  }
 }
 
 export function startPoller(): void {

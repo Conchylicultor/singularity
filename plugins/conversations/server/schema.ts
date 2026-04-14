@@ -8,6 +8,7 @@ export const ConversationStatusSchema = z.enum([
   "working",
   "needs_attention",
   "completed",
+  "gone",
   "obsolete",
 ]);
 export type ConversationStatus = z.infer<typeof ConversationStatusSchema>;
