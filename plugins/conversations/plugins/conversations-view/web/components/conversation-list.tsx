@@ -99,7 +99,9 @@ export function ConversationList() {
                       ? "bg-primary"
                       : needsAttention
                         ? "bg-amber-500"
-                        : "bg-muted-foreground/40",
+                        : conversation.status === "completed"
+                          ? "bg-emerald-600/40 dark:bg-emerald-400/40"
+                          : "bg-muted-foreground/40",
                   )} />
                   <div className="flex flex-col gap-0.5 overflow-hidden">
                     <span
