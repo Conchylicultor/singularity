@@ -10,7 +10,11 @@ const apiRuntime: ConversationRuntime = {
   async list(): Promise<Map<string, RuntimeInfo>> {
     return new Map();
   },
-  async create(): Promise<void> {
+  async create(
+    _conversationId: string,
+    _worktreePath: string,
+    _opts?: { prompt?: string },
+  ): Promise<void> {
     throw new Error("api runtime: create() not implemented");
   },
   async delete(): Promise<void> {

@@ -92,11 +92,20 @@ export const tmuxRuntime: ConversationRuntime = {
     return out;
   },
 
-  async create(conversationId: string, worktreePath: string): Promise<void> {
+  async create(
+    conversationId: string,
+    worktreePath: string,
+    opts?: { prompt?: string },
+  ): Promise<void> {
     // SINGULARITY_CONVERSATION_ID is read by the .githooks/prepare-commit-msg
     // hook so any `git commit` made inside the pane gets stamped with a
     // Singularity-Conversation trailer. The id is a generated slug (no shell
     // metacharacters), but we still keep it wrapped in single quotes.
+    const hasPrompt = typeof opts?.prompt === "string" && opts.prompt.length > 0;
+    const envArgs = hasPrompt
+      ? ["-e", `SINGULARITY_PROMPT=${opts!.prompt}`]
+      : [];
+    const claudeCmd = hasPrompt ? `${CLAUDE} "$SINGULARITY_PROMPT"` : CLAUDE;
     await Bun.spawn(
       [
         TMUX,
@@ -107,7 +116,8 @@ export const tmuxRuntime: ConversationRuntime = {
         conversationId,
         "-c",
         worktreePath,
-        `zsh -l -c 'export SINGULARITY_CONVERSATION_ID=${conversationId}; ${CLAUDE}'`,
+        ...envArgs,
+        `zsh -l -c 'export SINGULARITY_CONVERSATION_ID=${conversationId}; ${claudeCmd}'`,
       ],
       { stdout: "pipe", stderr: "pipe" },
     ).exited;

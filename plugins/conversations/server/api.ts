@@ -9,7 +9,11 @@ export interface RuntimeInfo {
 
 export interface ConversationRuntime {
   readonly id: string;
-  create(conversationId: string, worktreePath: string): Promise<void>;
+  create(
+    conversationId: string,
+    worktreePath: string,
+    opts?: { prompt?: string },
+  ): Promise<void>;
   delete(conversationId: string): Promise<void>;
   list(): Promise<Map<string, RuntimeInfo>>;
 }

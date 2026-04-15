@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Shell } from "@plugins/shell/web/commands";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
+import { ConversationSchema } from "@plugins/conversations/shared/types";
+import { Button } from "@/components/ui/button";
 
 type Task = {
   id: string;
@@ -89,6 +93,40 @@ export function TaskDetail({ taskId }: { taskId: string }) {
     void save({ status: v });
   };
 
+  const [launching, setLaunching] = useState(false);
+  const launchAgent = useCallback(async () => {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) return;
+    setLaunching(true);
+    try {
+      if (titleTimer.current) {
+        clearTimeout(titleTimer.current);
+        titleTimer.current = null;
+      }
+      if (descTimer.current) {
+        clearTimeout(descTimer.current);
+        descTimer.current = null;
+      }
+      await save({
+        title: trimmedTitle || "Untitled",
+        description,
+        status,
+      });
+      const prompt = description.trim()
+        ? `${trimmedTitle}\n\n${description}`
+        : trimmedTitle;
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, prompt }),
+      });
+      const conversation = ConversationSchema.parse(await res.json());
+      Shell.OpenPane(conversationPane({ session_id: conversation.id }));
+    } finally {
+      setLaunching(false);
+    }
+  }, [taskId, title, description, status, save]);
+
   if (!task) {
     return (
       <div className="text-muted-foreground p-6 text-sm">Loading…</div>
@@ -132,6 +170,15 @@ export function TaskDetail({ taskId }: { taskId: string }) {
         rows={10}
         className="placeholder:text-muted-foreground min-h-48 w-full resize-y rounded border bg-transparent p-3 text-sm outline-none focus:ring-1 focus:ring-ring"
       />
+      <div className="flex justify-end">
+        <Button
+          size="sm"
+          onClick={() => void launchAgent()}
+          disabled={launching || !title.trim()}
+        >
+          {launching ? "Launching…" : "Launch agent"}
+        </Button>
+      </div>
     </div>
   );
 }

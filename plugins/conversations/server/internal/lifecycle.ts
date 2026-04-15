@@ -13,8 +13,13 @@ import {
 const DEFAULT_RUNTIME = "tmux";
 
 export async function createConversation(
-  runtimeId: string = DEFAULT_RUNTIME,
+  opts: {
+    runtimeId?: string;
+    taskAttemptId?: string;
+    prompt?: string;
+  } = {},
 ): Promise<Conversation> {
+  const runtimeId = opts.runtimeId ?? DEFAULT_RUNTIME;
   const runtime = Runtime.get(runtimeId);
   const id = `${CONVERSATION_PREFIX}-${Math.floor(Date.now() / 1000)}`;
   const wtPath = await worktreePathFor(id);
@@ -27,10 +32,15 @@ export async function createConversation(
   // adoption).
   const [row] = await db
     .insert(conversations)
-    .values({ id, worktreePath: wtPath, runtime: runtimeId })
+    .values({
+      id,
+      worktreePath: wtPath,
+      runtime: runtimeId,
+      taskAttemptId: opts.taskAttemptId ?? null,
+    })
     .returning();
 
-  await runtime.create(id, wtPath);
+  await runtime.create(id, wtPath, { prompt: opts.prompt });
   return row!;
 }
 
