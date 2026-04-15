@@ -4,11 +4,7 @@ import { z } from "zod";
 import { ConversationSchema } from "../shared/types";
 import { conversationsResource, type ConversationEntry } from "../shared/resources";
 
-const EntrySchema = z.intersection(
-  ConversationSchema,
-  z.object({ working: z.boolean() }),
-);
-const EntryArraySchema = z.array(EntrySchema);
+const EntryArraySchema = z.array(ConversationSchema);
 
 export function useConversations(): {
   conversations: ConversationEntry[];

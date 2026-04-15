@@ -76,15 +76,13 @@ export function ConversationList() {
       </div>
       <SidebarMenu>
         {conversations.map((conversation) => {
-          const working = conversation.working;
+          const working = conversation.status === "working";
           const needsAttention = conversation.status === "needs_attention";
-          const muted = !working && !needsAttention;
-          const gone = muted;
           const label = conversation.title ?? "Starting...";
           return (
             <SidebarMenuItem
               key={conversation.id}
-              style={{ order: gone ? 1 : 0 }}
+              style={{ order: conversation.active ? 0 : 1 }}
             >
               <SidebarMenuButton
                 className="h-auto py-1.5"
@@ -107,7 +105,7 @@ export function ConversationList() {
                     <span
                       className={cn(
                         "truncate text-xs",
-                        muted ? "text-muted-foreground" : "font-medium",
+                        conversation.active ? "font-medium" : "text-muted-foreground",
                       )}
                     >
                       {label}

@@ -21,9 +21,11 @@ async function terminalStatusFor(id: string): Promise<"completed" | "gone"> {
 
 const TICK_MS = 1000;
 
-const TERMINAL_DB_STATUSES = new Set<ConversationStatus>([
+// Statuses that represent an explicit finalization — never overwritten by the
+// live poller. `gone` is deliberately omitted: it's a transient "we don't see
+// the pane right now" signal, and must flip back to live if tmux re-reports it.
+const FINALIZED_STATUSES = new Set<ConversationStatus>([
   "completed",
-  "gone",
   "abandoned",
 ]);
 
@@ -32,10 +34,6 @@ interface LiveEntry extends RuntimeInfo {
 }
 
 let snapshot = new Map<string, LiveEntry>();
-
-export function getSnapshot(): ReadonlyMap<string, LiveEntry> {
-  return snapshot;
-}
 
 async function collectLive(): Promise<Map<string, LiveEntry>> {
   const merged = new Map<string, LiveEntry>();
@@ -116,7 +114,7 @@ async function tick(): Promise<void> {
   for (const [id, info] of next) {
     const dbRow = dbById.get(id);
     if (!dbRow) continue;
-    if (TERMINAL_DB_STATUSES.has(dbRow.status)) continue;
+    if (FINALIZED_STATUSES.has(dbRow.status)) continue;
 
     // Dead: runtime reports the process exited. Decide terminal status based on
     // whether this conversation was ever pushed.
@@ -157,7 +155,7 @@ async function tick(): Promise<void> {
   for (const [id, dbRow] of dbById) {
     if (next.has(id)) continue;
     if (dbRow.status === "starting") continue;
-    if (TERMINAL_DB_STATUSES.has(dbRow.status)) continue;
+    if (FINALIZED_STATUSES.has(dbRow.status)) continue;
     const desiredStatus = await terminalStatusFor(id);
     await db
       .update(conversations)

@@ -93,7 +93,7 @@ export function WelcomeView() {
                   <span
                     className={cn(
                       "size-1.5 shrink-0 rounded-full",
-                      !conversation.working
+                      !conversation.active
                         ? "bg-muted-foreground/40"
                         : "bg-primary",
                     )}
@@ -102,7 +102,7 @@ export function WelcomeView() {
                     <span
                       className={cn(
                         "truncate text-xs",
-                        !conversation.working
+                        !conversation.active
                           ? "text-muted-foreground"
                           : "font-medium text-foreground",
                       )}
