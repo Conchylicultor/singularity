@@ -35,6 +35,7 @@ interface PluginInfo {
   sseRoutes: string[];
   apiExports: string[];
   apiUses: string[];
+  resources: { key: string; mode: string }[];
   children: PluginInfo[];
 }
 
@@ -350,6 +351,32 @@ function parseServerApiUses(serverDir: string, selfName: string): string[] {
   return Array.from(uses).sort();
 }
 
+function parseResources(serverDir: string): { key: string; mode: string }[] {
+  const files: string[] = [];
+  walkFiles(serverDir, files);
+  const out: { key: string; mode: string }[] = [];
+  const seen = new Set<string>();
+  for (const f of files) {
+    const src = readIfExists(f);
+    if (!src) continue;
+    const re = /defineResource\s*\(\s*\{/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src))) {
+      const openIdx = m.index + m[0].length - 1;
+      const closeIdx = matchBracket(src, openIdx, "{", "}");
+      if (closeIdx < 0) continue;
+      const body = src.slice(openIdx + 1, closeIdx);
+      const key = parseStringField(body, "key");
+      const mode = parseStringField(body, "mode") ?? "push";
+      if (key && !seen.has(key)) {
+        seen.add(key);
+        out.push({ key, mode });
+      }
+    }
+  }
+  return out.sort((a, b) => a.key.localeCompare(b.key));
+}
+
 function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
   const webIndex = readIfExists(join(dir, "web", "index.ts"));
   const serverIndex = readIfExists(join(dir, "server", "index.ts"));
@@ -402,6 +429,7 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
   const apiExports = apiSrc ? parseApiExports(stripTypes(apiSrc)) : [];
   const serverDir = join(dir, "server");
   const apiUses = existsSync(serverDir) ? parseServerApiUses(serverDir, basename(dir)) : [];
+  const resources = existsSync(serverDir) ? parseResources(serverDir) : [];
 
   const rel = relative(pluginsRoot, dir);
   const segs = rel.split(/[\\/]+/);
@@ -424,6 +452,7 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
     sseRoutes,
     apiExports,
     apiUses,
+    resources,
     children: [],
   };
 }
@@ -486,7 +515,12 @@ function renderPlugin(p: PluginInfo, depth: number, root: string): string[] {
     ...p.wsRoutes.map((r) => `WS ${r}`),
     ...p.sseRoutes.map((r) => `SSE ${r}`),
   ];
-  if (serverEntries.length > 0 || p.apiExports.length > 0 || p.apiUses.length > 0) {
+  if (
+    serverEntries.length > 0 ||
+    p.apiExports.length > 0 ||
+    p.apiUses.length > 0 ||
+    p.resources.length > 0
+  ) {
     lines.push(`${indent}  - Server:`);
     if (p.apiExports.length > 0) {
       lines.push(
@@ -496,6 +530,11 @@ function renderPlugin(p: PluginInfo, depth: number, root: string): string[] {
     if (p.apiUses.length > 0) {
       lines.push(
         `${indent}    - Uses: ${p.apiUses.map((n) => `\`${n}\``).join(", ")}`,
+      );
+    }
+    if (p.resources.length > 0) {
+      lines.push(
+        `${indent}    - Resources: ${p.resources.map((r) => `\`${r.key}\` (${r.mode})`).join(", ")}`,
       );
     }
     for (const r of serverEntries) lines.push(`${indent}    - \`${r}\``);

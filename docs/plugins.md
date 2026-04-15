@@ -14,6 +14,7 @@
     - DB schema: `plugins/conversations/server/schema.ts`
   - Server:
     - API: `Runtime`
+    - Resources: `conversations` (push)
     - `GET /api/conversations`
     - `GET /api/conversations/:id`
     - `POST /api/conversations`
@@ -113,6 +114,7 @@
     - `Shell.Route` `/tasks`
     - `Shell.Route` `/tasks/:id`
   - Server:
+    - Resources: `tasks` (push)
     - `GET /api/tasks`
     - `POST /api/tasks`
     - `GET /api/tasks/:id`
