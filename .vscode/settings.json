@@ -1,0 +1,5 @@
+{
+  "files.watcherExclude": { "**/.claude/worktrees/**": true },
+  "search.exclude": { "**/.claude/worktrees/**": true },
+  "git.ignoredRepositories": ["/Users/admin/__A__/dev/singularity/.claude/worktrees"]
+}
