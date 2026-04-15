@@ -20,7 +20,7 @@ export function TasksPanel({ selectedId }: { selectedId?: string }) {
 
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full">
-      <ResizablePanel defaultSize={55} minSize={25}>
+      <ResizablePanel defaultSize={30} minSize={20}>
         <div className="h-full overflow-auto p-4">
           <TasksList selectedId={selectedId} />
           {lists.length > 0 && (
@@ -33,7 +33,7 @@ export function TasksPanel({ selectedId }: { selectedId?: string }) {
         </div>
       </ResizablePanel>
       <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={45} minSize={20}>
+      <ResizablePanel defaultSize={70} minSize={30}>
         <TaskView taskId={selectedId} views={views} />
       </ResizablePanel>
     </ResizablePanelGroup>
