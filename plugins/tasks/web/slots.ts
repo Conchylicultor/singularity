@@ -11,4 +11,8 @@ export const Tasks = {
     title?: string;
     component: ComponentType<{ taskId: string }>;
   }>("tasks.view"),
+  TaskActions: defineSlot<{
+    id: string;
+    component: ComponentType<{ taskId: string }>;
+  }>("tasks.task-actions"),
 };

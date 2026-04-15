@@ -1,8 +1,8 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MdChevronRight, MdAdd } from "react-icons/md";
 import { useResource } from "@core";
-import { Tasks as TasksCommands } from "../commands";
 import { tasksResource } from "../../shared/resources";
+import { Tasks as TasksSlots } from "../slots";
 import { cn } from "@/lib/utils";
 
 type Task = {
@@ -28,17 +28,19 @@ function buildTree(rows: readonly Task[]): TreeNode[] {
   return roots;
 }
 
-async function patchExpanded(id: string, expanded: boolean) {
+async function patchTask(id: string, patch: Partial<Pick<Task, "title" | "expanded">>) {
   await fetch(`/api/tasks/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ expanded }),
+    body: JSON.stringify(patch),
   });
 }
 
 export function TasksList({ selectedId }: { selectedId?: string }) {
   const { data } = useResource(tasksResource);
   const rows = (data ?? []) as Task[];
+  const actions = TasksSlots.TaskActions.useContributions();
+  const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
 
   const createTask = useCallback(
     async (parentId: string | null) => {
@@ -48,8 +50,8 @@ export function TasksList({ selectedId }: { selectedId?: string }) {
         body: JSON.stringify({ parentId }),
       });
       const task = (await res.json()) as Task;
-      if (parentId) void patchExpanded(parentId, true);
-      TasksCommands.OpenTask({ id: task.id });
+      if (parentId) void patchTask(parentId, { expanded: true });
+      setPendingFocusId(task.id);
     },
     [],
   );
@@ -58,7 +60,7 @@ export function TasksList({ selectedId }: { selectedId?: string }) {
     (id: string) => {
       const target = rows.find((r) => r.id === id);
       if (!target) return;
-      void patchExpanded(id, !target.expanded);
+      void patchTask(id, { expanded: !target.expanded });
     },
     [rows],
   );
@@ -75,6 +77,9 @@ export function TasksList({ selectedId }: { selectedId?: string }) {
           selectedId={selectedId}
           onToggle={toggle}
           onAdd={createTask}
+          actions={actions}
+          pendingFocusId={pendingFocusId}
+          clearPendingFocus={() => setPendingFocusId(null)}
         />
       ))}
       <button
@@ -89,22 +94,75 @@ export function TasksList({ selectedId }: { selectedId?: string }) {
   );
 }
 
+type ActionContribution = {
+  id: string;
+  component: React.ComponentType<{ taskId: string }>;
+};
+
 function TaskNode({
   node,
   depth,
   selectedId,
   onToggle,
   onAdd,
+  actions,
+  pendingFocusId,
+  clearPendingFocus,
 }: {
   node: TreeNode;
   depth: number;
   selectedId?: string;
   onToggle: (id: string) => void;
   onAdd: (parentId: string | null) => void;
+  actions: readonly ActionContribution[];
+  pendingFocusId: string | null;
+  clearPendingFocus: () => void;
 }) {
   const isOpen = node.expanded;
   const hasChildren = node.children.length > 0;
   const isSelected = selectedId === node.id;
+
+  const [title, setTitle] = useState(node.title);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dirtyRef = useRef(false);
+
+  useEffect(() => {
+    if (!dirtyRef.current) setTitle(node.title);
+  }, [node.title]);
+
+  useEffect(() => {
+    if (pendingFocusId === node.id && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+      clearPendingFocus();
+    }
+  }, [pendingFocusId, node.id, clearPendingFocus]);
+
+  const commit = useCallback(
+    (value: string) => {
+      dirtyRef.current = false;
+      const next = value.trim() || "Untitled";
+      if (next === node.title) return;
+      void patchTask(node.id, { title: next });
+    },
+    [node.id, node.title],
+  );
+
+  const onChange = (v: string) => {
+    dirtyRef.current = true;
+    setTitle(v);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => commit(v), 500);
+  };
+
+  const onBlur = () => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    commit(title);
+  };
 
   return (
     <div>
@@ -135,13 +193,26 @@ function TaskNode({
             )}
           />
         </button>
-        <button
-          type="button"
-          onClick={() => TasksCommands.OpenTask({ id: node.id })}
-          className="flex-1 truncate text-left"
-        >
-          {node.title}
-        </button>
+        <input
+          ref={inputRef}
+          value={title}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              inputRef.current?.blur();
+            }
+          }}
+          className="flex-1 truncate bg-transparent outline-none"
+        />
+        {actions.length > 0 && (
+          <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100">
+            {actions.map((a) => (
+              <a.component key={a.id} taskId={node.id} />
+            ))}
+          </div>
+        )}
       </div>
       {isOpen && (
         <div>
@@ -153,6 +224,9 @@ function TaskNode({
               selectedId={selectedId}
               onToggle={onToggle}
               onAdd={onAdd}
+              actions={actions}
+              pendingFocusId={pendingFocusId}
+              clearPendingFocus={clearPendingFocus}
             />
           ))}
           <button

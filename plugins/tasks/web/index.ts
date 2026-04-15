@@ -3,6 +3,9 @@ import { Shell } from "@plugins/shell/web/slots";
 import { Shell as ShellCommands } from "@plugins/shell/web/commands";
 import { MdChecklist } from "react-icons/md";
 import { tasksPane } from "./views";
+import { Tasks as TasksSlots } from "./slots";
+import { LaunchAgentAction } from "./components/launch-agent-action";
+import { OpenDetailsAction } from "./components/open-details-action";
 
 const tasksPlugin: PluginDefinition = {
   id: "tasks",
@@ -23,6 +26,8 @@ const tasksPlugin: PluginDefinition = {
       pattern: "/tasks/:id",
       resolve: (params) => tasksPane({ id: params.id }),
     }),
+    TasksSlots.TaskActions({ id: "launch-agent", component: LaunchAgentAction }),
+    TasksSlots.TaskActions({ id: "open-details", component: OpenDetailsAction }),
   ],
 };
 

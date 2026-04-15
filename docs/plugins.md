@@ -110,13 +110,15 @@
 
 - **`tasks`** — Nested tasks with attempts; meta-plugin hosting sub-pane contributions. Nested tasks with attempts linking to conversations.
   - Defines:
-    - Slots: `Tasks.List`, `Tasks.View`
+    - Slots: `Tasks.List`, `Tasks.View`, `Tasks.TaskActions`
     - Commands: `Tasks.OpenTask`
     - DB schema: `plugins/tasks/server/schema.ts`
   - Contributes:
     - `Shell.Sidebar` "Tasks" (group `System`)
     - `Shell.Route` `/tasks`
     - `Shell.Route` `/tasks/:id`
+    - `Tasks.TaskActions` → `LaunchAgentAction`
+    - `Tasks.TaskActions` → `OpenDetailsAction`
   - Server:
     - Resources: `tasks` (push)
     - `GET /api/tasks`
