@@ -27,14 +27,13 @@
       - Contributes:
         - `Shell.Route` `/c/:id`
       - Plugins:
-        - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Streams edited files in the conversation's worktree via SSE.
+        - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Defines:
             - Slots: `Code.ToolbarButton`
           - Contributes:
             - `Conversation.Toolbar` → `CodeToolbarSlot`
           - Server:
             - `GET /api/conversations/:id/file`
-            - `SSE /api/conversations/:id/edited-files/stream`
           - Plugins:
             - **`edited-files-button`** — Toolbar button showing the number of files edited in the conversation's worktree.
               - Contributes:

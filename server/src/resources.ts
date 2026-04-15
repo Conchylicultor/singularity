@@ -16,6 +16,13 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
   key: string;
   mode?: ResourceMode;
   loader: (params: P) => Promise<T> | T;
+  /**
+   * Sub-lifecycle hooks. Fire on the 0→1 and N→0 global refcount transitions
+   * for a given params tuple (counted across every open socket; a socket
+   * closing releases the refs it held).
+   */
+  onFirstSubscribe?: (params: P) => void | Promise<void>;
+  onLastUnsubscribe?: (params: P) => void;
 }
 
 export interface Resource<T, P extends ResourceParams = ResourceParams> {
@@ -34,6 +41,10 @@ interface RegistryEntry {
   versions: Map<string, number>;
   /** Coalesced pending notifies per params-tuple. */
   pendingNotifies: Map<string, ResourceParams>;
+  /** Global subscriber refcount per params-tuple (across all sockets). */
+  subCounts: Map<string, number>;
+  onFirstSubscribe?: (params: ResourceParams) => void | Promise<void>;
+  onLastUnsubscribe?: (params: ResourceParams) => void;
 }
 
 const registry = new Map<string, RegistryEntry>();
@@ -58,6 +69,13 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
     loader: def.loader as (params: ResourceParams) => Promise<unknown> | unknown,
     versions: new Map(),
     pendingNotifies: new Map(),
+    subCounts: new Map(),
+    onFirstSubscribe: def.onFirstSubscribe as
+      | ((params: ResourceParams) => void | Promise<void>)
+      | undefined,
+    onLastUnsubscribe: def.onLastUnsubscribe as
+      | ((params: ResourceParams) => void)
+      | undefined,
   };
   registry.set(def.key, entry);
 
@@ -180,6 +198,12 @@ export const notificationsWsHandler: WsHandler = {
     const timer = heartbeats.get(ws);
     if (timer) clearInterval(timer);
     heartbeats.delete(ws);
+    const state = sockets.get(ws);
+    if (state) {
+      for (const [key, inner] of state.subs) {
+        for (const [pk, params] of inner) releaseSubRefcount(key, pk, params);
+      }
+    }
     sockets.delete(ws);
   },
 };
@@ -201,7 +225,19 @@ async function handleSub(
     inner = new Map();
     state.subs.set(key, inner);
   }
+  const alreadyHeldBySocket = inner.has(pk);
   inner.set(pk, params);
+  if (!alreadyHeldBySocket) {
+    const prev = entry.subCounts.get(pk) ?? 0;
+    entry.subCounts.set(pk, prev + 1);
+    if (prev === 0 && entry.onFirstSubscribe) {
+      try {
+        await entry.onFirstSubscribe(params);
+      } catch (err) {
+        console.error(`[resources] onFirstSubscribe failed for ${key}`, err);
+      }
+    }
+  }
 
   let value: unknown;
   try {
@@ -224,8 +260,31 @@ function handleUnsub(
   if (!key) return;
   const inner = state.subs.get(key);
   if (!inner) return;
-  inner.delete(paramsKey(params));
+  const pk = paramsKey(params);
+  if (!inner.has(pk)) return;
+  inner.delete(pk);
   if (inner.size === 0) state.subs.delete(key);
+  releaseSubRefcount(key, pk, params);
+}
+
+function releaseSubRefcount(key: string, pk: string, params: ResourceParams): void {
+  const entry = registry.get(key);
+  if (!entry) return;
+  const prev = entry.subCounts.get(pk) ?? 0;
+  if (prev <= 0) return;
+  const next = prev - 1;
+  if (next === 0) {
+    entry.subCounts.delete(pk);
+    if (entry.onLastUnsubscribe) {
+      try {
+        entry.onLastUnsubscribe(params);
+      } catch (err) {
+        console.error(`[resources] onLastUnsubscribe failed for ${key}`, err);
+      }
+    }
+  } else {
+    entry.subCounts.set(pk, next);
+  }
 }
 
 // --- HTTP handler ---

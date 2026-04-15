@@ -1,16 +1,15 @@
 import type { ServerPluginDefinition } from "../../../../../../../server/src/types";
-import { editedFilesStreamHandler } from "./internal/edited-files-stream";
+import { editedFilesResource } from "./internal/edited-files-resource";
 import { handleFileContent } from "./internal/file-content-handler";
 
 const plugin: ServerPluginDefinition = {
   id: "conversation-code",
   name: "Conversation: Code",
-  description: "Streams edited files in the conversation's worktree via SSE.",
+  description:
+    "Tracks edited files in the conversation's worktree via the live-state primitive.",
   httpRoutes: {
     "GET /api/conversations/:id/file": handleFileContent,
   },
-  sseRoutes: {
-    "/api/conversations/:id/edited-files/stream": editedFilesStreamHandler,
-  },
+  resources: [editedFilesResource],
 };
 export default plugin;
