@@ -1,7 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Shell } from "@plugins/shell/web/commands";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
-import { ConversationSchema } from "@plugins/conversations/shared/types";
 import { Button } from "@/components/ui/button";
 
 type Task = {
@@ -115,13 +112,11 @@ export function TaskDetail({ taskId }: { taskId: string }) {
       const prompt = description.trim()
         ? `${trimmedTitle}\n\n${description}`
         : trimmedTitle;
-      const res = await fetch("/api/conversations", {
+      await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ taskId, prompt }),
       });
-      const conversation = ConversationSchema.parse(await res.json());
-      Shell.OpenPane(conversationPane({ session_id: conversation.id }));
     } finally {
       setLaunching(false);
     }
