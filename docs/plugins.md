@@ -117,7 +117,6 @@
     - `POST /api/tasks`
     - `GET /api/tasks/:id`
     - `PATCH /api/tasks/:id`
-    - `SSE /api/tasks/stream`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Server:

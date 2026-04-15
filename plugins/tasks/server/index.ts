@@ -3,7 +3,7 @@ import { handleList } from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";
 import { handleGet } from "./internal/handle-get";
 import { handleUpdate } from "./internal/handle-update";
-import { tasksStreamHandler } from "./internal/sse";
+import { tasksResource } from "./internal/resources";
 
 const plugin: ServerPluginDefinition = {
   id: "tasks",
@@ -15,8 +15,6 @@ const plugin: ServerPluginDefinition = {
     "GET /api/tasks/:id": handleGet,
     "PATCH /api/tasks/:id": handleUpdate,
   },
-  sseRoutes: {
-    "/api/tasks/stream": tasksStreamHandler,
-  },
+  resources: [tasksResource],
 };
 export default plugin;

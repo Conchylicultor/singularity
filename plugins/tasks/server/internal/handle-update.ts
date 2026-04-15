@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { tasks } from "../schema";
-import { broadcastChanged } from "./sse";
+import { tasksResource } from "./resources";
 
 const ALLOWED_STATUSES = new Set(["todo", "in_progress", "done", "cancelled"]);
 
@@ -35,6 +35,6 @@ export async function handleUpdate(
     .where(eq(tasks.id, id))
     .returning();
   if (!row) return new Response("Not found", { status: 404 });
-  broadcastChanged();
+  tasksResource.notify();
   return Response.json(row);
 }

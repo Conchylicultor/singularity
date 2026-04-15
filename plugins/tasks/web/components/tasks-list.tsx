@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 import { MdChevronRight, MdAdd } from "react-icons/md";
-import { ReconnectingEventSource } from "@core";
+import { useResource } from "@core";
 import { Tasks as TasksCommands } from "../commands";
+import { tasksResource } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 
 type Task = {
@@ -13,7 +14,7 @@ type Task = {
 
 type TreeNode = Task & { children: TreeNode[] };
 
-function buildTree(rows: Task[]): TreeNode[] {
+function buildTree(rows: readonly Task[]): TreeNode[] {
   const byId = new Map<string, TreeNode>();
   rows.forEach((r) => byId.set(r.id, { ...r, children: [] }));
   const roots: TreeNode[] = [];
@@ -36,23 +37,8 @@ async function patchExpanded(id: string, expanded: boolean) {
 }
 
 export function TasksList({ selectedId }: { selectedId?: string }) {
-  const [rows, setRows] = useState<Task[]>([]);
-
-  const load = useCallback(async () => {
-    const res = await fetch("/api/tasks");
-    setRows(await res.json());
-  }, []);
-
-  useEffect(() => {
-    void load();
-    const es = new ReconnectingEventSource({
-      url: "/api/tasks/stream",
-      onMessage: () => {
-        void load();
-      },
-    });
-    return () => es.close();
-  }, [load]);
+  const { data } = useResource(tasksResource);
+  const rows = (data ?? []) as Task[];
 
   const createTask = useCallback(
     async (parentId: string | null) => {
@@ -62,27 +48,20 @@ export function TasksList({ selectedId }: { selectedId?: string }) {
         body: JSON.stringify({ parentId }),
       });
       const task = (await res.json()) as Task;
-      setRows((prev) => {
-        const next = [...prev, task];
-        return parentId
-          ? next.map((r) => (r.id === parentId ? { ...r, expanded: true } : r))
-          : next;
-      });
       if (parentId) void patchExpanded(parentId, true);
       TasksCommands.OpenTask({ id: task.id });
     },
     [],
   );
 
-  const toggle = useCallback((id: string) => {
-    setRows((prev) => {
-      const target = prev.find((r) => r.id === id);
-      if (!target) return prev;
-      const nextExpanded = !target.expanded;
-      void patchExpanded(id, nextExpanded);
-      return prev.map((r) => (r.id === id ? { ...r, expanded: nextExpanded } : r));
-    });
-  }, []);
+  const toggle = useCallback(
+    (id: string) => {
+      const target = rows.find((r) => r.id === id);
+      if (!target) return;
+      void patchExpanded(id, !target.expanded);
+    },
+    [rows],
+  );
 
   const tree = buildTree(rows);
 
