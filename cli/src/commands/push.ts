@@ -100,14 +100,7 @@ export function registerPush(program: Command) {
           console.log(`Committing ${files.length} file(s)${opts.fromMain ? " on main" : ""}:`);
           for (const f of files) console.log(`  ${f}`);
           await exec(["git", "add", "-A"]);
-          await exec([
-            "git",
-            "commit",
-            "-m",
-            opts.message,
-            "--trailer",
-            `Singularity-Push=${pushId}`,
-          ]);
+          await exec(["git", "commit", "-m", opts.message]);
         } else if (opts.fromMain) {
           console.error("Nothing to commit.");
           process.exit(1);
@@ -124,7 +117,13 @@ export function registerPush(program: Command) {
       // --from-main: rebase onto origin/main and push. No worktree merge.
       if (opts.fromMain) {
         console.log("Pulling main...");
-        await exec(["git", "pull", "--rebase"]);
+        await exec([
+          "git",
+          "pull",
+          "--rebase",
+          "--exec",
+          `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
+        ]);
         if (!opts.skipChecks) {
           console.log("Running checks...");
           const ok = await runChecks();
@@ -157,7 +156,7 @@ export function registerPush(program: Command) {
         "rebase",
         "main",
         "--exec",
-        `git commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
+        `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
       ]);
       if (rebaseExit !== 0) {
         await run(["git", "rebase", "--abort"]);
