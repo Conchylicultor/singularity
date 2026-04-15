@@ -1,37 +1,32 @@
-import { eq } from "drizzle-orm";
-import { db } from "../../../../../../../../server/src/db/client";
-import { conversations } from "../../../../../../server/schema";
+import type { SseHandler } from "../../../../../../../../server/src/types";
+import { worktreePathForSync } from "../../../../../../server/internal/worktree";
 import { getEditedFiles } from "./get-edited-files";
-import type { EditedFile, EditedFilesResponse } from "../../shared/protocol";
+import type { EditedFilesResponse } from "../../shared/protocol";
 
 const TICK_MS = 1000;
-const encoder = new TextEncoder();
+
+type Send = (data: EditedFilesResponse) => void;
 
 interface Room {
   worktreePath: string;
-  subscribers: Set<ReadableStreamDefaultController<Uint8Array>>;
+  subscribers: Set<Send>;
   timer: ReturnType<typeof setInterval> | null;
   lastSerialized: string;
 }
 
 const rooms = new Map<string, Room>();
 
-function frame(files: EditedFile[]): Uint8Array {
-  const body: EditedFilesResponse = { files };
-  return encoder.encode(`data: ${JSON.stringify(body)}\n\n`);
-}
-
 async function tick(id: string, room: Room): Promise<void> {
   const files = await getEditedFiles(room.worktreePath);
   const serialized = JSON.stringify(files);
   if (serialized === room.lastSerialized) return;
   room.lastSerialized = serialized;
-  const bytes = frame(files);
-  for (const controller of room.subscribers) {
+  const payload: EditedFilesResponse = { files };
+  for (const send of room.subscribers) {
     try {
-      controller.enqueue(bytes);
+      send(payload);
     } catch {
-      room.subscribers.delete(controller);
+      room.subscribers.delete(send);
     }
   }
   if (room.subscribers.size === 0) stopRoom(id);
@@ -53,62 +48,48 @@ function stopRoom(id: string) {
   rooms.delete(id);
 }
 
-export async function handleEditedFilesStream(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const id = params.id;
-  if (!id) return new Response("Missing id", { status: 400 });
+export const editedFilesStreamHandler: SseHandler<EditedFilesResponse> = {
+  subscribe(send, params) {
+    const id = params.id;
+    if (!id) return () => {};
+    const worktreePath = worktreePathForSync(id);
 
-  const [row] = await db
-    .select({ worktreePath: conversations.worktreePath })
-    .from(conversations)
-    .where(eq(conversations.id, id))
-    .limit(1);
-  if (!row) return new Response("Not found", { status: 404 });
+    let room = rooms.get(id);
+    const fresh = !room;
+    if (!room) {
+      room = {
+        worktreePath,
+        subscribers: new Set(),
+        timer: null,
+        lastSerialized: "",
+      };
+      rooms.set(id, room);
+    }
+    room.subscribers.add(send);
 
-  const worktreePath = row.worktreePath;
-
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      controller.enqueue(encoder.encode(": ok\n\n"));
-
-      let room = rooms.get(id);
-      if (!room) {
-        room = {
-          worktreePath,
-          subscribers: new Set(),
-          timer: null,
-          lastSerialized: "",
-        };
-        rooms.set(id, room);
-      }
-      room.subscribers.add(controller);
-
-      // Send current snapshot immediately so a new subscriber doesn't wait a tick.
+    if (room.lastSerialized) {
       try {
-        const files = await getEditedFiles(worktreePath);
-        room.lastSerialized = JSON.stringify(files);
-        controller.enqueue(frame(files));
-      } catch (err) {
-        console.error("[code.edited-files-stream] snapshot failed", err);
-      }
+        send(JSON.parse(room.lastSerialized) as EditedFilesResponse);
+      } catch {}
+    } else if (fresh) {
+      // Fire an eager first tick so the first subscriber doesn't wait TICK_MS
+      // for the initial snapshot. Deferred via microtask so subscribe stays
+      // fully synchronous.
+      const r = room;
+      queueMicrotask(() =>
+        tick(id, r).catch((err) =>
+          console.error("[code.edited-files-stream] initial tick failed", err),
+        ),
+      );
+    }
 
-      startRoom(room, id);
-    },
-    cancel(controller) {
-      const room = rooms.get(id);
-      if (!room) return;
-      room.subscribers.delete(controller);
-      if (room.subscribers.size === 0) stopRoom(id);
-    },
-  });
+    startRoom(room, id);
 
-  return new Response(stream, {
-    headers: {
-      "content-type": "text/event-stream",
-      "cache-control": "no-cache",
-      "connection": "keep-alive",
-    },
-  });
-}
+    return () => {
+      const r = rooms.get(id);
+      if (!r) return;
+      r.subscribers.delete(send);
+      if (r.subscribers.size === 0) stopRoom(id);
+    };
+  },
+};

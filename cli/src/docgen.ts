@@ -32,6 +32,7 @@ interface PluginInfo {
   contributions: Contribution[];
   httpRoutes: string[];
   wsRoutes: string[];
+  sseRoutes: string[];
   apiExports: string[];
   apiUses: string[];
   children: PluginInfo[];
@@ -250,7 +251,10 @@ function parsePropsBlock(body: string): Record<string, string> {
   return out;
 }
 
-function parseRouteMap(src: string, field: "httpRoutes" | "wsRoutes"): string[] {
+function parseRouteMap(
+  src: string,
+  field: "httpRoutes" | "wsRoutes" | "sseRoutes",
+): string[] {
   const idx = src.search(new RegExp(`\\b${field}\\s*:\\s*\\{`));
   if (idx < 0) return [];
   const start = src.indexOf("{", idx);
@@ -392,6 +396,7 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
 
   const httpRoutes = serverSrc ? parseRouteMap(serverSrc, "httpRoutes") : [];
   const wsRoutes = serverSrc ? parseRouteMap(serverSrc, "wsRoutes") : [];
+  const sseRoutes = serverSrc ? parseRouteMap(serverSrc, "sseRoutes") : [];
 
   const apiSrc = readIfExists(join(dir, "server", "api.ts"));
   const apiExports = apiSrc ? parseApiExports(stripTypes(apiSrc)) : [];
@@ -416,6 +421,7 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
     contributions,
     httpRoutes,
     wsRoutes,
+    sseRoutes,
     apiExports,
     apiUses,
     children: [],
@@ -475,7 +481,11 @@ function renderPlugin(p: PluginInfo, depth: number, root: string): string[] {
     for (const c of p.contributions) lines.push(`${indent}    - ${renderContribution(c)}`);
   }
 
-  const serverEntries = [...p.httpRoutes, ...p.wsRoutes.map((r) => `WS ${r}`)];
+  const serverEntries = [
+    ...p.httpRoutes,
+    ...p.wsRoutes.map((r) => `WS ${r}`),
+    ...p.sseRoutes.map((r) => `SSE ${r}`),
+  ];
   if (serverEntries.length > 0 || p.apiExports.length > 0 || p.apiUses.length > 0) {
     lines.push(`${indent}  - Server:`);
     if (p.apiExports.length > 0) {

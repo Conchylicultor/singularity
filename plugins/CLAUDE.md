@@ -20,10 +20,10 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
   - Server:
     - API: `Runtime`
     - `GET /api/conversations`
-    - `GET /api/conversations/stream`
     - `GET /api/conversations/:id`
     - `POST /api/conversations`
     - `DELETE /api/conversations`
+    - `SSE /api/conversations/stream`
   - Plugins:
     - **`conversation-view`** — Conversation pane and toolbar host; nested plugins extend `Conversation.Toolbar`.
       - Defines:
@@ -38,8 +38,8 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
           - Contributes:
             - `Conversation.Toolbar` → `CodeToolbarSlot`
           - Server:
-            - `GET /api/conversations/:id/edited-files/stream`
             - `GET /api/conversations/:id/file`
+            - `SSE /api/conversations/:id/edited-files/stream`
           - Plugins:
             - **`edited-files-button`** — Toolbar button showing the number of files edited in the conversation's worktree.
               - Contributes:
@@ -120,10 +120,10 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
     - `Shell.Route` `/tasks/:id`
   - Server:
     - `GET /api/tasks`
-    - `GET /api/tasks/stream`
     - `POST /api/tasks`
     - `GET /api/tasks/:id`
     - `PATCH /api/tasks/:id`
+    - `SSE /api/tasks/stream`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Server:

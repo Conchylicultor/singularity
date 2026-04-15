@@ -4,34 +4,42 @@ export interface ReconnectingEventSourceOptions {
   url: string;
   onMessage?: (data: string, eventName?: string) => void;
   onStatusChange?: (status: WsStatus) => void;
-  // Named SSE events beyond the default "message" channel.
+  // Named SSE events beyond the default "message" channel. Rarely used now
+  // that all streams are multiplexed under /api/events and keyed by virtual
+  // URL as the SSE event name.
   events?: string[];
 }
 
-// SSE fanout is shared across tabs: one tab wins a Web Lock keyed by URL and
-// opens the real EventSource; other tabs attach as followers over a
-// BroadcastChannel. This caps backend SSE connections at one per URL per
-// browser, not one per tab per subscription, which is what kept saturating
-// Bun when many tabs were open.
+// All SSE in the app is multiplexed over a single connection to /api/events.
+// Consumers keep talking to virtual URLs (e.g. "/api/conversations/stream");
+// the multiplex layer rewrites that into a subscription on the real stream
+// and demuxes incoming frames by their SSE `event:` name (= virtual URL).
+//
+// Leader election is global (one Web Lock for all SSE, not per-URL). Follower
+// tabs never open a real EventSource — they receive demuxed frames over a
+// BroadcastChannel keyed per virtual URL, just as before.
+
+const MULTIPLEX_URL = "/api/events";
+const MULTIPLEX_LOCK = "singularity:sse:multiplex";
+const BACKOFF_MS = [500, 1000, 2000, 5000];
 
 type Envelope =
   | { kind: "event"; eventName?: string; data: string }
   | { kind: "status"; status: WsStatus };
 
-const BACKOFF_MS = [500, 1000, 2000, 5000];
 const coordinators = new Map<string, Coordinator>();
+let multiplex: Multiplex | null = null;
 
+function getMultiplex(): Multiplex {
+  if (!multiplex) multiplex = new Multiplex();
+  return multiplex;
+}
+
+// Per-virtual-URL fan-out. Owns its tab-local subscribers and a
+// BroadcastChannel for cross-tab fan-out. Does NOT open EventSource itself.
 class Coordinator {
   private subs = new Set<ReconnectingEventSource>();
-  private eventNames = new Set<string>();
   private channel: BroadcastChannel | null = null;
-  private isLeader = false;
-  private lockReleaser: (() => void) | null = null;
-
-  private es: EventSource | null = null;
-  private attempt = 0;
-  private retryTimer: ReturnType<typeof setTimeout> | null = null;
-  private disposed = false;
   private status: WsStatus = "connecting";
 
   constructor(private url: string) {
@@ -39,104 +47,47 @@ class Coordinator {
       this.channel = new BroadcastChannel(`sse:${url}`);
       this.channel.onmessage = this.onChannelMessage;
     }
-
-    const locks = typeof navigator !== "undefined"
-      ? (navigator as Navigator & { locks?: LockManager }).locks
-      : undefined;
-
-    if (locks && this.channel) {
-      locks.request(`sse:${url}`, { mode: "exclusive" }, () => {
-        if (this.disposed) return;
-        this.becomeLeader();
-        return new Promise<void>((resolve) => {
-          this.lockReleaser = resolve;
-        });
-      });
-    } else {
-      // No Web Locks / BroadcastChannel: fall back to per-tab connections.
-      this.becomeLeader();
-    }
   }
 
-  subscribe(sub: ReconnectingEventSource, events: string[]) {
+  subscribe(sub: ReconnectingEventSource) {
     this.subs.add(sub);
-    for (const name of events) {
-      if (this.eventNames.has(name)) continue;
-      this.eventNames.add(name);
-      this.attachNamedListener(name);
-    }
     sub._setStatus(this.status);
   }
 
   unsubscribe(sub: ReconnectingEventSource) {
     this.subs.delete(sub);
-    if (this.subs.size === 0) this.dispose();
+    if (this.subs.size === 0) {
+      this.channel?.close();
+      this.channel = null;
+      coordinators.delete(this.url);
+      getMultiplex().removeUrl(this.url);
+    }
   }
 
-  private dispose() {
-    this.disposed = true;
-    if (this.retryTimer) clearTimeout(this.retryTimer);
-    this.es?.close();
-    this.es = null;
-    this.channel?.close();
-    this.channel = null;
-    this.lockReleaser?.();
-    coordinators.delete(this.url);
+  hasSubscribers(): boolean {
+    return this.subs.size > 0;
   }
 
-  private becomeLeader() {
-    this.isLeader = true;
-    this.connect();
-  }
-
-  private connect = () => {
-    if (this.disposed) return;
-    this.setStatus(this.attempt === 0 ? "connecting" : "reconnecting");
-    const es = new EventSource(this.url);
-    this.es = es;
-
-    es.onopen = () => {
-      if (this.disposed) return;
-      this.attempt = 0;
-      this.setStatus("open");
-    };
-
-    es.onmessage = (ev) => this.dispatchEvent(undefined, ev.data);
-
-    es.onerror = () => {
-      if (this.disposed) return;
-      es.close();
-      this.es = null;
-      const delay = BACKOFF_MS[Math.min(this.attempt, BACKOFF_MS.length - 1)]!;
-      this.attempt++;
-      this.setStatus("reconnecting");
-      this.retryTimer = setTimeout(this.connect, delay);
-    };
-
-    for (const name of this.eventNames) this.attachNamedListener(name);
-  };
-
-  private attachNamedListener(name: string) {
-    if (!this.isLeader || !this.es) return;
-    this.es.addEventListener(name, (ev) => {
-      this.dispatchEvent(name, (ev as MessageEvent).data);
-    });
-  }
-
-  private dispatchEvent(eventName: string | undefined, data: string) {
+  /** Dispatch a frame received by the multiplex leader to this URL's subscribers. */
+  dispatchLeader(eventName: string | undefined, data: string) {
     for (const sub of this.subs) sub._onMessage(data, eventName);
     this.channel?.postMessage({ kind: "event", eventName, data } satisfies Envelope);
   }
 
-  private setStatus(status: WsStatus) {
+  /** Update status for this virtual URL. */
+  setStatus(status: WsStatus, broadcastToFollowers: boolean) {
     this.status = status;
     publishWsStatus({ url: this.url, status });
     for (const sub of this.subs) sub._setStatus(status);
-    this.channel?.postMessage({ kind: "status", status } satisfies Envelope);
+    if (broadcastToFollowers) {
+      this.channel?.postMessage({ kind: "status", status } satisfies Envelope);
+    }
   }
 
   private onChannelMessage = (ev: MessageEvent<Envelope>) => {
-    if (this.isLeader) return;
+    // Followers receive frames/status from whichever tab holds the lock.
+    // Leader tab ignores its own echoes by noticing it already dispatched.
+    if (getMultiplex().isLeader) return;
     const env = ev.data;
     if (env.kind === "event") {
       for (const sub of this.subs) sub._onMessage(env.data, env.eventName);
@@ -146,6 +97,133 @@ class Coordinator {
       for (const sub of this.subs) sub._setStatus(env.status);
     }
   };
+}
+
+class Multiplex {
+  private urls = new Set<string>();
+  private es: EventSource | null = null;
+  private attempt = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private reopenScheduled = false;
+  private listenerUrls = new Set<string>();
+  isLeader = false;
+
+  constructor() {
+    const locks =
+      typeof navigator !== "undefined"
+        ? (navigator as Navigator & { locks?: LockManager }).locks
+        : undefined;
+    if (locks && typeof BroadcastChannel !== "undefined") {
+      void locks.request(MULTIPLEX_LOCK, { mode: "exclusive" }, () => {
+        this.becomeLeader();
+        // Hold the lock for the lifetime of the tab (released on tab close).
+        return new Promise<void>(() => {});
+      });
+    } else {
+      // Fallback: no Web Locks / BroadcastChannel — every tab is its own leader.
+      this.becomeLeader();
+    }
+  }
+
+  addUrl(url: string) {
+    if (this.urls.has(url)) return;
+    this.urls.add(url);
+    this.scheduleReopen();
+  }
+
+  removeUrl(url: string) {
+    if (!this.urls.delete(url)) return;
+    this.scheduleReopen();
+  }
+
+  private becomeLeader() {
+    this.isLeader = true;
+    this.connect();
+  }
+
+  // Coalesce mount/unmount churn into a single reconnect per tick.
+  private scheduleReopen() {
+    if (!this.isLeader || this.reopenScheduled) return;
+    this.reopenScheduled = true;
+    queueMicrotask(() => {
+      this.reopenScheduled = false;
+      this.reopen();
+    });
+  }
+
+  private reopen() {
+    if (!this.isLeader) return;
+    // If the live connection already covers exactly the active URL set, no-op.
+    // This collapses React StrictMode's mount→unmount→mount churn from three
+    // reconnects into zero.
+    if (
+      this.es &&
+      this.listenerUrls.size === this.urls.size &&
+      Array.from(this.urls).every((u) => this.listenerUrls.has(u))
+    ) {
+      return;
+    }
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
+    }
+    if (this.es) {
+      const old = this.es;
+      this.es = null;
+      old.onerror = null;
+      old.close();
+    }
+    if (this.urls.size === 0) {
+      // No active virtual URLs; stay disconnected until something subscribes.
+      return;
+    }
+    this.connect();
+  }
+
+  private connect = () => {
+    if (!this.isLeader || this.urls.size === 0) return;
+    const urlsParam = Array.from(this.urls)
+      .map((u) => encodeURIComponent(u))
+      .join(",");
+    const phase: WsStatus = this.attempt === 0 ? "connecting" : "reconnecting";
+    this.broadcastStatus(phase);
+
+    const es = new EventSource(`${MULTIPLEX_URL}?urls=${urlsParam}`);
+    this.es = es;
+    this.listenerUrls = new Set();
+
+    for (const url of this.urls) this.attachListener(url);
+
+    es.onopen = () => {
+      this.attempt = 0;
+      this.broadcastStatus("open");
+    };
+
+    es.onerror = () => {
+      es.close();
+      this.es = null;
+      const delay = BACKOFF_MS[Math.min(this.attempt, BACKOFF_MS.length - 1)]!;
+      this.attempt++;
+      this.broadcastStatus("reconnecting");
+      this.retryTimer = setTimeout(this.connect, delay);
+    };
+  };
+
+  private attachListener(url: string) {
+    if (!this.es || this.listenerUrls.has(url)) return;
+    this.listenerUrls.add(url);
+    this.es.addEventListener(url, (ev) => {
+      const coord = coordinators.get(url);
+      coord?.dispatchLeader(url, (ev as MessageEvent).data);
+    });
+  }
+
+  private broadcastStatus(status: WsStatus) {
+    for (const url of this.urls) {
+      const coord = coordinators.get(url);
+      coord?.setStatus(status, /* broadcastToFollowers */ true);
+    }
+  }
 }
 
 export class ReconnectingEventSource {
@@ -158,7 +236,8 @@ export class ReconnectingEventSource {
       coordinators.set(opts.url, coord);
     }
     this.coord = coord;
-    coord.subscribe(this, opts.events ?? []);
+    coord.subscribe(this);
+    getMultiplex().addUrl(opts.url);
   }
 
   close(): void {

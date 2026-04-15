@@ -1,4 +1,4 @@
-import { getMainWorktreeRoot } from "@plugins/conversations/server/internal/worktree";
+import { ensureMainWorktreeRoot } from "@plugins/conversations/server/internal/worktree";
 
 const GIT = "/usr/bin/git";
 const TTL_MS = 30_000;
@@ -20,7 +20,7 @@ let cache: { expires: number; commits: CommitInfo[] } | null = null;
 
 export async function getCommits(): Promise<CommitInfo[]> {
   if (cache && cache.expires > Date.now()) return cache.commits;
-  const root = await getMainWorktreeRoot();
+  const root = await ensureMainWorktreeRoot();
   const proc = Bun.spawn(
     [GIT, "-C", root, "log", "--format=__C__%H %cI", "--numstat", "--reverse"],
     { stdout: "pipe", stderr: "pipe" },

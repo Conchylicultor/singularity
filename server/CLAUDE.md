@@ -9,9 +9,10 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`plu
 1. `src/index.ts` starts `Bun.serve()` on port 9001
 2. Each plugin declares its routes via a `ServerPluginDefinition` (defined in `src/types.ts`)
 3. `src/plugins.ts` is a flat list of plugin imports — structurally identical to `web/src/plugins.ts`
-4. At startup, the entry point flattens all plugin routes into two lookup tables:
+4. At startup, the entry point flattens all plugin routes into three lookup tables:
    - `httpRoutes` — `"METHOD /path"` → handler function
    - `wsRoutes` — `"/path"` → `WsHandler` object (open/message/close)
+   - `sseRoutes` — `"/path"` → `SseHandler` object (subscribe returning unsubscribe). Exposed to clients via a single multiplexed `GET /api/events?urls=…` stream owned by the core; plugins never write `text/event-stream` themselves
 
 ## File Structure
 
@@ -44,6 +45,21 @@ export default plugin;
 ```
 
 The type is intentionally flat — no base classes, no lifecycle hooks. A plugin is just a data object with optional route maps.
+
+### SseHandler Interface
+
+SSE streams are declared as pure subscriber handlers:
+
+```typescript
+interface SseHandler {
+  subscribe(
+    send: (data: unknown) => void,
+    params: Record<string, string>,
+  ): (() => void) | Promise<() => void>;
+}
+```
+
+All streams are multiplexed onto the single core endpoint `GET /api/events?urls=<csv>`; each emitted value is wrapped as a named SSE event keyed by the virtual URL. The core owns response encoding and a 20s heartbeat. Plugins just push payloads via `send(...)` and return a teardown. `:param` path segments are supported, same syntax as `httpRoutes`.
 
 ### WsHandler Interface
 

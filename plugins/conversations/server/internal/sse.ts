@@ -1,56 +1,29 @@
+import type { SseHandler } from "../../../../server/src/types";
 import type { ConversationEvent } from "../../shared/protocol";
 import { getSnapshot } from "./poller";
 
-const subscribers = new Set<ReadableStreamDefaultController<Uint8Array>>();
-const encoder = new TextEncoder();
-const PING = encoder.encode(": ping\n\n");
-const HEARTBEAT_MS = 20_000;
+type Send = (data: ConversationEvent) => void;
 
-function frame(event: ConversationEvent): Uint8Array {
-  return encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
-}
+const subscribers = new Set<Send>();
 
 export function broadcast(event: ConversationEvent): void {
-  const bytes = frame(event);
-  for (const controller of subscribers) {
+  for (const send of subscribers) {
     try {
-      controller.enqueue(bytes);
+      send(event);
     } catch {
-      subscribers.delete(controller);
+      subscribers.delete(send);
     }
   }
 }
 
-setInterval(() => {
-  for (const controller of subscribers) {
-    try {
-      controller.enqueue(PING);
-    } catch {
-      subscribers.delete(controller);
+export const conversationsStreamHandler: SseHandler<ConversationEvent> = {
+  subscribe(send) {
+    subscribers.add(send);
+    for (const [id, info] of getSnapshot()) {
+      send({ type: "working", id, working: info.working } satisfies ConversationEvent);
     }
-  }
-}, HEARTBEAT_MS);
-
-export function handleStream(_req: Request): Response {
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      subscribers.add(controller);
-      controller.enqueue(encoder.encode(": ok\n\n"));
-      for (const [id, info] of getSnapshot()) {
-        controller.enqueue(
-          frame({ type: "working", id, working: info.working }),
-        );
-      }
-    },
-    cancel(controller) {
-      subscribers.delete(controller);
-    },
-  });
-  return new Response(stream, {
-    headers: {
-      "content-type": "text/event-stream",
-      "cache-control": "no-cache",
-      "connection": "keep-alive",
-    },
-  });
-}
+    return () => {
+      subscribers.delete(send);
+    };
+  },
+};
