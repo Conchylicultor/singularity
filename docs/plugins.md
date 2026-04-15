@@ -74,6 +74,10 @@
     - `GET /api/logs/channels`
     - `WS /ws/logs`
 
+- **`markdown`** — Rendered markdown preview for .md and .mdx files.
+  - Contributes:
+    - `FilePane.Renderer` "Markdown" → `MarkdownView`
+
 - **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
   - Contributes:
     - `FilePane.Renderer` "Raw" → `RawView`
