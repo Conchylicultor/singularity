@@ -1,15 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
-import { MdAdd, MdRefresh, MdArrowForward } from "react-icons/md";
-import { subscribeWsStatus } from "@core";
+import { MdAdd, MdArrowForward } from "react-icons/md";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
-import { z } from "zod";
-import {
-  ConversationSchema,
-  type Conversation,
-  type RuntimeLive,
-} from "@plugins/conversations/shared/types";
-import { useConversationStream } from "@plugins/conversations/web/stream";
+import { ConversationSchema } from "@plugins/conversations/shared/types";
+import { useConversations } from "@plugins/conversations/web/use-conversations";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -25,64 +18,8 @@ function formatRelativeTime(date: Date): string {
 }
 
 export function WelcomeView() {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [live, setLive] = useState<Record<string, RuntimeLive>>({});
-  const [loading, setLoading] = useState(true);
+  const { conversations, isLoading } = useConversations();
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/conversations");
-      setConversations(z.array(ConversationSchema).parse(await res.json()));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  useConversationStream(useCallback((parsed) => {
-    if (parsed.type === "title") {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === parsed.id ? { ...c, title: parsed.title } : c,
-        ),
-      );
-    } else if (parsed.type === "status") {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === parsed.id ? { ...c, status: parsed.status } : c,
-        ),
-      );
-    } else if (parsed.type === "working") {
-      setLive((prev) => ({
-        ...prev,
-        [parsed.id]: { working: parsed.working },
-      }));
-    } else if (parsed.type === "gone") {
-      setLive((prev) => {
-        const next = { ...prev };
-        delete next[parsed.id];
-        return next;
-      });
-    }
-  }, []));
-
-  useEffect(() => {
-    let wasReconnecting = false;
-    return subscribeWsStatus(({ url, status }) => {
-      if (url !== "/api/conversations/stream") return;
-      if (status === "reconnecting") wasReconnecting = true;
-      else if (status === "open" && wasReconnecting) {
-        wasReconnecting = false;
-        refresh();
-      }
-    });
-  }, [refresh]);
-
-  const isWorking = (name: string) => live[name]?.working ?? false;
   const activeCount = conversations.filter((c) => c.active).length;
   const idleCount = conversations.length - activeCount;
 
@@ -110,7 +47,7 @@ export function WelcomeView() {
         </div>
 
         {/* Stats */}
-        {!loading && conversations.length > 0 && (
+        {!isLoading && conversations.length > 0 && (
           <div className="flex w-full gap-3">
             {[
               { label: "Total", value: conversations.length },
@@ -139,23 +76,12 @@ export function WelcomeView() {
         </Button>
 
         {/* Recent Conversations */}
-        {!loading && recentConversations.length > 0 && (
+        {!isLoading && recentConversations.length > 0 && (
           <div className="w-full">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-muted-foreground">
                 Recent conversations
               </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-6"
-                onClick={refresh}
-                disabled={loading}
-              >
-                <MdRefresh
-                  className={cn("size-3.5", loading && "animate-spin")}
-                />
-              </Button>
             </div>
             <div className="flex flex-col rounded-lg border bg-card overflow-hidden divide-y">
               {recentConversations.map((conversation) => (
@@ -167,7 +93,7 @@ export function WelcomeView() {
                   <span
                     className={cn(
                       "size-1.5 shrink-0 rounded-full",
-                      !isWorking(conversation.id)
+                      !conversation.working
                         ? "bg-muted-foreground/40"
                         : "bg-primary",
                     )}
@@ -176,7 +102,7 @@ export function WelcomeView() {
                     <span
                       className={cn(
                         "truncate text-xs",
-                        !isWorking(conversation.id)
+                        !conversation.working
                           ? "text-muted-foreground"
                           : "font-medium text-foreground",
                       )}

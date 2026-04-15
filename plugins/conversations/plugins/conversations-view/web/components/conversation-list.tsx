@@ -1,15 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
-import { MdAdd, MdRefresh, MdClose } from "react-icons/md";
-import { subscribeWsStatus } from "@core";
+import { useState, useEffect } from "react";
+import { MdAdd, MdClose } from "react-icons/md";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
-import { z } from "zod";
-import {
-  ConversationSchema,
-  type Conversation,
-  type RuntimeLive,
-} from "@plugins/conversations/shared/types";
-import { useConversationStream } from "@plugins/conversations/web/stream";
+import { ConversationSchema } from "@plugins/conversations/shared/types";
+import { useConversations } from "@plugins/conversations/web/use-conversations";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -40,9 +34,7 @@ function activeIdFromPath(pathname: string): string | null {
 }
 
 export function ConversationList() {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [live, setLive] = useState<Record<string, RuntimeLive>>({});
-  const [loading, setLoading] = useState(false);
+  const { conversations, isLoading } = useConversations();
   const [activeId, setActiveId] = useState<string | null>(() =>
     activeIdFromPath(window.location.pathname),
   );
@@ -57,68 +49,6 @@ export function ConversationList() {
     };
   }, []);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/conversations");
-      setConversations(z.array(ConversationSchema).parse(await res.json()));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  useConversationStream(useCallback((parsed) => {
-    if (parsed.type === "title") {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === parsed.id ? { ...c, title: parsed.title } : c,
-        ),
-      );
-    } else if (parsed.type === "status") {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === parsed.id ? { ...c, status: parsed.status } : c,
-        ),
-      );
-    } else if (parsed.type === "created") {
-      const conv = ConversationSchema.parse(parsed.conversation);
-      setConversations((prev) =>
-        prev.some((c) => c.id === conv.id) ? prev : [conv, ...prev],
-      );
-    } else if (parsed.type === "deleted") {
-      setConversations((prev) => prev.filter((c) => c.id !== parsed.id));
-    } else if (parsed.type === "working") {
-      setLive((prev) => ({
-        ...prev,
-        [parsed.id]: { working: parsed.working },
-      }));
-    } else if (parsed.type === "gone") {
-      setLive((prev) => {
-        const next = { ...prev };
-        delete next[parsed.id];
-        return next;
-      });
-    }
-  }, []));
-
-  // After the SSE reconnects (e.g. server restart), DB-backed list state may
-  // have drifted. Re-fetch once we see open-after-reconnecting.
-  useEffect(() => {
-    let wasReconnecting = false;
-    return subscribeWsStatus(({ url, status }) => {
-      if (url !== "/api/conversations/stream") return;
-      if (status === "reconnecting") wasReconnecting = true;
-      else if (status === "open" && wasReconnecting) {
-        wasReconnecting = false;
-        refresh();
-      }
-    });
-  }, [refresh]);
-
   const createConversation = async () => {
     const res = await fetch("/api/conversations", { method: "POST" });
     const conversation = ConversationSchema.parse(await res.json());
@@ -126,13 +56,9 @@ export function ConversationList() {
     setActiveId(conversation.id);
   };
 
-  const deleteConversation = async (
-    name: string,
-    e: React.MouseEvent<HTMLButtonElement>,
-  ) => {
+  const deleteConversation = async (name: string, e: React.MouseEvent) => {
     e.stopPropagation();
     await fetch(`/api/conversations?name=${name}`, { method: "DELETE" });
-    await refresh();
   };
 
   return (
@@ -147,21 +73,10 @@ export function ConversationList() {
           <MdAdd className="size-4" />
           New conversation
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 shrink-0"
-          onClick={refresh}
-          disabled={loading}
-        >
-          <MdRefresh
-            className={cn("size-3.5", loading && "animate-spin")}
-          />
-        </Button>
       </div>
       <SidebarMenu>
         {conversations.map((conversation) => {
-          const working = live[conversation.id]?.working ?? false;
+          const working = conversation.working;
           const needsAttention = conversation.status === "needs_attention";
           const muted = !working && !needsAttention;
           const gone = muted;
@@ -204,7 +119,7 @@ export function ConversationList() {
                 </div>
               </SidebarMenuButton>
               <SidebarMenuAction
-                onClick={(e) => deleteConversation(conversation.id, e)}
+                onClick={(e: React.MouseEvent) => deleteConversation(conversation.id, e)}
                 className="opacity-0 group-hover/menu-item:opacity-100"
               >
                 <MdClose className="size-3.5" />
@@ -212,7 +127,7 @@ export function ConversationList() {
             </SidebarMenuItem>
           );
         })}
-        {conversations.length === 0 && !loading && (
+        {conversations.length === 0 && !isLoading && (
           <div className="px-4 py-2 text-xs text-muted-foreground">
             No conversations
           </div>

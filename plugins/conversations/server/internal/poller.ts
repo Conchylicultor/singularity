@@ -4,7 +4,7 @@ import { Runtime, type RuntimeInfo } from "../api";
 import { conversations, pushes } from "../schema";
 import type { ConversationStatus } from "../../shared/types";
 import { worktreePathFor } from "./worktree";
-import { broadcast } from "./sse";
+import { conversationsResource } from "./resources";
 
 function liveStatusFor(info: RuntimeInfo): ConversationStatus {
   return info.working ? "working" : "needs_attention";
@@ -60,6 +60,7 @@ async function collectLive(): Promise<Map<string, LiveEntry>> {
 }
 
 async function tick(): Promise<void> {
+  let changed = false;
   const [next, rows] = await Promise.all([
     collectLive(),
     db
@@ -98,22 +99,17 @@ async function tick(): Promise<void> {
           claudeSessionId: inserted.claudeSessionId,
           status: inserted.status,
         });
-        broadcast({
-          type: "created",
-          conversation: JSON.parse(JSON.stringify(inserted)),
-        });
+        changed = true;
       }
     }
   }
 
   for (const [id, info] of next) {
     const prev = snapshot.get(id);
-    if (!prev || prev.working !== info.working) {
-      broadcast({ type: "working", id, working: info.working });
-    }
+    if (!prev || prev.working !== info.working) changed = true;
   }
   for (const id of snapshot.keys()) {
-    if (!next.has(id)) broadcast({ type: "gone", id });
+    if (!next.has(id)) changed = true;
   }
   snapshot = next;
 
@@ -134,7 +130,7 @@ async function tick(): Promise<void> {
           updatedAt: new Date(),
         })
         .where(eq(conversations.id, id));
-      broadcast({ type: "status", id, status: desiredStatus });
+      changed = true;
       continue;
     }
 
@@ -152,15 +148,7 @@ async function tick(): Promise<void> {
     if (sessionChanged) patch.claudeSessionId = info.claudeSessionId;
     if (statusChanged) patch.status = desiredStatus;
     await db.update(conversations).set(patch).where(eq(conversations.id, id));
-    if (titleChanged) broadcast({ type: "title", id, title: desiredTitle });
-    if (sessionChanged) {
-      broadcast({
-        type: "claude-session",
-        id,
-        claudeSessionId: info.claudeSessionId,
-      });
-    }
-    if (statusChanged) broadcast({ type: "status", id, status: desiredStatus });
+    changed = true;
   }
 
   // Mark DB rows whose runtime entry has vanished (tmux pane killed) as
@@ -179,8 +167,10 @@ async function tick(): Promise<void> {
         updatedAt: new Date(),
       })
       .where(eq(conversations.id, id));
-    broadcast({ type: "status", id, status: desiredStatus });
+    changed = true;
   }
+
+  if (changed) conversationsResource.notify();
 }
 
 export function startPoller(): void {

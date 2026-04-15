@@ -23,7 +23,6 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
     - `GET /api/conversations/:id`
     - `POST /api/conversations`
     - `DELETE /api/conversations`
-    - `SSE /api/conversations/stream`
   - Plugins:
     - **`conversation-view`** — Conversation pane and toolbar host; nested plugins extend `Conversation.Toolbar`.
       - Defines:

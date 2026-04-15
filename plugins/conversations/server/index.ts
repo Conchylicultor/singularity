@@ -3,8 +3,8 @@ import { handleList } from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";
 import { handleDelete } from "./internal/handle-delete";
 import { handleGet } from "./internal/handle-get";
-import { conversationsStreamHandler } from "./internal/sse";
 import { startPoller } from "./internal/poller";
+import { conversationsResource } from "./internal/resources";
 
 startPoller();
 
@@ -18,8 +18,6 @@ const plugin: ServerPluginDefinition = {
     "POST /api/conversations": handleCreate,
     "DELETE /api/conversations": handleDelete,
   },
-  sseRoutes: {
-    "/api/conversations/stream": conversationsStreamHandler,
-  },
+  resources: [conversationsResource],
 };
 export default plugin;

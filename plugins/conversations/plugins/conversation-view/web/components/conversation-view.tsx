@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { subscribeWsStatus } from "@core";
 import { Conversation } from "../slots";
 import {
   Conversation as ConversationCommands,
@@ -10,15 +9,14 @@ import {
   type RightPaneDescriptor,
 } from "../commands";
 import { terminalPane } from "@plugins/terminal/web/views";
-import type { Conversation as ConversationRecord } from "@plugins/conversations/shared/types";
-import { useConversationStream } from "@plugins/conversations/web/stream";
+import { useConversation } from "@plugins/conversations/web/use-conversations";
 import { Button } from "@/components/ui/button";
 
 const TMUX = "/opt/homebrew/bin/tmux";
 
 export function ConversationView({ sessionId }: { sessionId: string }) {
   const toolbarItems = Conversation.Toolbar.useContributions();
-  const [conversation, setConversation] = useState<ConversationRecord | null>(null);
+  const conversation = useConversation(sessionId);
   const [middlePane, setMiddlePane] = useState<MiddlePaneDescriptor | null>(null);
   const [rightPane, setRightPane] = useState<RightPaneDescriptor | null>(null);
   ConversationCommands.OpenMiddlePane.useHandler((d) => setMiddlePane(d));
@@ -27,42 +25,6 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
     setMiddlePane(null);
     setRightPane(null);
   }, [sessionId]);
-
-  const fetchConversation = useCallback(() => {
-    let cancelled = false;
-    setConversation(null);
-    fetch(`/api/conversations/${sessionId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((row: ConversationRecord | null) => {
-        if (!cancelled && row) setConversation(row);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [sessionId]);
-
-  useEffect(() => fetchConversation(), [fetchConversation]);
-
-  useConversationStream(useCallback((parsed) => {
-    if (parsed.type === "title" && parsed.id === sessionId) {
-      setConversation((prev) => (prev ? { ...prev, title: parsed.title } : prev));
-    } else if (parsed.type === "status" && parsed.id === sessionId) {
-      setConversation((prev) => (prev ? { ...prev, status: parsed.status } : prev));
-    }
-  }, [sessionId]));
-
-  useEffect(() => {
-    let wasReconnecting = false;
-    return subscribeWsStatus(({ url, status }) => {
-      if (url !== "/api/conversations/stream") return;
-      if (status === "reconnecting") wasReconnecting = true;
-      else if (status === "open" && wasReconnecting) {
-        wasReconnecting = false;
-        fetchConversation();
-      }
-    });
-  }, [fetchConversation]);
 
   const TerminalComponent = useMemo(
     () =>
