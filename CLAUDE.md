@@ -23,7 +23,12 @@ RULES:
 
 ## Architecture
 
-Every feature is a **plugin**. The core app is thin plumbing that connects plugins together via a slot-based extension system. See [`plugin-core/CLAUDE.md`](plugin-core/CLAUDE.md) for the frontend plugin API and [`server/CLAUDE.md`](server/CLAUDE.md) for the backend.
+Every feature is a **plugin**. The core app is thin plumbing that connects plugins together via a slot-based extension system.
+
+Always READ the plugin architecture doc to understand design, caveats, and rules:
+
+- Frontend: [`plugin-core/CLAUDE.md`](../plugin-core/CLAUDE.md)
+- Backend: [`server/CLAUDE.md`](../server/CLAUDE.md)
 
 ### Folder Structure
 
@@ -134,3 +139,7 @@ When working on this project, follow these instructions thoughtfully:
 - Most features first require a thoughtful design phase. Use the project `plan` SKILL for this phase. This is important to correctly write the plan doc at the right location. Do NOT use `EnterPlanMode` tool.
 - New features should be implemented as plugins in `plugins/`. See [`plugin-core/CLAUDE.md`](plugin-core/CLAUDE.md) for how to create one.
 - Always edit files in your worktree, not the main branch.
+
+------------------------------------
+
+@docs/plugins.md

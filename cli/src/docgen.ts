@@ -544,29 +544,17 @@ export function renderPluginDocs({ root }: GenerateDocsOptions): string {
 
 export function renderFullDoc({ root }: GenerateDocsOptions): string {
   const body = renderPluginDocs({ root });
-  const header =
-    "# Plugins\n\n" +
-    "Always READ the plugin architecture doc to understand design, caveats, and rules:\n\n" +
-    "- Frontend: [`plugin-core/CLAUDE.md`](../plugin-core/CLAUDE.md)\n" +
-    "- Backend: [`server/CLAUDE.md`](../server/CLAUDE.md)\n\n";
+  const header = "# Plugins list\n\n";
   return `${header}${BEGIN}\n\n${body}\n${END}\n`;
 }
 
+export function pluginDocsPath(root: string): string {
+  return join(root, "docs", "plugins.md");
+}
+
 export async function generatePluginDocs({ root }: GenerateDocsOptions): Promise<void> {
-  const file = join(root, "plugins", "CLAUDE.md");
+  const file = pluginDocsPath(root);
   const existing = readIfExists(file) ?? "";
-  const body = renderPluginDocs({ root });
-
-  let next: string;
-  if (existing.includes(BEGIN) && existing.includes(END)) {
-    const beginAt = existing.indexOf(BEGIN);
-    const endAt = existing.indexOf(END);
-    const before = existing.slice(0, beginAt + BEGIN.length);
-    const after = existing.slice(endAt);
-    next = `${before}\n\n${body}\n${after}`;
-  } else {
-    next = renderFullDoc({ root });
-  }
-
+  const next = renderFullDoc({ root });
   if (next !== existing) writeFileSync(file, next);
 }
