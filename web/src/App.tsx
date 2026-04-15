@@ -1,4 +1,4 @@
-import { PluginProvider, PluginErrorBoundary, Core } from "@core";
+import { PluginProvider, PluginErrorBoundary, Core, NotificationsProvider } from "@core";
 import { plugins } from "./plugins";
 
 function RootRenderer() {
@@ -16,8 +16,10 @@ function RootRenderer() {
 
 export default function App() {
   return (
-    <PluginProvider plugins={plugins}>
-      <RootRenderer />
-    </PluginProvider>
+    <NotificationsProvider>
+      <PluginProvider plugins={plugins}>
+        <RootRenderer />
+      </PluginProvider>
+    </NotificationsProvider>
   );
 }

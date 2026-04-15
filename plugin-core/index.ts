@@ -12,3 +12,11 @@ export { fetchWithRetry } from "./fetch-with-retry";
 export type { FetchWithRetryOptions } from "./fetch-with-retry";
 export { publishWsStatus, subscribeWsStatus } from "./ws-status-bus";
 export type { WsStatus, WsStatusEvent } from "./ws-status-bus";
+export {
+  NotificationsProvider,
+  useResource,
+  resourceDescriptor,
+} from "./use-resource";
+export type { ResourceDescriptor } from "./use-resource";
+export { NotificationsClient, queryKeyFor } from "./notifications-client";
+export type { ResourceKey } from "./notifications-client";

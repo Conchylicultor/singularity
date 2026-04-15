@@ -25,6 +25,11 @@ export interface SseHandler<T = unknown> {
   ): () => void;
 }
 
+// Opaque handle for a resource defined via `defineResource`. The concrete
+// `Resource<T, P>` type lives in ./resources; kept minimal here to avoid a
+// circular import.
+export type ResourceLike = { key: string };
+
 export interface ServerPluginDefinition {
   id: string;
   name: string;
@@ -32,4 +37,6 @@ export interface ServerPluginDefinition {
   httpRoutes?: Record<string, HttpHandler>;
   wsRoutes?: Record<string, WsHandler>;
   sseRoutes?: Record<string, SseHandler>;
+  /** Live-state resources declared via `defineResource`. */
+  resources?: ResourceLike[];
 }

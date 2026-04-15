@@ -2,6 +2,7 @@ import type { WsData, HttpHandler, WsHandler, SseHandler } from "./types";
 import { plugins } from "./plugins";
 import { runMigrations } from "./db/migrate";
 import { ensureMainWorktreeRoot } from "@plugins/conversations/server/internal/worktree";
+import { notificationsWsHandler, handleResourceHttp } from "./resources";
 
 await runMigrations();
 await ensureMainWorktreeRoot();
@@ -106,7 +107,14 @@ for (const plugin of plugins) {
       registerSseRoute(path, handler);
     }
   }
+  // `plugin.resources` is just a declaration — defineResource() already
+  // registered them in the global registry at import time. The field exists
+  // for documentation / future introspection.
 }
+
+// Core-owned routes for the live-state primitive.
+wsRoutes["/ws/notifications"] = notificationsWsHandler;
+registerHttpRoute("GET /api/resources/:key", handleResourceHttp);
 
 const encoder = new TextEncoder();
 const PING = encoder.encode(": ping\n\n");
