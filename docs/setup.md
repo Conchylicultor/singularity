@@ -29,3 +29,13 @@ Default connection uses Unix-socket trust auth with your OS user — no password
 - `PGUSER` (default `$USER`)
 
 The server picks which database to connect to via `SINGULARITY_WORKTREE` (set by the gateway).
+
+## Git hooks
+
+After cloning, point git at the repo's hooks directory once per clone:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+`core.hooksPath` lives in `.git/config` (not tracked), so it cannot be committed. Setting it once applies across every worktree of that clone. The `.githooks/prepare-commit-msg` hook auto-stamps commits made inside a Claude pane with a `Singularity-Conversation` trailer, so the server can attribute commits to the conversation that authored them.

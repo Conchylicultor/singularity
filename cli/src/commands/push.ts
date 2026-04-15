@@ -72,6 +72,12 @@ export function registerPush(program: Command) {
     }) => {
       const branch = await getCurrentBranch();
       const onMain = branch === "main";
+      // One push id per invocation; every commit that lands on main as part of
+      // this push gets stamped with it (via `git commit --trailer` for the
+      // --from-main path, and via `git rebase --exec` for the worktree path).
+      // Watchers on every namespace read the trailer to group commits into a
+      // single push event.
+      const pushId = crypto.randomUUID();
 
       if (onMain && !opts.fromMain) {
         console.error("Already on main — nothing to merge.");
@@ -94,7 +100,14 @@ export function registerPush(program: Command) {
           console.log(`Committing ${files.length} file(s)${opts.fromMain ? " on main" : ""}:`);
           for (const f of files) console.log(`  ${f}`);
           await exec(["git", "add", "-A"]);
-          await exec(["git", "commit", "-m", opts.message]);
+          await exec([
+            "git",
+            "commit",
+            "-m",
+            opts.message,
+            "--trailer",
+            `Singularity-Push=${pushId}`,
+          ]);
         } else if (opts.fromMain) {
           console.error("Nothing to commit.");
           process.exit(1);
@@ -135,8 +148,17 @@ export function registerPush(program: Command) {
       console.log("Pulling main...");
       await exec(["git", "pull", "--ff-only"], mainWorktree);
 
-      // 3. Rebase onto main so the merge is always a fast-forward
-      const { exitCode: rebaseExit } = await run(["git", "rebase", "main"]);
+      // 3. Rebase onto main so the merge is always a fast-forward. `--exec`
+      //    runs after each replayed commit, amending it to carry a shared
+      //    Singularity-Push trailer so the server can group all commits in
+      //    this push as a single event.
+      const { exitCode: rebaseExit } = await run([
+        "git",
+        "rebase",
+        "main",
+        "--exec",
+        `git commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
+      ]);
       if (rebaseExit !== 0) {
         await run(["git", "rebase", "--abort"]);
         console.error(

@@ -1,0 +1,10 @@
+#!/bin/sh
+# Auto-stamp Singularity-Conversation trailer on every commit when the pane's
+# conversation id is present in the env. No-op if missing (e.g. manual commit
+# from a shell that was not spawned by the tmux runtime).
+if [ -n "$SINGULARITY_CONVERSATION_ID" ]; then
+  if ! grep -q "^Singularity-Conversation:" "$1" 2>/dev/null; then
+    git interpret-trailers --in-place \
+      --trailer "Singularity-Conversation=$SINGULARITY_CONVERSATION_ID" "$1"
+  fi
+fi

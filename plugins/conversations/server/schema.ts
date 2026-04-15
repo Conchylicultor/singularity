@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { taskAttempts } from "@plugins/tasks/server/schema";
@@ -41,12 +41,20 @@ export const ConversationSchema = createSelectSchema(conversations, {
 }).transform((row) => ({ ...row, active: isActiveStatus(row.status) }));
 export type Conversation = z.infer<typeof ConversationSchema>;
 
-export const pushes = pgTable("pushes", {
-  id: text("id").primaryKey(),
-  conversationId: text("conversation_id")
-    .notNull()
-    .references(() => conversations.id, { onDelete: "cascade" }),
-  sha: text("sha").notNull(),
-  message: text("message").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const pushes = pgTable(
+  "pushes",
+  {
+    id: text("id").primaryKey(),
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => conversations.id, { onDelete: "cascade" }),
+    sha: text("sha").notNull(),
+    pushId: text("push_id").notNull(),
+    message: text("message").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("pushes_sha_unique").on(t.sha),
+    index("pushes_push_id_idx").on(t.pushId),
+  ],
+);

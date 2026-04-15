@@ -93,6 +93,10 @@ export const tmuxRuntime: ConversationRuntime = {
   },
 
   async create(conversationId: string, worktreePath: string): Promise<void> {
+    // SINGULARITY_CONVERSATION_ID is read by the .githooks/prepare-commit-msg
+    // hook so any `git commit` made inside the pane gets stamped with a
+    // Singularity-Conversation trailer. The id is a generated slug (no shell
+    // metacharacters), but we still keep it wrapped in single quotes.
     await Bun.spawn(
       [
         TMUX,
@@ -103,7 +107,7 @@ export const tmuxRuntime: ConversationRuntime = {
         conversationId,
         "-c",
         worktreePath,
-        `zsh -l -c '${CLAUDE}'`,
+        `zsh -l -c 'export SINGULARITY_CONVERSATION_ID=${conversationId}; ${CLAUDE}'`,
       ],
       { stdout: "pipe", stderr: "pipe" },
     ).exited;

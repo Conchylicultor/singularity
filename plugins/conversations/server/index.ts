@@ -5,8 +5,10 @@ import { handleDelete } from "./internal/handle-delete";
 import { handleGet } from "./internal/handle-get";
 import { startPoller } from "./internal/poller";
 import { conversationsResource } from "./internal/resources";
+import { startPushWatcher } from "./internal/push-watcher";
 
 startPoller();
+startPushWatcher();
 
 const plugin: ServerPluginDefinition = {
   id: "conversations",
