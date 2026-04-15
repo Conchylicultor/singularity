@@ -8,15 +8,15 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
+// Only this check's own source may mention the raw string (for matching).
 const ALLOWED_PATHS = [
-  "server/src/index.ts",
   "cli/src/checks/no-raw-sse.ts",
 ];
 
 export const noRawSse: Check = {
   id: "no-raw-sse",
   description:
-    "SSE responses must go through the core multiplex (`sseRoutes`), not raw `text/event-stream` handlers",
+    "Live state must go through `defineResource` / `useResource`; no raw `text/event-stream` writers in TS",
   async run() {
     const root = await getRoot();
     const proc = Bun.spawn(
@@ -39,7 +39,7 @@ export const noRawSse: Check = {
       ok: false,
       message: `raw \`text/event-stream\` response found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
       hint:
-        "Declare the stream in `sseRoutes` on the plugin's ServerPluginDefinition and emit via `send(...)` inside `subscribe()`. The core multiplex at `server/src/index.ts` owns response encoding and heartbeat. See `server/CLAUDE.md` → \"SseHandler Interface\".",
+        "Live state belongs in `defineResource` (server) + `useResource` (web); see `server/CLAUDE.md` → \"defineResource\". Append-only firehoses (terminal, log tails) belong on a dedicated WS route. The gateway's SSE endpoint for external log streams is Go and out of scope for this check.",
     };
   },
 };

@@ -15,16 +15,6 @@ export type HttpHandler = (
   params: Record<string, string>,
 ) => Response | Promise<Response>;
 
-// Plugins declare SSE streams as pure subscriber handlers. The core owns the
-// single multiplexed /api/events endpoint, response encoding, and heartbeat;
-// plugins just emit application-level events via `send`.
-export interface SseHandler<T = unknown> {
-  subscribe(
-    send: (data: T) => void,
-    params: Record<string, string>,
-  ): () => void;
-}
-
 // Opaque handle for a resource defined via `defineResource`. The concrete
 // `Resource<T, P>` type lives in ./resources; kept minimal here to avoid a
 // circular import.
@@ -36,7 +26,6 @@ export interface ServerPluginDefinition {
   description?: string;
   httpRoutes?: Record<string, HttpHandler>;
   wsRoutes?: Record<string, WsHandler>;
-  sseRoutes?: Record<string, SseHandler>;
   /** Live-state resources declared via `defineResource`. */
   resources?: ResourceLike[];
 }

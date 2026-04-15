@@ -1,4 +1,4 @@
-import type { WsData, HttpHandler, WsHandler, SseHandler } from "./types";
+import type { WsData, HttpHandler, WsHandler } from "./types";
 import { plugins } from "./plugins";
 import { runMigrations } from "./db/migrate";
 import { ensureMainWorktreeRoot } from "@plugins/conversations/server/internal/worktree";
@@ -29,8 +29,6 @@ interface HttpParamRoute extends ParamRoute<HttpHandler> {
 const literalHttpRoutes: Record<string, HttpHandler> = {};
 const paramHttpRoutes: HttpParamRoute[] = [];
 const wsRoutes: Record<string, WsHandler> = {};
-const literalSseRoutes: Record<string, SseHandler> = {};
-const paramSseRoutes: ParamRoute<SseHandler>[] = [];
 
 function pathSegments(path: string): Array<{ literal: string } | { param: string }> {
   return path
@@ -48,14 +46,6 @@ function registerHttpRoute(key: string, handler: HttpHandler) {
     return;
   }
   paramHttpRoutes.push({ method, segments: pathSegments(path), handler });
-}
-
-function registerSseRoute(path: string, handler: SseHandler) {
-  if (!path.includes("/:")) {
-    literalSseRoutes[path] = handler;
-    return;
-  }
-  paramSseRoutes.push({ segments: pathSegments(path), handler });
 }
 
 function matchSegments<H>(
@@ -86,15 +76,6 @@ function matchSegments<H>(
   return null;
 }
 
-function resolveSse(
-  virtualUrl: string,
-): { handler: SseHandler; params: Record<string, string> } | null {
-  // virtualUrl is a path like "/api/conversations/stream" — no query string.
-  const literal = literalSseRoutes[virtualUrl];
-  if (literal) return { handler: literal, params: {} };
-  return matchSegments(virtualUrl, paramSseRoutes);
-}
-
 for (const plugin of plugins) {
   if (plugin.httpRoutes) {
     for (const [key, handler] of Object.entries(plugin.httpRoutes)) {
@@ -102,11 +83,6 @@ for (const plugin of plugins) {
     }
   }
   if (plugin.wsRoutes) Object.assign(wsRoutes, plugin.wsRoutes);
-  if (plugin.sseRoutes) {
-    for (const [path, handler] of Object.entries(plugin.sseRoutes)) {
-      registerSseRoute(path, handler);
-    }
-  }
   // `plugin.resources` is just a declaration — defineResource() already
   // registered them in the global registry at import time. The field exists
   // for documentation / future introspection.
@@ -115,91 +91,6 @@ for (const plugin of plugins) {
 // Core-owned routes for the live-state primitive.
 wsRoutes["/ws/notifications"] = notificationsWsHandler;
 registerHttpRoute("GET /api/resources/:key", handleResourceHttp);
-
-const encoder = new TextEncoder();
-const PING = encoder.encode(": ping\n\n");
-const HEARTBEAT_MS = 20_000;
-
-// Escape SSE event name: must not contain newlines. Virtual URLs never do,
-// but be defensive.
-function escapeEventName(name: string): string {
-  return name.replace(/[\r\n]/g, "");
-}
-
-function handleEvents(req: Request): Response {
-  const url = new URL(req.url);
-  const urlsParam = url.searchParams.get("urls") ?? "";
-  const virtualUrls = urlsParam
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0)
-    .map((s) => decodeURIComponent(s));
-
-  let closed = false;
-  const unsubs: Array<() => void> = [];
-  let heartbeat: ReturnType<typeof setInterval> | null = null;
-
-  const cleanup = () => {
-    if (closed) return;
-    closed = true;
-    if (heartbeat) clearInterval(heartbeat);
-    for (const u of unsubs) {
-      try {
-        u();
-      } catch (err) {
-        console.error("[sse] unsubscribe failed", err);
-      }
-    }
-  };
-
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      const enqueue = (bytes: Uint8Array) => {
-        if (closed) return;
-        try {
-          controller.enqueue(bytes);
-        } catch {
-          cleanup();
-        }
-      };
-
-      controller.enqueue(encoder.encode(": ok\n\n"));
-      heartbeat = setInterval(() => enqueue(PING), HEARTBEAT_MS);
-
-      for (const virtualUrl of virtualUrls) {
-        const match = resolveSse(virtualUrl);
-        if (!match) {
-          controller.enqueue(
-            encoder.encode(
-              `event: ${escapeEventName(virtualUrl)}\ndata: {"error":"not-found"}\n\n`,
-            ),
-          );
-          continue;
-        }
-        const name = escapeEventName(virtualUrl);
-        const send = (data: unknown) => {
-          enqueue(encoder.encode(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`));
-        };
-        try {
-          unsubs.push(match.handler.subscribe(send, match.params));
-        } catch (err) {
-          console.error(`[sse] subscribe failed for ${virtualUrl}`, err);
-        }
-      }
-    },
-    cancel() {
-      cleanup();
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "content-type": "text/event-stream",
-      "cache-control": "no-cache",
-      "connection": "keep-alive",
-    },
-  });
-}
 
 const server = Bun.serve<WsData>({
   port: (() => {
@@ -218,11 +109,6 @@ const server = Bun.serve<WsData>({
         server.upgrade(req, { data: { path: url.pathname } });
         return;
       }
-    }
-
-    // Unified multiplexed SSE endpoint.
-    if (req.method === "GET" && url.pathname === "/api/events") {
-      return handleEvents(req);
     }
 
     // HTTP routing: literal fast-path, then :param matcher.

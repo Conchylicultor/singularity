@@ -9,10 +9,10 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`plu
 1. `src/index.ts` starts `Bun.serve()` on port 9001
 2. Each plugin declares its routes via a `ServerPluginDefinition` (defined in `src/types.ts`)
 3. `src/plugins.ts` is a flat list of plugin imports — structurally identical to `web/src/plugins.ts`
-4. At startup, the entry point flattens all plugin routes into three lookup tables:
+4. At startup, the entry point flattens all plugin routes into two lookup tables:
    - `httpRoutes` — `"METHOD /path"` → handler function
    - `wsRoutes` — `"/path"` → `WsHandler` object (open/message/close)
-   - `sseRoutes` — `"/path"` → `SseHandler` object (subscribe returning unsubscribe). Exposed to clients via a single multiplexed `GET /api/events?urls=…` stream owned by the core; plugins never write `text/event-stream` themselves
+5. Plugins also declare live-state via `resources` (see `defineResource` below). Append-only firehoses (terminal, log tails) use a dedicated WS route. There is no SSE path — raw `text/event-stream` in TS is forbidden (enforced by `./singularity check`).
 
 ## File Structure
 
@@ -46,20 +46,31 @@ export default plugin;
 
 The type is intentionally flat — no base classes, no lifecycle hooks. A plugin is just a data object with optional route maps.
 
-### SseHandler Interface
+### `defineResource` — live state
 
-SSE streams are declared as pure subscriber handlers:
+Live state (anything a client wants kept in sync with server truth) is declared via `defineResource`, never by hand-rolled WS or SSE:
 
 ```typescript
-interface SseHandler {
-  subscribe(
-    send: (data: unknown) => void,
-    params: Record<string, string>,
-  ): (() => void) | Promise<() => void>;
-}
+// plugins/tasks/server/internal/tasks-resource.ts
+import { defineResource } from "@singularity/server/resources";
+
+export const tasksResource = defineResource({
+  key: "tasks",
+  mode: "push",                // or "invalidate"
+  loader: async () => loadTasks(),
+});
 ```
 
-All streams are multiplexed onto the single core endpoint `GET /api/events?urls=<csv>`; each emitted value is wrapped as a named SSE event keyed by the virtual URL. The core owns response encoding and a 20s heartbeat. Plugins just push payloads via `send(...)` and return a teardown. `:param` path segments are supported, same syntax as `httpRoutes`.
+Mount via `resources: [tasksResource]` on the `ServerPluginDefinition`. The core auto-registers:
+
+- `GET /api/resources/tasks/...` (HTTP fallback for WS-down / curl / SSR)
+- A subscription entry on the shared `GET /ws/notifications` socket
+
+Call `tasksResource.notify()` from mutation handlers / pollers when server state changes.
+
+**`push` vs `invalidate`.** Both deliver level state (never deltas). `push` sends the new value inline over the WS (one computation, N tabs). `invalidate` sends only a version stamp; each observing tab fires its own GET. Use `push` when the value is small (< ~4KB), the same for every subscriber, and almost always observed when notifications fire. Otherwise `invalidate`. See `research/2026-04-15-global-sse-lifecycle-mental-model-v3.md` §5 for the full decision rule.
+
+On the client, plugins consume resources with `useResource` from `@core` — see `plugin-core/CLAUDE.md`. No manual reconnect / reconcile code; TanStack Query + the leader-elected `NotificationsClient` handle it.
 
 ### WsHandler Interface
 
