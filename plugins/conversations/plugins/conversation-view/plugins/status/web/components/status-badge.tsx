@@ -7,7 +7,7 @@ const STATUS_CLASSES: Record<ConversationStatus, string> = {
   needs_attention: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
   completed: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
   gone: "bg-muted text-muted-foreground/60 italic",
-  obsolete: "bg-muted text-muted-foreground/60 line-through",
+  abandoned: "bg-muted text-muted-foreground/60 line-through",
 };
 
 function prettify(status: ConversationStatus): string {

@@ -1,17 +1,31 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { Runtime, type RuntimeInfo } from "../api";
-import { conversations } from "../schema";
+import { conversations, pushes } from "../schema";
 import type { ConversationStatus } from "../../shared/types";
 import { worktreePathFor } from "./worktree";
 import { broadcast } from "./sse";
 
-function statusFor(info: RuntimeInfo): ConversationStatus {
-  if (info.dead) return "completed";
+function liveStatusFor(info: RuntimeInfo): ConversationStatus {
   return info.working ? "working" : "needs_attention";
 }
 
+async function terminalStatusFor(id: string): Promise<"completed" | "gone"> {
+  const [row] = await db
+    .select({ exists: sql<number>`1` })
+    .from(pushes)
+    .where(eq(pushes.conversationId, id))
+    .limit(1);
+  return row ? "completed" : "gone";
+}
+
 const TICK_MS = 1000;
+
+const TERMINAL_DB_STATUSES = new Set<ConversationStatus>([
+  "completed",
+  "gone",
+  "abandoned",
+]);
 
 interface LiveEntry extends RuntimeInfo {
   runtime: string;
@@ -65,13 +79,14 @@ async function tick(): Promise<void> {
   if (orphans.length > 0) {
     for (const id of orphans) {
       const live = next.get(id)!;
+      if (live.dead) continue;
       const [inserted] = await db
         .insert(conversations)
         .values({
           id,
           worktreePath: await worktreePathFor(id),
           runtime: live.runtime,
-          status: statusFor(live),
+          status: liveStatusFor(live),
           title: live.title || null,
         })
         .onConflictDoNothing()
@@ -105,10 +120,28 @@ async function tick(): Promise<void> {
   for (const [id, info] of next) {
     const dbRow = dbById.get(id);
     if (!dbRow) continue;
+    if (TERMINAL_DB_STATUSES.has(dbRow.status)) continue;
+
+    // Dead: runtime reports the process exited. Decide terminal status based on
+    // whether this conversation was ever pushed.
+    if (info.dead) {
+      const desiredStatus = await terminalStatusFor(id);
+      await db
+        .update(conversations)
+        .set({
+          status: desiredStatus,
+          endedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(conversations.id, id));
+      broadcast({ type: "status", id, status: desiredStatus });
+      continue;
+    }
+
     // Only overwrite title when the runtime reports a real one; preserve the
     // last known title when the pane is in a default/waiting state.
     const desiredTitle = info.title ? info.title : dbRow.title;
-    const desiredStatus = statusFor(info);
+    const desiredStatus = liveStatusFor(info);
     const titleChanged = desiredTitle !== dbRow.title;
     const sessionChanged = info.claudeSessionId !== dbRow.claudeSessionId;
     const statusChanged = desiredStatus !== dbRow.status;
@@ -130,21 +163,23 @@ async function tick(): Promise<void> {
     if (statusChanged) broadcast({ type: "status", id, status: desiredStatus });
   }
 
-  // Mark DB rows whose runtime entry has vanished (e.g. tmux session killed)
-  // as "gone". Skip rows still in a pre-live state to avoid racing with creation.
+  // Mark DB rows whose runtime entry has vanished (tmux pane killed) as
+  // terminal. Pushed conversations land on "completed"; otherwise "gone".
+  // Skip rows still in a pre-live state or already terminal.
   for (const [id, dbRow] of dbById) {
     if (next.has(id)) continue;
-    if (
-      dbRow.status === "gone" ||
-      dbRow.status === "obsolete" ||
-      dbRow.status === "starting"
-    )
-      continue;
+    if (dbRow.status === "starting") continue;
+    if (TERMINAL_DB_STATUSES.has(dbRow.status)) continue;
+    const desiredStatus = await terminalStatusFor(id);
     await db
       .update(conversations)
-      .set({ status: "gone", updatedAt: new Date() })
+      .set({
+        status: desiredStatus,
+        endedAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(eq(conversations.id, id));
-    broadcast({ type: "status", id, status: "gone" });
+    broadcast({ type: "status", id, status: desiredStatus });
   }
 }
 

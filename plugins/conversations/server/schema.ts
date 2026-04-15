@@ -9,9 +9,14 @@ export const ConversationStatusSchema = z.enum([
   "needs_attention",
   "completed",
   "gone",
-  "obsolete",
+  "abandoned",
 ]);
 export type ConversationStatus = z.infer<typeof ConversationStatusSchema>;
+
+export const TERMINAL_STATUSES = ["completed", "gone", "abandoned"] as const;
+export function isActiveStatus(status: ConversationStatus): boolean {
+  return !(TERMINAL_STATUSES as readonly string[]).includes(status);
+}
 
 export const conversations = pgTable("conversations", {
   id: text("id").primaryKey(),
@@ -25,13 +30,15 @@ export const conversations = pgTable("conversations", {
   }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
 });
 
 export const ConversationSchema = createSelectSchema(conversations, {
   status: ConversationStatusSchema,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
-});
+  endedAt: z.coerce.date().nullable(),
+}).transform((row) => ({ ...row, active: isActiveStatus(row.status) }));
 export type Conversation = z.infer<typeof ConversationSchema>;
 
 export const pushes = pgTable("pushes", {

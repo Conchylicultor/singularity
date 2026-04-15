@@ -83,8 +83,8 @@ export function WelcomeView() {
   }, [refresh]);
 
   const isWorking = (name: string) => live[name]?.working ?? false;
-  const activeCount = conversations.filter((c) => isWorking(c.id)).length;
-  const idleCount = conversations.filter((c) => !isWorking(c.id)).length;
+  const activeCount = conversations.filter((c) => c.active).length;
+  const idleCount = conversations.length - activeCount;
 
   const createConversation = async () => {
     const res = await fetch("/api/conversations", { method: "POST" });

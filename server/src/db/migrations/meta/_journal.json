@@ -71,6 +71,13 @@
       "tag": "20260414_213700_2624d0ed__add_task_expanded",
       "hash": "2624d0ed",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776232703000,
+      "tag": "20260415_055823_dafedbaa__active_tracking",
+      "hash": "dafedbaa",
+      "breakpoints": true
     }
   ]
 }
