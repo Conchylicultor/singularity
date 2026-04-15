@@ -33,6 +33,7 @@
           - Contributes:
             - `Conversation.Toolbar` → `CodeToolbarSlot`
           - Server:
+            - Resources: `edited-files` (invalidate)
             - `GET /api/conversations/:id/file`
           - Plugins:
             - **`edited-files-button`** — Toolbar button showing the number of files edited in the conversation's worktree.
