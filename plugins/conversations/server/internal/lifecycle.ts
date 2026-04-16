@@ -98,7 +98,7 @@ export async function createConversation(
     prompt: opts.prompt,
     model,
   });
-  return { ...row!, active: row!.status !== "gone" } as Conversation;
+  return { ...row!, worktreePath, active: row!.status !== "gone" } as Conversation;
 }
 
 export async function deleteConversation(id: string): Promise<void> {
