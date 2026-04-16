@@ -11,10 +11,12 @@ export function FilePaneView({
   conversation,
   path,
   status,
+  embedded = false,
 }: {
   conversation: ConversationState;
   path: string;
   status: EditedFileStatus;
+  embedded?: boolean;
 }) {
   const contributions = FilePane.Renderer.useContributions();
   const resolved = useMemo(
@@ -34,16 +36,18 @@ export function FilePaneView({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2 border-b px-2 py-1.5">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 shrink-0"
-          title="Close file"
-          aria-label="Close file"
-          onClick={() => Conversation.OpenRightPane(null)}
-        >
-          <MdClose className="size-4" />
-        </Button>
+        {!embedded && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 shrink-0"
+            title="Close file"
+            aria-label="Close file"
+            onClick={() => Conversation.OpenRightPane(null)}
+          >
+            <MdClose className="size-4" />
+          </Button>
+        )}
         <div className="flex min-w-0 flex-1 items-baseline text-sm">
           <span className="truncate text-muted-foreground">{dir}</span>
           <span className="truncate font-medium">{basename}</span>

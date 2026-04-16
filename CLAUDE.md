@@ -126,11 +126,29 @@ This will:
 
 ## Screenshots
 
-Take screenshots of the app using Playwright (Chromium is pre-installed):
+Take screenshots of the app using Playwright (Chromium is pre-installed).
+
+For a single static snapshot:
 
 ```bash
 bunx playwright screenshot --wait-for-timeout 3000 --viewport-size "1280,800" http://<worktree>.localhost:9000 /tmp/screenshot.png
 ```
+
+If you need to **verify behavior** (click a button, confirm state, capture a
+before/after), go straight to a scripted Playwright run — don't take blind
+static screenshots first. Use the helper at [`e2e/screenshot.mjs`](e2e/screenshot.mjs)
+or copy it as a starting point:
+
+```bash
+bun e2e/screenshot.mjs \
+  --url http://<worktree>.localhost:9000/c/<id> \
+  --click "Design docs" \
+  --out /tmp/docs
+```
+
+It prints the matched button's `disabled` / `aria-pressed` / text state and
+writes `-before.png` + `-after.png`, so a single run tells you whether the
+feature actually works.
 
 ## Sidequests
 

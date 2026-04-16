@@ -1,6 +1,5 @@
-import { MdInsertDriveFile } from "react-icons/md";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/web/commands";
-import { filePane } from "../../../file-pane/web/views";
+import { MdArticle } from "react-icons/md";
+import { cn } from "@/lib/utils";
 import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared/protocol";
 
 const STATUS_DOT: Record<EditedFileStatus, string> = {
@@ -10,12 +9,16 @@ const STATUS_DOT: Record<EditedFileStatus, string> = {
   deleted: "bg-muted-foreground/40",
 };
 
-export function FileRow({
+export function DocRow({
   path,
   status,
+  selected,
+  onSelect,
 }: {
   path: string;
   status: EditedFileStatus;
+  selected: boolean;
+  onSelect: () => void;
 }) {
   const slash = path.lastIndexOf("/");
   const dir = slash >= 0 ? path.slice(0, slash + 1) : "";
@@ -26,18 +29,24 @@ export function FileRow({
     <button
       type="button"
       disabled={muted}
-      onClick={() => Conversation.OpenRightPane(filePane({ path, status }))}
-      className={`flex w-full items-center gap-1.5 px-2 py-0.5 text-left text-xs hover:bg-muted/60 disabled:cursor-not-allowed ${
-        muted ? "opacity-60" : ""
-      }`}
+      onClick={onSelect}
+      aria-pressed={selected}
+      className={cn(
+        "flex w-full items-center gap-1.5 px-2 py-0.5 text-left text-xs hover:bg-muted/60 disabled:cursor-not-allowed",
+        muted && "opacity-60",
+        selected && "bg-muted",
+      )}
       title={`${status} — ${path}`}
     >
       <span
-        className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT[status]}`}
+        className={cn(
+          "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
+          STATUS_DOT[status],
+        )}
       />
-      <MdInsertDriveFile className="size-3 shrink-0 text-muted-foreground" />
+      <MdArticle className="size-3 shrink-0 text-muted-foreground" />
       <span className="truncate text-muted-foreground">{dir}</span>
-      <span className={`truncate ${muted ? "" : "font-medium"}`}>{basename}</span>
+      <span className={cn("truncate", !muted && "font-medium")}>{basename}</span>
     </button>
   );
 }

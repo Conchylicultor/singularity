@@ -38,9 +38,9 @@
             - `GET /api/conversations/:id/file`
             - `GET /api/conversations/:id/diff`
           - Plugins:
-            - **`edited-files-button`** — Toolbar button showing the number of files edited in the conversation's worktree.
+            - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
               - Contributes:
-                - `Code.ToolbarButton` → `EditedFilesButton`
+                - `Code.ToolbarButton` → `DocsButton`
             - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file.
               - Contributes:
                 - `Code.ToolbarButton` → `ReviewButton`
