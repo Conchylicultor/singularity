@@ -12,6 +12,7 @@ import conversationCodePlugin from "@plugins/conversations/plugins/conversation-
 import conversationCodeEditedFilesButtonPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/edited-files-button/web";
 import conversationCodeFilePaneRawPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/raw/web";
 import conversationCodeFilePaneMarkdownPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/markdown/web";
+import conversationCodeFilePaneDiffPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import worktreeSwitcherPlugin from "@plugins/worktree-switcher/web";
 import themePlugin from "@plugins/theme/web";
 import welcomePlugin from "@plugins/welcome/web";
@@ -35,6 +36,7 @@ export const plugins: PluginDefinition[] = [
   conversationCodeEditedFilesButtonPlugin,
   conversationCodeFilePaneRawPlugin,
   conversationCodeFilePaneMarkdownPlugin,
+  conversationCodeFilePaneDiffPlugin,
   conversationsPlugin,
   themePlugin,
   healthPlugin,

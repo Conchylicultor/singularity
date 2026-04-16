@@ -1,6 +1,7 @@
 import type { ServerPluginDefinition } from "../../../../../../../server/src/types";
 import { editedFilesResource } from "./internal/edited-files-resource";
 import { handleFileContent } from "./internal/file-content-handler";
+import { handleFileDiff } from "./internal/file-diff-handler";
 
 const plugin: ServerPluginDefinition = {
   id: "conversation-code",
@@ -9,6 +10,7 @@ const plugin: ServerPluginDefinition = {
     "Tracks edited files in the conversation's worktree via the live-state primitive.",
   httpRoutes: {
     "GET /api/conversations/:id/file": handleFileContent,
+    "GET /api/conversations/:id/diff": handleFileDiff,
   },
   resources: [editedFilesResource],
 };

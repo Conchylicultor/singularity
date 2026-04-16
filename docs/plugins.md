@@ -35,6 +35,7 @@
           - Server:
             - Resources: `edited-files` (invalidate)
             - `GET /api/conversations/:id/file`
+            - `GET /api/conversations/:id/diff`
           - Plugins:
             - **`edited-files-button`** — Toolbar button showing the number of files edited in the conversation's worktree.
               - Contributes:
@@ -57,6 +58,10 @@
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
       - Server:
         - Uses: `conversations.Runtime`
+
+- **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
+  - Contributes:
+    - `FilePane.Renderer` "Diff" → `DiffView`
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Contributes:
