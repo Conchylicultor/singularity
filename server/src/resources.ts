@@ -12,10 +12,30 @@ import type { WsData, WsHandler } from "./types";
 export type ResourceMode = "push" | "invalidate";
 export type ResourceParams = Record<string, string>;
 
+// Upstream edge: when `resource` notifies, this resource is cascaded.
+// `map` translates upstream params (and optionally value) into the list of
+// downstream params tuples to schedule. Default: identity (`[upstreamParams]`).
+// See `research/2026-04-16-global-derived-state-primitive-v2.md`.
+export interface DependsOnEntry<P extends ResourceParams = ResourceParams> {
+  // biome-ignore lint/suspicious/noExplicitAny: upstream type is erased — the map callback owns the shape.
+  resource: Resource<any, any>;
+  map?: (
+    // biome-ignore lint/suspicious/noExplicitAny: see above.
+    upstreamParams: any,
+    upstreamValue: unknown,
+  ) => P[];
+}
+
 export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams> {
   key: string;
   mode?: ResourceMode;
   loader: (params: P) => Promise<T> | T;
+  /**
+   * Upstream resources. When any listed resource notifies, this resource is
+   * scheduled to notify within the same microtask flush, with per-key /
+   * per-params coalescing. Cycles are detected at boot (warn-only in phase 1).
+   */
+  dependsOn?: ReadonlyArray<DependsOnEntry<P>>;
   /**
    * Sub-lifecycle hooks. Fire on the 0→1 and N→0 global refcount transitions
    * for a given params tuple (counted across every open socket; a socket
@@ -33,6 +53,11 @@ export interface Resource<T, P extends ResourceParams = ResourceParams> {
   notify(params?: P): void;
 }
 
+interface DownstreamEdge {
+  downstreamKey: string;
+  map?: (upstreamParams: ResourceParams, upstreamValue: unknown) => ResourceParams[];
+}
+
 interface RegistryEntry {
   key: string;
   mode: ResourceMode;
@@ -43,11 +68,17 @@ interface RegistryEntry {
   pendingNotifies: Map<string, ResourceParams>;
   /** Global subscriber refcount per params-tuple (across all sockets). */
   subCounts: Map<string, number>;
+  /** Upstream keys this entry listens to (for cycle detection). */
+  upstreamKeys: string[];
+  /** Downstream entries to cascade to when this entry notifies. */
+  downstream: DownstreamEdge[];
   onFirstSubscribe?: (params: ResourceParams) => void | Promise<void>;
   onLastUnsubscribe?: (params: ResourceParams) => void;
 }
 
 const registry = new Map<string, RegistryEntry>();
+let dagDirty = true;
+let topoOrder: RegistryEntry[] = [];
 
 function paramsKey(params: ResourceParams): string {
   const keys = Object.keys(params).sort();
@@ -63,6 +94,23 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
     throw new Error(`defineResource: duplicate key "${def.key}"`);
   }
   const mode = def.mode ?? "invalidate";
+  const upstreamKeys: string[] = [];
+  const ownDownstreamEdges: Array<{ upstreamKey: string; edge: DownstreamEdge }> = [];
+  for (const dep of def.dependsOn ?? []) {
+    upstreamKeys.push(dep.resource.key);
+    ownDownstreamEdges.push({
+      upstreamKey: dep.resource.key,
+      edge: {
+        downstreamKey: def.key,
+        map: dep.map as
+          | ((
+              upstreamParams: ResourceParams,
+              upstreamValue: unknown,
+            ) => ResourceParams[])
+          | undefined,
+      },
+    });
+  }
   const entry: RegistryEntry = {
     key: def.key,
     mode,
@@ -70,6 +118,8 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
     versions: new Map(),
     pendingNotifies: new Map(),
     subCounts: new Map(),
+    upstreamKeys,
+    downstream: [],
     onFirstSubscribe: def.onFirstSubscribe as
       | ((params: ResourceParams) => void | Promise<void>)
       | undefined,
@@ -78,6 +128,15 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
       | undefined,
   };
   registry.set(def.key, entry);
+
+  // Wire this entry as a downstream of its upstreams. Upstreams must be
+  // defined before their downstreams — otherwise the upstream's registry
+  // entry doesn't exist yet. Warned lazily during DAG rebuild.
+  for (const { upstreamKey, edge } of ownDownstreamEdges) {
+    const upstream = registry.get(upstreamKey);
+    if (upstream) upstream.downstream.push(edge);
+  }
+  dagDirty = true;
 
   return {
     key: def.key,
@@ -89,6 +148,53 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
       scheduleNotify(entry, (params ?? ({} as P)) as ResourceParams);
     },
   };
+}
+
+// Rebuild the topological order and warn on cycles or dangling upstream refs.
+// Called lazily — amortised to flushNotifies and the debug endpoint.
+function rebuildDag(): void {
+  if (!dagDirty) return;
+  dagDirty = false;
+
+  const order: RegistryEntry[] = [];
+  const state = new Map<string, "visiting" | "done">();
+  const cycles: string[][] = [];
+
+  const visit = (entry: RegistryEntry, stack: string[]): void => {
+    const s = state.get(entry.key);
+    if (s === "done") return;
+    if (s === "visiting") {
+      const i = stack.indexOf(entry.key);
+      cycles.push(stack.slice(i >= 0 ? i : 0).concat(entry.key));
+      return;
+    }
+    state.set(entry.key, "visiting");
+    stack.push(entry.key);
+    for (const upKey of entry.upstreamKeys) {
+      const up = registry.get(upKey);
+      if (!up) {
+        console.warn(
+          `[resources] "${entry.key}" depends on unknown resource "${upKey}" (upstream not yet defined at ${entry.key}'s registration time?)`,
+        );
+        continue;
+      }
+      visit(up, stack);
+    }
+    stack.pop();
+    state.set(entry.key, "done");
+    order.push(entry);
+  };
+
+  for (const entry of registry.values()) visit(entry, []);
+
+  if (cycles.length > 0) {
+    for (const cycle of cycles) {
+      // Phase 1: warn only. Phase 3 promotes this to a hard failure.
+      console.warn(`[resources] dependsOn cycle detected: ${cycle.join(" -> ")}`);
+    }
+  }
+
+  topoOrder = order;
 }
 
 // --- Broadcast machinery ---
@@ -128,7 +234,12 @@ function scheduleNotify(entry: RegistryEntry, params: ResourceParams): void {
 
 async function flushNotifies(): Promise<void> {
   flushScheduled = false;
-  for (const entry of registry.values()) {
+  rebuildDag();
+
+  // Iterate upstream-first so cascades into downstream entries are picked up
+  // later in the same loop. `pendingNotifies` is a Map keyed by paramsKey, so
+  // cascaded-then-pre-existing notifies coalesce automatically.
+  for (const entry of topoOrder) {
     if (entry.pendingNotifies.size === 0) continue;
     const pending = Array.from(entry.pendingNotifies.values());
     entry.pendingNotifies.clear();
@@ -137,20 +248,57 @@ async function flushNotifies(): Promise<void> {
       const version = (entry.versions.get(pk) ?? 0) + 1;
       entry.versions.set(pk, version);
       const subs = subscribersFor(entry.key, pk);
-      if (subs.length === 0) continue;
-      if (entry.mode === "invalidate") {
-        const msg = { kind: "invalidate" as const, key: entry.key, params, version };
-        for (const s of subs) sendJson(s.ws, msg);
-      } else {
-        let value: unknown;
+
+      // Compute value once if either a subscriber (push mode) or any
+      // value-aware downstream `map` needs it. For invalidate-mode upstreams
+      // we still compute when a map wants it — rare today, acceptable cost.
+      const hasValueAwareDownstream = entry.downstream.some((d) => d.map !== undefined);
+      const needValue =
+        (entry.mode === "push" && subs.length > 0) || hasValueAwareDownstream;
+      let value: unknown;
+      let valueComputed = false;
+      if (needValue) {
         try {
           value = await entry.loader(params);
+          valueComputed = true;
         } catch (err) {
           console.error(`[resources] loader failed for ${entry.key}`, err);
+          // Skip sending and cascading on loader failure — otherwise we'd
+          // invalidate downstream state based on a torn read.
           continue;
         }
-        const msg = { kind: "update" as const, key: entry.key, params, value, version };
-        for (const s of subs) sendJson(s.ws, msg);
+      }
+
+      if (subs.length > 0) {
+        if (entry.mode === "invalidate") {
+          const msg = { kind: "invalidate" as const, key: entry.key, params, version };
+          for (const s of subs) sendJson(s.ws, msg);
+        } else {
+          const msg = { kind: "update" as const, key: entry.key, params, value, version };
+          for (const s of subs) sendJson(s.ws, msg);
+        }
+      }
+
+      for (const edge of entry.downstream) {
+        const down = registry.get(edge.downstreamKey);
+        if (!down) continue;
+        let derived: ResourceParams[];
+        if (edge.map) {
+          try {
+            derived = edge.map(params, valueComputed ? value : undefined);
+          } catch (err) {
+            console.error(
+              `[resources] dependsOn map failed (${entry.key} → ${edge.downstreamKey})`,
+              err,
+            );
+            continue;
+          }
+        } else {
+          derived = [params];
+        }
+        for (const dp of derived) {
+          down.pendingNotifies.set(paramsKey(dp), dp);
+        }
       }
     }
   }
@@ -319,11 +467,14 @@ export async function handleResourceHttp(
 }
 
 function handleResourcesDebug(): Response {
+  rebuildDag();
   const out: Array<{
     key: string;
     mode: ResourceMode;
     subscribers: number;
     versions: Record<string, number>;
+    dependsOn: string[];
+    downstream: string[];
   }> = [];
   for (const entry of registry.values()) {
     let subscribers = 0;
@@ -336,9 +487,16 @@ function handleResourcesDebug(): Response {
       mode: entry.mode,
       subscribers,
       versions: Object.fromEntries(entry.versions),
+      dependsOn: entry.upstreamKeys,
+      downstream: entry.downstream.map((d) => d.downstreamKey),
     });
   }
-  return new Response(JSON.stringify(out, null, 2), {
-    headers: { "content-type": "application/json" },
-  });
+  return new Response(
+    JSON.stringify(
+      { topoOrder: topoOrder.map((e) => e.key), resources: out },
+      null,
+      2,
+    ),
+    { headers: { "content-type": "application/json" } },
+  );
 }
