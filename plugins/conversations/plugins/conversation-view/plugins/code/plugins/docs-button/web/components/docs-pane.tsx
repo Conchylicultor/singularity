@@ -50,25 +50,27 @@ export function DocsPane({ conversation }: { conversation: ConversationState }) 
           </span>
         )}
       </div>
-      <div className="max-h-[40%] min-h-0 shrink-0 overflow-auto border-b py-1">
-        {docs == null ? (
-          <div className="px-2 py-1 text-xs text-muted-foreground">Loading…</div>
-        ) : docs.length === 0 ? (
-          <div className="px-2 py-1 text-xs text-muted-foreground">
-            No design docs in the diff.
-          </div>
-        ) : (
-          docs.map((f) => (
-            <DocRow
-              key={f.path}
-              path={f.path}
-              status={f.status}
-              selected={f.path === selectedPath}
-              onSelect={() => setSelectedPath(f.path)}
-            />
-          ))
-        )}
-      </div>
+      {(docs == null || docs.length !== 1) && (
+        <div className="max-h-[40%] min-h-0 shrink-0 overflow-auto border-b py-1">
+          {docs == null ? (
+            <div className="px-2 py-1 text-xs text-muted-foreground">Loading…</div>
+          ) : docs.length === 0 ? (
+            <div className="px-2 py-1 text-xs text-muted-foreground">
+              No design docs in the diff.
+            </div>
+          ) : (
+            docs.map((f) => (
+              <DocRow
+                key={f.path}
+                path={f.path}
+                status={f.status}
+                selected={f.path === selectedPath}
+                onSelect={() => setSelectedPath(f.path)}
+              />
+            ))
+          )}
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-hidden">
         {selected ? (
           <FilePaneView
