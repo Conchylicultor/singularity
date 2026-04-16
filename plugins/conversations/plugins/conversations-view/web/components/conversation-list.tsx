@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { MdAdd, MdClose } from "react-icons/md";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
-import { ConversationSchema } from "@plugins/conversations/shared/types";
+import {
+  ConversationSchema,
+  type ConversationModel,
+} from "@plugins/conversations/shared/types";
 import { useConversations } from "@plugins/conversations/web/use-conversations";
 import { cn } from "@/lib/utils";
 import {
@@ -49,8 +52,12 @@ export function ConversationList() {
     };
   }, []);
 
-  const createConversation = async () => {
-    const res = await fetch("/api/conversations", { method: "POST" });
+  const createConversation = async (model: ConversationModel) => {
+    const res = await fetch("/api/conversations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model }),
+    });
     const conversation = ConversationSchema.parse(await res.json());
     openConversation(conversation.id);
     setActiveId(conversation.id);
@@ -67,11 +74,20 @@ export function ConversationList() {
         <Button
           variant="outline"
           size="sm"
-          className="flex-1 gap-2"
-          onClick={createConversation}
+          className="flex-1 gap-1"
+          onClick={() => createConversation("sonnet")}
         >
           <MdAdd className="size-4" />
-          New conversation
+          Sonnet
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1 gap-1"
+          onClick={() => createConversation("opus")}
+        >
+          <MdAdd className="size-4" />
+          Opus
         </Button>
       </div>
       <SidebarMenu>

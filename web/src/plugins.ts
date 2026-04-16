@@ -8,6 +8,7 @@ import conversationPlugin from "@plugins/conversations/plugins/conversation-view
 import conversationVscodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/vscode/web";
 import conversationOpenAppPlugin from "@plugins/conversations/plugins/conversation-view/plugins/open-app/web";
 import conversationStatusPlugin from "@plugins/conversations/plugins/conversation-view/plugins/status/web";
+import conversationModelPlugin from "@plugins/conversations/plugins/conversation-view/plugins/model/web";
 import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import conversationCodeDocsButtonPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/docs-button/web";
 import conversationCodeReviewPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/web";
@@ -33,6 +34,7 @@ export const plugins: PluginDefinition[] = [
   conversationVscodePlugin,
   conversationOpenAppPlugin,
   conversationStatusPlugin,
+  conversationModelPlugin,
   conversationCodePlugin,
   conversationCodeDocsButtonPlugin,
   conversationCodeReviewPlugin,

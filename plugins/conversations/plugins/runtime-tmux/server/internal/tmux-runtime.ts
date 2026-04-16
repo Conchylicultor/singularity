@@ -2,6 +2,7 @@ import type {
   ConversationRuntime,
   RuntimeInfo,
 } from "@plugins/conversations/server/api";
+import type { ConversationModel } from "@plugins/conversations/server/model";
 import { resolveClaudeSessionId } from "./claude-session";
 
 const TMUX = "/opt/homebrew/bin/tmux";
@@ -95,7 +96,7 @@ export const tmuxRuntime: ConversationRuntime = {
   async create(
     conversationId: string,
     worktreePath: string,
-    opts?: { prompt?: string },
+    opts?: { prompt?: string; model?: ConversationModel },
   ): Promise<void> {
     // SINGULARITY_CONVERSATION_ID is read by the .githooks/prepare-commit-msg
     // hook so any `git commit` made inside the pane gets stamped with a
@@ -105,7 +106,10 @@ export const tmuxRuntime: ConversationRuntime = {
     const envArgs = hasPrompt
       ? ["-e", `SINGULARITY_PROMPT=${opts!.prompt}`]
       : [];
-    const claudeCmd = hasPrompt ? `${CLAUDE} "$SINGULARITY_PROMPT"` : CLAUDE;
+    const claudeBase = opts?.model ? `${CLAUDE} --model ${opts.model}` : CLAUDE;
+    const claudeCmd = hasPrompt
+      ? `${claudeBase} "$SINGULARITY_PROMPT"`
+      : claudeBase;
     await Bun.spawn(
       [
         TMUX,

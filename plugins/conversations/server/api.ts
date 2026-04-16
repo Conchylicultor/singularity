@@ -1,3 +1,5 @@
+import type { ConversationModel } from "./model";
+
 export interface RuntimeInfo {
   title: string;
   /** True while Claude is actively processing (spinner visible). False when waiting for user input or in a default/unused pane state. */
@@ -12,7 +14,7 @@ export interface ConversationRuntime {
   create(
     conversationId: string,
     worktreePath: string,
-    opts?: { prompt?: string },
+    opts?: { prompt?: string; model?: ConversationModel },
   ): Promise<void>;
   delete(conversationId: string): Promise<void>;
   list(): Promise<Map<string, RuntimeInfo>>;

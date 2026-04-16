@@ -99,6 +99,13 @@
       "tag": "20260416_165556_cb3b7e1d__schema_split_internal",
       "hash": "cb3b7e1d",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776362678000,
+      "tag": "20260416_180438_16616814__add_conversation_model",
+      "hash": "16616814",
+      "breakpoints": true
     }
   ]
 }

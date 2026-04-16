@@ -1,7 +1,10 @@
 import { MdAdd, MdArrowForward } from "react-icons/md";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
-import { ConversationSchema } from "@plugins/conversations/shared/types";
+import {
+  ConversationSchema,
+  type ConversationModel,
+} from "@plugins/conversations/shared/types";
 import { useConversations } from "@plugins/conversations/web/use-conversations";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,8 +26,12 @@ export function WelcomeView() {
   const activeCount = conversations.filter((c) => c.active).length;
   const idleCount = conversations.length - activeCount;
 
-  const createConversation = async () => {
-    const res = await fetch("/api/conversations", { method: "POST" });
+  const createConversation = async (model: ConversationModel) => {
+    const res = await fetch("/api/conversations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model }),
+    });
     const conversation = ConversationSchema.parse(await res.json());
     Shell.OpenPane(conversationPane({ session_id: conversation.id }));
   };
@@ -70,10 +77,22 @@ export function WelcomeView() {
         )}
 
         {/* New Conversation */}
-        <Button className="w-full gap-2" onClick={createConversation}>
-          <MdAdd className="size-4" />
-          New Conversation
-        </Button>
+        <div className="flex w-full gap-2">
+          <Button
+            className="flex-1 gap-1"
+            onClick={() => createConversation("sonnet")}
+          >
+            <MdAdd className="size-4" />
+            Sonnet
+          </Button>
+          <Button
+            className="flex-1 gap-1"
+            onClick={() => createConversation("opus")}
+          >
+            <MdAdd className="size-4" />
+            Opus
+          </Button>
+        </div>
 
         {/* Recent Conversations */}
         {!isLoading && recentConversations.length > 0 && (

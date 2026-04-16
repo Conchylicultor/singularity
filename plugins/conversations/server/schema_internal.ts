@@ -1,5 +1,6 @@
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { _attempts } from "@plugins/tasks/server/schema_internal";
+import type { ConversationModel } from "./model";
 import type { ConversationStatus } from "./status";
 
 // Physical table. In-plugin writers import from here. Cross-plugin callers
@@ -13,6 +14,7 @@ export const _conversations = pgTable("conversations", {
   title: text("title"),
   status: text("status").$type<ConversationStatus>().notNull().default("starting"),
   runtime: text("runtime").notNull().default("tmux"),
+  model: text("model").$type<ConversationModel>().notNull().default("opus"),
   claudeSessionId: text("claude_session_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

@@ -3,6 +3,7 @@ import { pgView } from "drizzle-orm/pg-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { _attempts } from "@plugins/tasks/server/schema_internal";
+import { ConversationModelSchema } from "./model";
 import { _conversations } from "./schema_internal";
 import { ConversationStatusSchema } from "./status";
 
@@ -11,6 +12,8 @@ import { ConversationStatusSchema } from "./status";
 // Status enum + helpers live in ./status so schema_internal can import them
 // without depending on the view file.
 
+export { ConversationModelSchema } from "./model";
+export type { ConversationModel } from "./model";
 export { ConversationStatusSchema, isActiveStatus } from "./status";
 export type { ConversationStatus } from "./status";
 
@@ -30,6 +33,7 @@ export const conversations = pgView("conversations_v").as((qb) =>
 
 export const ConversationSchema = createSelectSchema(_conversations, {
   status: ConversationStatusSchema,
+  model: ConversationModelSchema,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   endedAt: z.coerce.date().nullable(),

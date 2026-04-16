@@ -44,6 +44,9 @@
             - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file.
               - Contributes:
                 - `Code.ToolbarButton` → `ReviewButton`
+        - **`model`** — Displays the conversation model as a colored chip in the toolbar.
+          - Contributes:
+            - `Conversation.Toolbar` (group `status`) → `ModelBadge`
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
           - Contributes:
             - `Conversation.Toolbar` "Open"

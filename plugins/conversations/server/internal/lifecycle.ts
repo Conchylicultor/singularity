@@ -3,6 +3,7 @@ import { db } from "../../../../server/src/db/client";
 import { _attempts, _tasks } from "@plugins/tasks/server/schema_internal";
 import { attemptsResource } from "@plugins/tasks/server/api";
 import { Runtime } from "../api";
+import type { ConversationModel } from "../model";
 import { _conversations } from "../schema_internal";
 import type { Conversation } from "../../shared/types";
 import { forkDatabase } from "./db-fork";
@@ -13,6 +14,7 @@ import {
 } from "./worktree";
 
 const DEFAULT_RUNTIME = "tmux";
+const DEFAULT_MODEL: ConversationModel = "opus";
 
 function synthesiseTitle(prompt: string | undefined): string {
   const trimmed = (prompt ?? "").trim();
@@ -27,10 +29,12 @@ export async function createConversation(
     taskId?: string;
     attemptId?: string;
     prompt?: string;
+    model?: ConversationModel;
   } = {},
 ): Promise<Conversation> {
   const runtimeId = opts.runtimeId ?? DEFAULT_RUNTIME;
   const runtime = Runtime.get(runtimeId);
+  const model = opts.model ?? DEFAULT_MODEL;
 
   // Every conversation belongs to exactly one attempt. Synthesise task +
   // attempt when the caller hasn't provided one. The attempt id doubles as
@@ -86,10 +90,14 @@ export async function createConversation(
       id: conversationId,
       attemptId,
       runtime: runtimeId,
+      model,
     })
     .returning();
 
-  await runtime.create(conversationId, worktreePath, { prompt: opts.prompt });
+  await runtime.create(conversationId, worktreePath, {
+    prompt: opts.prompt,
+    model,
+  });
   return { ...row!, active: row!.status !== "gone" } as Conversation;
 }
 

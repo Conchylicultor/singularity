@@ -1,3 +1,4 @@
+import { ConversationModelSchema } from "../model";
 import { createConversation } from "./lifecycle";
 import { conversationsResource } from "./resources";
 
@@ -7,13 +8,18 @@ export async function handleCreate(req: Request): Promise<Response> {
     attemptId?: string;
     prompt?: string;
     runtime?: string;
+    model?: string;
   };
+
+  const model =
+    body.model !== undefined ? ConversationModelSchema.parse(body.model) : undefined;
 
   const session = await createConversation({
     taskId: body.taskId,
     attemptId: body.attemptId,
     prompt: body.prompt,
     runtimeId: body.runtime,
+    model,
   });
   conversationsResource.notify();
   return Response.json(session);
