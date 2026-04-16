@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useFileContent } from "../../../../web/use-file-content";
-import { getHighlighter, themeForMode } from "../highlighter";
-import { languageForPath, SHIKI_LANGS } from "../lang";
-import { useDarkMode } from "../use-dark-mode";
+import { getHighlighter, themeForMode } from "../../../../web/highlighter";
+import { languageForPath, SHIKI_LANGS } from "../../../../web/lang";
+import { useDarkMode } from "../../../../web/use-dark-mode";
 
 export function RawView({
   conversationId,
