@@ -6,7 +6,7 @@ Singularity is a new self-evolving app for the agentic era. The vision has a few
 
   The app is a nested todo list of tasks agents need to execute. Each agent executes in its own isolated `worktree` (including this current session) and deploys to `http://<worktree>.localhost:9000`. The UI allows seamless switching between namespaces to inspect agent work.
 
-- The agent manager app will progressively be used to develop independent projects using the same plugin system and primitives as the core app. Some plugins will link between all sub-apps, like a mini operating system implemented in a mono-repo.
+- The app evolves into a Notion-like WeChat: a single unified surface where agents compose user-tailored apps on the fly from plugin building blocks. Notion gives users composable blocks (databases, pages, views) to fit their workflow; Singularity does the same at the *app* level, with agents doing the composing. The agent manager becomes one such composition among many, sharing the same plugins and primitives.
 
 - The app scope will be expanded to research Agents' limits and interactions. Projects will ultimately move outside of coding into the physical world.
 
