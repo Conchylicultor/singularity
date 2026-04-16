@@ -7,6 +7,17 @@ import { notificationsWsHandler, handleResourceHttp } from "./resources";
 await runMigrations();
 await ensureMainWorktreeRoot();
 
+// Plugins can declare post-migration startup work via `onReady`. Running
+// this from a plugin's module body would race the migration runner (the
+// first `await` inside runMigrations drains the microtask queue).
+await Promise.all(
+  plugins.map((p) =>
+    Promise.resolve()
+      .then(() => p.onReady?.())
+      .catch((err) => console.error(`[plugin.${p.id}] onReady failed`, err)),
+  ),
+);
+
 // Exit when orphaned (parent gateway died and we were reparented to init).
 // macOS has no PR_SET_PDEATHSIG equivalent, so poll. Without this, old
 // backends survive gateway crashes, leak PTYs, and hold onto ports.

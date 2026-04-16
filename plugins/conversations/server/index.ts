@@ -6,11 +6,6 @@ import { handleGet } from "./internal/handle-get";
 import { startPoller } from "./internal/poller";
 import { conversationsResource } from "./internal/resources";
 
-// Defer poller start until after the server has booted (and migrations have
-// completed on the main thread). Running at module-load time used to race
-// the first-tick DB query against `await runMigrations()`.
-queueMicrotask(() => startPoller());
-
 const plugin: ServerPluginDefinition = {
   id: "conversations",
   name: "Conversations",
@@ -23,5 +18,6 @@ const plugin: ServerPluginDefinition = {
     "DELETE /api/conversations": handleDelete,
   },
   resources: [conversationsResource],
+  onReady: () => startPoller(),
 };
 export default plugin;

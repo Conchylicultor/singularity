@@ -11,10 +11,6 @@ import {
 } from "./internal/resources";
 import { startPushWatcher } from "./internal/push-watcher";
 
-// Same deferral rationale as the conversations poller: keep background work
-// out of module init so runMigrations() completes before the first query.
-queueMicrotask(() => startPushWatcher());
-
 const plugin: ServerPluginDefinition = {
   id: "tasks",
   name: "Tasks",
@@ -27,5 +23,6 @@ const plugin: ServerPluginDefinition = {
     "DELETE /api/tasks/:id": handleDelete,
   },
   resources: [tasksResource, attemptsResource, pushesResource],
+  onReady: startPushWatcher,
 };
 export default plugin;

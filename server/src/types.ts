@@ -28,4 +28,10 @@ export interface ServerPluginDefinition {
   wsRoutes?: Record<string, WsHandler>;
   /** Live-state resources declared via `defineResource`. */
   resources?: ResourceLike[];
+  /**
+   * Called once after `runMigrations()` completes. Use this for background
+   * work (pollers, watchers) that issues DB queries — scheduling it from the
+   * plugin's module body races the migration runner.
+   */
+  onReady?: () => void | Promise<void>;
 }
