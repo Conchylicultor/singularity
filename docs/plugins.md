@@ -117,14 +117,15 @@
     - `Shell.Sidebar` "Tasks" (group `System`)
     - `Shell.Route` `/tasks`
     - `Shell.Route` `/tasks/:id`
+    - `Tasks.TaskActions` → `DeleteTaskAction`
     - `Tasks.TaskActions` → `LaunchAgentAction`
-    - `Tasks.TaskActions` → `OpenDetailsAction`
   - Server:
     - Resources: `tasks` (push)
     - `GET /api/tasks`
     - `POST /api/tasks`
     - `GET /api/tasks/:id`
     - `PATCH /api/tasks/:id`
+    - `DELETE /api/tasks/:id`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Server:

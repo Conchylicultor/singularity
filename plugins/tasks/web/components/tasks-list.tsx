@@ -104,7 +104,7 @@ export function TasksList({ selectedId }: { selectedId?: string }) {
 
 type ActionContribution = {
   id: string;
-  component: React.ComponentType<{ taskId: string }>;
+  component: React.ComponentType<{ taskId: string; hasChildren: boolean }>;
 };
 
 function TaskNode({
@@ -223,7 +223,11 @@ function TaskNode({
         {actions.length > 0 && (
           <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100">
             {actions.map((a) => (
-              <a.component key={a.id} taskId={node.id} />
+              <a.component
+                key={a.id}
+                taskId={node.id}
+                hasChildren={hasChildren}
+              />
             ))}
           </div>
         )}
