@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/cascadia-code";
 
 @source "../../plugins/";
 
@@ -8,7 +9,8 @@
 
 @theme inline {
     --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-sans: 'Inter Variable', sans-serif;
+    --font-mono: 'Cascadia Code Variable', monospace;
     --color-ring: var(--ring);
     --color-input: var(--input);
     --color-border: var(--border);
