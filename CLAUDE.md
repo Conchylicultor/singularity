@@ -1,10 +1,14 @@
 # Singularity
 
-Agent manager app whose goal is to fix todos faster than they are created. The app will be used to improve itself.
+Singularity is a new self-evolving app for the agentic area. The vision has few steps:
 
-The app is a todo nested list of tasks agents need to execute. Each agent executes in its own isolated `worktree` (including this current session) and deploys to `http://<worktree>.localhost:9000`. The UI allows seamlessly switching between namespaces to inspect agent work.
+- At first, the app itself is an Agent manager app whose goal is to fix todos faster than they are created. The app will be used to improve itself.
 
-Progressively, the project will become a mono-repo where the agent manager app is used to develop independent projects, while sharing primitives, designs patterns and experiences across projects. Projects will also ultimately move outside of coding to the physical world.
+  The app is a todo nested list of tasks agents need to execute. Each agent executes in its own isolated `worktree` (including this current session) and deploys to `http://<worktree>.localhost:9000`. The UI allows seamlessly switching between namespaces to inspect agent work.
+
+- The agent manager app will progressivelly be used to develop independent projects using the same plugin system and primitives as the core app. Some plugin will link between all sub-apps, like a mini operating system implemented in a mono-repo.
+
+- The app scope will be expanded to reseach Agents limits and interations. Projects will ultimately move outside of coding into the physical world.
 
 ## Agent Workflow
 
@@ -29,6 +33,8 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
 
 - Frontend: [`plugin-core/CLAUDE.md`](../plugin-core/CLAUDE.md)
 - Backend: [`server/CLAUDE.md`](../server/CLAUDE.md)
+
+Think carefully about the plugin's boundaries, APIs,... when desiging plugins as it is the load bearing infra of the entire project.
 
 ### Folder Structure
 
