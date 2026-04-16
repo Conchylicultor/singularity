@@ -1,6 +1,6 @@
 {
-  "id": "b6c7f920-e596-4b91-942b-f1dc10f289c6",
-  "prevId": "a7015567-0a81-42f4-bdcf-90f1ae9e27e6",
+  "id": "bf0e49d0-b456-4e04-b5c4-b069cf65d7a9",
+  "prevId": "6f653f7f-3ebe-4d3b-b3c7-97d576f30da3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -176,6 +176,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'tmux'"
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'opus'"
         },
         "claude_session_id": {
           "name": "claude_session_id",
@@ -484,6 +491,13 @@
           "notNull": true,
           "default": "'tmux'"
         },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'opus'"
+        },
         "claude_session_id": {
           "name": "claude_session_id",
           "type": "text",
@@ -523,7 +537,7 @@
           "notNull": true
         }
       },
-      "definition": "select \"conversations\".\"id\", \"conversations\".\"attempt_id\", \"conversations\".\"title\", \"conversations\".\"status\", \"conversations\".\"runtime\", \"conversations\".\"claude_session_id\", \"conversations\".\"created_at\", \"conversations\".\"updated_at\", \"conversations\".\"ended_at\", \"attempts\".\"worktree_path\", \"attempts\".\"task_id\", (\"conversations\".\"status\" <> 'gone') as \"active\" from \"conversations\" inner join \"attempts\" on \"attempts\".\"id\" = \"conversations\".\"attempt_id\"",
+      "definition": "select \"conversations\".\"id\", \"conversations\".\"attempt_id\", \"conversations\".\"title\", \"conversations\".\"status\", \"conversations\".\"runtime\", \"conversations\".\"model\", \"conversations\".\"claude_session_id\", \"conversations\".\"created_at\", \"conversations\".\"updated_at\", \"conversations\".\"ended_at\", \"attempts\".\"worktree_path\", \"attempts\".\"task_id\", (\"conversations\".\"status\" <> 'gone') as \"active\" from \"conversations\" inner join \"attempts\" on \"attempts\".\"id\" = \"conversations\".\"attempt_id\"",
       "name": "conversations_v",
       "schema": "public",
       "isExisting": false,
