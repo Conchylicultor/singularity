@@ -106,6 +106,13 @@
       "tag": "20260416_180438_16616814__add_conversation_model",
       "hash": "16616814",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776379797000,
+      "tag": "20260416_224957_dac0ff85__add_task_id_to_conversations_view",
+      "hash": "dac0ff85",
+      "breakpoints": true
     }
   ]
 }

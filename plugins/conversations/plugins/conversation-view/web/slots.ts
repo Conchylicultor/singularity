@@ -12,4 +12,7 @@ export const Conversation = {
     component?: ComponentType<{ conversation: ConversationState }>;
     group?: string;
   }>("conversation.toolbar"),
+  Title: defineSlot<{
+    component: ComponentType<{ conversation: ConversationState }>;
+  }>("conversation.title"),
 };

@@ -18,6 +18,7 @@ const TMUX = "/opt/homebrew/bin/tmux";
 
 export function ConversationView({ sessionId }: { sessionId: string }) {
   const toolbarItems = Conversation.Toolbar.useContributions();
+  const titleItems = Conversation.Title.useContributions();
   const conversation = useConversation(sessionId);
   const [middlePane, setMiddlePane] = useState<MiddlePaneDescriptor | null>(null);
   const [rightPane, setRightPane] = useState<RightPaneDescriptor | null>(null);
@@ -43,6 +44,7 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
   const MiddlePaneComponent = middlePane?.component;
   const RightPaneComponent = rightPane?.component;
   const MainViewComponent = mainView?.component;
+  const TitleComponent = titleItems[0]?.component ?? null;
 
   return (
     <MainViewContext.Provider value={mainView}>
@@ -51,9 +53,13 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
     <div className="flex h-[calc(100svh-3rem)] min-h-0 flex-col overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="truncate font-medium text-sm">
-            {conversation?.title ?? sessionId}
-          </div>
+          {conversation && TitleComponent ? (
+            <TitleComponent conversation={conversation} />
+          ) : (
+            <div className="truncate font-medium text-sm">
+              {conversation?.title ?? sessionId}
+            </div>
+          )}
           {conversation &&
             toolbarItems
               .filter((item) => item.group === "status")

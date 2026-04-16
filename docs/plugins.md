@@ -23,7 +23,7 @@
   - Plugins:
     - **`conversation-view`** — Conversation pane and toolbar host; nested plugins extend `Conversation.Toolbar`.
       - Defines:
-        - Slots: `Conversation.Toolbar`
+        - Slots: `Conversation.Toolbar`, `Conversation.Title`
         - Commands: `Conversation.OpenMiddlePane`, `Conversation.OpenRightPane`, `Conversation.OpenMainView`
       - Contributes:
         - `Shell.Route` `/c/:id`
@@ -53,6 +53,9 @@
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Contributes:
             - `Conversation.Toolbar` (group `status`) → `StatusBadge`
+        - **`title`** — Clickable conversation title that opens a popover to create a child task under the conversation's parent task.
+          - Contributes:
+            - `Conversation.Title` → `ConversationTitle`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:
             - `Conversation.Toolbar` "VSCode"

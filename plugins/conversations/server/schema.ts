@@ -25,6 +25,7 @@ export const conversations = pgView("conversations_v").as((qb) =>
     .select({
       ...getTableColumns(_conversations),
       worktreePath: _attempts.worktreePath,
+      taskId: _attempts.taskId,
       active: sql<boolean>`(${_conversations.status} <> 'gone')`.as("active"),
     })
     .from(_conversations)
@@ -39,6 +40,7 @@ export const ConversationSchema = createSelectSchema(_conversations, {
   endedAt: z.coerce.date().nullable(),
 }).extend({
   worktreePath: z.string(),
+  taskId: z.string(),
   active: z.boolean(),
 });
 export type Conversation = z.infer<typeof ConversationSchema>;
