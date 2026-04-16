@@ -42,6 +42,7 @@ export async function generateMigration(opts: {
 
   const proc = Bun.spawn(cmd, {
     cwd: serverDir,
+    stdin: "inherit",
     stdout: "inherit",
     stderr: "inherit",
     env: { ...process.env, SINGULARITY_WORKTREE: worktreeName },

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { conversations } from "../schema";
+import { _conversations } from "../schema_internal";
 import { deleteConversation } from "./lifecycle";
 import { conversationsResource } from "./resources";
 
@@ -11,7 +11,7 @@ export async function handleDelete(req: Request): Promise<Response> {
     return Response.json({ error: "Invalid session name" }, { status: 400 });
   }
   await deleteConversation(name);
-  await db.delete(conversations).where(eq(conversations.id, name));
+  await db.delete(_conversations).where(eq(_conversations.id, name));
   conversationsResource.notify();
   return Response.json({ ok: true });
 }

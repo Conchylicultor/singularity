@@ -6,21 +6,22 @@ type Task = {
   parentId: string | null;
   title: string;
   description: string | null;
-  status: string;
+  status: "new" | "in_progress" | "attempted" | "done" | "dropped";
+  droppedAt: string | null;
 };
 
-const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "todo", label: "Todo" },
-  { value: "in_progress", label: "In progress" },
-  { value: "done", label: "Done" },
-  { value: "cancelled", label: "Cancelled" },
-];
+const STATUS_LABELS: Record<Task["status"], string> = {
+  new: "New",
+  in_progress: "In progress",
+  attempted: "Attempted",
+  done: "Done",
+  dropped: "Dropped",
+};
 
 export function TaskDetail({ taskId }: { taskId: string }) {
   const [task, setTask] = useState<Task | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [status, setStatus] = useState("todo");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -33,22 +34,26 @@ export function TaskDetail({ taskId }: { taskId: string }) {
       setTask(t);
       setTitle(t.title);
       setDescription(t.description ?? "");
-      setStatus(t.status);
     })();
     return () => {
       cancelled = true;
     };
   }, [taskId]);
 
-const save = useCallback(
-    async (patch: Partial<Pick<Task, "title" | "description" | "status">>) => {
+  const save = useCallback(
+    async (patch: Partial<{ title: string; description: string | null; drop: boolean }>) => {
       setSaving(true);
       try {
-        await fetch(`/api/tasks/${taskId}`, {
+        const res = await fetch(`/api/tasks/${taskId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(patch),
         });
+        if (res.ok) {
+          // Refresh so derived status badge stays in sync after a drop toggle.
+          const refreshed = (await res.json()) as Task;
+          setTask((prev) => (prev ? { ...prev, ...refreshed } : prev));
+        }
       } finally {
         setSaving(false);
       }
@@ -75,9 +80,9 @@ const save = useCallback(
     }, 500);
   };
 
-  const onStatusChange = (v: string) => {
-    setStatus(v);
-    void save({ status: v });
+  const toggleDrop = () => {
+    if (!task) return;
+    void save({ drop: task.status !== "dropped" });
   };
 
   const [launching, setLaunching] = useState(false);
@@ -97,7 +102,6 @@ const save = useCallback(
       await save({
         title: trimmedTitle || "Untitled",
         description,
-        status,
       });
       const prompt = description.trim()
         ? `${trimmedTitle}\n\n${description}`
@@ -110,12 +114,10 @@ const save = useCallback(
     } finally {
       setLaunching(false);
     }
-  }, [taskId, title, description, status, save]);
+  }, [taskId, title, description, save]);
 
   if (!task) {
-    return (
-      <div className="text-muted-foreground p-6 text-sm">Loading…</div>
-    );
+    return <div className="text-muted-foreground p-6 text-sm">Loading…</div>;
   }
 
   return (
@@ -131,21 +133,20 @@ const save = useCallback(
           {saving ? "Saving…" : "Saved"}
         </span>
       </div>
-      <div className="flex items-center gap-2">
-        <label className="text-muted-foreground text-xs uppercase tracking-wide">
+      <div className="flex items-center gap-3">
+        <span className="text-muted-foreground text-xs uppercase tracking-wide">
           Status
-        </label>
-        <select
-          value={status}
-          onChange={(e) => onStatusChange(e.target.value)}
-          className="bg-background hover:bg-accent rounded border px-2 py-1 text-sm outline-none"
+        </span>
+        <span className="bg-muted rounded px-2 py-0.5 text-xs font-medium">
+          {STATUS_LABELS[task.status]}
+        </span>
+        <Button
+          size="sm"
+          variant={task.status === "dropped" ? "secondary" : "outline"}
+          onClick={toggleDrop}
         >
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+          {task.status === "dropped" ? "Undrop" : "Drop task"}
+        </Button>
       </div>
       <textarea
         value={description}

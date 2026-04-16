@@ -77,7 +77,8 @@ export function ConversationList() {
       <SidebarMenu>
         {conversations.map((conversation) => {
           const working = conversation.status === "working";
-          const needsAttention = conversation.status === "needs_attention";
+          const waiting = conversation.status === "waiting";
+          const gone = conversation.status === "gone";
           const label = conversation.title ?? "Starting...";
           return (
             <SidebarMenuItem
@@ -97,11 +98,11 @@ export function ConversationList() {
                     "mt-1.5 size-1.5 shrink-0 rounded-full",
                     working
                       ? "bg-primary"
-                      : needsAttention
+                      : waiting
                         ? "bg-amber-500"
-                        : conversation.status === "completed"
-                          ? "bg-emerald-600/40 dark:bg-emerald-400/40"
-                          : "bg-muted-foreground/40",
+                        : gone
+                          ? "bg-muted-foreground/40"
+                          : "bg-muted-foreground/60",
                   )} />
                   <div className="flex flex-col gap-0.5 overflow-hidden">
                     <span

@@ -36,3 +36,10 @@ export const Runtime = {
     return Array.from(registry.values());
   },
 };
+
+export { conversationsResource } from "./internal/resources";
+export {
+  ensureMainWorktreeRoot,
+  worktreePathFor,
+  worktreePathForSync,
+} from "./internal/worktree";

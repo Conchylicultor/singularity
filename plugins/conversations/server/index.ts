@@ -5,15 +5,17 @@ import { handleDelete } from "./internal/handle-delete";
 import { handleGet } from "./internal/handle-get";
 import { startPoller } from "./internal/poller";
 import { conversationsResource } from "./internal/resources";
-import { startPushWatcher } from "./internal/push-watcher";
 
-startPoller();
-startPushWatcher();
+// Defer poller start until after the server has booted (and migrations have
+// completed on the main thread). Running at module-load time used to race
+// the first-tick DB query against `await runMigrations()`.
+queueMicrotask(() => startPoller());
 
 const plugin: ServerPluginDefinition = {
   id: "conversations",
   name: "Conversations",
-  description: "Conversation domain: shared server code and types; view plugins live under `plugins/`.",
+  description:
+    "Conversation domain: shared server code and types; view plugins live under `plugins/`.",
   httpRoutes: {
     "GET /api/conversations": handleList,
     "GET /api/conversations/:id": handleGet,

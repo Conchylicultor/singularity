@@ -85,6 +85,20 @@
       "tag": "20260415_124136_813d9830__add_push_tracking",
       "hash": "813d9830",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776355264000,
+      "tag": "20260416_160104_050c75af__tasks_schema_v2",
+      "hash": "050c75af",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776358556000,
+      "tag": "20260416_165556_cb3b7e1d__schema_split_internal",
+      "hash": "cb3b7e1d",
+      "breakpoints": true
     }
   ]
 }

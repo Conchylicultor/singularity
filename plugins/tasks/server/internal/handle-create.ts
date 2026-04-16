@@ -1,5 +1,5 @@
 import { db } from "../../../../server/src/db/client";
-import { tasks } from "../schema";
+import { _tasks } from "../schema_internal";
 import { tasksResource } from "./resources";
 
 export async function handleCreate(req: Request): Promise<Response> {
@@ -9,7 +9,7 @@ export async function handleCreate(req: Request): Promise<Response> {
   };
   const id = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const [row] = await db
-    .insert(tasks)
+    .insert(_tasks)
     .values({
       id,
       parentId: body.parentId ?? null,

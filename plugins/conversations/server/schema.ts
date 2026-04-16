@@ -1,60 +1,40 @@
-import { index, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { eq, getTableColumns, sql } from "drizzle-orm";
+import { pgView } from "drizzle-orm/pg-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { taskAttempts } from "@plugins/tasks/server/schema";
+import { _attempts } from "@plugins/tasks/server/schema_internal";
+import { _conversations } from "./schema_internal";
+import { ConversationStatusSchema } from "./status";
 
-export const ConversationStatusSchema = z.enum([
-  "starting",
-  "working",
-  "needs_attention",
-  "completed",
-  "gone",
-  "abandoned",
-]);
-export type ConversationStatus = z.infer<typeof ConversationStatusSchema>;
+// Public surface for this plugin: view (derived) + Zod + types.
+// In-plugin writers go through ./schema_internal.
+// Status enum + helpers live in ./status so schema_internal can import them
+// without depending on the view file.
 
-export const TERMINAL_STATUSES = ["completed", "gone", "abandoned"] as const;
-export function isActiveStatus(status: ConversationStatus): boolean {
-  return !(TERMINAL_STATUSES as readonly string[]).includes(status);
-}
+export { ConversationStatusSchema, isActiveStatus } from "./status";
+export type { ConversationStatus } from "./status";
 
-export const conversations = pgTable("conversations", {
-  id: text("id").primaryKey(),
-  worktreePath: text("worktree_path").notNull(),
-  title: text("title"),
-  status: text("status").$type<ConversationStatus>().notNull().default("starting"),
-  runtime: text("runtime").notNull().default("tmux"),
-  claudeSessionId: text("claude_session_id"),
-  taskAttemptId: text("task_attempt_id").references(() => taskAttempts.id, {
-    onDelete: "set null",
-  }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  endedAt: timestamp("ended_at", { withTimezone: true }),
-});
+// Public view: adds the derived `active` plus the attempt's worktree path
+// (convenience for UI consumers — they shouldn't have to subscribe to
+// `attempts` just to render the VSCode/Open-App buttons).
+export const conversations = pgView("conversations_v").as((qb) =>
+  qb
+    .select({
+      ...getTableColumns(_conversations),
+      worktreePath: _attempts.worktreePath,
+      active: sql<boolean>`(${_conversations.status} <> 'gone')`.as("active"),
+    })
+    .from(_conversations)
+    .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId)),
+);
 
-export const ConversationSchema = createSelectSchema(conversations, {
+export const ConversationSchema = createSelectSchema(_conversations, {
   status: ConversationStatusSchema,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   endedAt: z.coerce.date().nullable(),
-}).transform((row) => ({ ...row, active: isActiveStatus(row.status) }));
+}).extend({
+  worktreePath: z.string(),
+  active: z.boolean(),
+});
 export type Conversation = z.infer<typeof ConversationSchema>;
-
-export const pushes = pgTable(
-  "pushes",
-  {
-    id: text("id").primaryKey(),
-    conversationId: text("conversation_id")
-      .notNull()
-      .references(() => conversations.id, { onDelete: "cascade" }),
-    sha: text("sha").notNull(),
-    pushId: text("push_id").notNull(),
-    message: text("message").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [
-    uniqueIndex("pushes_sha_unique").on(t.sha),
-    index("pushes_push_id_idx").on(t.pushId),
-  ],
-);

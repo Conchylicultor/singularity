@@ -1,9 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { tasks } from "../schema";
+import { _tasks } from "../schema_internal";
 import { tasksResource } from "./resources";
-
-const ALLOWED_STATUSES = new Set(["todo", "in_progress", "done", "cancelled"]);
 
 export async function handleUpdate(
   req: Request,
@@ -14,7 +12,7 @@ export async function handleUpdate(
   const body = (await req.json().catch(() => ({}))) as {
     title?: string;
     description?: string | null;
-    status?: string;
+    drop?: boolean;
     expanded?: boolean;
   };
   const patch: Record<string, unknown> = { updatedAt: new Date() };
@@ -22,17 +20,14 @@ export async function handleUpdate(
   if (body.description === null || typeof body.description === "string") {
     patch.description = body.description;
   }
-  if (typeof body.status === "string") {
-    if (!ALLOWED_STATUSES.has(body.status)) {
-      return new Response("Invalid status", { status: 400 });
-    }
-    patch.status = body.status;
+  if (typeof body.drop === "boolean") {
+    patch.droppedAt = body.drop ? new Date() : null;
   }
   if (typeof body.expanded === "boolean") patch.expanded = body.expanded;
   const [row] = await db
-    .update(tasks)
+    .update(_tasks)
     .set(patch)
-    .where(eq(tasks.id, id))
+    .where(eq(_tasks.id, id))
     .returning();
   if (!row) return new Response("Not found", { status: 404 });
   tasksResource.notify();

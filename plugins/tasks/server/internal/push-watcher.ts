@@ -1,7 +1,8 @@
 import { db } from "../../../../server/src/db/client";
-import { conversations, pushes } from "../schema";
-import { conversationsResource } from "./resources";
-import { ensureMainWorktreeRoot } from "./worktree";
+import { _attempts } from "../schema_internal";
+import { pushes } from "../schema";
+import { attemptsResource, pushesResource } from "./resources";
+import { ensureMainWorktreeRoot } from "@plugins/conversations/server/api";
 
 const GIT = "/usr/bin/git";
 const TICK_MS = 1000;
@@ -77,20 +78,22 @@ async function readCommits(
 async function recordCommits(commits: ParsedCommit[]): Promise<boolean> {
   if (commits.length === 0) return false;
 
-  // Attribute only to conversations present in *this* server's DB. Other
-  // servers see the same commits but have their own conversations table.
-  const existing = await db
-    .select({ id: conversations.id })
-    .from(conversations);
-  const localIds = new Set(existing.map((c) => c.id));
+  // Attribute to attempts whose id matches the commit's conversation trailer.
+  // For the 1:1 legacy case, conversation id == attempt id; future multi-
+  // conversation-per-attempt flows write a conversation id that is not the
+  // attempt id, so we also probe conversations for an attempt lookup.
+  const existing = await db.select({ id: _attempts.id }).from(_attempts);
+  const localAttemptIds = new Set(existing.map((a) => a.id));
 
   let inserted = false;
   for (const commit of [...commits].reverse()) {
-    if (!localIds.has(commit.conversationId)) continue;
+    if (!localAttemptIds.has(commit.conversationId)) continue;
+    const attemptId = commit.conversationId;
     const [row] = await db
       .insert(pushes)
       .values({
         id: `${commit.pushId}:${commit.sha}`,
+        attemptId,
         conversationId: commit.conversationId,
         sha: commit.sha,
         pushId: commit.pushId,
@@ -111,7 +114,7 @@ async function tick(cwd: string): Promise<void> {
   try {
     head = await resolveMainSha(cwd);
   } catch (err) {
-    console.error("[conversations.push-watcher] rev-parse failed", err);
+    console.error("[tasks.push-watcher] rev-parse failed", err);
     return;
   }
   if (head === lastSha) return;
@@ -121,14 +124,14 @@ async function tick(cwd: string): Promise<void> {
     const commits = await readCommits(range, cwd);
     didInsert = await recordCommits(commits);
   } catch (err) {
-    console.error("[conversations.push-watcher] tick failed", err);
+    console.error("[tasks.push-watcher] tick failed", err);
     return;
   }
   lastSha = head;
-  // A new pushes row changes a conversation's *future* terminal status
-  // (completed vs gone) when the pane dies. Notify so any consumer that
-  // reads pushes alongside conversations refetches.
-  if (didInsert) conversationsResource.notify();
+  if (didInsert) {
+    pushesResource.notify();
+    attemptsResource.notify();
+  }
 }
 
 export async function startPushWatcher(): Promise<void> {
@@ -137,24 +140,25 @@ export async function startPushWatcher(): Promise<void> {
     cwd = await ensureMainWorktreeRoot();
   } catch (err) {
     console.error(
-      "[conversations.push-watcher] cannot resolve main worktree",
+      "[tasks.push-watcher] cannot resolve main worktree",
       err,
     );
     return;
   }
-  // Backfill: walk main and record commits carrying our trailers.
-  // `onConflictDoNothing` on the unique sha index makes this safe to re-run.
   try {
     const commits = await readCommits(null, cwd);
     const inserted = await recordCommits(commits);
     lastSha = await resolveMainSha(cwd);
-    if (inserted) conversationsResource.notify();
+    if (inserted) {
+      pushesResource.notify();
+      attemptsResource.notify();
+    }
   } catch (err) {
-    console.error("[conversations.push-watcher] backfill failed", err);
+    console.error("[tasks.push-watcher] backfill failed", err);
   }
   setInterval(() => {
     tick(cwd).catch((err) =>
-      console.error("[conversations.push-watcher] tick threw", err),
+      console.error("[tasks.push-watcher] tick threw", err),
     );
   }, TICK_MS);
 }

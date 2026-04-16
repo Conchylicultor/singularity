@@ -1,33 +1,16 @@
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
+import { attempts } from "@plugins/tasks/server/schema";
 import { Runtime, type RuntimeInfo } from "../api";
-import { conversations, pushes } from "../schema";
+import { _conversations } from "../schema_internal";
 import type { ConversationStatus } from "../../shared/types";
-import { worktreePathFor } from "./worktree";
 import { conversationsResource } from "./resources";
 
 function liveStatusFor(info: RuntimeInfo): ConversationStatus {
-  return info.working ? "working" : "needs_attention";
-}
-
-async function terminalStatusFor(id: string): Promise<"completed" | "gone"> {
-  const [row] = await db
-    .select({ exists: sql<number>`1` })
-    .from(pushes)
-    .where(eq(pushes.conversationId, id))
-    .limit(1);
-  return row ? "completed" : "gone";
+  return info.working ? "working" : "waiting";
 }
 
 const TICK_MS = 1000;
-
-// Statuses that represent an explicit finalization — never overwritten by the
-// live poller. `gone` is deliberately omitted: it's a transient "we don't see
-// the pane right now" signal, and must flip back to live if tmux re-reports it.
-const FINALIZED_STATUSES = new Set<ConversationStatus>([
-  "completed",
-  "abandoned",
-]);
 
 interface LiveEntry extends RuntimeInfo {
   runtime: string;
@@ -63,27 +46,39 @@ async function tick(): Promise<void> {
     collectLive(),
     db
       .select({
-        id: conversations.id,
-        title: conversations.title,
-        claudeSessionId: conversations.claudeSessionId,
-        status: conversations.status,
+        id: _conversations.id,
+        attemptId: _conversations.attemptId,
+        title: _conversations.title,
+        claudeSessionId: _conversations.claudeSessionId,
+        status: _conversations.status,
       })
-      .from(conversations),
+      .from(_conversations),
   ]);
   const dbById = new Map(rows.map((r) => [r.id, r]));
 
   // Adopt orphans: live sessions with no DB row (e.g. sessions surviving a DB
-  // reset, or created out-of-band). Insert idempotently and broadcast.
+  // reset, or created out-of-band). Each adopted conversation needs a matching
+  // attempt row. If the attempt doesn't exist yet, skip the adoption — we can
+  // revisit once the attempt lifecycle catches up.
   const orphans = [...next.keys()].filter((id) => !dbById.has(id));
   if (orphans.length > 0) {
     for (const id of orphans) {
       const live = next.get(id)!;
       if (live.dead) continue;
+      // For the current 1:1 case, the conversation id equals the attempt id.
+      // Read through the public `attempts` view to avoid reaching into the
+      // tasks plugin's internal table.
+      const [attempt] = await db
+        .select({ id: attempts.id })
+        .from(attempts)
+        .where(eq(attempts.id, id))
+        .limit(1);
+      if (!attempt) continue;
       const [inserted] = await db
-        .insert(conversations)
+        .insert(_conversations)
         .values({
           id,
-          worktreePath: await worktreePathFor(id),
+          attemptId: attempt.id,
           runtime: live.runtime,
           status: liveStatusFor(live),
           title: live.title || null,
@@ -93,6 +88,7 @@ async function tick(): Promise<void> {
       if (inserted) {
         dbById.set(inserted.id, {
           id: inserted.id,
+          attemptId: inserted.attemptId,
           title: inserted.title,
           claudeSessionId: inserted.claudeSessionId,
           status: inserted.status,
@@ -114,26 +110,21 @@ async function tick(): Promise<void> {
   for (const [id, info] of next) {
     const dbRow = dbById.get(id);
     if (!dbRow) continue;
-    if (FINALIZED_STATUSES.has(dbRow.status)) continue;
+    if (dbRow.status === "gone") continue;
 
-    // Dead: runtime reports the process exited. Decide terminal status based on
-    // whether this conversation was ever pushed.
     if (info.dead) {
-      const desiredStatus = await terminalStatusFor(id);
       await db
-        .update(conversations)
+        .update(_conversations)
         .set({
-          status: desiredStatus,
+          status: "gone",
           endedAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(conversations.id, id));
+        .where(eq(_conversations.id, id));
       changed = true;
       continue;
     }
 
-    // Only overwrite title when the runtime reports a real one; preserve the
-    // last known title when the pane is in a default/waiting state.
     const desiredTitle = info.title ? info.title : dbRow.title;
     const desiredStatus = liveStatusFor(info);
     const titleChanged = desiredTitle !== dbRow.title;
@@ -145,26 +136,25 @@ async function tick(): Promise<void> {
     if (titleChanged) patch.title = desiredTitle;
     if (sessionChanged) patch.claudeSessionId = info.claudeSessionId;
     if (statusChanged) patch.status = desiredStatus;
-    await db.update(conversations).set(patch).where(eq(conversations.id, id));
+    await db.update(_conversations).set(patch).where(eq(_conversations.id, id));
     changed = true;
   }
 
-  // Mark DB rows whose runtime entry has vanished (tmux pane killed) as
-  // terminal. Pushed conversations land on "completed"; otherwise "gone".
-  // Skip rows still in a pre-live state or already terminal.
+  // Any DB row whose runtime entry has vanished (tmux pane killed) goes to
+  // `gone` and gets an `ended_at`. The attempt view derives `abandoned` or
+  // `completed` from whether a push row exists.
   for (const [id, dbRow] of dbById) {
     if (next.has(id)) continue;
     if (dbRow.status === "starting") continue;
-    if (FINALIZED_STATUSES.has(dbRow.status)) continue;
-    const desiredStatus = await terminalStatusFor(id);
+    if (dbRow.status === "gone") continue;
     await db
-      .update(conversations)
+      .update(_conversations)
       .set({
-        status: desiredStatus,
+        status: "gone",
         endedAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(eq(conversations.id, id));
+      .where(eq(_conversations.id, id));
     changed = true;
   }
 

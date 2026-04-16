@@ -13,7 +13,8 @@
   - Defines:
     - DB schema: `plugins/conversations/server/schema.ts`
   - Server:
-    - API: `Runtime`
+    - API: `Runtime`, `conversationsResource`, `ensureMainWorktreeRoot`, `worktreePathFor`, `worktreePathForSync`
+    - Uses: `tasks.attemptsResource`
     - Resources: `conversations` (push)
     - `GET /api/conversations`
     - `GET /api/conversations/:id`
@@ -128,7 +129,9 @@
     - `Tasks.TaskActions` → `DeleteTaskAction`
     - `Tasks.TaskActions` → `LaunchAgentAction`
   - Server:
-    - Resources: `tasks` (push)
+    - API: `attemptsResource`, `pushesResource`, `tasksResource`
+    - Uses: `conversations.conversationsResource`, `conversations.ensureMainWorktreeRoot`
+    - Resources: `attempts` (push), `pushes` (push), `tasks` (push)
     - `GET /api/tasks`
     - `POST /api/tasks`
     - `GET /api/tasks/:id`
