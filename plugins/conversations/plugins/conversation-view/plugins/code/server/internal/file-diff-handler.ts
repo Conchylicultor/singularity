@@ -13,6 +13,7 @@ export async function handleFileDiff(
   const url = new URL(req.url);
   const path = url.searchParams.get("path");
   if (!path) return new Response("Missing path", { status: 400 });
+  const base = url.searchParams.get("base") ?? "HEAD";
 
   const [row] = await db
     .select({ worktreePath: conversations.worktreePath })
@@ -21,7 +22,7 @@ export async function handleFileDiff(
     .limit(1);
   if (!row) return new Response("Not found", { status: 404 });
 
-  const result = await getFileDiff(row.worktreePath, path);
+  const result = await getFileDiff(row.worktreePath, path, base);
   if (result.kind === "ok") {
     return Response.json({ diff: result.diff });
   }

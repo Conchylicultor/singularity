@@ -29,12 +29,18 @@ async function runGit(
   return null;
 }
 
+const ALLOWED_BASES = new Set(["HEAD", "main"]);
+
 export async function getFileDiff(
   worktreePath: string,
   relPath: string,
+  base: string = "HEAD",
 ): Promise<FileDiffResult> {
   if (!relPath || relPath.includes("\0")) {
     return { kind: "error", status: 400, message: "Invalid path" };
+  }
+  if (!ALLOWED_BASES.has(base)) {
+    return { kind: "error", status: 400, message: "Invalid base" };
   }
 
   const absRoot = resolve(worktreePath);
@@ -54,8 +60,10 @@ export async function getFileDiff(
   const statusLine = status.split("\n").find((l) => l.length > 0);
   const isUntracked = statusLine?.startsWith("??") ?? false;
 
-  if (!statusLine) {
-    // No changes per status. Disambiguate tracked-clean vs nonexistent.
+  if (!statusLine && base === "HEAD") {
+    // Diffing against HEAD with no working-tree changes: disambiguate
+    // tracked-clean vs nonexistent. (When base is main, fall through so we
+    // pick up committed branch changes via `git diff main`.)
     const file = Bun.file(absTarget);
     if (!(await file.exists())) {
       return { kind: "error", status: 404, message: "File not found" };
@@ -70,7 +78,7 @@ export async function getFileDiff(
         true,
       )
     : await runGit(
-        ["diff", "--no-color", "HEAD", "--", relPath],
+        ["diff", "--no-color", "--no-renames", base, "--", relPath],
         absRoot,
       );
 

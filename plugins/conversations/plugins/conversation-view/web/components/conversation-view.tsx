@@ -3,8 +3,10 @@ import { Group, Panel, Separator } from "react-resizable-panels";
 import { Conversation } from "../slots";
 import {
   Conversation as ConversationCommands,
+  MainViewContext,
   MiddlePaneContext,
   RightPaneContext,
+  type MainViewDescriptor,
   type MiddlePaneDescriptor,
   type RightPaneDescriptor,
 } from "../commands";
@@ -19,11 +21,14 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
   const conversation = useConversation(sessionId);
   const [middlePane, setMiddlePane] = useState<MiddlePaneDescriptor | null>(null);
   const [rightPane, setRightPane] = useState<RightPaneDescriptor | null>(null);
+  const [mainView, setMainView] = useState<MainViewDescriptor | null>(null);
   ConversationCommands.OpenMiddlePane.useHandler((d) => setMiddlePane(d));
   ConversationCommands.OpenRightPane.useHandler((d) => setRightPane(d));
+  ConversationCommands.OpenMainView.useHandler((d) => setMainView(d));
   useEffect(() => {
     setMiddlePane(null);
     setRightPane(null);
+    setMainView(null);
   }, [sessionId]);
 
   const TerminalComponent = useMemo(
@@ -37,8 +42,10 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
 
   const MiddlePaneComponent = middlePane?.component;
   const RightPaneComponent = rightPane?.component;
+  const MainViewComponent = mainView?.component;
 
   return (
+    <MainViewContext.Provider value={mainView}>
     <MiddlePaneContext.Provider value={middlePane}>
     <RightPaneContext.Provider value={rightPane}>
     <div className="flex h-[calc(100svh-3rem)] min-h-0 flex-col overflow-hidden">
@@ -92,31 +99,38 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
-        <Group orientation="horizontal" className="flex h-full min-h-0">
-          <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
-            {MiddlePaneComponent && conversation && (
-              <div className="max-h-[50%] shrink-0 overflow-y-auto">
-                <MiddlePaneComponent conversation={conversation} />
-              </div>
-            )}
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <TerminalComponent />
-            </div>
-          </Panel>
-          {RightPaneComponent && conversation && (
-            <>
-              <Separator className="w-px bg-border transition-colors data-[separator-state=hover]:bg-foreground/20 data-[separator-state=drag]:bg-foreground/30" />
-              <Panel minSize="25%" className="min-h-0 min-w-0 overflow-hidden">
-                <div className="h-full min-h-0 overflow-hidden">
-                  <RightPaneComponent conversation={conversation} />
+        {MainViewComponent && conversation ? (
+          <div className="h-full min-h-0 overflow-hidden">
+            <MainViewComponent conversation={conversation} />
+          </div>
+        ) : (
+          <Group orientation="horizontal" className="flex h-full min-h-0">
+            <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col overflow-hidden">
+              {MiddlePaneComponent && conversation && (
+                <div className="max-h-[50%] shrink-0 overflow-y-auto">
+                  <MiddlePaneComponent conversation={conversation} />
                 </div>
-              </Panel>
-            </>
-          )}
-        </Group>
+              )}
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <TerminalComponent />
+              </div>
+            </Panel>
+            {RightPaneComponent && conversation && (
+              <>
+                <Separator className="w-px bg-border transition-colors data-[separator-state=hover]:bg-foreground/20 data-[separator-state=drag]:bg-foreground/30" />
+                <Panel minSize="25%" className="min-h-0 min-w-0 overflow-hidden">
+                  <div className="h-full min-h-0 overflow-hidden">
+                    <RightPaneComponent conversation={conversation} />
+                  </div>
+                </Panel>
+              </>
+            )}
+          </Group>
+        )}
       </div>
     </div>
     </RightPaneContext.Provider>
     </MiddlePaneContext.Provider>
+    </MainViewContext.Provider>
   );
 }

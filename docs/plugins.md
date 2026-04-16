@@ -23,7 +23,7 @@
     - **`conversation-view`** — Conversation pane and toolbar host; nested plugins extend `Conversation.Toolbar`.
       - Defines:
         - Slots: `Conversation.Toolbar`
-        - Commands: `Conversation.OpenMiddlePane`, `Conversation.OpenRightPane`
+        - Commands: `Conversation.OpenMiddlePane`, `Conversation.OpenRightPane`, `Conversation.OpenMainView`
       - Contributes:
         - `Shell.Route` `/c/:id`
       - Plugins:
@@ -40,6 +40,9 @@
             - **`edited-files-button`** — Toolbar button showing the number of files edited in the conversation's worktree.
               - Contributes:
                 - `Code.ToolbarButton` → `EditedFilesButton`
+            - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file.
+              - Contributes:
+                - `Code.ToolbarButton` → `ReviewButton`
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
           - Contributes:
             - `Conversation.Toolbar` "Open"

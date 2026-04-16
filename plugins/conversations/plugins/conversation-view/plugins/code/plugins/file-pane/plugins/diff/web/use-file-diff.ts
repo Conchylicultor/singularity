@@ -8,13 +8,15 @@ export type FileDiffState =
 export function useFileDiff(
   conversationId: string,
   path: string,
+  base?: string,
 ): FileDiffState {
   const [state, setState] = useState<FileDiffState>({ kind: "loading" });
 
   useEffect(() => {
     let cancelled = false;
     setState({ kind: "loading" });
-    const url = `/api/conversations/${conversationId}/diff?path=${encodeURIComponent(path)}`;
+    const baseQuery = base ? `&base=${encodeURIComponent(base)}` : "";
+    const url = `/api/conversations/${conversationId}/diff?path=${encodeURIComponent(path)}${baseQuery}`;
     fetch(url)
       .then(async (res) => {
         if (cancelled) return;
@@ -37,7 +39,7 @@ export function useFileDiff(
     return () => {
       cancelled = true;
     };
-  }, [conversationId, path]);
+  }, [conversationId, path, base]);
 
   return state;
 }

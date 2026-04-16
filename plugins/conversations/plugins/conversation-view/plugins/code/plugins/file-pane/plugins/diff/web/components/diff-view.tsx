@@ -11,11 +11,13 @@ import "./diff-view.css";
 export function DiffView({
   conversationId,
   path,
+  base,
 }: {
   conversationId: string;
   path: string;
+  base?: string;
 }) {
-  const state = useFileDiff(conversationId, path);
+  const state = useFileDiff(conversationId, path, base);
   const dark = useDarkMode();
 
   const files = useMemo<FileData[]>(() => {
@@ -44,7 +46,7 @@ export function DiffView({
   }
 
   if (state.diff.length === 0 || files.length === 0) {
-    return <Placeholder>No changes vs HEAD.</Placeholder>;
+    return <Placeholder>No changes vs {base ?? "HEAD"}.</Placeholder>;
   }
 
   return (

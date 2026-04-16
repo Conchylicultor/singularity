@@ -1,0 +1,68 @@
+import { MdChevronRight } from "react-icons/md";
+import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared/protocol";
+import { DiffView } from "../../../file-pane/plugins/diff/web/components/diff-view";
+
+const STATUS_LABEL: Record<EditedFileStatus, string> = {
+  modified: "modified",
+  added: "new",
+  untracked: "new",
+  deleted: "deleted",
+};
+
+const STATUS_BADGE: Record<EditedFileStatus, string> = {
+  modified: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
+  added: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+  untracked: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+  deleted: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30",
+};
+
+export function ReviewFileRow({
+  conversationId,
+  file,
+  expanded,
+  onToggle,
+}: {
+  conversationId: string;
+  file: EditedFile;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const slash = file.path.lastIndexOf("/");
+  const dir = slash >= 0 ? file.path.slice(0, slash + 1) : "";
+  const basename = slash >= 0 ? file.path.slice(slash + 1) : file.path;
+
+  return (
+    <div className="border-b border-border last:border-b-0">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="sticky top-0 z-[1] flex w-full items-center gap-2 bg-muted px-3 py-1.5 text-left text-sm hover:bg-muted/80"
+        aria-expanded={expanded}
+      >
+        <MdChevronRight
+          className={`size-4 shrink-0 text-muted-foreground transition-transform ${
+            expanded ? "rotate-90" : ""
+          }`}
+        />
+        <span
+          className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${STATUS_BADGE[file.status]}`}
+        >
+          {STATUS_LABEL[file.status]}
+        </span>
+        <span className="min-w-0 flex-1 truncate">
+          <span className="text-muted-foreground">{dir}</span>
+          <span className="font-medium">{basename}</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
+          <span className="text-emerald-600 dark:text-emerald-400">+{file.additions}</span>
+          <span className="text-red-600 dark:text-red-400">−{file.deletions}</span>
+        </span>
+      </button>
+      {expanded && (
+        <div className="bg-background">
+          <DiffView conversationId={conversationId} path={file.path} base="main" />
+        </div>
+      )}
+    </div>
+  );
+}
