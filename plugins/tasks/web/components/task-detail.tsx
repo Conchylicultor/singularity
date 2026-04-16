@@ -22,7 +22,6 @@ export function TaskDetail({ taskId }: { taskId: string }) {
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("todo");
   const [saving, setSaving] = useState(false);
-  const titleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,16 +40,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
     };
   }, [taskId]);
 
-  const didAutoFocus = useRef(false);
-  useEffect(() => {
-    if (didAutoFocus.current) return;
-    if (!task || task.title !== "Untitled") return;
-    didAutoFocus.current = true;
-    titleInputRef.current?.focus();
-    titleInputRef.current?.select();
-  }, [task]);
-
-  const save = useCallback(
+const save = useCallback(
     async (patch: Partial<Pick<Task, "title" | "description" | "status">>) => {
       setSaving(true);
       try {
@@ -132,7 +122,6 @@ export function TaskDetail({ taskId }: { taskId: string }) {
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-start gap-3">
         <input
-          ref={titleInputRef}
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
           placeholder="Untitled"

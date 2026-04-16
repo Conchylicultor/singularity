@@ -3,6 +3,7 @@ import { MdChevronRight, MdAdd } from "react-icons/md";
 import { useResource } from "@core";
 import { tasksResource } from "../../shared/resources";
 import { Tasks as TasksSlots } from "../slots";
+import { Tasks as TasksCommands } from "../commands";
 import { cn } from "@/lib/utils";
 
 type Task = {
@@ -36,11 +37,17 @@ async function patchTask(id: string, patch: Partial<Pick<Task, "title" | "expand
   });
 }
 
+let pendingFocusAcrossMount: string | null = null;
+
 export function TasksList({ selectedId }: { selectedId?: string }) {
   const { data } = useResource(tasksResource);
   const rows = (data ?? []) as Task[];
   const actions = TasksSlots.TaskActions.useContributions();
-  const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
+  const [pendingFocusId, setPendingFocusId] = useState<string | null>(() => {
+    const id = pendingFocusAcrossMount;
+    pendingFocusAcrossMount = null;
+    return id;
+  });
 
   const createTask = useCallback(
     async (parentId: string | null) => {
@@ -51,7 +58,8 @@ export function TasksList({ selectedId }: { selectedId?: string }) {
       });
       const task = (await res.json()) as Task;
       if (parentId) void patchTask(parentId, { expanded: true });
-      setPendingFocusId(task.id);
+      pendingFocusAcrossMount = task.id;
+      TasksCommands.OpenTask({ id: task.id });
     },
     [],
   );
@@ -197,6 +205,12 @@ function TaskNode({
           ref={inputRef}
           value={title}
           onChange={(e) => onChange(e.target.value)}
+          onMouseDown={() => {
+            if (!isSelected) {
+              pendingFocusAcrossMount = node.id;
+              TasksCommands.OpenTask({ id: node.id });
+            }
+          }}
           onBlur={onBlur}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
