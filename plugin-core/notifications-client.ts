@@ -1,15 +1,18 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { SharedWebSocket } from "./shared-websocket";
 
-// Single WS to /ws/notifications per app instance (leader-elected across tabs
-// via Web Lock). Drives the TanStack Query cache: incoming `update` messages
-// become setQueryData; `invalidate` messages become invalidateQueries.
+// Drives the TanStack Query cache off server resource notifications. Uses
+// SharedWebSocket, which transparently shares a single `/ws/notifications`
+// connection across all tabs of the origin. On every (re)open of the real
+// socket (including leader handoff and server restart), `replaySubs` resends
+// every active subscription — the server's sub state is per-connection and
+// this client is the source of truth for what the UI wants to observe.
 //
-// See research/2026-04-15-global-sse-lifecycle-mental-model-v3.md.
+// See research/2026-04-15-global-sse-lifecycle-mental-model-v3.md for the
+// underlying protocol, and research/2026-04-16-plugin-core-shared-websocket-v2.md
+// for the SharedWebSocket abstraction.
 
-const LEADER_LOCK = "singularity:notifications:leader";
 const WS_URL = "/ws/notifications";
-const BACKOFF_MS = [500, 1000, 2000, 5000];
-const CHANNEL = "singularity:notifications";
 
 type ResourceParams = Record<string, string>;
 
@@ -25,10 +28,6 @@ type ServerMsg =
   | { kind: "sub-error"; id?: number; key: string; reason: string }
   | { kind: "ping" };
 
-type FollowerMsg =
-  | { kind: "update"; key: string; params: ResourceParams; value: unknown; version: number }
-  | { kind: "invalidate"; key: string; params: ResourceParams; version: number };
-
 function paramsKey(params: ResourceParams | undefined): string {
   if (!params) return "{}";
   const keys = Object.keys(params).sort();
@@ -43,95 +42,22 @@ export function queryKeyFor(key: string, params: ResourceParams | undefined): un
 }
 
 interface ActiveSub {
+  refcount: number;
   key: string;
   params: ResourceParams;
-  pk: string;
   version: number;
 }
 
 export class NotificationsClient {
-  private ws: WebSocket | null = null;
-  private attempt = 0;
-  private retryTimer: ReturnType<typeof setTimeout> | null = null;
-  private isLeader = false;
+  private ws: SharedWebSocket;
   /** (key, paramsKey) -> refcount + subscription state */
-  private subs = new Map<string, { refcount: number; sub: ActiveSub }>();
+  private subs = new Map<string, ActiveSub>();
   private nextMsgId = 1;
-  private channel: BroadcastChannel | null = null;
 
   constructor(private queryClient: QueryClient) {
-    if (typeof BroadcastChannel !== "undefined") {
-      this.channel = new BroadcastChannel(CHANNEL);
-      this.channel.onmessage = this.onChannelMessage;
-    }
-    const locks =
-      typeof navigator !== "undefined"
-        ? (navigator as Navigator & { locks?: LockManager }).locks
-        : undefined;
-    if (locks) {
-      void locks.request(LEADER_LOCK, { mode: "exclusive" }, () => {
-        this.becomeLeader();
-        // Hold for the lifetime of this tab.
-        return new Promise<void>(() => {});
-      });
-    } else {
-      // No Web Locks — every tab opens its own WS. Correct, just N×.
-      this.becomeLeader();
-    }
-  }
-
-  /** Observer count increased for (key, params). Sub on 0→1. */
-  observe(key: string, params: ResourceParams = {}): void {
-    const pk = paramsKey(params);
-    const id = `${key}\0${pk}`;
-    const existing = this.subs.get(id);
-    if (existing) {
-      existing.refcount++;
-      return;
-    }
-    this.subs.set(id, {
-      refcount: 1,
-      sub: { key, params, pk, version: 0 },
-    });
-    this.sendSub(key, params);
-  }
-
-  /** Observer count decreased. Unsub on 1→0. */
-  unobserve(key: string, params: ResourceParams = {}): void {
-    const pk = paramsKey(params);
-    const id = `${key}\0${pk}`;
-    const existing = this.subs.get(id);
-    if (!existing) return;
-    existing.refcount--;
-    if (existing.refcount > 0) return;
-    this.subs.delete(id);
-    this.sendUnsub(key, params);
-  }
-
-  private becomeLeader(): void {
-    this.isLeader = true;
-    this.connect();
-  }
-
-  private connect = (): void => {
-    if (!this.isLeader) return;
-    if (this.retryTimer) {
-      clearTimeout(this.retryTimer);
-      this.retryTimer = null;
-    }
-    const proto = typeof location !== "undefined" && location.protocol === "https:" ? "wss" : "ws";
-    const host = typeof location !== "undefined" ? location.host : "";
-    const ws = new WebSocket(`${proto}://${host}${WS_URL}`);
-    this.ws = ws;
-
-    ws.onopen = () => {
-      this.attempt = 0;
-      // Replay all active subscriptions.
-      for (const { sub } of this.subs.values()) {
-        this.wsSend({ op: "sub", id: this.nextMsgId++, key: sub.key, params: sub.params });
-      }
-    };
-    ws.onmessage = (ev) => {
+    this.ws = new SharedWebSocket(WS_URL);
+    this.ws.onopen = this.replaySubs;
+    this.ws.onmessage = (ev) => {
       let msg: ServerMsg;
       try {
         msg = JSON.parse(ev.data);
@@ -140,40 +66,52 @@ export class NotificationsClient {
       }
       this.handleServerMessage(msg);
     };
-    ws.onerror = () => {
-      // Let onclose handle reconnect.
-    };
-    ws.onclose = () => {
-      this.ws = null;
-      if (!this.isLeader) return;
-      const delay = BACKOFF_MS[Math.min(this.attempt, BACKOFF_MS.length - 1)]!;
-      this.attempt++;
-      this.retryTimer = setTimeout(this.connect, delay);
-    };
+  }
+
+  /** Observer count increased for (key, params). Sub on 0→1. */
+  observe(key: string, params: ResourceParams = {}): void {
+    const id = `${key}\0${paramsKey(params)}`;
+    const existing = this.subs.get(id);
+    if (existing) {
+      existing.refcount++;
+      return;
+    }
+    this.subs.set(id, { refcount: 1, key, params, version: 0 });
+    this.sendSub(key, params);
+  }
+
+  /** Observer count decreased. Unsub on 1→0. */
+  unobserve(key: string, params: ResourceParams = {}): void {
+    const id = `${key}\0${paramsKey(params)}`;
+    const existing = this.subs.get(id);
+    if (!existing) return;
+    existing.refcount--;
+    if (existing.refcount > 0) return;
+    this.subs.delete(id);
+    this.ws.send(JSON.stringify({ op: "unsub", key, params }));
+  }
+
+  private replaySubs = (): void => {
+    // Fresh connection means the server has no record of our subs. Reset
+    // local versions so a new sub-ack (which will come with a possibly lower
+    // version if the server process restarted) isn't dropped as stale.
+    for (const sub of this.subs.values()) {
+      sub.version = 0;
+      this.sendSub(sub.key, sub.params);
+    }
   };
 
-  private wsSend(obj: unknown): void {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    try {
-      this.ws.send(JSON.stringify(obj));
-    } catch {
-      // ignore
-    }
-  }
-
   private sendSub(key: string, params: ResourceParams): void {
-    if (!this.isLeader) return;
-    this.wsSend({ op: "sub", id: this.nextMsgId++, key, params });
-  }
-
-  private sendUnsub(key: string, params: ResourceParams): void {
-    if (!this.isLeader) return;
-    this.wsSend({ op: "unsub", key, params });
+    this.ws.send(
+      JSON.stringify({ op: "sub", id: this.nextMsgId++, key, params }),
+    );
   }
 
   private handleServerMessage(msg: ServerMsg): void {
     if (msg.kind === "ping") {
-      this.wsSend({ kind: "pong" });
+      // Server keepalive; no app-level action needed. Per-tab duplicate
+      // responses would be harmless (server ignores `pong`) but skipping
+      // avoids N× writes through the leader per ping.
       return;
     }
     if (msg.kind === "sub-error") {
@@ -182,25 +120,10 @@ export class NotificationsClient {
     }
     if (msg.kind === "sub-ack" || msg.kind === "update") {
       this.applyUpdate(msg.key, msg.params, msg.value, msg.version);
-      if (msg.kind === "update") {
-        this.channel?.postMessage({
-          kind: "update",
-          key: msg.key,
-          params: msg.params,
-          value: msg.value,
-          version: msg.version,
-        } satisfies FollowerMsg);
-      }
       return;
     }
     if (msg.kind === "invalidate") {
       this.applyInvalidate(msg.key, msg.params, msg.version);
-      this.channel?.postMessage({
-        kind: "invalidate",
-        key: msg.key,
-        params: msg.params,
-        version: msg.version,
-      } satisfies FollowerMsg);
       return;
     }
   }
@@ -211,12 +134,11 @@ export class NotificationsClient {
     value: unknown,
     version: number,
   ): void {
-    const pk = paramsKey(params);
-    const id = `${key}\0${pk}`;
+    const id = `${key}\0${paramsKey(params)}`;
     const entry = this.subs.get(id);
     if (entry) {
-      if (version <= entry.sub.version) return;
-      entry.sub.version = version;
+      if (version <= entry.version) return;
+      entry.version = version;
     }
     this.queryClient.setQueryData(queryKeyFor(key, params), value);
   }
@@ -226,24 +148,12 @@ export class NotificationsClient {
     params: ResourceParams,
     version: number,
   ): void {
-    const pk = paramsKey(params);
-    const id = `${key}\0${pk}`;
+    const id = `${key}\0${paramsKey(params)}`;
     const entry = this.subs.get(id);
     if (entry) {
-      if (version <= entry.sub.version) return;
-      entry.sub.version = version;
+      if (version <= entry.version) return;
+      entry.version = version;
     }
     void this.queryClient.invalidateQueries({ queryKey: queryKeyFor(key, params) });
   }
-
-  private onChannelMessage = (ev: MessageEvent<FollowerMsg>): void => {
-    // Followers receive fan-out from the leader. Leader ignores its own echoes
-    // because BroadcastChannel does not deliver to the sender.
-    const msg = ev.data;
-    if (msg.kind === "update") {
-      this.applyUpdate(msg.key, msg.params, msg.value, msg.version);
-    } else if (msg.kind === "invalidate") {
-      this.applyInvalidate(msg.key, msg.params, msg.version);
-    }
-  };
 }

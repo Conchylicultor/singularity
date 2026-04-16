@@ -1,10 +1,17 @@
 import { migrationsInSync } from "./migrations-in-sync";
 import { noRawEventSource } from "./no-raw-event-source";
 import { noRawSse } from "./no-raw-sse";
+import { noRawWebsocket } from "./no-raw-websocket";
 import { pluginsDocInSync } from "./plugins-doc-in-sync";
 import type { Check } from "./types";
 
-export const CHECKS: Check[] = [migrationsInSync, pluginsDocInSync, noRawEventSource, noRawSse];
+export const CHECKS: Check[] = [
+  migrationsInSync,
+  pluginsDocInSync,
+  noRawEventSource,
+  noRawSse,
+  noRawWebsocket,
+];
 
 export type { Check, CheckResult } from "./types";
 
