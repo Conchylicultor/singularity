@@ -73,8 +73,11 @@ function ensureEntry(
 export async function getEditedFiles(worktreePath: string): Promise<EditedFile[]> {
   const byPath = new Map<string, FileEntry>();
 
+  const mergeBase =
+    (await run(["merge-base", "main", "HEAD"], worktreePath))?.trim() ?? "main";
+
   const diff = await run(
-    ["diff", "--no-renames", "--name-status", "main...HEAD"],
+    ["diff", "--no-renames", "--name-status", mergeBase],
     worktreePath,
   );
   if (diff) {
@@ -107,10 +110,10 @@ export async function getEditedFiles(worktreePath: string): Promise<EditedFile[]
     }
   }
 
-  // Per-file +/- counts: tracked files via numstat against main (covers both
-  // committed branch changes and uncommitted working-tree edits).
+  // Per-file +/- counts: tracked files via numstat against the merge-base (covers
+  // both committed branch changes and uncommitted working-tree edits).
   const numstat = await run(
-    ["diff", "--no-renames", "--numstat", "main"],
+    ["diff", "--no-renames", "--numstat", mergeBase],
     worktreePath,
   );
   if (numstat) {
