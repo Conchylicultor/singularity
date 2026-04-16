@@ -1,14 +1,14 @@
 # Singularity
 
-Singularity is a new self-evolving app for the agentic area. The vision has few steps:
+Singularity is a new self-evolving app for the agentic era. The vision has a few steps:
 
 - At first, the app itself is an Agent manager app whose goal is to fix todos faster than they are created. The app will be used to improve itself.
 
-  The app is a todo nested list of tasks agents need to execute. Each agent executes in its own isolated `worktree` (including this current session) and deploys to `http://<worktree>.localhost:9000`. The UI allows seamlessly switching between namespaces to inspect agent work.
+  The app is a nested todo list of tasks agents need to execute. Each agent executes in its own isolated `worktree` (including this current session) and deploys to `http://<worktree>.localhost:9000`. The UI allows seamless switching between namespaces to inspect agent work.
 
-- The agent manager app will progressivelly be used to develop independent projects using the same plugin system and primitives as the core app. Some plugin will link between all sub-apps, like a mini operating system implemented in a mono-repo.
+- The agent manager app will progressively be used to develop independent projects using the same plugin system and primitives as the core app. Some plugins will link between all sub-apps, like a mini operating system implemented in a mono-repo.
 
-- The app scope will be expanded to reseach Agents limits and interations. Projects will ultimately move outside of coding into the physical world.
+- The app scope will be expanded to research Agents' limits and interactions. Projects will ultimately move outside of coding into the physical world.
 
 ## Agent Workflow
 
@@ -21,8 +21,8 @@ Agents work in isolated git worktrees automatically created before starting. The
 
 RULES:
 
-- NEVER run `./singularity push` unless instructed to. The user need to review your code before.
-- NEVER commit files yourself (this will create branches conflicts). Always use `./singularity push -m "commit message"`
+- NEVER run `./singularity push` unless instructed to. The user needs to review your code first.
+- NEVER commit files yourself (this will create branch conflicts). Always use `./singularity push -m "commit message"`
 - NEVER run `drizzle-kit generate` or `bun src/db/migrate.ts` manually — always go through `./singularity build`.
 
 ## Architecture
@@ -34,7 +34,7 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
 - Frontend: [`plugin-core/CLAUDE.md`](../plugin-core/CLAUDE.md)
 - Backend: [`server/CLAUDE.md`](../server/CLAUDE.md)
 
-Think carefully about the plugin's boundaries, APIs,... when desiging plugins as it is the load bearing infra of the entire project.
+Think carefully about the plugin's boundaries, APIs, etc. when designing plugins, as it is the load-bearing infra of the entire project.
 
 ### Folder Structure
 
@@ -75,9 +75,9 @@ This will:
 - Regenerate DB migrations from `schema.ts` (server applies them on restart)
 - Build the frontend
 - Build and restart the server
-- Notifying the gateway the app is available for this worktree.
+- Notify the gateway that the app is available for this worktree.
 
-The gateway serve the app automatically at `http://<worktree>.localhost:9000`.
+The gateway serves the app automatically at `http://<worktree>.localhost:9000`.
 
 ### Check
 
@@ -107,9 +107,9 @@ This will:
 1. Run validation checks (skip with `--skip-checks`)
 2. Check for uncommitted changes (fails if dirty)
 3. Push the worktree branch to remote
-3. Pull main (`--ff-only`) to ensure it's up to date
-4. Merge the branch into main (from the main worktree)
-5. Push main to remote
+4. Pull main (`--ff-only`) to ensure it's up to date
+5. Merge the branch into main (from the main worktree)
+6. Push main to remote
 
 > **CRITICAL — NEVER push or commit on your own initiative.** Wait for the user to ask.
 > NEVER use raw git commands (`git commit`, `git push`). Always use `./singularity push -m "message"`.
