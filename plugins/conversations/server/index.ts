@@ -5,6 +5,7 @@ import { handleDelete } from "./internal/handle-delete";
 import { handleGet } from "./internal/handle-get";
 import { startPoller } from "./internal/poller";
 import { conversationsResource } from "./internal/resources";
+import { forkErrorsResource } from "./internal/fork-errors";
 
 const plugin: ServerPluginDefinition = {
   id: "conversations",
@@ -17,7 +18,7 @@ const plugin: ServerPluginDefinition = {
     "POST /api/conversations": handleCreate,
     "DELETE /api/conversations": handleDelete,
   },
-  resources: [conversationsResource],
+  resources: [conversationsResource, forkErrorsResource],
   onReady: () => startPoller(),
 };
 export default plugin;

@@ -39,6 +39,48 @@ async function getWorktreeRoot(): Promise<string> {
   return output.trim();
 }
 
+async function databaseExists(name: string): Promise<boolean> {
+  const proc = Bun.spawn(
+    [
+      "psql",
+      "-d",
+      "postgres",
+      "-tAc",
+      `SELECT 1 FROM pg_database WHERE datname = '${name.replace(/'/g, "''")}'`,
+    ],
+    { stdout: "pipe", stderr: "pipe" },
+  );
+  const output = await new Response(proc.stdout).text();
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    const stderr = await new Response(proc.stderr).text();
+    console.error(`psql failed while checking database "${name}": ${stderr.trim()}`);
+    process.exit(1);
+  }
+  return output.trim() === "1";
+}
+
+async function waitForDatabase(name: string): Promise<void> {
+  // Conversation creation kicks off `pg_dump | pg_restore` in the background
+  // (see plugins/conversations/server/internal/lifecycle.ts). By the time the
+  // user runs `./singularity build` in the new worktree the fork is usually
+  // done, but poll for a short window to cover the race.
+  const deadline = Date.now() + 30_000;
+  let warned = false;
+  while (Date.now() < deadline) {
+    if (await databaseExists(name)) return;
+    if (!warned) {
+      console.log(`Waiting for DB fork "${name}" to complete...`);
+      warned = true;
+    }
+    await Bun.sleep(1_000);
+  }
+  console.error(
+    `Database "${name}" does not exist. The DB fork either failed or is taking too long — check server logs (the main app also shows a toast on failure).`,
+  );
+  process.exit(1);
+}
+
 export function registerBuild(program: Command) {
   program
     .command("build")
@@ -60,6 +102,10 @@ export function registerBuild(program: Command) {
         );
         process.exit(1);
       }
+
+      // 0. Ensure the worktree's DB fork has completed (forked asynchronously
+      // during conversation creation).
+      await waitForDatabase(name);
 
       // 1. Install dependencies
       console.log("Installing dependencies...");

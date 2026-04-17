@@ -74,6 +74,7 @@
     - **`conversations-view`** — Sidebar list of all conversations.
       - Contributes:
         - `Shell.Sidebar` "Conversations" → `ConversationList`
+        - `Core.Root` → `ForkErrorWatcher`
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
       - Server:
         - Uses: `conversations.ConversationRuntime`, `conversations.Runtime`, `conversations.RuntimeInfo`

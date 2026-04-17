@@ -12,6 +12,7 @@ import { conversations } from "../schema";
 import { _conversations } from "../schema_internal";
 import type { Conversation } from "../../shared/types";
 import { forkDatabase } from "./db-fork";
+import { reportForkError } from "./fork-errors";
 import {
   CONVERSATION_PREFIX,
   setupWorktree,
@@ -93,12 +94,19 @@ export async function createConversation(
     // created in the same second.
     const suffix = Math.random().toString(36).slice(2, 6);
     attemptId = `${CONVERSATION_PREFIX}-${Math.floor(Date.now() / 1000)}-${suffix}`;
-    worktreePath = await worktreePathFor(attemptId);
-    await setupWorktree(attemptId, worktreePath);
-    await forkDatabase(attemptId);
+    const newAttemptId = attemptId;
+    worktreePath = await worktreePathFor(newAttemptId);
+    await setupWorktree(newAttemptId, worktreePath);
+    // DB fork is only consumed when the worktree is later deployed via
+    // `./singularity build`, so detach it to keep conversation creation snappy.
+    // `./singularity build` verifies the DB exists before deploying.
+    void forkDatabase(newAttemptId).catch((err) => {
+      console.error(`[conversations] db fork failed for ${newAttemptId}`, err);
+      reportForkError(newAttemptId, err);
+    });
     await db
       .insert(_attempts)
-      .values({ id: attemptId, taskId, worktreePath });
+      .values({ id: newAttemptId, taskId, worktreePath });
     // Cascade would eventually reach attempts via conversationsResource, but
     // notifying directly keeps the attempts feed correct even if a future
     // path inserts an attempt without an accompanying conversation.
