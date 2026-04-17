@@ -6,7 +6,7 @@ import { screenshotPane } from "./views";
 const screenshotPlugin: PluginDefinition = {
   id: "screenshot",
   name: "Screenshot",
-  description: "Capture the current page and edit it (crop, draw) in a new tab.",
+  description: "Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached.",
   contributions: [
     Shell.Toolbar({ component: ScreenshotButton, group: "actions" }),
     Shell.Route({

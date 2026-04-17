@@ -1,6 +1,7 @@
 import type { ServerPluginDefinition } from "../../../server/src/types";
 import { handleCreate } from "./internal/handle-create";
 import { handleGet } from "./internal/handle-get";
+import { handleSaveFile } from "./internal/handle-save-file";
 
 const plugin: ServerPluginDefinition = {
   id: "screenshot",
@@ -9,6 +10,7 @@ const plugin: ServerPluginDefinition = {
   httpRoutes: {
     "POST /api/screenshots/:id": handleCreate,
     "GET /api/screenshots/:id": handleGet,
+    "POST /api/screenshots/:id/file": handleSaveFile,
   },
 };
 export default plugin;

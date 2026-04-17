@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ToolsPane, type Tool, type DrawSettings } from "./tools-pane";
 import { CropOverlay, type CropRect } from "./crop-overlay";
 import { DrawOverlay, type Stroke } from "./draw-overlay";
+import { PromptForm } from "./prompt-form";
 
 export function ScreenshotView({ id }: { id: string }) {
   const [imageBlob, setImageBlob] = useState<Blob | null>(null);
@@ -51,25 +52,28 @@ export function ScreenshotView({ id }: { id: string }) {
 
   return (
     <div className="flex h-[calc(100svh-3rem)] min-h-0 w-full overflow-hidden">
-      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/40">
-        {error ? (
-          <div className="text-sm text-muted-foreground">{error}</div>
-        ) : !imageBlob ? (
-          <div className="text-sm text-muted-foreground">Loading…</div>
-        ) : (
-          <ImageStage
-            blob={imageBlob}
-            tool={tool}
-            onCropCommit={async (rect) => {
-              const next = await applyCrop(imageBlob, rect);
-              setImageBlob(next);
-              resetEdits();
-            }}
-            strokes={strokes}
-            onStrokesChange={setStrokes}
-            drawSettings={draw}
-          />
-        )}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/40">
+          {error ? (
+            <div className="text-sm text-muted-foreground">{error}</div>
+          ) : !imageBlob ? (
+            <div className="text-sm text-muted-foreground">Loading…</div>
+          ) : (
+            <ImageStage
+              blob={imageBlob}
+              tool={tool}
+              onCropCommit={async (rect) => {
+                const next = await applyCrop(imageBlob, rect);
+                setImageBlob(next);
+                resetEdits();
+              }}
+              strokes={strokes}
+              onStrokesChange={setStrokes}
+              drawSettings={draw}
+            />
+          )}
+        </div>
+        <PromptForm id={id} getBlob={() => imageBlob} />
       </div>
       <div className="w-72 shrink-0 border-l bg-background">
         <ToolsPane
