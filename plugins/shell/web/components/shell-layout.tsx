@@ -126,6 +126,20 @@ export function ShellLayout() {
     fn(message, opts);
   });
 
+  // Surface async errors (unhandled promise rejections) as toasts. Without
+  // this, errors thrown inside async click handlers vanish into the devtools
+  // console and the UI silently stalls.
+  useEffect(() => {
+    const onRejection = (e: PromiseRejectionEvent) => {
+      const reason = e.reason;
+      const message =
+        reason instanceof Error ? reason.message : String(reason);
+      toast.error(message);
+    };
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => window.removeEventListener("unhandledrejection", onRejection);
+  }, []);
+
   return (
     <>
     <TooltipProvider>

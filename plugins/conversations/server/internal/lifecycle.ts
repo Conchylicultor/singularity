@@ -4,6 +4,7 @@ import { _attempts, _tasks } from "@plugins/tasks/server/schema_internal";
 import { attemptsResource } from "@plugins/tasks/server/api";
 import { Runtime } from "../api";
 import type { ConversationModel } from "../model";
+import { conversations } from "../schema";
 import { _conversations } from "../schema_internal";
 import type { Conversation } from "../../shared/types";
 import { forkDatabase } from "./db-fork";
@@ -84,21 +85,28 @@ export async function createConversation(
 
   // Insert the DB row BEFORE the runtime spawns so the poller never observes
   // a live session without a matching DB row.
-  const [row] = await db
+  await db
     .insert(_conversations)
     .values({
       id: conversationId,
       attemptId,
       runtime: runtimeId,
       model,
-    })
-    .returning();
+    });
 
   await runtime.create(conversationId, worktreePath, {
     prompt: opts.prompt,
     model,
   });
-  return { ...row!, worktreePath, active: row!.status !== "gone" } as Conversation;
+
+  // Read back from the public view so the response matches ConversationSchema
+  // exactly (includes taskId, worktreePath, active).
+  const [row] = await db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.id, conversationId))
+    .limit(1);
+  return row as Conversation;
 }
 
 export async function deleteConversation(id: string): Promise<void> {
