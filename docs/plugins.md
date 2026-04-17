@@ -97,6 +97,14 @@
     - `GET /api/logs/channels`
     - `WS /ws/logs`
 
+- **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Stores in-flight screenshots so a freshly opened tab can fetch them.
+  - Contributes:
+    - `Shell.Toolbar` (group `actions`) → `ScreenshotButton`
+    - `Shell.Route` `/screenshot/:id`
+  - Server:
+    - `POST /api/screenshots`
+    - `GET /api/screenshots/:id`
+
 - **`shell`** — Foundational app layout; defines the slots and commands most other plugins extend.
   - Defines:
     - Slots: `Shell.Sidebar`, `Shell.Toolbar`, `Shell.Route`
