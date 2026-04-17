@@ -1,7 +1,11 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { _attempts, _tasks } from "@plugins/tasks/server/schema_internal";
-import { attemptsResource } from "@plugins/tasks/server/api";
+import {
+  CONVERSATIONS_META_TASK_ID,
+  attemptsResource,
+  tasksResource,
+} from "@plugins/tasks/server/api";
 import { Runtime } from "../api";
 import type { ConversationModel } from "../model";
 import { conversations } from "../schema";
@@ -60,9 +64,14 @@ export async function createConversation(
         .slice(2, 8)}`;
       const [t] = await db
         .insert(_tasks)
-        .values({ id: newTaskId, title: synthesiseTitle(opts.prompt) })
+        .values({
+          id: newTaskId,
+          parentId: CONVERSATIONS_META_TASK_ID,
+          title: synthesiseTitle(opts.prompt),
+        })
         .returning();
       taskId = t!.id;
+      tasksResource.notify();
     }
     // Seconds-precision timestamp + random suffix: readable in URLs while
     // avoiding tmux session-name collisions when two conversations are

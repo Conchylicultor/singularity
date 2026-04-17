@@ -11,6 +11,10 @@ import {
   tasksResource,
 } from "./internal/resources";
 import { startPushWatcher } from "./internal/push-watcher";
+import {
+  backfillConversationsMetaParent,
+  ensureConversationsMetaTask,
+} from "./internal/meta-conversations";
 
 const plugin: ServerPluginDefinition = {
   id: "tasks",
@@ -25,6 +29,15 @@ const plugin: ServerPluginDefinition = {
     "GET /api/repo-info": handleRepoInfo,
   },
   resources: [tasksResource, attemptsResource, pushesResource],
-  onReady: startPushWatcher,
+  onReady: async () => {
+    const created = await ensureConversationsMetaTask();
+    if (created) {
+      const n = await backfillConversationsMetaParent();
+      console.log(
+        `[tasks] created Conversations meta task; backfilled ${n} orphan root task(s)`,
+      );
+    }
+    await startPushWatcher();
+  },
 };
 export default plugin;

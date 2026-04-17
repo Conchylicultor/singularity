@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { attempts } from "@plugins/tasks/server/schema";
 import { _attempts, _tasks } from "@plugins/tasks/server/schema_internal";
+import { CONVERSATIONS_META_TASK_ID } from "@plugins/tasks/server/api";
 import { Runtime, type RuntimeInfo } from "../api";
 import { _conversations } from "../schema_internal";
 import type { ConversationStatus } from "../../shared/types";
@@ -88,7 +89,11 @@ async function tick(): Promise<void> {
           await db.transaction(async (tx) => {
             await tx
               .insert(_tasks)
-              .values({ id, title: taskTitle })
+              .values({
+                id,
+                parentId: CONVERSATIONS_META_TASK_ID,
+                title: taskTitle,
+              })
               .onConflictDoNothing();
             await tx
               .insert(_attempts)
