@@ -1,16 +1,71 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MdChevronRight, MdAdd } from "react-icons/md";
+import {
+  MdChevronRight,
+  MdAdd,
+  MdCheckCircle,
+  MdRadioButtonUnchecked,
+  MdTimelapse,
+  MdPauseCircle,
+  MdCancel,
+  MdIncompleteCircle,
+} from "react-icons/md";
+import type { IconType } from "react-icons";
 import { useResource } from "@core";
 import { tasksResource } from "../../shared/resources";
 import { Tasks as TasksSlots } from "../slots";
 import { Tasks as TasksCommands } from "../commands";
 import { cn } from "@/lib/utils";
 
+type TaskStatus =
+  | "new"
+  | "in_progress"
+  | "attempted"
+  | "done"
+  | "held"
+  | "dropped";
+
 type Task = {
   id: string;
   parentId: string | null;
   title: string;
   expanded: boolean;
+  status: TaskStatus;
+};
+
+const STATUS_META: Record<
+  TaskStatus,
+  { icon: IconType; className: string; label: string }
+> = {
+  new: {
+    icon: MdRadioButtonUnchecked,
+    className: "text-muted-foreground/60",
+    label: "New",
+  },
+  in_progress: {
+    icon: MdTimelapse,
+    className: "text-blue-600 dark:text-blue-400",
+    label: "In progress",
+  },
+  attempted: {
+    icon: MdIncompleteCircle,
+    className: "text-muted-foreground",
+    label: "Attempted",
+  },
+  done: {
+    icon: MdCheckCircle,
+    className: "text-emerald-600 dark:text-emerald-400",
+    label: "Done",
+  },
+  held: {
+    icon: MdPauseCircle,
+    className: "text-amber-600 dark:text-amber-400",
+    label: "Held",
+  },
+  dropped: {
+    icon: MdCancel,
+    className: "text-muted-foreground/50",
+    label: "Dropped",
+  },
 };
 
 type TreeNode = Task & { children: TreeNode[] };
@@ -234,6 +289,7 @@ function TaskNode({
             )}
           />
         </button>
+        <StatusIcon status={node.status} />
         <input
           ref={inputRef}
           value={title}
@@ -255,7 +311,12 @@ function TaskNode({
               inputRef.current?.blur();
             }
           }}
-          className="flex-1 truncate bg-transparent outline-none"
+          className={cn(
+            "flex-1 truncate bg-transparent outline-none",
+            node.status === "dropped" &&
+              "text-muted-foreground/70 line-through italic",
+            node.status === "done" && "text-muted-foreground",
+          )}
         />
         {actions.length > 0 && (
           <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100">
@@ -297,5 +358,19 @@ function TaskNode({
         </div>
       )}
     </div>
+  );
+}
+
+function StatusIcon({ status }: { status: TaskStatus }) {
+  const meta = STATUS_META[status];
+  const Icon = meta.icon;
+  return (
+    <span
+      title={meta.label}
+      aria-label={meta.label}
+      className="flex size-5 shrink-0 items-center justify-center"
+    >
+      <Icon className={cn("size-4", meta.className)} />
+    </span>
   );
 }
