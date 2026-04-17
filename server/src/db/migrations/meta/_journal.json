@@ -141,6 +141,13 @@
       "tag": "20260417_120500_996ffe6e__backfill_untitled_conversation_tasks",
       "hash": "996ffe6e",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776429892000,
+      "tag": "20260417_124452_66316dff__add_task_rank",
+      "hash": "66316dff",
+      "breakpoints": true
     }
   ]
 }

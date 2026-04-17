@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MdChevronRight,
   MdAdd,
@@ -10,8 +10,22 @@ import {
   MdIncompleteCircle,
   MdFilterAlt,
   MdFilterAltOff,
+  MdDragIndicator,
 } from "react-icons/md";
 import type { IconType } from "react-icons";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  pointerWithin,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { generateKeyBetween } from "fractional-indexing";
 import { useResource } from "@core";
 import { tasksResource } from "../../shared/resources";
 import { Tasks as TasksSlots } from "../slots";
@@ -30,9 +44,12 @@ type Task = {
   id: string;
   parentId: string | null;
   title: string;
+  rank: string;
   expanded: boolean;
   status: TaskStatus;
 };
+
+type DropZone = "before" | "after" | "child";
 
 const STATUS_META: Record<
   TaskStatus,
@@ -86,12 +103,84 @@ function buildTree(rows: readonly Task[]): TreeNode[] {
   return roots;
 }
 
-async function patchTask(id: string, patch: Partial<Pick<Task, "title" | "expanded">>) {
+type TaskPatch = {
+  title?: string;
+  expanded?: boolean;
+  parentId?: string | null;
+  rank?: string;
+};
+
+async function patchTask(id: string, patch: TaskPatch) {
   await fetch(`/api/tasks/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
   });
+}
+
+function isDescendant(
+  rows: readonly Task[],
+  ancestorId: string,
+  candidateId: string,
+): boolean {
+  const parents = new Map(rows.map((r) => [r.id, r.parentId] as const));
+  let cur: string | null = candidateId;
+  const seen = new Set<string>();
+  while (cur) {
+    if (cur === ancestorId) return true;
+    if (seen.has(cur)) return false;
+    seen.add(cur);
+    cur = parents.get(cur) ?? null;
+  }
+  return false;
+}
+
+function computeDrop(
+  rows: readonly Task[],
+  draggedId: string,
+  zone: DropZone,
+  targetId: string,
+): { parentId: string | null; rank: string } | null {
+  const target = rows.find((r) => r.id === targetId);
+  if (!target) return null;
+
+  if (zone === "child") {
+    const children = rows
+      .filter((r) => r.parentId === target.id && r.id !== draggedId)
+      .sort((a, b) => a.rank.localeCompare(b.rank));
+    const last = children[children.length - 1];
+    try {
+      return {
+        parentId: target.id,
+        rank: generateKeyBetween(last?.rank ?? null, null),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  const siblings = rows
+    .filter((r) => r.parentId === target.parentId && r.id !== draggedId)
+    .sort((a, b) => a.rank.localeCompare(b.rank));
+  const idx = siblings.findIndex((s) => s.id === target.id);
+  if (idx === -1) return null;
+
+  try {
+    if (zone === "before") {
+      const prev = siblings[idx - 1];
+      return {
+        parentId: target.parentId,
+        rank: generateKeyBetween(prev?.rank ?? null, target.rank),
+      };
+    }
+    const next = siblings[idx + 1];
+    return {
+      parentId: target.parentId,
+      rank: generateKeyBetween(target.rank, next?.rank ?? null),
+    };
+  } catch {
+    return null;
+  }
 }
 
 let pendingFocusAcrossMount: string | null = null;
@@ -147,52 +236,114 @@ export function TasksList({
   const tree = buildTree(scoped);
   const visibleTree = hideCompleted ? hideCompletedSubtrees(tree) : tree;
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+  );
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeTitle = useMemo(
+    () => (activeId ? rows.find((r) => r.id === activeId)?.title ?? null : null),
+    [activeId, rows],
+  );
+
+  const onDragStart = useCallback((event: DragStartEvent) => {
+    const id = event.active.data.current?.id as string | undefined;
+    setActiveId(id ?? null);
+  }, []);
+
+  const onDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveId(null);
+      const { active, over } = event;
+      if (!over) return;
+      const draggedId = active.data.current?.id as string | undefined;
+      const zone = over.data.current?.zone as DropZone | undefined;
+      const targetId = over.data.current?.targetId as string | undefined;
+      if (!draggedId || !zone || !targetId) return;
+      if (draggedId === targetId) return;
+      if (isDescendant(rows, draggedId, targetId)) return;
+      const dest = computeDrop(rows, draggedId, zone, targetId);
+      if (!dest) return;
+      const current = rows.find((r) => r.id === draggedId);
+      if (
+        current &&
+        current.parentId === dest.parentId &&
+        current.rank === dest.rank
+      ) {
+        return;
+      }
+      void patchTask(draggedId, dest);
+      if (zone === "child") {
+        const target = rows.find((r) => r.id === targetId);
+        if (target && !target.expanded) {
+          void patchTask(targetId, { expanded: true });
+        }
+      }
+    },
+    [rows],
+  );
+
   return (
-    <div className="flex flex-col gap-0.5">
-      <div className="mb-1 flex items-center justify-end">
-        <button
-          type="button"
-          onClick={() => setHideCompleted((v) => !v)}
-          aria-pressed={hideCompleted}
-          title={hideCompleted ? "Show completed" : "Hide completed"}
-          className={cn(
-            "hover:bg-accent flex w-fit items-center gap-1 rounded px-2 py-1 text-xs",
-            hideCompleted ? "text-foreground" : "text-muted-foreground",
-          )}
-        >
-          {hideCompleted ? (
-            <MdFilterAlt className="size-4" />
-          ) : (
-            <MdFilterAltOff className="size-4" />
-          )}
-          {hideCompleted ? "Completed hidden" : "Hide completed"}
-        </button>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={pointerWithin}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragCancel={() => setActiveId(null)}
+    >
+      <div className="flex flex-col gap-0.5">
+        <div className="mb-1 flex items-center justify-end">
+          <button
+            type="button"
+            onClick={() => setHideCompleted((v) => !v)}
+            aria-pressed={hideCompleted}
+            title={hideCompleted ? "Show completed" : "Hide completed"}
+            className={cn(
+              "hover:bg-accent flex w-fit items-center gap-1 rounded px-2 py-1 text-xs",
+              hideCompleted ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {hideCompleted ? (
+              <MdFilterAlt className="size-4" />
+            ) : (
+              <MdFilterAltOff className="size-4" />
+            )}
+            {hideCompleted ? "Completed hidden" : "Hide completed"}
+          </button>
+        </div>
+        {visibleTree.map((node) => (
+          <TaskNode
+            key={node.id}
+            node={node}
+            depth={0}
+            selectedId={selectedId}
+            onToggle={toggle}
+            onAdd={createTask}
+            onSelect={onSelect}
+            actions={actions}
+            pendingFocusId={pendingFocusId}
+            clearPendingFocus={() => setPendingFocusId(null)}
+            activeId={activeId}
+          />
+        ))}
+        {!rootTaskId && (
+          <button
+            type="button"
+            onClick={() => createTask(null)}
+            className="text-muted-foreground hover:bg-accent hover:text-foreground mt-1 flex w-fit items-center gap-1 rounded px-2 py-1 text-sm"
+          >
+            <MdAdd className="size-4" />
+            Add
+          </button>
+        )}
       </div>
-      {visibleTree.map((node) => (
-        <TaskNode
-          key={node.id}
-          node={node}
-          depth={0}
-          selectedId={selectedId}
-          onToggle={toggle}
-          onAdd={createTask}
-          onSelect={onSelect}
-          actions={actions}
-          pendingFocusId={pendingFocusId}
-          clearPendingFocus={() => setPendingFocusId(null)}
-        />
-      ))}
-      {!rootTaskId && (
-        <button
-          type="button"
-          onClick={() => createTask(null)}
-          className="text-muted-foreground hover:bg-accent hover:text-foreground mt-1 flex w-fit items-center gap-1 rounded px-2 py-1 text-sm"
-        >
-          <MdAdd className="size-4" />
-          Add
-        </button>
-      )}
-    </div>
+      <DragOverlay dropAnimation={null}>
+        {activeTitle !== null ? (
+          <div className="bg-background/90 border-accent rounded border px-2 py-1 text-sm shadow">
+            {activeTitle || "Untitled"}
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }
 
@@ -237,6 +388,7 @@ function TaskNode({
   actions,
   pendingFocusId,
   clearPendingFocus,
+  activeId,
 }: {
   node: TreeNode;
   depth: number;
@@ -247,10 +399,31 @@ function TaskNode({
   actions: readonly ActionContribution[];
   pendingFocusId: string | null;
   clearPendingFocus: () => void;
+  activeId: string | null;
 }) {
   const isOpen = node.expanded;
   const hasChildren = node.children.length > 0;
   const isSelected = selectedId === node.id;
+  const isDragging = activeId === node.id;
+
+  const dragData = { id: node.id, parentId: node.parentId, rank: node.rank };
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+  } = useDraggable({ id: `drag:${node.id}`, data: dragData });
+  const { isOver: isOverBefore, setNodeRef: setBeforeRef } = useDroppable({
+    id: `before:${node.id}`,
+    data: { zone: "before" as const, targetId: node.id },
+  });
+  const { isOver: isOverAfter, setNodeRef: setAfterRef } = useDroppable({
+    id: `after:${node.id}`,
+    data: { zone: "after" as const, targetId: node.id },
+  });
+  const { isOver: isOverChild, setNodeRef: setChildRef } = useDroppable({
+    id: `child:${node.id}`,
+    data: { zone: "child" as const, targetId: node.id },
+  });
 
   const [title, setTitle] = useState(node.title);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -296,73 +469,109 @@ function TaskNode({
 
   return (
     <div>
-      <div
-        className={cn(
-          "group flex items-center gap-1 rounded px-1 py-1 text-sm",
-          "hover:bg-accent",
-          isSelected && "bg-accent",
-        )}
-        style={{ paddingLeft: depth * 16 + 4 }}
-      >
+      <div className="group/row relative">
         <button
           type="button"
-          onClick={() => onToggle(node.id)}
-          aria-label={isOpen ? "Collapse" : "Expand"}
+          ref={setDragRef}
+          aria-label="Drag to reorder"
+          {...attributes}
+          {...listeners}
           className={cn(
-            "flex size-5 shrink-0 items-center justify-center rounded",
-            "hover:bg-background/60",
-            hasChildren
-              ? "opacity-40 group-hover:opacity-100"
-              : "opacity-0 group-hover:opacity-60",
+            "absolute top-1/2 z-10 flex size-5 -translate-y-1/2 cursor-grab items-center justify-center rounded",
+            "text-muted-foreground hover:bg-background/60 active:cursor-grabbing",
+            "opacity-0 group-hover/row:opacity-60",
           )}
+          style={{ left: depth * 16 - 16 }}
         >
-          <MdChevronRight
+          <MdDragIndicator className="size-4" />
+        </button>
+        <div
+          ref={setChildRef}
+          className={cn(
+            "group flex items-center gap-1 rounded px-1 py-1 text-sm",
+            "hover:bg-accent",
+            isSelected && "bg-accent",
+            isDragging && "opacity-40",
+            isOverChild && "bg-accent ring-primary/40 ring-1",
+          )}
+          style={{ paddingLeft: depth * 16 + 4 }}
+        >
+          <button
+            type="button"
+            onClick={() => onToggle(node.id)}
+            aria-label={isOpen ? "Collapse" : "Expand"}
             className={cn(
-              "size-4 transition-transform",
-              isOpen && "rotate-90",
+              "flex size-5 shrink-0 items-center justify-center rounded",
+              "hover:bg-background/60",
+              hasChildren
+                ? "opacity-40 group-hover:opacity-100"
+                : "opacity-0 group-hover:opacity-60",
+            )}
+          >
+            <MdChevronRight
+              className={cn(
+                "size-4 transition-transform",
+                isOpen && "rotate-90",
+              )}
+            />
+          </button>
+          <StatusIcon status={node.status} />
+          <input
+            ref={inputRef}
+            value={title}
+            onChange={(e) => onChange(e.target.value)}
+            onMouseDown={() => {
+              if (!isSelected) {
+                pendingFocusAcrossMount = node.id;
+                if (onSelect) {
+                  onSelect(node.id);
+                } else {
+                  TasksCommands.OpenTask({ id: node.id });
+                }
+              }
+            }}
+            onBlur={onBlur}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                inputRef.current?.blur();
+              }
+            }}
+            className={cn(
+              "flex-1 truncate bg-transparent outline-none",
+              node.status === "dropped" &&
+                "text-muted-foreground/70 line-through italic",
+              node.status === "done" && "text-muted-foreground",
             )}
           />
-        </button>
-        <StatusIcon status={node.status} />
-        <input
-          ref={inputRef}
-          value={title}
-          onChange={(e) => onChange(e.target.value)}
-          onMouseDown={() => {
-            if (!isSelected) {
-              pendingFocusAcrossMount = node.id;
-              if (onSelect) {
-                onSelect(node.id);
-              } else {
-                TasksCommands.OpenTask({ id: node.id });
-              }
-            }
-          }}
-          onBlur={onBlur}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              inputRef.current?.blur();
-            }
-          }}
-          className={cn(
-            "flex-1 truncate bg-transparent outline-none",
-            node.status === "dropped" &&
-              "text-muted-foreground/70 line-through italic",
-            node.status === "done" && "text-muted-foreground",
+          {actions.length > 0 && (
+            <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100">
+              {actions.map((a) => (
+                <a.component
+                  key={a.id}
+                  taskId={node.id}
+                  hasChildren={hasChildren}
+                />
+              ))}
+            </div>
           )}
-        />
-        {actions.length > 0 && (
-          <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100">
-            {actions.map((a) => (
-              <a.component
-                key={a.id}
-                taskId={node.id}
-                hasChildren={hasChildren}
-              />
-            ))}
-          </div>
-        )}
+        </div>
+        <div
+          ref={setBeforeRef}
+          className="pointer-events-none absolute inset-x-0 top-0 h-[6px]"
+        >
+          {isOverBefore && (
+            <div className="bg-primary absolute inset-x-1 top-0 h-[2px] rounded-full" />
+          )}
+        </div>
+        <div
+          ref={setAfterRef}
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[6px]"
+        >
+          {isOverAfter && (
+            <div className="bg-primary absolute inset-x-1 bottom-0 h-[2px] rounded-full" />
+          )}
+        </div>
       </div>
       {isOpen && (
         <div>
@@ -378,6 +587,7 @@ function TaskNode({
               actions={actions}
               pendingFocusId={pendingFocusId}
               clearPendingFocus={clearPendingFocus}
+              activeId={activeId}
             />
           ))}
           <button

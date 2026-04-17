@@ -31,5 +31,5 @@ export const tasksResource = defineResource({
   mode: "push",
   dependsOn: [{ resource: attemptsResource }],
   loader: async (): Promise<Task[]> =>
-    db.select().from(tasks).orderBy(asc(tasks.createdAt)),
+    db.select().from(tasks).orderBy(asc(tasks.rank), asc(tasks.createdAt)),
 });
