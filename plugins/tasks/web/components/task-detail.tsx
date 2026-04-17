@@ -2,16 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { LaunchButtons } from "@plugins/launch/web";
 import { Button } from "@/components/ui/button";
 import { TaskEvents } from "./task-events";
-
-type Task = {
-  id: string;
-  parentId: string | null;
-  title: string;
-  description: string | null;
-  status: "new" | "in_progress" | "attempted" | "done" | "held" | "dropped";
-  droppedAt: string | null;
-  heldAt: string | null;
-};
+import { useResource } from "@core";
+import { tasksResource } from "../../shared/resources";
+import type { Task } from "../../server/schema";
 
 const STATUS_LABELS: Record<Task["status"], string> = {
   new: "New",
@@ -32,26 +25,22 @@ const STATUS_CLASSES: Record<Task["status"], string> = {
 };
 
 export function TaskDetail({ taskId }: { taskId: string }) {
-  const [task, setTask] = useState<Task | null>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const { data } = useResource(tasksResource);
+  const task = (data as Task[] | undefined)?.find((t) => t.id === taskId) ?? null;
+
+  const [title, setTitle] = useState(task?.title ?? "");
+  const [description, setDescription] = useState(task?.description ?? "");
   const [saving, setSaving] = useState(false);
 
+  const titleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const descTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync local editing state from live resource when not actively editing.
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      const res = await fetch(`/api/tasks/${taskId}`);
-      if (!res.ok) return;
-      const t = (await res.json()) as Task;
-      if (cancelled) return;
-      setTask(t);
-      setTitle(t.title);
-      setDescription(t.description ?? "");
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [taskId]);
+    if (!task) return;
+    if (!titleTimer.current) setTitle(task.title);
+    if (!descTimer.current) setDescription(task.description ?? "");
+  }, [task?.title, task?.description]);
 
   const save = useCallback(
     async (
@@ -70,9 +59,8 @@ export function TaskDetail({ taskId }: { taskId: string }) {
           body: JSON.stringify(patch),
         });
         if (res.ok) {
-          // Refresh so derived status badge stays in sync after a drop toggle.
-          const refreshed = (await res.json()) as Task;
-          setTask((prev) => (prev ? { ...prev, ...refreshed } : prev));
+          // tasksResource broadcast will update task status; consume the body.
+          await res.json();
         }
       } finally {
         setSaving(false);
@@ -81,13 +69,11 @@ export function TaskDetail({ taskId }: { taskId: string }) {
     [taskId],
   );
 
-  const titleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const descTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const onTitleChange = (v: string) => {
     setTitle(v);
     if (titleTimer.current) clearTimeout(titleTimer.current);
     titleTimer.current = setTimeout(() => {
+      titleTimer.current = null;
       void save({ title: v.trim() || "Untitled" });
     }, 500);
   };
@@ -96,6 +82,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
     setDescription(v);
     if (descTimer.current) clearTimeout(descTimer.current);
     descTimer.current = setTimeout(() => {
+      descTimer.current = null;
       void save({ description: v });
     }, 500);
   };
