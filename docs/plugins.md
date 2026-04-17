@@ -53,6 +53,9 @@
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Contributes:
             - `Conversation.Toolbar` (group `status`) → `StatusBadge`
+        - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
+          - Contributes:
+            - `Conversation.Toolbar` → `TasksButton`
         - **`title`** — Clickable conversation title that opens a popover to create a child task under the conversation's parent task.
           - Contributes:
             - `Conversation.Title` → `ConversationTitle`

@@ -39,7 +39,15 @@ async function patchTask(id: string, patch: Partial<Pick<Task, "title" | "expand
 
 let pendingFocusAcrossMount: string | null = null;
 
-export function TasksList({ selectedId }: { selectedId?: string }) {
+export function TasksList({
+  selectedId,
+  rootTaskId,
+  onSelect,
+}: {
+  selectedId?: string;
+  rootTaskId?: string;
+  onSelect?: (id: string) => void;
+}) {
   const { data } = useResource(tasksResource);
   const rows = (data ?? []) as Task[];
   const actions = TasksSlots.TaskActions.useContributions();
@@ -59,9 +67,13 @@ export function TasksList({ selectedId }: { selectedId?: string }) {
       const task = (await res.json()) as Task;
       if (parentId) void patchTask(parentId, { expanded: true });
       pendingFocusAcrossMount = task.id;
-      TasksCommands.OpenTask({ id: task.id });
+      if (onSelect) {
+        onSelect(task.id);
+      } else {
+        TasksCommands.OpenTask({ id: task.id });
+      }
     },
-    [],
+    [onSelect],
   );
 
   const toggle = useCallback(
@@ -73,7 +85,8 @@ export function TasksList({ selectedId }: { selectedId?: string }) {
     [rows],
   );
 
-  const tree = buildTree(rows);
+  const scoped = rootTaskId ? filterSubtree(rows, rootTaskId) : rows;
+  const tree = buildTree(scoped);
 
   return (
     <div className="flex flex-col gap-0.5">
@@ -85,21 +98,39 @@ export function TasksList({ selectedId }: { selectedId?: string }) {
           selectedId={selectedId}
           onToggle={toggle}
           onAdd={createTask}
+          onSelect={onSelect}
           actions={actions}
           pendingFocusId={pendingFocusId}
           clearPendingFocus={() => setPendingFocusId(null)}
         />
       ))}
-      <button
-        type="button"
-        onClick={() => createTask(null)}
-        className="text-muted-foreground hover:bg-accent hover:text-foreground mt-1 flex w-fit items-center gap-1 rounded px-2 py-1 text-sm"
-      >
-        <MdAdd className="size-4" />
-        Add
-      </button>
+      {!rootTaskId && (
+        <button
+          type="button"
+          onClick={() => createTask(null)}
+          className="text-muted-foreground hover:bg-accent hover:text-foreground mt-1 flex w-fit items-center gap-1 rounded px-2 py-1 text-sm"
+        >
+          <MdAdd className="size-4" />
+          Add
+        </button>
+      )}
     </div>
   );
+}
+
+function filterSubtree(rows: readonly Task[], rootId: string): Task[] {
+  const keep = new Set<string>([rootId]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const r of rows) {
+      if (r.parentId && keep.has(r.parentId) && !keep.has(r.id)) {
+        keep.add(r.id);
+        grew = true;
+      }
+    }
+  }
+  return rows.filter((r) => keep.has(r.id));
 }
 
 type ActionContribution = {
@@ -113,6 +144,7 @@ function TaskNode({
   selectedId,
   onToggle,
   onAdd,
+  onSelect,
   actions,
   pendingFocusId,
   clearPendingFocus,
@@ -122,6 +154,7 @@ function TaskNode({
   selectedId?: string;
   onToggle: (id: string) => void;
   onAdd: (parentId: string | null) => void;
+  onSelect?: (id: string) => void;
   actions: readonly ActionContribution[];
   pendingFocusId: string | null;
   clearPendingFocus: () => void;
@@ -208,7 +241,11 @@ function TaskNode({
           onMouseDown={() => {
             if (!isSelected) {
               pendingFocusAcrossMount = node.id;
-              TasksCommands.OpenTask({ id: node.id });
+              if (onSelect) {
+                onSelect(node.id);
+              } else {
+                TasksCommands.OpenTask({ id: node.id });
+              }
             }
           }}
           onBlur={onBlur}
@@ -242,6 +279,7 @@ function TaskNode({
               selectedId={selectedId}
               onToggle={onToggle}
               onAdd={onAdd}
+              onSelect={onSelect}
               actions={actions}
               pendingFocusId={pendingFocusId}
               clearPendingFocus={clearPendingFocus}
