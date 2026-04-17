@@ -48,9 +48,9 @@ export function ConversationList() {
     };
   }, []);
 
-  const deleteConversation = async (name: string, e: React.MouseEvent) => {
+  const closeConversation = async (name: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    await fetch(`/api/conversations?name=${name}`, { method: "DELETE" });
+    await fetch(`/api/conversations/${name}/close`, { method: "POST" });
   };
 
   return (
@@ -102,7 +102,7 @@ export function ConversationList() {
                 </div>
               </SidebarMenuButton>
               <SidebarMenuAction
-                onClick={(e: React.MouseEvent) => deleteConversation(conversation.id, e)}
+                onClick={(e: React.MouseEvent) => closeConversation(conversation.id, e)}
                 className="opacity-0 group-hover/menu-item:opacity-100"
               >
                 <MdClose className="size-3.5" />
