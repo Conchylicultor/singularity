@@ -38,9 +38,18 @@
             - `GET /api/conversations/:id/file`
             - `GET /api/conversations/:id/diff`
           - Plugins:
+            - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
+              - Contributes:
+                - `FilePane.Renderer` "Diff" → `DiffView`
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
               - Contributes:
                 - `Code.ToolbarButton` → `DocsButton`
+            - **`markdown`** — Rendered markdown preview for .md and .mdx files.
+              - Contributes:
+                - `FilePane.Renderer` "Markdown" → `MarkdownView`
+            - **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
+              - Contributes:
+                - `FilePane.Renderer` "Raw" → `RawView`
             - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file.
               - Contributes:
                 - `Code.ToolbarButton` → `ReviewButton`
@@ -72,10 +81,6 @@
       - Server:
         - Uses: `conversations.Runtime`
 
-- **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
-  - Contributes:
-    - `FilePane.Renderer` "Diff" → `DiffView`
-
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Contributes:
     - `Core.Root` → `ReconnectWatcher`
@@ -91,14 +96,6 @@
     - API: `Log`
     - `GET /api/logs/channels`
     - `WS /ws/logs`
-
-- **`markdown`** — Rendered markdown preview for .md and .mdx files.
-  - Contributes:
-    - `FilePane.Renderer` "Markdown" → `MarkdownView`
-
-- **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
-  - Contributes:
-    - `FilePane.Renderer` "Raw" → `RawView`
 
 - **`shell`** — Foundational app layout; defines the slots and commands most other plugins extend.
   - Defines:

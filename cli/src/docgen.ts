@@ -556,8 +556,18 @@ export function renderPluginDocs({ root }: GenerateDocsOptions): string {
 
   const roots: PluginInfo[] = [];
   for (const info of byDir.values()) {
-    if (info.parentDir && byDir.has(info.parentDir)) {
-      byDir.get(info.parentDir)!.children.push(info);
+    let parent = info.parentDir;
+    while (parent && !byDir.has(parent)) {
+      const rel = relative(pluginsRoot, parent);
+      const segs = rel.split(/[\\/]+/);
+      if (segs.length >= 3 && segs[segs.length - 2] === "plugins") {
+        parent = join(pluginsRoot, ...segs.slice(0, segs.length - 2));
+      } else {
+        parent = null;
+      }
+    }
+    if (parent && byDir.has(parent)) {
+      byDir.get(parent)!.children.push(info);
     } else {
       roots.push(info);
     }
