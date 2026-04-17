@@ -12,10 +12,10 @@ const user = process.env.PGUSER ?? process.env.USER ?? "postgres";
 
 export const connectionString = `postgres://${user}@${host}:${port}/${worktree}`;
 
-export const sql = postgres(connectionString, { max: 10 });
+export const sql = postgres(connectionString, { max: 5, idle_timeout: 20 });
 export const db = drizzle(sql, { schema });
 
 export const adminSql = postgres(
   `postgres://${user}@${host}:${port}/postgres`,
-  { max: 1 },
+  { max: 1, idle_timeout: 20 },
 );
