@@ -115,12 +115,15 @@ export function registerPush(program: Command) {
       }
 
       // --from-main: rebase onto origin/main and push. No worktree merge.
+      // Split fetch + rebase because `git pull --rebase --exec` isn't a valid
+      // flag combination on Apple Git (the --exec doesn't propagate to rebase).
       if (opts.fromMain) {
         console.log("Pulling main...");
+        await exec(["git", "fetch", "origin", "main"]);
         await exec([
           "git",
-          "pull",
-          "--rebase",
+          "rebase",
+          "origin/main",
           "--exec",
           `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
         ]);

@@ -1,6 +1,7 @@
 import { and, isNull, ne, sql } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { _attempts, _tasks } from "../schema_internal";
+import { nextRankUnder } from "./rank";
 import { tasksResource } from "./resources";
 
 export const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
@@ -9,9 +10,10 @@ const TITLE = "Conversations";
 // Idempotent. Returns true iff this call inserted the row (used as the
 // one-shot signal for the backfill).
 export async function ensureConversationsMetaTask(): Promise<boolean> {
+  const rank = await nextRankUnder(null);
   const rows = await db
     .insert(_tasks)
-    .values({ id: CONVERSATIONS_META_TASK_ID, title: TITLE })
+    .values({ id: CONVERSATIONS_META_TASK_ID, title: TITLE, rank })
     .onConflictDoNothing({ target: _tasks.id })
     .returning({ id: _tasks.id });
   return rows.length === 1;

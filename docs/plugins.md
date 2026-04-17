@@ -14,7 +14,7 @@
     - DB schema: `plugins/conversations/server/schema.ts`
   - Server:
     - API: `Runtime`, `conversationsResource`, `deleteConversation`, `ensureMainWorktreeRoot`, `getConversationRow`, `readConversationTurns`, `worktreePathFor`, `worktreePathForSync`
-    - Uses: `tasks.CONVERSATIONS_META_TASK_ID`, `tasks.attemptsResource`, `tasks.tasksResource`
+    - Uses: `tasks.CONVERSATIONS_META_TASK_ID`, `tasks.attemptsResource`, `tasks.nextRankUnder`, `tasks.tasksResource`
     - Resources: `conversations` (push)
     - `GET /api/conversations`
     - `GET /api/conversations/:id`
@@ -162,7 +162,7 @@
     - `Tasks.TaskActions` → `DeleteTaskAction`
     - `Tasks.TaskActions` → `LaunchAgentAction`
   - Server:
-    - API: `CONVERSATIONS_META_TASK_ID`, `attemptsResource`, `pushesResource`, `tasksResource`
+    - API: `CONVERSATIONS_META_TASK_ID`, `attemptsResource`, `nextRankUnder`, `pushesResource`, `tasksResource`
     - Uses: `conversations.conversationsResource`, `conversations.ensureMainWorktreeRoot`
     - Resources: `attempts` (push), `pushes` (push), `tasks` (push)
     - `GET /api/tasks`

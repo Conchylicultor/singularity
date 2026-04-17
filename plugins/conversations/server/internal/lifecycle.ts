@@ -4,6 +4,7 @@ import { _attempts, _tasks } from "@plugins/tasks/server/schema_internal";
 import {
   CONVERSATIONS_META_TASK_ID,
   attemptsResource,
+  nextRankUnder,
   tasksResource,
 } from "@plugins/tasks/server/api";
 import { Runtime } from "../api";
@@ -64,12 +65,14 @@ export async function createConversation(
       const newTaskId = `task-${Date.now()}-${Math.random()
         .toString(36)
         .slice(2, 8)}`;
+      const rank = await nextRankUnder(CONVERSATIONS_META_TASK_ID);
       const [t] = await db
         .insert(_tasks)
         .values({
           id: newTaskId,
           parentId: CONVERSATIONS_META_TASK_ID,
           title: synthesiseTitle(opts.prompt),
+          rank,
         })
         .returning();
       taskId = t!.id;

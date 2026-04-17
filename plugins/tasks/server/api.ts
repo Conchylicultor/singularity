@@ -4,3 +4,4 @@ export {
   tasksResource,
 } from "./internal/resources";
 export { CONVERSATIONS_META_TASK_ID } from "./internal/meta-conversations";
+export { nextRankUnder } from "./internal/rank";
