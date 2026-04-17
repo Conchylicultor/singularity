@@ -1,13 +1,9 @@
-import { MdAdd, MdArrowForward } from "react-icons/md";
+import { MdArrowForward } from "react-icons/md";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
-import {
-  ConversationSchema,
-  type ConversationModel,
-} from "@plugins/conversations/shared/types";
 import { useConversations } from "@plugins/conversations/web/use-conversations";
+import { LaunchButtons } from "@plugins/launch/web";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 
 function formatRelativeTime(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -25,16 +21,6 @@ export function WelcomeView() {
 
   const activeCount = conversations.filter((c) => c.active).length;
   const idleCount = conversations.length - activeCount;
-
-  const createConversation = async (model: ConversationModel) => {
-    const res = await fetch("/api/conversations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model }),
-    });
-    const conversation = ConversationSchema.parse(await res.json());
-    Shell.OpenPane(conversationPane({ session_id: conversation.id }));
-  };
 
   const openConversation = (name: string) => {
     Shell.OpenPane(conversationPane({ session_id: name }));
@@ -77,22 +63,7 @@ export function WelcomeView() {
         )}
 
         {/* New Conversation */}
-        <div className="flex w-full gap-2">
-          <Button
-            className="flex-1 gap-1"
-            onClick={() => createConversation("sonnet")}
-          >
-            <MdAdd className="size-4" />
-            Sonnet
-          </Button>
-          <Button
-            className="flex-1 gap-1"
-            onClick={() => createConversation("opus")}
-          >
-            <MdAdd className="size-4" />
-            Opus
-          </Button>
-        </div>
+        <LaunchButtons className="w-full" />
 
         {/* Recent Conversations */}
         {!isLoading && recentConversations.length > 0 && (

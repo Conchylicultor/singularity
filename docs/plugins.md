@@ -88,6 +88,8 @@
   - Server:
     - `GET /api/health`
 
+- **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
+
 - **`logs`** — System logs pane, opened from a sidebar button.
   - Contributes:
     - `Shell.Sidebar` "Logs" (group `System`)

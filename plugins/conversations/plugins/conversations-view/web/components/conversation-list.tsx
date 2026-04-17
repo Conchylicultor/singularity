@@ -1,12 +1,9 @@
 import { useState, useEffect } from "react";
-import { MdAdd, MdClose } from "react-icons/md";
+import { MdClose } from "react-icons/md";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
-import {
-  ConversationSchema,
-  type ConversationModel,
-} from "@plugins/conversations/shared/types";
 import { useConversations } from "@plugins/conversations/web/use-conversations";
+import { LaunchButtons } from "@plugins/launch/web";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,
@@ -14,7 +11,6 @@ import {
   SidebarMenuItem,
   SidebarMenuAction,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
 
 function formatRelativeTime(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
@@ -52,17 +48,6 @@ export function ConversationList() {
     };
   }, []);
 
-  const createConversation = async (model: ConversationModel) => {
-    const res = await fetch("/api/conversations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model }),
-    });
-    const conversation = ConversationSchema.parse(await res.json());
-    openConversation(conversation.id);
-    setActiveId(conversation.id);
-  };
-
   const deleteConversation = async (name: string, e: React.MouseEvent) => {
     e.stopPropagation();
     await fetch(`/api/conversations?name=${name}`, { method: "DELETE" });
@@ -70,26 +55,7 @@ export function ConversationList() {
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-1.5 px-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 gap-1"
-          onClick={() => createConversation("sonnet")}
-        >
-          <MdAdd className="size-4" />
-          Sonnet
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 gap-1"
-          onClick={() => createConversation("opus")}
-        >
-          <MdAdd className="size-4" />
-          Opus
-        </Button>
-      </div>
+      <LaunchButtons variant="outline" size="sm" className="px-2" />
       <SidebarMenu>
         {conversations.map((conversation) => {
           const working = conversation.status === "working";

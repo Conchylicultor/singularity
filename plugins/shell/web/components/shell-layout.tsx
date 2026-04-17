@@ -83,6 +83,7 @@ export function ShellLayout() {
   ShellCommands.OpenPane.useHandler((descriptor) => {
     const id = openPane(descriptor);
     history.pushState({}, "", descriptor.path);
+    window.dispatchEvent(new CustomEvent("shell:navigate"));
     return id;
   });
 

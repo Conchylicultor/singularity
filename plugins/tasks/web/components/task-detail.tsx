@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { LaunchButtons } from "@plugins/launch/web";
 import { Button } from "@/components/ui/button";
 import { TaskEvents } from "./task-events";
 
@@ -109,35 +110,21 @@ export function TaskDetail({ taskId }: { taskId: string }) {
     void save({ hold: task.status !== "held" });
   };
 
-  const [launching, setLaunching] = useState(false);
-  const launchAgent = useCallback(async () => {
-    const trimmedTitle = title.trim();
-    if (!trimmedTitle) return;
-    setLaunching(true);
-    try {
-      if (titleTimer.current) {
-        clearTimeout(titleTimer.current);
-        titleTimer.current = null;
-      }
-      if (descTimer.current) {
-        clearTimeout(descTimer.current);
-        descTimer.current = null;
-      }
-      await save({
-        title: trimmedTitle || "Untitled",
-        description,
-      });
-      const prompt = description.trim()
-        ? `${trimmedTitle}\n\n${description}`
-        : trimmedTitle;
-      await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId, prompt }),
-      });
-    } finally {
-      setLaunching(false);
+  const buildLaunchRequest = useCallback(async () => {
+    const trimmedTitle = title.trim() || "Untitled";
+    if (titleTimer.current) {
+      clearTimeout(titleTimer.current);
+      titleTimer.current = null;
     }
+    if (descTimer.current) {
+      clearTimeout(descTimer.current);
+      descTimer.current = null;
+    }
+    await save({ title: trimmedTitle, description });
+    const prompt = description.trim()
+      ? `${trimmedTitle}\n\n${description}`
+      : trimmedTitle;
+    return { taskId, prompt };
   }, [taskId, title, description, save]);
 
   if (!task) {
@@ -189,13 +176,12 @@ export function TaskDetail({ taskId }: { taskId: string }) {
         className="placeholder:text-muted-foreground min-h-48 w-full resize-y rounded border bg-transparent p-3 text-sm outline-none focus:ring-1 focus:ring-ring"
       />
       <div className="flex justify-end">
-        <Button
+        <LaunchButtons
           size="sm"
-          onClick={() => void launchAgent()}
-          disabled={launching || !title.trim()}
-        >
-          {launching ? "Launching…" : "Launch agent"}
-        </Button>
+          getRequest={buildLaunchRequest}
+          disabled={!title.trim()}
+          className="w-auto"
+        />
       </div>
       <TaskEvents taskId={taskId} />
     </div>
