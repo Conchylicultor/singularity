@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LaunchButtons } from "@plugins/launch/web";
 import { Button } from "@/components/ui/button";
 import { TaskEvents } from "./task-events";
 import { useResource } from "@core";
+import { Shell as ShellCommands } from "@plugins/shell/web/commands";
+import { conversationsResource } from "@plugins/conversations/shared/resources";
+import type { Conversation } from "@plugins/conversations/shared/types";
 import { tasksResource } from "../../shared/resources";
 import type { Task } from "../../server/schema";
+import { tasksPane } from "../views";
 
 const STATUS_LABELS: Record<Task["status"], string> = {
   new: "New",
@@ -23,6 +27,36 @@ const STATUS_CLASSES: Record<Task["status"], string> = {
   held: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
   dropped: "bg-muted text-muted-foreground/60 italic",
 };
+
+function AuthorDisplay({ author }: { author: string | null }) {
+  const { data: tasksData } = useResource(tasksResource);
+  const { data: convsData } = useResource(conversationsResource);
+
+  const authorTask = useMemo(() => {
+    if (!author || author === "user") return null;
+    const conv = (convsData as Conversation[] | undefined)?.find((c) => c.id === author);
+    if (!conv) return null;
+    return (tasksData as Task[] | undefined)?.find((t) => t.id === conv.taskId) ?? null;
+  }, [author, tasksData, convsData]);
+
+  if (!author || author === "user") {
+    return <span className="text-sm">User</span>;
+  }
+
+  if (!authorTask) {
+    return <span className="text-muted-foreground font-mono text-xs">{author}</span>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => ShellCommands.OpenPane(tasksPane({ id: authorTask.id }))}
+      className="hover:text-foreground text-sm underline underline-offset-2"
+    >
+      {authorTask.title}
+    </button>
+  );
+}
 
 export function TaskDetail({ taskId }: { taskId: string }) {
   const { data } = useResource(tasksResource);
@@ -154,6 +188,12 @@ export function TaskDetail({ taskId }: { taskId: string }) {
         >
           {task.status === "dropped" ? "Undrop" : "Drop task"}
         </Button>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-muted-foreground text-xs uppercase tracking-wide">
+          Author
+        </span>
+        <AuthorDisplay author={task.author ?? "user"} />
       </div>
       <textarea
         value={description}
