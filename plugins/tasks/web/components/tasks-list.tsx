@@ -8,6 +8,8 @@ import {
   MdPauseCircle,
   MdCancel,
   MdIncompleteCircle,
+  MdFilterAlt,
+  MdFilterAltOff,
 } from "react-icons/md";
 import type { IconType } from "react-icons";
 import { useResource } from "@core";
@@ -106,6 +108,7 @@ export function TasksList({
   const { data } = useResource(tasksResource);
   const rows = (data ?? []) as Task[];
   const actions = TasksSlots.TaskActions.useContributions();
+  const [hideCompleted, setHideCompleted] = useState(true);
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(() => {
     const id = pendingFocusAcrossMount;
     pendingFocusAcrossMount = null;
@@ -142,10 +145,30 @@ export function TasksList({
 
   const scoped = rootTaskId ? filterSubtree(rows, rootTaskId) : rows;
   const tree = buildTree(scoped);
+  const visibleTree = hideCompleted ? hideCompletedSubtrees(tree) : tree;
 
   return (
     <div className="flex flex-col gap-0.5">
-      {tree.map((node) => (
+      <div className="mb-1 flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => setHideCompleted((v) => !v)}
+          aria-pressed={hideCompleted}
+          title={hideCompleted ? "Show completed" : "Hide completed"}
+          className={cn(
+            "hover:bg-accent flex w-fit items-center gap-1 rounded px-2 py-1 text-xs",
+            hideCompleted ? "text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {hideCompleted ? (
+            <MdFilterAlt className="size-4" />
+          ) : (
+            <MdFilterAltOff className="size-4" />
+          )}
+          {hideCompleted ? "Completed hidden" : "Hide completed"}
+        </button>
+      </div>
+      {visibleTree.map((node) => (
         <TaskNode
           key={node.id}
           node={node}
@@ -171,6 +194,17 @@ export function TasksList({
       )}
     </div>
   );
+}
+
+function isFullyCompleted(node: TreeNode): boolean {
+  const terminal = node.status === "done" || node.status === "dropped";
+  return terminal && node.children.every(isFullyCompleted);
+}
+
+function hideCompletedSubtrees(tree: TreeNode[]): TreeNode[] {
+  return tree
+    .filter((n) => !isFullyCompleted(n))
+    .map((n) => ({ ...n, children: hideCompletedSubtrees(n.children) }));
 }
 
 function filterSubtree(rows: readonly Task[], rootId: string): Task[] {
