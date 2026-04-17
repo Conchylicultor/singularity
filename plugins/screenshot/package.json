@@ -1,0 +1,8 @@
+{
+  "name": "@singularity/plugin-screenshot",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "html-to-image": "^1.11.13"
+  }
+}
