@@ -1,3 +1,11 @@
+import { eq } from "drizzle-orm";
+import { db } from "../../../server/src/db/client";
+import { _conversations } from "./schema_internal";
+import {
+  findTranscriptPath,
+  readTurns,
+  type Turn,
+} from "./internal/claude-transcript";
 import type { ConversationModel } from "./model";
 
 export interface RuntimeInfo {
@@ -50,3 +58,37 @@ export {
   worktreePathFor,
   worktreePathForSync,
 } from "./internal/worktree";
+export { deleteConversation } from "./internal/lifecycle";
+export type { Turn } from "./internal/claude-transcript";
+
+export async function getConversationRow(id: string): Promise<{
+  status: string;
+  runtime: string;
+  claudeSessionId: string | null;
+} | null> {
+  const [row] = await db
+    .select({
+      status: _conversations.status,
+      runtime: _conversations.runtime,
+      claudeSessionId: _conversations.claudeSessionId,
+    })
+    .from(_conversations)
+    .where(eq(_conversations.id, id))
+    .limit(1);
+  return row ?? null;
+}
+
+export async function readConversationTurns(
+  id: string,
+  since?: string,
+): Promise<Turn[]> {
+  const [row] = await db
+    .select({ claudeSessionId: _conversations.claudeSessionId })
+    .from(_conversations)
+    .where(eq(_conversations.id, id))
+    .limit(1);
+  if (!row?.claudeSessionId) return [];
+  const path = await findTranscriptPath(row.claudeSessionId);
+  if (!path) return [];
+  return readTurns(path, since);
+}
