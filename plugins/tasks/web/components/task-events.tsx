@@ -8,6 +8,7 @@ import type { Conversation } from "@plugins/conversations/shared/types";
 import { attemptsResource, pushesResource } from "../../shared/resources";
 import type { Attempt, Push } from "../../server/schema";
 import { cn } from "@/lib/utils";
+import { useConversationPane } from "./conversation-pane-context";
 
 type RepoInfo = { githubBase: string | null };
 
@@ -70,6 +71,7 @@ export function TaskEvents({ taskId }: { taskId: string }) {
   const pushesQ = useResource(pushesResource);
   const convQ = useResource(conversationsResource);
   const githubBase = useGithubBase();
+  const convPane = useConversationPane();
 
   const attempts = useMemo(() => {
     const rows = (attemptsQ.data ?? []) as Attempt[];
@@ -190,16 +192,25 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                     </p>
                   ) : (
                     <ul className="flex flex-col gap-1">
-                      {convs.map((c) => (
+                      {convs.map((c) => {
+                        const isActive = convPane?.activeId === c.id;
+                        return (
                         <li key={c.id}>
                           <button
                             type="button"
-                            onClick={() =>
-                              ShellCommands.OpenPane(
-                                conversationPane({ session_id: c.id }),
-                              )
-                            }
-                            className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm"
+                            onClick={() => {
+                              if (convPane) {
+                                convPane.open(c.id);
+                              } else {
+                                ShellCommands.OpenPane(
+                                  conversationPane({ session_id: c.id }),
+                                );
+                              }
+                            }}
+                            className={cn(
+                              "hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm",
+                              isActive && "bg-accent",
+                            )}
                           >
                             <span
                               className={cn(
@@ -215,7 +226,8 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                             </span>
                           </button>
                         </li>
-                      ))}
+                        );
+                      })}
                     </ul>
                   )}
                 </li>
