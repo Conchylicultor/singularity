@@ -72,6 +72,7 @@ export async function createConversation(
           id: newTaskId,
           parentId: CONVERSATIONS_META_TASK_ID,
           title: synthesiseTitle(opts.prompt),
+          author: opts.spawnedBy ?? Bun.env.SINGULARITY_WORKTREE ?? "user",
           rank,
         })
         .returning();
@@ -124,7 +125,13 @@ export async function createConversation(
 
   // Insert the DB row BEFORE the runtime spawns so the poller never observes
   // a live session without a matching DB row.
-  const spawnedBy = opts.spawnedBy ?? Bun.env.SINGULARITY_WORKTREE ?? null;
+  // SINGULARITY_WORKTREE is guaranteed at server startup (db/client.ts throws
+  // without it), so the env fallback always resolves to the current worktree
+  // slug. A null here would leave spawned Claudes unable to dial back for MCP.
+  const spawnedBy = opts.spawnedBy ?? Bun.env.SINGULARITY_WORKTREE;
+  if (!spawnedBy) {
+    throw new Error("createConversation requires spawnedBy (or SINGULARITY_WORKTREE)");
+  }
 
   await db
     .insert(_conversations)
@@ -139,6 +146,7 @@ export async function createConversation(
   await runtime.create(conversationId, worktreePath, {
     prompt: opts.prompt,
     model,
+    spawnedBy,
   });
 
   // Read back from the public view so the response matches ConversationSchema

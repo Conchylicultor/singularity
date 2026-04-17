@@ -1,0 +1,8 @@
+{
+  "name": "@singularity/plugin-mcp",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0"
+  }
+}

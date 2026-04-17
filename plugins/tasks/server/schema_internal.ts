@@ -21,6 +21,8 @@ export const _tasks = pgTable(
     }),
     title: text("title").notNull(),
     description: text("description"),
+    // "user" for UI-created tasks, a conversation id for agent-created ones.
+    author: text("author"),
     droppedAt: timestamp("dropped_at", { withTimezone: true }),
     heldAt: timestamp("held_at", { withTimezone: true }),
     expanded: boolean("expanded").notNull().default(false),

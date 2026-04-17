@@ -8,6 +8,7 @@ import conversationsRuntimeApiPlugin from "@plugins/conversations/plugins/runtim
 import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import pushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server";
 import healthPlugin from "@plugins/health/server";
+import mcpPlugin from "@plugins/mcp/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/server";
 import tasksPlugin from "@plugins/tasks/server";
@@ -15,6 +16,9 @@ import screenshotPlugin from "@plugins/screenshot/server";
 
 // Runtime plugins must load before `conversationsPlugin` so they register
 // with the `Runtime` registry before the poller starts ticking on its import.
+// `mcpPlugin` must load before any plugin that registers an MCP tool (e.g.
+// `tasksPlugin`) so the tool registry is importable at that plugin's module
+// load time.
 export const plugins: ServerPluginDefinition[] = [
   logsPlugin,
   buildPlugin,
@@ -25,6 +29,7 @@ export const plugins: ServerPluginDefinition[] = [
   conversationCodePlugin,
   pushAndExitPlugin,
   healthPlugin,
+  mcpPlugin,
   statsCommitsPlugin,
   statsTasksPlugin,
   tasksPlugin,

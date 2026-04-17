@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { _tasks } from "../schema_internal";
 import { nextRankUnder } from "./rank";
@@ -7,6 +8,7 @@ export async function handleCreate(req: Request): Promise<Response> {
   const body = (await req.json().catch(() => ({}))) as {
     parentId?: string | null;
     title?: string;
+    author?: string;
   };
   const id = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const parentId = body.parentId ?? null;
@@ -17,6 +19,7 @@ export async function handleCreate(req: Request): Promise<Response> {
       id,
       parentId,
       title: body.title ?? "Untitled",
+      author: body.author ?? "user",
       rank,
     })
     .returning();

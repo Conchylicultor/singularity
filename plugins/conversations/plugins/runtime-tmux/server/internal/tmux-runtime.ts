@@ -96,16 +96,26 @@ export const tmuxRuntime: ConversationRuntime = {
   async create(
     conversationId: string,
     worktreePath: string,
-    opts?: { prompt?: string; model?: ConversationModel },
+    opts?: {
+      prompt?: string;
+      model?: ConversationModel;
+      spawnedBy?: string | null;
+    },
   ): Promise<void> {
     // SINGULARITY_CONVERSATION_ID is read by the .githooks/prepare-commit-msg
     // hook so any `git commit` made inside the pane gets stamped with a
-    // Singularity-Conversation trailer. The id is a generated slug (no shell
-    // metacharacters), but we still keep it wrapped in single quotes.
+    // Singularity-Conversation trailer. SINGULARITY_PARENT_HOST is the
+    // worktree slug Claude's .mcp.json dials back to over HTTP. The ids are
+    // generated slugs (no shell metacharacters) but we still keep them
+    // wrapped in single quotes.
     const hasPrompt = typeof opts?.prompt === "string" && opts.prompt.length > 0;
     const envArgs = hasPrompt
       ? ["-e", `SINGULARITY_PROMPT=${opts!.prompt}`]
       : [];
+    const parentHost = opts?.spawnedBy;
+    if (!parentHost) {
+      throw new Error("tmux runtime requires spawnedBy to route MCP back to the parent server");
+    }
     const claudeBase = opts?.model ? `${CLAUDE} --model ${opts.model}` : CLAUDE;
     const claudeCmd = hasPrompt
       ? `${claudeBase} "$SINGULARITY_PROMPT"`
@@ -121,7 +131,7 @@ export const tmuxRuntime: ConversationRuntime = {
         "-c",
         worktreePath,
         ...envArgs,
-        `zsh -l -c 'export SINGULARITY_CONVERSATION_ID=${conversationId}; ${claudeCmd}'`,
+        `zsh -l -c 'export SINGULARITY_CONVERSATION_ID=${conversationId}; export SINGULARITY_PARENT_HOST=${parentHost}; ${claudeCmd}'`,
       ],
       { stdout: "pipe", stderr: "pipe" },
     ).exited;

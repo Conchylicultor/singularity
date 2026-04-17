@@ -22,7 +22,16 @@ export interface ConversationRuntime {
   create(
     conversationId: string,
     worktreePath: string,
-    opts?: { prompt?: string; model?: ConversationModel },
+    opts?: {
+      prompt?: string;
+      model?: ConversationModel;
+      /**
+       * Worktree slug of the backend that spawned this conversation. The
+       * runtime exports this as `SINGULARITY_PARENT_HOST` so the spawned
+       * Claude's MCP config can dial back to the owning backend.
+       */
+      spawnedBy?: string | null;
+    },
   ): Promise<void>;
   delete(conversationId: string): Promise<void>;
   list(): Promise<Map<string, RuntimeInfo>>;

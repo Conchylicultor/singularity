@@ -15,6 +15,7 @@ import {
   backfillConversationsMetaParent,
   ensureConversationsMetaTask,
 } from "./internal/meta-conversations";
+import "./internal/mcp-tools";
 
 const plugin: ServerPluginDefinition = {
   id: "tasks",

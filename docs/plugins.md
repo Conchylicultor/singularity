@@ -110,6 +110,11 @@
     - `GET /api/logs/channels`
     - `WS /ws/logs`
 
+- **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.registerTool.
+  - Server:
+    - API: `Mcp`
+    - `POST /api/mcp/:conversationId`
+
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `ScreenshotButton`
@@ -164,7 +169,7 @@
     - `Tasks.TaskActions` → `LaunchAgentAction`
   - Server:
     - API: `CONVERSATIONS_META_TASK_ID`, `attemptsResource`, `nextRankUnder`, `pushesResource`, `tasksResource`
-    - Uses: `conversations.conversationsResource`, `conversations.ensureMainWorktreeRoot`
+    - Uses: `conversations.conversationsResource`, `conversations.ensureMainWorktreeRoot`, `mcp.Mcp`
     - Resources: `attempts` (push), `pushes` (push), `tasks` (push)
     - `GET /api/tasks`
     - `POST /api/tasks`

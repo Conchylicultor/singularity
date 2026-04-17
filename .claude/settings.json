@@ -2,6 +2,7 @@
   "permissions": {
     "defaultMode": "bypassPermissions"
   },
+  "enableAllProjectMcpServers": true,
   "hooks": {
     "PreToolUse": [
       {
