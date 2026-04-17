@@ -13,6 +13,7 @@ export async function handleUpdate(
     title?: string;
     description?: string | null;
     drop?: boolean;
+    hold?: boolean;
     expanded?: boolean;
   };
   const patch: Record<string, unknown> = { updatedAt: new Date() };
@@ -22,6 +23,11 @@ export async function handleUpdate(
   }
   if (typeof body.drop === "boolean") {
     patch.droppedAt = body.drop ? new Date() : null;
+    if (body.drop) patch.heldAt = null;
+  }
+  if (typeof body.hold === "boolean") {
+    patch.heldAt = body.hold ? new Date() : null;
+    if (body.hold) patch.droppedAt = null;
   }
   if (typeof body.expanded === "boolean") patch.expanded = body.expanded;
   const [row] = await db

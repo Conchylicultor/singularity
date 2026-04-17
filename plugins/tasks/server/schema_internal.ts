@@ -19,6 +19,7 @@ export const _tasks = pgTable("tasks", {
   title: text("title").notNull(),
   description: text("description"),
   droppedAt: timestamp("dropped_at", { withTimezone: true }),
+  heldAt: timestamp("held_at", { withTimezone: true }),
   expanded: boolean("expanded").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

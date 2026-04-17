@@ -6,8 +6,9 @@ type Task = {
   parentId: string | null;
   title: string;
   description: string | null;
-  status: "new" | "in_progress" | "attempted" | "done" | "dropped";
+  status: "new" | "in_progress" | "attempted" | "done" | "held" | "dropped";
   droppedAt: string | null;
+  heldAt: string | null;
 };
 
 const STATUS_LABELS: Record<Task["status"], string> = {
@@ -15,7 +16,17 @@ const STATUS_LABELS: Record<Task["status"], string> = {
   in_progress: "In progress",
   attempted: "Attempted",
   done: "Done",
+  held: "Held",
   dropped: "Dropped",
+};
+
+const STATUS_CLASSES: Record<Task["status"], string> = {
+  new: "bg-muted",
+  in_progress: "bg-muted",
+  attempted: "bg-muted",
+  done: "bg-muted",
+  held: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  dropped: "bg-muted text-muted-foreground/60 italic",
 };
 
 export function TaskDetail({ taskId }: { taskId: string }) {
@@ -41,7 +52,14 @@ export function TaskDetail({ taskId }: { taskId: string }) {
   }, [taskId]);
 
   const save = useCallback(
-    async (patch: Partial<{ title: string; description: string | null; drop: boolean }>) => {
+    async (
+      patch: Partial<{
+        title: string;
+        description: string | null;
+        drop: boolean;
+        hold: boolean;
+      }>,
+    ) => {
       setSaving(true);
       try {
         const res = await fetch(`/api/tasks/${taskId}`, {
@@ -83,6 +101,11 @@ export function TaskDetail({ taskId }: { taskId: string }) {
   const toggleDrop = () => {
     if (!task) return;
     void save({ drop: task.status !== "dropped" });
+  };
+
+  const toggleHold = () => {
+    if (!task) return;
+    void save({ hold: task.status !== "held" });
   };
 
   const [launching, setLaunching] = useState(false);
@@ -137,9 +160,18 @@ export function TaskDetail({ taskId }: { taskId: string }) {
         <span className="text-muted-foreground text-xs uppercase tracking-wide">
           Status
         </span>
-        <span className="bg-muted rounded px-2 py-0.5 text-xs font-medium">
+        <span
+          className={`rounded px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[task.status]}`}
+        >
           {STATUS_LABELS[task.status]}
         </span>
+        <Button
+          size="sm"
+          variant={task.status === "held" ? "secondary" : "outline"}
+          onClick={toggleHold}
+        >
+          {task.status === "held" ? "Resume" : "Hold"}
+        </Button>
         <Button
           size="sm"
           variant={task.status === "dropped" ? "secondary" : "outline"}

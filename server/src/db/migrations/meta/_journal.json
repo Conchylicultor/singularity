@@ -113,6 +113,13 @@
       "tag": "20260416_234115_aa1d645a__add_task_id_to_conversations_view",
       "hash": "aa1d645a",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776386249000,
+      "tag": "20260417_003729_8af313f8__add_task_held_status",
+      "hash": "8af313f8",
+      "breakpoints": true
     }
   ]
 }

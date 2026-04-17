@@ -122,9 +122,10 @@ export const tasks = pgView("tasks_v").as((qb) => {
     .with(facts)
     .select({
       ...getTableColumns(_tasks),
-      status: sql<"new" | "in_progress" | "attempted" | "done" | "dropped">`
+      status: sql<"new" | "in_progress" | "attempted" | "done" | "held" | "dropped">`
         CASE
           WHEN ${_tasks.droppedAt} IS NOT NULL   THEN 'dropped'
+          WHEN ${_tasks.heldAt}    IS NOT NULL   THEN 'held'
           WHEN ${facts.hasCompleted}             THEN 'done'
           WHEN ${facts.hasActive}                THEN 'in_progress'
           WHEN ${facts.hasAttempt}               THEN 'attempted'
@@ -133,6 +134,7 @@ export const tasks = pgView("tasks_v").as((qb) => {
       `.as("status"),
       active: sql<boolean>`(
         ${_tasks.droppedAt} IS NULL
+        AND ${_tasks.heldAt} IS NULL
         AND NOT ${facts.hasCompleted}
         AND ${facts.hasActive}
       )`.as("active"),
@@ -153,6 +155,7 @@ export const TaskStatusSchema = z.enum([
   "in_progress",
   "attempted",
   "done",
+  "held",
   "dropped",
 ]);
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
@@ -170,6 +173,7 @@ export const TaskSchema = createSelectSchema(_tasks, {
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   droppedAt: z.coerce.date().nullable(),
+  heldAt: z.coerce.date().nullable(),
 }).extend({
   status: TaskStatusSchema,
   active: z.boolean(),
