@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { _attempts, _tasks } from "@plugins/tasks/server/schema_internal";
 import {
@@ -23,7 +23,7 @@ const DEFAULT_MODEL: ConversationModel = "opus";
 
 function synthesiseTitle(prompt: string | undefined): string {
   const trimmed = (prompt ?? "").trim();
-  if (!trimmed) return "Untitled conversation";
+  if (!trimmed) return "Untitled";
   const firstLine = trimmed.split(/\r?\n/, 1)[0] ?? trimmed;
   return firstLine.length > 80 ? `${firstLine.slice(0, 77)}…` : firstLine;
 }
@@ -72,6 +72,20 @@ export async function createConversation(
         .returning();
       taskId = t!.id;
       tasksResource.notify();
+    } else {
+      // Seed the title from the first conversation so it stays stable after.
+      const [seeded] = await db
+        .update(_tasks)
+        .set({ title: synthesiseTitle(opts.prompt), updatedAt: new Date() })
+        .where(
+          and(
+            eq(_tasks.id, taskId),
+            inArray(_tasks.title, ["Untitled", "Untitled conversation"]),
+            sql`NOT EXISTS (SELECT 1 FROM ${_attempts} WHERE ${_attempts.taskId} = ${_tasks.id})`,
+          ),
+        )
+        .returning({ id: _tasks.id });
+      if (seeded) tasksResource.notify();
     }
     // Seconds-precision timestamp + random suffix: readable in URLs while
     // avoiding tmux session-name collisions when two conversations are
