@@ -18,11 +18,6 @@ import {
   type JobState,
 } from "../../shared/resources";
 
-function navigateHome() {
-  history.pushState({}, "", "/");
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
-
 export function PushAndExitButton({
   conversation,
 }: {
@@ -40,7 +35,6 @@ export function PushAndExitButton({
       `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
       { method: "DELETE" },
     ).catch(() => {});
-    navigateHome();
   }, [job?.status]);
 
   useEffect(() => {
@@ -87,7 +81,6 @@ export function PushAndExitButton({
         { method: "DELETE" },
       );
       Shell.Toast({ description: "Conversation closed", variant: "success" });
-      navigateHome();
     } catch (err) {
       Shell.Toast({
         description: `Close failed: ${err instanceof Error ? err.message : String(err)}`,
