@@ -14,35 +14,9 @@ export function ConversationTitle({
   conversation: ConversationState;
 }) {
   const [open, setOpen] = useState(false);
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="hover:bg-accent truncate rounded px-2 py-0.5 font-medium text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring">
-        {conversation.title ?? conversation.id}
-      </PopoverTrigger>
-      <PopoverContent>
-        <CreateChildTaskForm
-          parentTaskId={conversation.taskId}
-          onClose={() => setOpen(false)}
-        />
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function CreateChildTaskForm({
-  parentTaskId,
-  onClose,
-}: {
-  parentTaskId: string;
-  onClose: () => void;
-}) {
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    textareaRef.current?.focus();
-  }, []);
+  const cancelledRef = useRef(false);
 
   const submit = async () => {
     const title = value.trim();
@@ -52,7 +26,7 @@ function CreateChildTaskForm({
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ parentId: parentTaskId, title }),
+        body: JSON.stringify({ parentId: conversation.taskId, title }),
       });
       if (!res.ok) {
         Shell.Toast({
@@ -63,11 +37,65 @@ function CreateChildTaskForm({
       }
       Shell.Toast({ description: "Child task created", variant: "success" });
       setValue("");
-      onClose();
     } finally {
       setSubmitting(false);
     }
   };
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      if (cancelledRef.current) {
+        cancelledRef.current = false;
+        setValue("");
+      } else if (value.trim() && !submitting) {
+        void submit();
+      }
+    }
+    setOpen(next);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger className="hover:bg-accent truncate rounded px-2 py-0.5 font-medium text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring">
+        {conversation.title ?? conversation.id}
+      </PopoverTrigger>
+      <PopoverContent>
+        <CreateChildTaskForm
+          value={value}
+          onChange={setValue}
+          submitting={submitting}
+          onSubmit={async () => {
+            await submit();
+            setOpen(false);
+          }}
+          onCancel={() => {
+            cancelledRef.current = true;
+            setOpen(false);
+          }}
+        />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function CreateChildTaskForm({
+  value,
+  onChange,
+  submitting,
+  onSubmit,
+  onCancel,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  submitting: boolean;
+  onSubmit: () => void;
+  onCancel: () => void;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
 
   return (
     <div className="flex w-80 flex-col gap-2">
@@ -77,11 +105,11 @@ function CreateChildTaskForm({
       <textarea
         ref={textareaRef}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
-            void submit();
+            onSubmit();
           }
         }}
         placeholder="Describe the task…"
@@ -89,12 +117,12 @@ function CreateChildTaskForm({
         className="placeholder:text-muted-foreground w-full resize-y rounded border bg-transparent p-2 text-sm outline-none focus:ring-1 focus:ring-ring"
       />
       <div className="flex justify-end gap-2">
-        <Button size="sm" variant="ghost" onClick={onClose}>
+        <Button size="sm" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
         <Button
           size="sm"
-          onClick={() => void submit()}
+          onClick={onSubmit}
           disabled={!value.trim() || submitting}
         >
           {submitting ? "Creating…" : "Create"}
