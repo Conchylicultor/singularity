@@ -212,7 +212,6 @@ export function TasksList({
         body: JSON.stringify({ parentId }),
       });
       const task = (await res.json()) as Task;
-      if (parentId) void patchTask(parentId, { expanded: true });
       pendingFocusAcrossMount = task.id;
       if (onSelect) {
         onSelect(task.id);
@@ -272,12 +271,6 @@ export function TasksList({
         return;
       }
       void patchTask(draggedId, dest);
-      if (zone === "child") {
-        const target = rows.find((r) => r.id === targetId);
-        if (target && !target.expanded) {
-          void patchTask(targetId, { expanded: true });
-        }
-      }
     },
     [rows],
   );

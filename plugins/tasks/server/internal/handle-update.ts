@@ -53,6 +53,12 @@ export async function handleUpdate(
     .where(eq(_tasks.id, id))
     .returning({ id: _tasks.id });
   if (!updated) return new Response("Not found", { status: 404 });
+  if (typeof body.parentId === "string" && body.parentId.length > 0) {
+    await db
+      .update(_tasks)
+      .set({ expanded: true, updatedAt: new Date() })
+      .where(eq(_tasks.id, body.parentId));
+  }
   const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
   tasksResource.notify();
   return Response.json(row);

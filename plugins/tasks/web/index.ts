@@ -6,6 +6,7 @@ import { tasksPane } from "./views";
 import { Tasks as TasksSlots } from "./slots";
 import { LaunchAgentAction } from "./components/launch-agent-action";
 import { DeleteTaskAction } from "./components/delete-task-action";
+import { ExpandCollapseAllAction } from "./components/expand-collapse-all-action";
 
 const tasksPlugin: PluginDefinition = {
   id: "tasks",
@@ -25,6 +26,10 @@ const tasksPlugin: PluginDefinition = {
     Shell.Route({
       pattern: "/tasks/:id",
       resolve: (params) => tasksPane({ id: params.id }),
+    }),
+    TasksSlots.TaskActions({
+      id: "expand-collapse-all",
+      component: ExpandCollapseAllAction,
     }),
     TasksSlots.TaskActions({ id: "delete", component: DeleteTaskAction }),
     TasksSlots.TaskActions({ id: "launch-agent", component: LaunchAgentAction }),

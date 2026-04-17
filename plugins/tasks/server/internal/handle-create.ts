@@ -20,6 +20,12 @@ export async function handleCreate(req: Request): Promise<Response> {
       rank,
     })
     .returning();
+  if (parentId) {
+    await db
+      .update(_tasks)
+      .set({ expanded: true, updatedAt: new Date() })
+      .where(eq(_tasks.id, parentId));
+  }
   tasksResource.notify();
   return Response.json(row);
 }

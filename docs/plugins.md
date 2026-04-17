@@ -159,6 +159,7 @@
     - `Shell.Sidebar` "Tasks" (group `System`)
     - `Shell.Route` `/tasks`
     - `Shell.Route` `/tasks/:id`
+    - `Tasks.TaskActions` → `ExpandCollapseAllAction`
     - `Tasks.TaskActions` → `DeleteTaskAction`
     - `Tasks.TaskActions` → `LaunchAgentAction`
   - Server:
