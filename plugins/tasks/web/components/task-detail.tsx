@@ -168,6 +168,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
           getRequest={buildLaunchRequest}
           disabled={!title.trim()}
           className="w-auto"
+          openAfterLaunch={false}
         />
       </div>
       <TaskEvents taskId={taskId} />
