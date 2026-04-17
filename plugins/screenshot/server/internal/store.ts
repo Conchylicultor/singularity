@@ -13,12 +13,10 @@ function gc(now: number) {
   }
 }
 
-export function put(png: Uint8Array): string {
+export function put(id: string, png: Uint8Array): void {
   const now = Date.now();
   gc(now);
-  const id = crypto.randomUUID();
   store.set(id, { png, createdAt: now });
-  return id;
 }
 
 export function get(id: string): Uint8Array | null {

@@ -13,16 +13,26 @@ export function ScreenshotView({ id }: { id: string }) {
 
   const reload = useCallback(async () => {
     setError(null);
-    try {
-      const res = await fetch(`/api/screenshots/${id}`);
-      if (!res.ok) {
-        setError(res.status === 404 ? "Screenshot not found" : `Failed (${res.status})`);
+    // The tab is opened before the upload completes; retry a 404 for a while
+    // so the view lights up as soon as the bytes arrive.
+    const deadline = Date.now() + 30_000;
+    while (true) {
+      try {
+        const res = await fetch(`/api/screenshots/${id}`);
+        if (res.ok) {
+          setImageBlob(await res.blob());
+          resetEdits();
+          return;
+        }
+        if (res.status !== 404 || Date.now() > deadline) {
+          setError(res.status === 404 ? "Screenshot not found" : `Failed (${res.status})`);
+          return;
+        }
+      } catch (err) {
+        setError((err as Error).message);
         return;
       }
-      setImageBlob(await res.blob());
-      resetEdits();
-    } catch (err) {
-      setError((err as Error).message);
+      await new Promise((r) => setTimeout(r, 150));
     }
   }, [id]);
 

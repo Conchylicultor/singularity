@@ -3,6 +3,6 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "html-to-image": "^1.11.13"
+    "modern-screenshot": "^4.6.0"
   }
 }

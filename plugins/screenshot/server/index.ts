@@ -7,7 +7,7 @@ const plugin: ServerPluginDefinition = {
   name: "Screenshot",
   description: "Stores in-flight screenshots so a freshly opened tab can fetch them.",
   httpRoutes: {
-    "POST /api/screenshots": handleCreate,
+    "POST /api/screenshots/:id": handleCreate,
     "GET /api/screenshots/:id": handleGet,
   },
 };

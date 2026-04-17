@@ -102,7 +102,7 @@
     - `Shell.Toolbar` (group `actions`) → `ScreenshotButton`
     - `Shell.Route` `/screenshot/:id`
   - Server:
-    - `POST /api/screenshots`
+    - `POST /api/screenshots/:id`
     - `GET /api/screenshots/:id`
 
 - **`shell`** — Foundational app layout; defines the slots and commands most other plugins extend.
