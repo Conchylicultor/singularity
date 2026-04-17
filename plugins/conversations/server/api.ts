@@ -18,6 +18,11 @@ export interface ConversationRuntime {
   ): Promise<void>;
   delete(conversationId: string): Promise<void>;
   list(): Promise<Map<string, RuntimeInfo>>;
+  /**
+   * Post a user turn into the running conversation. The text is delivered to
+   * Claude exactly as if the user had typed it into the pane and hit Enter.
+   */
+  send(conversationId: string, text: string): Promise<void>;
 }
 
 const registry = new Map<string, ConversationRuntime>();

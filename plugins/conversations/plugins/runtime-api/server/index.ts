@@ -20,6 +20,9 @@ const apiRuntime: ConversationRuntime = {
   async delete(): Promise<void> {
     throw new Error("api runtime: delete() not implemented");
   },
+  async send(): Promise<void> {
+    throw new Error("api runtime: send() not implemented");
+  },
 };
 
 Runtime.register(apiRuntime);

@@ -133,4 +133,27 @@ export const tmuxRuntime: ConversationRuntime = {
       stderr: "pipe",
     }).exited;
   },
+
+  async send(conversationId: string, text: string): Promise<void> {
+    // Round-trip through a tmux paste buffer so multi-line prompts and any
+    // shell metacharacters land in the pane verbatim (safer than inlining the
+    // text into `send-keys`). `paste-buffer -d` drops the buffer afterwards.
+    const buf = `singularity-send-${crypto.randomUUID()}`;
+    const load = Bun.spawn([TMUX, "load-buffer", "-b", buf, "-"], {
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    load.stdin.write(text);
+    await load.stdin.end();
+    await load.exited;
+    await Bun.spawn(
+      [TMUX, "paste-buffer", "-t", conversationId, "-b", buf, "-d"],
+      { stdout: "pipe", stderr: "pipe" },
+    ).exited;
+    await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Enter"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
+  },
 };

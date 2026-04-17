@@ -11,6 +11,7 @@ import conversationStatusPlugin from "@plugins/conversations/plugins/conversatio
 import conversationModelPlugin from "@plugins/conversations/plugins/conversation-view/plugins/model/web";
 import conversationTitlePlugin from "@plugins/conversations/plugins/conversation-view/plugins/title/web";
 import conversationTasksPanelPlugin from "@plugins/conversations/plugins/conversation-view/plugins/tasks-panel/web";
+import conversationPushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/web";
 import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import conversationCodeDocsButtonPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/docs-button/web";
 import conversationCodeReviewPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/web";
@@ -42,6 +43,7 @@ export const plugins: PluginDefinition[] = [
   conversationModelPlugin,
   conversationTitlePlugin,
   conversationTasksPanelPlugin,
+  conversationPushAndExitPlugin,
   conversationCodePlugin,
   conversationCodeDocsButtonPlugin,
   conversationCodeReviewPlugin,

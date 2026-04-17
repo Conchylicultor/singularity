@@ -20,6 +20,9 @@
     - `GET /api/conversations/:id`
     - `POST /api/conversations`
     - `DELETE /api/conversations`
+    - `POST /api/conversations/:id/turn`
+    - `GET /api/conversations/:id/turns`
+    - `POST /api/conversations/:id/close`
   - Plugins:
     - **`conversation-view`** — Conversation pane and toolbar host; nested plugins extend `Conversation.Toolbar`.
       - Defines:
@@ -59,6 +62,9 @@
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
           - Contributes:
             - `Conversation.Toolbar` "Open"
+        - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
+          - Contributes:
+            - `Conversation.Toolbar` → `PushAndExitButton`
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Contributes:
             - `Conversation.Toolbar` (group `status`) → `StatusBadge`

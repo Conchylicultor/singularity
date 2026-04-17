@@ -3,9 +3,11 @@ import { homedir } from "node:os";
 
 const SESSIONS_DIR = `${homedir()}/.claude/sessions`;
 
-// Cache session-id resolution by claude pid. A fresh pid always re-reads;
-// unchanged pid re-uses prior result (including null for "not found").
-const pidCache = new Map<number, string | null>();
+// Positive-only cache. A null result (sessions file not yet on disk)
+// must be re-checked on the next poller tick — otherwise an early race
+// where the poller fires before Claude has written ~/.claude/sessions/<pid>.json
+// would pin `claudeSessionId` to NULL for the life of the pane.
+const pidCache = new Map<number, string>();
 
 async function readSessionId(pid: number): Promise<string | null> {
   try {
@@ -43,7 +45,8 @@ async function pgrepChildren(pid: number): Promise<number[]> {
 export async function resolveClaudeSessionId(
   panePid: number,
 ): Promise<string | null> {
-  if (pidCache.has(panePid)) return pidCache.get(panePid)!;
+  const cached = pidCache.get(panePid);
+  if (cached) return cached;
 
   let sessionId = await readSessionId(panePid);
   if (sessionId == null) {
@@ -52,7 +55,7 @@ export async function resolveClaudeSessionId(
       if (sessionId) break;
     }
   }
-  pidCache.set(panePid, sessionId);
+  if (sessionId) pidCache.set(panePid, sessionId);
   return sessionId;
 }
 
