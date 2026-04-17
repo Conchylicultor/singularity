@@ -7,7 +7,6 @@ export function ScreenshotView({ id }: { id: string }) {
   const [imageBlob, setImageBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tool, setTool] = useState<Tool>("none");
-  const [crop, setCrop] = useState<CropRect | null>(null);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [draw, setDraw] = useState<DrawSettings>({ color: "#ef4444", width: 4 });
 
@@ -42,13 +41,11 @@ export function ScreenshotView({ id }: { id: string }) {
 
   function resetEdits() {
     setTool("none");
-    setCrop(null);
     setStrokes([]);
   }
 
   // Switching tools clears tool-local state.
   useEffect(() => {
-    if (tool !== "crop") setCrop(null);
     if (tool !== "draw") setStrokes([]);
   }, [tool]);
 
@@ -63,8 +60,11 @@ export function ScreenshotView({ id }: { id: string }) {
           <ImageStage
             blob={imageBlob}
             tool={tool}
-            crop={crop}
-            onCropChange={setCrop}
+            onCropCommit={async (rect) => {
+              const next = await applyCrop(imageBlob, rect);
+              setImageBlob(next);
+              resetEdits();
+            }}
             strokes={strokes}
             onStrokesChange={setStrokes}
             drawSettings={draw}
@@ -77,15 +77,7 @@ export function ScreenshotView({ id }: { id: string }) {
           onToolChange={setTool}
           drawSettings={draw}
           onDrawSettingsChange={setDraw}
-          hasCrop={crop !== null && crop.w > 1 && crop.h > 1}
           hasStrokes={strokes.length > 0}
-          onApplyCrop={async () => {
-            if (!imageBlob || !crop) return;
-            const next = await applyCrop(imageBlob, crop);
-            setImageBlob(next);
-            resetEdits();
-          }}
-          onCancelCrop={() => setCrop(null)}
           onApplyDraw={async () => {
             if (!imageBlob || strokes.length === 0) return;
             const next = await applyStrokes(imageBlob, strokes);
@@ -119,8 +111,7 @@ export function ScreenshotView({ id }: { id: string }) {
 interface ImageStageProps {
   blob: Blob;
   tool: Tool;
-  crop: CropRect | null;
-  onCropChange: (r: CropRect | null) => void;
+  onCropCommit: (r: CropRect) => void;
   strokes: Stroke[];
   onStrokesChange: (s: Stroke[] | ((prev: Stroke[]) => Stroke[])) => void;
   drawSettings: DrawSettings;
@@ -129,8 +120,7 @@ interface ImageStageProps {
 function ImageStage({
   blob,
   tool,
-  crop,
-  onCropChange,
+  onCropCommit,
   strokes,
   onStrokesChange,
   drawSettings,
@@ -191,8 +181,7 @@ function ImageStage({
         <CropOverlay
           displayed={displayedRect}
           natural={naturalSize}
-          rect={crop}
-          onChange={onCropChange}
+          onCommit={onCropCommit}
         />
       )}
       {tool === "draw" && naturalSize && displayedRect && (

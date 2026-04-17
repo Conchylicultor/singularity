@@ -17,11 +17,10 @@ interface Props {
   displayed: DOMRect;
   /** Natural pixel dimensions of the image. */
   natural: { w: number; h: number };
-  rect: CropRect | null;
-  onChange: (r: CropRect | null) => void;
+  onCommit: (r: CropRect) => void;
 }
 
-export function CropOverlay({ displayed, natural, rect, onChange }: Props) {
+export function CropOverlay({ displayed, natural, onCommit }: Props) {
   const [dragStart, setDragStart] = useState<Point | null>(null);
   const [dragEnd, setDragEnd] = useState<Point | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
@@ -44,11 +43,8 @@ export function CropOverlay({ displayed, natural, rect, onChange }: Props) {
     const y0 = Math.min(start.y, end.y);
     const w = Math.abs(end.x - start.x);
     const h = Math.abs(end.y - start.y);
-    if (w < 2 || h < 2) {
-      onChange(null);
-      return;
-    }
-    onChange({
+    if (w < 2 || h < 2) return;
+    onCommit({
       x: x0 * scaleX,
       y: y0 * scaleY,
       w: w * scaleX,
@@ -64,14 +60,6 @@ export function CropOverlay({ displayed, natural, rect, onChange }: Props) {
       const w = Math.abs(dragEnd.x - dragStart.x);
       const h = Math.abs(dragEnd.y - dragStart.y);
       return { x, y, w, h };
-    }
-    if (rect) {
-      return {
-        x: rect.x / scaleX,
-        y: rect.y / scaleY,
-        w: rect.w / scaleX,
-        h: rect.h / scaleY,
-      };
     }
     return null;
   })();
@@ -91,7 +79,6 @@ export function CropOverlay({ displayed, natural, rect, onChange }: Props) {
         const p = localPoint(e);
         setDragStart(p);
         setDragEnd(p);
-        onChange(null);
       }}
       onPointerMove={(e) => {
         if (!dragStart) return;

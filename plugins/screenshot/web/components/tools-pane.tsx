@@ -24,10 +24,7 @@ interface Props {
   onToolChange: (t: Tool) => void;
   drawSettings: DrawSettings;
   onDrawSettingsChange: (s: DrawSettings) => void;
-  hasCrop: boolean;
   hasStrokes: boolean;
-  onApplyCrop: () => void;
-  onCancelCrop: () => void;
   onApplyDraw: () => void;
   onClearStrokes: () => void;
   onUndoStroke: () => void;
@@ -65,22 +62,9 @@ export function ToolsPane(props: Props) {
       </div>
 
       {props.tool === "crop" && (
-        <div className="space-y-2 border-b p-3">
+        <div className="border-b p-3">
           <div className="text-xs text-muted-foreground">
-            Drag a rectangle on the image, then Apply.
-          </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={props.onApplyCrop} disabled={!props.hasCrop}>
-              Apply
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={props.onCancelCrop}
-              disabled={!props.hasCrop}
-            >
-              Cancel
-            </Button>
+            Drag a rectangle on the image to crop.
           </div>
         </div>
       )}

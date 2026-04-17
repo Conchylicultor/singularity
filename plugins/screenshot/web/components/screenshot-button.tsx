@@ -51,15 +51,14 @@ export function ScreenshotButton() {
 }
 
 async function upload(id: string, blob: Blob): Promise<void> {
-  // Best-effort clipboard copy. Some browsers / contexts deny it; we
-  // continue regardless so the user still gets the new tab.
-  try {
-    await navigator.clipboard.write([
-      new ClipboardItem({ "image/png": blob }),
-    ]);
-  } catch {
-    /* clipboard denied; non-fatal */
-  }
+  // Fire clipboard copy and server upload in parallel. A clipboard permission
+  // prompt must not block the upload — otherwise the just-opened tab sits on
+  // "Loading…" until the user dismisses it.
+  void navigator.clipboard
+    .write([new ClipboardItem({ "image/png": blob })])
+    .catch(() => {
+      /* clipboard denied; non-fatal */
+    });
 
   try {
     const res = await fetch(`/api/screenshots/${id}`, {
