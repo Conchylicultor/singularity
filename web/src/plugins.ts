@@ -25,6 +25,7 @@ import launchPlugin from "@plugins/launch/web";
 import healthPlugin from "@plugins/health/web";
 import statsPlugin from "@plugins/stats/web";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/web";
+import statsTasksPlugin from "@plugins/stats/plugins/tasks/web";
 import tasksPlugin from "@plugins/tasks/web";
 import screenshotPlugin from "@plugins/screenshot/web";
 
@@ -54,6 +55,7 @@ export const plugins: PluginDefinition[] = [
   themePlugin,
   healthPlugin,
   statsPlugin,
+  statsTasksPlugin,
   statsCommitsPlugin,
   tasksPlugin,
   screenshotPlugin,

@@ -140,6 +140,11 @@
         - `GET /api/stats/commits/rate`
         - `GET /api/stats/commits/lines/cumulative`
         - `GET /api/stats/commits/lines/rate`
+    - **`tasks`** — Task-based stats: active (open) tasks over time.
+      - Contributes:
+        - `Stats.Chart` "Active tasks over time" → `TasksCumulativeChart`
+      - Server:
+        - `GET /api/stats/tasks/cumulative`
 
 - **`tasks`** — Nested tasks with attempts; meta-plugin hosting sub-pane contributions. Nested tasks with attempts linking to conversations.
   - Defines:

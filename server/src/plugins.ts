@@ -8,6 +8,7 @@ import conversationsRuntimeApiPlugin from "@plugins/conversations/plugins/runtim
 import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import healthPlugin from "@plugins/health/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
+import statsTasksPlugin from "@plugins/stats/plugins/tasks/server";
 import tasksPlugin from "@plugins/tasks/server";
 import screenshotPlugin from "@plugins/screenshot/server";
 
@@ -23,6 +24,7 @@ export const plugins: ServerPluginDefinition[] = [
   conversationCodePlugin,
   healthPlugin,
   statsCommitsPlugin,
+  statsTasksPlugin,
   tasksPlugin,
   screenshotPlugin,
 ];
