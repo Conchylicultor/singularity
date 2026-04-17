@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
+import { tasks } from "../schema";
 import { _tasks } from "../schema_internal";
 import { tasksResource } from "./resources";
 
@@ -30,12 +31,13 @@ export async function handleUpdate(
     if (body.hold) patch.droppedAt = null;
   }
   if (typeof body.expanded === "boolean") patch.expanded = body.expanded;
-  const [row] = await db
+  const [updated] = await db
     .update(_tasks)
     .set(patch)
     .where(eq(_tasks.id, id))
-    .returning();
-  if (!row) return new Response("Not found", { status: 404 });
+    .returning({ id: _tasks.id });
+  if (!updated) return new Response("Not found", { status: 404 });
+  const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
   tasksResource.notify();
   return Response.json(row);
 }
