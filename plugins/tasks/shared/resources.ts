@@ -1,4 +1,4 @@
-import type { Task } from "../server/schema";
+import type { Attempt, Push, Task } from "../server/schema";
 
 function descriptor<T>(key: string) {
   return { key } as {
@@ -8,3 +8,5 @@ function descriptor<T>(key: string) {
 }
 
 export const tasksResource = descriptor<Task[]>("tasks");
+export const attemptsResource = descriptor<Attempt[]>("attempts");
+export const pushesResource = descriptor<Push[]>("pushes");

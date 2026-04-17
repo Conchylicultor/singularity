@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { TaskEvents } from "./task-events";
 
 type Task = {
   id: string;
@@ -196,6 +197,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
           {launching ? "Launching…" : "Launch agent"}
         </Button>
       </div>
+      <TaskEvents taskId={taskId} />
     </div>
   );
 }
