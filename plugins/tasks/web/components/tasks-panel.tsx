@@ -19,23 +19,25 @@ export function TasksPanel({ selectedId }: { selectedId?: string }) {
   });
 
   return (
-    <ResizablePanelGroup orientation="horizontal" className="h-full">
-      <ResizablePanel defaultSize={30} minSize={20}>
-        <div className="h-full overflow-auto p-4">
-          <TasksList selectedId={selectedId} />
-          {lists.length > 0 && (
-            <div className="mt-6 flex flex-col gap-4">
-              {lists.map((l) => (
-                <l.component key={l.id} />
-              ))}
-            </div>
-          )}
-        </div>
-      </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={70} minSize={30}>
-        <TaskView taskId={selectedId} views={views} />
-      </ResizablePanel>
-    </ResizablePanelGroup>
+    <div className="h-[calc(100svh-3rem)] min-h-0 overflow-hidden">
+      <ResizablePanelGroup orientation="horizontal" className="h-full">
+        <ResizablePanel defaultSize={30} minSize={20}>
+          <div className="h-full overflow-auto p-4">
+            <TasksList selectedId={selectedId} />
+            {lists.length > 0 && (
+              <div className="mt-6 flex flex-col gap-4">
+                {lists.map((l) => (
+                  <l.component key={l.id} />
+                ))}
+              </div>
+            )}
+          </div>
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={70} minSize={30}>
+          <TaskView taskId={selectedId} views={views} />
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    </div>
   );
 }
