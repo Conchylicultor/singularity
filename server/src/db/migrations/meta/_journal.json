@@ -148,6 +148,13 @@
       "tag": "20260417_124452_66316dff__add_task_rank",
       "hash": "66316dff",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776438144000,
+      "tag": "20260417_150224_26b713bb__add_task_author",
+      "hash": "26b713bb",
+      "breakpoints": true
     }
   ]
 }
