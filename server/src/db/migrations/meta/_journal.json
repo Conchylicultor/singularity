@@ -120,6 +120,27 @@
       "tag": "20260417_003729_8af313f8__add_task_held_status",
       "hash": "8af313f8",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776411538000,
+      "tag": "20260417_073858_eec5e46d__add_spawned_by",
+      "hash": "eec5e46d",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776427200000,
+      "tag": "20260417_120000_6d466d3e__backfill_untitled_task_titles",
+      "hash": "6d466d3e",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776427500000,
+      "tag": "20260417_120500_996ffe6e__backfill_untitled_conversation_tasks",
+      "hash": "996ffe6e",
+      "breakpoints": true
     }
   ]
 }

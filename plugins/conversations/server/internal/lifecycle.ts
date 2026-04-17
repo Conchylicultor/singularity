@@ -35,6 +35,7 @@ export async function createConversation(
     attemptId?: string;
     prompt?: string;
     model?: ConversationModel;
+    spawnedBy?: string;
   } = {},
 ): Promise<Conversation> {
   const runtimeId = opts.runtimeId ?? DEFAULT_RUNTIME;
@@ -112,6 +113,8 @@ export async function createConversation(
 
   // Insert the DB row BEFORE the runtime spawns so the poller never observes
   // a live session without a matching DB row.
+  const spawnedBy = opts.spawnedBy ?? Bun.env.SINGULARITY_WORKTREE ?? null;
+
   await db
     .insert(_conversations)
     .values({
@@ -119,6 +122,7 @@ export async function createConversation(
       attemptId,
       runtime: runtimeId,
       model,
+      spawnedBy,
     });
 
   await runtime.create(conversationId, worktreePath, {

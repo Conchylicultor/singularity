@@ -16,6 +16,7 @@ export const _conversations = pgTable("conversations", {
   runtime: text("runtime").notNull().default("tmux"),
   model: text("model").$type<ConversationModel>().notNull().default("opus"),
   claudeSessionId: text("claude_session_id"),
+  spawnedBy: text("spawned_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   endedAt: timestamp("ended_at", { withTimezone: true }),
