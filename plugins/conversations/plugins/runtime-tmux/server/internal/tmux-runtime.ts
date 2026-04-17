@@ -25,7 +25,7 @@ function cleanPaneTitle(raw: string): { title: string; working: boolean } {
   const isDefault =
     !title ||
     /^[a-zA-Z0-9-]+\.(local|internal|lan)$/.test(title) ||
-    /^claude-\d+$/.test(title);
+    /^claude-\d+(-[a-z0-9]+)?$/.test(title);
 
   return {
     title: isDefault ? "" : title,

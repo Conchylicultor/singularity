@@ -1,10 +1,12 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { attempts } from "@plugins/tasks/server/schema";
+import { _attempts, _tasks } from "@plugins/tasks/server/schema_internal";
 import { Runtime, type RuntimeInfo } from "../api";
 import { _conversations } from "../schema_internal";
 import type { ConversationStatus } from "../../shared/types";
 import { conversationsResource } from "./resources";
+import { worktreePathFor } from "./worktree";
 
 function liveStatusFor(info: RuntimeInfo): ConversationStatus {
   return info.working ? "working" : "waiting";
@@ -68,12 +70,45 @@ async function tick(): Promise<void> {
       // For the current 1:1 case, the conversation id equals the attempt id.
       // Read through the public `attempts` view to avoid reaching into the
       // tasks plugin's internal table.
-      const [attempt] = await db
+      let [attempt] = await db
         .select({ id: attempts.id })
         .from(attempts)
         .where(eq(attempts.id, id))
         .limit(1);
-      if (!attempt) continue;
+      if (!attempt) {
+        // No attempt row yet — the tmux session was created outside this
+        // DB's history (e.g. the main worktree spawned it after we forked,
+        // or it was started via `tmux new-session` directly). Synthesize a
+        // task + attempt so the conversation can surface in the list. The
+        // worktree path is derivable by convention: `<main>/.claude/
+        // worktrees/<id>`.
+        const worktreePath = await worktreePathFor(id);
+        const taskTitle = live.title?.trim() || id;
+        try {
+          await db.transaction(async (tx) => {
+            await tx
+              .insert(_tasks)
+              .values({ id, title: taskTitle })
+              .onConflictDoNothing();
+            await tx
+              .insert(_attempts)
+              .values({ id, taskId: id, worktreePath })
+              .onConflictDoNothing();
+          });
+        } catch (err) {
+          console.error(
+            `[conversations.poller] synthesising task/attempt for "${id}" failed`,
+            err,
+          );
+          continue;
+        }
+        [attempt] = await db
+          .select({ id: attempts.id })
+          .from(attempts)
+          .where(eq(attempts.id, id))
+          .limit(1);
+        if (!attempt) continue;
+      }
       const [inserted] = await db
         .insert(_conversations)
         .values({
@@ -110,9 +145,9 @@ async function tick(): Promise<void> {
   for (const [id, info] of next) {
     const dbRow = dbById.get(id);
     if (!dbRow) continue;
-    if (dbRow.status === "gone") continue;
 
     if (info.dead) {
+      if (dbRow.status === "gone") continue;
       await db
         .update(_conversations)
         .set({
@@ -132,10 +167,15 @@ async function tick(): Promise<void> {
     const statusChanged = desiredStatus !== dbRow.status;
     if (!titleChanged && !sessionChanged && !statusChanged) continue;
 
+    // A live session with `status = 'gone'` means a prior tick spuriously
+    // declared it dead (e.g. transient `tmux list-panes` failure). Resurrect
+    // it by clearing `endedAt` alongside the status flip.
+    const resurrecting = dbRow.status === "gone" && desiredStatus !== "gone";
     const patch: Record<string, unknown> = { updatedAt: new Date() };
     if (titleChanged) patch.title = desiredTitle;
     if (sessionChanged) patch.claudeSessionId = info.claudeSessionId;
     if (statusChanged) patch.status = desiredStatus;
+    if (resurrecting) patch.endedAt = null;
     await db.update(_conversations).set(patch).where(eq(_conversations.id, id));
     changed = true;
   }

@@ -64,7 +64,11 @@ export async function createConversation(
         .returning();
       taskId = t!.id;
     }
-    attemptId = `${CONVERSATION_PREFIX}-${Math.floor(Date.now() / 1000)}`;
+    // Seconds-precision timestamp + random suffix: readable in URLs while
+    // avoiding tmux session-name collisions when two conversations are
+    // created in the same second.
+    const suffix = Math.random().toString(36).slice(2, 6);
+    attemptId = `${CONVERSATION_PREFIX}-${Math.floor(Date.now() / 1000)}-${suffix}`;
     worktreePath = await worktreePathFor(attemptId);
     await setupWorktree(attemptId, worktreePath);
     await forkDatabase(attemptId);
