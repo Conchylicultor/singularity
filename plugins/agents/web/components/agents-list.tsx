@@ -1,9 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MdAdd,
   MdChevronRight,
+  MdDragIndicator,
   MdPrecisionManufacturing,
 } from "react-icons/md";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  pointerWithin,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { generateKeyBetween } from "fractional-indexing";
 import { useResource } from "@core";
 import { agentsResource } from "../../shared/resources";
 import { Agents as AgentsCommands } from "../commands";
@@ -21,6 +35,8 @@ type Agent = {
 
 type TreeNode = Agent & { children: TreeNode[] };
 
+type DropZone = "before" | "after" | "child";
+
 function buildTree(rows: readonly Agent[]): TreeNode[] {
   const byId = new Map<string, TreeNode>();
   rows.forEach((r) => byId.set(r.id, { ...r, children: [] }));
@@ -35,9 +51,74 @@ function buildTree(rows: readonly Agent[]): TreeNode[] {
   return roots;
 }
 
+function isDescendant(
+  rows: readonly Agent[],
+  ancestorId: string,
+  candidateId: string,
+): boolean {
+  const parents = new Map(rows.map((r) => [r.id, r.parentId] as const));
+  let cur: string | null = candidateId;
+  const seen = new Set<string>();
+  while (cur) {
+    if (cur === ancestorId) return true;
+    if (seen.has(cur)) return false;
+    seen.add(cur);
+    cur = parents.get(cur) ?? null;
+  }
+  return false;
+}
+
+function computeDrop(
+  rows: readonly Agent[],
+  draggedId: string,
+  zone: DropZone,
+  targetId: string,
+): { parentId: string | null; rank: string } | null {
+  const target = rows.find((r) => r.id === targetId);
+  if (!target) return null;
+
+  if (zone === "child") {
+    const children = rows
+      .filter((r) => r.parentId === target.id && r.id !== draggedId)
+      .sort((a, b) => a.rank.localeCompare(b.rank));
+    const last = children[children.length - 1];
+    try {
+      return {
+        parentId: target.id,
+        rank: generateKeyBetween(last?.rank ?? null, null),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  const siblings = rows
+    .filter((r) => r.parentId === target.parentId && r.id !== draggedId)
+    .sort((a, b) => a.rank.localeCompare(b.rank));
+  const idx = siblings.findIndex((s) => s.id === target.id);
+  if (idx === -1) return null;
+
+  try {
+    if (zone === "before") {
+      const prev = siblings[idx - 1];
+      return {
+        parentId: target.parentId,
+        rank: generateKeyBetween(prev?.rank ?? null, target.rank),
+      };
+    }
+    const next = siblings[idx + 1];
+    return {
+      parentId: target.parentId,
+      rank: generateKeyBetween(target.rank, next?.rank ?? null),
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function patchAgent(
   id: string,
-  patch: { name?: string; expanded?: boolean },
+  patch: { name?: string; expanded?: boolean; parentId?: string | null; rank?: string },
 ) {
   await fetch(`/api/agents/${id}`, {
     method: "PATCH",
@@ -96,35 +177,85 @@ export function AgentsList({
     [rows],
   );
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+  );
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeName = useMemo(
+    () => (activeId ? rows.find((r) => r.id === activeId)?.name ?? null : null),
+    [activeId, rows],
+  );
+
+  const onDragStart = useCallback((event: DragStartEvent) => {
+    const id = event.active.data.current?.id as string | undefined;
+    setActiveId(id ?? null);
+  }, []);
+
+  const onDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveId(null);
+      const { active, over } = event;
+      if (!over) return;
+      const draggedId = active.data.current?.id as string | undefined;
+      const zone = over.data.current?.zone as DropZone | undefined;
+      const targetId = over.data.current?.targetId as string | undefined;
+      if (!draggedId || !zone || !targetId) return;
+      if (draggedId === targetId) return;
+      if (isDescendant(rows, draggedId, targetId)) return;
+      const dest = computeDrop(rows, draggedId, zone, targetId);
+      if (!dest) return;
+      const current = rows.find((r) => r.id === draggedId);
+      if (current && current.parentId === dest.parentId && current.rank === dest.rank) return;
+      void patchAgent(draggedId, dest);
+    },
+    [rows],
+  );
+
   const tree = buildTree(rows);
 
   return (
-    <div className="flex flex-col gap-0.5">
-      {tree.map((node) => (
-        <AgentNode
-          key={node.id}
-          node={node}
-          depth={0}
-          selectedId={selectedId}
-          onToggle={toggle}
-          onAdd={create}
-          onSelect={onSelect}
-          actions={actions}
-          pendingFocusId={pendingFocusId}
-          clearPendingFocus={() => setPendingFocusId(null)}
-        />
-      ))}
-      <div className="mt-1 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => create(null)}
-          className="text-muted-foreground hover:bg-accent hover:text-foreground flex w-fit items-center gap-1 rounded px-2 py-1 text-sm"
-        >
-          <MdAdd className="size-4" />
-          Agent
-        </button>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={pointerWithin}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragCancel={() => setActiveId(null)}
+    >
+      <div className="flex flex-col gap-0.5">
+        {tree.map((node) => (
+          <AgentNode
+            key={node.id}
+            node={node}
+            depth={0}
+            selectedId={selectedId}
+            onToggle={toggle}
+            onAdd={create}
+            onSelect={onSelect}
+            actions={actions}
+            pendingFocusId={pendingFocusId}
+            clearPendingFocus={() => setPendingFocusId(null)}
+            activeId={activeId}
+          />
+        ))}
+        <div className="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => create(null)}
+            className="text-muted-foreground hover:bg-accent hover:text-foreground flex w-fit items-center gap-1 rounded px-2 py-1 text-sm"
+          >
+            <MdAdd className="size-4" />
+            Agent
+          </button>
+        </div>
       </div>
-    </div>
+      <DragOverlay dropAnimation={null}>
+        {activeName !== null ? (
+          <div className="bg-background/90 border-accent rounded border px-2 py-1 text-sm shadow">
+            {activeName || "Untitled"}
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }
 
@@ -143,6 +274,7 @@ function AgentNode({
   actions,
   pendingFocusId,
   clearPendingFocus,
+  activeId,
 }: {
   node: TreeNode;
   depth: number;
@@ -153,10 +285,31 @@ function AgentNode({
   actions: readonly ActionContribution[];
   pendingFocusId: string | null;
   clearPendingFocus: () => void;
+  activeId: string | null;
 }) {
   const isOpen = node.expanded;
   const hasChildren = node.children.length > 0;
   const isSelected = selectedId === node.id;
+  const isDragging = activeId === node.id;
+
+  const dragData = { id: node.id, parentId: node.parentId, rank: node.rank };
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+  } = useDraggable({ id: `drag:${node.id}`, data: dragData });
+  const { isOver: isOverBefore, setNodeRef: setBeforeRef } = useDroppable({
+    id: `before:${node.id}`,
+    data: { zone: "before" as const, targetId: node.id },
+  });
+  const { isOver: isOverAfter, setNodeRef: setAfterRef } = useDroppable({
+    id: `after:${node.id}`,
+    data: { zone: "after" as const, targetId: node.id },
+  });
+  const { isOver: isOverChild, setNodeRef: setChildRef } = useDroppable({
+    id: `child:${node.id}`,
+    data: { zone: "child" as const, targetId: node.id },
+  });
 
   const [name, setName] = useState(node.name);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -203,11 +356,29 @@ function AgentNode({
   return (
     <div>
       <div className="group/row relative">
+        <button
+          type="button"
+          ref={setDragRef}
+          aria-label="Drag to reorder"
+          {...attributes}
+          {...listeners}
+          className={cn(
+            "absolute top-1/2 z-10 flex size-5 -translate-y-1/2 cursor-grab items-center justify-center rounded",
+            "text-muted-foreground hover:bg-background/60 active:cursor-grabbing",
+            "opacity-0 group-hover/row:opacity-60",
+          )}
+          style={{ left: depth * 16 - 16 }}
+        >
+          <MdDragIndicator className="size-4" />
+        </button>
         <div
+          ref={setChildRef}
           className={cn(
             "group flex items-center gap-1 rounded px-1 py-1 text-sm",
             "hover:bg-accent",
             isSelected && "bg-accent",
+            isDragging && "opacity-40",
+            isOverChild && "bg-accent ring-primary/40 ring-1",
           )}
           style={{ paddingLeft: depth * 16 + 4 }}
         >
@@ -262,6 +433,22 @@ function AgentNode({
             </div>
           )}
         </div>
+        <div
+          ref={setBeforeRef}
+          className="pointer-events-none absolute inset-x-0 top-0 h-[6px]"
+        >
+          {isOverBefore && (
+            <div className="bg-primary absolute inset-x-1 top-0 h-[2px] rounded-full" />
+          )}
+        </div>
+        <div
+          ref={setAfterRef}
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[6px]"
+        >
+          {isOverAfter && (
+            <div className="bg-primary absolute inset-x-1 bottom-0 h-[2px] rounded-full" />
+          )}
+        </div>
       </div>
       {isOpen && (
         <div>
@@ -277,6 +464,7 @@ function AgentNode({
               actions={actions}
               pendingFocusId={pendingFocusId}
               clearPendingFocus={clearPendingFocus}
+              activeId={activeId}
             />
           ))}
           <button
