@@ -89,11 +89,6 @@ export function AgentDetail({ agentId }: { agentId: string }) {
     await save({ model: newModel });
   };
 
-  const convertToAgent = async () => {
-    await save({ prompt: "" });
-    setPrompt("");
-  };
-
   const launch = async () => {
     if (!agent || !agent.prompt) return;
     if (launching) return;
@@ -145,58 +140,45 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         rows={2}
         className="placeholder:text-muted-foreground focus:ring-ring w-full resize-y rounded border bg-transparent p-2 text-sm outline-none focus:ring-1"
       />
-      {agent.isFolder ? (
-        <div className="flex items-center gap-3 rounded border bg-muted/30 px-4 py-6 text-sm">
-          <span className="text-muted-foreground flex-1">
-            This is a folder. Convert it to a launchable agent to add a prompt.
-          </span>
-          <Button size="sm" variant="outline" onClick={convertToAgent}>
-            Convert to agent
-          </Button>
-        </div>
-      ) : (
-        <>
-          <div className="flex flex-col gap-1">
-            <label className="text-muted-foreground text-xs uppercase tracking-wide">
-              Model
-            </label>
-            <select
-              value={model ?? ""}
-              onChange={(e) => void onModelChange(e.target.value)}
-              className="focus:ring-ring w-fit rounded border bg-transparent px-2 py-1 text-sm outline-none focus:ring-1"
-            >
-              {MODELS.map((m) => (
-                <option key={String(m.value)} value={m.value ?? ""}>
-                  {m.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-muted-foreground text-xs uppercase tracking-wide">
-              Prompt
-            </label>
-            <textarea
-              value={prompt}
-              onChange={(e) => onPromptChange(e.target.value)}
-              placeholder="Instructions the agent runs with…"
-              rows={12}
-              className="placeholder:text-muted-foreground focus:ring-ring min-h-56 w-full resize-y rounded border bg-transparent p-3 font-mono text-sm outline-none focus:ring-1"
-            />
-          </div>
-          <div className="flex justify-end">
-            <Button
-              onClick={launch}
-              disabled={launching || !prompt.trim()}
-              className="gap-1"
-            >
-              <MdPlayArrow className="size-4" />
-              {launching ? "Launching…" : "Launch"}
-            </Button>
-          </div>
-          <AgentLaunches agentId={agentId} />
-        </>
-      )}
+      <div className="flex flex-col gap-1">
+        <label className="text-muted-foreground text-xs uppercase tracking-wide">
+          Model
+        </label>
+        <select
+          value={model ?? ""}
+          onChange={(e) => void onModelChange(e.target.value)}
+          className="focus:ring-ring w-fit rounded border bg-transparent px-2 py-1 text-sm outline-none focus:ring-1"
+        >
+          {MODELS.map((m) => (
+            <option key={String(m.value)} value={m.value ?? ""}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1">
+        <label className="text-muted-foreground text-xs uppercase tracking-wide">
+          Prompt
+        </label>
+        <textarea
+          value={prompt}
+          onChange={(e) => onPromptChange(e.target.value)}
+          placeholder="Instructions the agent runs with…"
+          rows={12}
+          className="placeholder:text-muted-foreground focus:ring-ring min-h-56 w-full resize-y rounded border bg-transparent p-3 font-mono text-sm outline-none focus:ring-1"
+        />
+      </div>
+      <div className="flex justify-end">
+        <Button
+          onClick={launch}
+          disabled={launching || !prompt.trim()}
+          className="gap-1"
+        >
+          <MdPlayArrow className="size-4" />
+          {launching ? "Launching…" : "Launch"}
+        </Button>
+      </div>
+      <AgentLaunches agentId={agentId} />
     </div>
   );
 }

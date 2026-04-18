@@ -2,8 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   MdAdd,
   MdChevronRight,
-  MdCreateNewFolder,
-  MdFolder,
   MdPrecisionManufacturing,
 } from "react-icons/md";
 import { useResource } from "@core";
@@ -19,7 +17,6 @@ type Agent = {
   prompt: string | null;
   rank: string;
   expanded: boolean;
-  isFolder: boolean;
 };
 
 type TreeNode = Agent & { children: TreeNode[] };
@@ -68,14 +65,14 @@ export function AgentsList({
   });
 
   const create = useCallback(
-    async (parentId: string | null, kind: "agent" | "folder") => {
+    async (parentId: string | null) => {
       const res = await fetch("/api/agents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           parentId,
-          name: kind === "folder" ? "New folder" : "New agent",
-          prompt: kind === "folder" ? null : "",
+          name: "New agent",
+          prompt: "",
         }),
       });
       if (!res.ok) return;
@@ -120,19 +117,11 @@ export function AgentsList({
       <div className="mt-1 flex items-center gap-2">
         <button
           type="button"
-          onClick={() => create(null, "agent")}
+          onClick={() => create(null)}
           className="text-muted-foreground hover:bg-accent hover:text-foreground flex w-fit items-center gap-1 rounded px-2 py-1 text-sm"
         >
           <MdAdd className="size-4" />
           Agent
-        </button>
-        <button
-          type="button"
-          onClick={() => create(null, "folder")}
-          className="text-muted-foreground hover:bg-accent hover:text-foreground flex w-fit items-center gap-1 rounded px-2 py-1 text-sm"
-        >
-          <MdCreateNewFolder className="size-4" />
-          Folder
         </button>
       </div>
     </div>
@@ -159,7 +148,7 @@ function AgentNode({
   depth: number;
   selectedId?: string;
   onToggle: (id: string) => void;
-  onAdd: (parentId: string | null, kind: "agent" | "folder") => void;
+  onAdd: (parentId: string | null) => void;
   onSelect?: (id: string) => void;
   actions: readonly ActionContribution[];
   pendingFocusId: string | null;
@@ -241,7 +230,7 @@ function AgentNode({
               )}
             />
           </button>
-          <TypeIcon isFolder={node.isFolder} />
+          <AgentIcon />
           <input
             ref={inputRef}
             value={name}
@@ -290,45 +279,25 @@ function AgentNode({
               clearPendingFocus={clearPendingFocus}
             />
           ))}
-          {node.isFolder && (
-            <div
-              className="flex items-center gap-2"
-              style={{ paddingLeft: (depth + 1) * 16 + 4 }}
-            >
-              <button
-                type="button"
-                onClick={() => onAdd(node.id, "agent")}
-                className="text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-1 rounded px-2 py-1 text-sm"
-              >
-                <MdAdd className="size-4" />
-                Agent
-              </button>
-              <button
-                type="button"
-                onClick={() => onAdd(node.id, "folder")}
-                className="text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-1 rounded px-2 py-1 text-sm"
-              >
-                <MdCreateNewFolder className="size-4" />
-                Folder
-              </button>
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={() => onAdd(node.id)}
+            className="text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-1 rounded px-2 py-1 text-sm"
+            style={{ paddingLeft: (depth + 1) * 16 + 4 }}
+          >
+            <MdAdd className="size-4" />
+            Add
+          </button>
         </div>
       )}
     </div>
   );
 }
 
-function TypeIcon({ isFolder }: { isFolder: boolean }) {
-  const Icon = isFolder ? MdFolder : MdPrecisionManufacturing;
+function AgentIcon() {
   return (
     <span className="flex size-5 shrink-0 items-center justify-center">
-      <Icon
-        className={cn(
-          "size-4",
-          isFolder ? "text-amber-600 dark:text-amber-400" : "text-primary",
-        )}
-      />
+      <MdPrecisionManufacturing className="size-4 text-primary" />
     </span>
   );
 }
