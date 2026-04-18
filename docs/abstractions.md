@@ -80,6 +80,15 @@ Per-agent sandboxing so many agents can work in parallel without conflict.
 - **Namespace** — an instance identity shared by a worktree, its DB, its backend process, and its subdomain.
 - **Deploy-per-namespace** — every namespace is independently built, served, and addressable at its own URL.
 
+## Config
+
+Per-instance, per-plugin typed configuration with a unified storage and Settings UI.
+
+- **`defineConfig(schema)`** — plugin declares its typed fields; supported kinds: `string`, `number`, `boolean`, `string-list`.
+- **`readConfig(descriptor)`** — server-side typed read; merges DB overrides with declared defaults.
+- **`useConfigValues(descriptor, pluginId)`** — React hook returning a typed value object, kept in sync via the live-state primitive.
+- **Settings UI** — auto-generated panel; plugins contribute their descriptor to a slot and the panel renders a section per plugin.
+
 ## Frontend utilities
 
 Reusable client primitives plugins can rely on.
