@@ -1,3 +1,5 @@
+import { readConfig } from "@plugins/config/server/api";
+import { commitsConfig } from "../../shared/config";
 import { getCommits } from "./commit-timestamps";
 
 type Bucket = "hour" | "day" | "week" | "month" | "year";
@@ -51,9 +53,12 @@ export async function handleRate(req: Request): Promise<Response> {
 
 export async function handleLinesRate(req: Request): Promise<Response> {
   const bucket = parseBucket(req);
+  const { excludedShas } = await readConfig(commitsConfig);
+  const excluded = new Set(excludedShas);
   const commits = await getCommits();
   const counts = new Map<string, { added: number; removed: number }>();
   for (const c of commits) {
+    if (excluded.has(c.sha)) continue;
     const k = keyFor(c.iso, bucket);
     const e = counts.get(k) ?? { added: 0, removed: 0 };
     e.added += c.added;

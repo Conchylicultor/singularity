@@ -17,7 +17,14 @@ export function PluginProvider({
   children: ReactNode;
 }) {
   const runtime = useMemo(() => {
-    const contributions = plugins.flatMap((p) => p.contributions ?? []);
+    const contributions = plugins.flatMap((p) =>
+      (p.contributions ?? []).map((c) => ({
+        ...c,
+        _pluginId: p.id,
+        _pluginName: p.name,
+        _pluginDescription: p.description,
+      })),
+    );
     const bySlot = new Map<string, Contribution[]>();
     for (const c of contributions) {
       let list = bySlot.get(c._slotId);

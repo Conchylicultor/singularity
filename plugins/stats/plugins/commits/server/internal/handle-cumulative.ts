@@ -1,3 +1,5 @@
+import { readConfig } from "@plugins/config/server/api";
+import { commitsConfig } from "../../shared/config";
 import { getCommits } from "./commit-timestamps";
 
 export async function handleCumulative(_req: Request): Promise<Response> {
@@ -17,9 +19,12 @@ export async function handleCumulative(_req: Request): Promise<Response> {
 }
 
 export async function handleLinesCumulative(_req: Request): Promise<Response> {
+  const { excludedShas } = await readConfig(commitsConfig);
+  const excluded = new Set(excludedShas);
   const commits = await getCommits();
   const perDay = new Map<string, { added: number; removed: number }>();
   for (const c of commits) {
+    if (excluded.has(c.sha)) continue;
     const day = c.iso.slice(0, 10);
     const e = perDay.get(day) ?? { added: 0, removed: 0 };
     e.added += c.added;

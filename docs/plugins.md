@@ -30,6 +30,20 @@
     - Uses: `logs.Log`
     - `POST /api/build`
 
+- **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
+  - Defines:
+    - Slots: `Config.Spec`
+    - DB schema: `plugins/config/server/schema.ts`
+  - Contributes:
+    - `Shell.Sidebar` "Settings" (group `System`)
+    - `Shell.Route` `/settings`
+  - Server:
+    - API: `configResource`, `readConfig`
+    - `GET /api/config`
+    - `GET /api/config/specs`
+    - `PATCH /api/config`
+    - `DELETE /api/config/:key`
+
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:
     - DB schema: `plugins/conversations/server/schema.ts`
@@ -159,13 +173,14 @@
     - `Shell.Sidebar` "Stats" (group `System`)
     - `Shell.Route` `/stats`
   - Plugins:
-    - **`commits`** — Commit-based stats: commits and lines of change over time.
+    - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
       - Contributes:
         - `Stats.Chart` "Commits over time" → `CumulativeCommitsChart`
         - `Stats.Chart` "Commits per period" → `CommitsRateChart`
         - `Stats.Chart` "Lines changed over time" → `CumulativeLinesChart`
         - `Stats.Chart` "Lines changed per period" → `LinesRateChart`
       - Server:
+        - Uses: `config.readConfig`
         - `GET /api/stats/commits/cumulative`
         - `GET /api/stats/commits/rate`
         - `GET /api/stats/commits/lines/cumulative`

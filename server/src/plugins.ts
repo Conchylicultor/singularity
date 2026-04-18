@@ -14,6 +14,7 @@ import statsTasksPlugin from "@plugins/stats/plugins/tasks/server";
 import tasksPlugin from "@plugins/tasks/server";
 import agentsPlugin from "@plugins/agents/server";
 import screenshotPlugin from "@plugins/screenshot/server";
+import configPlugin from "@plugins/config/server";
 
 // Runtime plugins must load before `conversationsPlugin` so they register
 // with the `Runtime` registry before the poller starts ticking on its import.
@@ -31,6 +32,7 @@ export const plugins: ServerPluginDefinition[] = [
   pushAndExitPlugin,
   healthPlugin,
   mcpPlugin,
+  configPlugin,
   statsCommitsPlugin,
   statsTasksPlugin,
   tasksPlugin,

@@ -20,6 +20,11 @@ export type HttpHandler = (
 // circular import.
 export type ResourceLike = { key: string };
 
+// Opaque handle for a config descriptor defined via `defineConfig`. The
+// concrete `ConfigDescriptor<S>` type lives in `@plugins/config/shared`.
+// biome-ignore lint/suspicious/noExplicitAny: descriptor is type-erased here.
+export type ConfigDescriptorLike = { schema: Record<string, any> };
+
 export interface ServerPluginDefinition {
   id: string;
   name: string;
@@ -28,6 +33,8 @@ export interface ServerPluginDefinition {
   wsRoutes?: Record<string, WsHandler>;
   /** Live-state resources declared via `defineResource`. */
   resources?: ResourceLike[];
+  /** Config descriptor declared via `defineConfig` (plugins/config/shared). */
+  config?: ConfigDescriptorLike;
   /**
    * Called once after `runMigrations()` completes. Use this for background
    * work (pollers, watchers) that issues DB queries — scheduling it from the

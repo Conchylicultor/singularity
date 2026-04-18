@@ -169,6 +169,13 @@
       "tag": "20260418_131354_e585fbd6__task_need_action_status",
       "hash": "e585fbd6",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776519674000,
+      "tag": "20260418_134114_d8da9e66__add_config_table",
+      "hash": "d8da9e66",
+      "breakpoints": true
     }
   ]
 }

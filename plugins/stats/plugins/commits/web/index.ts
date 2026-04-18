@@ -1,8 +1,10 @@
 import type { PluginDefinition } from "@core";
 import { Stats } from "@plugins/stats/web/slots";
+import { Config } from "@plugins/config/web/slots";
 import { CumulativeCommitsChart } from "./components/cumulative-chart";
 import { CumulativeLinesChart, LinesRateChart } from "./components/lines-charts";
 import { CommitsRateChart } from "./components/rate-chart";
+import { commitsConfig } from "../shared/config";
 
 const commitsPlugin: PluginDefinition = {
   id: "stats-commits",
@@ -29,6 +31,7 @@ const commitsPlugin: PluginDefinition = {
       title: "Lines changed per period",
       component: LinesRateChart,
     }),
+    Config.Spec(commitsConfig),
   ],
 };
 

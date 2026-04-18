@@ -1,6 +1,13 @@
 export type PluginId = string;
 
-export type Contribution = { _slotId: string; [key: string]: unknown };
+export type Contribution = {
+  _slotId: string;
+  /** Injected by PluginProvider from the enclosing PluginDefinition. */
+  _pluginId?: PluginId;
+  _pluginName?: string;
+  _pluginDescription?: string;
+  [key: string]: unknown;
+};
 
 export interface PluginDefinition {
   id: PluginId;
