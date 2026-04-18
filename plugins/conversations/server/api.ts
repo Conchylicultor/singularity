@@ -67,7 +67,7 @@ export {
   worktreePathFor,
   worktreePathForSync,
 } from "./internal/worktree";
-export { deleteConversation } from "./internal/lifecycle";
+export { createConversation, deleteConversation } from "./internal/lifecycle";
 export type { Turn } from "./internal/claude-transcript";
 
 export async function getConversationRow(id: string): Promise<{

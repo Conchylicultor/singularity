@@ -12,6 +12,7 @@ import mcpPlugin from "@plugins/mcp/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/server";
 import tasksPlugin from "@plugins/tasks/server";
+import agentsPlugin from "@plugins/agents/server";
 import screenshotPlugin from "@plugins/screenshot/server";
 
 // Runtime plugins must load before `conversationsPlugin` so they register
@@ -33,5 +34,6 @@ export const plugins: ServerPluginDefinition[] = [
   statsCommitsPlugin,
   statsTasksPlugin,
   tasksPlugin,
+  agentsPlugin,
   screenshotPlugin,
 ];

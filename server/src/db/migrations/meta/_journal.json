@@ -155,6 +155,13 @@
       "tag": "20260417_150224_26b713bb__add_task_author",
       "hash": "26b713bb",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776515251000,
+      "tag": "20260418_122731_2fe80704__add_agents",
+      "hash": "2fe80704",
+      "breakpoints": true
     }
   ]
 }

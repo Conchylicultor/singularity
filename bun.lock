@@ -49,6 +49,10 @@
         "react": "^19.1.0",
       },
     },
+    "plugins/agents": {
+      "name": "@singularity/plugin-agents",
+      "version": "0.0.1",
+    },
     "plugins/build": {
       "name": "@singularity/plugin-build",
       "version": "0.0.1",
@@ -577,6 +581,8 @@
     "@sindresorhus/merge-streams": ["@sindresorhus/merge-streams@4.0.0", "", {}, "sha512-tlqY9xq5ukxTUZBmoOp+m61cqwQD5pHJtFY3Mn8CA8ps6yghLH/Hw8UPdqg4OLmFW3IFlcXnQNmo/dh8HzXYIQ=="],
 
     "@singularity/cli": ["@singularity/cli@workspace:cli"],
+
+    "@singularity/plugin-agents": ["@singularity/plugin-agents@workspace:plugins/agents"],
 
     "@singularity/plugin-build": ["@singularity/plugin-build@workspace:plugins/build"],
 

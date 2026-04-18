@@ -27,6 +27,7 @@ import statsPlugin from "@plugins/stats/web";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/web";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/web";
 import tasksPlugin from "@plugins/tasks/web";
+import agentsPlugin from "@plugins/agents/web";
 import screenshotPlugin from "@plugins/screenshot/web";
 
 export const plugins: PluginDefinition[] = [
@@ -58,5 +59,6 @@ export const plugins: PluginDefinition[] = [
   statsTasksPlugin,
   statsCommitsPlugin,
   tasksPlugin,
+  agentsPlugin,
   screenshotPlugin,
 ];
