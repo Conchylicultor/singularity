@@ -10,13 +10,10 @@ export interface CommitInfo {
   removed: number;
 }
 
-let cache: { expires: number; commits: CommitInfo[] } | null = null;
-
-export async function getCommits(): Promise<CommitInfo[]> {
-  if (cache && cache.expires > Date.now()) return cache.commits;
+async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
   const root = await ensureMainWorktreeRoot();
   const proc = Bun.spawn(
-    [GIT, "-C", root, "log", "--format=__C__%H %cI", "--numstat", "--reverse"],
+    [GIT, "-C", root, "log", "--format=__C__%H %cI", "--numstat", "--reverse", ...args],
     { stdout: "pipe", stderr: "pipe" },
   );
   const text = await new Response(proc.stdout).text();
@@ -43,8 +40,26 @@ export async function getCommits(): Promise<CommitInfo[]> {
     }
   }
   if (current) commits.push(current);
+  return commits;
+}
 
+let cache: { expires: number; commits: CommitInfo[] } | null = null;
+const filteredCache = new Map<string, { expires: number; commits: CommitInfo[] }>();
+
+export async function getCommits(): Promise<CommitInfo[]> {
+  if (cache && cache.expires > Date.now()) return cache.commits;
+  const commits = await parseGitLog([]);
   cache = { expires: Date.now() + TTL_MS, commits };
+  return commits;
+}
+
+export async function getCommitsExcludingPaths(excludedPaths: string[]): Promise<CommitInfo[]> {
+  const key = [...excludedPaths].sort().join("|");
+  const cached = filteredCache.get(key);
+  if (cached && cached.expires > Date.now()) return cached.commits;
+  const excludeArgs = excludedPaths.map((p) => `:(exclude)${p}`);
+  const commits = await parseGitLog(["--", ".", ...excludeArgs]);
+  filteredCache.set(key, { expires: Date.now() + TTL_MS, commits });
   return commits;
 }
 

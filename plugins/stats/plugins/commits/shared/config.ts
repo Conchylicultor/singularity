@@ -10,4 +10,10 @@ export const commitsConfig = defineConfig({
       "Commits excluded from line-change aggregation. Useful for one-shot scaffolds that distort the stats.",
     label: "Excluded commit SHAs",
   },
+  excludedPaths: {
+    default: ["research/", "server/src/db/migrations/meta/"] as string[],
+    description:
+      "File path prefixes excluded from line-change stats when the filter toggle is enabled.",
+    label: "Excluded paths (line stats)",
+  },
 });

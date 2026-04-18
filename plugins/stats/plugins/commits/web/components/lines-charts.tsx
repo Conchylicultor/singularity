@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 import {
   Area,
   Bar,
@@ -26,6 +26,8 @@ import {
   useFetchJson,
   yAxisFormatter,
 } from "./chart-primitives";
+
+const ExcludePathsContext = createContext(false);
 
 const ADDED_COLOR = "var(--chart-added, #16a34a)";
 const REMOVED_COLOR = "var(--chart-removed, #dc2626)";
@@ -70,9 +72,11 @@ interface CumulativePoint {
 }
 
 export function CumulativeLinesChart() {
-  const { data, error } = useFetchJson<{ points: CumulativePoint[] }>(
-    "/api/stats/commits/lines/cumulative",
-  );
+  const excludePaths = useContext(ExcludePathsContext);
+  const url = excludePaths
+    ? "/api/stats/commits/lines/cumulative?excludePaths=true"
+    : "/api/stats/commits/lines/cumulative";
+  const { data, error } = useFetchJson<{ points: CumulativePoint[] }>(url);
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
   const points = (data?.points ?? []).map((p) => ({
     date: p.date,
@@ -174,9 +178,11 @@ interface RatePoint {
 }
 
 export function LinesRateChart() {
+  const excludePaths = useContext(ExcludePathsContext);
   const [bucket, setBucket] = useState<Bucket>("day");
+  const excludeParam = excludePaths ? "&excludePaths=true" : "";
   const { data, error } = useFetchJson<{ points: RatePoint[] }>(
-    `/api/stats/commits/lines/rate?bucket=${bucket}`,
+    `/api/stats/commits/lines/rate?bucket=${bucket}${excludeParam}`,
   );
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
 
@@ -255,5 +261,37 @@ export function LinesRateChart() {
         ))}
       </div>
     </div>
+  );
+}
+
+export function LinesChartsSection() {
+  const [excludePaths, setExcludePaths] = useState(false);
+  return (
+    <ExcludePathsContext.Provider value={excludePaths}>
+      <div className="flex flex-col gap-6">
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={() => setExcludePaths((v) => !v)}
+            className={cn(
+              "rounded-full border px-3 py-1 text-xs transition-colors",
+              excludePaths
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            {excludePaths ? "Excluding filtered paths" : "All paths"}
+          </button>
+        </div>
+        <div>
+          <h3 className="mb-3 text-xs font-medium text-muted-foreground">Over time</h3>
+          <CumulativeLinesChart />
+        </div>
+        <div>
+          <h3 className="mb-3 text-xs font-medium text-muted-foreground">Per period</h3>
+          <LinesRateChart />
+        </div>
+      </div>
+    </ExcludePathsContext.Provider>
   );
 }

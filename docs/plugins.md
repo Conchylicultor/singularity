@@ -177,8 +177,7 @@
       - Contributes:
         - `Stats.Chart` "Commits over time" → `CumulativeCommitsChart`
         - `Stats.Chart` "Commits per period" → `CommitsRateChart`
-        - `Stats.Chart` "Lines changed over time" → `CumulativeLinesChart`
-        - `Stats.Chart` "Lines changed per period" → `LinesRateChart`
+        - `Stats.Chart` "Lines changed" → `LinesChartsSection`
       - Server:
         - Uses: `config.readConfig`
         - `GET /api/stats/commits/cumulative`
