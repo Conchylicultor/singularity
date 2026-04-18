@@ -14,6 +14,12 @@ type Patch = Partial<{
   model: string | null;
 }>;
 
+const MODELS = [
+  { value: null, label: "Default" },
+  { value: "sonnet", label: "Sonnet" },
+  { value: "opus", label: "Opus" },
+] as const;
+
 async function patchAgent(id: string, patch: Patch) {
   await fetch(`/api/agents/${id}`, {
     method: "PATCH",
@@ -30,6 +36,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
   const [name, setName] = useState(agent?.name ?? "");
   const [description, setDescription] = useState(agent?.description ?? "");
   const [prompt, setPrompt] = useState(agent?.prompt ?? "");
+  const [model, setModel] = useState<string | null>(agent?.model ?? null);
   const [launching, setLaunching] = useState(false);
 
   const nameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,7 +48,8 @@ export function AgentDetail({ agentId }: { agentId: string }) {
     if (!nameTimer.current) setName(agent.name);
     if (!descTimer.current) setDescription(agent.description ?? "");
     if (!promptTimer.current) setPrompt(agent.prompt ?? "");
-  }, [agent?.name, agent?.description, agent?.prompt]);
+    setModel(agent.model ?? null);
+  }, [agent?.name, agent?.description, agent?.prompt, agent?.model]);
 
   const save = useCallback(
     async (patch: Patch) => {
@@ -73,6 +81,12 @@ export function AgentDetail({ agentId }: { agentId: string }) {
       promptTimer.current = null;
       void save({ prompt: v });
     }, 500);
+  };
+
+  const onModelChange = async (v: string) => {
+    const newModel = v === "" ? null : v;
+    setModel(newModel);
+    await save({ model: newModel });
   };
 
   const convertToAgent = async () => {
@@ -142,6 +156,22 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         </div>
       ) : (
         <>
+          <div className="flex flex-col gap-1">
+            <label className="text-muted-foreground text-xs uppercase tracking-wide">
+              Model
+            </label>
+            <select
+              value={model ?? ""}
+              onChange={(e) => void onModelChange(e.target.value)}
+              className="focus:ring-ring w-fit rounded border bg-transparent px-2 py-1 text-sm outline-none focus:ring-1"
+            >
+              {MODELS.map((m) => (
+                <option key={String(m.value)} value={m.value ?? ""}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="flex flex-col gap-1">
             <label className="text-muted-foreground text-xs uppercase tracking-wide">
               Prompt
