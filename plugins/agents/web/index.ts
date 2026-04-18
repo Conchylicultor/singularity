@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@core";
 import { Shell } from "@plugins/shell/web/slots";
 import { Shell as ShellCommands } from "@plugins/shell/web/commands";
-import { MdSmartToy } from "react-icons/md";
+import { MdPrecisionManufacturing } from "react-icons/md";
 import { agentsPane } from "./views";
 
 const agentsPlugin: PluginDefinition = {
@@ -11,7 +11,7 @@ const agentsPlugin: PluginDefinition = {
   contributions: [
     Shell.Sidebar({
       title: "Agents",
-      icon: MdSmartToy,
+      icon: MdPrecisionManufacturing,
       group: "System",
       onClick: () => ShellCommands.OpenPane(agentsPane()),
     }),

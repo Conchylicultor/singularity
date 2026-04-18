@@ -4,7 +4,7 @@ import {
   MdChevronRight,
   MdCreateNewFolder,
   MdFolder,
-  MdSmartToy,
+  MdPrecisionManufacturing,
 } from "react-icons/md";
 import { useResource } from "@core";
 import { agentsResource } from "../../shared/resources";
@@ -320,7 +320,7 @@ function AgentNode({
 }
 
 function TypeIcon({ isFolder }: { isFolder: boolean }) {
-  const Icon = isFolder ? MdFolder : MdSmartToy;
+  const Icon = isFolder ? MdFolder : MdPrecisionManufacturing;
   return (
     <span className="flex size-5 shrink-0 items-center justify-center">
       <Icon
