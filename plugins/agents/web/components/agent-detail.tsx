@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { agentsResource } from "../../shared/resources";
 import type { Agent } from "../../server/schema";
 import { AgentLaunches } from "./agent-launches";
+import { AgentStatus } from "./agent-status";
 import { useConversationPane } from "./conversation-pane-context";
 
 type Patch = Partial<{
@@ -125,7 +126,8 @@ export function AgentDetail({ agentId }: { agentId: string }) {
 
   return (
     <div className="flex flex-col gap-4 p-6">
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
+        <AgentStatus agentId={agentId} size="md" />
         <input
           value={name}
           onChange={(e) => onNameChange(e.target.value)}

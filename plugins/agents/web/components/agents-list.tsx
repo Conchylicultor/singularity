@@ -3,7 +3,6 @@ import {
   MdAdd,
   MdChevronRight,
   MdDragIndicator,
-  MdPrecisionManufacturing,
 } from "react-icons/md";
 import {
   DndContext,
@@ -23,6 +22,7 @@ import { agentsResource } from "../../shared/resources";
 import { Agents as AgentsCommands } from "../commands";
 import { Agents as AgentsSlots } from "../slots";
 import { cn } from "@/lib/utils";
+import { AgentStatus } from "./agent-status";
 
 type Agent = {
   id: string;
@@ -401,7 +401,7 @@ function AgentNode({
               )}
             />
           </button>
-          <AgentIcon />
+          <AgentStatus agentId={node.id} />
           <input
             ref={inputRef}
             value={name}
@@ -482,10 +482,3 @@ function AgentNode({
   );
 }
 
-function AgentIcon() {
-  return (
-    <span className="flex size-5 shrink-0 items-center justify-center">
-      <MdPrecisionManufacturing className="size-4 text-primary" />
-    </span>
-  );
-}
