@@ -11,6 +11,7 @@ import {
   MdFilterAlt,
   MdFilterAltOff,
   MdDragIndicator,
+  MdInput,
 } from "react-icons/md";
 import type { IconType } from "react-icons";
 import {
@@ -35,6 +36,7 @@ import { cn } from "@/lib/utils";
 type TaskStatus =
   | "new"
   | "in_progress"
+  | "need_action"
   | "attempted"
   | "done"
   | "held"
@@ -64,6 +66,11 @@ const STATUS_META: Record<
     icon: MdTimelapse,
     className: "text-blue-600 dark:text-blue-400",
     label: "In progress",
+  },
+  need_action: {
+    icon: MdInput,
+    className: "text-orange-500 dark:text-orange-400",
+    label: "Need action",
   },
   attempted: {
     icon: MdIncompleteCircle,
