@@ -2,10 +2,9 @@ import { getTableColumns, sql } from "drizzle-orm";
 import { pgView } from "drizzle-orm/pg-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { _agent_launches, _agents } from "./schema_internal";
+import { _agent_launches, _agents } from "./tables";
 
-// Public surface: derived views + zod types. In-plugin writers of the
-// underlying tables go through ./schema_internal.
+// Derived view + Zod schemas + types. Tables live in `./tables.ts`.
 
 export const agents = pgView("agents_v").as((qb) =>
   qb

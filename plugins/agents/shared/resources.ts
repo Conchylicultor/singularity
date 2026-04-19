@@ -1,4 +1,9 @@
-import type { Agent, AgentLaunch } from "../server/schema";
+// In-plugin imports go straight to the leaf so the frontend bundle doesn't
+// pull `server/api`'s runtime surface. Cross-plugin consumers go through
+// `@plugins/agents/server/api`.
+import type { Agent, AgentLaunch } from "../server/internal/schema";
+
+export type { Agent, AgentLaunch } from "../server/internal/schema";
 
 function descriptor<T>(key: string) {
   return { key } as {

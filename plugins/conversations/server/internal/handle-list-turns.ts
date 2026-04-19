@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { _conversations } from "../schema_internal";
+import { _conversations } from "./tables";
 import { findTranscriptPath, readTurns } from "./claude-transcript";
 
 export async function handleListTurns(

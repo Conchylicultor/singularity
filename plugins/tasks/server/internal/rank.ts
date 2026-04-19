@@ -1,7 +1,7 @@
 import { desc, eq, isNull } from "drizzle-orm";
 import { generateKeyBetween } from "fractional-indexing";
 import { db } from "../../../../server/src/db/client";
-import { _tasks } from "../schema_internal";
+import { _tasks } from "./tables";
 
 type Executor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 

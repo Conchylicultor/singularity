@@ -6,13 +6,14 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { rankText } from "../../../server/src/db/types";
+import { rankText } from "../../../../server/src/db/types";
 
-// Physical tables that back a `pgView`. In-plugin writers import from here.
-// Cross-plugin callers must never import this file — they use `./schema`
-// (views + types). Plain tables with no derived view (e.g. `pushes`) live
-// in `./schema` directly instead.
+// Physical tables only. This file is a load-order leaf: it must NOT import
+// from any other plugin's schema/tables file (lazy FK callbacks aside) so
+// that cross-plugin schemas can depend on it without forming a cycle. Views,
+// Zod schemas, and types live in `./schema.ts`.
 
 export const _tasks = pgTable(
   "tasks",
@@ -59,5 +60,27 @@ export const _taskDependencies = pgTable(
   (t) => [
     primaryKey({ columns: [t.taskId, t.dependsOnTaskId] }),
     index("task_deps_depends_on_idx").on(t.dependsOnTaskId),
+  ],
+);
+
+export const pushes = pgTable(
+  "pushes",
+  {
+    id: text("id").primaryKey(),
+    attemptId: text("attempt_id")
+      .notNull()
+      .references(() => _attempts.id, { onDelete: "cascade" }),
+    // Soft attribution to the conversation that ran the push (cross-plugin,
+    // no FK so the conversations table can own its own lifecycle).
+    conversationId: text("conversation_id"),
+    sha: text("sha").notNull(),
+    pushId: text("push_id").notNull(),
+    message: text("message").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("pushes_sha_unique").on(t.sha),
+    index("pushes_push_id_idx").on(t.pushId),
+    index("pushes_attempt_id_idx").on(t.attemptId),
   ],
 );

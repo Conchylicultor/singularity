@@ -2,20 +2,13 @@ import { eq, getTableColumns, sql } from "drizzle-orm";
 import { pgView } from "drizzle-orm/pg-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { _attempts } from "@plugins/tasks/server/schema_internal";
-import { ConversationModelSchema } from "./model";
-import { _conversations } from "./schema_internal";
-import { ConversationStatusSchema } from "./status";
-
-// Public surface for this plugin: view (derived) + Zod + types.
-// In-plugin writers go through ./schema_internal.
-// Status enum + helpers live in ./status so schema_internal can import them
-// without depending on the view file.
-
-export { ConversationModelSchema } from "./model";
-export type { ConversationModel } from "./model";
-export { ConversationStatusSchema, isActiveStatus } from "./status";
-export type { ConversationStatus } from "./status";
+// Cross-plugin FK ref via the leaf `internal/tables` path (not `server/api`)
+// to avoid pulling in tasks' views, which back-reference `_conversations`
+// and would form an initialization cycle.
+import { _attempts } from "@plugins/tasks/server/internal/tables";
+import { ConversationModelSchema } from "../model";
+import { ConversationStatusSchema } from "../status";
+import { _conversations } from "./tables";
 
 // Public view: adds the derived `active` plus the attempt's worktree path
 // (convenience for UI consumers — they shouldn't have to subscribe to

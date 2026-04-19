@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../../../server/src/db/client";
 import { defineResource } from "../../../../../../server/src/resources";
-import { excludedPathState } from "../schema";
+import { excludedPathState } from "./tables";
 
 export interface PathStateMap {
   [path: string]: boolean;

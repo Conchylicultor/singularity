@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { Runtime } from "../api";
-import { _conversations } from "../schema_internal";
+import { _conversations } from "./tables";
 
 export async function handlePostTurn(
   req: Request,

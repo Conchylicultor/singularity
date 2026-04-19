@@ -1,6 +1,18 @@
+// Schema surface — order matters: tables.ts is a leaf, so re-exporting from
+// it first lets cross-plugin code that imports tables (FK targets) avoid
+// pulling in the views, which depend on other plugins' schemas and would
+// otherwise create initialization cycles.
+export { _conversations } from "./internal/tables";
+export { conversations, ConversationSchema } from "./internal/schema";
+export type { Conversation } from "./internal/schema";
+export { ConversationModelSchema } from "./model";
+export type { ConversationModel } from "./model";
+export { ConversationStatusSchema, isActiveStatus } from "./status";
+export type { ConversationStatus } from "./status";
+
 import { eq } from "drizzle-orm";
 import { db } from "../../../server/src/db/client";
-import { _conversations } from "./schema_internal";
+import { _conversations } from "./internal/tables";
 import {
   findTranscriptPath,
   readTurns,

@@ -1,6 +1,6 @@
 import { db } from "../../../../server/src/db/client";
-import { _attempts } from "../schema_internal";
-import { pushes } from "../schema";
+import { _attempts } from "./tables";
+import { pushes } from "./tables";
 import { attemptsResource, pushesResource } from "./resources";
 import { ensureMainWorktreeRoot } from "@plugins/conversations/server/api";
 

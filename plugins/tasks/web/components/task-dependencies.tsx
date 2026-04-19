@@ -3,8 +3,7 @@ import { MdClose } from "react-icons/md";
 import { useResource } from "@core";
 import { Button } from "@/components/ui/button";
 import { Shell as ShellCommands } from "@plugins/shell/web/commands";
-import { tasksResource } from "../../shared/resources";
-import type { Task } from "../../server/schema";
+import { tasksResource, type Task } from "../../shared/resources";
 import { tasksPane } from "../views";
 
 const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";

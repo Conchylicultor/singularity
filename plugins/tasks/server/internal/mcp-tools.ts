@@ -2,8 +2,8 @@ import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { Mcp } from "@plugins/mcp/server/api";
 import { db } from "../../../../server/src/db/client";
-import { conversations } from "@plugins/conversations/server/schema";
-import { _taskDependencies, _tasks } from "../schema_internal";
+import { conversations } from "@plugins/conversations/server/api";
+import { _taskDependencies, _tasks } from "./tables";
 import { nextRankUnder } from "./rank";
 import { tasksResource } from "./resources";
 

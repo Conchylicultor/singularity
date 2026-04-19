@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { tasks } from "../schema";
+import { tasks } from "./schema";
 
 export async function handleGet(
   _req: Request,

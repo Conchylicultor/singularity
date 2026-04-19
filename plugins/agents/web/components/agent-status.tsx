@@ -2,8 +2,7 @@ import { useMemo } from "react";
 import { useResource } from "@core";
 import { conversationsResource } from "@plugins/conversations/shared/resources";
 import type { Conversation } from "@plugins/conversations/shared/types";
-import { agentLaunchesResource } from "../../shared/resources";
-import type { AgentLaunch } from "../../server/schema";
+import { agentLaunchesResource, type AgentLaunch } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 
 const CONV_STATUS_DOT: Record<Conversation["status"], string> = {

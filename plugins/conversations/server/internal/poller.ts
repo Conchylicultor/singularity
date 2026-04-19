@@ -1,10 +1,14 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { attempts } from "@plugins/tasks/server/schema";
-import { _attempts, _tasks } from "@plugins/tasks/server/schema_internal";
-import { CONVERSATIONS_META_TASK_ID, nextRankUnder } from "@plugins/tasks/server/api";
+import {
+  _attempts,
+  _tasks,
+  attempts,
+  CONVERSATIONS_META_TASK_ID,
+  nextRankUnder,
+} from "@plugins/tasks/server/api";
 import { Runtime, type RuntimeInfo } from "../api";
-import { _conversations } from "../schema_internal";
+import { _conversations } from "./tables";
 import type { ConversationStatus } from "../../shared/types";
 import { conversationsResource } from "./resources";
 import { worktreePathFor } from "./worktree";

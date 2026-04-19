@@ -6,10 +6,10 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { rankText } from "../../../server/src/db/types";
+import { rankText } from "../../../../server/src/db/types";
 
-// Physical tables. Writers inside the plugin import from here; cross-plugin
-// consumers go through ./schema (public types only).
+// Physical tables only. Leaf in the schema dependency graph (no cross-plugin
+// imports). Views, Zod schemas, and types live in `./schema.ts`.
 
 export const _agents = pgTable(
   "agents",

@@ -6,14 +6,13 @@
   - Defines:
     - Slots: `Agents.List`, `Agents.View`, `Agents.AgentActions`
     - Commands: `Agents.OpenAgent`
-    - DB schema: `plugins/agents/server/schema.ts`
   - Contributes:
     - `Shell.Sidebar` "Agents" (group `System`)
     - `Shell.Route` `/agents`
     - `Shell.Route` `/agents/:id`
   - Server:
-    - API: `AGENTS_META_TASK_ID`, `agentLaunchesResource`, `agentsResource`, `nextAgentRankUnder`
-    - Uses: `conversations.createConversation`, `tasks.nextRankUnder`, `tasks.tasksResource`
+    - API: `AGENTS_META_TASK_ID`, `AgentLaunchSchema`, `AgentSchema`, `_agent_launches`, `_agents`, `agentLaunchesResource`, `agents`, `agentsResource`, `nextAgentRankUnder`
+    - Uses: `conversations.createConversation`, `tasks._tasks`, `tasks.nextRankUnder`, `tasks.tasksResource`
     - Resources: `agent-launches` (push), `agents` (push)
     - `GET /api/agents`
     - `POST /api/agents`
@@ -34,7 +33,6 @@
 - **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
   - Defines:
     - Slots: `Config.Spec`, `Config.Section`
-    - DB schema: `plugins/config/server/schema.ts`
   - Contributes:
     - `Shell.Sidebar` "Settings" (group `System`)
     - `Shell.Route` `/settings`
@@ -46,11 +44,9 @@
     - `DELETE /api/config/:key`
 
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
-  - Defines:
-    - DB schema: `plugins/conversations/server/schema.ts`
   - Server:
-    - API: `Runtime`, `conversationsResource`, `createConversation`, `deleteConversation`, `ensureMainWorktreeRoot`, `getConversationRow`, `readConversationTurns`, `worktreePathFor`, `worktreePathForSync`
-    - Uses: `tasks.CONVERSATIONS_META_TASK_ID`, `tasks.attemptsResource`, `tasks.nextRankUnder`, `tasks.tasksResource`
+    - API: `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `Runtime`, `_conversations`, `conversations`, `conversationsResource`, `createConversation`, `deleteConversation`, `ensureMainWorktreeRoot`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `worktreePathFor`, `worktreePathForSync`
+    - Uses: `tasks.CONVERSATIONS_META_TASK_ID`, `tasks._attempts`, `tasks._tasks`, `tasks.attempts`, `tasks.attemptsResource`, `tasks.nextRankUnder`, `tasks.tasksResource`
     - Resources: `conversations` (push)
     - `GET /api/conversations`
     - `GET /api/conversations/:id`
@@ -73,6 +69,7 @@
           - Contributes:
             - `Conversation.Toolbar` → `CodeToolbarSlot`
           - Server:
+            - Uses: `conversations.conversations`
             - Resources: `edited-files` (invalidate)
             - `GET /api/conversations/:id/file`
             - `GET /api/conversations/:id/diff`
@@ -187,8 +184,6 @@
     - `Shell.Route` `/stats`
   - Plugins:
     - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
-      - Defines:
-        - DB schema: `plugins/stats/plugins/commits/server/schema.ts`
       - Contributes:
         - `Stats.Chart` "Commits over time" → `CumulativeCommitsChart`
         - `Stats.Chart` "Commits per period" → `CommitsRateChart`
@@ -213,7 +208,6 @@
   - Defines:
     - Slots: `Tasks.List`, `Tasks.View`, `Tasks.TaskActions`
     - Commands: `Tasks.OpenTask`
-    - DB schema: `plugins/tasks/server/schema.ts`
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `NewTaskButton`
     - `Shell.Sidebar` "Tasks" (group `System`)
@@ -223,8 +217,8 @@
     - `Tasks.TaskActions` → `DeleteTaskAction`
     - `Tasks.TaskActions` → `LaunchAgentAction`
   - Server:
-    - API: `CONVERSATIONS_META_TASK_ID`, `attemptsResource`, `nextRankUnder`, `pushesResource`, `tasksResource`
-    - Uses: `conversations.conversationsResource`, `conversations.ensureMainWorktreeRoot`, `mcp.Mcp`
+    - API: `AttemptSchema`, `AttemptStatusSchema`, `CONVERSATIONS_META_TASK_ID`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`, `_attempts`, `_tasks`, `attempts`, `attemptsResource`, `nextRankUnder`, `pushes`, `pushesResource`, `tasks`, `tasksResource`
+    - Uses: `conversations.conversations`, `conversations.conversationsResource`, `conversations.ensureMainWorktreeRoot`, `mcp.Mcp`
     - Resources: `attempts` (push), `pushes` (push), `tasks` (push)
     - `GET /api/tasks`
     - `POST /api/tasks`

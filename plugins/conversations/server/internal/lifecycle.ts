@@ -1,7 +1,8 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { _attempts, _tasks } from "@plugins/tasks/server/schema_internal";
 import {
+  _attempts,
+  _tasks,
   CONVERSATIONS_META_TASK_ID,
   attemptsResource,
   nextRankUnder,
@@ -9,8 +10,8 @@ import {
 } from "@plugins/tasks/server/api";
 import { Runtime } from "../api";
 import type { ConversationModel } from "../model";
-import { conversations } from "../schema";
-import { _conversations } from "../schema_internal";
+import { _conversations } from "./tables";
+import { conversations } from "./schema";
 import type { Conversation } from "../../shared/types";
 import { forkDatabase } from "./db-fork";
 import { reportForkError } from "./fork-errors";

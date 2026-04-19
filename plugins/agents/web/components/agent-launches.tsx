@@ -4,8 +4,7 @@ import { Shell as ShellCommands } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
 import { conversationsResource } from "@plugins/conversations/shared/resources";
 import type { Conversation } from "@plugins/conversations/shared/types";
-import { agentLaunchesResource } from "../../shared/resources";
-import type { AgentLaunch } from "../../server/schema";
+import { agentLaunchesResource, type AgentLaunch } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 import { useConversationPane } from "./conversation-pane-context";
 

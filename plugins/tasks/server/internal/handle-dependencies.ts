@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { _taskDependencies, _tasks } from "../schema_internal";
+import { _taskDependencies, _tasks } from "./tables";
 import { tasksResource } from "./resources";
 
 export async function handleAddDependency(

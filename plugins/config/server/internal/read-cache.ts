@@ -1,5 +1,5 @@
 import { db } from "../../../../server/src/db/client";
-import { config } from "../schema";
+import { config } from "./tables";
 
 // In-memory cache of all config values, keyed by fullKey. Populated on first
 // read and kept in sync with PATCH writes. Server handlers call this from the

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { tasks } from "../schema";
-import { _tasks } from "../schema_internal";
+import { _tasks } from "./tables";
+import { tasks } from "./schema";
 import { tasksResource } from "./resources";
 
 export async function handleUpdate(

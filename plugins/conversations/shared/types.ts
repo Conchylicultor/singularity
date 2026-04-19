@@ -1,9 +1,11 @@
+// In-plugin imports go straight to the leaf modules so the frontend bundle
+// doesn't pull `server/api`'s runtime surface (which loads `claude-transcript`
+// and other Node-only modules). Cross-plugin consumers must still go through
+// `@plugins/conversations/server/api`.
+export { ConversationSchema, type Conversation } from "../server/internal/schema";
+export { ConversationModelSchema, type ConversationModel } from "../server/model";
 export {
-  ConversationModelSchema,
-  ConversationSchema,
   ConversationStatusSchema,
   isActiveStatus,
-  type Conversation,
-  type ConversationModel,
   type ConversationStatus,
-} from "../server/schema";
+} from "../server/status";

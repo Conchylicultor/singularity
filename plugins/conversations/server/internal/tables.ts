@@ -1,10 +1,16 @@
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { _attempts } from "@plugins/tasks/server/schema_internal";
-import type { ConversationModel } from "./model";
-import type { ConversationStatus } from "./status";
+import { _attempts } from "@plugins/tasks/server/internal/tables";
+import type { ConversationModel } from "../model";
+import type { ConversationStatus } from "../status";
 
-// Physical table. In-plugin writers import from here. Cross-plugin callers
-// must never import this file — they use `./schema` (view + types).
+// Physical table only. The cross-plugin FK target `_attempts` is imported from
+// the owning plugin's leaf `internal/tables` (NOT through `server/api`) so this
+// file remains a true leaf in the schema dependency graph. Going through
+// `server/api` would transitively load that plugin's `internal/schema` (views),
+// which back-references this table and forms an initialization cycle.
+// Application code outside `internal/tables.ts` must still go through
+// `@plugins/<name>/server/api`. Views, Zod schemas, and types live in
+// `./schema.ts`.
 
 export const _conversations = pgTable("conversations", {
   id: text("id").primaryKey(),

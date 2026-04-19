@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { config } from "../schema";
+import { config } from "./tables";
 import { getRegistry, getField } from "./registry";
 import { deleteValue, getAll, setValue } from "./read-cache";
 import { configResource } from "./resource";

@@ -7,8 +7,7 @@ import { useResource } from "@core";
 import { Shell as ShellCommands } from "@plugins/shell/web/commands";
 import { conversationsResource } from "@plugins/conversations/shared/resources";
 import type { Conversation } from "@plugins/conversations/shared/types";
-import { tasksResource } from "../../shared/resources";
-import type { Task } from "../../server/schema";
+import { tasksResource, type Task } from "../../shared/resources";
 import { tasksPane } from "../views";
 
 const STATUS_LABELS: Record<Task["status"], string> = {

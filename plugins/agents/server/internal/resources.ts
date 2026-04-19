@@ -1,8 +1,8 @@
 import { asc } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { defineResource } from "../../../../server/src/resources";
-import { _agent_launches } from "../schema_internal";
-import { agents, type Agent, type AgentLaunch } from "../schema";
+import { _agent_launches } from "./tables";
+import { agents, type Agent, type AgentLaunch } from "./schema";
 
 export const agentsResource = defineResource({
   key: "agents",

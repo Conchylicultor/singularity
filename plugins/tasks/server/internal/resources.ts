@@ -2,14 +2,14 @@ import { asc, desc } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { defineResource } from "../../../../server/src/resources";
 import { conversationsResource } from "@plugins/conversations/server/api";
+import { pushes } from "./tables";
 import {
   attempts,
-  pushes,
   tasks,
   type Attempt,
   type Push,
   type Task,
-} from "../schema";
+} from "./schema";
 
 export const pushesResource = defineResource({
   key: "pushes",

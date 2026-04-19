@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../../../../../server/src/db/client";
-import { conversations } from "../../../../../../server/schema";
+import { conversations } from "@plugins/conversations/server/api";
 import { getFileContent } from "./get-file-content";
 
 export async function handleFileContent(

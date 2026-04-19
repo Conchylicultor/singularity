@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { agents } from "../schema";
-import { _agents } from "../schema_internal";
+import { _agents } from "./tables";
+import { agents } from "./schema";
 import { agentsResource } from "./resources";
 
 export async function handleUpdate(

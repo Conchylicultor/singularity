@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { _agent_launches } from "../schema_internal";
+import { _agent_launches } from "./tables";
 
 export async function handleListLaunches(
   _req: Request,

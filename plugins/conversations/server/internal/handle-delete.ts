@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { _conversations } from "../schema_internal";
+import { _conversations } from "./tables";
 import { deleteConversation } from "./lifecycle";
 import { conversationsResource } from "./resources";
 

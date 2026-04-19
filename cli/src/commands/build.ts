@@ -95,6 +95,30 @@ async function waitForDatabase(name: string): Promise<void> {
   process.exit(1);
 }
 
+async function probeHealth(name: string): Promise<void> {
+  console.log("Probing /api/health...");
+  const url = `http://${name}.localhost:9000/api/health`;
+  const deadline = Date.now() + 10_000;
+  let lastStatus: number | string = "no response";
+  while (Date.now() < deadline) {
+    try {
+      const resp = await fetch(url);
+      if (resp.ok) return;
+      lastStatus = resp.status;
+    } catch (err) {
+      lastStatus = err instanceof Error ? err.message : String(err);
+    }
+    await Bun.sleep(250);
+  }
+  console.error(
+    `Server failed to respond on /api/health within 10s (last: ${lastStatus}).`,
+  );
+  console.error(
+    "The build artifacts are valid but the server can't boot. Check server logs.",
+  );
+  process.exit(1);
+}
+
 export function registerBuild(program: Command) {
   program
     .command("build")
@@ -157,7 +181,14 @@ export function registerBuild(program: Command) {
       console.log("Generating plugins doc...");
       await generatePluginDocs({ root });
 
-      // 4. Build frontend
+      // 4. Type-check server. Bun runs the server without static checks, and
+      // the web `tsc -b` only covers files reachable from web — so server-only
+      // modules (handlers, pollers) can ship with broken imports and only
+      // surface as 502s on first request. Run server tsc explicitly here.
+      console.log("Type-checking server...");
+      await exec(["bunx", "tsc"], resolve(root, "server"));
+
+      // 5. Build frontend
       console.log("Building frontend...");
       await exec(["bun", "run", "build"], resolve(root, "web"));
 
@@ -180,12 +211,15 @@ export function registerBuild(program: Command) {
         return;
       }
       console.log("Restarting backend...");
+      let gatewayUp = true;
+      let backendWasRunning = false;
       try {
         const resp = await fetch(
           `http://localhost:9000/gateway/worktrees/${name}/restart`,
           { method: "POST" },
         );
         if (resp.ok) {
+          backendWasRunning = true;
           console.log("Backend restarted (will respawn on next request)");
         } else if (resp.status === 404) {
           console.log("No running backend to restart");
@@ -194,7 +228,16 @@ export function registerBuild(program: Command) {
         }
       } catch {
         // Gateway not running — that's fine, backend will start on first request
+        gatewayUp = false;
         console.log("Gateway not reachable, skipping backend restart");
+      }
+
+      // Smoke-test the server boot. tsc catches static import errors but the
+      // server can still fail to evaluate (missing env, init-time cycle, etc.)
+      // and surface as a 502 on first request. Hit /api/health to force a boot
+      // and fail the build if the server can't come up.
+      if (gatewayUp && backendWasRunning) {
+        await probeHealth(name);
       }
 
       console.log(`Deployed to http://${name}.localhost:9000`);

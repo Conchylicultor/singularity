@@ -1,6 +1,6 @@
 import { asc } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { agents } from "../schema";
+import { agents } from "./schema";
 
 export async function handleList(_req: Request): Promise<Response> {
   const rows = await db

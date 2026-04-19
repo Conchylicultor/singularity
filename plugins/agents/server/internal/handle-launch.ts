@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { _tasks } from "@plugins/tasks/server/schema_internal";
 import {
+  _tasks,
   nextRankUnder,
   tasksResource,
 } from "@plugins/tasks/server/api";
@@ -10,8 +10,8 @@ import {
   ConversationModelSchema,
   type ConversationModel,
 } from "@plugins/conversations/shared/types";
-import { _agent_launches } from "../schema_internal";
-import { agents } from "../schema";
+import { _agent_launches } from "./tables";
+import { agents } from "./schema";
 import { AGENTS_META_TASK_ID } from "./meta-agents";
 import { agentLaunchesResource } from "./resources";
 

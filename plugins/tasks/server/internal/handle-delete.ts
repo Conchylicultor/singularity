@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import { _tasks } from "../schema_internal";
+import { _tasks } from "./tables";
 import { tasksResource } from "./resources";
 
 export async function handleDelete(

@@ -1,35 +1,19 @@
-import { index, pgTable, pgView, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { eq, getTableColumns, sql } from "drizzle-orm";
+import { pgView } from "drizzle-orm/pg-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { _conversations } from "@plugins/conversations/server/schema_internal";
-import { _attempts, _taskDependencies, _tasks } from "./schema_internal";
+import { _conversations } from "@plugins/conversations/server/internal/tables";
+import { _attempts, _taskDependencies, _tasks, pushes } from "./tables";
 
-// Public surface for this plugin: views (derived) + plain tables with no
-// derivation (e.g. pushes) + Zod + types. In-plugin writers of the derived
-// tables (_tasks, _attempts) go through ./schema_internal.
-
-export const pushes = pgTable(
-  "pushes",
-  {
-    id: text("id").primaryKey(),
-    attemptId: text("attempt_id")
-      .notNull()
-      .references(() => _attempts.id, { onDelete: "cascade" }),
-    // Soft attribution to the conversation that ran the push (cross-plugin,
-    // no FK so the conversations table can own its own lifecycle).
-    conversationId: text("conversation_id"),
-    sha: text("sha").notNull(),
-    pushId: text("push_id").notNull(),
-    message: text("message").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [
-    uniqueIndex("pushes_sha_unique").on(t.sha),
-    index("pushes_push_id_idx").on(t.pushId),
-    index("pushes_attempt_id_idx").on(t.attemptId),
-  ],
-);
+// Derived views + Zod schemas + types. Tables live in `./tables.ts` so that
+// any cross-plugin file (including other plugins' schemas) can import them
+// without dragging in this file's view definitions, which would form an
+// initialization cycle.
+//
+// Cross-plugin FK refs go through the owning plugin's leaf `internal/tables`
+// (NOT `server/api`) for the same reason: `server/api` re-exports both tables
+// and views, and the views back-reference our tables — going through `api`
+// here would cycle. App code outside schema files still goes through `api`.
 
 export const attempts = pgView("attempts_v").as((qb) => {
   const facts = qb.$with("attempt_facts").as(
