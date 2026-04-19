@@ -15,6 +15,7 @@ import tasksPlugin from "@plugins/tasks/server";
 import agentsPlugin from "@plugins/agents/server";
 import screenshotPlugin from "@plugins/screenshot/server";
 import configPlugin from "@plugins/config/server";
+import dbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
 
 // Runtime plugins must load before `conversationsPlugin` so they register
 // with the `Runtime` registry before the poller starts ticking on its import.
@@ -38,4 +39,5 @@ export const plugins: ServerPluginDefinition[] = [
   tasksPlugin,
   agentsPlugin,
   screenshotPlugin,
+  dbBackupPlugin,
 ];

@@ -2,6 +2,8 @@ import type { PluginDefinition } from "@core";
 import shellPlugin from "@plugins/shell/web";
 import terminalPlugin from "@plugins/terminal/web";
 import buildPlugin from "@plugins/build/web";
+import debugPlugin from "@plugins/debug/web";
+import dbBackupPlugin from "@plugins/debug/plugins/db-backup/web";
 import logsPlugin from "@plugins/logs/web";
 import conversationsPlugin from "@plugins/conversations/plugins/conversations-view/web";
 import conversationPlugin from "@plugins/conversations/plugins/conversation-view/web";
@@ -38,7 +40,9 @@ export const plugins: PluginDefinition[] = [
   terminalPlugin,
   worktreeSwitcherPlugin,
   buildPlugin,
+  debugPlugin,
   logsPlugin,
+  dbBackupPlugin,
   conversationPlugin,
   conversationVscodePlugin,
   conversationOpenAppPlugin,

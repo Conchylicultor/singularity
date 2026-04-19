@@ -127,6 +127,18 @@
       - Server:
         - Uses: `conversations.Runtime`
 
+- **`debug`** — Debug tools sidebar group.
+  - Defines:
+    - Slots: `Debug.Item`
+  - Contributes:
+    - `Shell.Sidebar` "Debug" → `DebugSidebar`
+  - Plugins:
+    - **`db-backup`** — Backup non-worktree Postgres databases to ~/.backups/singularity/. Backup non-worktree Postgres databases to ~/.backups/singularity/.
+      - Contributes:
+        - `Debug.Item` "DB Backup"
+      - Server:
+        - `POST /api/debug/backup-db`
+
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Contributes:
     - `Core.Root` → `ReconnectWatcher`
@@ -135,9 +147,9 @@
 
 - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
 
-- **`logs`** — System logs pane, opened from a sidebar button.
+- **`logs`** — System logs pane, opened from the Debug sidebar.
   - Contributes:
-    - `Shell.Sidebar` "Logs" (group `System`)
+    - `Debug.Item` "Logs"
     - `Shell.Route` `/logs`
     - `Shell.Route` `/logs/:channel`
   - Server:
