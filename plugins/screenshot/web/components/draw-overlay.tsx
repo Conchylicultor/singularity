@@ -14,6 +14,7 @@ interface Props {
   onStrokesChange: (s: Stroke[] | ((prev: Stroke[]) => Stroke[])) => void;
   color: string;
   width: number;
+  readOnly?: boolean;
 }
 
 export function DrawOverlay({
@@ -23,6 +24,7 @@ export function DrawOverlay({
   onStrokesChange,
   color,
   width,
+  readOnly = false,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [drawing, setDrawing] = useState(false);
@@ -75,14 +77,17 @@ export function DrawOverlay({
   return (
     <canvas
       ref={canvasRef}
-      className="absolute touch-none cursor-crosshair"
+      className="absolute touch-none"
       style={{
         left: displayed.x,
         top: displayed.y,
         width: displayed.width,
         height: displayed.height,
+        cursor: readOnly ? "default" : "crosshair",
+        pointerEvents: readOnly ? "none" : "auto",
       }}
       onPointerDown={(e) => {
+        if (readOnly) return;
         e.currentTarget.setPointerCapture(e.pointerId);
         setDrawing(true);
         const p = localPoint(e);

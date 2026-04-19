@@ -45,11 +45,6 @@ export function ScreenshotView({ id }: { id: string }) {
     setStrokes([]);
   }
 
-  // Switching tools clears tool-local state.
-  useEffect(() => {
-    if (tool !== "draw") setStrokes([]);
-  }, [tool]);
-
   return (
     <div className="flex h-[calc(100svh-3rem)] min-h-0 w-full overflow-hidden">
       <div className="flex min-h-0 flex-1 flex-col">
@@ -63,7 +58,8 @@ export function ScreenshotView({ id }: { id: string }) {
               blob={imageBlob}
               tool={tool}
               onCropCommit={async (rect) => {
-                const next = await applyCrop(imageBlob, rect);
+                const base = strokes.length > 0 ? await applyStrokes(imageBlob, strokes) : imageBlob;
+                const next = await applyCrop(base, rect);
                 setImageBlob(next);
                 resetEdits();
               }}
@@ -188,7 +184,7 @@ function ImageStage({
           onCommit={onCropCommit}
         />
       )}
-      {tool === "draw" && naturalSize && displayedRect && (
+      {(tool === "draw" || (tool === "crop" && strokes.length > 0)) && naturalSize && displayedRect && (
         <DrawOverlay
           displayed={displayedRect}
           natural={naturalSize}
@@ -196,6 +192,7 @@ function ImageStage({
           onStrokesChange={onStrokesChange}
           color={drawSettings.color}
           width={drawSettings.width}
+          readOnly={tool !== "draw"}
         />
       )}
     </div>
