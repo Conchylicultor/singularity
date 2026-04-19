@@ -593,10 +593,11 @@ function TaskNode({
           <button
             type="button"
             onClick={() => onAdd(node.id)}
-            className="text-muted-foreground hover:bg-accent hover:text-foreground flex items-center gap-1 rounded px-2 py-1 text-sm"
+            className="text-muted-foreground hover:bg-accent hover:text-foreground flex w-full items-center gap-1 rounded px-1 py-1 text-sm"
             style={{ paddingLeft: (depth + 1) * 16 + 4 }}
           >
-            <MdAdd className="size-4" />
+            <span className="size-5 shrink-0" />
+            <MdAdd className="size-4 shrink-0" />
             Add
           </button>
         </div>
