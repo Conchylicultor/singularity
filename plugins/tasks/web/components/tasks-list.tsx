@@ -154,7 +154,7 @@ function computeDrop(
   if (zone === "child") {
     const children = rows
       .filter((r) => r.parentId === target.id && r.id !== draggedId)
-      .sort((a, b) => a.rank.localeCompare(b.rank));
+      .sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0));
     const last = children[children.length - 1];
     try {
       return {
@@ -168,7 +168,7 @@ function computeDrop(
 
   const siblings = rows
     .filter((r) => r.parentId === target.parentId && r.id !== draggedId)
-    .sort((a, b) => a.rank.localeCompare(b.rank));
+    .sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0));
   const idx = siblings.findIndex((s) => s.id === target.id);
   if (idx === -1) return null;
 

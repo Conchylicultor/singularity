@@ -6,6 +6,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { rankText } from "../../../server/src/db/types";
 
 // Physical tables that back a `pgView`. In-plugin writers import from here.
 // Cross-plugin callers must never import this file — they use `./schema`
@@ -26,7 +27,7 @@ export const _tasks = pgTable(
     droppedAt: timestamp("dropped_at", { withTimezone: true }),
     heldAt: timestamp("held_at", { withTimezone: true }),
     expanded: boolean("expanded").notNull().default(false),
-    rank: text("rank").notNull(),
+    rank: rankText("rank").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

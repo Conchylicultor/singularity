@@ -6,6 +6,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { rankText } from "../../../server/src/db/types";
 
 // Physical tables. Writers inside the plugin import from here; cross-plugin
 // consumers go through ./schema (public types only).
@@ -24,7 +25,7 @@ export const _agents = pgTable(
     prompt: text("prompt"),
     model: text("model"),
     expanded: boolean("expanded").notNull().default(false),
-    rank: text("rank").notNull(),
+    rank: rankText("rank").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
