@@ -3,7 +3,7 @@ import { MdClose } from "react-icons/md";
 import { Shell } from "@plugins/shell/web/commands";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
 import { useConversations } from "@plugins/conversations/web/use-conversations";
-import { LaunchButtons } from "@plugins/launch/web";
+import { LaunchButtons } from "@plugins/launch/web/api";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,

@@ -9,4 +9,3 @@ const launchPlugin: PluginDefinition = {
 
 export default launchPlugin;
 
-export { LaunchButtons, type LaunchButtonsProps, type LaunchRequest } from "./components/launch-buttons";

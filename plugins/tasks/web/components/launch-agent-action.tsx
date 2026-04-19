@@ -1,4 +1,4 @@
-import { LaunchButtons } from "@plugins/launch/web";
+import { LaunchButtons } from "@plugins/launch/web/api";
 
 export function LaunchAgentAction({ taskId }: { taskId: string }) {
   const getRequest = async () => {

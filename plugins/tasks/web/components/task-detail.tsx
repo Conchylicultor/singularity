@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LaunchButtons } from "@plugins/launch/web";
+import { LaunchButtons } from "@plugins/launch/web/api";
 import { Button } from "@/components/ui/button";
 import { TaskDependencies } from "./task-dependencies";
 import { TaskEvents } from "./task-events";
