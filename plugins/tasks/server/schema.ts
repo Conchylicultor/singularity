@@ -3,7 +3,7 @@ import { eq, getTableColumns, sql } from "drizzle-orm";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { _conversations } from "@plugins/conversations/server/schema_internal";
-import { _attempts, _tasks } from "./schema_internal";
+import { _attempts, _taskDependencies, _tasks } from "./schema_internal";
 
 // Public surface for this plugin: views (derived) + plain tables with no
 // derivation (e.g. pushes) + Zod + types. In-plugin writers of the derived
@@ -119,6 +119,16 @@ export const tasks = pgView("tasks_v").as((qb) => {
             JOIN ${_attempts} a ON a.id = p.attempt_id
            WHERE a.task_id = ${sql.raw('"tasks"."id"')}
         )`.as("min_completed_push_at"),
+        hasBlockingDep: sql<boolean>`EXISTS (
+          SELECT 1 FROM ${_taskDependencies} td
+            JOIN ${_tasks} dep ON dep.id = td.depends_on_task_id
+           WHERE td.task_id = ${sql.raw('"tasks"."id"')}
+             AND dep.dropped_at IS NULL
+             AND NOT EXISTS (
+               SELECT 1 FROM ${attempts} a
+                WHERE a.task_id = dep.id AND a.status = 'completed'
+             )
+        )`.as("has_blocking_dep"),
       })
       .from(_tasks),
   );
@@ -127,11 +137,12 @@ export const tasks = pgView("tasks_v").as((qb) => {
     .with(facts)
     .select({
       ...getTableColumns(_tasks),
-      status: sql<"new" | "in_progress" | "need_action" | "attempted" | "done" | "held" | "dropped">`
+      status: sql<"new" | "in_progress" | "need_action" | "attempted" | "done" | "held" | "dropped" | "blocked">`
         CASE
           WHEN ${_tasks.droppedAt} IS NOT NULL              THEN 'dropped'
           WHEN ${_tasks.heldAt}    IS NOT NULL              THEN 'held'
           WHEN ${facts.hasCompleted}                        THEN 'done'
+          WHEN ${facts.hasBlockingDep}                      THEN 'blocked'
           WHEN ${facts.hasActive} AND ${facts.hasWaiting}   THEN 'need_action'
           WHEN ${facts.hasActive}                           THEN 'in_progress'
           WHEN ${facts.hasAttempt}                          THEN 'attempted'
@@ -142,6 +153,7 @@ export const tasks = pgView("tasks_v").as((qb) => {
         ${_tasks.droppedAt} IS NULL
         AND ${_tasks.heldAt} IS NULL
         AND NOT ${facts.hasCompleted}
+        AND NOT ${facts.hasBlockingDep}
         AND ${facts.hasActive}
       )`.as("active"),
       finishedAt: sql<Date | null>`
@@ -151,6 +163,11 @@ export const tasks = pgView("tasks_v").as((qb) => {
           ELSE                                        NULL
         END
       `.as("finished_at"),
+      dependencies: sql<string[]>`COALESCE(ARRAY(
+        SELECT td.depends_on_task_id FROM ${_taskDependencies} td
+         WHERE td.task_id = ${sql.raw('"tasks"."id"')}
+         ORDER BY td.created_at
+      ), ARRAY[]::text[])`.as("dependencies"),
     })
     .from(_tasks)
     .innerJoin(facts, eq(facts.id, _tasks.id));
@@ -164,6 +181,7 @@ export const TaskStatusSchema = z.enum([
   "done",
   "held",
   "dropped",
+  "blocked",
 ]);
 export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 
@@ -185,6 +203,7 @@ export const TaskSchema = createSelectSchema(_tasks, {
   status: TaskStatusSchema,
   active: z.boolean(),
   finishedAt: z.coerce.date().nullable(),
+  dependencies: z.array(z.string()),
 });
 export type Task = z.infer<typeof TaskSchema>;
 

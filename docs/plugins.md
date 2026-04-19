@@ -231,6 +231,8 @@
     - `GET /api/tasks/:id`
     - `PATCH /api/tasks/:id`
     - `DELETE /api/tasks/:id`
+    - `POST /api/tasks/:id/dependencies`
+    - `DELETE /api/tasks/:id/dependencies/:depId`
     - `GET /api/repo-info`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.

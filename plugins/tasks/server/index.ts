@@ -4,6 +4,10 @@ import { handleCreate } from "./internal/handle-create";
 import { handleGet } from "./internal/handle-get";
 import { handleUpdate } from "./internal/handle-update";
 import { handleDelete } from "./internal/handle-delete";
+import {
+  handleAddDependency,
+  handleRemoveDependency,
+} from "./internal/handle-dependencies";
 import { handleRepoInfo } from "./internal/handle-repo-info";
 import {
   attemptsResource,
@@ -27,6 +31,8 @@ const plugin: ServerPluginDefinition = {
     "GET /api/tasks/:id": handleGet,
     "PATCH /api/tasks/:id": handleUpdate,
     "DELETE /api/tasks/:id": handleDelete,
+    "POST /api/tasks/:id/dependencies": handleAddDependency,
+    "DELETE /api/tasks/:id/dependencies/:depId": handleRemoveDependency,
     "GET /api/repo-info": handleRepoInfo,
   },
   resources: [tasksResource, attemptsResource, pushesResource],

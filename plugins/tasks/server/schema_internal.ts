@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   pgTable,
+  primaryKey,
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
@@ -43,3 +44,20 @@ export const _attempts = pgTable("attempts", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const _taskDependencies = pgTable(
+  "task_dependencies",
+  {
+    taskId: text("task_id")
+      .notNull()
+      .references(() => _tasks.id, { onDelete: "cascade" }),
+    dependsOnTaskId: text("depends_on_task_id")
+      .notNull()
+      .references(() => _tasks.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.taskId, t.dependsOnTaskId] }),
+    index("task_deps_depends_on_idx").on(t.dependsOnTaskId),
+  ],
+);

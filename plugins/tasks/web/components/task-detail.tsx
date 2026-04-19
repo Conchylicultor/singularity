@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LaunchButtons } from "@plugins/launch/web";
 import { Button } from "@/components/ui/button";
+import { TaskDependencies } from "./task-dependencies";
 import { TaskEvents } from "./task-events";
 import { useResource } from "@core";
 import { Shell as ShellCommands } from "@plugins/shell/web/commands";
@@ -18,6 +19,7 @@ const STATUS_LABELS: Record<Task["status"], string> = {
   done: "Done",
   held: "Held",
   dropped: "Dropped",
+  blocked: "Blocked",
 };
 
 const STATUS_CLASSES: Record<Task["status"], string> = {
@@ -28,6 +30,7 @@ const STATUS_CLASSES: Record<Task["status"], string> = {
   done: "bg-muted",
   held: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
   dropped: "bg-muted text-muted-foreground/60 italic",
+  blocked: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300",
 };
 
 function AuthorDisplay({ author }: { author: string | null }) {
@@ -219,6 +222,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
           openAfterLaunch={false}
         />
       </div>
+      <TaskDependencies taskId={taskId} />
       <TaskEvents taskId={taskId} />
     </div>
   );

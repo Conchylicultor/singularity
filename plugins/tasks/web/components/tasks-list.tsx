@@ -40,7 +40,8 @@ type TaskStatus =
   | "attempted"
   | "done"
   | "held"
-  | "dropped";
+  | "dropped"
+  | "blocked";
 
 type Task = {
   id: string;
@@ -91,6 +92,11 @@ const STATUS_META: Record<
     icon: MdCancel,
     className: "text-muted-foreground/50",
     label: "Dropped",
+  },
+  blocked: {
+    icon: MdPauseCircle,
+    className: "text-zinc-500 dark:text-zinc-400",
+    label: "Blocked",
   },
 };
 
