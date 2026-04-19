@@ -16,6 +16,11 @@ export function ScreenshotButton() {
       aria-label="Screenshot"
       disabled={busy}
       onClick={async () => {
+        // Open the tab synchronously within the click event — browsers block
+        // window.open called after an await as an unsolicited popup.
+        const id = crypto.randomUUID();
+        window.open(`/screenshot/${id}`, "_blank", "noopener");
+
         // flushSync + two rAFs guarantees the disabled state is committed
         // AND painted before domToBlob blocks the main thread (CSS
         // animations would freeze while blocked, so we only rely on the
@@ -32,8 +37,6 @@ export function ScreenshotButton() {
             Shell.Toast({ description: "Screenshot failed", variant: "error" });
             return;
           }
-          const id = crypto.randomUUID();
-          window.open(`/screenshot/${id}`, "_blank", "noopener");
           void upload(id, blob);
         } catch (err) {
           Shell.Toast({
