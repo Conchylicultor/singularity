@@ -214,6 +214,7 @@
     - Commands: `Tasks.OpenTask`
     - DB schema: `plugins/tasks/server/schema.ts`
   - Contributes:
+    - `Shell.Toolbar` (group `actions`) → `NewTaskButton`
     - `Shell.Sidebar` "Tasks" (group `System`)
     - `Shell.Route` `/tasks`
     - `Shell.Route` `/tasks/:id`
