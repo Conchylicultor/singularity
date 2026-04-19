@@ -53,6 +53,35 @@ async function getCurrentBranch(): Promise<string> {
   return output.trim();
 }
 
+// Self-heal `core.hooksPath`. `.githooks/prepare-commit-msg` is how each
+// commit gets its Singularity-Conversation trailer, which in turn is how
+// push-watcher attributes commits back to the originating task. Drift here
+// is silent — no error, just orphaned pushes — so check on every build and
+// reset to the tracked value.
+async function ensureHooksPath(): Promise<void> {
+  const read = Bun.spawn(["git", "config", "--get", "core.hooksPath"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const current = (await new Response(read.stdout).text()).trim();
+  await read.exited;
+  if (current === ".githooks") return;
+  const write = Bun.spawn(["git", "config", "core.hooksPath", ".githooks"], {
+    stdout: "pipe",
+    stderr: "inherit",
+  });
+  const exitCode = await write.exited;
+  if (exitCode !== 0) {
+    console.error(
+      `Failed to set core.hooksPath=.githooks (was ${current ? `"${current}"` : "unset"}).`,
+    );
+    process.exit(1);
+  }
+  console.log(
+    `Fixed core.hooksPath: was ${current ? `"${current}"` : "unset"}, now ".githooks"`,
+  );
+}
+
 async function databaseExists(name: string): Promise<boolean> {
   const proc = Bun.spawn(
     [
@@ -135,6 +164,8 @@ export function registerBuild(program: Command) {
       "DANGER: allow running build from the main branch. Agents MUST NOT pass this flag without explicit user approval in the current conversation.",
     )
     .action(async (opts: { migrationName?: string; restart: boolean; allowMain?: boolean }) => {
+      await ensureHooksPath();
+
       const branch = await getCurrentBranch();
       if (branch === "main" && !opts.allowMain) {
         console.error(
