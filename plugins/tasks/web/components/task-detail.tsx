@@ -70,11 +70,12 @@ export function TaskDetail({ taskId }: { taskId: string }) {
 
   const titleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const descTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const titleFocused = useRef(false);
 
   // Sync local editing state from live resource when not actively editing.
   useEffect(() => {
     if (!task) return;
-    if (!titleTimer.current) setTitle(task.title);
+    if (!titleTimer.current && !titleFocused.current) setTitle(task.title);
     if (!descTimer.current) setDescription(task.description ?? "");
   }, [task?.title, task?.description]);
 
@@ -160,6 +161,11 @@ export function TaskDetail({ taskId }: { taskId: string }) {
         <input
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
+          onFocus={() => { titleFocused.current = true; }}
+          onBlur={() => {
+            titleFocused.current = false;
+            void save({ title: title.trim() || "Untitled" });
+          }}
           placeholder="Untitled"
           className="flex-1 bg-transparent text-xl font-semibold outline-none placeholder:text-muted-foreground focus:ring-0"
         />
