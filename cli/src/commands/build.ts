@@ -39,6 +39,20 @@ async function getWorktreeRoot(): Promise<string> {
   return output.trim();
 }
 
+async function getCurrentBranch(): Promise<string> {
+  const proc = Bun.spawn(["git", "rev-parse", "--abbrev-ref", "HEAD"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const output = await new Response(proc.stdout).text();
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    console.error("Could not determine current branch");
+    process.exit(1);
+  }
+  return output.trim();
+}
+
 async function databaseExists(name: string): Promise<boolean> {
   const proc = Bun.spawn(
     [
@@ -92,7 +106,27 @@ export function registerBuild(program: Command) {
       "Name for a new migration (required if schema.ts has changed)",
     )
     .option("--no-restart", "Skip asking the gateway to restart the backend")
-    .action(async (opts: { migrationName?: string; restart: boolean }) => {
+    .option(
+      "--allow-main",
+      "DANGER: allow running build from the main branch. Agents MUST NOT pass this flag without explicit user approval in the current conversation.",
+    )
+    .action(async (opts: { migrationName?: string; restart: boolean; allowMain?: boolean }) => {
+      const branch = await getCurrentBranch();
+      if (branch === "main" && !opts.allowMain) {
+        console.error(
+          [
+            "ERROR: refusing to build from the main branch.",
+            "",
+            "Agents should work in a worktree, not directly on main.",
+            "If you are inside a worktree conversation, make sure you are running",
+            "this command from the worktree directory, not the main repo.",
+            "",
+            "To override (only with explicit user permission): ./singularity build --allow-main",
+          ].join("\n"),
+        );
+        process.exit(1);
+      }
+
       const root = await getWorktreeRoot();
       const name = basename(root);
 
