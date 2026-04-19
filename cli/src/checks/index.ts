@@ -3,10 +3,12 @@ import { noRawEventSource } from "./no-raw-event-source";
 import { noRawSse } from "./no-raw-sse";
 import { noRawWebsocket } from "./no-raw-websocket";
 import { pluginsDocInSync } from "./plugins-doc-in-sync";
+import { snapshotChainIntact } from "./snapshot-chain-intact";
 import type { Check } from "./types";
 
 export const CHECKS: Check[] = [
   migrationsInSync,
+  snapshotChainIntact,
   pluginsDocInSync,
   noRawEventSource,
   noRawSse,

@@ -44,10 +44,36 @@ export async function generateMigration(opts: {
     cwd: serverDir,
     stdin: "inherit",
     stdout: "inherit",
-    stderr: "inherit",
+    stderr: "pipe",
     env: { ...process.env, SINGULARITY_WORKTREE: worktreeName },
   });
-  if ((await proc.exited) !== 0) process.exit(1);
+
+  // Tee stderr: forward live to the user AND capture so we can detect cases
+  // where drizzle-kit printed a diagnostic but still exited 0 (seen with
+  // snapshot-chain collisions).
+  let stderrBuf = "";
+  const stderrDone = (async () => {
+    const decoder = new TextDecoder();
+    const reader = proc.stderr.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      process.stderr.write(value);
+      stderrBuf += decoder.decode(value, { stream: true });
+    }
+    stderrBuf += decoder.decode();
+  })();
+
+  const exitCode = await proc.exited;
+  await stderrDone;
+  if (exitCode !== 0) process.exit(1);
+  if (/\b(error|collision|conflict)\b/i.test(stderrBuf)) {
+    console.error(
+      "\nError: drizzle-kit printed a diagnostic but exited 0. Treating as failure.\n" +
+        "If this is a snapshot-chain collision, rebase onto origin/main and re-run ./singularity build.",
+    );
+    process.exit(1);
+  }
 
   const added = readdirSync(migrationsDir).filter(
     (f: string) => f.endsWith(".sql") && !before.has(f),
