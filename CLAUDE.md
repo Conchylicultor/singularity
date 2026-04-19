@@ -70,6 +70,8 @@ Always deploy after all changes, fixes, implementations:
 ./singularity build
 ```
 
+> Run from the worktree directory (the primary working directory), not the main repo root.
+
 This will:
 
 - Regenerate DB migrations from `schema.ts` (server applies them on restart)

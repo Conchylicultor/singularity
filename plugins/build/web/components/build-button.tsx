@@ -24,12 +24,14 @@ export function BuildButton() {
   const [building, setBuilding] = useState(false);
   const [mainAheadCount, setMainAheadCount] = useState(0);
   const [staleTab, setStaleTab] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const initialHashRef = useRef<string | null>(null);
 
   function applyStatus(status: BuildStatus) {
     setMainAheadCount(status.mainAheadCount);
     if (initialHashRef.current === null) {
       initialHashRef.current = status.frontendHash;
+      setLoaded(true);
     } else if (status.frontendHash && status.frontendHash !== initialHashRef.current) {
       setStaleTab(true);
     }
@@ -90,7 +92,7 @@ export function BuildButton() {
             main is {mainAheadCount} commit{mainAheadCount !== 1 ? "s" : ""} ahead of this worktree
           </TooltipContent>
         </Tooltip>
-      ) : initialHashRef.current !== null && !staleTab ? (
+      ) : loaded && !staleTab ? (
         <Tooltip>
           <TooltipTrigger render={<span className="block size-2 rounded-full bg-zinc-400" />} />
           <TooltipContent>Synced to HEAD</TooltipContent>
