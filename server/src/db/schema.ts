@@ -8,3 +8,4 @@ export * from "@plugins/tasks/server/schema";
 export * from "@plugins/conversations/server/schema";
 export * from "@plugins/agents/server/schema";
 export * from "@plugins/config/server/schema";
+export * from "@plugins/stats/plugins/commits/server/schema";

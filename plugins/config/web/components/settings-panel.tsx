@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useResource } from "@core";
-import { useSpecsWithPlugin, type SpecWithPlugin } from "../slots";
+import {
+  useSpecsWithPlugin,
+  useSectionsWithPlugin,
+  type SpecWithPlugin,
+  type SectionWithPlugin,
+} from "../slots";
 import {
   fullKey,
   normalize,
@@ -15,31 +20,48 @@ interface Group {
   pluginName: string;
   pluginDescription?: string;
   fields: NormalizedField[];
+  sections: SectionWithPlugin[];
 }
 
-function buildGroups(specs: SpecWithPlugin[]): Group[] {
+function buildGroups(
+  specs: SpecWithPlugin[],
+  sections: SectionWithPlugin[],
+): Group[] {
   const byId = new Map<string, Group>();
+  const ensure = (
+    pluginId: string,
+    pluginName: string,
+    pluginDescription?: string,
+  ): Group => {
+    const existing = byId.get(pluginId);
+    if (existing) return existing;
+    const g: Group = {
+      pluginId,
+      pluginName,
+      pluginDescription,
+      fields: [],
+      sections: [],
+    };
+    byId.set(pluginId, g);
+    return g;
+  };
   for (const s of specs) {
     const fields = normalize(s.descriptor.schema);
     if (fields.length === 0) continue;
-    const existing = byId.get(s.pluginId);
-    if (existing) {
-      existing.fields.push(...fields);
-    } else {
-      byId.set(s.pluginId, {
-        pluginId: s.pluginId,
-        pluginName: s.pluginName,
-        pluginDescription: s.pluginDescription,
-        fields,
-      });
-    }
+    const g = ensure(s.pluginId, s.pluginName, s.pluginDescription);
+    g.fields.push(...fields);
+  }
+  for (const s of sections) {
+    const g = ensure(s.pluginId, s.pluginName, s.pluginDescription);
+    g.sections.push(s);
   }
   return [...byId.values()].sort((a, b) => a.pluginName.localeCompare(b.pluginName));
 }
 
 export function SettingsPanel() {
   const specs = useSpecsWithPlugin();
-  const groups = buildGroups(specs);
+  const sections = useSectionsWithPlugin();
+  const groups = buildGroups(specs, sections);
   const { data: values } = useResource(configResource);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,6 +139,23 @@ export function SettingsPanel() {
                 );
               })}
             </div>
+            {g.sections.length > 0 ? (
+              <div className="mt-6 space-y-6">
+                {g.sections.map((s) => (
+                  <div key={s.id}>
+                    <h3 className="text-sm font-medium">{s.title}</h3>
+                    {s.description ? (
+                      <p className="mb-2 text-xs text-muted-foreground">
+                        {s.description}
+                      </p>
+                    ) : null}
+                    <div className="mt-2">
+                      <s.component />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </section>
         ))}
       </div>

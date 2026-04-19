@@ -32,7 +32,7 @@
 
 - **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
   - Defines:
-    - Slots: `Config.Spec`
+    - Slots: `Config.Spec`, `Config.Section`
     - DB schema: `plugins/config/server/schema.ts`
   - Contributes:
     - `Shell.Sidebar` "Settings" (group `System`)
@@ -174,16 +174,22 @@
     - `Shell.Route` `/stats`
   - Plugins:
     - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
+      - Defines:
+        - DB schema: `plugins/stats/plugins/commits/server/schema.ts`
       - Contributes:
         - `Stats.Chart` "Commits over time" → `CumulativeCommitsChart`
         - `Stats.Chart` "Commits per period" → `CommitsRateChart`
         - `Stats.Chart` "Lines changed" → `LinesChartsSection`
+        - `Config.Section` "Excluded path toggles" → `ExcludedPathToggles`
       - Server:
         - Uses: `config.readConfig`
         - `GET /api/stats/commits/cumulative`
         - `GET /api/stats/commits/rate`
         - `GET /api/stats/commits/lines/cumulative`
         - `GET /api/stats/commits/lines/rate`
+        - `GET /api/stats/commits/excluded-path-state`
+        - `PATCH /api/stats/commits/excluded-path-state`
+        - `DELETE /api/stats/commits/excluded-path-state/:path`
     - **`tasks`** — Task-based stats: active (open) tasks over time.
       - Contributes:
         - `Stats.Chart` "Active tasks over time" → `TasksCumulativeChart`

@@ -1,6 +1,6 @@
 {
-  "id": "2eca0529-7d9b-434c-963a-cbe3214364c9",
-  "prevId": "59f0e921-1b7f-4f21-baca-f714cee4cc36",
+  "id": "f4961c59-c308-48fb-9181-70fdcfb96918",
+  "prevId": "2eca0529-7d9b-434c-963a-cbe3214364c9",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -590,6 +590,39 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.stats_commits_excluded_path_state": {
+      "name": "stats_commits_excluded_path_state",
+      "schema": "",
+      "columns": {
+        "path": {
+          "name": "path",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         },
         "updated_at": {
           "name": "updated_at",

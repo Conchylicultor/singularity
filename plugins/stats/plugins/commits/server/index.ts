@@ -1,6 +1,12 @@
 import type { ServerPluginDefinition } from "../../../../../server/src/types";
 import { handleCumulative, handleLinesCumulative } from "./internal/handle-cumulative";
 import { handleLinesRate, handleRate } from "./internal/handle-rate";
+import {
+  excludedPathStateResource,
+  handleDeleteState,
+  handleGetState,
+  handlePatchState,
+} from "./internal/excluded-paths";
 import { commitsConfig } from "../shared/config";
 
 const plugin: ServerPluginDefinition = {
@@ -13,6 +19,10 @@ const plugin: ServerPluginDefinition = {
     "GET /api/stats/commits/rate": handleRate,
     "GET /api/stats/commits/lines/cumulative": handleLinesCumulative,
     "GET /api/stats/commits/lines/rate": handleLinesRate,
+    "GET /api/stats/commits/excluded-path-state": handleGetState,
+    "PATCH /api/stats/commits/excluded-path-state": handlePatchState,
+    "DELETE /api/stats/commits/excluded-path-state/:path": handleDeleteState,
   },
+  resources: [excludedPathStateResource],
 };
 export default plugin;

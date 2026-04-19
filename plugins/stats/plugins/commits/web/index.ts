@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@core";
 import { Stats } from "@plugins/stats/web/slots";
 import { Config } from "@plugins/config/web/slots";
 import { CumulativeCommitsChart } from "./components/cumulative-chart";
+import { ExcludedPathToggles } from "./components/excluded-path-toggles";
 import { LinesChartsSection } from "./components/lines-charts";
 import { CommitsRateChart } from "./components/rate-chart";
 import { commitsConfig } from "../shared/config";
@@ -27,6 +28,13 @@ const commitsPlugin: PluginDefinition = {
       component: LinesChartsSection,
     }),
     Config.Spec(commitsConfig),
+    Config.Section({
+      id: "excluded-path-state",
+      title: "Excluded path toggles",
+      description:
+        "Toggle each excluded path on or off. Changes recompute line stats immediately.",
+      component: ExcludedPathToggles,
+    }),
   ],
 };
 

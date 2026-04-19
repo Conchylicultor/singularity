@@ -176,6 +176,13 @@
       "tag": "20260418_134114_d8da9e66__add_config_table",
       "hash": "d8da9e66",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776557775000,
+      "tag": "20260419_001615_f8b9aa91__stats_commits_excluded_path_state",
+      "hash": "f8b9aa91",
+      "breakpoints": true
     }
   ]
 }

@@ -1,14 +1,13 @@
 import { readConfig } from "@plugins/config/server/api";
 import { commitsConfig } from "../../shared/config";
 import { getCommits, getCommitsExcludingPaths } from "./commit-timestamps";
+import { activeExcludedPaths } from "./excluded-paths";
 
-async function resolveCommits(req: Request) {
-  const excludePaths = new URL(req.url).searchParams.get("excludePaths") === "true";
-  if (excludePaths) {
-    const { excludedPaths } = await readConfig(commitsConfig);
-    return getCommitsExcludingPaths(excludedPaths);
-  }
-  return getCommits();
+async function resolveCommits(): Promise<ReturnType<typeof getCommits>> {
+  const { excludedPaths } = await readConfig(commitsConfig);
+  const active = await activeExcludedPaths(excludedPaths);
+  if (active.length === 0) return getCommits();
+  return getCommitsExcludingPaths(active);
 }
 
 export async function handleCumulative(_req: Request): Promise<Response> {
@@ -27,13 +26,10 @@ export async function handleCumulative(_req: Request): Promise<Response> {
   return Response.json({ points });
 }
 
-export async function handleLinesCumulative(req: Request): Promise<Response> {
-  const { excludedShas } = await readConfig(commitsConfig);
-  const excluded = new Set(excludedShas);
-  const commits = await resolveCommits(req);
+export async function handleLinesCumulative(_req: Request): Promise<Response> {
+  const commits = await resolveCommits();
   const perDay = new Map<string, { added: number; removed: number }>();
   for (const c of commits) {
-    if (excluded.has(c.sha)) continue;
     const day = c.iso.slice(0, 10);
     const e = perDay.get(day) ?? { added: 0, removed: 0 };
     e.added += c.added;

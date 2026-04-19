@@ -1,14 +1,13 @@
 import { readConfig } from "@plugins/config/server/api";
 import { commitsConfig } from "../../shared/config";
 import { getCommits, getCommitsExcludingPaths } from "./commit-timestamps";
+import { activeExcludedPaths } from "./excluded-paths";
 
-async function resolveCommits(req: Request) {
-  const excludePaths = new URL(req.url).searchParams.get("excludePaths") === "true";
-  if (excludePaths) {
-    const { excludedPaths } = await readConfig(commitsConfig);
-    return getCommitsExcludingPaths(excludedPaths);
-  }
-  return getCommits();
+async function resolveCommits(): Promise<ReturnType<typeof getCommits>> {
+  const { excludedPaths } = await readConfig(commitsConfig);
+  const active = await activeExcludedPaths(excludedPaths);
+  if (active.length === 0) return getCommits();
+  return getCommitsExcludingPaths(active);
 }
 
 type Bucket = "hour" | "day" | "week" | "month" | "year";
@@ -62,12 +61,9 @@ export async function handleRate(req: Request): Promise<Response> {
 
 export async function handleLinesRate(req: Request): Promise<Response> {
   const bucket = parseBucket(req);
-  const { excludedShas } = await readConfig(commitsConfig);
-  const excluded = new Set(excludedShas);
-  const commits = await resolveCommits(req);
+  const commits = await resolveCommits();
   const counts = new Map<string, { added: number; removed: number }>();
   for (const c of commits) {
-    if (excluded.has(c.sha)) continue;
     const k = keyFor(c.iso, bucket);
     const e = counts.get(k) ?? { added: 0, removed: 0 };
     e.added += c.added;
