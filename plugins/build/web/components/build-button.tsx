@@ -83,14 +83,19 @@ export function BuildButton() {
     >
       <MdRefresh className={`size-4 ${building ? "animate-spin" : ""}`} />
       Build
-      {mainAheadCount > 0 && (
+      {mainAheadCount > 0 ? (
         <Tooltip>
           <TooltipTrigger render={<span className="block size-2 rounded-full bg-amber-400" />} />
           <TooltipContent>
             main is {mainAheadCount} commit{mainAheadCount !== 1 ? "s" : ""} ahead of this worktree
           </TooltipContent>
         </Tooltip>
-      )}
+      ) : initialHashRef.current !== null && !staleTab ? (
+        <Tooltip>
+          <TooltipTrigger render={<span className="block size-2 rounded-full bg-zinc-400" />} />
+          <TooltipContent>Synced to HEAD</TooltipContent>
+        </Tooltip>
+      ) : null}
       {staleTab && (
         <Tooltip>
           <TooltipTrigger
