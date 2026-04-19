@@ -2,9 +2,10 @@ import { and, ne } from "drizzle-orm";
 import { db } from "../../../../../../server/src/db/client";
 import { CONVERSATIONS_META_TASK_ID, tasks } from "@plugins/tasks/server/api";
 
-// Two monotonic series sampled at every event:
-//   total  = cumulative tasks created
-//   active = total minus closed (earliest of finishedAt / heldAt)
+// Three monotonic series sampled at every event:
+//   total     = cumulative tasks created
+//   active    = total minus closed (earliest of finishedAt / heldAt)
+//   completed = cumulative tasks with finishedAt set
 // Emitting one point per event keeps resolution fine without bucketing.
 export async function handleCumulative(_req: Request): Promise<Response> {
   const rows = await db
@@ -17,15 +18,25 @@ export async function handleCumulative(_req: Request): Promise<Response> {
     .where(and(ne(tasks.id, CONVERSATIONS_META_TASK_ID)));
 
   const toDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
-  const events: { t: number; dTotal: number; dActive: number }[] = [];
+  const events: { t: number; dTotal: number; dActive: number; dCompleted: number }[] = [];
   for (const r of rows) {
     const created = toDate(r.createdAt).getTime();
-    events.push({ t: created, dTotal: 1, dActive: 1 });
+    events.push({ t: created, dTotal: 1, dActive: 1, dCompleted: 0 });
     const closures: number[] = [];
     if (r.finishedAt) closures.push(toDate(r.finishedAt).getTime());
     if (r.heldAt) closures.push(toDate(r.heldAt).getTime());
     if (closures.length > 0) {
-      events.push({ t: Math.min(...closures), dTotal: 0, dActive: -1 });
+      const closedAt = Math.min(...closures);
+      const isFinished = r.finishedAt && toDate(r.finishedAt).getTime() === closedAt;
+      events.push({ t: closedAt, dTotal: 0, dActive: -1, dCompleted: isFinished ? 1 : 0 });
+    }
+    // If heldAt came first but finishedAt exists too, count completion at finishedAt
+    if (r.finishedAt && r.heldAt) {
+      const finishedAt = toDate(r.finishedAt).getTime();
+      const heldAt = toDate(r.heldAt).getTime();
+      if (heldAt < finishedAt) {
+        events.push({ t: finishedAt, dTotal: 0, dActive: 0, dCompleted: 1 });
+      }
     }
   }
   events.sort((a, b) => a.t - b.t);
@@ -40,12 +51,14 @@ export async function handleCumulative(_req: Request): Promise<Response> {
 
   let total = 0;
   let active = 0;
-  const byKey = new Map<string, { date: string; total: number; active: number }>();
+  let completed = 0;
+  const byKey = new Map<string, { date: string; total: number; active: number; completed: number }>();
   for (const e of events) {
     total += e.dTotal;
     active += e.dActive;
+    completed += e.dCompleted;
     const key = fmt(e.t);
-    byKey.set(key, { date: key, total, active });
+    byKey.set(key, { date: key, total, active, completed });
   }
   const points = [...byKey.values()];
   return Response.json({ points });

@@ -23,13 +23,15 @@ import {
 
 const TOTAL_COLOR = "var(--chart-total, #2563eb)";
 const ACTIVE_COLOR = "var(--chart-active, #f59e0b)";
+const COMPLETED_COLOR = "var(--chart-completed, #16a34a)";
 
-type SeriesKey = "total" | "active";
+type SeriesKey = "total" | "active" | "completed";
 
 interface Point {
   date: string;
   total: number;
   active: number;
+  completed: number;
 }
 
 export function TasksCumulativeChart() {
@@ -39,10 +41,11 @@ export function TasksCumulativeChart() {
   const [hidden, setHidden] = useState<Record<SeriesKey, boolean>>({
     total: false,
     active: false,
+    completed: false,
   });
   const onLegendClick = (e: any) => {
     const k = e?.dataKey as SeriesKey | undefined;
-    if (k === "total" || k === "active") {
+    if (k === "total" || k === "active" || k === "completed") {
       setHidden((h) => ({ ...h, [k]: !h[k] }));
     }
   };
@@ -118,6 +121,17 @@ export function TasksCumulativeChart() {
               activeDot={{ r: 4 }}
               isAnimationActive={false}
               hide={hidden.active}
+            />
+            <Line
+              type="monotone"
+              dataKey="completed"
+              name="Completed"
+              stroke={COMPLETED_COLOR}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+              isAnimationActive={false}
+              hide={hidden.completed}
             />
           </LineChart>
         </ResponsiveContainer>
