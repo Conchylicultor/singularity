@@ -1,11 +1,55 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Shell } from "@plugins/shell/web/commands";
 import { getHealth, waitForRestart } from "@plugins/health/web/api";
 import { MdRefresh } from "react-icons/md";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+
+interface BuildStatus {
+  mainAheadCount: number;
+  frontendHash: string;
+}
+
+async function getBuildStatus(): Promise<BuildStatus | null> {
+  try {
+    const res = await fetch("/api/build/status");
+    if (!res.ok) return null;
+    return res.json() as Promise<BuildStatus>;
+  } catch {
+    return null;
+  }
+}
 
 export function BuildButton() {
   const [building, setBuilding] = useState(false);
+  const [mainAheadCount, setMainAheadCount] = useState(0);
+  const [staleTab, setStaleTab] = useState(false);
+  const initialHashRef = useRef<string | null>(null);
+
+  function applyStatus(status: BuildStatus) {
+    setMainAheadCount(status.mainAheadCount);
+    if (initialHashRef.current === null) {
+      initialHashRef.current = status.frontendHash;
+    } else if (status.frontendHash && status.frontendHash !== initialHashRef.current) {
+      setStaleTab(true);
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function poll() {
+      const status = await getBuildStatus();
+      if (status && !cancelled) applyStatus(status);
+    }
+
+    poll();
+    const interval = setInterval(poll, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Button
@@ -21,8 +65,6 @@ export function BuildButton() {
             return;
           }
 
-          // Fire-and-forget — the build restarts the server, so the response
-          // will usually never arrive. We swallow the error and poll instead.
           fetch("/api/build", { method: "POST" }).catch(() => {});
 
           const restarted = await waitForRestart(before.startedAt);
@@ -31,6 +73,9 @@ export function BuildButton() {
           } else {
             Shell.Toast({ description: "Build timed out", variant: "error" });
           }
+
+          const status = await getBuildStatus();
+          if (status) applyStatus(status);
         } finally {
           setBuilding(false);
         }
@@ -38,6 +83,30 @@ export function BuildButton() {
     >
       <MdRefresh className={`size-4 ${building ? "animate-spin" : ""}`} />
       Build
+      {mainAheadCount > 0 && (
+        <Tooltip>
+          <TooltipTrigger render={<span className="block size-2 rounded-full bg-amber-400" />} />
+          <TooltipContent>
+            main is {mainAheadCount} commit{mainAheadCount !== 1 ? "s" : ""} ahead of this worktree
+          </TooltipContent>
+        </Tooltip>
+      )}
+      {staleTab && (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <button
+                className="block size-2 rounded-full bg-sky-400 hover:bg-sky-500"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.location.reload();
+                }}
+              />
+            }
+          />
+          <TooltipContent>Server was rebuilt — click to reload this tab</TooltipContent>
+        </Tooltip>
+      )}
     </Button>
   );
 }

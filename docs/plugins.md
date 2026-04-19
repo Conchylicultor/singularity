@@ -29,6 +29,7 @@
   - Server:
     - Uses: `logs.Log`
     - `POST /api/build`
+    - `GET /api/build/status`
 
 - **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
   - Defines:
