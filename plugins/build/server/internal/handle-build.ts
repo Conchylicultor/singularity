@@ -3,7 +3,7 @@ import { Log } from "@plugins/logs/server/api";
 const buildLog = Log.channel("build");
 
 export async function handleBuild(_req: Request): Promise<Response> {
-  const proc = Bun.spawn(["./singularity", "build", "--no-restart"], {
+  const proc = Bun.spawn(["./singularity", "build", "--no-restart", "--allow-main"], {
     cwd: import.meta.dir + "/../../../..",
     stdout: "pipe",
     stderr: "pipe",
