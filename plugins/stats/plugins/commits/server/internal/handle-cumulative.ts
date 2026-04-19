@@ -26,8 +26,37 @@ export async function handleCumulative(_req: Request): Promise<Response> {
   return Response.json({ points });
 }
 
-export async function handleLinesCumulative(_req: Request): Promise<Response> {
+export async function handleLinesCumulative(req: Request): Promise<Response> {
+  const breakdown = new URL(req.url).searchParams.get("breakdown") === "ext";
   const commits = await resolveCommits();
+
+  if (breakdown) {
+    const perDay = new Map<string, Record<string, { added: number; removed: number }>>();
+    for (const c of commits) {
+      const day = c.iso.slice(0, 10);
+      const existing = perDay.get(day) ?? {};
+      for (const [ext, stats] of Object.entries(c.byExt)) {
+        const e = existing[ext] ?? { added: 0, removed: 0 };
+        e.added += stats.added;
+        e.removed += stats.removed;
+        existing[ext] = e;
+      }
+      perDay.set(day, existing);
+    }
+    const days = [...perDay.keys()].sort();
+    const running: Record<string, { added: number; removed: number }> = {};
+    const points = days.map((date) => {
+      for (const [ext, stats] of Object.entries(perDay.get(date)!)) {
+        const r = running[ext] ?? { added: 0, removed: 0 };
+        r.added += stats.added;
+        r.removed += stats.removed;
+        running[ext] = r;
+      }
+      return { date, byExt: Object.fromEntries(Object.entries(running).map(([k, v]) => [k, { ...v }])) };
+    });
+    return Response.json({ points });
+  }
+
   const perDay = new Map<string, { added: number; removed: number }>();
   for (const c of commits) {
     const day = c.iso.slice(0, 10);

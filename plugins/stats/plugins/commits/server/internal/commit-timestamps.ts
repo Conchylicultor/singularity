@@ -8,6 +8,7 @@ export interface CommitInfo {
   iso: string;
   added: number;
   removed: number;
+  byExt: Record<string, { added: number; removed: number }>;
 }
 
 async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
@@ -28,14 +29,21 @@ async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
       const spaceIdx = header.indexOf(" ");
       const sha = spaceIdx === -1 ? header : header.slice(0, spaceIdx);
       const iso = spaceIdx === -1 ? "" : header.slice(spaceIdx + 1);
-      current = { sha, iso, added: 0, removed: 0 };
+      current = { sha, iso, added: 0, removed: 0, byExt: {} };
     } else if (current && line.trim()) {
       const parts = line.split("\t");
-      if (parts.length >= 2) {
+      if (parts.length >= 3) {
         const ins = parts[0] === "-" ? 0 : parseInt(parts[0], 10) || 0;
         const del = parts[1] === "-" ? 0 : parseInt(parts[1], 10) || 0;
         current.added += ins;
         current.removed += del;
+        const filepath = parts[2];
+        const dotIdx = filepath.lastIndexOf(".");
+        const ext = dotIdx >= 0 ? filepath.slice(dotIdx).toLowerCase() : "(none)";
+        const e = current.byExt[ext] ?? { added: 0, removed: 0 };
+        e.added += ins;
+        e.removed += del;
+        current.byExt[ext] = e;
       }
     }
   }

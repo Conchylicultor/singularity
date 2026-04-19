@@ -61,7 +61,28 @@ export async function handleRate(req: Request): Promise<Response> {
 
 export async function handleLinesRate(req: Request): Promise<Response> {
   const bucket = parseBucket(req);
+  const breakdown = new URL(req.url).searchParams.get("breakdown") === "ext";
   const commits = await resolveCommits();
+
+  if (breakdown) {
+    const counts = new Map<string, Record<string, { added: number; removed: number }>>();
+    for (const c of commits) {
+      const k = keyFor(c.iso, bucket);
+      const existing = counts.get(k) ?? {};
+      for (const [ext, stats] of Object.entries(c.byExt)) {
+        const e = existing[ext] ?? { added: 0, removed: 0 };
+        e.added += stats.added;
+        e.removed += stats.removed;
+        existing[ext] = e;
+      }
+      counts.set(k, existing);
+    }
+    const points = [...counts.entries()]
+      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+      .map(([k, v]) => ({ bucket: k, byExt: v }));
+    return Response.json({ bucket, points });
+  }
+
   const counts = new Map<string, { added: number; removed: number }>();
   for (const c of commits) {
     const k = keyFor(c.iso, bucket);
