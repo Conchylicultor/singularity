@@ -1,5 +1,7 @@
 import type { PluginDefinition } from "@core";
 import { Shell as ShellSlots } from "@plugins/shell/web/slots";
+import { Config } from "@plugins/config/web/slots";
+import { buildConfig } from "../shared/config";
 import { BuildButton } from "./components/build-button";
 
 const buildPlugin: PluginDefinition = {
@@ -11,6 +13,7 @@ const buildPlugin: PluginDefinition = {
       component: BuildButton,
       group: "actions",
     }),
+    Config.Spec(buildConfig),
   ],
 };
 

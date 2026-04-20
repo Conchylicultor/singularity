@@ -26,7 +26,7 @@
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `BuildButton`
   - Server:
-    - Uses: `logs.Log`
+    - Uses: `config.readConfig`, `logs.Log`, `tasks.pushes`
     - `POST /api/build`
     - `GET /api/build/status`
 
