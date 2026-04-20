@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import {
   _attempts,
@@ -6,6 +6,7 @@ import {
   attempts,
   CONVERSATIONS_META_TASK_ID,
   nextRankUnder,
+  tasksResource,
 } from "@plugins/tasks/server/api";
 import { Runtime, type RuntimeInfo } from "../api";
 import { _conversations } from "./tables";
@@ -188,6 +189,26 @@ async function tick(): Promise<void> {
     if (statusChanged) patch.status = desiredStatus;
     if (resurrecting) patch.endedAt = null;
     await db.update(_conversations).set(patch).where(eq(_conversations.id, id));
+    if (titleChanged && desiredTitle) {
+      const [attempt] = await db
+        .select({ taskId: _attempts.taskId })
+        .from(_attempts)
+        .where(eq(_attempts.id, dbRow.attemptId))
+        .limit(1);
+      if (attempt) {
+        const [updated] = await db
+          .update(_tasks)
+          .set({ title: desiredTitle, updatedAt: new Date() })
+          .where(
+            and(
+              eq(_tasks.id, attempt.taskId),
+              inArray(_tasks.title, ["Untitled", "Untitled conversation"]),
+            ),
+          )
+          .returning({ id: _tasks.id });
+        if (updated) tasksResource.notify();
+      }
+    }
     changed = true;
   }
 
