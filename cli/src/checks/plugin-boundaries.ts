@@ -21,13 +21,6 @@ const SKIPPED_PLUGINS: ReadonlyArray<string> = [
   // circular initialization errors. Fixing requires design discussion.
   "conversations",
   "tasks",
-  // Known cross-runtime false-positive cycle:
-  // conversations/plugins/conversation-view → conversations → tasks → conversation-view
-  // (web and server are separate module graphs; no actual runtime cycle exists)
-  // Needs design discussion before breaking architecturally.
-  "conversations/plugins/conversation-view",
-  "conversations/plugins/conversation-view/plugins/code",
-  "conversations/plugins/conversation-view/plugins/code/plugins/file-pane",
 ];
 
 // Framework-level files exempt from cross-plugin boundary checks (both the
@@ -154,19 +147,24 @@ export const pluginBoundaries: Check = {
           });
         }
 
-        // R6: track DAG edge (deduped).
+        // R6: track DAG edge (deduped), tagged with source file's runtime.
         if (sourcePlugin && sourcePlugin !== resolved.pluginPath) {
-          edges.add(`${sourcePlugin}\0${resolved.pluginPath}`);
+          const runtime = runtimeForPath(relFile, pluginSet) ?? "shared";
+          edges.add(`${sourcePlugin}\0${resolved.pluginPath}\0${runtime}`);
         }
       }
     }
 
-    // R6: detect cycles
+    // R6: detect cycles — run separately per runtime so web and server graphs
+    // are never conflated (a cross-runtime path is not a real cycle).
     const edgeList = Array.from(edges).map((e) => {
-      const [from, to] = e.split("\0");
-      return { from: from!, to: to! };
+      const parts = e.split("\0");
+      return { from: parts[0]!, to: parts[1]!, runtime: parts[2] as "web" | "server" | "shared" };
     });
-    const cycle = detectCycle(edgeList);
+    // Shared code is reachable from both runtimes.
+    const webEdges = edgeList.filter((e) => e.runtime === "web" || e.runtime === "shared");
+    const serverEdges = edgeList.filter((e) => e.runtime === "server" || e.runtime === "shared");
+    const cycle = detectCycle(webEdges) ?? detectCycle(serverEdges);
     if (cycle) {
       violations.push({
         rule: "cycle",
@@ -218,6 +216,19 @@ function discoverPlugins(pluginsRoot: string): PluginDir[] {
   }
   walk(pluginsRoot, 0);
   return out;
+}
+
+/** Return the runtime ("web" | "server" | "shared") of `relFile`, or null if unknown. */
+function runtimeForPath(relFile: string, pluginSet: Set<string>): "web" | "server" | "shared" | null {
+  const norm = relFile.split(sep).join("/");
+  const pluginPath = pluginForPath(relFile, pluginSet);
+  if (!pluginPath) return null;
+  const afterPlugin = norm.slice(`plugins/${pluginPath}/`.length);
+  const segment = afterPlugin.split("/")[0];
+  if (segment === "web") return "web";
+  if (segment === "server") return "server";
+  if (segment === "shared") return "shared";
+  return null;
 }
 
 /** Return the relative plugin path that owns `relFile`, or null if the file lives outside `plugins/`. */
