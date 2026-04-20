@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MdAdd } from "react-icons/md";
+import { MdAdd, MdPlayArrow } from "react-icons/md";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
@@ -25,6 +25,7 @@ export type LaunchButtonsProps = {
 
 const MODELS: ConversationModel[] = ["sonnet", "opus"];
 const LABEL: Record<ConversationModel, string> = { sonnet: "Sonnet", opus: "Opus" };
+const ICON_SIZE: Record<ConversationModel, string> = { sonnet: "size-3", opus: "size-4" };
 
 export function LaunchButtons({
   getRequest,
@@ -69,11 +70,11 @@ export function LaunchButtons({
             title={`Launch ${LABEL[model]}`}
             aria-label={`Launch ${LABEL[model]}`}
             className={cn(
-              "hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded text-[10px] font-semibold uppercase",
+              "hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded",
               launching === model && "opacity-50",
             )}
           >
-            {LABEL[model][0]}
+            <MdPlayArrow className={ICON_SIZE[model]} />
           </button>
         ))}
       </div>
