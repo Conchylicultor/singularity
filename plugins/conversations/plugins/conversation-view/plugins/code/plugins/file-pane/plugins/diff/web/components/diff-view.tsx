@@ -69,10 +69,12 @@ export function DiffView({
 
   const baseHunks = files[0]?.hunks ?? null;
   const [expandedHunks, setExpandedHunks] = useState<HunkData[] | null>(null);
+  const [totalLines, setTotalLines] = useState<number | null>(null);
   const fileContentRef = useRef<string | null>(null);
 
   useEffect(() => {
     setExpandedHunks(null);
+    setTotalLines(null);
     fileContentRef.current = null;
   }, [state]);
 
@@ -91,6 +93,7 @@ export function DiffView({
         if (!res.ok) return;
         const body = (await res.json()) as { content?: string };
         fileContentRef.current = body.content ?? "";
+        setTotalLines(fileContentRef.current.split("\n").length);
       }
       const content = fileContentRef.current;
       setExpandedHunks((prev) => {
@@ -240,13 +243,13 @@ export function DiffView({
           {(hunks) =>
             hunks.flatMap((hunk, idx) => {
               const prevHunk = idx > 0 ? hunks[idx - 1] : null;
-              const skipped = getCollapsedLinesCountBetween(prevHunk ?? null, hunk);
-              const gapStart = prevHunk
-                ? prevHunk.oldStart + prevHunk.oldLines
-                : 1;
+              const linesAbove = prevHunk
+                ? getCollapsedLinesCountBetween(prevHunk, hunk)
+                : hunk.oldStart - 1;
+              const gapStart = prevHunk ? prevHunk.oldStart + prevHunk.oldLines : 1;
               const gapEnd = hunk.oldStart;
               const elements: JSX.Element[] = [];
-              if (skipped > 0 && i === 0) {
+              if (linesAbove > 0 && i === 0) {
                 elements.push(
                   <Decoration key={`skip-${idx}-${hunk.newStart}`}>
                     <button
@@ -254,12 +257,29 @@ export function DiffView({
                       className="diff-skip-separator"
                       onClick={() => expandLines(gapStart, gapEnd)}
                     >
-                      {skipped} {skipped === 1 ? "line" : "lines"} skipped — click to expand
+                      {linesAbove} {linesAbove === 1 ? "line" : "lines"} skipped — click to expand
                     </button>
                   </Decoration>,
                 );
               }
               elements.push(<Hunk key={hunk.content} hunk={hunk} />);
+              if (idx === hunks.length - 1 && i === 0 && totalLines !== null) {
+                const lastOldLine = hunk.oldStart + hunk.oldLines - 1;
+                const linesBelow = totalLines - lastOldLine;
+                if (linesBelow > 0) {
+                  elements.push(
+                    <Decoration key={`skip-end-${hunk.newStart}`}>
+                      <button
+                        type="button"
+                        className="diff-skip-separator"
+                        onClick={() => expandLines(lastOldLine + 1, totalLines + 1)}
+                      >
+                        {linesBelow} {linesBelow === 1 ? "line" : "lines"} skipped — click to expand
+                      </button>
+                    </Decoration>,
+                  );
+                }
+              }
               return elements;
             })
           }
