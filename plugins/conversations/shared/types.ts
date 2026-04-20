@@ -2,7 +2,7 @@
 // doesn't pull `server/api`'s runtime surface (which loads `claude-transcript`
 // and other Node-only modules). Cross-plugin consumers must still go through
 // `@plugins/conversations/server/api`.
-export { ConversationSchema, type Conversation } from "../server/internal/schema";
+export { ConversationSchema, type Conversation } from "@plugins/tasks-core/shared";
 export { ConversationModelSchema, type ConversationModel } from "../server/model";
 export {
   ConversationStatusSchema,
