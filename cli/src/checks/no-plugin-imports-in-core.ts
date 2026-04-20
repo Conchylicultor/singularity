@@ -8,7 +8,7 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-// Matches: from "...plugins/...", from '@singularity/plugin-...', from '@plugins/...' (import/require/export)
+// Detects import/require/export statements whose specifier resolves into the plugins layer
 const PLUGIN_IMPORT_RE =
   /(?:from|require|export\s+\*\s+from)\s+['"][^'"]*(?:\/plugins\/|@singularity\/plugin-|@plugins\/)/;
 
