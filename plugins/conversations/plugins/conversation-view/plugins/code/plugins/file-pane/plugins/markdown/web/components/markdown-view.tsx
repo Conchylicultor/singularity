@@ -11,7 +11,15 @@ const MARKDOWN_COMPONENTS: Components = {
   h3: (p) => <h3 className="mt-3 mb-1.5 text-lg font-semibold" {...p} />,
   h4: (p) => <h4 className="mt-3 mb-1 font-semibold" {...p} />,
   p: (p) => <p className="my-2" {...p} />,
-  a: (p) => <a className="text-primary underline" {...p} />,
+  a: ({ href, ...p }) => (
+    <a
+      className="text-primary underline"
+      href={href}
+      target={href?.startsWith("http") ? "_blank" : undefined}
+      rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
+      {...p}
+    />
+  ),
   ul: (p) => <ul className="my-2 list-disc pl-6" {...p} />,
   ol: (p) => <ol className="my-2 list-decimal pl-6" {...p} />,
   li: (p) => <li className="my-0.5" {...p} />,
