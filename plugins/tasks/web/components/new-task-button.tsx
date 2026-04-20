@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Shell } from "@plugins/shell/web/commands";
+import type { ConversationModel } from "@plugins/conversations/shared/types";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Popover,
@@ -8,15 +9,17 @@ import {
 } from "@/components/ui/popover";
 import { MdAdd } from "react-icons/md";
 
+type Submitting = false | "create" | ConversationModel;
+
 export function NewTaskButton() {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState<Submitting>(false);
 
-  const submit = async () => {
+  const submit = async (model?: ConversationModel) => {
     const title = value.trim();
     if (!title || submitting) return;
-    setSubmitting(true);
+    setSubmitting(model ?? "create");
     try {
       const res = await fetch("/api/tasks", {
         method: "POST",
@@ -27,7 +30,21 @@ export function NewTaskButton() {
         Shell.Toast({ description: "Failed to create task", variant: "error" });
         return;
       }
-      Shell.Toast({ description: "Task created", variant: "success" });
+      if (model) {
+        const task = (await res.json()) as { id: string };
+        const convRes = await fetch("/api/conversations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model, taskId: task.id, prompt: title }),
+        });
+        if (!convRes.ok) {
+          Shell.Toast({ description: "Task created but failed to launch", variant: "error" });
+        } else {
+          Shell.Toast({ description: `Task launched with ${model === "sonnet" ? "Sonnet" : "Opus"}`, variant: "success" });
+        }
+      } else {
+        Shell.Toast({ description: "Task created", variant: "success" });
+      }
       setValue("");
       setOpen(false);
     } finally {
@@ -68,8 +85,8 @@ function NewTaskForm({
 }: {
   value: string;
   onChange: (value: string) => void;
-  submitting: boolean;
-  onSubmit: () => void;
+  submitting: Submitting;
+  onSubmit: (model?: ConversationModel) => void;
   onCancel: () => void;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -77,6 +94,8 @@ function NewTaskForm({
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
+
+  const disabled = !value.trim() || submitting !== false;
 
   return (
     <div className="flex w-80 flex-col gap-2">
@@ -101,8 +120,26 @@ function NewTaskForm({
         <Button size="sm" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
-        <Button size="sm" onClick={onSubmit} disabled={!value.trim() || submitting}>
-          {submitting ? "Creating…" : "Create"}
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onSubmit("sonnet")}
+          disabled={disabled}
+        >
+          <MdAdd className="size-3.5" />
+          {submitting === "sonnet" ? "Launching…" : "Sonnet"}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => onSubmit("opus")}
+          disabled={disabled}
+        >
+          <MdAdd className="size-3.5" />
+          {submitting === "opus" ? "Launching…" : "Opus"}
+        </Button>
+        <Button size="sm" onClick={() => onSubmit()} disabled={disabled}>
+          {submitting === "create" ? "Creating…" : "Create"}
         </Button>
       </div>
     </div>
