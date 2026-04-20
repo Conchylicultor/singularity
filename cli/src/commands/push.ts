@@ -145,10 +145,14 @@ export function registerPush(program: Command) {
         return;
       }
 
-      // 2. Pull main to ensure it's up to date before merging
+      // 2. Pull main to ensure it's up to date before merging.
+      // Use explicit fetch + merge instead of `git pull --ff-only` because FETCH_HEAD
+      // is shared across all worktrees; a prior fetch in another worktree can leave
+      // multiple "for-merge" entries, causing "Cannot fast-forward to multiple branches".
       const mainWorktree = await getMainWorktree();
       console.log("Pulling main...");
-      await exec(["git", "pull", "--ff-only"], mainWorktree);
+      await exec(["git", "fetch", "origin", "main"], mainWorktree);
+      await exec(["git", "merge", "--ff-only", "origin/main"], mainWorktree);
 
       // 3. Rebase onto main so the merge is always a fast-forward. `--exec`
       //    runs after each replayed commit, amending it to carry a shared
