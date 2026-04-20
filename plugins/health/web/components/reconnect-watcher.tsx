@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { subscribeWsStatus } from "@core";
-import { Shell } from "@plugins/shell/web/commands";
+import { ShellCommands } from "@plugins/shell/web";
 
 export function ReconnectWatcher() {
   useEffect(() => {
@@ -11,7 +11,7 @@ export function ReconnectWatcher() {
       if (toastTimer) return;
       toastTimer = setTimeout(() => {
         toastTimer = null;
-        Shell.Toast({ description: "Reconnected to server", variant: "info" });
+        ShellCommands.Toast({ description: "Reconnected to server", variant: "info" });
       }, 150);
     };
 

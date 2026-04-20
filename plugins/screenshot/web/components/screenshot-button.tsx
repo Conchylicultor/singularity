@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import { MdPhotoCamera } from "react-icons/md";
 import { domToBlob } from "modern-screenshot";
 import { Button } from "@/components/ui/button";
-import { Shell } from "@plugins/shell/web/commands";
+import { ShellCommands } from "@plugins/shell/web";
 
 export function ScreenshotButton() {
   const [busy, setBusy] = useState(false);
@@ -34,12 +34,12 @@ export function ScreenshotButton() {
             scale: window.devicePixelRatio || 1,
           });
           if (!blob) {
-            Shell.Toast({ description: "Screenshot failed", variant: "error" });
+            ShellCommands.Toast({ description: "Screenshot failed", variant: "error" });
             return;
           }
           void upload(id, blob);
         } catch (err) {
-          Shell.Toast({
+          ShellCommands.Toast({
             description: `Screenshot failed: ${(err as Error).message}`,
             variant: "error",
           });
@@ -70,13 +70,13 @@ async function upload(id: string, blob: Blob): Promise<void> {
       headers: { "content-type": "image/png" },
     });
     if (!res.ok) {
-      Shell.Toast({
+      ShellCommands.Toast({
         description: `Screenshot upload failed (${res.status})`,
         variant: "error",
       });
     }
   } catch (err) {
-    Shell.Toast({
+    ShellCommands.Toast({
       description: `Screenshot upload failed: ${(err as Error).message}`,
       variant: "error",
     });

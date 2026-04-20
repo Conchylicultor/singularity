@@ -3,7 +3,7 @@ import { handleCreate } from "./internal/handle-create";
 import { handleGet } from "./internal/handle-get";
 import { handleSaveFile } from "./internal/handle-save-file";
 
-const plugin: ServerPluginDefinition = {
+export default {
   id: "screenshot",
   name: "Screenshot",
   description: "Stores in-flight screenshots so a freshly opened tab can fetch them.",
@@ -12,5 +12,4 @@ const plugin: ServerPluginDefinition = {
     "GET /api/screenshots/:id": handleGet,
     "POST /api/screenshots/:id/file": handleSaveFile,
   },
-};
-export default plugin;
+} satisfies ServerPluginDefinition;

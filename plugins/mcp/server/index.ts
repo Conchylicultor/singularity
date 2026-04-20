@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "../../../server/src/types";
 import { handleMcpRequest } from "./internal/handle-mcp";
 
-const plugin: ServerPluginDefinition = {
+export default {
   id: "mcp",
   name: "MCP",
   description:
@@ -9,5 +9,4 @@ const plugin: ServerPluginDefinition = {
   httpRoutes: {
     "POST /api/mcp/:conversationId": handleMcpRequest,
   },
-};
-export default plugin;
+} satisfies ServerPluginDefinition;

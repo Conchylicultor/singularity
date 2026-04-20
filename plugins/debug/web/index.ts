@@ -1,9 +1,10 @@
 import type { PluginDefinition } from "@core";
-import { Shell } from "@plugins/shell/web/slots";
+import { Shell } from "@plugins/shell/web";
 import { MdBugReport } from "react-icons/md";
 import { DebugSidebar } from "./components/debug-sidebar";
+export { Debug } from "./slots";
 
-const debugPlugin: PluginDefinition = {
+export default {
   id: "debug",
   name: "Debug",
   description: "Debug tools sidebar group.",
@@ -14,6 +15,4 @@ const debugPlugin: PluginDefinition = {
       component: DebugSidebar,
     }),
   ],
-};
-
-export default debugPlugin;
+} satisfies PluginDefinition;

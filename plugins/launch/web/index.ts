@@ -1,11 +1,10 @@
 import type { PluginDefinition } from "@core";
+export { LaunchButtons, type LaunchButtonsProps, type LaunchRequest } from "./components/launch-buttons";
 
-const launchPlugin: PluginDefinition = {
+export default {
   id: "launch",
   name: "Launch",
   description: "Reusable Sonnet/Opus launch buttons for creating conversations.",
   contributions: [],
-};
-
-export default launchPlugin;
+} satisfies PluginDefinition;
 

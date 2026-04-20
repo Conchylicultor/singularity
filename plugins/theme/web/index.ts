@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@core";
-import { Shell } from "@plugins/shell/web/slots";
+import { Shell } from "@plugins/shell/web";
 import { ThemeToggle, ExperimentalToggle } from "./components/theme-toggle";
 
-const themePlugin: PluginDefinition = {
+export default {
   id: "theme",
   name: "Theme",
   description: "Toolbar toggles for light/dark mode and a distinct theme on non-main worktrees.",
@@ -10,6 +10,4 @@ const themePlugin: PluginDefinition = {
     Shell.Toolbar({ component: ExperimentalToggle, group: "actions" }),
     Shell.Toolbar({ component: ThemeToggle, group: "actions" }),
   ],
-};
-
-export default themePlugin;
+} satisfies PluginDefinition;

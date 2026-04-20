@@ -1,11 +1,10 @@
 import type { ServerPluginDefinition } from "../../../server/src/types";
 import { wsHandler } from "./internal/ws-handler";
 
-const plugin: ServerPluginDefinition = {
+export default {
   id: "terminal",
   name: "Terminal",
   wsRoutes: {
     "/ws/terminal": wsHandler,
   },
-};
-export default plugin;
+} satisfies ServerPluginDefinition;

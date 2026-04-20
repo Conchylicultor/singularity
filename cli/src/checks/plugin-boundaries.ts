@@ -36,22 +36,13 @@ const SKIPPED_PLUGINS: ReadonlyArray<string> = [
   "conversations/plugins/conversations-view",
   "conversations/plugins/runtime-api",
   "conversations/plugins/runtime-tmux",
-  "debug",
-  "debug/plugins/db-backup",
-  "health",
   "launch",
   "logs",
-  "mcp",
-  "screenshot",
-  "shell",
   "stats",
   "stats/plugins/commits",
   "stats/plugins/tasks",
   "tasks",
-  "terminal",
-  "theme",
   "welcome",
-  "worktree-switcher",
 ];
 
 // Framework-level files exempt from cross-plugin boundary checks (both the

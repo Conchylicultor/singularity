@@ -1,10 +1,10 @@
 import type { PluginDefinition } from "@core";
-import { Shell as ShellCommands } from "@plugins/shell/web/commands";
-import { Debug } from "@plugins/debug/web/slots";
+import { ShellCommands } from "@plugins/shell/web";
+import { Debug } from "@plugins/debug/web";
 import { MdBackup } from "react-icons/md";
 import { dbBackupPane } from "./views";
 
-const dbBackupPlugin: PluginDefinition = {
+export default {
   id: "debug-db-backup",
   name: "DB Backup",
   description: "Backup non-worktree Postgres databases to ~/.backups/singularity/.",
@@ -16,6 +16,4 @@ const dbBackupPlugin: PluginDefinition = {
       onClick: () => ShellCommands.OpenPane(dbBackupPane()),
     }),
   ],
-};
-
-export default dbBackupPlugin;
+} satisfies PluginDefinition;

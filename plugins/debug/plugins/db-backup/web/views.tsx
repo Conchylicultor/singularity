@@ -1,4 +1,4 @@
-import type { PaneDescriptor } from "@plugins/shell/web/commands";
+import type { PaneDescriptor } from "@plugins/shell/web";
 import { DbBackupPanel } from "./components/db-backup-panel";
 
 export function dbBackupPane(): PaneDescriptor {

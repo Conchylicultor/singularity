@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@core";
-import { Shell } from "@plugins/shell/web/slots";
+import { Shell } from "@plugins/shell/web";
 import { WorktreeDropdown } from "./components/worktree-dropdown";
 
-const worktreeSwitcherPlugin: PluginDefinition = {
+export default {
   id: "worktree-switcher",
   name: "Worktree Switcher",
   description: "Toolbar dropdown to switch the active worktree namespace.",
@@ -12,6 +12,4 @@ const worktreeSwitcherPlugin: PluginDefinition = {
       group: "namespace",
     }),
   ],
-};
-
-export default worktreeSwitcherPlugin;
+} satisfies PluginDefinition;
