@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { MdClose } from "react-icons/md";
+import { useMemo, useState, useCallback } from "react";
+import { MdClose, MdContentCopy, MdCheck } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web/slots";
@@ -26,6 +26,13 @@ export function FilePaneView({
 
   const defaultId = resolved[0]?.contribution.id ?? null;
   const [activeId, setActiveId] = useState<string | null>(defaultId);
+  const [copied, setCopied] = useState(false);
+  const copyPath = useCallback(() => {
+    void navigator.clipboard.writeText(path).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [path]);
   const active =
     resolved.find((r) => r.contribution.id === activeId) ?? resolved[0] ?? null;
 
@@ -48,9 +55,23 @@ export function FilePaneView({
             <MdClose className="size-4" />
           </Button>
         )}
-        <div className="flex min-w-0 flex-1 items-baseline text-sm">
+        <div className="flex min-w-0 flex-1 items-baseline gap-1 text-sm">
           <span className="truncate text-muted-foreground">{dir}</span>
           <span className="truncate font-medium">{basename}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-5 shrink-0 text-muted-foreground hover:text-foreground"
+            title="Copy path"
+            aria-label="Copy path"
+            onClick={copyPath}
+          >
+            {copied ? (
+              <MdCheck className="size-3" />
+            ) : (
+              <MdContentCopy className="size-3" />
+            )}
+          </Button>
         </div>
         <div role="tablist" className="flex items-center gap-1">
           {resolved.map(({ contribution: c }) => {

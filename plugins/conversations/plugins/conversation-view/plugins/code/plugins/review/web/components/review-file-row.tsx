@@ -1,4 +1,5 @@
-import { MdChevronRight, MdWarning } from "react-icons/md";
+import { useState, useCallback } from "react";
+import { MdChevronRight, MdWarning, MdContentCopy, MdCheck } from "react-icons/md";
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared/protocol";
 import { DiffView } from "../../../file-pane/plugins/diff/web/components/diff-view";
 import { isCoreFile } from "../core-files";
@@ -32,6 +33,14 @@ export function ReviewFileRow({
   const dir = slash >= 0 ? file.path.slice(0, slash + 1) : "";
   const basename = slash >= 0 ? file.path.slice(slash + 1) : file.path;
   const isCore = isCoreFile(file.path);
+  const [copied, setCopied] = useState(false);
+  const copyPath = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    void navigator.clipboard.writeText(file.path).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [file.path]);
 
   return (
     <div className="border-b border-border last:border-b-0">
@@ -54,9 +63,18 @@ export function ReviewFileRow({
         >
           {STATUS_LABEL[file.status]}
         </span>
-        <span className="min-w-0 flex-1 truncate">
+        <span className="group/path min-w-0 flex-1 truncate">
           <span className="text-muted-foreground">{dir}</span>
           <span className="font-medium">{basename}</span>
+          <button
+            type="button"
+            onClick={copyPath}
+            title="Copy path"
+            aria-label="Copy path"
+            className="ml-1 inline-flex translate-y-px items-center rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/path:opacity-100"
+          >
+            {copied ? <MdCheck className="size-3" /> : <MdContentCopy className="size-3" />}
+          </button>
         </span>
         <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
           <span className="text-emerald-600 dark:text-emerald-400">+{file.additions}</span>
