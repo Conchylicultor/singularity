@@ -1,5 +1,5 @@
-import type { CSSProperties, ReactNode } from "react";
-import { useMemo } from "react";
+import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
+import { useMemo, useRef } from "react";
 import { Diff, Hunk, parseDiff } from "react-diff-view";
 import type { FileData, TokenNode } from "react-diff-view";
 import "react-diff-view/style/index.css";
@@ -31,6 +31,19 @@ export function DiffView({
 
   const hunks = files[0]?.hunks ?? null;
   const tokens = useDiffTokens(hunks, path, dark);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if ((e.ctrlKey || e.metaKey) && e.key === "a" && containerRef.current) {
+      e.preventDefault();
+      const sel = window.getSelection();
+      if (!sel) return;
+      const range = document.createRange();
+      range.selectNodeContents(containerRef.current);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  }
 
   if (state.kind === "loading") {
     return <Placeholder>Loading…</Placeholder>;
@@ -50,7 +63,12 @@ export function DiffView({
   }
 
   return (
-    <div className="diff-view overflow-auto p-3 font-mono text-xs leading-5">
+    <div
+      ref={containerRef}
+      className="diff-view overflow-auto p-3 font-mono text-xs leading-5"
+      onKeyDown={handleKeyDown}
+      tabIndex={-1}
+    >
       {files.map((file, i) => (
         <Diff
           key={`${file.oldRevision}-${file.newRevision}`}
