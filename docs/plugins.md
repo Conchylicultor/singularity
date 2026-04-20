@@ -138,6 +138,8 @@
 - **`debug`** — Debug tools sidebar group.
   - Defines:
     - Slots: `Debug.Item`
+  - Exports (web):
+    - Values: `Debug`
   - Contributes:
     - `Shell.Sidebar` "Debug" → `DebugSidebar`
   - Plugins:
@@ -192,6 +194,9 @@
   - Defines:
     - Slots: `Shell.Sidebar`, `Shell.Toolbar`, `Shell.Route`
     - Commands: `Shell.OpenPane`, `Shell.Toast`
+  - Exports (web):
+    - Types: `PaneDescriptor`, `ToastArgs`, `ToastVariant`
+    - Values: `Shell`, `ShellCommands`
   - Contributes:
     - `Core.Root` → `ShellLayout`
 
