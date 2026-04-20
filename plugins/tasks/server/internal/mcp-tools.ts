@@ -27,7 +27,9 @@ as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
     description: z
       .string()
       .optional()
-      .describe("Optional longer description."),
+      .describe(
+        "Optional longer description. If a design doc exists for this task, cross-link it here (e.g. 'See design doc: docs/path/to/design.md') so the agent that picks up the task has context."
+      ),
     parent: z
       .string()
       .optional()
