@@ -9,14 +9,20 @@ export interface BuildStatusResponse {
 
 export async function handleBuildStatus(_req: Request): Promise<Response> {
   const [mainAheadCount, frontendHash] = await Promise.all([
-    getMainAheadCount(),
+    getMainAheadCountAsync(),
     getFrontendHash(),
   ]);
   return Response.json({ mainAheadCount, frontendHash } satisfies BuildStatusResponse);
 }
 
-function getMainAheadCount(): number {
-  const proc = Bun.spawnSync(["git", "log", "HEAD..refs/heads/main", "--oneline"], {
+async function getMainAheadCountAsync(): Promise<number> {
+  Bun.spawnSync(["git", "fetch", "origin", "main", "--quiet"], { cwd: repoRoot });
+  let base = "HEAD";
+  try {
+    const stored = (await Bun.file(`${repoRoot}/web/dist/.build-commit`).text()).trim();
+    if (stored) base = stored;
+  } catch {}
+  const proc = Bun.spawnSync(["git", "log", `${base}..origin/main`, "--oneline"], {
     cwd: repoRoot,
   });
   if (proc.exitCode !== 0) return 0;

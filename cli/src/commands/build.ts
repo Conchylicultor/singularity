@@ -223,6 +223,16 @@ export function registerBuild(program: Command) {
       console.log("Building frontend...");
       await exec(["bun", "run", "build"], resolve(root, "web"));
 
+      // Write the commit hash at build time so the server can report drift.
+      const commitProc = Bun.spawnSync(["git", "rev-parse", "HEAD"], {
+        cwd: root,
+        stdout: "pipe",
+      });
+      const buildCommit = commitProc.stdout.toString().trim();
+      if (buildCommit) {
+        writeFileSync(resolve(root, "web", "dist", ".build-commit"), buildCommit + "\n");
+      }
+
       // 3. Write registry JSON
       console.log("Registering worktree...");
       const spec = {
