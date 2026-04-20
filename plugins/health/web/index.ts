@@ -2,6 +2,8 @@ import type { PluginDefinition } from "@core";
 import { Core } from "@core";
 import { ReconnectWatcher } from "./components/reconnect-watcher";
 
+export { getHealth, waitForRestart } from "./api";
+
 export default {
   id: "health",
   name: "Health",

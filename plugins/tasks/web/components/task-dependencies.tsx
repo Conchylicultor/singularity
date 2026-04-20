@@ -2,7 +2,7 @@ import { useCallback, useMemo } from "react";
 import { MdClose } from "react-icons/md";
 import { useResource } from "@core";
 import { Button } from "@/components/ui/button";
-import { Shell as ShellCommands } from "@plugins/shell/web/commands";
+import { ShellCommands } from "@plugins/shell/web";
 import { tasksResource, type Task } from "../../shared/resources";
 import { tasksPane } from "../views";
 

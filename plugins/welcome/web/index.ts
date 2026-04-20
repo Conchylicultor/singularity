@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@core";
-import { Shell } from "@plugins/shell/web/slots";
+import { Shell } from "@plugins/shell/web";
 import { welcomePane } from "./views";
 
-const welcomePlugin: PluginDefinition = {
+export default {
   id: "welcome",
   name: "Welcome",
   description: "Landing pane shown at `/`.",
@@ -12,6 +12,4 @@ const welcomePlugin: PluginDefinition = {
       resolve: () => welcomePane(),
     }),
   ],
-};
-
-export default welcomePlugin;
+} satisfies PluginDefinition;

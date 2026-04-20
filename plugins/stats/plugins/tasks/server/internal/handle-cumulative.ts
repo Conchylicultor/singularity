@@ -1,6 +1,6 @@
 import { and, ne } from "drizzle-orm";
 import { db } from "../../../../../../server/src/db/client";
-import { CONVERSATIONS_META_TASK_ID, tasks } from "@plugins/tasks/server/api";
+import { CONVERSATIONS_META_TASK_ID, tasks } from "@plugins/tasks/server";
 
 // Three monotonic series sampled at every event:
 //   total     = cumulative tasks created

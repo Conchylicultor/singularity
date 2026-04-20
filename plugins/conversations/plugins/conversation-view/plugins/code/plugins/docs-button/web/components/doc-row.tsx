@@ -1,6 +1,6 @@
 import { MdArticle } from "react-icons/md";
 import { cn } from "@/lib/utils";
-import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared/protocol";
+import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
 
 const STATUS_DOT: Record<EditedFileStatus, string> = {
   modified: "bg-blue-500",

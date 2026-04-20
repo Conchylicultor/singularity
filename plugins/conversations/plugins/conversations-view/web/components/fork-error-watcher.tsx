@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useResource } from "@core";
-import { Shell } from "@plugins/shell/web/commands";
-import { forkErrorsResource } from "@plugins/conversations/shared/fork-errors";
+import { ShellCommands as Shell } from "@plugins/shell/web";
+import { forkErrorsResource } from "@plugins/conversations/shared";
 
 export function ForkErrorWatcher() {
   const { data } = useResource(forkErrorsResource);

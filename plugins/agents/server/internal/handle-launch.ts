@@ -4,12 +4,12 @@ import {
   _tasks,
   nextRankUnder,
   tasksResource,
-} from "@plugins/tasks/server/api";
-import { createConversation } from "@plugins/conversations/server/api";
+} from "@plugins/tasks/server";
+import { createConversation } from "@plugins/conversations/server";
 import {
   ConversationModelSchema,
   type ConversationModel,
-} from "@plugins/conversations/shared/types";
+} from "@plugins/conversations/shared";
 import { _agent_launches } from "./tables";
 import { agents } from "./schema";
 import { AGENTS_META_TASK_ID } from "./meta-agents";

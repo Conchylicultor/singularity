@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LaunchButtons } from "@plugins/launch/web/api";
+import { LaunchButtons } from "@plugins/launch/web";
 import { Button } from "@/components/ui/button";
 import { TaskDependencies } from "./task-dependencies";
 import { TaskEvents } from "./task-events";
 import { useResource } from "@core";
-import { Shell as ShellCommands } from "@plugins/shell/web/commands";
-import { conversationsResource } from "@plugins/conversations/shared/resources";
-import type { Conversation } from "@plugins/conversations/shared/types";
+import { ShellCommands } from "@plugins/shell/web";
+import { conversationsResource } from "@plugins/conversations/shared";
+import type { Conversation } from "@plugins/conversations/shared";
 import { tasksResource, type Task } from "../../shared/resources";
 import { tasksPane } from "../views";
 

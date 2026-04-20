@@ -1,5 +1,5 @@
 import { resourceDescriptor, useResource } from "@core";
-import { useConfigValues } from "@plugins/config/web/api";
+import { useConfigValues } from "@plugins/config/web";
 import { cn } from "@/lib/utils";
 import { commitsConfig } from "../../shared/config";
 

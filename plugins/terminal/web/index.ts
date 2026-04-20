@@ -1,5 +1,7 @@
 import type { PluginDefinition } from "@core";
 
+export { terminalPane } from "./views";
+
 export default {
   id: "terminal",
   name: "Terminal",

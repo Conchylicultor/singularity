@@ -21,7 +21,22 @@ import {
 } from "./internal/meta-conversations";
 import "./internal/mcp-tools";
 
-const plugin: ServerPluginDefinition = {
+export { _attempts, _tasks, pushes } from "./internal/tables";
+export {
+  attempts,
+  tasks,
+  AttemptSchema,
+  AttemptStatusSchema,
+  PushSchema,
+  TaskSchema,
+  TaskStatusSchema,
+} from "./internal/schema";
+export type { Attempt, AttemptStatus, Push, Task, TaskStatus } from "./internal/schema";
+export { attemptsResource, pushesResource, tasksResource } from "./internal/resources";
+export { CONVERSATIONS_META_TASK_ID } from "./internal/meta-conversations";
+export { nextRankUnder } from "./internal/rank";
+
+export default {
   id: "tasks",
   name: "Tasks",
   description: "Nested tasks with attempts linking to conversations.",
@@ -46,5 +61,4 @@ const plugin: ServerPluginDefinition = {
     }
     await startPushWatcher();
   },
-};
-export default plugin;
+} satisfies ServerPluginDefinition;

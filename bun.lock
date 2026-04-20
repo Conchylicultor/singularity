@@ -73,6 +73,14 @@
       "name": "@singularity/plugin-health",
       "version": "0.0.1",
     },
+    "plugins/launch": {
+      "name": "@singularity/plugin-launch",
+      "version": "0.0.1",
+    },
+    "plugins/logs": {
+      "name": "@singularity/plugin-logs",
+      "version": "0.0.1",
+    },
     "plugins/mcp": {
       "name": "@singularity/plugin-mcp",
       "version": "0.0.1",
@@ -120,6 +128,10 @@
     },
     "plugins/theme": {
       "name": "@singularity/plugin-theme",
+      "version": "0.0.1",
+    },
+    "plugins/welcome": {
+      "name": "@singularity/plugin-welcome",
       "version": "0.0.1",
     },
     "plugins/worktree-switcher": {
@@ -612,6 +624,10 @@
 
     "@singularity/plugin-health": ["@singularity/plugin-health@workspace:plugins/health"],
 
+    "@singularity/plugin-launch": ["@singularity/plugin-launch@workspace:plugins/launch"],
+
+    "@singularity/plugin-logs": ["@singularity/plugin-logs@workspace:plugins/logs"],
+
     "@singularity/plugin-mcp": ["@singularity/plugin-mcp@workspace:plugins/mcp"],
 
     "@singularity/plugin-screenshot": ["@singularity/plugin-screenshot@workspace:plugins/screenshot"],
@@ -625,6 +641,8 @@
     "@singularity/plugin-terminal": ["@singularity/plugin-terminal@workspace:plugins/terminal"],
 
     "@singularity/plugin-theme": ["@singularity/plugin-theme@workspace:plugins/theme"],
+
+    "@singularity/plugin-welcome": ["@singularity/plugin-welcome@workspace:plugins/welcome"],
 
     "@singularity/plugin-worktree-switcher": ["@singularity/plugin-worktree-switcher@workspace:plugins/worktree-switcher"],
 

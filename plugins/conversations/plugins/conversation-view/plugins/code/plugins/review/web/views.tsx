@@ -1,4 +1,4 @@
-import type { MainViewDescriptor } from "@plugins/conversations/plugins/conversation-view/web/commands";
+import type { MainViewDescriptor } from "@plugins/conversations/plugins/conversation-view/web";
 import { ReviewView } from "./components/review-view";
 
 export const REVIEW_MAIN_VIEW_ID = "code.review";

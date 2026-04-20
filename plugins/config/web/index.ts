@@ -1,10 +1,14 @@
 import type { PluginDefinition } from "@core";
-import { Shell } from "@plugins/shell/web/slots";
-import { Shell as ShellCommands } from "@plugins/shell/web/commands";
+import { Shell } from "@plugins/shell/web";
+import { ShellCommands } from "@plugins/shell/web";
 import { MdSettings } from "react-icons/md";
 import { settingsPane } from "./views";
 
-const configPlugin: PluginDefinition = {
+export { configResource, useConfigValues, setConfigValue, resetConfigValue } from "./api";
+export { Config, useSpecsWithPlugin, useSectionsWithPlugin } from "./slots";
+export type { SpecWithPlugin, SectionWithPlugin } from "./slots";
+
+export default {
   id: "config",
   name: "Config",
   description:
@@ -18,6 +22,4 @@ const configPlugin: PluginDefinition = {
     }),
     Shell.Route({ pattern: "/settings", resolve: () => settingsPane() }),
   ],
-};
-
-export default configPlugin;
+} satisfies PluginDefinition;

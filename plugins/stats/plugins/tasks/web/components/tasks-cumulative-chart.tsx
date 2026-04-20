@@ -19,7 +19,7 @@ import {
   tooltipNumberFormatter,
   useFetchJson,
   yAxisFormatter,
-} from "@plugins/stats/plugins/commits/web/components/chart-primitives";
+} from "@plugins/stats/plugins/commits/web";
 
 const TOTAL_COLOR = "var(--chart-total, #2563eb)";
 const ACTIVE_COLOR = "var(--chart-active, #f59e0b)";

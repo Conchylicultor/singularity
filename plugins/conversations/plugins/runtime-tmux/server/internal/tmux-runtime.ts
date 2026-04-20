@@ -1,8 +1,8 @@
 import type {
   ConversationRuntime,
   RuntimeInfo,
-} from "@plugins/conversations/server/api";
-import type { ConversationModel } from "@plugins/conversations/server/model";
+} from "@plugins/conversations/server";
+import type { ConversationModel } from "@plugins/conversations/server";
 import { resolveClaudeSessionId } from "./claude-session";
 
 const TMUX = "/opt/homebrew/bin/tmux";

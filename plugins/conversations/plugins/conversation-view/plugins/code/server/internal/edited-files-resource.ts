@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../../../../../server/src/db/client";
 import { defineResource } from "../../../../../../../../server/src/resources";
-import { conversations } from "@plugins/conversations/server/api";
+import { conversations } from "@plugins/conversations/server";
 import { getEditedFiles } from "./get-edited-files";
 import { watchEditedFiles } from "./watch-edited-files";
 

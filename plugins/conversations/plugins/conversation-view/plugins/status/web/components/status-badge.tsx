@@ -1,5 +1,5 @@
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web/slots";
-import type { ConversationStatus } from "@plugins/conversations/shared/types";
+import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationStatus } from "@plugins/conversations/shared";
 
 const STATUS_CLASSES: Record<ConversationStatus, string> = {
   starting: "bg-muted text-muted-foreground",

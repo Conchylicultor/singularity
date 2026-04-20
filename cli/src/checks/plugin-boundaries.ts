@@ -14,35 +14,20 @@ import type { Check, CheckResult } from "./types";
 // Paths are relative to `plugins/`. Remove entries as plugins are brought into
 // compliance. Empty list = full enforcement.
 const SKIPPED_PLUGINS: ReadonlyArray<string> = [
-  "agents",
-  "build",
-  "config",
+  // Known architectural cycle: conversations ↔ tasks (server-side, mutual FK deps).
+  // conversations/server/internal/tables.ts needs _attempts from tasks, and
+  // tasks/server/internal/schema.ts needs _conversations from conversations.
+  // Both must use direct leaf table imports (not barrels) to avoid runtime
+  // circular initialization errors. Fixing requires design discussion.
   "conversations",
+  "tasks",
+  // Known cross-runtime false-positive cycle:
+  // conversations/plugins/conversation-view → conversations → tasks → conversation-view
+  // (web and server are separate module graphs; no actual runtime cycle exists)
+  // Needs design discussion before breaking architecturally.
   "conversations/plugins/conversation-view",
   "conversations/plugins/conversation-view/plugins/code",
-  "conversations/plugins/conversation-view/plugins/code/plugins/docs-button",
   "conversations/plugins/conversation-view/plugins/code/plugins/file-pane",
-  "conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff",
-  "conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/markdown",
-  "conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/raw",
-  "conversations/plugins/conversation-view/plugins/code/plugins/review",
-  "conversations/plugins/conversation-view/plugins/model",
-  "conversations/plugins/conversation-view/plugins/open-app",
-  "conversations/plugins/conversation-view/plugins/push-and-exit",
-  "conversations/plugins/conversation-view/plugins/status",
-  "conversations/plugins/conversation-view/plugins/tasks-panel",
-  "conversations/plugins/conversation-view/plugins/title",
-  "conversations/plugins/conversation-view/plugins/vscode",
-  "conversations/plugins/conversations-view",
-  "conversations/plugins/runtime-api",
-  "conversations/plugins/runtime-tmux",
-  "launch",
-  "logs",
-  "stats",
-  "stats/plugins/commits",
-  "stats/plugins/tasks",
-  "tasks",
-  "welcome",
 ];
 
 // Framework-level files exempt from cross-plugin boundary checks (both the
@@ -54,9 +39,6 @@ const SKIPPED_PLUGINS: ReadonlyArray<string> = [
 //   - server/src/db/schema.ts: drizzle aggregator. Intentionally `export *`s
 //     plugin internal schemas so `drizzle({ schema })` knows every table.
 //
-// Grandfathered (should eventually be migrated):
-//   - server/src/index.ts: imports `ensureMainWorktreeRoot` from a plugin
-//     internal. Fix by re-exporting through `conversations/server/index.ts`.
 const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
   "web/src/plugins.ts",
   "server/src/plugins.ts",

@@ -1,10 +1,11 @@
 import type { PluginDefinition } from "@core";
-import { Shell } from "@plugins/shell/web/slots";
-import { Shell as ShellCommands } from "@plugins/shell/web/commands";
+import { Shell, ShellCommands } from "@plugins/shell/web";
 import { MdInsights } from "react-icons/md";
 import { statsPane } from "./views";
 
-const statsPlugin: PluginDefinition = {
+export { Stats } from "./slots";
+
+export default {
   id: "stats",
   name: "Stats",
   description: "Root plugin hosting stacked chart contributions from child plugins.",
@@ -20,6 +21,4 @@ const statsPlugin: PluginDefinition = {
       resolve: () => statsPane(),
     }),
   ],
-};
-
-export default statsPlugin;
+} satisfies PluginDefinition;

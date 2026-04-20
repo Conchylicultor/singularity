@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Shell as ShellCommands } from "@plugins/shell/web/commands";
-import { ConversationView } from "@plugins/conversations/plugins/conversation-view/web/components/conversation-view";
+import { ShellCommands } from "@plugins/shell/web";
+import { ConversationView } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   ResizableHandle,
   ResizablePanel,

@@ -1,9 +1,9 @@
 import { MdRateReview, MdWarning } from "react-icons/md";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web/slots";
+import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
 import {
-  Conversation,
+  ConversationCommands as Conversation,
   useMainView,
-} from "@plugins/conversations/plugins/conversation-view/web/commands";
+} from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "../../../../web/use-edited-files";
 import { reviewMainView, REVIEW_MAIN_VIEW_ID } from "../views";

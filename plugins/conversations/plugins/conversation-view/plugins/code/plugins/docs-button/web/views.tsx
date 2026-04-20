@@ -1,4 +1,4 @@
-import type { RightPaneDescriptor } from "@plugins/conversations/plugins/conversation-view/web/commands";
+import type { RightPaneDescriptor } from "@plugins/conversations/plugins/conversation-view/web";
 import { DocsPane } from "./components/docs-pane";
 
 export const DOCS_PANE_ID = "code.docs-pane";

@@ -1,5 +1,5 @@
 import { db } from "../../../../server/src/db/client";
-import { _tasks, nextRankUnder } from "@plugins/tasks/server/api";
+import { _tasks, nextRankUnder } from "@plugins/tasks/server";
 
 export const AGENTS_META_TASK_ID = "task-meta-agents";
 const TITLE = "Agents";

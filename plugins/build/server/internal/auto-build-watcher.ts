@@ -1,7 +1,7 @@
 import { db } from "../../../../server/src/db/client";
-import { pushes } from "@plugins/tasks/server/api";
+import { pushes } from "@plugins/tasks/server";
 import { desc } from "drizzle-orm";
-import { readConfig } from "@plugins/config/server/api";
+import { readConfig } from "@plugins/config/server";
 import { buildConfig } from "../../shared/config";
 import { runBuild } from "./run-build";
 

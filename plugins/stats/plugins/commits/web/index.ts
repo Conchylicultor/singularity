@@ -1,13 +1,26 @@
 import type { PluginDefinition } from "@core";
-import { Stats } from "@plugins/stats/web/slots";
-import { Config } from "@plugins/config/web/slots";
+import { Stats } from "@plugins/stats/web";
+import { Config } from "@plugins/config/web";
 import { CumulativeCommitsChart } from "./components/cumulative-chart";
 import { ExcludedPathToggles } from "./components/excluded-path-toggles";
 import { LinesChartsSection } from "./components/lines-charts";
 import { CommitsRateChart } from "./components/rate-chart";
 import { commitsConfig } from "../shared/config";
 
-const commitsPlugin: PluginDefinition = {
+export {
+  useFetchJson,
+  ChartState,
+  axisProps,
+  yAxisFormatter,
+  tooltipNumberFormatter,
+  tooltipContentStyle,
+  tooltipLabelStyle,
+  lineCursor,
+  barCursor,
+  gridProps,
+} from "./components/chart-primitives";
+
+export default {
   id: "stats-commits",
   name: "Stats: Commits",
   description: "Commit-based stats: commits and lines of change over time.",
@@ -36,6 +49,4 @@ const commitsPlugin: PluginDefinition = {
       component: ExcludedPathToggles,
     }),
   ],
-};
-
-export default commitsPlugin;
+} satisfies PluginDefinition;

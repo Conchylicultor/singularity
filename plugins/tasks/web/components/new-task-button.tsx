@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Shell } from "@plugins/shell/web/commands";
-import type { ConversationModel } from "@plugins/conversations/shared/types";
+import { ShellCommands as Shell } from "@plugins/shell/web";
+import type { ConversationModel } from "@plugins/conversations/shared";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Popover,

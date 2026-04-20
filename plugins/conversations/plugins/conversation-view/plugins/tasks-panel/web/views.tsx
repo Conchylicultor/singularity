@@ -1,4 +1,4 @@
-import type { RightPaneDescriptor } from "@plugins/conversations/plugins/conversation-view/web/commands";
+import type { RightPaneDescriptor } from "@plugins/conversations/plugins/conversation-view/web";
 import { TasksPane } from "./components/tasks-pane";
 
 export const TASKS_PANE_ID = "conversation.tasks-panel";

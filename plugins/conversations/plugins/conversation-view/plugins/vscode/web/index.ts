@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@core";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/web/slots";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { MdCode } from "react-icons/md";
 
-const vscodePlugin: PluginDefinition = {
+export default {
   id: "conversation-vscode",
   name: "Conversation: VSCode",
   description: "Opens the conversation's worktree in VSCode.",
@@ -19,6 +19,4 @@ const vscodePlugin: PluginDefinition = {
       },
     }),
   ],
-};
-
-export default vscodePlugin;
+} satisfies PluginDefinition;

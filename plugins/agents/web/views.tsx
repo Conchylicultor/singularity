@@ -1,4 +1,4 @@
-import type { PaneDescriptor } from "@plugins/shell/web/commands";
+import type { PaneDescriptor } from "@plugins/shell/web";
 import { AgentsPanel } from "./components/agents-panel";
 
 export function agentsPane(args?: { id?: string }): PaneDescriptor {

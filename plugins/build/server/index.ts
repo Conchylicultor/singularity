@@ -4,7 +4,7 @@ import { handleBuildStatus } from "./internal/handle-build-status";
 import { startAutoBuildWatcher } from "./internal/auto-build-watcher";
 import { buildConfig } from "../shared/config";
 
-const plugin: ServerPluginDefinition = {
+export default {
   id: "build",
   name: "Build",
   config: buildConfig,
@@ -13,5 +13,4 @@ const plugin: ServerPluginDefinition = {
     "GET /api/build/status": handleBuildStatus,
   },
   onReady: startAutoBuildWatcher,
-};
-export default plugin;
+} satisfies ServerPluginDefinition;

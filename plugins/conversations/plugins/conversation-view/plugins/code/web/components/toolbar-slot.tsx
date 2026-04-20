@@ -1,4 +1,4 @@
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web/slots";
+import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
 import { Code } from "../slots";
 
 export function CodeToolbarSlot({ conversation }: { conversation: ConversationState }) {

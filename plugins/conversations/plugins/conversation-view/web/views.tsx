@@ -1,4 +1,4 @@
-import type { PaneDescriptor } from "@plugins/shell/web/commands";
+import type { PaneDescriptor } from "@plugins/shell/web";
 import { ConversationView } from "./components/conversation-view";
 
 export function conversationPane(opts: { session_id: string }): PaneDescriptor {

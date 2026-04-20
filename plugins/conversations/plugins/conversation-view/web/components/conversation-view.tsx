@@ -10,8 +10,8 @@ import {
   type MiddlePaneDescriptor,
   type RightPaneDescriptor,
 } from "../commands";
-import { terminalPane } from "@plugins/terminal/web/views";
-import { useConversation } from "@plugins/conversations/web/use-conversations";
+import { terminalPane } from "@plugins/terminal/web";
+import { useConversation } from "@plugins/conversations/web";
 import { Button } from "@/components/ui/button";
 
 const TMUX = "/opt/homebrew/bin/tmux";

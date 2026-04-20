@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../../../../../server/src/db/client";
-import { conversations } from "@plugins/conversations/server/api";
+import { conversations } from "@plugins/conversations/server";
 import { getFileContent, getFileContentAtRef } from "./get-file-content";
 
 const GIT = "/usr/bin/git";

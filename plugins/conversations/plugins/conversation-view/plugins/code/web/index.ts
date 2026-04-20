@@ -1,8 +1,10 @@
 import type { PluginDefinition } from "@core";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/web/slots";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { CodeToolbarSlot } from "./components/toolbar-slot";
 
-const codePlugin: PluginDefinition = {
+export { Code } from "./slots";
+
+export default {
   id: "conversation-code",
   name: "Conversation: Code",
   description:
@@ -12,6 +14,4 @@ const codePlugin: PluginDefinition = {
       component: CodeToolbarSlot,
     }),
   ],
-};
-
-export default codePlugin;
+} satisfies PluginDefinition;

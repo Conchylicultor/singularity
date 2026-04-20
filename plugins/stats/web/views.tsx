@@ -1,4 +1,4 @@
-import type { PaneDescriptor } from "@plugins/shell/web/commands";
+import type { PaneDescriptor } from "@plugins/shell/web";
 import { StatsPanel } from "./components/stats-panel";
 
 export function statsPane(): PaneDescriptor {

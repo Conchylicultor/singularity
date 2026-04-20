@@ -9,7 +9,10 @@ import {
   handleSpecs,
 } from "./internal/handlers";
 
-const plugin: ServerPluginDefinition = {
+export { configResource } from "./internal/resource";
+export { readConfig } from "./api";
+
+export default {
   id: "config",
   name: "Config",
   description:
@@ -24,6 +27,4 @@ const plugin: ServerPluginDefinition = {
   async onReady() {
     buildRegistry(allPlugins);
   },
-};
-
-export default plugin;
+} satisfies ServerPluginDefinition;

@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { MdChevronRight, MdWarning, MdContentCopy, MdCheck } from "react-icons/md";
-import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared/protocol";
+import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
 import { DiffView } from "../../../file-pane/plugins/diff/web/components/diff-view";
 import { isCoreFile } from "../core-files";
 

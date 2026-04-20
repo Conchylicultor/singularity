@@ -1,4 +1,4 @@
-import type { PaneDescriptor } from "@plugins/shell/web/commands";
+import type { PaneDescriptor } from "@plugins/shell/web";
 import { TasksPanel } from "./components/tasks-panel";
 
 export function tasksPane(args?: { id?: string }): PaneDescriptor {

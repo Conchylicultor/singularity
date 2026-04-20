@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@core";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/web/slots";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { ConversationTitle } from "./components/conversation-title";
 
-const titlePlugin: PluginDefinition = {
+export default {
   id: "conversation-title",
   name: "Conversation: Title",
   description:
@@ -12,6 +12,4 @@ const titlePlugin: PluginDefinition = {
       component: ConversationTitle,
     }),
   ],
-};
-
-export default titlePlugin;
+} satisfies PluginDefinition;

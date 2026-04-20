@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { MdClose } from "react-icons/md";
 import { Button } from "@/components/ui/button";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web/slots";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/web/commands";
-import { TasksList } from "@plugins/tasks/web/components/tasks-list";
-import { TaskDetail } from "@plugins/tasks/web/components/task-detail";
+import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import { ConversationCommands as Conversation } from "@plugins/conversations/plugins/conversation-view/web";
+import { TasksList } from "@plugins/tasks/web";
+import { TaskDetail } from "@plugins/tasks/web";
 
 export function TasksPane({
   conversation,

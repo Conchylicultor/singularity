@@ -10,7 +10,21 @@ import { startPoller } from "./internal/poller";
 import { conversationsResource } from "./internal/resources";
 import { forkErrorsResource } from "./internal/fork-errors";
 
-const plugin: ServerPluginDefinition = {
+export { _conversations } from "./internal/tables";
+export { conversations, ConversationSchema } from "./internal/schema";
+export type { Conversation } from "./internal/schema";
+export { ConversationModelSchema } from "./model";
+export type { ConversationModel } from "./model";
+export { ConversationStatusSchema, isActiveStatus } from "./status";
+export type { ConversationStatus } from "./status";
+export { conversationsResource } from "./internal/resources";
+export { ensureMainWorktreeRoot, worktreePathFor, worktreePathForSync } from "./internal/worktree";
+export { createConversation, deleteConversation } from "./internal/lifecycle";
+export type { Turn } from "./internal/claude-transcript";
+export { Runtime, getConversationRow, readConversationTurns } from "./api";
+export type { RuntimeInfo, ConversationRuntime } from "./api";
+
+export default {
   id: "conversations",
   name: "Conversations",
   description:
@@ -26,5 +40,4 @@ const plugin: ServerPluginDefinition = {
   },
   resources: [conversationsResource, forkErrorsResource],
   onReady: () => startPoller(),
-};
-export default plugin;
+} satisfies ServerPluginDefinition;

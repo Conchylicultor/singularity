@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { useResource } from "@core";
-import { Shell as ShellCommands } from "@plugins/shell/web/commands";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
-import { conversationsResource } from "@plugins/conversations/shared/resources";
-import type { Conversation } from "@plugins/conversations/shared/types";
+import { ShellCommands } from "@plugins/shell/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationsResource } from "@plugins/conversations/shared";
+import type { Conversation } from "@plugins/conversations/shared";
 import { agentLaunchesResource, type AgentLaunch } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 import { useConversationPane } from "./conversation-pane-context";

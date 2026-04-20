@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { MdOpenInNew } from "react-icons/md";
 import { useResource } from "@core";
-import { Shell as ShellCommands } from "@plugins/shell/web/commands";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
-import { conversationsResource } from "@plugins/conversations/shared/resources";
-import type { Conversation } from "@plugins/conversations/shared/types";
+import { ShellCommands } from "@plugins/shell/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationsResource } from "@plugins/conversations/shared";
+import type { Conversation } from "@plugins/conversations/shared";
 import {
   attemptsResource,
   pushesResource,

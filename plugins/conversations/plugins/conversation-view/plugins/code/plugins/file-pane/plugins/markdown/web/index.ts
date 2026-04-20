@@ -1,10 +1,9 @@
 import type { PluginDefinition } from "@core";
 import { FilePane } from "../../../web/slots";
 import { MarkdownView } from "./components/markdown-view";
+import { supportsMarkdown } from "./internal/supports";
 
-const MD_EXT = new Set(["md", "mdx", "markdown"]);
-
-const markdownPlugin: PluginDefinition = {
+export default {
   id: "conversation-code-file-pane-markdown",
   name: "Conversation: Code — Markdown renderer",
   description: "Rendered markdown preview for .md and .mdx files.",
@@ -12,15 +11,8 @@ const markdownPlugin: PluginDefinition = {
     FilePane.Renderer({
       id: "markdown",
       label: "Markdown",
-      supports: (file) => {
-        const base = file.path.slice(file.path.lastIndexOf("/") + 1).toLowerCase();
-        const dot = base.lastIndexOf(".");
-        if (dot < 0) return false;
-        return MD_EXT.has(base.slice(dot + 1)) ? "native" : false;
-      },
+      supports: supportsMarkdown,
       component: MarkdownView,
     }),
   ],
-};
-
-export default markdownPlugin;
+} satisfies PluginDefinition;

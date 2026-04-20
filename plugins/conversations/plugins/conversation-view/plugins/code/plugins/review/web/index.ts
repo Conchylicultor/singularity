@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@core";
-import { Code } from "../../../web/slots";
+import { Code } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { ReviewButton } from "./components/review-button";
 
-const reviewPlugin: PluginDefinition = {
+export default {
   id: "conversation-code-review",
   name: "Conversation: Code — Review",
   description:
@@ -12,6 +12,4 @@ const reviewPlugin: PluginDefinition = {
       component: ReviewButton,
     }),
   ],
-};
-
-export default reviewPlugin;
+} satisfies PluginDefinition;

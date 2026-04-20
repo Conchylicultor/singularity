@@ -2,7 +2,7 @@ import { db } from "../../../../server/src/db/client";
 import { _attempts } from "./tables";
 import { pushes } from "./tables";
 import { attemptsResource, pushesResource } from "./resources";
-import { ensureMainWorktreeRoot } from "@plugins/conversations/server/api";
+import { ensureMainWorktreeRoot } from "@plugins/conversations/server";
 
 const GIT = "/usr/bin/git";
 const TICK_MS = 1000;

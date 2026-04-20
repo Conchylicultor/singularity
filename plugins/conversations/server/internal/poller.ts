@@ -7,7 +7,7 @@ import {
   CONVERSATIONS_META_TASK_ID,
   nextRankUnder,
   tasksResource,
-} from "@plugins/tasks/server/api";
+} from "@plugins/tasks/server";
 import { Runtime, type RuntimeInfo } from "../api";
 import { _conversations } from "./tables";
 import type { ConversationStatus } from "../../shared/types";

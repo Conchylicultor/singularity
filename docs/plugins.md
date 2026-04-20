@@ -36,7 +36,8 @@
   - Defines:
     - Slots: `Config.Spec`, `Config.Section`
   - Exports (web):
-    - Values: `configResource`, `resetConfigValue`, `setConfigValue`, `useConfigValues`
+    - Types: `SectionWithPlugin`, `SpecWithPlugin`
+    - Values: `Config`, `configResource`, `resetConfigValue`, `setConfigValue`, `useConfigValues`, `useSectionsWithPlugin`, `useSpecsWithPlugin`
   - Exports (server):
     - Values: `configResource`, `readConfig`
   - Exports (shared):
@@ -52,9 +53,14 @@
     - `DELETE /api/config/:key`
 
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
+  - Exports (web):
+    - Values: `useConversation`, `useConversations`
   - Exports (server):
     - Types: `Conversation`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `RuntimeInfo`, `Turn`
     - Values: `_conversations`, `ConversationModelSchema`, `conversations`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `ensureMainWorktreeRoot`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `Runtime`, `worktreePathFor`, `worktreePathForSync`
+  - Exports (shared):
+    - Types: `Conversation`, `ConversationEntry`, `ConversationModel`, `ConversationStatus`, `ForkError`
+    - Values: `ConversationModelSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`
   - Server:
     - Uses: `tasks.CONVERSATIONS_META_TASK_ID`, `tasks._attempts`, `tasks._tasks`, `tasks.attempts`, `tasks.attemptsResource`, `tasks.nextRankUnder`, `tasks.tasksResource`
     - Resources: `conversations` (push)
@@ -70,12 +76,20 @@
       - Defines:
         - Slots: `Conversation.Toolbar`, `Conversation.Title`
         - Commands: `Conversation.OpenMiddlePane`, `Conversation.OpenRightPane`, `Conversation.OpenMainView`
+      - Exports (web):
+        - Types: `ConversationState`, `MainViewDescriptor`, `MiddlePaneDescriptor`, `RightPaneDescriptor`
+        - Values: `Conversation`, `ConversationCommands`, `conversationPane`, `ConversationView`, `MainViewContext`, `MiddlePaneContext`, `RightPaneContext`, `useMainView`, `useMiddlePane`, `useRightPane`
       - Contributes:
         - `Shell.Route` `/c/:id`
       - Plugins:
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Defines:
             - Slots: `Code.ToolbarButton`
+          - Exports (web):
+            - Values: `Code`
+          - Exports (shared):
+            - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`, `ResourceDescriptor`
+            - Values: `editedFilesResource`
           - Contributes:
             - `Conversation.Toolbar` → `CodeToolbarSlot`
           - Server:
@@ -109,6 +123,7 @@
           - Contributes:
             - `Conversation.Toolbar` → `PushAndExitButton`
           - Server:
+            - Uses: `conversations.Runtime`, `conversations.Turn`, `conversations.conversationsResource`, `conversations.deleteConversation`, `conversations.getConversationRow`, `conversations.readConversationTurns`
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
             - `DELETE /api/conversations/:id/push-and-exit`
@@ -203,18 +218,22 @@
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Defines:
     - Slots: `Stats.Chart`
+  - Exports (web):
+    - Values: `Stats`
   - Contributes:
     - `Shell.Sidebar` "Stats" (group `System`)
     - `Shell.Route` `/stats`
   - Plugins:
     - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
+      - Exports (web):
+        - Values: `axisProps`, `barCursor`, `ChartState`, `gridProps`, `lineCursor`, `tooltipContentStyle`, `tooltipLabelStyle`, `tooltipNumberFormatter`, `useFetchJson`, `yAxisFormatter`
       - Contributes:
         - `Stats.Chart` "Commits over time" → `CumulativeCommitsChart`
         - `Stats.Chart` "Commits per period" → `CommitsRateChart`
         - `Stats.Chart` "Lines changed" → `LinesChartsSection`
         - `Config.Section` "Excluded path toggles" → `ExcludedPathToggles`
       - Server:
-        - Uses: `config.readConfig`
+        - Uses: `config.readConfig`, `conversations.ensureMainWorktreeRoot`
         - `GET /api/stats/commits/cumulative`
         - `GET /api/stats/commits/rate`
         - `GET /api/stats/commits/lines/cumulative`
@@ -232,6 +251,8 @@
   - Defines:
     - Slots: `Tasks.List`, `Tasks.View`, `Tasks.TaskActions`
     - Commands: `Tasks.OpenTask`
+  - Exports (web):
+    - Values: `TaskDetail`, `Tasks`, `TasksList`
   - Exports (server):
     - Types: `Attempt`, `AttemptStatus`, `Push`, `Task`, `TaskStatus`
     - Values: `_attempts`, `_tasks`, `attempts`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `CONVERSATIONS_META_TASK_ID`, `nextRankUnder`, `pushes`, `pushesResource`, `PushSchema`, `tasks`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`
@@ -256,6 +277,8 @@
     - `GET /api/repo-info`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
+  - Exports (web):
+    - Values: `terminalPane`
   - Server:
     - `WS /ws/terminal`
 

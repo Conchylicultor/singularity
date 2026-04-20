@@ -7,7 +7,7 @@ import {
   attemptsResource,
   nextRankUnder,
   tasksResource,
-} from "@plugins/tasks/server/api";
+} from "@plugins/tasks/server";
 import { Runtime } from "../api";
 import type { ConversationModel } from "../model";
 import { _conversations } from "./tables";

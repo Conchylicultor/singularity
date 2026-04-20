@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
-import { Shell } from "@plugins/shell/web/slots";
-import { Shell as ShellCommands } from "@plugins/shell/web/commands";
+import { Shell } from "@plugins/shell/web";
+import { ShellCommands } from "@plugins/shell/web";
 import { MdChecklist } from "react-icons/md";
 import { tasksPane } from "./views";
 import { Tasks as TasksSlots } from "./slots";
@@ -8,8 +8,11 @@ import { LaunchAgentAction } from "./components/launch-agent-action";
 import { DeleteTaskAction } from "./components/delete-task-action";
 import { ExpandCollapseAllAction } from "./components/expand-collapse-all-action";
 import { NewTaskButton } from "./components/new-task-button";
+export { Tasks } from "./slots";
+export { TasksList } from "./components/tasks-list";
+export { TaskDetail } from "./components/task-detail";
 
-const tasksPlugin: PluginDefinition = {
+export default {
   id: "tasks",
   name: "Tasks",
   description: "Nested tasks with attempts; meta-plugin hosting sub-pane contributions.",
@@ -39,6 +42,4 @@ const tasksPlugin: PluginDefinition = {
     TasksSlots.TaskActions({ id: "delete", component: DeleteTaskAction }),
     TasksSlots.TaskActions({ id: "launch-agent", component: LaunchAgentAction }),
   ],
-};
-
-export default tasksPlugin;
+} satisfies PluginDefinition;

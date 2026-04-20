@@ -2,7 +2,10 @@ import type { ServerPluginDefinition } from "../../../server/src/types";
 import { handleChannels } from "./internal/handle-channels";
 import { wsHandler } from "./internal/ws-handler";
 
-const plugin: ServerPluginDefinition = {
+export { Log } from "./api";
+export type { LogChannel, LogStream } from "./api";
+
+export default {
   id: "logs",
   name: "Logs",
   httpRoutes: {
@@ -11,5 +14,4 @@ const plugin: ServerPluginDefinition = {
   wsRoutes: {
     "/ws/logs": wsHandler,
   },
-};
-export default plugin;
+} satisfies ServerPluginDefinition;

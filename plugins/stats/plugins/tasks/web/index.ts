@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@core";
-import { Stats } from "@plugins/stats/web/slots";
+import { Stats } from "@plugins/stats/web";
 import { TasksCumulativeChart } from "./components/tasks-cumulative-chart";
 
-const tasksStatsPlugin: PluginDefinition = {
+export default {
   id: "stats-tasks",
   name: "Stats: Tasks",
   description: "Task-based stats: active (open) tasks over time.",
@@ -13,6 +13,4 @@ const tasksStatsPlugin: PluginDefinition = {
       component: TasksCumulativeChart,
     }),
   ],
-};
-
-export default tasksStatsPlugin;
+} satisfies PluginDefinition;

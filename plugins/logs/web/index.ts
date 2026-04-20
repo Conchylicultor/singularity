@@ -1,11 +1,10 @@
 import type { PluginDefinition } from "@core";
-import { Shell } from "@plugins/shell/web/slots";
-import { Shell as ShellCommands } from "@plugins/shell/web/commands";
-import { Debug } from "@plugins/debug/web/slots";
+import { Shell, ShellCommands } from "@plugins/shell/web";
+import { Debug } from "@plugins/debug/web";
 import { MdTerminal } from "react-icons/md";
 import { logPane } from "./views";
 
-const logsPlugin: PluginDefinition = {
+export default {
   id: "logs",
   name: "Logs",
   description: "System logs pane, opened from the Debug sidebar.",
@@ -25,6 +24,4 @@ const logsPlugin: PluginDefinition = {
       resolve: (params) => logPane({ channel: params.channel }),
     }),
   ],
-};
-
-export default logsPlugin;
+} satisfies PluginDefinition;

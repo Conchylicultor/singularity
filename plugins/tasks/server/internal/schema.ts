@@ -2,6 +2,9 @@ import { eq, getTableColumns, sql } from "drizzle-orm";
 import { pgView } from "drizzle-orm/pg-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
+// Cross-plugin FK ref via the leaf `internal/tables` path (not the barrel)
+// to avoid pulling in conversations' initialization which back-references
+// `_attempts` and would form a circular initialization error at runtime.
 import { _conversations } from "@plugins/conversations/server/internal/tables";
 import { _attempts, _taskDependencies, _tasks, pushes } from "./tables";
 

@@ -1,7 +1,7 @@
 import { asc, desc } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { defineResource } from "../../../../server/src/resources";
-import { conversationsResource } from "@plugins/conversations/server/api";
+import { conversationsResource } from "@plugins/conversations/server";
 import { pushes } from "./tables";
 import {
   attempts,

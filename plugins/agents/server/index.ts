@@ -9,7 +9,7 @@ import { handleListLaunches } from "./internal/handle-list-launches";
 import { agentLaunchesResource, agentsResource } from "./internal/resources";
 import { ensureAgentsMetaTask } from "./internal/meta-agents";
 
-const plugin: ServerPluginDefinition = {
+export default {
   id: "agents",
   name: "Agents",
   description: "Named agent definitions that launch conversations.",
@@ -26,6 +26,4 @@ const plugin: ServerPluginDefinition = {
   onReady: async () => {
     await ensureAgentsMetaTask();
   },
-};
-
-export default plugin;
+} satisfies ServerPluginDefinition;

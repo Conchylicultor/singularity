@@ -1,5 +1,5 @@
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web/slots";
-import type { ConversationModel } from "@plugins/conversations/shared/types";
+import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationModel } from "@plugins/conversations/shared";
 
 const MODEL_CLASSES: Record<ConversationModel, string> = {
   opus: "bg-purple-500/15 text-purple-700 dark:text-purple-300",

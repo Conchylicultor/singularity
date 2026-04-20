@@ -1,6 +1,9 @@
 import type { ServerPluginDefinition } from "../../../server/src/types";
 import { handleMcpRequest } from "./internal/handle-mcp";
 
+export { Mcp } from "./api";
+export type { McpTool, McpToolContext, McpToolResult } from "./api";
+
 export default {
   id: "mcp",
   name: "MCP",

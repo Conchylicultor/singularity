@@ -1,10 +1,9 @@
 import type { PluginDefinition } from "@core";
-import { Shell } from "@plugins/shell/web/slots";
-import { Shell as ShellCommands } from "@plugins/shell/web/commands";
+import { Shell, ShellCommands } from "@plugins/shell/web";
 import { MdPrecisionManufacturing } from "react-icons/md";
 import { agentsPane } from "./views";
 
-const agentsPlugin: PluginDefinition = {
+export default {
   id: "agents",
   name: "Agents",
   description: "Named agent definitions that launch conversations.",
@@ -24,6 +23,4 @@ const agentsPlugin: PluginDefinition = {
       resolve: (params) => agentsPane({ id: params.id }),
     }),
   ],
-};
-
-export default agentsPlugin;
+} satisfies PluginDefinition;

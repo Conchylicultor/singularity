@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@core";
 import { FilePane } from "../../../web/slots";
 import { DiffView } from "./components/diff-view";
 
-const diffPlugin: PluginDefinition = {
+export default {
   id: "conversation-code-file-pane-diff",
   name: "Conversation: Code — Diff renderer",
   description:
@@ -21,6 +21,4 @@ const diffPlugin: PluginDefinition = {
       component: DiffView,
     }),
   ],
-};
-
-export default diffPlugin;
+} satisfies PluginDefinition;

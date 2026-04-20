@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@core";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/web/slots";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { ModelBadge } from "./components/model-badge";
 
-const modelPlugin: PluginDefinition = {
+export default {
   id: "conversation-model",
   name: "Conversation: Model",
   description:
@@ -13,6 +13,4 @@ const modelPlugin: PluginDefinition = {
       group: "status",
     }),
   ],
-};
-
-export default modelPlugin;
+} satisfies PluginDefinition;

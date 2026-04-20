@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { MdAdd } from "react-icons/md";
-import { Shell } from "@plugins/shell/web/commands";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
+import { ShellCommands as Shell } from "@plugins/shell/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   ConversationSchema,
   type ConversationModel,
-} from "@plugins/conversations/shared/types";
+} from "@plugins/conversations/shared";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 

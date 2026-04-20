@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@core";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/web/slots";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { MdRocketLaunch } from "react-icons/md";
 
-const openAppPlugin: PluginDefinition = {
+export default {
   id: "conversation-open-app",
   name: "Conversation: Open App",
   description:
@@ -19,6 +19,4 @@ const openAppPlugin: PluginDefinition = {
       },
     }),
   ],
-};
-
-export default openAppPlugin;
+} satisfies PluginDefinition;

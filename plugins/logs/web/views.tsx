@@ -1,4 +1,4 @@
-import type { PaneDescriptor } from "@plugins/shell/web/commands";
+import type { PaneDescriptor } from "@plugins/shell/web";
 import { LogViewer } from "./components/log-viewer";
 
 export function logPane(args?: { channel?: string }): PaneDescriptor {

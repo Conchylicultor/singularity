@@ -1,4 +1,4 @@
-import { readConfig } from "@plugins/config/server/api";
+import { readConfig } from "@plugins/config/server";
 import { commitsConfig } from "../../shared/config";
 import { getCommits, getCommitsExcludingPaths } from "./commit-timestamps";
 import { activeExcludedPaths } from "./excluded-paths";

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Shell } from "@plugins/shell/web/commands";
-import { getHealth, waitForRestart } from "@plugins/health/web/api";
+import { ShellCommands as Shell } from "@plugins/shell/web";
+import { getHealth, waitForRestart } from "@plugins/health/web";
 import { MdRefresh } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";

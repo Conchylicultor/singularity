@@ -9,7 +9,7 @@ import {
 } from "./internal/excluded-paths";
 import { commitsConfig } from "../shared/config";
 
-const plugin: ServerPluginDefinition = {
+export default {
   id: "stats-commits",
   name: "Stats: Commits",
   description: "Commit-based stats: commits and lines of change over time.",
@@ -24,5 +24,4 @@ const plugin: ServerPluginDefinition = {
     "DELETE /api/stats/commits/excluded-path-state/:path": handleDeleteState,
   },
   resources: [excludedPathStateResource],
-};
-export default plugin;
+} satisfies ServerPluginDefinition;

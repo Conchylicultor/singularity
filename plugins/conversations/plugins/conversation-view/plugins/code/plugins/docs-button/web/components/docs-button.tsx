@@ -1,9 +1,9 @@
 import { MdArticle } from "react-icons/md";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web/slots";
+import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
 import {
-  Conversation,
+  ConversationCommands as Conversation,
   useRightPane,
-} from "@plugins/conversations/plugins/conversation-view/web/commands";
+} from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "../../../../web/use-edited-files";
 import { docsRightPane, DOCS_PANE_ID, isDocFile } from "../views";

@@ -1,6 +1,6 @@
 import { defineSlot } from "@core";
 import type { ComponentType } from "react";
-import type { Conversation as ConversationRecord } from "@plugins/conversations/shared/types";
+import type { Conversation as ConversationRecord } from "@plugins/conversations/shared";
 
 export type ConversationState = ConversationRecord;
 

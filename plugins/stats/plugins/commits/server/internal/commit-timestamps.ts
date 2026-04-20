@@ -1,4 +1,4 @@
-import { ensureMainWorktreeRoot } from "@plugins/conversations/server/internal/worktree";
+import { ensureMainWorktreeRoot } from "@plugins/conversations/server";
 
 const GIT = "/usr/bin/git";
 const TTL_MS = 30_000;

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useResource } from "@core";
-import { conversationsResource } from "@plugins/conversations/shared/resources";
-import type { Conversation } from "@plugins/conversations/shared/types";
+import { conversationsResource } from "@plugins/conversations/shared";
+import type { Conversation } from "@plugins/conversations/shared";
 import { agentLaunchesResource, type AgentLaunch } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 

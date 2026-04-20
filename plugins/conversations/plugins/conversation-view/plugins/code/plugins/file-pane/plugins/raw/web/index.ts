@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@core";
 import { FilePane } from "../../../web/slots";
 import { RawView } from "./components/raw-view";
 
-const rawPlugin: PluginDefinition = {
+export default {
   id: "conversation-code-file-pane-raw",
   name: "Conversation: Code — Raw renderer",
   description:
@@ -15,6 +15,4 @@ const rawPlugin: PluginDefinition = {
       component: RawView,
     }),
   ],
-};
-
-export default rawPlugin;
+} satisfies PluginDefinition;

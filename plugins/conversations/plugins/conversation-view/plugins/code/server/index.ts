@@ -3,7 +3,7 @@ import { editedFilesResource } from "./internal/edited-files-resource";
 import { handleFileContent } from "./internal/file-content-handler";
 import { handleFileDiff } from "./internal/file-diff-handler";
 
-const plugin: ServerPluginDefinition = {
+export default {
   id: "conversation-code",
   name: "Conversation: Code",
   description:
@@ -13,5 +13,4 @@ const plugin: ServerPluginDefinition = {
     "GET /api/conversations/:id/diff": handleFileDiff,
   },
   resources: [editedFilesResource],
-};
-export default plugin;
+} satisfies ServerPluginDefinition;

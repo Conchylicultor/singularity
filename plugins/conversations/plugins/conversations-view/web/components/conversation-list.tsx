@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { MdClose } from "react-icons/md";
-import { Shell } from "@plugins/shell/web/commands";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web/views";
-import { useConversations } from "@plugins/conversations/web/use-conversations";
-import { LaunchButtons } from "@plugins/launch/web/api";
+import { ShellCommands as Shell } from "@plugins/shell/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversations } from "@plugins/conversations/web";
+import { LaunchButtons } from "@plugins/launch/web";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { MdClose } from "react-icons/md";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web/slots";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/web/commands";
+import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import { ConversationCommands as Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "../../../../web/use-edited-files";
 import { ReviewFileRow } from "./review-file-row";
