@@ -27,3 +27,16 @@
 .diff-view .diff-gutter {
   color: var(--muted-foreground);
 }
+
+/* While dragging on one side, disable selection on the other */
+.diff-view[data-selecting="old"] .diff-code-new,
+.diff-view[data-selecting="old"] .diff-gutter-new {
+  user-select: none;
+  pointer-events: none;
+}
+
+.diff-view[data-selecting="new"] .diff-code-old,
+.diff-view[data-selecting="new"] .diff-gutter-old {
+  user-select: none;
+  pointer-events: none;
+}

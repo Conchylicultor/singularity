@@ -1,4 +1,4 @@
-import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
+import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { useMemo, useRef } from "react";
 import { Diff, Hunk, parseDiff } from "react-diff-view";
 import type { FileData, TokenNode } from "react-diff-view";
@@ -7,6 +7,21 @@ import { useDarkMode } from "../../../../web/use-dark-mode";
 import { useFileDiff } from "../use-file-diff";
 import { useDiffTokens } from "../use-diff-tokens";
 import "./diff-view.css";
+
+type DiffSide = "old" | "new";
+
+function getSide(el: Element | null): DiffSide | null {
+  while (el) {
+    if (el.classList.contains("diff-code-old") || el.classList.contains("diff-gutter-old")) return "old";
+    if (el.classList.contains("diff-code-new") || el.classList.contains("diff-gutter-new")) return "new";
+    el = el.parentElement;
+  }
+  return null;
+}
+
+function getSideFromNode(node: Node | null): DiffSide | null {
+  return getSide(node instanceof Element ? node : node?.parentElement ?? null);
+}
 
 export function DiffView({
   conversationId,
@@ -32,16 +47,46 @@ export function DiffView({
   const hunks = files[0]?.hunks ?? null;
   const tokens = useDiffTokens(hunks, path, dark, conversationId, base);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastClickedSide = useRef<DiffSide | null>(null);
+
+  function handleMouseDown(e: MouseEvent<HTMLDivElement>) {
+    const side = getSide(e.target as Element);
+    lastClickedSide.current = side;
+    if (!side || !containerRef.current) return;
+    containerRef.current.setAttribute("data-selecting", side);
+    const cleanup = () => {
+      containerRef.current?.removeAttribute("data-selecting");
+      document.removeEventListener("mouseup", cleanup);
+    };
+    document.addEventListener("mouseup", cleanup);
+  }
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if ((e.ctrlKey || e.metaKey) && e.key === "a" && containerRef.current) {
       e.preventDefault();
       const sel = window.getSelection();
       if (!sel) return;
-      const range = document.createRange();
-      range.selectNodeContents(containerRef.current);
+
+      const side =
+        lastClickedSide.current ??
+        getSideFromNode(sel.anchorNode);
+
       sel.removeAllRanges();
-      sel.addRange(range);
+      if (side) {
+        const cells = containerRef.current.querySelectorAll(`.diff-code-${side}`);
+        const first = cells[0];
+        const last = cells[cells.length - 1];
+        if (first && last) {
+          const range = document.createRange();
+          range.setStartBefore(first);
+          range.setEndAfter(last);
+          sel.addRange(range);
+        }
+      } else {
+        const range = document.createRange();
+        range.selectNodeContents(containerRef.current);
+        sel.addRange(range);
+      }
     }
   }
 
@@ -67,6 +112,7 @@ export function DiffView({
       ref={containerRef}
       className="diff-view overflow-auto font-mono text-xs leading-5"
       onKeyDown={handleKeyDown}
+      onMouseDown={handleMouseDown}
       tabIndex={-1}
     >
       {files.map((file, i) => (
