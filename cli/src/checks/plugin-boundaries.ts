@@ -351,9 +351,14 @@ function checkPackageNaming(p: PluginDir, violations: Violation[]) {
 /**
  * An `index.ts` may only contain:
  *   - import statements
- *   - re-exports: `export { ... } from "..."`, `export * from "..."`
+ *   - named re-exports: `export { ... }`, `export { ... } from "..."`, `export type { ... }`
  *   - type/interface aliases: `type X = ...`, `interface X { ... }` (bare or exported)
  *   - exactly one `export default <expression>`
+ *
+ * `export * from "..."` / `export * as X from "..."` are disallowed because
+ * docgen can't follow them to enumerate the public surface — every public
+ * name must be written in the barrel. Wrap with a named re-export instead:
+ * `import * as X from "./internal"; export { X };`.
  *
  * Any runtime declaration at the top level (`const`, `let`, `var`, `function`, `class`,
  * top-level `await`, control flow) is a violation — it should live in a sibling file
@@ -369,6 +374,15 @@ function checkBarrelPurity(absPath: string, relPath: string, violations: Violati
     if (!trimmed) continue;
     if (isAllowedBarrelStatement(trimmed)) continue;
     const head = trimmed.split(/\s+/).slice(0, 3).join(" ");
+    if (isWildcardReexport(trimmed)) {
+      violations.push({
+        rule: "barrel-purity",
+        file: `${relPath}:${line}`,
+        message: `wildcard re-export in barrel: \`${head}${trimmed.length > head.length ? "…" : ""}\``,
+        fix: "docgen can't follow `export *` to enumerate the public surface — every exported name must be written in the barrel. Replace with named re-exports (`export { A, B, type C } from \"./internal/foo\"`) or namespace: `import * as Foo from \"./internal/foo\"; export { Foo };`.",
+      });
+      continue;
+    }
     violations.push({
       rule: "barrel-purity",
       file: `${relPath}:${line}`,
@@ -378,18 +392,28 @@ function checkBarrelPurity(absPath: string, relPath: string, violations: Violati
   }
 }
 
+function isWildcardReexport(s: string): boolean {
+  if (!s.startsWith("export ")) return false;
+  const rest = s.slice("export ".length).trimStart();
+  if (rest.startsWith("*")) return true;
+  if (rest.startsWith("type ")) {
+    const afterType = rest.slice("type ".length).trimStart();
+    if (afterType.startsWith("*")) return true;
+  }
+  return false;
+}
+
 function isAllowedBarrelStatement(s: string): boolean {
   if (s.startsWith("import ") || s.startsWith("import{")) return true;
   if (s.startsWith("export default")) return true;
   if (s.startsWith("type ") || s.startsWith("interface ")) return true;
   if (s.startsWith("export type ") || s.startsWith("export interface ")) return true;
   if (s.startsWith("export ")) {
-    // Allowed: `export { ... }` (possibly with `from "..."`),
-    //          `export * from "..."`, `export * as X from "..."`.
-    // Disallowed: `export const/let/var/function/class/async`.
+    // Allowed: `export { ... }` (possibly with `from "..."`).
+    // Disallowed: `export * from "..."` (docgen can't enumerate wildcard
+    //             re-exports), `export const/let/var/function/class/async`.
     const rest = s.slice("export ".length).trimStart();
     if (rest.startsWith("{")) return true;
-    if (rest.startsWith("*")) return true;
     return false;
   }
   return false;

@@ -21,6 +21,11 @@ interface Contribution {
   props: Record<string, string>;
 }
 
+interface BarrelExport {
+  name: string;
+  kind: "type" | "value";
+}
+
 interface PluginInfo {
   dir: string;
   name: string;
@@ -32,7 +37,9 @@ interface PluginInfo {
   contributions: Contribution[];
   httpRoutes: string[];
   wsRoutes: string[];
-  apiExports: string[];
+  webExports: BarrelExport[];
+  serverExports: BarrelExport[];
+  sharedExports: BarrelExport[];
   apiUses: string[];
   resources: { key: string; mode: string }[];
   children: PluginInfo[];
@@ -268,24 +275,61 @@ function parseRouteMap(
   return keys;
 }
 
-function parseApiExports(src: string): string[] {
-  const names = new Set<string>();
+function parseBarrelExports(src: string): BarrelExport[] {
+  const map = new Map<string, "type" | "value">();
+  const setIfUnset = (name: string, kind: "type" | "value") => {
+    if (!map.has(name)) map.set(name, kind);
+  };
+
+  // Direct declarations (skip default): export [async] const|let|var|function|class|type|interface|enum NAME
   const declRe =
-    /export\s+(?:default\s+)?(?:async\s+)?(?:const|let|var|function|class|type|interface|enum)\s+([A-Za-z_$][\w$]*)/g;
+    /export\s+(?!default\b)(?:async\s+)?(const|let|var|function|class|type|interface|enum)\s+([A-Za-z_$][\w$]*)/g;
   let m: RegExpExecArray | null;
-  while ((m = declRe.exec(src))) names.add(m[1]!);
-  const listRe = /export\s+(?:type\s+)?\{([^}]+)\}/g;
+  while ((m = declRe.exec(src))) {
+    const keyword = m[1]!;
+    const name = m[2]!;
+    const kind: "type" | "value" =
+      keyword === "type" || keyword === "interface" ? "type" : "value";
+    setIfUnset(name, kind);
+  }
+
+  // List exports: export [type] { X, type Y, Z as W } [from "..."]
+  const listRe = /export\s+(type\s+)?\{([^}]+)\}/g;
   while ((m = listRe.exec(src))) {
-    for (const raw of m[1]!.split(",")) {
+    const blockIsType = !!m[1];
+    const inner = m[2]!;
+    for (const raw of inner.split(",")) {
       let s = raw.trim();
       if (!s) continue;
-      s = s.replace(/^type\s+/, "");
-      const asMatch = s.match(/^\w+\s+as\s+(\w+)$/);
-      if (asMatch) names.add(asMatch[1]!);
-      else if (/^\w+$/.test(s)) names.add(s);
+      let itemIsType = false;
+      if (/^type\s+/.test(s)) {
+        itemIsType = true;
+        s = s.replace(/^type\s+/, "");
+      }
+      const asMatch = s.match(/^(\w+)\s+as\s+(\w+)$/);
+      const name = asMatch ? asMatch[2]! : s;
+      if (name === "default") continue;
+      if (!/^\w+$/.test(name)) continue;
+      const kind: "type" | "value" = blockIsType || itemIsType ? "type" : "value";
+      setIfUnset(name, kind);
     }
   }
-  return Array.from(names).sort();
+
+  return Array.from(map, ([name, kind]) => ({ name, kind })).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+}
+
+function mergeBarrelExports(...lists: BarrelExport[][]): BarrelExport[] {
+  const map = new Map<string, "type" | "value">();
+  for (const list of lists) {
+    for (const e of list) {
+      if (!map.has(e.name)) map.set(e.name, e.kind);
+    }
+  }
+  return Array.from(map, ([name, kind]) => ({ name, kind })).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 }
 
 function walkFiles(dir: string, out: string[]): void {
@@ -310,7 +354,7 @@ function parseServerApiUses(serverDir: string, selfName: string): string[] {
   const files: string[] = [];
   walkFiles(serverDir, files);
   const uses = new Set<string>();
-  const modRe = /@plugins\/([^/"'`]+)\/server\/api(?:\/index)?$/;
+  const modRe = /@plugins\/([^/"'`]+)\/server(?:\/(?:api(?:\/index)?|index))?$/;
   const namedRe =
     /import\s+(?:([A-Za-z_$][\w$]*)\s*,\s*)?\{([^}]+)\}\s*from\s*["']([^"']+)["']/g;
   const nsRe =
@@ -423,8 +467,33 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
   const httpRoutes = serverSrc ? parseRouteMap(serverSrc, "httpRoutes") : [];
   const wsRoutes = serverSrc ? parseRouteMap(serverSrc, "wsRoutes") : [];
 
-  const apiSrc = readIfExists(join(dir, "server", "api.ts"));
-  const apiExports = apiSrc ? parseApiExports(stripTypes(apiSrc)) : [];
+  // Parse barrels on raw source (not stripTypes): the Bun transpiler drops
+  // `export type { ... }` re-exports entirely, and our regex is already
+  // type-aware.
+  const legacyWebApi = readIfExists(join(dir, "web", "api.ts"));
+  const webExports = mergeBarrelExports(
+    webIndex ? parseBarrelExports(webIndex) : [],
+    legacyWebApi ? parseBarrelExports(legacyWebApi) : [],
+  );
+
+  // Merge `server/index.ts` barrel with legacy `server/api.ts` during the
+  // v2 migration. Once api.ts is collapsed into index.ts, the legacy branch
+  // contributes nothing.
+  const legacyServerApiSrc = readIfExists(join(dir, "server", "api.ts"));
+  const serverBarrelExports = serverIndex ? parseBarrelExports(serverIndex) : [];
+  const legacyServerApiExports = legacyServerApiSrc
+    ? parseBarrelExports(legacyServerApiSrc)
+    : [];
+  const serverExports = mergeBarrelExports(serverBarrelExports, legacyServerApiExports);
+
+  // Same transitional treatment for `shared/index.ts` (+ legacy `shared/api.ts`).
+  const sharedIndex = readIfExists(join(dir, "shared", "index.ts"));
+  const legacySharedApi = readIfExists(join(dir, "shared", "api.ts"));
+  const sharedExports = mergeBarrelExports(
+    sharedIndex ? parseBarrelExports(sharedIndex) : [],
+    legacySharedApi ? parseBarrelExports(legacySharedApi) : [],
+  );
+
   const serverDir = join(dir, "server");
   const apiUses = existsSync(serverDir) ? parseServerApiUses(serverDir, basename(dir)) : [];
   const resources = existsSync(serverDir) ? parseResources(serverDir) : [];
@@ -447,7 +516,9 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
     contributions,
     httpRoutes,
     wsRoutes,
-    apiExports,
+    webExports,
+    serverExports,
+    sharedExports,
     apiUses,
     resources,
     children: [],
@@ -476,6 +547,28 @@ function renderContribution(c: Contribution): string {
   return parts.join(" ");
 }
 
+function renderExports(
+  runtime: "web" | "server" | "shared",
+  exports: BarrelExport[],
+  indent: string,
+  lines: string[],
+): void {
+  if (exports.length === 0) return;
+  const types = exports.filter((e) => e.kind === "type");
+  const values = exports.filter((e) => e.kind === "value");
+  lines.push(`${indent}  - Exports (${runtime}):`);
+  if (types.length > 0) {
+    lines.push(
+      `${indent}    - Types: ${types.map((e) => `\`${e.name}\``).join(", ")}`,
+    );
+  }
+  if (values.length > 0) {
+    lines.push(
+      `${indent}    - Values: ${values.map((e) => `\`${e.name}\``).join(", ")}`,
+    );
+  }
+}
+
 function renderPlugin(p: PluginInfo, depth: number, root: string): string[] {
   const indent = "  ".repeat(depth);
   const lines: string[] = [];
@@ -502,6 +595,10 @@ function renderPlugin(p: PluginInfo, depth: number, root: string): string[] {
     lines.push(...defines);
   }
 
+  renderExports("web", p.webExports, indent, lines);
+  renderExports("server", p.serverExports, indent, lines);
+  renderExports("shared", p.sharedExports, indent, lines);
+
   if (p.contributions.length > 0) {
     lines.push(`${indent}  - Contributes:`);
     for (const c of p.contributions) lines.push(`${indent}    - ${renderContribution(c)}`);
@@ -511,18 +608,8 @@ function renderPlugin(p: PluginInfo, depth: number, root: string): string[] {
     ...p.httpRoutes,
     ...p.wsRoutes.map((r) => `WS ${r}`),
   ];
-  if (
-    serverEntries.length > 0 ||
-    p.apiExports.length > 0 ||
-    p.apiUses.length > 0 ||
-    p.resources.length > 0
-  ) {
+  if (serverEntries.length > 0 || p.apiUses.length > 0 || p.resources.length > 0) {
     lines.push(`${indent}  - Server:`);
-    if (p.apiExports.length > 0) {
-      lines.push(
-        `${indent}    - API: ${p.apiExports.map((n) => `\`${n}\``).join(", ")}`,
-      );
-    }
     if (p.apiUses.length > 0) {
       lines.push(
         `${indent}    - Uses: ${p.apiUses.map((n) => `\`${n}\``).join(", ")}`,

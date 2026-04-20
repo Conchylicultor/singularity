@@ -6,12 +6,14 @@
   - Defines:
     - Slots: `Agents.List`, `Agents.View`, `Agents.AgentActions`
     - Commands: `Agents.OpenAgent`
+  - Exports (server):
+    - Types: `Agent`, `AgentLaunch`
+    - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
   - Contributes:
     - `Shell.Sidebar` "Agents" (group `System`)
     - `Shell.Route` `/agents`
     - `Shell.Route` `/agents/:id`
   - Server:
-    - API: `AGENTS_META_TASK_ID`, `AgentLaunchSchema`, `AgentSchema`, `_agent_launches`, `_agents`, `agentLaunchesResource`, `agents`, `agentsResource`, `nextAgentRankUnder`
     - Uses: `conversations.createConversation`, `tasks._tasks`, `tasks.nextRankUnder`, `tasks.tasksResource`
     - Resources: `agent-launches` (push), `agents` (push)
     - `GET /api/agents`
@@ -33,19 +35,27 @@
 - **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
   - Defines:
     - Slots: `Config.Spec`, `Config.Section`
+  - Exports (web):
+    - Values: `configResource`, `resetConfigValue`, `setConfigValue`, `useConfigValues`
+  - Exports (server):
+    - Values: `configResource`, `readConfig`
+  - Exports (shared):
+    - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `Schema`, `ValueOf`, `Values`
+    - Values: `defineConfig`, `fullKey`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `validateKind`
   - Contributes:
     - `Shell.Sidebar` "Settings" (group `System`)
     - `Shell.Route` `/settings`
   - Server:
-    - API: `configResource`, `readConfig`
     - `GET /api/config`
     - `GET /api/config/specs`
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
 
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
+  - Exports (server):
+    - Types: `Conversation`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `RuntimeInfo`, `Turn`
+    - Values: `_conversations`, `ConversationModelSchema`, `conversations`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `ensureMainWorktreeRoot`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `Runtime`, `worktreePathFor`, `worktreePathForSync`
   - Server:
-    - API: `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `Runtime`, `_conversations`, `conversations`, `conversationsResource`, `createConversation`, `deleteConversation`, `ensureMainWorktreeRoot`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `worktreePathFor`, `worktreePathForSync`
     - Uses: `tasks.CONVERSATIONS_META_TASK_ID`, `tasks._attempts`, `tasks._tasks`, `tasks.attempts`, `tasks.attemptsResource`, `tasks.nextRankUnder`, `tasks.tasksResource`
     - Resources: `conversations` (push)
     - `GET /api/conversations`
@@ -138,26 +148,35 @@
         - `POST /api/debug/backup-db`
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
+  - Exports (web):
+    - Values: `getHealth`, `waitForRestart`
   - Contributes:
     - `Core.Root` → `ReconnectWatcher`
   - Server:
     - `GET /api/health`
 
 - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
+  - Exports (web):
+    - Types: `LaunchButtonsProps`, `LaunchRequest`
+    - Values: `LaunchButtons`
 
 - **`logs`** — System logs pane, opened from the Debug sidebar.
+  - Exports (server):
+    - Types: `LogChannel`, `LogStream`
+    - Values: `Log`
   - Contributes:
     - `Debug.Item` "Logs"
     - `Shell.Route` `/logs`
     - `Shell.Route` `/logs/:channel`
   - Server:
-    - API: `Log`
     - `GET /api/logs/channels`
     - `WS /ws/logs`
 
 - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.registerTool.
+  - Exports (server):
+    - Types: `McpTool`, `McpToolContext`, `McpToolResult`
+    - Values: `Mcp`
   - Server:
-    - API: `Mcp`
     - `POST /api/mcp/:conversationId`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
@@ -208,6 +227,9 @@
   - Defines:
     - Slots: `Tasks.List`, `Tasks.View`, `Tasks.TaskActions`
     - Commands: `Tasks.OpenTask`
+  - Exports (server):
+    - Types: `Attempt`, `AttemptStatus`, `Push`, `Task`, `TaskStatus`
+    - Values: `_attempts`, `_tasks`, `attempts`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `CONVERSATIONS_META_TASK_ID`, `nextRankUnder`, `pushes`, `pushesResource`, `PushSchema`, `tasks`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `NewTaskButton`
     - `Shell.Sidebar` "Tasks" (group `System`)
@@ -217,7 +239,6 @@
     - `Tasks.TaskActions` → `DeleteTaskAction`
     - `Tasks.TaskActions` → `LaunchAgentAction`
   - Server:
-    - API: `AttemptSchema`, `AttemptStatusSchema`, `CONVERSATIONS_META_TASK_ID`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`, `_attempts`, `_tasks`, `attempts`, `attemptsResource`, `nextRankUnder`, `pushes`, `pushesResource`, `tasks`, `tasksResource`
     - Uses: `conversations.conversations`, `conversations.conversationsResource`, `conversations.ensureMainWorktreeRoot`, `mcp.Mcp`
     - Resources: `attempts` (push), `pushes` (push), `tasks` (push)
     - `GET /api/tasks`
