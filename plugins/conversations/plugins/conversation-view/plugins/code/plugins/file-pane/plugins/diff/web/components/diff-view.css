@@ -40,3 +40,26 @@
   user-select: none;
   pointer-events: none;
 }
+
+.diff-skip-separator {
+  display: block;
+  width: 100%;
+  padding: 3px 12px;
+  text-align: center;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: var(--muted-foreground);
+  background: color-mix(in oklab, var(--muted) 40%, transparent);
+  border: none;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+}
+
+.diff-skip-separator:hover {
+  background: color-mix(in oklab, var(--muted) 70%, transparent);
+  color: var(--foreground);
+}

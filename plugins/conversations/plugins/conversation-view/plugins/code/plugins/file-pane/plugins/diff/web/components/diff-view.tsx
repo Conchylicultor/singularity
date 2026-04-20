@@ -1,7 +1,14 @@
-import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from "react";
-import { useMemo, useRef } from "react";
-import { Diff, Hunk, parseDiff } from "react-diff-view";
-import type { FileData, TokenNode } from "react-diff-view";
+import type { CSSProperties, JSX, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Decoration,
+  Diff,
+  Hunk,
+  expandFromRawCode,
+  getCollapsedLinesCountBetween,
+  parseDiff,
+} from "react-diff-view";
+import type { FileData, HunkData, TokenNode } from "react-diff-view";
 import "react-diff-view/style/index.css";
 import { useDarkMode } from "../../../../web/use-dark-mode";
 import { useFileDiff } from "../use-file-diff";
@@ -44,10 +51,39 @@ export function DiffView({
     }
   }, [state]);
 
-  const hunks = files[0]?.hunks ?? null;
-  const tokens = useDiffTokens(hunks, path, dark, conversationId, base);
+  const baseHunks = files[0]?.hunks ?? null;
+  const [expandedHunks, setExpandedHunks] = useState<HunkData[] | null>(null);
+  const fileContentRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    setExpandedHunks(null);
+    fileContentRef.current = null;
+  }, [state]);
+
+  const effectiveHunks = expandedHunks ?? baseHunks;
+  const tokens = useDiffTokens(effectiveHunks, path, dark, conversationId, base);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastClickedSide = useRef<DiffSide | null>(null);
+
+  const expandLines = useCallback(
+    async (start: number, end: number) => {
+      if (!fileContentRef.current) {
+        const ref = base ?? "HEAD";
+        const res = await fetch(
+          `/api/conversations/${conversationId}/file?path=${encodeURIComponent(path)}&ref=${encodeURIComponent(ref)}`,
+        );
+        if (!res.ok) return;
+        const body = (await res.json()) as { content?: string };
+        fileContentRef.current = body.content ?? "";
+      }
+      const content = fileContentRef.current;
+      setExpandedHunks((prev) => {
+        const current = prev ?? baseHunks ?? [];
+        return expandFromRawCode(current, content, start, end);
+      });
+    },
+    [conversationId, path, base, baseHunks],
+  );
 
   function handleMouseDown(e: MouseEvent<HTMLDivElement>) {
     const side = getSide(e.target as Element);
@@ -120,12 +156,35 @@ export function DiffView({
           key={`${file.oldRevision}-${file.newRevision}`}
           viewType="split"
           diffType={file.type}
-          hunks={file.hunks}
+          hunks={i === 0 ? (effectiveHunks ?? file.hunks) : file.hunks}
           tokens={i === 0 ? tokens : null}
           renderToken={renderShikiToken}
         >
           {(hunks) =>
-            hunks.map((hunk) => <Hunk key={hunk.content} hunk={hunk} />)
+            hunks.flatMap((hunk, idx) => {
+              const prevHunk = idx > 0 ? hunks[idx - 1] : null;
+              const skipped = getCollapsedLinesCountBetween(prevHunk ?? null, hunk);
+              const gapStart = prevHunk
+                ? prevHunk.oldStart + prevHunk.oldLines
+                : 1;
+              const gapEnd = hunk.oldStart;
+              const elements: JSX.Element[] = [];
+              if (skipped > 0 && i === 0) {
+                elements.push(
+                  <Decoration key={`skip-${idx}-${hunk.newStart}`}>
+                    <button
+                      type="button"
+                      className="diff-skip-separator"
+                      onClick={() => expandLines(gapStart, gapEnd)}
+                    >
+                      {skipped} {skipped === 1 ? "line" : "lines"} skipped — click to expand
+                    </button>
+                  </Decoration>,
+                );
+              }
+              elements.push(<Hunk key={hunk.content} hunk={hunk} />);
+              return elements;
+            })
           }
         </Diff>
       ))}
