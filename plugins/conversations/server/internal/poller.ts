@@ -189,7 +189,8 @@ async function tick(): Promise<void> {
     if (statusChanged) patch.status = desiredStatus;
     if (resurrecting) patch.endedAt = null;
     await db.update(_conversations).set(patch).where(eq(_conversations.id, id));
-    if (titleChanged && desiredTitle) {
+    const UNINFORMATIVE_TITLES = ["Untitled", "Untitled conversation", "Claude Code"];
+    if (titleChanged && desiredTitle && !UNINFORMATIVE_TITLES.includes(desiredTitle)) {
       const [attempt] = await db
         .select({ taskId: _attempts.taskId })
         .from(_attempts)
@@ -202,7 +203,7 @@ async function tick(): Promise<void> {
           .where(
             and(
               eq(_tasks.id, attempt.taskId),
-              inArray(_tasks.title, ["Untitled", "Untitled conversation"]),
+              inArray(_tasks.title, UNINFORMATIVE_TITLES),
             ),
           )
           .returning({ id: _tasks.id });
