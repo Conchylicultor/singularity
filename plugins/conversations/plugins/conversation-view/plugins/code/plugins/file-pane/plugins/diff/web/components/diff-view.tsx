@@ -1,4 +1,4 @@
-import type { CSSProperties, JSX, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import type { ClipboardEvent, CSSProperties, JSX, KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Decoration,
@@ -17,10 +17,23 @@ import "./diff-view.css";
 
 type DiffSide = "old" | "new";
 
+// Split view rows have 4 cells: old-gutter(0), old-code(1), new-gutter(2), new-code(3).
+// Without hideGutter: 2 cells — old-code(0), new-code(1).
+// react-diff-view uses type-based class names (insert/delete/normal), not side-based,
+// so we rely on column index instead of class names.
 function getSide(el: Element | null): DiffSide | null {
   while (el) {
-    if (el.classList.contains("diff-code-old") || el.classList.contains("diff-gutter-old")) return "old";
-    if (el.classList.contains("diff-code-new") || el.classList.contains("diff-gutter-new")) return "new";
+    if (el.tagName === "TD") {
+      const tr = el.parentElement;
+      if (!tr?.classList.contains("diff-line")) return null;
+      let idx = 0;
+      let prev = el.previousElementSibling;
+      while (prev) { idx++; prev = prev.previousElementSibling; }
+      const count = tr.children.length;
+      if (count === 4) return idx <= 1 ? "old" : "new";
+      if (count === 2) return idx === 0 ? "old" : "new";
+      return null;
+    }
     el = el.parentElement;
   }
   return null;
@@ -29,6 +42,9 @@ function getSide(el: Element | null): DiffSide | null {
 function getSideFromNode(node: Node | null): DiffSide | null {
   return getSide(node instanceof Element ? node : node?.parentElement ?? null);
 }
+
+// 1-based :nth-child index of the code cell for each side (4-column layout with gutters)
+const CODE_NTH: Record<DiffSide, number> = { old: 2, new: 4 };
 
 export function DiffView({
   conversationId,
@@ -89,10 +105,48 @@ export function DiffView({
     const side = getSide(e.target as Element);
     lastClickedSide.current = side;
     if (!side || !containerRef.current) return;
-    containerRef.current.setAttribute("data-selecting", side);
+
+    const container = containerRef.current;
+    const activeSide = side; // typed as DiffSide (non-null) for closure capture
+    container.setAttribute("data-active-side", activeSide);
+    container.setAttribute("data-selecting", activeSide);
+
+    function onSelectionChange() {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+
+      const focusSide = getSideFromNode(sel.focusNode);
+      if (!focusSide || focusSide === activeSide) return;
+
+      // Selection crossed to the opposite side — trim it back
+      const anchorNode = sel.anchorNode;
+      const anchorOffset = sel.anchorOffset;
+      const nth = CODE_NTH[activeSide];
+      const cells = Array.from(container.querySelectorAll<Element>(`.diff-line > td:nth-child(${nth})`));
+      const firstCell = cells[0];
+      const lastCell = cells[cells.length - 1];
+      if (!firstCell || !lastCell) return;
+
+      const range = document.createRange();
+      if (activeSide === "old") {
+        if (anchorNode) range.setStart(anchorNode, anchorOffset);
+        else range.setStartBefore(firstCell);
+        range.setEndAfter(lastCell);
+      } else {
+        range.setStartBefore(firstCell);
+        if (anchorNode) range.setEnd(anchorNode, anchorOffset);
+        else range.setEndAfter(lastCell);
+      }
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    document.addEventListener("selectionchange", onSelectionChange);
+
     const cleanup = () => {
-      containerRef.current?.removeAttribute("data-selecting");
+      container.removeAttribute("data-selecting");
       document.removeEventListener("mouseup", cleanup);
+      document.removeEventListener("selectionchange", onSelectionChange);
     };
     document.addEventListener("mouseup", cleanup);
   }
@@ -103,13 +157,13 @@ export function DiffView({
       const sel = window.getSelection();
       if (!sel) return;
 
-      const side =
-        lastClickedSide.current ??
-        getSideFromNode(sel.anchorNode);
+      const side = lastClickedSide.current ?? getSideFromNode(sel.anchorNode);
 
       sel.removeAllRanges();
       if (side) {
-        const cells = containerRef.current.querySelectorAll(`.diff-code-${side}`);
+        containerRef.current.setAttribute("data-active-side", side);
+        const nth = CODE_NTH[side];
+        const cells = containerRef.current.querySelectorAll(`.diff-line > td:nth-child(${nth})`);
         const first = cells[0];
         const last = cells[cells.length - 1];
         if (first && last) {
@@ -123,6 +177,30 @@ export function DiffView({
         range.selectNodeContents(containerRef.current);
         sel.addRange(range);
       }
+    }
+  }
+
+  function handleCopy(e: ClipboardEvent<HTMLDivElement>) {
+    const side = lastClickedSide.current;
+    if (!side || !containerRef.current) return;
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+
+    const range = sel.getRangeAt(0);
+    const nth = CODE_NTH[side];
+    const lines: string[] = [];
+
+    for (const row of containerRef.current.querySelectorAll<HTMLElement>(".diff-line")) {
+      const cell = row.children[nth - 1] as Element | undefined;
+      if (cell && range.intersectsNode(cell)) {
+        lines.push(cell.textContent ?? "");
+      }
+    }
+
+    if (lines.length > 0) {
+      e.clipboardData.setData("text/plain", lines.join("\n"));
+      e.preventDefault();
     }
   }
 
@@ -149,6 +227,7 @@ export function DiffView({
       className="diff-view overflow-auto font-mono text-xs leading-5"
       onKeyDown={handleKeyDown}
       onMouseDown={handleMouseDown}
+      onCopy={handleCopy}
       tabIndex={-1}
     >
       {files.map((file, i) => (

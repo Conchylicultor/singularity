@@ -28,17 +28,40 @@
   color: var(--muted-foreground);
 }
 
-/* While dragging on one side, disable selection on the other */
-.diff-view[data-selecting="old"] .diff-code-new,
-.diff-view[data-selecting="old"] .diff-gutter-new {
+/*
+ * Split view column layout (gutters shown, 4 cols per row):
+ *   :nth-child(1) = old gutter
+ *   :nth-child(2) = old code   ← active when data-active-side="old"
+ *   :nth-child(3) = new gutter
+ *   :nth-child(4) = new code   ← active when data-active-side="new"
+ */
+
+/* During drag: prevent selection from starting in the inactive code cell */
+.diff-view[data-selecting="old"] .diff-line > td:nth-child(3),
+.diff-view[data-selecting="old"] .diff-line > td:nth-child(4) {
   user-select: none;
-  pointer-events: none;
 }
 
-.diff-view[data-selecting="new"] .diff-code-old,
-.diff-view[data-selecting="new"] .diff-gutter-old {
+.diff-view[data-selecting="new"] .diff-line > td:nth-child(1),
+.diff-view[data-selecting="new"] .diff-line > td:nth-child(2) {
   user-select: none;
-  pointer-events: none;
+}
+
+/* Visual: suppress selection highlight on the inactive side */
+.diff-view[data-active-side="old"] .diff-line > td:nth-child(3)::selection,
+.diff-view[data-active-side="old"] .diff-line > td:nth-child(4)::selection,
+.diff-view[data-active-side="old"] .diff-line > td:nth-child(3) *::selection,
+.diff-view[data-active-side="old"] .diff-line > td:nth-child(4) *::selection {
+  background-color: transparent;
+  color: inherit;
+}
+
+.diff-view[data-active-side="new"] .diff-line > td:nth-child(1)::selection,
+.diff-view[data-active-side="new"] .diff-line > td:nth-child(2)::selection,
+.diff-view[data-active-side="new"] .diff-line > td:nth-child(1) *::selection,
+.diff-view[data-active-side="new"] .diff-line > td:nth-child(2) *::selection {
+  background-color: transparent;
+  color: inherit;
 }
 
 .diff-skip-separator {
