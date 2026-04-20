@@ -65,7 +65,7 @@ export function DiffView({
   return (
     <div
       ref={containerRef}
-      className="diff-view overflow-auto p-3 font-mono text-xs leading-5"
+      className="diff-view overflow-auto font-mono text-xs leading-5"
       onKeyDown={handleKeyDown}
       tabIndex={-1}
     >
