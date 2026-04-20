@@ -276,6 +276,8 @@
     - `DELETE /api/tasks/:id/dependencies/:depId`
     - `GET /api/repo-info`
 
+- **`tasks-core`** — Schema + repository layer for the tasks/attempts/conversations FK cluster.
+
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):
     - Values: `terminalPane`

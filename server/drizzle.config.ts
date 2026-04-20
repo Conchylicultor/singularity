@@ -10,17 +10,12 @@ const user = process.env.PGUSER ?? process.env.USER ?? "postgres";
 
 export default defineConfig({
   dialect: "postgresql",
-  // Glob across every plugin's internal schema. Each plugin owns its tables
-  // under `plugins/<name>/server/internal/tables.ts` and (for plugins with
-  // derived views) `plugins/<name>/server/internal/schema.ts`. Cross-plugin
-  // access goes through that plugin's `server/api.ts`. Adding a new plugin
-  // schema requires no change here.
-  schema: [
-    "../plugins/*/server/internal/tables.ts",
-    "../plugins/*/server/internal/schema.ts",
-    "../plugins/*/plugins/*/server/internal/tables.ts",
-    "../plugins/*/plugins/*/server/internal/schema.ts",
-  ],
+  // Single-barrel schema discovery: drizzle-kit follows the export chains in
+  // schema.ts to find all tables and views. Plugin tables/views are registered
+  // there; adding a new plugin requires one line in that barrel.
+  // (Previously a glob; switched to the barrel after tasks-core migration so
+  // stub re-export files in tasks/ and conversations/ don't create duplicates.)
+  schema: ["./src/db/schema.ts"],
   out: "./src/db/migrations",
   dbCredentials: {
     url: `postgres://${user}@${host}:${port}/${worktree}`,

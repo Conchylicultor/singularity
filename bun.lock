@@ -116,6 +116,10 @@
         "@singularity/plugin-mcp": "workspace:*",
       },
     },
+    "plugins/tasks-core": {
+      "name": "@singularity/plugin-tasks-core",
+      "version": "0.0.1",
+    },
     "plugins/terminal": {
       "name": "@singularity/plugin-terminal",
       "version": "0.0.1",
@@ -637,6 +641,8 @@
     "@singularity/plugin-stats": ["@singularity/plugin-stats@workspace:plugins/stats"],
 
     "@singularity/plugin-tasks": ["@singularity/plugin-tasks@workspace:plugins/tasks"],
+
+    "@singularity/plugin-tasks-core": ["@singularity/plugin-tasks-core@workspace:plugins/tasks-core"],
 
     "@singularity/plugin-terminal": ["@singularity/plugin-terminal@workspace:plugins/terminal"],
 
