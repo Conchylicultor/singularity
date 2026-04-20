@@ -16,36 +16,6 @@ export type DiffTokens = {
   new: ShikiTokenNode[][];
 };
 
-function buildSideText(
-  hunks: HunkData[],
-  side: "old" | "new",
-): string {
-  const lines = new Map<number, string>();
-  let maxLine = 0;
-  for (const hunk of hunks) {
-    for (const change of hunk.changes) {
-      let lineNumber: number | undefined;
-      if (change.type === "normal") {
-        lineNumber =
-          side === "old" ? change.oldLineNumber : change.newLineNumber;
-      } else if (change.type === "delete" && side === "old") {
-        lineNumber = change.lineNumber;
-      } else if (change.type === "insert" && side === "new") {
-        lineNumber = change.lineNumber;
-      }
-      if (lineNumber !== undefined) {
-        lines.set(lineNumber, change.content);
-        if (lineNumber > maxLine) maxLine = lineNumber;
-      }
-    }
-  }
-  const out: string[] = [];
-  for (let i = 1; i <= maxLine; i++) {
-    out.push(lines.get(i) ?? "");
-  }
-  return out.join("\n");
-}
-
 function themedToTokens(lines: ThemedToken[][]): ShikiTokenNode[][] {
   return lines.map((line) =>
     line.map((tok) => ({
@@ -57,10 +27,76 @@ function themedToTokens(lines: ThemedToken[][]): ShikiTokenNode[][] {
   );
 }
 
+async function fetchFileContent(
+  conversationId: string,
+  path: string,
+  ref?: string,
+): Promise<string | null> {
+  const refQuery = ref ? `&ref=${encodeURIComponent(ref)}` : "";
+  const url = `/api/conversations/${conversationId}/file?path=${encodeURIComponent(path)}${refQuery}`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const body = (await res.json()) as { content?: string };
+    return body.content ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function buildSideTokenMap(
+  hunks: HunkData[],
+  side: "old" | "new",
+  allLines: ShikiTokenNode[][],
+): ShikiTokenNode[][] {
+  const lineCount = allLines.length;
+  const result: ShikiTokenNode[][] = [];
+
+  let maxLine = 0;
+  for (const hunk of hunks) {
+    for (const change of hunk.changes) {
+      let lineNumber: number | undefined;
+      if (change.type === "normal") {
+        lineNumber = side === "old" ? change.oldLineNumber : change.newLineNumber;
+      } else if (change.type === "delete" && side === "old") {
+        lineNumber = change.lineNumber;
+      } else if (change.type === "insert" && side === "new") {
+        lineNumber = change.lineNumber;
+      }
+      if (lineNumber !== undefined && lineNumber > maxLine) maxLine = lineNumber;
+    }
+  }
+
+  const lineMap = new Map<number, ShikiTokenNode[]>();
+  for (const hunk of hunks) {
+    for (const change of hunk.changes) {
+      let lineNumber: number | undefined;
+      if (change.type === "normal") {
+        lineNumber = side === "old" ? change.oldLineNumber : change.newLineNumber;
+      } else if (change.type === "delete" && side === "old") {
+        lineNumber = change.lineNumber;
+      } else if (change.type === "insert" && side === "new") {
+        lineNumber = change.lineNumber;
+      }
+      if (lineNumber !== undefined) {
+        const idx = lineNumber - 1;
+        lineMap.set(lineNumber, idx < lineCount ? (allLines[idx] ?? []) : []);
+      }
+    }
+  }
+
+  for (let i = 1; i <= maxLine; i++) {
+    result.push(lineMap.get(i) ?? []);
+  }
+  return result;
+}
+
 export function useDiffTokens(
   hunks: HunkData[] | null,
   path: string,
   dark: boolean,
+  conversationId: string,
+  base?: string,
 ): DiffTokens | null {
   const [tokens, setTokens] = useState<DiffTokens | null>(null);
 
@@ -77,27 +113,35 @@ export function useDiffTokens(
     const lang = rawLang as BundledLanguage;
     let cancelled = false;
     const theme = themeForMode(dark);
-    const oldText = buildSideText(hunks, "old");
-    const newText = buildSideText(hunks, "new");
+    const oldRef = base ?? "HEAD";
 
-    getHighlighter()
-      .then((hl) => {
-        if (cancelled) return;
-        const oldLines = hl.codeToTokensBase(oldText, { lang, theme });
-        const newLines = hl.codeToTokensBase(newText, { lang, theme });
-        setTokens({
-          old: themedToTokens(oldLines),
-          new: themedToTokens(newLines),
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setTokens(null);
+    Promise.all([
+      fetchFileContent(conversationId, path, oldRef),
+      fetchFileContent(conversationId, path),
+      getHighlighter(),
+    ]).then(([oldContent, newContent, hl]) => {
+      if (cancelled) return;
+
+      const highlight = (content: string | null) => {
+        if (!content) return [];
+        return themedToTokens(hl.codeToTokensBase(content, { lang, theme }));
+      };
+
+      const oldAllLines = highlight(oldContent);
+      const newAllLines = highlight(newContent);
+
+      setTokens({
+        old: buildSideTokenMap(hunks, "old", oldAllLines),
+        new: buildSideTokenMap(hunks, "new", newAllLines),
       });
+    }).catch(() => {
+      if (!cancelled) setTokens(null);
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [hunks, path, dark]);
+  }, [hunks, path, dark, conversationId, base]);
 
   return tokens;
 }

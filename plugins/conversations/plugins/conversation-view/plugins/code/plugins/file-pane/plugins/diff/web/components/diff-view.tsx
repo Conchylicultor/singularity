@@ -30,7 +30,7 @@ export function DiffView({
   }, [state]);
 
   const hunks = files[0]?.hunks ?? null;
-  const tokens = useDiffTokens(hunks, path, dark);
+  const tokens = useDiffTokens(hunks, path, dark, conversationId, base);
   const containerRef = useRef<HTMLDivElement>(null);
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {

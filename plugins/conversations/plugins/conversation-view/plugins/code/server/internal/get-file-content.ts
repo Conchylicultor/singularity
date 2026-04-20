@@ -1,5 +1,6 @@
 import { resolve, sep } from "node:path";
 
+const GIT = "/usr/bin/git";
 const MAX_BYTES = 2 * 1024 * 1024;
 
 export type FileReadResult =
@@ -20,6 +21,31 @@ function looksBinary(bytes: Uint8Array): boolean {
     if (b === 0) return true;
   }
   return false;
+}
+
+export async function getFileContentAtRef(
+  worktreePath: string,
+  relPath: string,
+  ref: string,
+): Promise<FileReadResult> {
+  if (!relPath || relPath.includes("\0")) return { kind: "invalid-path" };
+
+  const absRoot = resolve(worktreePath);
+  const absTarget = resolve(absRoot, relPath);
+  if (!isPathInside(absRoot, absTarget)) return { kind: "invalid-path" };
+
+  const proc = Bun.spawn([GIT, "-C", absRoot, "show", `${ref}:${relPath}`], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [bytes, code] = await Promise.all([
+    new Response(proc.stdout).arrayBuffer().then((b) => new Uint8Array(b)),
+    proc.exited,
+  ]);
+  if (code !== 0) return { kind: "not-found" };
+  if (bytes.length > MAX_BYTES) return { kind: "too-large", size: bytes.length };
+  if (looksBinary(bytes)) return { kind: "binary" };
+  return { kind: "ok", content: new TextDecoder().decode(bytes) };
 }
 
 export async function getFileContent(

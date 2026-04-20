@@ -1,7 +1,23 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../../../../../server/src/db/client";
 import { conversations } from "@plugins/conversations/server/api";
-import { getFileContent } from "./get-file-content";
+import { getFileContent, getFileContentAtRef } from "./get-file-content";
+
+const GIT = "/usr/bin/git";
+const ALLOWED_REFS = new Set(["HEAD", "main"]);
+
+async function resolveRef(worktreePath: string, ref: string): Promise<string> {
+  if (ref !== "main") return ref;
+  const proc = Bun.spawn(
+    [GIT, "-C", worktreePath, "merge-base", "main", "HEAD"],
+    { stdout: "pipe", stderr: "pipe" },
+  );
+  const [out, code] = await Promise.all([
+    new Response(proc.stdout).text(),
+    proc.exited,
+  ]);
+  return code === 0 ? out.trim() : ref;
+}
 
 export async function handleFileContent(
   req: Request,
@@ -13,6 +29,7 @@ export async function handleFileContent(
   const url = new URL(req.url);
   const path = url.searchParams.get("path");
   if (!path) return new Response("Missing path", { status: 400 });
+  const ref = url.searchParams.get("ref");
 
   const [row] = await db
     .select({ worktreePath: conversations.worktreePath })
@@ -21,7 +38,15 @@ export async function handleFileContent(
     .limit(1);
   if (!row) return new Response("Not found", { status: 404 });
 
-  const result = await getFileContent(row.worktreePath, path);
+  let result;
+  if (ref) {
+    if (!ALLOWED_REFS.has(ref)) return new Response("Invalid ref", { status: 400 });
+    const resolvedRef = await resolveRef(row.worktreePath, ref);
+    result = await getFileContentAtRef(row.worktreePath, path, resolvedRef);
+  } else {
+    result = await getFileContent(row.worktreePath, path);
+  }
+
   switch (result.kind) {
     case "invalid-path":
       return new Response("Invalid path", { status: 400 });
