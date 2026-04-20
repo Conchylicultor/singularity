@@ -1,7 +1,7 @@
 import type { WsData, HttpHandler, WsHandler } from "./types";
 import { plugins } from "./plugins";
 import { runMigrations } from "./db/migrate";
-import { ensureMainWorktreeRoot } from "@plugins/conversations/server";
+import { ensureMainWorktreeRoot } from "./worktree";
 import { notificationsWsHandler, handleResourceHttp } from "./resources";
 
 await runMigrations();

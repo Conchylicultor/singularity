@@ -74,11 +74,6 @@ export const Runtime = {
 };
 
 export { conversationsResource } from "./internal/resources";
-export {
-  ensureMainWorktreeRoot,
-  worktreePathFor,
-  worktreePathForSync,
-} from "./internal/worktree";
 export { createConversation, deleteConversation } from "./internal/lifecycle";
 export type { Turn } from "./internal/claude-transcript";
 

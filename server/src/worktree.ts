@@ -1,7 +1,5 @@
 const GIT = "/usr/bin/git";
 
-export const CONVERSATION_PREFIX = "claude";
-
 let cachedRepoRoot: string | null = null;
 
 // The main worktree root (parent of all `.claude/worktrees/*`), not the
@@ -33,6 +31,8 @@ export function worktreePathForSync(id: string): string {
   }
   return `${cachedRepoRoot}/.claude/worktrees/${id}`;
 }
+
+export const CONVERSATION_PREFIX = "claude";
 
 export async function setupWorktree(id: string, wtPath: string): Promise<void> {
   const repoRoot = await ensureMainWorktreeRoot();

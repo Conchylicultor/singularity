@@ -2,6 +2,7 @@ import { conversationTrailer } from "./conversation-trailer";
 import { migrationsInSync } from "./migrations-in-sync";
 import { noRawEventSource } from "./no-raw-event-source";
 import { noRawSse } from "./no-raw-sse";
+import { noPluginImportsInCore } from "./no-plugin-imports-in-core";
 import { noRawWebsocket } from "./no-raw-websocket";
 import { pluginBoundaries } from "./plugin-boundaries";
 import { pluginsDocInSync } from "./plugins-doc-in-sync";
@@ -14,6 +15,7 @@ export const CHECKS: Check[] = [
   snapshotChainIntact,
   pluginsDocInSync,
   pluginBoundaries,
+  noPluginImportsInCore,
   noRawEventSource,
   noRawSse,
   noRawWebsocket,

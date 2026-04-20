@@ -12,7 +12,7 @@ import { Runtime, type RuntimeInfo } from "../api";
 import { _conversations } from "./tables";
 import type { ConversationStatus } from "../../shared/types";
 import { conversationsResource } from "./resources";
-import { worktreePathFor } from "./worktree";
+import { worktreePathFor } from "@server/worktree";
 
 function liveStatusFor(info: RuntimeInfo): ConversationStatus {
   return info.working ? "working" : "waiting";

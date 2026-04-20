@@ -19,7 +19,7 @@ import {
   CONVERSATION_PREFIX,
   setupWorktree,
   worktreePathFor,
-} from "./worktree";
+} from "@server/worktree";
 
 const DEFAULT_RUNTIME = "tmux";
 const DEFAULT_MODEL: ConversationModel = "opus";

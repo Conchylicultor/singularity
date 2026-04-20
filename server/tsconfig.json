@@ -11,7 +11,8 @@
     "noUnusedParameters": true,
     "types": ["@types/bun"],
     "paths": {
-      "@plugins/*": ["../plugins/*"]
+      "@plugins/*": ["../plugins/*"],
+      "@server/*": ["./src/*"]
     }
   },
   "include": [

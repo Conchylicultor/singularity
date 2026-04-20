@@ -57,7 +57,7 @@
     - Values: `useConversation`, `useConversations`
   - Exports (server):
     - Types: `Conversation`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `RuntimeInfo`, `Turn`
-    - Values: `_conversations`, `ConversationModelSchema`, `conversations`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `ensureMainWorktreeRoot`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `Runtime`, `worktreePathFor`, `worktreePathForSync`
+    - Values: `_conversations`, `ConversationModelSchema`, `conversations`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `Runtime`
   - Exports (shared):
     - Types: `Conversation`, `ConversationEntry`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationModelSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`
@@ -233,7 +233,7 @@
         - `Stats.Chart` "Lines changed" → `LinesChartsSection`
         - `Config.Section` "Excluded path toggles" → `ExcludedPathToggles`
       - Server:
-        - Uses: `config.readConfig`, `conversations.ensureMainWorktreeRoot`
+        - Uses: `config.readConfig`
         - `GET /api/stats/commits/cumulative`
         - `GET /api/stats/commits/rate`
         - `GET /api/stats/commits/lines/cumulative`
@@ -265,7 +265,7 @@
     - `Tasks.TaskActions` → `DeleteTaskAction`
     - `Tasks.TaskActions` → `LaunchAgentAction`
   - Server:
-    - Uses: `conversations.conversations`, `conversations.conversationsResource`, `conversations.ensureMainWorktreeRoot`, `mcp.Mcp`
+    - Uses: `conversations.conversations`, `conversations.conversationsResource`, `mcp.Mcp`
     - Resources: `attempts` (push), `pushes` (push), `tasks` (push)
     - `GET /api/tasks`
     - `POST /api/tasks`

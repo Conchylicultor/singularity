@@ -18,7 +18,6 @@ export type { ConversationModel } from "./model";
 export { ConversationStatusSchema, isActiveStatus } from "./status";
 export type { ConversationStatus } from "./status";
 export { conversationsResource } from "./internal/resources";
-export { ensureMainWorktreeRoot, worktreePathFor, worktreePathForSync } from "./internal/worktree";
 export { createConversation, deleteConversation } from "./internal/lifecycle";
 export type { Turn } from "./internal/claude-transcript";
 export { Runtime, getConversationRow, readConversationTurns } from "./api";
