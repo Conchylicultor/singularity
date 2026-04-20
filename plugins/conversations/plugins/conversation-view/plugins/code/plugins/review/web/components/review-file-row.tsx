@@ -1,6 +1,7 @@
-import { MdChevronRight } from "react-icons/md";
+import { MdChevronRight, MdWarning } from "react-icons/md";
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared/protocol";
 import { DiffView } from "../../../file-pane/plugins/diff/web/components/diff-view";
+import { isCoreFile } from "../core-files";
 
 const STATUS_LABEL: Record<EditedFileStatus, string> = {
   modified: "modified",
@@ -30,14 +31,18 @@ export function ReviewFileRow({
   const slash = file.path.lastIndexOf("/");
   const dir = slash >= 0 ? file.path.slice(0, slash + 1) : "";
   const basename = slash >= 0 ? file.path.slice(slash + 1) : file.path;
+  const isCore = isCoreFile(file.path);
 
   return (
     <div className="border-b border-border last:border-b-0">
       <button
         type="button"
         onClick={onToggle}
-        className="sticky top-0 z-[1] flex w-full items-center gap-2 bg-muted px-3 py-1.5 text-left text-sm hover:bg-muted/80"
+        className={`sticky top-0 z-[1] flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/80 ${
+          isCore ? "bg-amber-500/10 dark:bg-amber-500/10" : "bg-muted"
+        }`}
         aria-expanded={expanded}
+        title={isCore ? "Core file — extra care required" : undefined}
       >
         <MdChevronRight
           className={`size-4 shrink-0 text-muted-foreground transition-transform ${
@@ -56,6 +61,12 @@ export function ReviewFileRow({
         <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
           <span className="text-emerald-600 dark:text-emerald-400">+{file.additions}</span>
           <span className="text-red-600 dark:text-red-400">−{file.deletions}</span>
+          {isCore && (
+            <MdWarning
+              className="size-3.5 text-amber-500 dark:text-amber-400"
+              aria-label="Core file — extra care required"
+            />
+          )}
         </span>
       </button>
       {expanded && (
