@@ -1,10 +1,12 @@
 import { createHash } from "node:crypto";
+import { lastAutoBuildAt } from "./auto-build-watcher";
 
 const repoRoot = import.meta.dir + "/../../../..";
 
 export interface BuildStatusResponse {
   mainAheadCount: number;
   frontendHash: string;
+  autoBuildAt: string | null;
 }
 
 export async function handleBuildStatus(_req: Request): Promise<Response> {
@@ -12,7 +14,7 @@ export async function handleBuildStatus(_req: Request): Promise<Response> {
     getMainAheadCountAsync(),
     getFrontendHash(),
   ]);
-  return Response.json({ mainAheadCount, frontendHash } satisfies BuildStatusResponse);
+  return Response.json({ mainAheadCount, frontendHash, autoBuildAt: lastAutoBuildAt } satisfies BuildStatusResponse);
 }
 
 async function getMainAheadCountAsync(): Promise<number> {

@@ -10,6 +10,7 @@ const POLL_MS = 2000;
 let initialized = false;
 let lastPushId: string | null = null;
 let building = false;
+export let lastAutoBuildAt: string | null = null;
 
 async function tick() {
   if (building) return;
@@ -35,6 +36,7 @@ async function tick() {
   if (!autoBuild) return;
 
   building = true;
+  lastAutoBuildAt = new Date().toISOString();
   runBuild().finally(() => {
     building = false;
   });

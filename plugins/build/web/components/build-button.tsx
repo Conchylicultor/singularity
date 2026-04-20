@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 interface BuildStatus {
   mainAheadCount: number;
   frontendHash: string;
+  autoBuildAt: string | null;
 }
 
 async function getBuildStatus(): Promise<BuildStatus | null> {
@@ -26,6 +27,7 @@ export function BuildButton() {
   const [staleTab, setStaleTab] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const initialHashRef = useRef<string | null>(null);
+  const lastAutoBuildAtRef = useRef<string | null | undefined>(undefined);
 
   function applyStatus(status: BuildStatus) {
     setMainAheadCount(status.mainAheadCount);
@@ -34,6 +36,12 @@ export function BuildButton() {
       setLoaded(true);
     } else if (status.frontendHash && status.frontendHash !== initialHashRef.current) {
       setStaleTab(true);
+    }
+    if (lastAutoBuildAtRef.current === undefined) {
+      lastAutoBuildAtRef.current = status.autoBuildAt;
+    } else if (status.autoBuildAt && status.autoBuildAt !== lastAutoBuildAtRef.current) {
+      lastAutoBuildAtRef.current = status.autoBuildAt;
+      Shell.Toast({ description: "Auto-build triggered by new push", variant: "info" });
     }
   }
 
