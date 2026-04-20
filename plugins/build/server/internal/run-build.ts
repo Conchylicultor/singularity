@@ -3,10 +3,13 @@ import { Log } from "@plugins/logs/server";
 const buildLog = Log.channel("build");
 
 export async function runBuild(): Promise<number> {
+  // Detach into a new session so gateway's process-group SIGKILL on idle-sweep
+  // doesn't kill the build mid-flight and leave web/dist half-wiped.
   const proc = Bun.spawn(["./singularity", "build", "--no-restart", "--allow-main"], {
     cwd: import.meta.dir + "/../../../..",
     stdout: "pipe",
     stderr: "pipe",
+    detached: true,
   });
 
   const decoder = new TextDecoder();
