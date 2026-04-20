@@ -109,7 +109,6 @@ export function DiffView({
     const container = containerRef.current;
     const activeSide = side; // typed as DiffSide (non-null) for closure capture
     container.setAttribute("data-active-side", activeSide);
-    container.setAttribute("data-selecting", activeSide);
 
     function onSelectionChange() {
       const sel = window.getSelection();
@@ -144,7 +143,6 @@ export function DiffView({
     document.addEventListener("selectionchange", onSelectionChange);
 
     const cleanup = () => {
-      container.removeAttribute("data-selecting");
       document.removeEventListener("mouseup", cleanup);
       document.removeEventListener("selectionchange", onSelectionChange);
     };

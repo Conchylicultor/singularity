@@ -34,34 +34,18 @@
  *   :nth-child(2) = old code   ← active when data-active-side="old"
  *   :nth-child(3) = new gutter
  *   :nth-child(4) = new code   ← active when data-active-side="new"
+ *
+ * Once a side is focused, keep the inactive side non-selectable so
+ * the browser never shows a selection highlight there.
  */
-
-/* During drag: prevent selection from starting in the inactive code cell */
-.diff-view[data-selecting="old"] .diff-line > td:nth-child(3),
-.diff-view[data-selecting="old"] .diff-line > td:nth-child(4) {
+.diff-view[data-active-side="old"] .diff-line > td:nth-child(3),
+.diff-view[data-active-side="old"] .diff-line > td:nth-child(4) {
   user-select: none;
 }
 
-.diff-view[data-selecting="new"] .diff-line > td:nth-child(1),
-.diff-view[data-selecting="new"] .diff-line > td:nth-child(2) {
+.diff-view[data-active-side="new"] .diff-line > td:nth-child(1),
+.diff-view[data-active-side="new"] .diff-line > td:nth-child(2) {
   user-select: none;
-}
-
-/* Visual: suppress selection highlight on the inactive side */
-.diff-view[data-active-side="old"] .diff-line > td:nth-child(3)::selection,
-.diff-view[data-active-side="old"] .diff-line > td:nth-child(4)::selection,
-.diff-view[data-active-side="old"] .diff-line > td:nth-child(3) *::selection,
-.diff-view[data-active-side="old"] .diff-line > td:nth-child(4) *::selection {
-  background-color: transparent;
-  color: inherit;
-}
-
-.diff-view[data-active-side="new"] .diff-line > td:nth-child(1)::selection,
-.diff-view[data-active-side="new"] .diff-line > td:nth-child(2)::selection,
-.diff-view[data-active-side="new"] .diff-line > td:nth-child(1) *::selection,
-.diff-view[data-active-side="new"] .diff-line > td:nth-child(2) *::selection {
-  background-color: transparent;
-  color: inherit;
 }
 
 .diff-skip-separator {
