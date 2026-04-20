@@ -1,10 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
-import {
-  _tasks,
-  nextRankUnder,
-  tasksResource,
-} from "@plugins/tasks/server";
+import { createTask } from "@plugins/tasks-core/server";
 import { createConversation } from "@plugins/conversations/server";
 import {
   ConversationModelSchema,
@@ -40,32 +36,21 @@ export async function handleLaunch(
   }
 
   const body = (await req.json().catch(() => ({}))) as { model?: string };
-  const requestedModel =
-    body.model ?? agent.model ?? undefined;
+  const requestedModel = body.model ?? agent.model ?? undefined;
   const model: ConversationModel | undefined =
     requestedModel !== undefined
       ? ConversationModelSchema.parse(requestedModel)
       : undefined;
 
   const now = new Date();
-  const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const rank = await nextRankUnder(AGENTS_META_TASK_ID);
-  await db.insert(_tasks).values({
-    id: taskId,
+  const task = await createTask({
     parentId: AGENTS_META_TASK_ID,
     title: `Agent-${agent.name}-${formatLaunchTime(now)}`,
     author: "agents-plugin",
-    rank,
   });
-  // Expand the Agents meta task so the new row is visible in the tasks tree.
-  await db
-    .update(_tasks)
-    .set({ expanded: true, updatedAt: new Date() })
-    .where(eq(_tasks.id, AGENTS_META_TASK_ID));
-  tasksResource.notify();
 
   const conversation = await createConversation({
-    taskId,
+    taskId: task.id,
     prompt: agent.prompt,
     model,
     spawnedBy: "agents-plugin",
@@ -74,12 +59,12 @@ export async function handleLaunch(
   const launchId = `launch-${Math.floor(Date.now() / 1000)}-${Math.random()
     .toString(36)
     .slice(2, 6)}`;
-  await db.insert(_agent_launches).values({ id: launchId, agentId, taskId });
+  await db.insert(_agent_launches).values({ id: launchId, agentId, taskId: task.id });
   agentLaunchesResource.notify();
 
   return Response.json({
     launchId,
-    taskId,
+    taskId: task.id,
     conversationId: conversation.id,
   });
 }

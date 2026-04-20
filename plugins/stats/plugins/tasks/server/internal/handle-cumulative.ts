@@ -1,25 +1,11 @@
-import { and, ne } from "drizzle-orm";
-import { db } from "../../../../../../server/src/db/client";
-import { CONVERSATIONS_META_TASK_ID, tasks } from "@plugins/tasks/server";
+import { listTasks, CONVERSATIONS_META_TASK_ID } from "@plugins/tasks-core/server";
 
-// Three monotonic series sampled at every event:
-//   total     = cumulative tasks created
-//   active    = total minus closed (earliest of finishedAt / heldAt)
-//   completed = cumulative tasks with finishedAt set
-// Emitting one point per event keeps resolution fine without bucketing.
 export async function handleCumulative(_req: Request): Promise<Response> {
-  const rows = await db
-    .select({
-      createdAt: tasks.createdAt,
-      finishedAt: tasks.finishedAt,
-      heldAt: tasks.heldAt,
-    })
-    .from(tasks)
-    .where(and(ne(tasks.id, CONVERSATIONS_META_TASK_ID)));
+  const allTasks = await listTasks({ excludeId: CONVERSATIONS_META_TASK_ID });
 
   const toDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
   const events: { t: number; dTotal: number; dActive: number; dCompleted: number }[] = [];
-  for (const r of rows) {
+  for (const r of allTasks) {
     const created = toDate(r.createdAt).getTime();
     events.push({ t: created, dTotal: 1, dActive: 1, dCompleted: 0 });
     const closures: number[] = [];
@@ -30,7 +16,6 @@ export async function handleCumulative(_req: Request): Promise<Response> {
       const isFinished = r.finishedAt && toDate(r.finishedAt).getTime() === closedAt;
       events.push({ t: closedAt, dTotal: 0, dActive: -1, dCompleted: isFinished ? 1 : 0 });
     }
-    // If heldAt came first but finishedAt exists too, count completion at finishedAt
     if (r.finishedAt && r.heldAt) {
       const finishedAt = toDate(r.finishedAt).getTime();
       const heldAt = toDate(r.heldAt).getTime();

@@ -1,6 +1,6 @@
+import { conversationsResource } from "@plugins/tasks-core/server";
 import { ConversationModelSchema } from "../model";
 import { createConversation } from "./lifecycle";
-import { conversationsResource } from "./resources";
 
 export async function handleCreate(req: Request): Promise<Response> {
   const body = (await req.json().catch(() => ({}))) as {

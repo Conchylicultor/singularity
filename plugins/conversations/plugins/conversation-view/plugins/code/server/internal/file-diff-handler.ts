@@ -1,6 +1,4 @@
-import { eq } from "drizzle-orm";
-import { db } from "../../../../../../../../server/src/db/client";
-import { conversations } from "@plugins/conversations/server";
+import { getConversation } from "@plugins/tasks-core/server";
 import { getFileDiff } from "./get-file-diff";
 
 export async function handleFileDiff(
@@ -15,11 +13,7 @@ export async function handleFileDiff(
   if (!path) return new Response("Missing path", { status: 400 });
   const base = url.searchParams.get("base") ?? "HEAD";
 
-  const [row] = await db
-    .select({ worktreePath: conversations.worktreePath })
-    .from(conversations)
-    .where(eq(conversations.id, id))
-    .limit(1);
+  const row = await getConversation(id);
   if (!row) return new Response("Not found", { status: 404 });
 
   const result = await getFileDiff(row.worktreePath, path, base);

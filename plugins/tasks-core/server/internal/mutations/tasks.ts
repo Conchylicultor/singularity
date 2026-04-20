@@ -1,1 +1,204 @@
-// Phase 2: createTask, updateTask, deleteTask, addTaskDependency, removeTaskDependency, ensureMetaTask
+import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { db } from "../../../../../server/src/db/client";
+import { _attempts, _taskDependencies, _tasks } from "../tables";
+import { tasks } from "../schema";
+import { tasksResource } from "../resources";
+import { findNextRankUnder, isDescendant, taskDependsOn } from "../queries/tasks";
+
+export const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
+
+export interface CreateTaskInput {
+  id?: string;
+  parentId?: string | null;
+  title: string;
+  author?: string;
+  rank?: string;
+  description?: string | null;
+}
+
+export interface UpdateTaskPatch {
+  title?: string;
+  description?: string | null;
+  drop?: boolean;
+  hold?: boolean;
+  expanded?: boolean;
+  parentId?: string | null;
+  rank?: string;
+}
+
+export async function createTask(input: CreateTaskInput) {
+  const id =
+    input.id ?? `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const parentId = input.parentId ?? null;
+  const rank = input.rank ?? (await findNextRankUnder(parentId));
+  await db.insert(_tasks).values({
+    id,
+    parentId,
+    title: input.title,
+    author: input.author,
+    rank,
+    description: input.description ?? null,
+  });
+  if (parentId) {
+    await db
+      .update(_tasks)
+      .set({ expanded: true, updatedAt: new Date() })
+      .where(eq(_tasks.id, parentId));
+  }
+  tasksResource.notify();
+  const [full] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+  return full!;
+}
+
+export async function updateTask(id: string, patch: UpdateTaskPatch) {
+  const dbPatch: Record<string, unknown> = { updatedAt: new Date() };
+  if (typeof patch.title === "string") dbPatch.title = patch.title;
+  if (patch.description === null || typeof patch.description === "string") {
+    dbPatch.description = patch.description;
+  }
+  if (typeof patch.drop === "boolean") {
+    dbPatch.droppedAt = patch.drop ? new Date() : null;
+    if (patch.drop) dbPatch.heldAt = null;
+  }
+  if (typeof patch.hold === "boolean") {
+    dbPatch.heldAt = patch.hold ? new Date() : null;
+    if (patch.hold) dbPatch.droppedAt = null;
+  }
+  if (typeof patch.expanded === "boolean") dbPatch.expanded = patch.expanded;
+  if (patch.parentId === null || typeof patch.parentId === "string") {
+    if (patch.parentId === id) {
+      throw new Error("Cannot parent a task to itself");
+    }
+    if (patch.parentId !== null && (await isDescendant(id, patch.parentId))) {
+      throw new Error("Cannot parent a task under its own descendant");
+    }
+    dbPatch.parentId = patch.parentId;
+  }
+  if (typeof patch.rank === "string" && patch.rank.length > 0) {
+    dbPatch.rank = patch.rank;
+  }
+  const [updated] = await db
+    .update(_tasks)
+    .set(dbPatch)
+    .where(eq(_tasks.id, id))
+    .returning({ id: _tasks.id });
+  if (!updated) return null;
+  if (typeof patch.parentId === "string" && patch.parentId.length > 0) {
+    await db
+      .update(_tasks)
+      .set({ expanded: true, updatedAt: new Date() })
+      .where(eq(_tasks.id, patch.parentId));
+  }
+  tasksResource.notify();
+  const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+  return row ?? null;
+}
+
+export async function updateTaskTitle(
+  id: string,
+  title: string,
+  onlyIfTitleIn: string[],
+): Promise<boolean> {
+  const [updated] = await db
+    .update(_tasks)
+    .set({ title, updatedAt: new Date() })
+    .where(
+      and(
+        eq(_tasks.id, id),
+        inArray(_tasks.title, onlyIfTitleIn),
+      ),
+    )
+    .returning({ id: _tasks.id });
+  if (updated) tasksResource.notify();
+  return !!updated;
+}
+
+export async function deleteTask(id: string): Promise<boolean> {
+  const children = await db
+    .select({ id: _tasks.id })
+    .from(_tasks)
+    .where(eq(_tasks.parentId, id))
+    .limit(1);
+  if (children.length > 0) throw new Error("Task has children");
+  const [row] = await db.delete(_tasks).where(eq(_tasks.id, id)).returning();
+  if (!row) return false;
+  tasksResource.notify();
+  return true;
+}
+
+export async function addTaskDependency(
+  taskId: string,
+  dependsOnTaskId: string,
+): Promise<void> {
+  if (dependsOnTaskId === taskId)
+    throw new Error("A task cannot depend on itself");
+  const [task] = await db
+    .select({ id: _tasks.id })
+    .from(_tasks)
+    .where(eq(_tasks.id, taskId))
+    .limit(1);
+  if (!task) throw new Error("Task not found");
+  const [dep] = await db
+    .select({ id: _tasks.id })
+    .from(_tasks)
+    .where(eq(_tasks.id, dependsOnTaskId))
+    .limit(1);
+  if (!dep) throw new Error("Dependency task not found");
+  if (await taskDependsOn(dependsOnTaskId, taskId)) {
+    throw new Error("Cycle detected in dependencies");
+  }
+  await db
+    .insert(_taskDependencies)
+    .values({ taskId, dependsOnTaskId })
+    .onConflictDoNothing();
+  tasksResource.notify();
+}
+
+export async function removeTaskDependency(
+  taskId: string,
+  dependsOnTaskId: string,
+): Promise<boolean> {
+  const [row] = await db
+    .delete(_taskDependencies)
+    .where(
+      and(
+        eq(_taskDependencies.taskId, taskId),
+        eq(_taskDependencies.dependsOnTaskId, dependsOnTaskId),
+      ),
+    )
+    .returning({ taskId: _taskDependencies.taskId });
+  if (!row) return false;
+  tasksResource.notify();
+  return true;
+}
+
+// Idempotently ensures the meta-task exists. Returns true iff this call
+// inserted the row (used as a one-shot signal for backfills).
+export async function ensureMetaTask(id: string, title: string): Promise<boolean> {
+  const rank = await findNextRankUnder(null);
+  const rows = await db
+    .insert(_tasks)
+    .values({ id, title, rank })
+    .onConflictDoNothing({ target: _tasks.id })
+    .returning({ id: _tasks.id });
+  return rows.length === 1;
+}
+
+// Re-parent orphan roots that have >=1 attempt under the meta task.
+export async function backfillMetaParent(
+  metaTaskId: string,
+): Promise<number> {
+  const rows = await db
+    .update(_tasks)
+    .set({ parentId: metaTaskId })
+    .where(
+      and(
+        isNull(_tasks.parentId),
+        ne(_tasks.id, metaTaskId),
+        sql`EXISTS (SELECT 1 FROM ${_attempts} a WHERE a.task_id = ${_tasks.id})`,
+      ),
+    )
+    .returning({ id: _tasks.id });
+  if (rows.length > 0) tasksResource.notify();
+  return rows.length;
+}

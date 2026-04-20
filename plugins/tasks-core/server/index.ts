@@ -1,13 +1,108 @@
 import type { ServerPluginDefinition } from "../../../server/src/types";
+import {
+  tasksResource,
+  attemptsResource,
+  pushesResource,
+  conversationsResource,
+} from "./internal/resources";
 
-// Server-only library plugin. Owns all FK-connected tables (_tasks, _attempts,
-// _taskDependencies, pushes, _conversations), derived views, and Zod schemas.
-// Phase 1: scaffold only — tables and schemas are live, but the public
-// query/mutation API and resource ownership land in Phases 2–3.
+// Zod schemas and TS types
+export {
+  TaskSchema,
+  TaskStatusSchema,
+  AttemptSchema,
+  AttemptStatusSchema,
+  PushSchema,
+  ConversationSchema,
+} from "./internal/schema";
+export type {
+  Task,
+  TaskStatus,
+  Attempt,
+  AttemptStatus,
+  Push,
+  Conversation,
+} from "./internal/schema";
+
+// Resources (four resources, all owned here)
+export {
+  tasksResource,
+  attemptsResource,
+  pushesResource,
+  conversationsResource,
+} from "./internal/resources";
+
+// Query functions — reads
+export {
+  listTasks,
+  getTask,
+  findNextRankUnder,
+  isDescendant,
+  taskDependsOn,
+} from "./internal/queries/tasks";
+export type { TaskFilters } from "./internal/queries/tasks";
+
+export {
+  listAttempts,
+  getAttempt,
+  listAttemptsForTask,
+} from "./internal/queries/attempts";
+
+export {
+  listConversations,
+  getConversation,
+  getConversationRuntime,
+  getConversationClaudeSessionId,
+} from "./internal/queries/conversations";
+
+export {
+  listPushes,
+  listPushesForAttempt,
+  getLatestPush,
+} from "./internal/queries/pushes";
+
+// Mutation functions — writes (all call .notify() internally)
+export {
+  CONVERSATIONS_META_TASK_ID,
+  createTask,
+  updateTask,
+  updateTaskTitle,
+  deleteTask,
+  addTaskDependency,
+  removeTaskDependency,
+  ensureMetaTask,
+  backfillMetaParent,
+} from "./internal/mutations/tasks";
+export type {
+  CreateTaskInput,
+  UpdateTaskPatch,
+} from "./internal/mutations/tasks";
+
+export { createAttempt } from "./internal/mutations/attempts";
+export type { CreateAttemptInput } from "./internal/mutations/attempts";
+
+export {
+  insertConversation,
+  insertConversationOnConflictDoNothing,
+  updateConversation,
+  deleteConversationRow,
+  markConversationClosed,
+} from "./internal/mutations/conversations";
+export type {
+  InsertConversationInput,
+  UpdateConversationPatch,
+} from "./internal/mutations/conversations";
+
+export { insertPush } from "./internal/mutations/pushes";
+export type { InsertPushInput } from "./internal/mutations/pushes";
+
+export { adoptOrphanConversation } from "./internal/mutations/cross-table";
+export type { AdoptOrphanInput } from "./internal/mutations/cross-table";
+
 export default {
   id: "tasks-core",
   name: "Tasks Core",
   description:
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
-  resources: [],
+  resources: [tasksResource, attemptsResource, pushesResource, conversationsResource],
 } satisfies ServerPluginDefinition;

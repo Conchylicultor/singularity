@@ -1,7 +1,5 @@
-import { eq } from "drizzle-orm";
-import { db } from "../../../../server/src/db/client";
+import { getConversationRuntime } from "@plugins/tasks-core/server";
 import { Runtime } from "../api";
-import { _conversations } from "./tables";
 
 export async function handlePostTurn(
   req: Request,
@@ -15,11 +13,7 @@ export async function handlePostTurn(
     return Response.json({ error: "body.text required" }, { status: 400 });
   }
 
-  const [row] = await db
-    .select({ runtime: _conversations.runtime })
-    .from(_conversations)
-    .where(eq(_conversations.id, id))
-    .limit(1);
+  const row = await getConversationRuntime(id);
   if (!row) return new Response("Not found", { status: 404 });
 
   await Runtime.get(row.runtime).send(id, body.text);

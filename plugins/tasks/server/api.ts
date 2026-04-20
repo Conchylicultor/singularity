@@ -1,23 +1,16 @@
-// Schema surface — order matters: tables.ts is a leaf, so re-exporting from
-// it first lets cross-plugin code that imports tables (FK targets) avoid
-// pulling in the views, which depend on other plugins' schemas and would
-// otherwise create initialization cycles.
-export { _attempts, _tasks, pushes } from "./internal/tables";
+// MIGRATION shim: all schema/resource/rank/meta-task symbols now live in
+// tasks-core. Re-exported here for any consumers that haven't been updated yet.
+// Remove in Phase 3 once every consumer imports directly from tasks-core.
 export {
-  attempts,
-  tasks,
+  tasksResource,
+  attemptsResource,
+  pushesResource,
+  CONVERSATIONS_META_TASK_ID,
+  findNextRankUnder as nextRankUnder,
+  TaskSchema,
+  TaskStatusSchema,
   AttemptSchema,
   AttemptStatusSchema,
   PushSchema,
-  TaskSchema,
-  TaskStatusSchema,
-} from "./internal/schema";
-export type { Attempt, AttemptStatus, Push, Task, TaskStatus } from "./internal/schema";
-
-export {
-  attemptsResource,
-  pushesResource,
-  tasksResource,
-} from "./internal/resources";
-export { CONVERSATIONS_META_TASK_ID } from "./internal/meta-conversations";
-export { nextRankUnder } from "./internal/rank";
+} from "@plugins/tasks-core/server";
+export type { Task, TaskStatus, Attempt, AttemptStatus, Push } from "@plugins/tasks-core/server";

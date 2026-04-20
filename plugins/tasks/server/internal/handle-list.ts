@@ -1,11 +1,6 @@
-import { asc } from "drizzle-orm";
-import { db } from "../../../../server/src/db/client";
-import { tasks } from "./schema";
+import { listTasks } from "@plugins/tasks-core/server";
 
 export async function handleList(_req: Request): Promise<Response> {
-  const rows = await db
-    .select()
-    .from(tasks)
-    .orderBy(asc(tasks.rank), asc(tasks.createdAt));
+  const rows = await listTasks();
   return Response.json(rows);
 }

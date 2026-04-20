@@ -1,17 +1,12 @@
-import { and, eq, inArray } from "drizzle-orm";
-import { db } from "../../../../server/src/db/client";
 import {
-  _attempts,
-  _tasks,
-  attempts,
-  CONVERSATIONS_META_TASK_ID,
-  nextRankUnder,
-  tasksResource,
-} from "@plugins/tasks/server";
+  listConversations,
+  updateConversation,
+  updateTaskTitle,
+  adoptOrphanConversation,
+  conversationsResource,
+} from "@plugins/tasks-core/server";
 import { Runtime, type RuntimeInfo } from "../api";
-import { _conversations } from "./tables";
 import type { ConversationStatus } from "../../shared/types";
-import { conversationsResource } from "./resources";
 import { worktreePathFor } from "@server/worktree";
 
 function liveStatusFor(info: RuntimeInfo): ConversationStatus {
@@ -48,98 +43,32 @@ async function collectLive(): Promise<Map<string, LiveEntry>> {
   return merged;
 }
 
+const UNINFORMATIVE_TITLES = ["Untitled", "Untitled conversation", "Claude Code"];
+
 async function tick(): Promise<void> {
   let changed = false;
   const [next, rows] = await Promise.all([
     collectLive(),
-    db
-      .select({
-        id: _conversations.id,
-        attemptId: _conversations.attemptId,
-        title: _conversations.title,
-        claudeSessionId: _conversations.claudeSessionId,
-        status: _conversations.status,
-      })
-      .from(_conversations),
+    listConversations(),
   ]);
   const dbById = new Map(rows.map((r) => [r.id, r]));
 
-  // Adopt orphans: live sessions with no DB row (e.g. sessions surviving a DB
-  // reset, or created out-of-band). Each adopted conversation needs a matching
-  // attempt row. If the attempt doesn't exist yet, skip the adoption — we can
-  // revisit once the attempt lifecycle catches up.
+  // Adopt orphans: live sessions with no DB row.
   const orphans = [...next.keys()].filter((id) => !dbById.has(id));
   if (orphans.length > 0) {
     for (const id of orphans) {
       const live = next.get(id)!;
       if (live.dead) continue;
-      // For the current 1:1 case, the conversation id equals the attempt id.
-      // Read through the public `attempts` view to avoid reaching into the
-      // tasks plugin's internal table.
-      let [attempt] = await db
-        .select({ id: attempts.id })
-        .from(attempts)
-        .where(eq(attempts.id, id))
-        .limit(1);
-      if (!attempt) {
-        // No attempt row yet — the tmux session was created outside this
-        // DB's history (e.g. the main worktree spawned it after we forked,
-        // or it was started via `tmux new-session` directly). Synthesize a
-        // task + attempt so the conversation can surface in the list. The
-        // worktree path is derivable by convention: `<main>/.claude/
-        // worktrees/<id>`.
-        const worktreePath = await worktreePathFor(id);
-        const taskTitle = live.title?.trim() || id;
-        try {
-          await db.transaction(async (tx) => {
-            const rank = await nextRankUnder(CONVERSATIONS_META_TASK_ID, tx);
-            await tx
-              .insert(_tasks)
-              .values({
-                id,
-                parentId: CONVERSATIONS_META_TASK_ID,
-                title: taskTitle,
-                rank,
-              })
-              .onConflictDoNothing();
-            await tx
-              .insert(_attempts)
-              .values({ id, taskId: id, worktreePath })
-              .onConflictDoNothing();
-          });
-        } catch (err) {
-          console.error(
-            `[conversations.poller] synthesising task/attempt for "${id}" failed`,
-            err,
-          );
-          continue;
-        }
-        [attempt] = await db
-          .select({ id: attempts.id })
-          .from(attempts)
-          .where(eq(attempts.id, id))
-          .limit(1);
-        if (!attempt) continue;
-      }
-      const [inserted] = await db
-        .insert(_conversations)
-        .values({
-          id,
-          attemptId: attempt.id,
-          runtime: live.runtime,
-          status: liveStatusFor(live),
-          title: live.title || null,
-        })
-        .onConflictDoNothing()
-        .returning();
-      if (inserted) {
-        dbById.set(inserted.id, {
-          id: inserted.id,
-          attemptId: inserted.attemptId,
-          title: inserted.title,
-          claudeSessionId: inserted.claudeSessionId,
-          status: inserted.status,
-        });
+      const worktreePath = await worktreePathFor(id);
+      const adopted = await adoptOrphanConversation({
+        id,
+        worktreePath,
+        runtimeId: live.runtime,
+        status: liveStatusFor(live),
+        title: live.title || null,
+      });
+      if (adopted) {
+        dbById.set(adopted.id, adopted);
         changed = true;
       }
     }
@@ -160,14 +89,7 @@ async function tick(): Promise<void> {
 
     if (info.dead) {
       if (dbRow.status === "gone") continue;
-      await db
-        .update(_conversations)
-        .set({
-          status: "gone",
-          endedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(_conversations.id, id));
+      await updateConversation(id, { status: "gone", endedAt: new Date() });
       changed = true;
       continue;
     }
@@ -179,55 +101,25 @@ async function tick(): Promise<void> {
     const statusChanged = desiredStatus !== dbRow.status;
     if (!titleChanged && !sessionChanged && !statusChanged) continue;
 
-    // A live session with `status = 'gone'` means a prior tick spuriously
-    // declared it dead (e.g. transient `tmux list-panes` failure). Resurrect
-    // it by clearing `endedAt` alongside the status flip.
     const resurrecting = dbRow.status === "gone" && desiredStatus !== "gone";
-    const patch: Record<string, unknown> = { updatedAt: new Date() };
+    const patch: Parameters<typeof updateConversation>[1] = {};
     if (titleChanged) patch.title = desiredTitle;
     if (sessionChanged) patch.claudeSessionId = info.claudeSessionId;
     if (statusChanged) patch.status = desiredStatus;
     if (resurrecting) patch.endedAt = null;
-    await db.update(_conversations).set(patch).where(eq(_conversations.id, id));
-    const UNINFORMATIVE_TITLES = ["Untitled", "Untitled conversation", "Claude Code"];
+    await updateConversation(id, patch);
+
     if (titleChanged && desiredTitle && !UNINFORMATIVE_TITLES.includes(desiredTitle)) {
-      const [attempt] = await db
-        .select({ taskId: _attempts.taskId })
-        .from(_attempts)
-        .where(eq(_attempts.id, dbRow.attemptId))
-        .limit(1);
-      if (attempt) {
-        const [updated] = await db
-          .update(_tasks)
-          .set({ title: desiredTitle, updatedAt: new Date() })
-          .where(
-            and(
-              eq(_tasks.id, attempt.taskId),
-              inArray(_tasks.title, UNINFORMATIVE_TITLES),
-            ),
-          )
-          .returning({ id: _tasks.id });
-        if (updated) tasksResource.notify();
-      }
+      await updateTaskTitle(dbRow.taskId, desiredTitle, UNINFORMATIVE_TITLES);
     }
     changed = true;
   }
 
-  // Any DB row whose runtime entry has vanished (tmux pane killed) goes to
-  // `gone` and gets an `ended_at`. The attempt view derives `abandoned` or
-  // `completed` from whether a push row exists.
   for (const [id, dbRow] of dbById) {
     if (next.has(id)) continue;
     if (dbRow.status === "starting") continue;
     if (dbRow.status === "gone") continue;
-    await db
-      .update(_conversations)
-      .set({
-        status: "gone",
-        endedAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(_conversations.id, id));
+    await updateConversation(id, { status: "gone", endedAt: new Date() });
     changed = true;
   }
 

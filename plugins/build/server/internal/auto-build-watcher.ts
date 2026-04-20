@@ -1,6 +1,4 @@
-import { db } from "../../../../server/src/db/client";
-import { pushes } from "@plugins/tasks/server";
-import { desc } from "drizzle-orm";
+import { getLatestPush } from "@plugins/tasks-core/server";
 import { readConfig } from "@plugins/config/server";
 import { buildConfig } from "../../shared/config";
 import { runBuild } from "./run-build";
@@ -15,12 +13,7 @@ export let lastAutoBuildAt: string | null = null;
 async function tick() {
   if (building) return;
 
-  const [latest] = await db
-    .select({ id: pushes.id })
-    .from(pushes)
-    .orderBy(desc(pushes.createdAt))
-    .limit(1);
-
+  const latest = await getLatestPush();
   const latestId = latest?.id ?? null;
 
   if (!initialized) {

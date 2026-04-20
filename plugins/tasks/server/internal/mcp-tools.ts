@@ -1,11 +1,10 @@
-import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { Mcp } from "@plugins/mcp/server";
-import { db } from "../../../../server/src/db/client";
-import { conversations } from "@plugins/conversations/server";
-import { _taskDependencies, _tasks } from "./tables";
-import { nextRankUnder } from "./rank";
-import { tasksResource } from "./resources";
+import {
+  createTask,
+  addTaskDependency,
+  getConversation,
+} from "@plugins/tasks-core/server";
 
 Mcp.registerTool({
   name: "add_task",
@@ -49,56 +48,37 @@ as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
     if (parent) {
       parentId = parent;
     } else {
-      const [conv] = await db
-        .select({ taskId: conversations.taskId })
-        .from(conversations)
-        .where(eq(conversations.id, conversationId))
-        .limit(1);
-      if (!conv) {
-        throw new Error(`Unknown conversation "${conversationId}"`);
-      }
+      const conv = await getConversation(conversationId);
+      if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);
       parentId = conv.taskId;
     }
 
-    const depIds = Array.from(new Set(dependencies ?? [])).filter(
-      (d) => d !== "" && d !== parent,
-    );
-    if (depIds.length > 0) {
-      const found = await db
-        .select({ id: _tasks.id })
-        .from(_tasks)
-        .where(inArray(_tasks.id, depIds));
-      const foundSet = new Set(found.map((r) => r.id));
-      const missing = depIds.filter((d) => !foundSet.has(d));
-      if (missing.length > 0) {
-        throw new Error(`Unknown dependency task id(s): ${missing.join(", ")}`);
-      }
-    }
-
-    const id = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const rank = await nextRankUnder(parentId);
-    await db.insert(_tasks).values({
-      id,
+    const task = await createTask({
       parentId,
       title,
       description: description ?? null,
       author: conversationId,
-      rank,
     });
-    if (depIds.length > 0) {
-      await db
-        .insert(_taskDependencies)
-        .values(depIds.map((depId) => ({ taskId: id, dependsOnTaskId: depId })))
-        .onConflictDoNothing();
+
+    const depIds = Array.from(new Set(dependencies ?? [])).filter(
+      (d) => d !== "" && d !== parent,
+    );
+    for (const depId of depIds) {
+      try {
+        await addTaskDependency(task.id, depId);
+      } catch (err) {
+        throw new Error(
+          `Failed to add dependency "${depId}": ${err instanceof Error ? err.message : err}`,
+        );
+      }
     }
-    tasksResource.notify();
 
     return {
       content: [
         {
           type: "text",
           text: JSON.stringify({
-            task_id: id,
+            task_id: task.id,
             parent_id: parentId,
             dependencies: depIds,
           }),

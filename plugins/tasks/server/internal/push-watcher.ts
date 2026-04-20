@@ -1,14 +1,9 @@
-import { db } from "../../../../server/src/db/client";
-import { _attempts } from "./tables";
-import { pushes } from "./tables";
-import { attemptsResource, pushesResource } from "./resources";
+import { listAttempts, insertPush } from "@plugins/tasks-core/server";
 import { ensureMainWorktreeRoot } from "@server/worktree";
 
 const GIT = "/usr/bin/git";
 const TICK_MS = 1000;
 
-// Field separator \0, records joined by \n. Safe for subjects containing
-// any character.
 const FORMAT =
   "%H%x00%cI%x00" +
   "%(trailers:key=Singularity-Conversation,valueonly,separator=%x00)%x00" +
@@ -77,32 +72,21 @@ async function readCommits(
 
 async function recordCommits(commits: ParsedCommit[]): Promise<boolean> {
   if (commits.length === 0) return false;
-
-  // Attribute to attempts whose id matches the commit's conversation trailer.
-  // For the 1:1 legacy case, conversation id == attempt id; future multi-
-  // conversation-per-attempt flows write a conversation id that is not the
-  // attempt id, so we also probe conversations for an attempt lookup.
-  const existing = await db.select({ id: _attempts.id }).from(_attempts);
+  const existing = await listAttempts();
   const localAttemptIds = new Set(existing.map((a) => a.id));
-
   let inserted = false;
   for (const commit of [...commits].reverse()) {
     if (!localAttemptIds.has(commit.conversationId)) continue;
-    const attemptId = commit.conversationId;
-    const [row] = await db
-      .insert(pushes)
-      .values({
-        id: `${commit.pushId}:${commit.sha}`,
-        attemptId,
-        conversationId: commit.conversationId,
-        sha: commit.sha,
-        pushId: commit.pushId,
-        message: commit.subject,
-        createdAt: commit.committedAt,
-      })
-      .onConflictDoNothing()
-      .returning();
-    if (row) inserted = true;
+    const didInsert = await insertPush({
+      id: `${commit.pushId}:${commit.sha}`,
+      attemptId: commit.conversationId,
+      conversationId: commit.conversationId,
+      sha: commit.sha,
+      pushId: commit.pushId,
+      message: commit.subject,
+      createdAt: commit.committedAt,
+    });
+    if (didInsert) inserted = true;
   }
   return inserted;
 }
@@ -119,19 +103,14 @@ async function tick(cwd: string): Promise<void> {
   }
   if (head === lastSha) return;
   const range = lastSha ? `${lastSha}..${head}` : null;
-  let didInsert = false;
   try {
     const commits = await readCommits(range, cwd);
-    didInsert = await recordCommits(commits);
+    await recordCommits(commits);
   } catch (err) {
     console.error("[tasks.push-watcher] tick failed", err);
     return;
   }
   lastSha = head;
-  if (didInsert) {
-    pushesResource.notify();
-    attemptsResource.notify();
-  }
 }
 
 export async function startPushWatcher(): Promise<void> {
@@ -139,20 +118,13 @@ export async function startPushWatcher(): Promise<void> {
   try {
     cwd = await ensureMainWorktreeRoot();
   } catch (err) {
-    console.error(
-      "[tasks.push-watcher] cannot resolve main worktree",
-      err,
-    );
+    console.error("[tasks.push-watcher] cannot resolve main worktree", err);
     return;
   }
   try {
     const commits = await readCommits(null, cwd);
-    const inserted = await recordCommits(commits);
+    await recordCommits(commits);
     lastSha = await resolveMainSha(cwd);
-    if (inserted) {
-      pushesResource.notify();
-      attemptsResource.notify();
-    }
   } catch (err) {
     console.error("[tasks.push-watcher] backfill failed", err);
   }

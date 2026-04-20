@@ -1,6 +1,4 @@
-import { eq } from "drizzle-orm";
-import { db } from "../../../../server/src/db/client";
-import { _conversations } from "./tables";
+import { getConversationClaudeSessionId } from "@plugins/tasks-core/server";
 import { findTranscriptPath, readTurns } from "./claude-transcript";
 
 export async function handleListTurns(
@@ -10,18 +8,12 @@ export async function handleListTurns(
   const id = params.id;
   if (!id) return new Response("Missing id", { status: 400 });
 
-  const [row] = await db
-    .select({ claudeSessionId: _conversations.claudeSessionId })
-    .from(_conversations)
-    .where(eq(_conversations.id, id))
-    .limit(1);
-  if (!row) return new Response("Not found", { status: 404 });
+  // undefined = row not found; null = row exists but no session yet
+  const claudeSessionId = await getConversationClaudeSessionId(id);
+  if (claudeSessionId === undefined) return new Response("Not found", { status: 404 });
+  if (!claudeSessionId) return Response.json({ turns: [] });
 
-  // No resolved Claude session yet (conversation just spawned, or runtime
-  // doesn't surface one). Callers should retry after the poller fills it in.
-  if (!row.claudeSessionId) return Response.json({ turns: [] });
-
-  const path = await findTranscriptPath(row.claudeSessionId);
+  const path = await findTranscriptPath(claudeSessionId);
   if (!path) return Response.json({ turns: [] });
 
   const since = new URL(req.url).searchParams.get("since") ?? undefined;

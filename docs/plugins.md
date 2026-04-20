@@ -14,7 +14,7 @@
     - `Shell.Route` `/agents`
     - `Shell.Route` `/agents/:id`
   - Server:
-    - Uses: `conversations.createConversation`, `tasks._tasks`, `tasks.nextRankUnder`, `tasks.tasksResource`
+    - Uses: `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`
     - Resources: `agent-launches` (push), `agents` (push)
     - `GET /api/agents`
     - `POST /api/agents`
@@ -28,7 +28,7 @@
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `BuildButton`
   - Server:
-    - Uses: `config.readConfig`, `logs.Log`, `tasks.pushes`
+    - Uses: `config.readConfig`, `logs.Log`, `tasks-core.getLatestPush`
     - `POST /api/build`
     - `GET /api/build/status`
 
@@ -57,13 +57,12 @@
     - Values: `useConversation`, `useConversations`
   - Exports (server):
     - Types: `Conversation`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `RuntimeInfo`, `Turn`
-    - Values: `_conversations`, `ConversationModelSchema`, `conversations`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `Runtime`
+    - Values: `ConversationModelSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `Runtime`
   - Exports (shared):
     - Types: `Conversation`, `ConversationEntry`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationModelSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`
   - Server:
-    - Uses: `tasks.CONVERSATIONS_META_TASK_ID`, `tasks._attempts`, `tasks._tasks`, `tasks.attempts`, `tasks.attemptsResource`, `tasks.nextRankUnder`, `tasks.tasksResource`
-    - Resources: `conversations` (push)
+    - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationsResource`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.insertConversation`, `tasks-core.listConversations`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/:id`
     - `POST /api/conversations`
@@ -93,7 +92,7 @@
           - Contributes:
             - `Conversation.Toolbar` → `CodeToolbarSlot`
           - Server:
-            - Uses: `conversations.conversations`
+            - Uses: `tasks-core.getConversation`
             - Resources: `edited-files` (invalidate)
             - `GET /api/conversations/:id/file`
             - `GET /api/conversations/:id/diff`
@@ -245,6 +244,7 @@
       - Contributes:
         - `Stats.Chart` "Active tasks over time" → `TasksCumulativeChart`
       - Server:
+        - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.listTasks`
         - `GET /api/stats/tasks/cumulative`
 
 - **`tasks`** — Nested tasks with attempts; meta-plugin hosting sub-pane contributions. Nested tasks with attempts linking to conversations.
@@ -255,7 +255,7 @@
     - Values: `TaskDetail`, `Tasks`, `TasksList`
   - Exports (server):
     - Types: `Attempt`, `AttemptStatus`, `Push`, `Task`, `TaskStatus`
-    - Values: `_attempts`, `_tasks`, `attempts`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `CONVERSATIONS_META_TASK_ID`, `nextRankUnder`, `pushes`, `pushesResource`, `PushSchema`, `tasks`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`
+    - Values: `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `CONVERSATIONS_META_TASK_ID`, `nextRankUnder`, `pushesResource`, `PushSchema`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `NewTaskButton`
     - `Shell.Sidebar` "Tasks" (group `System`)
@@ -265,8 +265,7 @@
     - `Tasks.TaskActions` → `DeleteTaskAction`
     - `Tasks.TaskActions` → `LaunchAgentAction`
   - Server:
-    - Uses: `conversations.conversations`, `conversations.conversationsResource`, `mcp.Mcp`
-    - Resources: `attempts` (push), `pushes` (push), `tasks` (push)
+    - Uses: `mcp.Mcp`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.updateTask`
     - `GET /api/tasks`
     - `POST /api/tasks`
     - `GET /api/tasks/:id`
@@ -277,6 +276,11 @@
     - `GET /api/repo-info`
 
 - **`tasks-core`** — Schema + repository layer for the tasks/attempts/conversations FK cluster.
+  - Exports (server):
+    - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `Conversation`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `Task`, `TaskFilters`, `TaskStatus`, `UpdateConversationPatch`, `UpdateTaskPatch`
+    - Values: `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `conversationsResource`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listAttempts`, `listAttemptsForTask`, `listConversations`, `listPushes`, `listPushesForAttempt`, `listTasks`, `markConversationClosed`, `pushesResource`, `PushSchema`, `removeTaskDependency`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`, `updateConversation`, `updateTask`, `updateTaskTitle`
+  - Server:
+    - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):

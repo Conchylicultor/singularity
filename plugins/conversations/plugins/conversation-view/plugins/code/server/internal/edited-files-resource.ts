@@ -1,7 +1,5 @@
-import { eq } from "drizzle-orm";
-import { db } from "../../../../../../../../server/src/db/client";
 import { defineResource } from "../../../../../../../../server/src/resources";
-import { conversations } from "@plugins/conversations/server";
+import { getConversation } from "@plugins/tasks-core/server";
 import { getEditedFiles } from "./get-edited-files";
 import { watchEditedFiles } from "./watch-edited-files";
 
@@ -10,11 +8,7 @@ type Params = { id: string };
 const unsubscribes = new Map<string, () => void>();
 
 async function worktreeFor(conversationId: string): Promise<string | null> {
-  const [row] = await db
-    .select({ worktreePath: conversations.worktreePath })
-    .from(conversations)
-    .where(eq(conversations.id, conversationId))
-    .limit(1);
+  const row = await getConversation(conversationId);
   return row?.worktreePath ?? null;
 }
 

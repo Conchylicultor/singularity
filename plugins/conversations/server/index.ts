@@ -7,17 +7,17 @@ import { handleGet } from "./internal/handle-get";
 import { handleListTurns } from "./internal/handle-list-turns";
 import { handlePostTurn } from "./internal/handle-post-turn";
 import { startPoller } from "./internal/poller";
-import { conversationsResource } from "./internal/resources";
 import { forkErrorsResource } from "./internal/fork-errors";
 
-export { _conversations } from "./internal/tables";
-export { conversations, ConversationSchema } from "./internal/schema";
-export type { Conversation } from "./internal/schema";
 export { ConversationModelSchema } from "./model";
 export type { ConversationModel } from "./model";
 export { ConversationStatusSchema, isActiveStatus } from "./status";
 export type { ConversationStatus } from "./status";
-export { conversationsResource } from "./internal/resources";
+export {
+  ConversationSchema,
+  conversationsResource,
+} from "@plugins/tasks-core/server";
+export type { Conversation } from "@plugins/tasks-core/server";
 export { createConversation, deleteConversation } from "./internal/lifecycle";
 export type { Turn } from "./internal/claude-transcript";
 export { Runtime, getConversationRow, readConversationTurns } from "./api";
@@ -37,6 +37,7 @@ export default {
     "GET /api/conversations/:id/turns": handleListTurns,
     "POST /api/conversations/:id/close": handleClose,
   },
-  resources: [conversationsResource, forkErrorsResource],
+  // conversationsResource is now mounted on tasks-core; only fork-errors stays here.
+  resources: [forkErrorsResource],
   onReady: () => startPoller(),
 } satisfies ServerPluginDefinition;
