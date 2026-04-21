@@ -28,7 +28,7 @@
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `BuildButton`
   - Server:
-    - Uses: `config.readConfig`, `logs.Log`, `tasks-core.getLatestPush`
+    - Uses: `config.readConfig`, `tasks-core.getLatestPush`
     - `POST /api/build`
     - `GET /api/build/status`
 
@@ -162,6 +162,17 @@
         - `Debug.Item` "DB Backup"
       - Server:
         - `POST /api/debug/backup-db`
+    - **`logs`** — System logs pane, opened from the Debug sidebar.
+      - Exports (server):
+        - Types: `LogChannel`, `LogStream`
+        - Values: `Log`
+      - Contributes:
+        - `Debug.Item` "Logs"
+        - `Shell.Route` `/logs`
+        - `Shell.Route` `/logs/:channel`
+      - Server:
+        - `GET /api/logs/channels`
+        - `WS /ws/logs`
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Exports (web):
@@ -175,18 +186,6 @@
   - Exports (web):
     - Types: `LaunchButtonsProps`, `LaunchRequest`
     - Values: `LaunchButtons`
-
-- **`logs`** — System logs pane, opened from the Debug sidebar.
-  - Exports (server):
-    - Types: `LogChannel`, `LogStream`
-    - Values: `Log`
-  - Contributes:
-    - `Debug.Item` "Logs"
-    - `Shell.Route` `/logs`
-    - `Shell.Route` `/logs/:channel`
-  - Server:
-    - `GET /api/logs/channels`
-    - `WS /ws/logs`
 
 - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.registerTool.
   - Exports (server):

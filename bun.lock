@@ -77,10 +77,6 @@
       "name": "@singularity/plugin-launch",
       "version": "0.0.1",
     },
-    "plugins/logs": {
-      "name": "@singularity/plugin-logs",
-      "version": "0.0.1",
-    },
     "plugins/mcp": {
       "name": "@singularity/plugin-mcp",
       "version": "0.0.1",
@@ -629,8 +625,6 @@
     "@singularity/plugin-health": ["@singularity/plugin-health@workspace:plugins/health"],
 
     "@singularity/plugin-launch": ["@singularity/plugin-launch@workspace:plugins/launch"],
-
-    "@singularity/plugin-logs": ["@singularity/plugin-logs@workspace:plugins/logs"],
 
     "@singularity/plugin-mcp": ["@singularity/plugin-mcp@workspace:plugins/mcp"],
 

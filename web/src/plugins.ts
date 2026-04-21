@@ -4,7 +4,7 @@ import terminalPlugin from "@plugins/terminal/web";
 import buildPlugin from "@plugins/build/web";
 import debugPlugin from "@plugins/debug/web";
 import dbBackupPlugin from "@plugins/debug/plugins/db-backup/web";
-import logsPlugin from "@plugins/logs/web";
+import logsPlugin from "@plugins/debug/plugins/logs/web";
 import conversationsPlugin from "@plugins/conversations/plugins/conversations-view/web";
 import conversationPlugin from "@plugins/conversations/plugins/conversation-view/web";
 import conversationVscodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/vscode/web";

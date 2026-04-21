@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "../../../server/src/types";
+import type { ServerPluginDefinition } from "../../../../../server/src/types";
 import { handleChannels } from "./internal/handle-channels";
 import { wsHandler } from "./internal/ws-handler";
 

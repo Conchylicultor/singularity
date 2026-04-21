@@ -1,4 +1,4 @@
-import { Log } from "@plugins/logs/server";
+import { Log } from "@plugins/debug/plugins/logs/server";
 
 const buildLog = Log.channel("build");
 
