@@ -10,11 +10,21 @@ export async function forkDatabase(name: string, source = "singularity"): Promis
   assertSafeName(name);
   assertSafeName(source);
   await adminSql.unsafe(`CREATE DATABASE "${name}"`);
-  const dump = Bun.spawn(["pg_dump", "-Fc", source], { stdout: "pipe", stderr: "pipe" });
+  // detached: true puts each process in its own session so they are not in
+  // the server's process group. The gateway kills backends via killGroup
+  // (SIGKILL on the entire process group); without detaching, a mid-fork
+  // pg_dump/pg_restore would die with the server and leave an empty DB shell
+  // behind (CREATE DATABASE already ran, DROP DATABASE cleanup never fires).
+  const dump = Bun.spawn(["pg_dump", "-Fc", source], {
+    stdout: "pipe",
+    stderr: "pipe",
+    detached: true,
+  });
   const restore = Bun.spawn(["pg_restore", "-d", name], {
     stdin: dump.stdout,
     stdout: "pipe",
     stderr: "pipe",
+    detached: true,
   });
   const [dumpExit, restoreExit] = await Promise.all([dump.exited, restore.exited]);
   if (dumpExit !== 0 || restoreExit !== 0) {

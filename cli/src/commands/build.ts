@@ -142,24 +142,25 @@ async function ensureHooksPath(): Promise<void> {
   );
 }
 
-async function databaseExists(name: string): Promise<boolean> {
+// Returns true once the DB exists AND the fork has landed (i.e.
+// __singularity_migrations has at least one row). Checking pg_database alone
+// is not enough: CREATE DATABASE runs at the very start of forkDatabase, so
+// the DB appears in pg_database while pg_restore is still running. Waiting
+// for __singularity_migrations ensures we don't race a still-in-progress
+// (or silently-dead) restore.
+async function databaseReady(name: string): Promise<boolean> {
   const proc = Bun.spawn(
     [
       "psql",
       "-d",
-      "postgres",
+      name,
       "-tAc",
-      `SELECT 1 FROM pg_database WHERE datname = '${name.replace(/'/g, "''")}'`,
+      "SELECT 1 FROM __singularity_migrations LIMIT 1",
     ],
     { stdout: "pipe", stderr: "pipe" },
   );
   const output = await new Response(proc.stdout).text();
-  const exitCode = await proc.exited;
-  if (exitCode !== 0) {
-    const stderr = await new Response(proc.stderr).text();
-    console.error(`psql failed while checking database "${name}": ${stderr.trim()}`);
-    process.exit(1);
-  }
+  await proc.exited;
   return output.trim() === "1";
 }
 
@@ -171,7 +172,7 @@ async function waitForDatabase(name: string): Promise<void> {
   const deadline = Date.now() + 30_000;
   let warned = false;
   while (Date.now() < deadline) {
-    if (await databaseExists(name)) return;
+    if (await databaseReady(name)) return;
     if (!warned) {
       console.log(`Waiting for DB fork "${name}" to complete...`);
       warned = true;
@@ -179,7 +180,15 @@ async function waitForDatabase(name: string): Promise<void> {
     await Bun.sleep(1_000);
   }
   console.error(
-    `Database "${name}" does not exist. The DB fork either failed or is taking too long — check server logs (the main app also shows a toast on failure).`,
+    [
+      `ERROR: DB fork for "${name}" did not complete within 30s.`,
+      "",
+      "This likely means the fork was interrupted (e.g. the server restarted",
+      "mid-fork). Do NOT attempt to fix this yourself.",
+      "",
+      "Stop here and report the failure so it can be investigated.",
+      "Check server logs and the fork-error toast in the main app for details.",
+    ].join("\n"),
   );
   process.exit(1);
 }
