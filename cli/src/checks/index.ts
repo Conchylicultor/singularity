@@ -4,6 +4,7 @@ import { noRawEventSource } from "./no-raw-event-source";
 import { noRawSse } from "./no-raw-sse";
 import { noPluginImportsInCore } from "./no-plugin-imports-in-core";
 import { noRawWebsocket } from "./no-raw-websocket";
+import { noUseResourceCast } from "./no-use-resource-cast";
 import { pluginBoundaries } from "./plugin-boundaries";
 import { pluginsDocInSync } from "./plugins-doc-in-sync";
 import { snapshotChainIntact } from "./snapshot-chain-intact";
@@ -19,6 +20,7 @@ export const CHECKS: Check[] = [
   noRawEventSource,
   noRawSse,
   noRawWebsocket,
+  noUseResourceCast,
 ];
 
 export type { Check, CheckResult } from "./types";

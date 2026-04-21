@@ -67,6 +67,11 @@ function getOrCreateNotifications(qc: QueryClient): NotificationsClient {
   return singleton;
 }
 
+// AGENT RULE: Never cast the `data` returned by useResource (e.g. `data as Foo[]`).
+// The generic T is inferred from the ResourceDescriptor — casting silently hides type
+// mismatches between the resource payload and your assumption.
+// If you believe a cast is necessary, STOP and report the exact resource + expected type
+// to the user before writing any code, so the resource definition can be fixed instead.
 export function useResource<T, P extends ResourceParams = ResourceParams>(
   resource: ResourceDescriptor<T, P>,
   params?: P,

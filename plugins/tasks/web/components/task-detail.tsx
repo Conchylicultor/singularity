@@ -6,7 +6,6 @@ import { TaskEvents } from "./task-events";
 import { useResource } from "@core";
 import { ShellCommands } from "@plugins/shell/web";
 import { conversationsResource } from "@plugins/conversations/shared";
-import type { Conversation } from "@plugins/conversations/shared";
 import { tasksResource, type Task } from "../../shared/resources";
 import { tasksPane } from "../views";
 
@@ -38,9 +37,10 @@ function AuthorDisplay({ author }: { author: string | null }) {
 
   const authorTask = useMemo(() => {
     if (!author || author === "user") return null;
-    const conv = (convsData as Conversation[] | undefined)?.find((c) => c.id === author);
+    const allConvs = [...(convsData?.active ?? []), ...(convsData?.recentGone ?? [])];
+    const conv = allConvs.find((c) => c.id === author);
     if (!conv) return null;
-    return (tasksData as Task[] | undefined)?.find((t) => t.id === conv.taskId) ?? null;
+    return tasksData?.find((t) => t.id === conv.taskId) ?? null;
   }, [author, tasksData, convsData]);
 
   if (!author || author === "user") {
@@ -64,7 +64,7 @@ function AuthorDisplay({ author }: { author: string | null }) {
 
 export function TaskDetail({ taskId }: { taskId: string }) {
   const { data } = useResource(tasksResource);
-  const task = (data as Task[] | undefined)?.find((t) => t.id === taskId) ?? null;
+  const task = data?.find((t) => t.id === taskId) ?? null;
 
   const [title, setTitle] = useState(task?.title ?? "");
   const [description, setDescription] = useState(task?.description ?? "");

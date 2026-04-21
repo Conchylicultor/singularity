@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { MdPlayArrow } from "react-icons/md";
 import { useResource } from "@core";
 import { Button } from "@/components/ui/button";
-import { agentsResource, type Agent } from "../../shared/resources";
+import { agentsResource } from "../../shared/resources";
 import { AgentLaunches } from "./agent-launches";
 import { AgentStatus } from "./agent-status";
 import { useConversationPane } from "./conversation-pane-context";
@@ -30,7 +30,7 @@ async function patchAgent(id: string, patch: Patch) {
 
 export function AgentDetail({ agentId }: { agentId: string }) {
   const { data } = useResource(agentsResource);
-  const agent = (data as Agent[] | undefined)?.find((a) => a.id === agentId) ?? null;
+  const agent = data?.find((a) => a.id === agentId) ?? null;
   const convPane = useConversationPane();
 
   const [name, setName] = useState(agent?.name ?? "");

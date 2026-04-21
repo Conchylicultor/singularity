@@ -10,7 +10,7 @@ const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 
 export function TaskDependencies({ taskId }: { taskId: string }) {
   const { data } = useResource(tasksResource);
-  const tasks = (data as Task[] | undefined) ?? [];
+  const tasks = data ?? [];
   const task = tasks.find((t) => t.id === taskId) ?? null;
 
   const deps = task?.dependencies ?? [];
