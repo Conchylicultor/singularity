@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { Conversation } from "../slots";
+import { Conversation, type ConversationRecord } from "../slots";
 import {
   Conversation as ConversationCommands,
   MainViewContext,
@@ -16,9 +16,50 @@ import { Button } from "@/components/ui/button";
 
 const TMUX = "/opt/homebrew/bin/tmux";
 
+type PromptBarItem = ReturnType<typeof Conversation.PromptBar.useContributions>[number];
+
+function PromptBar({
+  items,
+  conversation,
+}: {
+  items: PromptBarItem[];
+  conversation: ConversationRecord;
+}) {
+  const sections = items.reduce<Map<string, { order: number; items: PromptBarItem[] }>>(
+    (acc, item) => {
+      const entry = acc.get(item.section) ?? { order: item.sectionOrder ?? 0, items: [] };
+      entry.items.push(item);
+      acc.set(item.section, entry);
+      return acc;
+    },
+    new Map(),
+  );
+  const sorted = [...sections.entries()].sort(([, a], [, b]) => a.order - b.order);
+
+  return (
+    <div className="flex shrink-0 items-end justify-end gap-3 border-t border-border px-3 pt-1.5 pb-2">
+      {sorted.map(([section, { items: sectionItems }], idx) => (
+        <div key={section} className="flex items-center gap-3">
+          {idx > 0 && <div className="h-4 w-px bg-border" />}
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-[10px] leading-none text-muted-foreground/60">{section}</span>
+            <div className="flex items-center gap-1.5">
+              {sectionItems.map((item, i) => {
+                const Component = item.component;
+                return <Component key={i} conversation={conversation} />;
+              })}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function ConversationView({ sessionId }: { sessionId: string }) {
   const toolbarItems = Conversation.Toolbar.useContributions();
   const titleItems = Conversation.Title.useContributions();
+  const promptBarItems = Conversation.PromptBar.useContributions();
   const conversation = useConversationById(sessionId);
   const [middlePane, setMiddlePane] = useState<MiddlePaneDescriptor | null>(null);
   const [rightPane, setRightPane] = useState<RightPaneDescriptor | null>(null);
@@ -77,7 +118,7 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
         <div className="flex items-center gap-1">
           {conversation &&
             toolbarItems
-              .filter((item) => item.group !== "status" && item.group !== "floating")
+              .filter((item) => item.group !== "status")
               .map((item, idx) => {
                 if (item.component) {
                   const Component = item.component;
@@ -121,16 +162,8 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
                 <div className="min-h-0 flex-1 overflow-hidden">
                   <TerminalComponent />
                 </div>
-                {conversation && toolbarItems.some((item) => item.group === "floating") && (
-                  <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-3 py-2">
-                    {toolbarItems
-                      .filter((item) => item.group === "floating")
-                      .map((item, idx) => {
-                        if (!item.component) return null;
-                        const Component = item.component;
-                        return <Component key={item.label ?? `floating-${idx}`} conversation={conversation} />;
-                      })}
-                  </div>
+                {conversation && promptBarItems.length > 0 && (
+                  <PromptBar items={promptBarItems} conversation={conversation} />
                 )}
               </div>
             </Panel>

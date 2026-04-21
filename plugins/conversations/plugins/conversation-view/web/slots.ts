@@ -15,4 +15,9 @@ export const Conversation = {
   Title: defineSlot<{
     component: ComponentType<{ conversation: ConversationRecord }>;
   }>("conversation.title"),
+  PromptBar: defineSlot<{
+    section: string;
+    sectionOrder?: number;
+    component: ComponentType<{ conversation: ConversationRecord }>;
+  }>("conversation.prompt-bar"),
 };

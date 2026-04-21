@@ -76,7 +76,7 @@
   - Plugins:
     - **`conversation-view`** — Conversation pane and toolbar host; nested plugins extend `Conversation.Toolbar`.
       - Defines:
-        - Slots: `Conversation.Toolbar`, `Conversation.Title`
+        - Slots: `Conversation.Toolbar`, `Conversation.Title`, `Conversation.PromptBar`
         - Commands: `Conversation.OpenMiddlePane`, `Conversation.OpenRightPane`, `Conversation.OpenMainView`
       - Exports (web):
         - Types: `ConversationRecord`, `MainViewDescriptor`, `MiddlePaneDescriptor`, `RightPaneDescriptor`
@@ -117,16 +117,16 @@
                 - `Code.ToolbarButton` → `ReviewButton`
         - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
           - Contributes:
-            - `Conversation.Toolbar` (group `floating`) → `DropAndExitButton`
+            - `Conversation.PromptBar` → `DropAndExitButton`
           - Server:
             - Uses: `conversations.deleteConversation`, `conversations.recentConversationsResource`, `tasks-core.getConversation`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/drop-and-exit`
         - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
           - Contributes:
-            - `Conversation.Toolbar` (group `floating`) → `ForkConversationButtons`
+            - `Conversation.PromptBar` → `ForkConversationButtons`
         - **`hold-and-exit`** — Toolbar button that marks the task as held and closes the conversation.
           - Contributes:
-            - `Conversation.Toolbar` (group `floating`) → `HoldAndExitButton`
+            - `Conversation.PromptBar` → `HoldAndExitButton`
           - Server:
             - Uses: `conversations.deleteConversation`, `conversations.recentConversationsResource`, `tasks-core.getConversation`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/hold-and-exit`
@@ -138,7 +138,7 @@
             - `Conversation.Toolbar` "Open"
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
           - Contributes:
-            - `Conversation.Toolbar` (group `floating`) → `PushAndExitButton`
+            - `Conversation.PromptBar` → `PushAndExitButton`
           - Server:
             - Uses: `conversations.Turn`, `conversations.deleteConversation`, `conversations.getConversationRow`, `conversations.readConversationTurns`, `conversations.recentConversationsResource`, `conversations.sendTurn`
             - Resources: `push-and-exit` (push)
@@ -146,7 +146,7 @@
             - `DELETE /api/conversations/:id/push-and-exit`
         - **`quick-prompts`** — Named prompt chips in the conversation floating bar. Click to send a preset message to the active conversation. Named prompts that appear as chips in the conversation toolbar. Click to send a preset message.
           - Contributes:
-            - `Conversation.Toolbar` (group `floating`) → `QuickPromptChips`
+            - `Conversation.PromptBar` → `QuickPromptChips`
             - `Config.Section` "Quick Prompts" → `QuickPromptsSettings`
           - Server:
             - `GET /api/quick-prompts`
