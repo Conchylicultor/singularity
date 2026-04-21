@@ -1,6 +1,6 @@
 {
-  "id": "8be11ff1-6f60-4e38-908e-757cd776c410",
-  "prevId": "a5e8936c-78e2-434b-ac9f-1478eaaa6aca",
+  "id": "24b7033f-ea00-4aaa-a0e1-a17a89f82188",
+  "prevId": "8950bb49-c057-44a6-ba9f-30768414c063",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -299,7 +299,7 @@
         },
         "rank": {
           "name": "rank",
-          "type": "TEXT COLLATE \"C\"",
+          "type": "rank_text",
           "primaryKey": false,
           "notNull": true
         },
@@ -595,7 +595,7 @@
         },
         "rank": {
           "name": "rank",
-          "type": "TEXT COLLATE \"C\"",
+          "type": "rank_text",
           "primaryKey": false,
           "notNull": true
         },
@@ -853,21 +853,7 @@
           "with": {}
         }
       },
-      "foreignKeys": {
-        "crashes_task_id_tasks_id_fk": {
-          "name": "crashes_task_id_tasks_id_fk",
-          "tableFrom": "crashes",
-          "tableTo": "tasks",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -931,7 +917,7 @@
         },
         "rank": {
           "name": "rank",
-          "type": "TEXT COLLATE \"C\"",
+          "type": "rank_text",
           "primaryKey": false,
           "notNull": true
         },
@@ -1151,7 +1137,7 @@
         },
         "rank": {
           "name": "rank",
-          "type": "TEXT COLLATE \"C\"",
+          "type": "rank_text",
           "primaryKey": false,
           "notNull": true
         },
@@ -1223,7 +1209,7 @@
         },
         "rank": {
           "name": "rank",
-          "type": "TEXT COLLATE \"C\"",
+          "type": "rank_text",
           "primaryKey": false,
           "notNull": true
         },

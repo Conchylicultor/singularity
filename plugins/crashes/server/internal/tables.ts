@@ -7,7 +7,6 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { _tasks } from "@plugins/tasks-core/server/internal/tables";
 
 // One row per (fingerprint, worktree). Upserts atomically dedupe repeats:
 // first crash inserts + creates a task; repeats bump count and advance
@@ -29,7 +28,10 @@ export const _crashes = pgTable(
     label: text("label"),
     count: integer("count").notNull().default(1),
     crashLoop: boolean("crash_loop").notNull().default(false),
-    taskId: text("task_id").references(() => _tasks.id, { onDelete: "set null" }),
+    // Soft reference to tasks.id — the cross-plugin FK would cross a plugin
+    // boundary, so we validate integrity in code via getTask() instead. A
+    // deleted task just surfaces as `needsTask` on the next crash.
+    taskId: text("task_id"),
     firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).defaultNow().notNull(),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

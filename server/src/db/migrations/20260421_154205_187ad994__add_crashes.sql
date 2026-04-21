@@ -20,11 +20,5 @@ CREATE TABLE IF NOT EXISTS "crashes" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-DO $$ BEGIN
- ALTER TABLE "crashes" ADD CONSTRAINT "crashes_task_id_tasks_id_fk" FOREIGN KEY ("task_id") REFERENCES "public"."tasks"("id") ON DELETE set null ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
 CREATE UNIQUE INDEX IF NOT EXISTS "crashes_fingerprint_worktree_idx" ON "crashes" USING btree ("fingerprint","worktree");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "crashes_task_id_idx" ON "crashes" USING btree ("task_id");
