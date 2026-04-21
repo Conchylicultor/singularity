@@ -154,16 +154,12 @@ export const tmuxRuntime: ConversationRuntime = {
       stdout: "pipe",
       stderr: "pipe",
     });
-    load.stdin.write(text);
+    load.stdin.write(text + "\n");
     await load.stdin.end();
     await load.exited;
     await Bun.spawn(
       [TMUX, "paste-buffer", "-t", conversationId, "-b", buf, "-d"],
       { stdout: "pipe", stderr: "pipe" },
     ).exited;
-    await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Enter"], {
-      stdout: "pipe",
-      stderr: "pipe",
-    }).exited;
   },
 };
