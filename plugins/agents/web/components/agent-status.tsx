@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useResource } from "@core";
-import { CONV_STATUS_DOT } from "@plugins/conversations/web/status-dot";
+import { CONV_STATUS_DOT } from "@plugins/conversations/web";
 import { agentLaunchesResource } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 

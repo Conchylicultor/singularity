@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useResource } from "@core";
 import { ShellCommands } from "@plugins/shell/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { CONV_STATUS_DOT } from "@plugins/conversations/web/status-dot";
+import { CONV_STATUS_DOT } from "@plugins/conversations/web";
 import { agentLaunchesResource } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 import { useConversationPane } from "./conversation-pane-context";
