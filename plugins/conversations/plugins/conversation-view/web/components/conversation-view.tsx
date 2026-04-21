@@ -77,7 +77,7 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
         <div className="flex items-center gap-1">
           {conversation &&
             toolbarItems
-              .filter((item) => item.group !== "status")
+              .filter((item) => item.group !== "status" && item.group !== "floating")
               .map((item, idx) => {
                 if (item.component) {
                   const Component = item.component;
@@ -117,8 +117,23 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
                   <MiddlePaneComponent conversation={conversation} />
                 </div>
               )}
-              <div className="min-h-0 flex-1 overflow-hidden">
+              <div className="relative min-h-0 flex-1 overflow-hidden">
                 <TerminalComponent />
+                {conversation && toolbarItems.some((item) => item.group === "floating") && (
+                  <div className="pointer-events-none absolute bottom-10 right-4 z-10 flex flex-row items-center gap-2">
+                    {toolbarItems
+                      .filter((item) => item.group === "floating")
+                      .map((item, idx) => {
+                        if (!item.component) return null;
+                        const Component = item.component;
+                        return (
+                          <div key={item.label ?? `floating-${idx}`} className="pointer-events-auto">
+                            <Component conversation={conversation} />
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
               </div>
             </Panel>
             {RightPaneComponent && conversation && (

@@ -114,7 +114,7 @@
                 - `Code.ToolbarButton` → `ReviewButton`
         - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
           - Contributes:
-            - `Conversation.Toolbar` → `DropAndExitButton`
+            - `Conversation.Toolbar` (group `floating`) → `DropAndExitButton`
           - Server:
             - Uses: `conversations.conversationsResource`, `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/drop-and-exit`
@@ -126,7 +126,7 @@
             - `Conversation.Toolbar` "Open"
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
           - Contributes:
-            - `Conversation.Toolbar` → `PushAndExitButton`
+            - `Conversation.Toolbar` (group `floating`) → `PushAndExitButton`
           - Server:
             - Uses: `conversations.Turn`, `conversations.conversationsResource`, `conversations.deleteConversation`, `conversations.getConversationRow`, `conversations.readConversationTurns`, `conversations.sendTurn`
             - Resources: `push-and-exit` (push)

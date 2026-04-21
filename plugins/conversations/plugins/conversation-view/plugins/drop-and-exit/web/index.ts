@@ -7,5 +7,5 @@ export default {
   name: "Conversation: Drop & Exit",
   description:
     "Toolbar button that marks the top task as dropped and closes the conversation.",
-  contributions: [Conversation.Toolbar({ component: DropAndExitButton })],
+  contributions: [Conversation.Toolbar({ component: DropAndExitButton, group: "floating" })],
 } satisfies PluginDefinition;
