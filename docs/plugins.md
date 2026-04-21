@@ -119,6 +119,9 @@
           - Server:
             - Uses: `conversations.conversationsResource`, `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/drop-and-exit`
+        - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
+          - Contributes:
+            - `Conversation.Toolbar` (group `floating`) → `ForkConversationButtons`
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Contributes:
             - `Conversation.Toolbar` (group `status`) → `ModelBadge`

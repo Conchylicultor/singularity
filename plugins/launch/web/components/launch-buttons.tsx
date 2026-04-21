@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 export type LaunchRequest = {
   prompt?: string;
   taskId?: string;
+  attemptId?: string;
 };
 
 export type LaunchButtonsProps = {

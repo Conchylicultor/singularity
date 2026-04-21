@@ -16,6 +16,7 @@ import conversationTasksPanelPlugin from "@plugins/conversations/plugins/convers
 import conversationPushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/web";
 import conversationDropAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/web";
 import conversationQuickPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/web";
+import conversationForkPlugin from "@plugins/conversations/plugins/conversation-view/plugins/fork-conversation/web";
 import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import conversationCodeDocsButtonPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/docs-button/web";
 import conversationCodeReviewPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/web";
@@ -53,6 +54,7 @@ export const plugins: PluginDefinition[] = [
   conversationTitlePlugin,
   conversationTasksPanelPlugin,
   conversationQuickPromptsPlugin,
+  conversationForkPlugin,
   conversationPushAndExitPlugin,
   conversationDropAndExitPlugin,
   conversationCodePlugin,
