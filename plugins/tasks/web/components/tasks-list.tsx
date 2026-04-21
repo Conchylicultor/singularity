@@ -15,6 +15,12 @@ import {
   MdUnfoldMore,
   MdUnfoldLess,
 } from "react-icons/md";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import type { IconType } from "react-icons";
 import {
   DndContext,
@@ -237,6 +243,37 @@ export function TasksList({
     [onSelect],
   );
 
+  const addBelow = useCallback(
+    async (nodeId: string) => {
+      const node = rows.find((r) => r.id === nodeId);
+      if (!node) return;
+      const siblings = rows
+        .filter((r) => r.parentId === node.parentId)
+        .sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0));
+      const idx = siblings.findIndex((s) => s.id === nodeId);
+      const next = siblings[idx + 1];
+      let rank: string;
+      try {
+        rank = generateKeyBetween(node.rank, next?.rank ?? null);
+      } catch {
+        rank = generateKeyBetween(node.rank, null);
+      }
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parentId: node.parentId, rank }),
+      });
+      const task = (await res.json()) as Task;
+      pendingFocusAcrossMount = task.id;
+      if (onSelect) {
+        onSelect(task.id);
+      } else {
+        TasksCommands.OpenTask({ id: task.id });
+      }
+    },
+    [rows, onSelect],
+  );
+
   const toggle = useCallback(
     (id: string) => {
       const target = rows.find((r) => r.id === id);
@@ -355,6 +392,7 @@ export function TasksList({
             selectedId={selectedId}
             onToggle={toggle}
             onAdd={createTask}
+            onAddBelow={addBelow}
             onSelect={onSelect}
             actions={actions}
             pendingFocusId={pendingFocusId}
@@ -421,6 +459,7 @@ function TaskNode({
   selectedId,
   onToggle,
   onAdd,
+  onAddBelow,
   onSelect,
   actions,
   pendingFocusId,
@@ -432,6 +471,7 @@ function TaskNode({
   selectedId?: string;
   onToggle: (id: string) => void;
   onAdd: (parentId: string | null) => void;
+  onAddBelow: (nodeId: string) => void;
   onSelect?: (id: string) => void;
   actions: readonly ActionContribution[];
   pendingFocusId: string | null;
@@ -507,21 +547,28 @@ function TaskNode({
   return (
     <div>
       <div className="group/row relative">
-        <button
-          type="button"
-          ref={setDragRef}
-          aria-label="Drag to reorder"
-          {...attributes}
-          {...listeners}
-          className={cn(
-            "absolute top-1/2 z-10 flex size-5 -translate-y-1/2 cursor-grab items-center justify-center rounded",
-            "text-muted-foreground hover:bg-background/60 active:cursor-grabbing",
-            "opacity-0 group-hover/row:opacity-60",
-          )}
-          style={{ left: depth * 16 - 16 }}
-        >
-          <MdDragIndicator className="size-4" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            ref={setDragRef}
+            aria-label="Drag to reorder"
+            {...attributes}
+            {...listeners}
+            className={cn(
+              "absolute top-1/2 z-10 flex size-5 -translate-y-1/2 cursor-grab items-center justify-center rounded",
+              "text-muted-foreground hover:bg-background/60 active:cursor-grabbing",
+              "opacity-0 group-hover/row:opacity-60",
+            )}
+            style={{ left: depth * 16 - 16 }}
+          >
+            <MdDragIndicator className="size-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="bottom" align="start">
+            <DropdownMenuItem onClick={() => onAddBelow(node.id)}>
+              <MdAdd className="size-4" />
+              Add item below
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <div
           ref={setChildRef}
           className={cn(
@@ -620,6 +667,7 @@ function TaskNode({
               selectedId={selectedId}
               onToggle={onToggle}
               onAdd={onAdd}
+              onAddBelow={onAddBelow}
               onSelect={onSelect}
               actions={actions}
               pendingFocusId={pendingFocusId}
