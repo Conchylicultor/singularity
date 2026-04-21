@@ -18,6 +18,7 @@ export const agents = pgView("agents_v").as((qb) =>
 export const AgentSchema = createSelectSchema(_agents, {
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
+  rank: z.string(),
 }).extend({
   isFolder: z.boolean(),
 });

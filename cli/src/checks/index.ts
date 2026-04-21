@@ -6,6 +6,7 @@ import { noPluginImportsInCore } from "./no-plugin-imports-in-core";
 import { noRawWebsocket } from "./no-raw-websocket";
 import { noUseResourceCast } from "./no-use-resource-cast";
 import { pluginBoundaries } from "./plugin-boundaries";
+import { typescript } from "./typescript";
 import { pluginsDocInSync } from "./plugins-doc-in-sync";
 import { snapshotChainIntact } from "./snapshot-chain-intact";
 import type { Check } from "./types";
@@ -21,6 +22,7 @@ export const CHECKS: Check[] = [
   noRawSse,
   noRawWebsocket,
   noUseResourceCast,
+  typescript,
 ];
 
 export type { Check, CheckResult } from "./types";

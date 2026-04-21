@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useResource } from "@core";
 import { conversationsResource } from "@plugins/conversations/shared";
 import type { Conversation } from "@plugins/conversations/shared";
-import { agentLaunchesResource, type AgentLaunch } from "../../shared/resources";
+import { agentLaunchesResource } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 
 const CONV_STATUS_DOT: Record<Conversation["status"], string> = {
@@ -17,12 +17,13 @@ export function AgentStatus({ agentId, size = "sm" }: { agentId: string; size?: 
   const convQ = useResource(conversationsResource);
 
   const status = useMemo(() => {
-    const launches = (launchesQ.data ?? []) as AgentLaunch[];
+    const launches = launchesQ.data ?? [];
     const latest = launches
       .filter((l) => l.agentId === agentId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
     if (!latest) return null;
-    const conv = ((convQ.data ?? []) as Conversation[])
+    const allConvs: Conversation[] = [...(convQ.data?.active ?? []), ...(convQ.data?.recentGone ?? [])];
+    const conv = allConvs
       .filter((c) => c.taskId === latest.taskId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
     return conv?.status ?? null;

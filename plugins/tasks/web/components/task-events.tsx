@@ -9,7 +9,6 @@ import {
   attemptsResource,
   pushesResource,
   type Attempt,
-  type Push,
 } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 import { useConversationPane } from "./conversation-pane-context";
@@ -78,7 +77,7 @@ export function TaskEvents({ taskId }: { taskId: string }) {
   const convPane = useConversationPane();
 
   const attempts = useMemo(() => {
-    const rows = (attemptsQ.data ?? []) as Attempt[];
+    const rows = attemptsQ.data ?? [];
     return rows
       .filter((a) => a.taskId === taskId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
@@ -87,7 +86,7 @@ export function TaskEvents({ taskId }: { taskId: string }) {
   const attemptIds = useMemo(() => new Set(attempts.map((a) => a.id)), [attempts]);
 
   const pushes = useMemo(() => {
-    const rows = (pushesQ.data ?? []) as Push[];
+    const rows = pushesQ.data ?? [];
     return rows
       .filter((p) => attemptIds.has(p.attemptId))
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));

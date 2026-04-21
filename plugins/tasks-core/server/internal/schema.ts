@@ -195,6 +195,7 @@ export const TaskSchema = createSelectSchema(_tasks, {
   updatedAt: z.coerce.date(),
   droppedAt: z.coerce.date().nullable(),
   heldAt: z.coerce.date().nullable(),
+  rank: z.string(),
 }).extend({
   status: TaskStatusSchema,
   active: z.boolean(),

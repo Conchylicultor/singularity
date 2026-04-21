@@ -8,12 +8,16 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-// Matches cast patterns on variables that look like useResource destructures:
-//   (data as Foo)          — exact pattern from all known offenders
-//   (tasksData as Foo)     — aliased destructure e.g. { data: tasksData }
-//   (convsData as Foo)     — same
-// Pattern: identifier ending in "data" (case-insensitive suffix) followed by " as <UpperCase>"
-const CAST_PATTERN = "\\b[a-z][a-zA-Z]*[Dd]ata\\b as [A-Z]";
+// Matches cast patterns on variables that look like useResource data:
+//   tasksData as Foo               — bare aliased destructure
+//   (data ?? []) → Foo             — nullish-coalesced bare `data`
+//   (convQ.data ?? []) → Foo       — nullish-coalesced .data access
+// Two patterns cover all cases:
+//   1. identifier ending in "data" immediately before " as <UpperCase>"
+//   2. parenthesised expression with a *data* token AND a ?? operator, then " as <UpperCase>"
+//      (the ?? requirement excludes legit casts like `JSON.parse(data) as T`)
+const CAST_PATTERN =
+  "(\\b[a-z][a-zA-Z]*[Dd]ata\\b as [A-Z]|\\([^)]*[Dd]ata[^)]*\\?\\?[^)]*\\) as [A-Z])";
 
 export const noUseResourceCast: Check = {
   id: "no-use-resource-cast",

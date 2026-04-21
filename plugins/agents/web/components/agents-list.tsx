@@ -137,7 +137,7 @@ export function AgentsList({
   onSelect?: (id: string) => void;
 }) {
   const { data } = useResource(agentsResource);
-  const rows = (data ?? []) as Agent[];
+  const rows = data ?? [];
   const actions = AgentsSlots.AgentActions.useContributions();
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(() => {
     const id = pendingFocusAcrossMount;

@@ -216,7 +216,7 @@ export function TasksList({
   onSelect?: (id: string) => void;
 }) {
   const { data } = useResource(tasksResource);
-  const rows = (data ?? []) as Task[];
+  const rows = data ?? [];
   const actions = TasksSlots.TaskActions.useContributions();
   const [hideCompleted, setHideCompleted] = useState(true);
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(() => {

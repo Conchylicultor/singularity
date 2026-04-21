@@ -4,7 +4,7 @@ import { ShellCommands } from "@plugins/shell/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { conversationsResource } from "@plugins/conversations/shared";
 import type { Conversation } from "@plugins/conversations/shared";
-import { agentLaunchesResource, type AgentLaunch } from "../../shared/resources";
+import { agentLaunchesResource } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 import { useConversationPane } from "./conversation-pane-context";
 
@@ -31,7 +31,7 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
   const convPane = useConversationPane();
 
   const launches = useMemo(() => {
-    const rows = (launchesQ.data ?? []) as AgentLaunch[];
+    const rows = launchesQ.data ?? [];
     return rows
       .filter((l) => l.agentId === agentId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
@@ -39,7 +39,8 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
 
   const conversationsByTask = useMemo(() => {
     const map = new Map<string, Conversation[]>();
-    for (const c of (convQ.data ?? []) as Conversation[]) {
+    const allConvs = [...(convQ.data?.active ?? []), ...(convQ.data?.recentGone ?? [])];
+    for (const c of allConvs) {
       if (!c.taskId) continue;
       const list = map.get(c.taskId);
       if (list) list.push(c);
