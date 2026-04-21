@@ -19,6 +19,7 @@ import tasksPlugin from "@plugins/tasks/server";
 import agentsPlugin from "@plugins/agents/server";
 import screenshotPlugin from "@plugins/screenshot/server";
 import configPlugin from "@plugins/config/server";
+import crashesPlugin from "@plugins/crashes/server";
 import dbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
 
 // Runtime plugins must load before `conversationsPlugin` so they register
@@ -28,6 +29,7 @@ import dbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
 // load time.
 export const plugins: ServerPluginDefinition[] = [
   logsPlugin,
+  crashesPlugin,
   buildPlugin,
   terminalPlugin,
   tasksCorePlugin,

@@ -29,6 +29,7 @@ import themePlugin from "@plugins/theme/web";
 import welcomePlugin from "@plugins/welcome/web";
 import launchPlugin from "@plugins/launch/web";
 import healthPlugin from "@plugins/health/web";
+import crashesPlugin from "@plugins/crashes/web";
 import statsPlugin from "@plugins/stats/web";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/web";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/web";
@@ -68,6 +69,7 @@ export const plugins: PluginDefinition[] = [
   conversationsPlugin,
   themePlugin,
   healthPlugin,
+  crashesPlugin,
   statsPlugin,
   statsTasksPlugin,
   statsCommitsPlugin,

@@ -211,6 +211,13 @@
       "tag": "20260421_142530_06ac885b__use_rank_text_domain",
       "hash": "06ac885b",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776781877000,
+      "tag": "20260421_143117_52623cf6__add_crashes",
+      "hash": "52623cf6",
+      "breakpoints": true
     }
   ]
 }

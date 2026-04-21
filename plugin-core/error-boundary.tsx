@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from "react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
 
 interface Props {
   slot?: string;
@@ -10,11 +10,42 @@ interface State {
   error: Error | null;
 }
 
+export interface BoundaryErrorReport {
+  error: Error;
+  componentStack: string | null;
+  slot: string | null;
+  label: string | null;
+}
+
+// Registered by the `crashes` plugin at mount time. Module-level callback
+// avoids a hard import from plugin-core into a plugin; the reporter is
+// optional and best-effort.
+let reporter: ((r: BoundaryErrorReport) => void) | null = null;
+
+export function registerBoundaryReporter(
+  fn: ((r: BoundaryErrorReport) => void) | null,
+): void {
+  reporter = fn;
+}
+
 export class PluginErrorBoundary extends Component<Props, State> {
   state: State = { error: null };
 
   static getDerivedStateFromError(error: Error): State {
     return { error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    try {
+      reporter?.({
+        error,
+        componentStack: info.componentStack ?? null,
+        slot: this.props.slot ?? null,
+        label: this.props.label ?? null,
+      });
+    } catch {
+      // Never throw from the error path.
+    }
   }
 
   render() {

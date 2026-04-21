@@ -174,6 +174,18 @@
       - Server:
         - Uses: `conversations.Runtime`
 
+- **`crashes`** — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
+  - Exports (web):
+    - Values: `report`
+  - Exports (server):
+    - Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `recordCrash`
+  - Contributes:
+    - `Core.Root` → `CrashReporter`
+  - Server:
+    - Uses: `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
+    - Resources: `crashes` (push)
+    - `POST /api/crashes`
+
 - **`debug`** — Debug tools sidebar group.
   - Defines:
     - Slots: `Debug.Item`

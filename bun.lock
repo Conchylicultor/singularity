@@ -65,6 +65,10 @@
       "name": "@singularity/plugin-conversations",
       "version": "0.0.1",
     },
+    "plugins/crashes": {
+      "name": "@singularity/plugin-crashes",
+      "version": "0.0.1",
+    },
     "plugins/debug": {
       "name": "@singularity/plugin-debug",
       "version": "0.0.1",
@@ -619,6 +623,8 @@
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
 
     "@singularity/plugin-core": ["@singularity/plugin-core@workspace:plugin-core"],
+
+    "@singularity/plugin-crashes": ["@singularity/plugin-crashes@workspace:plugins/crashes"],
 
     "@singularity/plugin-debug": ["@singularity/plugin-debug@workspace:plugins/debug"],
 
