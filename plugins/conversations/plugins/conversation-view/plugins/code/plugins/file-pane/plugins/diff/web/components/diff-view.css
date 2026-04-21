@@ -49,24 +49,57 @@
 }
 
 .diff-skip-separator {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
-  padding: 1px 12px;
-  text-align: center;
+  padding: 2px 12px;
   font-family: inherit;
   font-size: 0.85em;
   line-height: 1.6;
   color: color-mix(in oklab, var(--muted-foreground) 60%, transparent);
   background: transparent;
-  border: none;
   border-top: 1px dashed color-mix(in oklab, var(--border) 60%, transparent);
   border-bottom: 1px dashed color-mix(in oklab, var(--border) 60%, transparent);
-  cursor: pointer;
   user-select: none;
   transition: color 0.1s, border-color 0.1s;
 }
 
 .diff-skip-separator:hover {
   color: var(--muted-foreground);
+  border-color: var(--border);
+}
+
+.diff-skip-label {
+  text-align: center;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 8px;
+}
+
+.diff-skip-actions {
+  display: flex;
+  gap: 3px;
+}
+
+.diff-skip-actions button {
+  padding: 0 5px;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
+  border-radius: 3px;
+  cursor: pointer;
+  line-height: 1.4;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.diff-skip-actions button:hover {
+  background: color-mix(in oklab, var(--muted) 50%, transparent);
   border-color: var(--border);
 }

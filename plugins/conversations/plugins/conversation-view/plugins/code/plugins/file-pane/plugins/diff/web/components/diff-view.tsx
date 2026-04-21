@@ -252,13 +252,12 @@ export function DiffView({
               if (linesAbove > 0 && i === 0) {
                 elements.push(
                   <Decoration key={`skip-${idx}-${hunk.newStart}`}>
-                    <button
-                      type="button"
-                      className="diff-skip-separator"
-                      onClick={() => expandLines(gapStart, gapEnd)}
-                    >
-                      {linesAbove} {linesAbove === 1 ? "line" : "lines"} skipped — click to expand
-                    </button>
+                    <SkipSeparator
+                      count={linesAbove}
+                      onExpandTop={(n) => expandLines(gapStart, Math.min(gapStart + n, gapEnd))}
+                      onExpandBottom={(n) => expandLines(Math.max(gapEnd - n, gapStart), gapEnd)}
+                      onExpandAll={() => expandLines(gapStart, gapEnd)}
+                    />
                   </Decoration>,
                 );
               }
@@ -269,13 +268,12 @@ export function DiffView({
                 if (linesBelow > 0) {
                   elements.push(
                     <Decoration key={`skip-end-${hunk.newStart}`}>
-                      <button
-                        type="button"
-                        className="diff-skip-separator"
-                        onClick={() => expandLines(lastOldLine + 1, totalLines + 1)}
-                      >
-                        {linesBelow} {linesBelow === 1 ? "line" : "lines"} skipped — click to expand
-                      </button>
+                      <SkipSeparator
+                        count={linesBelow}
+                        onExpandTop={(n) => expandLines(lastOldLine + 1, Math.min(lastOldLine + 1 + n, totalLines + 1))}
+                        onExpandBottom={(n) => expandLines(Math.max(totalLines + 1 - n, lastOldLine + 1), totalLines + 1)}
+                        onExpandAll={() => expandLines(lastOldLine + 1, totalLines + 1)}
+                      />
                     </Decoration>,
                   );
                 }
@@ -285,6 +283,41 @@ export function DiffView({
           }
         </Diff>
       ))}
+    </div>
+  );
+}
+
+function SkipSeparator({
+  count,
+  onExpandTop,
+  onExpandBottom,
+  onExpandAll,
+}: {
+  count: number;
+  onExpandTop: (n: number) => void;
+  onExpandBottom: (n: number) => void;
+  onExpandAll: () => void;
+}) {
+  const steps = [5, 10, 50].filter((n) => n < count);
+  return (
+    <div className="diff-skip-separator">
+      <span className="diff-skip-actions">
+        {[...steps].reverse().map((n) => (
+          <button key={n} type="button" onClick={() => onExpandTop(n)}>
+            ↓{n}
+          </button>
+        ))}
+      </span>
+      <button type="button" className="diff-skip-label" onClick={onExpandAll}>
+        {count} {count === 1 ? "line" : "lines"}
+      </button>
+      <span className="diff-skip-actions">
+        {steps.map((n) => (
+          <button key={n} type="button" onClick={() => onExpandBottom(n)}>
+            {n}↑
+          </button>
+        ))}
+      </span>
     </div>
   );
 }
