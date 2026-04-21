@@ -1,10 +1,8 @@
-// Public API for other plugins.
-
 import type { ConfigDescriptor, Schema, Values } from "@plugins/config/shared";
 import { fullKey, getDefault, normalize } from "@plugins/config/shared";
-import { configResource } from "./internal/resource";
-import { getValue } from "./internal/read-cache";
-import { pluginIdOf } from "./internal/registry";
+import { configResource } from "./resource";
+import { getValue } from "./read-cache";
+import { pluginIdOf } from "./registry";
 
 export { configResource };
 

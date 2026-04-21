@@ -20,8 +20,8 @@ export {
 export type { Conversation } from "@plugins/tasks-core/server";
 export { createConversation, deleteConversation } from "./internal/lifecycle";
 export type { Turn } from "./internal/claude-transcript";
-export { Runtime, getConversationRow, readConversationTurns } from "./api";
-export type { RuntimeInfo, ConversationRuntime } from "./api";
+export { Runtime, getConversationRow, readConversationTurns } from "./internal/api";
+export type { RuntimeInfo, ConversationRuntime } from "./internal/api";
 
 export default {
   id: "conversations",

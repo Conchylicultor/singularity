@@ -5,7 +5,7 @@ import {
   adoptOrphanConversation,
   conversationsResource,
 } from "@plugins/tasks-core/server";
-import { Runtime, type RuntimeInfo } from "../api";
+import { Runtime, type RuntimeInfo } from "./api";
 import type { ConversationStatus } from "../../shared/types";
 import { worktreePathFor } from "@server/worktree";
 

@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { registry } from "./internal/registry";
+import { registry } from "./registry";
 
 export interface McpToolContext {
   conversationId: string;

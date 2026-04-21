@@ -1,5 +1,5 @@
-import { createChannel } from "./internal/registry";
-import type { LogChannel, LogStream } from "./internal/registry";
+import { createChannel } from "./registry";
+import type { LogChannel, LogStream } from "./registry";
 
 export type { LogChannel, LogStream };
 

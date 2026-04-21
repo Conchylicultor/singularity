@@ -1,4 +1,4 @@
-import type { HealthResponse } from "../shared/protocol";
+import type { HealthResponse } from "../../shared/protocol";
 
 export async function getHealth(signal?: AbortSignal): Promise<HealthResponse | null> {
   try {

@@ -2,26 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { basename, join, relative, sep } from "path";
 import type { Check, CheckResult } from "./types";
 
-// ============================================================================
-// Grandfather list
-// ============================================================================
-//
-// Plugins currently exempt from enforcement. Violations inside these plugins
-// are skipped so the check can land without requiring simultaneous migration.
-// Cross-plugin imports *into* a skipped plugin are still checked on the
-// importing side — only the owning plugin's internals are free.
-//
-// Paths are relative to `plugins/`. Remove entries as plugins are brought into
-// compliance. Empty list = full enforcement.
-const SKIPPED_PLUGINS: ReadonlyArray<string> = [
-  // Known architectural cycle: conversations ↔ tasks (server-side, mutual FK deps).
-  // conversations/server/internal/tables.ts needs _attempts from tasks, and
-  // tasks/server/internal/schema.ts needs _conversations from conversations.
-  // Both must use direct leaf table imports (not barrels) to avoid runtime
-  // circular initialization errors. Fixing requires design discussion.
-  "conversations",
-  "tasks",
-];
+const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 
 // Framework-level files exempt from cross-plugin boundary checks (both the
 // import grammar (R4) and the "default-import is registry-only" rule (R5)).

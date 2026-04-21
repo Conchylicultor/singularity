@@ -2,8 +2,8 @@ import type { ServerPluginDefinition } from "../../../server/src/types";
 import { handleChannels } from "./internal/handle-channels";
 import { wsHandler } from "./internal/ws-handler";
 
-export { Log } from "./api";
-export type { LogChannel, LogStream } from "./api";
+export { Log } from "./internal/api";
+export type { LogChannel, LogStream } from "./internal/api";
 
 export default {
   id: "logs",

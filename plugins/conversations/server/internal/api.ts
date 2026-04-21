@@ -1,13 +1,3 @@
-export { ConversationModelSchema } from "./model";
-export type { ConversationModel } from "./model";
-export { ConversationStatusSchema, isActiveStatus } from "./status";
-export type { ConversationStatus } from "./status";
-export {
-  ConversationSchema,
-  conversationsResource,
-} from "@plugins/tasks-core/server";
-export type { Conversation } from "@plugins/tasks-core/server";
-
 import {
   getConversationRuntime,
   getConversationClaudeSessionId,
@@ -16,7 +6,7 @@ import {
   findTranscriptPath,
   readTurns,
   type Turn,
-} from "./internal/claude-transcript";
+} from "./claude-transcript";
 
 export type { Turn };
 
@@ -34,7 +24,7 @@ export interface ConversationRuntime {
     worktreePath: string,
     opts?: {
       prompt?: string;
-      model?: import("./model").ConversationModel;
+      model?: import("../model").ConversationModel;
       spawnedBy?: string | null;
     },
   ): Promise<void>;
@@ -61,8 +51,6 @@ export const Runtime = {
     return Array.from(registry.values());
   },
 };
-
-export { createConversation, deleteConversation } from "./internal/lifecycle";
 
 export async function getConversationRow(id: string): Promise<{
   status: string;
