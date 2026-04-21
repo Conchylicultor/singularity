@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { ComponentType } from "react";
-import { MdTune } from "react-icons/md";
+import { MdTune, MdChevronRight } from "react-icons/md";
 import { toast } from "sonner";
 
 const SIDEBAR_GROUPS: Record<
@@ -22,6 +22,7 @@ import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
+  SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
@@ -56,6 +57,8 @@ function ToolbarItem(item: {
 
 let nextPaneId = 0;
 
+const DEFAULT_COLLAPSED = new Set(["Debug"]);
+
 export function ShellLayout() {
   const sidebars = Shell.Sidebar.useContributions();
   const sidebarPanes = sidebars.filter((s) => s.component);
@@ -67,6 +70,15 @@ export function ShellLayout() {
     list.push(btn);
     buttonGroups.set(key, list);
   }
+
+  const [collapsed, setCollapsed] = useState<Set<string>>(DEFAULT_COLLAPSED);
+  const toggleSection = (key: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   const toolbarItems = Shell.Toolbar.useContributions();
   const routes = Shell.Route.useContributions();
 
@@ -168,29 +180,40 @@ export function ShellLayout() {
                 <SidebarGroup>
                   {groupName && (() => {
                     const GroupIcon = SIDEBAR_GROUPS[groupName]?.icon;
+                    const isCollapsed = collapsed.has(groupName);
                     return (
-                      <SidebarGroupLabel>
+                      <SidebarGroupLabel
+                        className="cursor-pointer select-none hover:text-sidebar-foreground"
+                        onClick={() => toggleSection(groupName)}
+                      >
                         {GroupIcon && <GroupIcon className="size-4 mr-2" />}
                         {groupName}
+                        <MdChevronRight
+                          className={`ml-auto size-4 transition-transform duration-200 ${isCollapsed ? "" : "rotate-90"}`}
+                        />
                       </SidebarGroupLabel>
                     );
                   })()}
-                  <SidebarMenu>
-                    {btns.map((btn) => (
-                      <PluginErrorBoundary
-                        key={btn.title}
-                        slot="shell.sidebar"
-                        label={btn.title}
-                      >
-                        <SidebarMenuItem>
-                          <SidebarMenuButton onClick={btn.onClick}>
-                            <btn.icon className="size-4" />
-                            <span>{btn.title}</span>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      </PluginErrorBoundary>
-                    ))}
-                  </SidebarMenu>
+                  {!collapsed.has(groupName) && (
+                    <SidebarGroupContent>
+                      <SidebarMenu>
+                        {btns.map((btn) => (
+                          <PluginErrorBoundary
+                            key={btn.title}
+                            slot="shell.sidebar"
+                            label={btn.title}
+                          >
+                            <SidebarMenuItem>
+                              <SidebarMenuButton onClick={btn.onClick}>
+                                <btn.icon className="size-4" />
+                                <span>{btn.title}</span>
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          </PluginErrorBoundary>
+                        ))}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  )}
                 </SidebarGroup>
               </Fragment>
             ))}
@@ -201,11 +224,21 @@ export function ShellLayout() {
                 )}
                 <PluginErrorBoundary slot="shell.sidebar" label={pane.title}>
                   <SidebarGroup>
-                    <SidebarGroupLabel>
+                    <SidebarGroupLabel
+                      className="cursor-pointer select-none hover:text-sidebar-foreground"
+                      onClick={() => toggleSection(pane.title)}
+                    >
                       <pane.icon className="size-4 mr-2" />
                       {pane.title}
+                      <MdChevronRight
+                        className={`ml-auto size-4 transition-transform duration-200 ${collapsed.has(pane.title) ? "" : "rotate-90"}`}
+                      />
                     </SidebarGroupLabel>
-                    {pane.component && <pane.component />}
+                    {!collapsed.has(pane.title) && pane.component && (
+                      <SidebarGroupContent>
+                        <pane.component />
+                      </SidebarGroupContent>
+                    )}
                   </SidebarGroup>
                 </PluginErrorBoundary>
               </Fragment>
