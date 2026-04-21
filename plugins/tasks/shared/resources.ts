@@ -6,6 +6,7 @@ import type {
   Push,
   Task,
 } from "@plugins/tasks-core/shared";
+import { resourceDescriptor } from "@core/shared/resource";
 
 export type {
   Attempt,
@@ -15,13 +16,6 @@ export type {
   Task,
 } from "@plugins/tasks-core/shared";
 
-function descriptor<T>(key: string) {
-  return { key } as {
-    readonly key: string;
-    readonly __types?: { value: T; params: Record<string, never> };
-  };
-}
-
-export const tasksResource = descriptor<Task[]>("tasks");
-export const attemptsResource = descriptor<AttemptWithConversations[]>("attempts");
-export const pushesResource = descriptor<Push[]>("pushes");
+export const tasksResource = resourceDescriptor<Task[]>("tasks");
+export const attemptsResource = resourceDescriptor<AttemptWithConversations[]>("attempts");
+export const pushesResource = resourceDescriptor<Push[]>("pushes");

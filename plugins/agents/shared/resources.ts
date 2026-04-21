@@ -3,6 +3,7 @@
 // `@plugins/agents/server/api`.
 import type { Agent, AgentLaunch } from "../server/internal/schema";
 import type { ConversationStatus } from "@plugins/conversations/shared";
+import { resourceDescriptor } from "@core/shared/resource";
 
 export type { Agent, AgentLaunch } from "../server/internal/schema";
 
@@ -20,12 +21,5 @@ export type AgentLaunchWithStatus = AgentLaunch & {
   latestConversation: AgentLaunchConversationRef | null;
 };
 
-function descriptor<T>(key: string) {
-  return { key } as {
-    readonly key: string;
-    readonly __types?: { value: T; params: Record<string, never> };
-  };
-}
-
-export const agentsResource = descriptor<Agent[]>("agents");
-export const agentLaunchesResource = descriptor<AgentLaunchWithStatus[]>("agent-launches");
+export const agentsResource = resourceDescriptor<Agent[]>("agents");
+export const agentLaunchesResource = resourceDescriptor<AgentLaunchWithStatus[]>("agent-launches");

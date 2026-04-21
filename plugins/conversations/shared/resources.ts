@@ -1,4 +1,5 @@
 import type { Conversation } from "./types";
+import { resourceDescriptor } from "@core/shared/resource";
 
 export type ConversationEntry = Conversation;
 
@@ -8,13 +9,4 @@ export type ConversationListPayload = {
   hasMoreGone: boolean;
 };
 
-// Mirrors `resourceDescriptor` from @core (plugin-core is web-only; this
-// module is shared with the server, which can't import from it).
-function descriptor<T>(key: string) {
-  return { key } as {
-    readonly key: string;
-    readonly __types?: { value: T; params: Record<string, never> };
-  };
-}
-
-export const recentConversationsResource = descriptor<ConversationListPayload>("conversations");
+export const recentConversationsResource = resourceDescriptor<ConversationListPayload>("conversations");

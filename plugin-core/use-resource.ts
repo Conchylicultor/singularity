@@ -6,23 +6,11 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import { NotificationsClient, queryKeyFor } from "./notifications-client";
+import type { ResourceDescriptor } from "./shared/resource";
+export type { ResourceDescriptor } from "./shared/resource";
+export { resourceDescriptor } from "./shared/resource";
 
 type ResourceParams = Record<string, string>;
-
-// Symbol-branded type so `Resource<T, P>` on the server can be imported on the
-// client (as a type) without pulling server code. In practice plugins will
-// share a tiny module that exports the Resource descriptor.
-export interface ResourceDescriptor<T, P extends ResourceParams = ResourceParams> {
-  key: string;
-  /** Phantom — never read at runtime, only exists for type inference. */
-  readonly __types?: { value: T; params: P };
-}
-
-export function resourceDescriptor<T, P extends ResourceParams = ResourceParams>(
-  key: string,
-): ResourceDescriptor<T, P> {
-  return { key };
-}
 
 const NotificationsContext = createContext<NotificationsClient | null>(null);
 

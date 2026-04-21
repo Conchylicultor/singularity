@@ -19,6 +19,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@core": ["../plugin-core"],
+      "@core/*": ["../plugin-core/*"],
       "@plugins/*": ["../plugins/*"]
     }
   },
