@@ -17,4 +17,4 @@ function descriptor<T>(key: string) {
   };
 }
 
-export const conversationsResource = descriptor<ConversationListPayload>("conversations");
+export const recentConversationsResource = descriptor<ConversationListPayload>("conversations");

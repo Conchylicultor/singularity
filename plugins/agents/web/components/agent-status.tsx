@@ -1,11 +1,10 @@
 import { useMemo } from "react";
 import { useResource } from "@core";
-import { conversationsResource } from "@plugins/conversations/shared";
-import type { Conversation } from "@plugins/conversations/shared";
+import type { ConversationStatus } from "@plugins/conversations/shared";
 import { agentLaunchesResource } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 
-const CONV_STATUS_DOT: Record<Conversation["status"], string> = {
+const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
   starting: "bg-muted-foreground/60",
   working: "bg-primary",
   waiting: "bg-amber-500",
@@ -14,20 +13,14 @@ const CONV_STATUS_DOT: Record<Conversation["status"], string> = {
 
 export function AgentStatus({ agentId, size = "sm" }: { agentId: string; size?: "sm" | "md" }) {
   const launchesQ = useResource(agentLaunchesResource);
-  const convQ = useResource(conversationsResource);
 
   const status = useMemo(() => {
     const launches = launchesQ.data ?? [];
     const latest = launches
       .filter((l) => l.agentId === agentId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
-    if (!latest) return null;
-    const allConvs: Conversation[] = [...(convQ.data?.active ?? []), ...(convQ.data?.recentGone ?? [])];
-    const conv = allConvs
-      .filter((c) => c.taskId === latest.taskId)
-      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
-    return conv?.status ?? null;
-  }, [launchesQ.data, convQ.data, agentId]);
+    return latest?.latestConversationStatus ?? null;
+  }, [launchesQ.data, agentId]);
 
   return (
     <span className="flex shrink-0 items-center justify-center" style={{ width: size === "md" ? 20 : 20, height: size === "md" ? 20 : 20 }}>

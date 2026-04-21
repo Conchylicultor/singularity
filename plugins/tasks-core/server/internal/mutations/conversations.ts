@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../../../../../server/src/db/client";
 import { _conversations } from "../tables";
 import { conversations } from "../schema";
-import { conversationsResource } from "../resources";
+import { recentConversationsResource } from "../resources";
 
 export interface InsertConversationInput {
   id: string;
@@ -73,7 +73,7 @@ export async function updateConversation(
 
 export async function deleteConversationRow(id: string): Promise<void> {
   await db.delete(_conversations).where(eq(_conversations.id, id));
-  conversationsResource.notify();
+  recentConversationsResource.notify();
 }
 
 export async function markConversationClosed(

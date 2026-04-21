@@ -16,7 +16,7 @@ export { ConversationStatusSchema, isActiveStatus } from "./status";
 export type { ConversationStatus } from "./status";
 export {
   ConversationSchema,
-  conversationsResource,
+  recentConversationsResource,
 } from "@plugins/tasks-core/server";
 export type { Conversation } from "@plugins/tasks-core/server";
 export { createConversation, deleteConversation } from "./internal/lifecycle";
@@ -39,7 +39,7 @@ export default {
     "GET /api/conversations/:id/turns": handleListTurns,
     "POST /api/conversations/:id/close": handleClose,
   },
-  // conversationsResource is now mounted on tasks-core; only fork-errors stays here.
+  // recentConversationsResource is now mounted on tasks-core; only fork-errors stays here.
   resources: [forkErrorsResource],
   onReady: () => startPoller(),
 } satisfies ServerPluginDefinition;

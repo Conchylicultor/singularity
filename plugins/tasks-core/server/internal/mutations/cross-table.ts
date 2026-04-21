@@ -4,7 +4,7 @@ import { conversations } from "../schema";
 import { eq } from "drizzle-orm";
 import { findNextRankUnder } from "../queries/tasks";
 import { CONVERSATIONS_META_TASK_ID } from "./tasks";
-import { tasksResource, attemptsResource, conversationsResource } from "../resources";
+import { tasksResource, attemptsResource, recentConversationsResource } from "../resources";
 
 export interface AdoptOrphanInput {
   id: string;
@@ -52,7 +52,7 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
   if (inserted) {
     tasksResource.notify();
     attemptsResource.notify();
-    conversationsResource.notify();
+    recentConversationsResource.notify();
   }
   if (!inserted) return null;
   const [row] = await db

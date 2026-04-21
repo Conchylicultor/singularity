@@ -1,4 +1,4 @@
-import { conversationsResource } from "@plugins/tasks-core/server";
+import { recentConversationsResource } from "@plugins/tasks-core/server";
 import { ConversationModelSchema } from "../model";
 import { createConversation } from "./lifecycle";
 
@@ -21,6 +21,6 @@ export async function handleCreate(req: Request): Promise<Response> {
     runtimeId: body.runtime,
     model,
   });
-  conversationsResource.notify();
+  recentConversationsResource.notify();
   return Response.json(session);
 }

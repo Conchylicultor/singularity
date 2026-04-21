@@ -3,7 +3,7 @@ import {
   tasksResource,
   attemptsResource,
   pushesResource,
-  conversationsResource,
+  recentConversationsResource,
 } from "./internal/resources";
 
 // Zod schemas and TS types
@@ -29,8 +29,12 @@ export {
   tasksResource,
   attemptsResource,
   pushesResource,
-  conversationsResource,
+  recentConversationsResource,
 } from "./internal/resources";
+export type {
+  AttemptWithConversations,
+  ConversationSummary,
+} from "../shared";
 
 // Query functions — reads
 export {
@@ -108,5 +112,5 @@ export default {
   name: "Tasks Core",
   description:
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
-  resources: [tasksResource, attemptsResource, pushesResource, conversationsResource],
+  resources: [tasksResource, attemptsResource, pushesResource, recentConversationsResource],
 } satisfies ServerPluginDefinition;

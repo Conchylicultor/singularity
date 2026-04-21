@@ -11,7 +11,7 @@ import {
   type RightPaneDescriptor,
 } from "../commands";
 import { terminalPane } from "@plugins/terminal/web";
-import { useConversation } from "@plugins/conversations/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { Button } from "@/components/ui/button";
 
 const TMUX = "/opt/homebrew/bin/tmux";
@@ -19,7 +19,7 @@ const TMUX = "/opt/homebrew/bin/tmux";
 export function ConversationView({ sessionId }: { sessionId: string }) {
   const toolbarItems = Conversation.Toolbar.useContributions();
   const titleItems = Conversation.Title.useContributions();
-  const conversation = useConversation(sessionId);
+  const conversation = useConversationById(sessionId);
   const [middlePane, setMiddlePane] = useState<MiddlePaneDescriptor | null>(null);
   const [rightPane, setRightPane] = useState<RightPaneDescriptor | null>(null);
   const [mainView, setMainView] = useState<MainViewDescriptor | null>(null);

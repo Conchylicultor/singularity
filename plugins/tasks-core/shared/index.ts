@@ -7,6 +7,10 @@ export {
   PushSchema,
   ConversationSchema,
 } from "../server/internal/schema";
+import type {
+  Attempt,
+  Conversation,
+} from "../server/internal/schema";
 export type {
   Task,
   TaskStatus,
@@ -15,3 +19,11 @@ export type {
   Push,
   Conversation,
 } from "../server/internal/schema";
+
+// The attemptsResource payload embeds a narrow summary of each attempt's
+// conversations so that the tasks plugin doesn't have to subscribe to the
+// bounded recentConversationsResource just to render attempt rows.
+export type ConversationSummary = Pick<Conversation, "id" | "title" | "status">;
+export type AttemptWithConversations = Attempt & {
+  conversations: ConversationSummary[];
+};

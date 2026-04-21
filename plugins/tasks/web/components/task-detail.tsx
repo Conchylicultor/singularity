@@ -5,7 +5,7 @@ import { TaskDependencies } from "./task-dependencies";
 import { TaskEvents } from "./task-events";
 import { useResource } from "@core";
 import { ShellCommands } from "@plugins/shell/web";
-import { conversationsResource } from "@plugins/conversations/shared";
+import { useConversationById } from "@plugins/conversations/web";
 import { tasksResource, type Task } from "../../shared/resources";
 import { tasksPane } from "../views";
 
@@ -32,18 +32,16 @@ const STATUS_CLASSES: Record<Task["status"], string> = {
 };
 
 function AuthorDisplay({ author }: { author: string | null }) {
+  const isUser = !author || author === "user";
   const { data: tasksData } = useResource(tasksResource);
-  const { data: convsData } = useResource(conversationsResource);
+  const authorConversation = useConversationById(isUser ? null : author);
 
   const authorTask = useMemo(() => {
-    if (!author || author === "user") return null;
-    const allConvs = [...(convsData?.active ?? []), ...(convsData?.recentGone ?? [])];
-    const conv = allConvs.find((c) => c.id === author);
-    if (!conv) return null;
-    return tasksData?.find((t) => t.id === conv.taskId) ?? null;
-  }, [author, tasksData, convsData]);
+    if (!authorConversation) return null;
+    return tasksData?.find((t) => t.id === authorConversation.taskId) ?? null;
+  }, [authorConversation, tasksData]);
 
-  if (!author || author === "user") {
+  if (isUser) {
     return <span className="text-sm">User</span>;
   }
 

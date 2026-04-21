@@ -1,1 +1,6 @@
-export { useConversations, useConversation, GonePageSchema } from "./use-conversations";
+export {
+  useConversations,
+  useConversation,
+  useConversationById,
+  GonePageSchema,
+} from "./use-conversations";

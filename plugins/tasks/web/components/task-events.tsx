@@ -3,8 +3,7 @@ import { MdOpenInNew } from "react-icons/md";
 import { useResource } from "@core";
 import { ShellCommands } from "@plugins/shell/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { conversationsResource } from "@plugins/conversations/shared";
-import type { Conversation } from "@plugins/conversations/shared";
+import type { ConversationStatus } from "@plugins/conversations/shared";
 import {
   attemptsResource,
   pushesResource,
@@ -62,7 +61,7 @@ const ATTEMPT_STATUS_LABELS: Record<Attempt["status"], string> = {
   abandoned: "Abandoned",
 };
 
-const CONV_STATUS_DOT: Record<Conversation["status"], string> = {
+const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
   starting: "bg-muted-foreground/60",
   working: "bg-primary",
   waiting: "bg-amber-500",
@@ -72,7 +71,6 @@ const CONV_STATUS_DOT: Record<Conversation["status"], string> = {
 export function TaskEvents({ taskId }: { taskId: string }) {
   const attemptsQ = useResource(attemptsResource);
   const pushesQ = useResource(pushesResource);
-  const convQ = useResource(conversationsResource);
   const githubBase = useGithubBase();
   const convPane = useConversationPane();
 
@@ -91,22 +89,6 @@ export function TaskEvents({ taskId }: { taskId: string }) {
       .filter((p) => attemptIds.has(p.attemptId))
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
   }, [pushesQ.data, attemptIds]);
-
-  const conversationsByAttempt = useMemo(() => {
-    const map = new Map<string, Conversation[]>();
-    const payload = convQ.data as { active?: Conversation[]; recentGone?: Conversation[] } | undefined;
-    const allConvs = [...(payload?.active ?? []), ...(payload?.recentGone ?? [])];
-    for (const c of allConvs) {
-      if (!attemptIds.has(c.attemptId)) continue;
-      const list = map.get(c.attemptId);
-      if (list) list.push(c);
-      else map.set(c.attemptId, [c]);
-    }
-    for (const list of map.values()) {
-      list.sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
-    }
-    return map;
-  }, [convQ.data, attemptIds]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -169,7 +151,7 @@ export function TaskEvents({ taskId }: { taskId: string }) {
         ) : (
           <ul className="flex flex-col gap-2">
             {attempts.map((attempt) => {
-              const convs = conversationsByAttempt.get(attempt.id) ?? [];
+              const convs = attempt.conversations;
               return (
                 <li
                   key={attempt.id}

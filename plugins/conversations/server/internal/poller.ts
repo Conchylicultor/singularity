@@ -3,7 +3,7 @@ import {
   updateConversation,
   updateTaskTitle,
   adoptOrphanConversation,
-  conversationsResource,
+  recentConversationsResource,
 } from "@plugins/tasks-core/server";
 import { Runtime, type RuntimeInfo } from "./runtime";
 import type { ConversationStatus } from "../../shared/types";
@@ -123,7 +123,7 @@ async function tick(): Promise<void> {
     changed = true;
   }
 
-  if (changed) conversationsResource.notify();
+  if (changed) recentConversationsResource.notify();
 }
 
 export function startPoller(): void {

@@ -1,4 +1,4 @@
-import { and, desc, eq, lt } from "drizzle-orm";
+import { and, asc, desc, eq, lt } from "drizzle-orm";
 import { db } from "../../../../../server/src/db/client";
 import { _conversations } from "../tables";
 import { conversations } from "../schema";
@@ -16,6 +16,23 @@ export async function listActiveConversations(): Promise<Conversation[]> {
     .from(conversations)
     .where(eq(conversations.active, true))
     .orderBy(desc(conversations.createdAt));
+}
+
+// Narrow projection used by attemptsResource for the embedded conversations
+// field. Returns every conversation (no limit) sorted oldest-first so the
+// client can render them in attempt-order without further sorting.
+export async function listAllConversationSummaries(): Promise<
+  Pick<Conversation, "id" | "attemptId" | "title" | "status">[]
+> {
+  return db
+    .select({
+      id: conversations.id,
+      attemptId: conversations.attemptId,
+      title: conversations.title,
+      status: conversations.status,
+    })
+    .from(conversations)
+    .orderBy(asc(conversations.createdAt));
 }
 
 export async function listRecentGoneConversations(limit: number): Promise<Conversation[]> {

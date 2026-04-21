@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "../../../../../../../server/src/types";
 import {
   deleteConversation,
-  conversationsResource,
+  recentConversationsResource,
 } from "@plugins/conversations/server";
 import { getConversation, updateTask } from "@plugins/tasks-core/server";
 
@@ -20,7 +20,7 @@ export default {
       await updateTask(conversation.taskId, { drop: true });
 
       await deleteConversation(id);
-      conversationsResource.notify();
+      recentConversationsResource.notify();
 
       return Response.json({ ok: true });
     },

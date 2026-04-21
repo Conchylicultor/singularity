@@ -2,13 +2,12 @@ import { useMemo } from "react";
 import { useResource } from "@core";
 import { ShellCommands } from "@plugins/shell/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { conversationsResource } from "@plugins/conversations/shared";
-import type { Conversation } from "@plugins/conversations/shared";
+import type { ConversationStatus } from "@plugins/conversations/shared";
 import { agentLaunchesResource } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 import { useConversationPane } from "./conversation-pane-context";
 
-const CONV_STATUS_DOT: Record<Conversation["status"], string> = {
+const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
   starting: "bg-muted-foreground/60",
   working: "bg-primary",
   waiting: "bg-amber-500",
@@ -27,7 +26,6 @@ function formatDate(value: Date | string): string {
 
 export function AgentLaunches({ agentId }: { agentId: string }) {
   const launchesQ = useResource(agentLaunchesResource);
-  const convQ = useResource(conversationsResource);
   const convPane = useConversationPane();
 
   const launches = useMemo(() => {
@@ -36,21 +34,6 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
       .filter((l) => l.agentId === agentId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
   }, [launchesQ.data, agentId]);
-
-  const conversationsByTask = useMemo(() => {
-    const map = new Map<string, Conversation[]>();
-    const allConvs = [...(convQ.data?.active ?? []), ...(convQ.data?.recentGone ?? [])];
-    for (const c of allConvs) {
-      if (!c.taskId) continue;
-      const list = map.get(c.taskId);
-      if (list) list.push(c);
-      else map.set(c.taskId, [c]);
-    }
-    for (const list of map.values()) {
-      list.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-    }
-    return map;
-  }, [convQ.data]);
 
   return (
     <section className="flex flex-col gap-2">
@@ -62,8 +45,7 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
       ) : (
         <ul className="flex flex-col gap-1">
           {launches.map((launch) => {
-            const convs = conversationsByTask.get(launch.taskId) ?? [];
-            const primary = convs[0] ?? null;
+            const primary = launch.latestConversation;
             const isActive = primary && convPane?.activeId === primary.id;
             const title = primary?.title ?? `Launch ${formatDate(launch.createdAt)}`;
             return (

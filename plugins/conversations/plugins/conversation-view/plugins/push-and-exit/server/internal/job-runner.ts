@@ -1,6 +1,6 @@
 import { defineResource } from "../../../../../../../../server/src/resources";
 import {
-  conversationsResource,
+  recentConversationsResource,
   deleteConversation,
   getConversationRow,
   readConversationTurns,
@@ -78,7 +78,7 @@ export async function runJob(conversationId: string): Promise<void> {
 
     if (verdict.status === "clean") {
       await deleteConversation(conversationId);
-      conversationsResource.notify();
+      recentConversationsResource.notify();
     }
   } catch (err) {
     jobs.set(conversationId, {

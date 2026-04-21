@@ -3,9 +3,14 @@ import { db } from "../../../../server/src/db/client";
 import { defineResource } from "../../../../server/src/resources";
 import { pushes } from "./tables";
 import { attempts, tasks } from "./schema";
-import type { Attempt, Conversation, Push, Task } from "./schema";
+import type { Conversation, Push, Task } from "./schema";
+import type {
+  AttemptWithConversations,
+  ConversationSummary,
+} from "../../shared";
 import {
   listActiveConversations,
+  listAllConversationSummaries,
   listRecentGoneConversations,
   RECENT_GONE_LIMIT,
 } from "./queries/conversations";
@@ -16,7 +21,7 @@ type ConversationListPayload = {
   hasMoreGone: boolean;
 };
 
-export const conversationsResource = defineResource({
+export const recentConversationsResource = defineResource({
   key: "conversations",
   mode: "push",
   loader: async (): Promise<ConversationListPayload> => {
@@ -43,9 +48,24 @@ export const pushesResource = defineResource({
 export const attemptsResource = defineResource({
   key: "attempts",
   mode: "push",
-  dependsOn: [{ resource: conversationsResource }, { resource: pushesResource }],
-  loader: async (): Promise<Attempt[]> =>
-    db.select().from(attempts).orderBy(asc(attempts.createdAt)),
+  dependsOn: [{ resource: recentConversationsResource }, { resource: pushesResource }],
+  loader: async (): Promise<AttemptWithConversations[]> => {
+    const [attemptRows, convRows] = await Promise.all([
+      db.select().from(attempts).orderBy(asc(attempts.createdAt)),
+      listAllConversationSummaries(),
+    ]);
+    const byAttempt = new Map<string, ConversationSummary[]>();
+    for (const c of convRows) {
+      const summary: ConversationSummary = { id: c.id, title: c.title, status: c.status };
+      const list = byAttempt.get(c.attemptId);
+      if (list) list.push(summary);
+      else byAttempt.set(c.attemptId, [summary]);
+    }
+    return attemptRows.map((a) => ({
+      ...a,
+      conversations: byAttempt.get(a.id) ?? [],
+    }));
+  },
 });
 
 export const tasksResource = defineResource({
