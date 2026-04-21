@@ -95,7 +95,9 @@ export function TaskEvents({ taskId }: { taskId: string }) {
 
   const conversationsByAttempt = useMemo(() => {
     const map = new Map<string, Conversation[]>();
-    for (const c of (convQ.data ?? []) as Conversation[]) {
+    const payload = convQ.data as { active?: Conversation[]; recentGone?: Conversation[] } | undefined;
+    const allConvs = [...(payload?.active ?? []), ...(payload?.recentGone ?? [])];
+    for (const c of allConvs) {
       if (!attemptIds.has(c.attemptId)) continue;
       const list = map.get(c.attemptId);
       if (list) list.push(c);
