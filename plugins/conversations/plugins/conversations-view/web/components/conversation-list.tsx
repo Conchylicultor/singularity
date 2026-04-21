@@ -12,7 +12,7 @@ import {
   SidebarMenuItem,
   SidebarMenuAction,
 } from "@/components/ui/sidebar";
-import type { ConversationEntry } from "@plugins/conversations/shared/resources";
+type ConversationEntry = ReturnType<typeof useConversations>["active"][number];
 
 const PAGE_SIZE = 20;
 
