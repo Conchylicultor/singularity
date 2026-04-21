@@ -101,7 +101,7 @@ The distinct vocabulary keeps the UX unambiguous.
 Resources form a DAG via `dependsOn`. One upstream `notify()` cascades through in a single microtask flush:
 
 ```
-conversationsResource
+recentConversationsResource
   ↑ notified by: runtime poller on status change, handlers on create/delete
   ↓ feeds: attemptsResource
 
@@ -115,7 +115,7 @@ attemptsResource        (loader: SELECT * FROM attempts_v)
 tasksResource           (loader: SELECT * FROM tasks_v)
 ```
 
-A conversation going `gone` → `conversationsResource.notify()` → `attemptsResource` re-loads (attempt flips `in_progress → abandoned` or `pushed → completed`) → `tasksResource` re-loads (task flips to `attempted` or `done`). Every badge downstream updates from one trigger.
+A conversation going `gone` → `recentConversationsResource.notify()` → `attemptsResource` re-loads (attempt flips `in_progress → abandoned` or `pushed → completed`) → `tasksResource` re-loads (task flips to `attempted` or `done`). Every badge downstream updates from one trigger.
 
 ## Schema layout
 
