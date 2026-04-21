@@ -11,7 +11,7 @@ import {
   normalize,
   type NormalizedField,
 } from "@plugins/config/shared";
-import { configResource, resetConfigValue, setConfigValue } from "../internal/api";
+import { configResource, resetConfigValue, setConfigValue } from "../internal/config-client";
 import { Field } from "./field";
 import { Button } from "@/components/ui/button";
 

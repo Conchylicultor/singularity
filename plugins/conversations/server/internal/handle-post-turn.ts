@@ -1,5 +1,5 @@
 import { getConversationRuntime } from "@plugins/tasks-core/server";
-import { Runtime } from "./api";
+import { Runtime } from "./runtime";
 
 export async function handlePostTurn(
   req: Request,

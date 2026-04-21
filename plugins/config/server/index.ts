@@ -10,7 +10,7 @@ import {
 } from "./internal/handlers";
 
 export { configResource } from "./internal/resource";
-export { readConfig } from "./internal/api";
+export { readConfig } from "./internal/read-config";
 
 export default {
   id: "config",

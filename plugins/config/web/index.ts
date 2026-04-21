@@ -4,7 +4,7 @@ import { ShellCommands } from "@plugins/shell/web";
 import { MdSettings } from "react-icons/md";
 import { settingsPane } from "./views";
 
-export { configResource, useConfigValues, setConfigValue, resetConfigValue } from "./internal/api";
+export { configResource, useConfigValues, setConfigValue, resetConfigValue } from "./internal/config-client";
 export { Config, useSpecsWithPlugin, useSectionsWithPlugin } from "./slots";
 export type { SpecWithPlugin, SectionWithPlugin } from "./slots";
 
