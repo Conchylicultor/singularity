@@ -117,20 +117,18 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
                   <MiddlePaneComponent conversation={conversation} />
                 </div>
               )}
-              <div className="relative min-h-0 flex-1 overflow-hidden">
-                <TerminalComponent />
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  <TerminalComponent />
+                </div>
                 {conversation && toolbarItems.some((item) => item.group === "floating") && (
-                  <div className="pointer-events-none absolute bottom-10 right-4 z-10 flex flex-row items-center gap-2">
+                  <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border px-3 py-2">
                     {toolbarItems
                       .filter((item) => item.group === "floating")
                       .map((item, idx) => {
                         if (!item.component) return null;
                         const Component = item.component;
-                        return (
-                          <div key={item.label ?? `floating-${idx}`} className="pointer-events-auto">
-                            <Component conversation={conversation} />
-                          </div>
-                        );
+                        return <Component key={item.label ?? `floating-${idx}`} conversation={conversation} />;
                       })}
                   </div>
                 )}
