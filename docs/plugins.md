@@ -112,6 +112,12 @@
             - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file.
               - Contributes:
                 - `Code.ToolbarButton` → `ReviewButton`
+        - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
+          - Contributes:
+            - `Conversation.Toolbar` → `DropAndExitButton`
+          - Server:
+            - Uses: `conversations.conversationsResource`, `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.updateTask`
+            - `POST /api/conversations/:id/drop-and-exit`
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Contributes:
             - `Conversation.Toolbar` (group `status`) → `ModelBadge`
