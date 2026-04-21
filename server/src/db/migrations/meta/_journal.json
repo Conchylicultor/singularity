@@ -204,6 +204,13 @@
       "tag": "20260421_123817_4d324a02__add_quick_prompts_table",
       "hash": "4d324a02",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776781530000,
+      "tag": "20260421_142530_06ac885b__use_rank_text_domain",
+      "hash": "06ac885b",
+      "breakpoints": true
     }
   ]
 }
