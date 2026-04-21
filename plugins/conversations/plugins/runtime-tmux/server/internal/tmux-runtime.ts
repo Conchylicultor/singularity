@@ -145,21 +145,17 @@ export const tmuxRuntime: ConversationRuntime = {
   },
 
   async send(conversationId: string, text: string): Promise<void> {
-    // Round-trip through a tmux paste buffer so multi-line prompts and any
-    // shell metacharacters land in the pane verbatim (safer than inlining the
-    // text into `send-keys`). `paste-buffer -d` drops the buffer afterwards.
-    const buf = `singularity-send-${crypto.randomUUID()}`;
-    const load = Bun.spawn([TMUX, "load-buffer", "-b", buf, "-"], {
-      stdin: "pipe",
+    // Use send-keys -l (literal) so special characters are passed verbatim
+    // without shell interpretation. Both send-keys calls go to the same tmux
+    // server sequentially, so PTY receives [text][Enter] in guaranteed order
+    // with no timing race.
+    await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "-l", text], {
       stdout: "pipe",
       stderr: "pipe",
-    });
-    load.stdin.write(text + "\n");
-    await load.stdin.end();
-    await load.exited;
-    await Bun.spawn(
-      [TMUX, "paste-buffer", "-t", conversationId, "-b", buf, "-d"],
-      { stdout: "pipe", stderr: "pipe" },
-    ).exited;
+    }).exited;
+    await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Enter"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
   },
 };
