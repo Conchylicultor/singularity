@@ -12,6 +12,8 @@ import {
   MdFilterAltOff,
   MdDragIndicator,
   MdInput,
+  MdUnfoldMore,
+  MdUnfoldLess,
 } from "react-icons/md";
 import type { IconType } from "react-icons";
 import {
@@ -248,6 +250,20 @@ export function TasksList({
   const tree = buildTree(scoped);
   const visibleTree = hideCompleted ? hideCompletedSubtrees(tree) : tree;
 
+  const nodesWithChildren = useMemo(() => {
+    const childSet = new Set(scoped.filter((r) => r.parentId).map((r) => r.parentId!));
+    return scoped.filter((r) => childSet.has(r.id));
+  }, [scoped]);
+  const allExpanded = nodesWithChildren.length > 0 && nodesWithChildren.every((r) => r.expanded);
+  const expandAll = useCallback(async () => {
+    const next = !allExpanded;
+    await Promise.all(
+      nodesWithChildren
+        .filter((r) => r.expanded !== next)
+        .map((r) => patchTask(r.id, { expanded: next })),
+    );
+  }, [nodesWithChildren, allExpanded]);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
@@ -297,7 +313,22 @@ export function TasksList({
       onDragCancel={() => setActiveId(null)}
     >
       <div className="flex flex-col gap-0.5">
-        <div className="mb-1 flex items-center justify-end">
+        <div className="mb-1 flex items-center justify-end gap-1">
+          {nodesWithChildren.length > 0 && (
+            <button
+              type="button"
+              onClick={expandAll}
+              title={allExpanded ? "Collapse all" : "Expand all"}
+              aria-label={allExpanded ? "Collapse all" : "Expand all"}
+              className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-7 items-center justify-center rounded"
+            >
+              {allExpanded ? (
+                <MdUnfoldLess className="size-4" />
+              ) : (
+                <MdUnfoldMore className="size-4" />
+              )}
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setHideCompleted((v) => !v)}
