@@ -1,5 +1,6 @@
 import type { Command } from "commander";
-import { mkdirSync, writeFileSync } from "fs";
+import { mkdirSync, unlinkSync, writeFileSync } from "fs";
+import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
 import { basename, join, resolve } from "path";
 import { homedir } from "os";
 import { generateMigration } from "../migrations";
@@ -7,6 +8,65 @@ import { generatePluginDocs } from "../docgen";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const WORKTREES_DIR = join(homedir(), ".singularity", "worktrees");
+
+// Staging / old-dir prefixes inside web/ for atomic publish. Each invocation
+// builds into `dist.staging.<pid>/` and atomically renames to `dist/` at the
+// end — the gateway never sees a partially-wiped dist (icons present, no
+// index.html). Leftovers from a crashed run are swept at the start of each
+// build.
+const STAGING_PREFIX = "dist.staging.";
+const OLD_PREFIX = "dist.old.";
+
+// Cross-process build mutex via atomic symlink. Protects against the narrow
+// race where a detached build orphaned by a SIGKILLed backend (idle-sweep)
+// runs concurrently with a fresh build in the replacement backend. Stale
+// locks from crashed holders are stolen after a PID probe.
+async function acquireBuildLock(lockPath: string): Promise<() => void> {
+  const holder = `pid-${process.pid}-${Date.now()}`;
+  let warned = false;
+  for (let attempt = 0; attempt < 600; attempt++) {
+    try {
+      await symlink(holder, lockPath);
+      const release = () => {
+        try {
+          unlinkSync(lockPath);
+        } catch {}
+      };
+      process.on("exit", release);
+      return release;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+    }
+    try {
+      const target = await readlink(lockPath);
+      const m = target.match(/^pid-(\d+)-/);
+      if (m) {
+        try {
+          process.kill(parseInt(m[1], 10), 0);
+        } catch {
+          try {
+            await unlink(lockPath);
+          } catch {}
+          continue;
+        }
+      }
+    } catch {}
+    if (!warned) {
+      console.log("Another build is in progress; waiting...");
+      warned = true;
+    }
+    await Bun.sleep(500);
+  }
+  throw new Error(`Timed out waiting for build lock at ${lockPath}`);
+}
+
+async function sweepStagingLeftovers(webDir: string): Promise<void> {
+  for (const entry of await readdir(webDir)) {
+    if (entry.startsWith(STAGING_PREFIX) || entry.startsWith(OLD_PREFIX)) {
+      await rm(resolve(webDir, entry), { recursive: true, force: true });
+    }
+  }
+}
 
 async function exec(
   cmd: string[],
@@ -196,6 +256,10 @@ export function registerBuild(program: Command) {
       // during conversation creation).
       await waitForDatabase(name);
 
+      const webDir = resolve(root, "web");
+      await acquireBuildLock(resolve(webDir, ".build.lock"));
+      await sweepStagingLeftovers(webDir);
+
       // 1. Install dependencies
       console.log("Installing dependencies...");
       await exec(["bun", "install"], root);
@@ -219,9 +283,12 @@ export function registerBuild(program: Command) {
       console.log("Type-checking server...");
       await exec(["bunx", "tsc"], resolve(root, "server"));
 
-      // 5. Build frontend
+      // 5. Build frontend into a per-pid staging dir, then atomically
+      // publish. Vite reads `VITE_OUT_DIR` (see web/vite.config.ts).
+      const stagingName = `${STAGING_PREFIX}${process.pid}`;
+      const stagingPath = resolve(webDir, stagingName);
       console.log("Building frontend...");
-      await exec(["bun", "run", "build"], resolve(root, "web"));
+      await exec(["bun", "run", "build"], webDir, { VITE_OUT_DIR: stagingName });
 
       // Write the commit hash at build time so the server can report drift.
       const commitProc = Bun.spawnSync(["git", "rev-parse", "HEAD"], {
@@ -230,14 +297,20 @@ export function registerBuild(program: Command) {
       });
       const buildCommit = commitProc.stdout.toString().trim();
       if (buildCommit) {
-        writeFileSync(resolve(root, "web", "dist", ".build-commit"), buildCommit + "\n");
+        writeFileSync(resolve(stagingPath, ".build-commit"), buildCommit + "\n");
       }
 
-      // 3. Write registry JSON
+      // Atomic publish. Brief microsecond window between rm and rename where
+      // dist doesn't exist; acceptable since both are atomic syscalls.
+      const livePath = resolve(webDir, "dist");
+      await rm(livePath, { recursive: true, force: true });
+      await rename(stagingPath, livePath);
+
+      // 6. Write registry JSON
       console.log("Registering worktree...");
       const spec = {
         server: resolve(root, "server"),
-        web: resolve(root, "web", "dist"),
+        web: livePath,
       };
 
       mkdirSync(WORKTREES_DIR, { recursive: true });

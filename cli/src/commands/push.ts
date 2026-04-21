@@ -27,24 +27,6 @@ async function exec(cmd: string[], cwd?: string): Promise<void> {
   }
 }
 
-async function execWarn(cmd: string[], cwd?: string): Promise<boolean> {
-  const proc = Bun.spawn(cmd, {
-    cwd,
-    stdout: "inherit",
-    stderr: "inherit",
-  });
-  const exitCode = await proc.exited;
-  return exitCode === 0;
-}
-
-async function depsChanged(cwd: string, fromRef: string): Promise<boolean> {
-  const { stdout } = await run(
-    ["git", "diff", "--name-only", fromRef, "HEAD", "--", "package.json", "bun.lockb"],
-    cwd,
-  );
-  return stdout.trim().length > 0;
-}
-
 async function getMainWorktree(): Promise<string> {
   const { stdout } = await run(["git", "worktree", "list", "--porcelain"]);
   // First worktree listed is always the main one
@@ -223,25 +205,16 @@ export function registerPush(program: Command) {
       await exec(["git", "push", "--force-with-lease", "-u", "origin", branch]);
 
       // 6. Fast-forward merge into main
-      const { stdout: mainHeadBefore } = await run(["git", "rev-parse", "HEAD"], mainWorktree);
       console.log(`Merging ${branch} into main...`);
       await exec(["git", "merge", "--ff-only", branch], mainWorktree);
 
-      // 6. Push main
+      // 7. Push main
       console.log("Pushing main...");
       await exec(["git", "push"], mainWorktree);
 
-      // 7. Install deps only when package.json/bun.lockb changed — avoids a
-      //    file-lock race with the running main server on unchanged pushes.
-      if (await depsChanged(mainWorktree, mainHeadBefore)) {
-        console.log("Installing deps in main...");
-        const ok = await execWarn(["bun", "install"], mainWorktree);
-        if (!ok) {
-          console.warn(
-            "⚠ bun install failed — deps may be stale. Run `bun install` in the main worktree manually.",
-          );
-        }
-      }
+      // Dep sync in main is handled by main's auto-build on the next push
+      // event — running `bun install` here races with that build's own
+      // `bun install` and can corrupt node_modules.
 
       console.log(`Done. ${branch} merged into main and pushed.`);
     });

@@ -2,9 +2,28 @@ import { Log } from "@plugins/debug/plugins/logs/server";
 
 const buildLog = Log.channel("build");
 
-export async function runBuild(): Promise<number> {
+// In-process mutex. Coalesces overlapping runBuild() calls onto a single
+// `./singularity build` invocation. Every call site (auto-build-watcher,
+// POST /api/build) goes through this, so none of them can spawn a second
+// vite run in parallel with an in-flight one.
+let inflight: Promise<number> | null = null;
+
+export function isBuildInflight(): boolean {
+  return inflight !== null;
+}
+
+export function runBuild(): Promise<number> {
+  if (inflight) return inflight;
+  inflight = doRunBuild().finally(() => {
+    inflight = null;
+  });
+  return inflight;
+}
+
+async function doRunBuild(): Promise<number> {
   // Detach into a new session so gateway's process-group SIGKILL on idle-sweep
-  // doesn't kill the build mid-flight and leave web/dist half-wiped.
+  // doesn't kill the build mid-flight. The CLI itself uses a filesystem lock
+  // and atomic-rename publish, so even across restarts web/dist stays whole.
   const proc = Bun.spawn(["./singularity", "build", "--no-restart", "--allow-main"], {
     cwd: import.meta.dir + "/../../../..",
     stdout: "pipe",

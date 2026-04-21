@@ -1,17 +1,21 @@
 import { getLatestPush } from "@plugins/tasks-core/server";
 import { readConfig } from "@plugins/config/server";
 import { buildConfig } from "../../shared/config";
-import { runBuild } from "./run-build";
+import { isBuildInflight, runBuild } from "./run-build";
 
 const POLL_MS = 2000;
 
 let initialized = false;
 let lastPushId: string | null = null;
-let building = false;
 export let lastAutoBuildAt: string | null = null;
 
+// `runBuild()` coalesces overlapping calls internally, so even if two ticks
+// race past the early-return (both pass through the awaits concurrently)
+// they end up awaiting the same build. `lastPushId` is only advanced once
+// we commit to triggering a build, so pushes that arrive during an in-flight
+// build still get a follow-up build on a later tick.
 async function tick() {
-  if (building) return;
+  if (isBuildInflight()) return;
 
   const latest = await getLatestPush();
   const latestId = latest?.id ?? null;
@@ -23,16 +27,15 @@ async function tick() {
   }
 
   if (latestId === lastPushId) return;
-  lastPushId = latestId;
 
   const { autoBuild } = await readConfig(buildConfig);
   if (!autoBuild) return;
 
-  building = true;
+  if (isBuildInflight()) return;
+
+  lastPushId = latestId;
   lastAutoBuildAt = new Date().toISOString();
-  runBuild().finally(() => {
-    building = false;
-  });
+  runBuild().catch(() => {});
 }
 
 export function startAutoBuildWatcher() {
