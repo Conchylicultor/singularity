@@ -11,6 +11,7 @@ node_modules/
 # Build output
 dist/
 /gateway/gateway
+web/.build.lock
 
 # TypeScript
 *.tsbuildinfo
