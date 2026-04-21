@@ -4,26 +4,27 @@ export async function handleCumulative(_req: Request): Promise<Response> {
   const allTasks = await listTasks({ excludeId: CONVERSATIONS_META_TASK_ID });
 
   const toDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
-  const events: { t: number; dTotal: number; dActive: number; dCompleted: number }[] = [];
+  const events: { t: number; dTotal: number; dActive: number; dCompleted: number; dDropped: number }[] = [];
+
   for (const r of allTasks) {
     const created = toDate(r.createdAt).getTime();
-    events.push({ t: created, dTotal: 1, dActive: 1, dCompleted: 0 });
-    const closures: number[] = [];
-    if (r.finishedAt) closures.push(toDate(r.finishedAt).getTime());
-    if (r.heldAt) closures.push(toDate(r.heldAt).getTime());
-    if (closures.length > 0) {
-      const closedAt = Math.min(...closures);
-      const isFinished = r.finishedAt && toDate(r.finishedAt).getTime() === closedAt;
-      events.push({ t: closedAt, dTotal: 0, dActive: -1, dCompleted: isFinished ? 1 : 0 });
-    }
-    if (r.finishedAt && r.heldAt) {
-      const finishedAt = toDate(r.finishedAt).getTime();
-      const heldAt = toDate(r.heldAt).getTime();
-      if (heldAt < finishedAt) {
-        events.push({ t: finishedAt, dTotal: 0, dActive: 0, dCompleted: 1 });
-      }
+    events.push({ t: created, dTotal: 1, dActive: 1, dCompleted: 0, dDropped: 0 });
+
+    // The view's `finishedAt` is derived as `droppedAt` when dropped, or
+    // `minCompletedPushAt` when done — so we can't use it to distinguish the two.
+    // Use `r.status` to determine the outcome, then pick the right timestamp.
+    //
+    // "held" tasks are grouped with "dropped" since they are no longer active
+    // and haven't completed, keeping the invariant: active + completed + dropped = total.
+    if (r.status === "done" && r.finishedAt) {
+      events.push({ t: toDate(r.finishedAt).getTime(), dTotal: 0, dActive: -1, dCompleted: 1, dDropped: 0 });
+    } else if (r.status === "dropped" && r.droppedAt) {
+      events.push({ t: toDate(r.droppedAt).getTime(), dTotal: 0, dActive: -1, dCompleted: 0, dDropped: 1 });
+    } else if (r.status === "held" && r.heldAt) {
+      events.push({ t: toDate(r.heldAt).getTime(), dTotal: 0, dActive: -1, dCompleted: 0, dDropped: 1 });
     }
   }
+
   events.sort((a, b) => a.t - b.t);
 
   const fmt = (ms: number) => {
@@ -37,13 +38,15 @@ export async function handleCumulative(_req: Request): Promise<Response> {
   let total = 0;
   let active = 0;
   let completed = 0;
-  const byKey = new Map<string, { date: string; total: number; active: number; completed: number }>();
+  let dropped = 0;
+  const byKey = new Map<string, { date: string; total: number; active: number; completed: number; dropped: number }>();
   for (const e of events) {
     total += e.dTotal;
     active += e.dActive;
     completed += e.dCompleted;
+    dropped += e.dDropped;
     const key = fmt(e.t);
-    byKey.set(key, { date: key, total, active, completed });
+    byKey.set(key, { date: key, total, active, completed, dropped });
   }
   const points = [...byKey.values()];
   return Response.json({ points });

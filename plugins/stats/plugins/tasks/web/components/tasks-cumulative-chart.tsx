@@ -24,14 +24,16 @@ import {
 const TOTAL_COLOR = "var(--chart-total, #2563eb)";
 const ACTIVE_COLOR = "var(--chart-active, #f59e0b)";
 const COMPLETED_COLOR = "var(--chart-completed, #16a34a)";
+const DROPPED_COLOR = "var(--chart-dropped, #dc2626)";
 
-type SeriesKey = "total" | "active" | "completed";
+type SeriesKey = "total" | "active" | "completed" | "dropped";
 
 interface Point {
   date: string;
   total: number;
   active: number;
   completed: number;
+  dropped: number;
 }
 
 export function TasksCumulativeChart() {
@@ -42,10 +44,11 @@ export function TasksCumulativeChart() {
     total: false,
     active: false,
     completed: false,
+    dropped: false,
   });
   const onLegendClick = (e: any) => {
     const k = e?.dataKey as SeriesKey | undefined;
-    if (k === "total" || k === "active" || k === "completed") {
+    if (k === "total" || k === "active" || k === "completed" || k === "dropped") {
       setHidden((h) => ({ ...h, [k]: !h[k] }));
     }
   };
@@ -132,6 +135,17 @@ export function TasksCumulativeChart() {
               activeDot={{ r: 4 }}
               isAnimationActive={false}
               hide={hidden.completed}
+            />
+            <Line
+              type="monotone"
+              dataKey="dropped"
+              name="Dropped"
+              stroke={DROPPED_COLOR}
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+              isAnimationActive={false}
+              hide={hidden.dropped}
             />
           </LineChart>
         </ResponsiveContainer>
