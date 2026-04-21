@@ -1,6 +1,7 @@
 import type { ServerPluginDefinition } from "../../../server/src/types";
 import { handleClose } from "./internal/handle-close";
 import { handleList } from "./internal/handle-list";
+import { handleListGone } from "./internal/handle-list-gone";
 import { handleCreate } from "./internal/handle-create";
 import { handleDelete } from "./internal/handle-delete";
 import { handleGet } from "./internal/handle-get";
@@ -30,6 +31,7 @@ export default {
     "Conversation domain: shared server code and types; view plugins live under `plugins/`.",
   httpRoutes: {
     "GET /api/conversations": handleList,
+    "GET /api/conversations/gone": handleListGone,
     "GET /api/conversations/:id": handleGet,
     "POST /api/conversations": handleCreate,
     "DELETE /api/conversations": handleDelete,

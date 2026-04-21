@@ -2,6 +2,12 @@ import type { Conversation } from "./types";
 
 export type ConversationEntry = Conversation;
 
+export type ConversationListPayload = {
+  active: ConversationEntry[];
+  recentGone: ConversationEntry[];
+  hasMoreGone: boolean;
+};
+
 // Mirrors `resourceDescriptor` from @core (plugin-core is web-only; this
 // module is shared with the server, which can't import from it).
 function descriptor<T>(key: string) {
@@ -11,4 +17,4 @@ function descriptor<T>(key: string) {
   };
 }
 
-export const conversationsResource = descriptor<ConversationEntry[]>("conversations");
+export const conversationsResource = descriptor<ConversationListPayload>("conversations");

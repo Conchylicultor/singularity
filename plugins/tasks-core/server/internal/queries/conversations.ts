@@ -1,11 +1,42 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, lt } from "drizzle-orm";
 import { db } from "../../../../../server/src/db/client";
 import { _conversations } from "../tables";
 import { conversations } from "../schema";
 import type { Conversation } from "../schema";
 
+export const RECENT_GONE_LIMIT = 30;
+
 export async function listConversations(): Promise<Conversation[]> {
   return db.select().from(conversations).orderBy(desc(conversations.createdAt));
+}
+
+export async function listActiveConversations(): Promise<Conversation[]> {
+  return db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.active, true))
+    .orderBy(desc(conversations.createdAt));
+}
+
+export async function listRecentGoneConversations(limit: number): Promise<Conversation[]> {
+  return db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.active, false))
+    .orderBy(desc(conversations.createdAt))
+    .limit(limit);
+}
+
+export async function listGoneConversationsBefore(
+  before: Date,
+  limit: number,
+): Promise<Conversation[]> {
+  return db
+    .select()
+    .from(conversations)
+    .where(and(eq(conversations.active, false), lt(conversations.createdAt, before)))
+    .orderBy(desc(conversations.createdAt))
+    .limit(limit);
 }
 
 export async function getConversation(id: string): Promise<Conversation | null> {

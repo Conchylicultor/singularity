@@ -50,9 +50,13 @@ export {
 
 export {
   listConversations,
+  listActiveConversations,
+  listRecentGoneConversations,
+  listGoneConversationsBefore,
   getConversation,
   getConversationRuntime,
   getConversationClaudeSessionId,
+  RECENT_GONE_LIMIT,
 } from "./internal/queries/conversations";
 
 export {

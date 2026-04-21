@@ -2,14 +2,35 @@ import { asc, desc } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { defineResource } from "../../../../server/src/resources";
 import { pushes } from "./tables";
-import { attempts, conversations, tasks } from "./schema";
+import { attempts, tasks } from "./schema";
 import type { Attempt, Conversation, Push, Task } from "./schema";
+import {
+  listActiveConversations,
+  listRecentGoneConversations,
+  RECENT_GONE_LIMIT,
+} from "./queries/conversations";
+
+type ConversationListPayload = {
+  active: Conversation[];
+  recentGone: Conversation[];
+  hasMoreGone: boolean;
+};
 
 export const conversationsResource = defineResource({
   key: "conversations",
   mode: "push",
-  loader: async (): Promise<Conversation[]> =>
-    db.select().from(conversations).orderBy(desc(conversations.createdAt)),
+  loader: async (): Promise<ConversationListPayload> => {
+    const [active, goneRows] = await Promise.all([
+      listActiveConversations(),
+      listRecentGoneConversations(RECENT_GONE_LIMIT + 1),
+    ]);
+    const hasMoreGone = goneRows.length > RECENT_GONE_LIMIT;
+    return {
+      active,
+      recentGone: hasMoreGone ? goneRows.slice(0, RECENT_GONE_LIMIT) : goneRows,
+      hasMoreGone,
+    };
+  },
 });
 
 export const pushesResource = defineResource({

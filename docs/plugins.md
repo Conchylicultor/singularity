@@ -54,7 +54,7 @@
 
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Exports (web):
-    - Values: `useConversation`, `useConversations`
+    - Values: `GonePageSchema`, `useConversation`, `useConversations`
   - Exports (server):
     - Types: `Conversation`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `RuntimeInfo`, `Turn`
     - Values: `ConversationModelSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `Runtime`, `sendTurn`
@@ -62,8 +62,9 @@
     - Types: `Conversation`, `ConversationEntry`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationModelSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`
   - Server:
-    - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationsResource`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.insertConversation`, `tasks-core.listConversations`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
+    - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationsResource`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.insertConversation`, `tasks-core.listConversations`, `tasks-core.listGoneConversationsBefore`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
+    - `GET /api/conversations/gone`
     - `GET /api/conversations/:id`
     - `POST /api/conversations`
     - `DELETE /api/conversations`
@@ -283,7 +284,7 @@
 - **`tasks-core`** — Schema + repository layer for the tasks/attempts/conversations FK cluster.
   - Exports (server):
     - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `Conversation`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `Task`, `TaskFilters`, `TaskStatus`, `UpdateConversationPatch`, `UpdateTaskPatch`
-    - Values: `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `conversationsResource`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listAttempts`, `listAttemptsForTask`, `listConversations`, `listPushes`, `listPushesForAttempt`, `listTasks`, `markConversationClosed`, `pushesResource`, `PushSchema`, `removeTaskDependency`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`, `updateConversation`, `updateTask`, `updateTaskTitle`
+    - Values: `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `conversationsResource`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listAttempts`, `listAttemptsForTask`, `listConversations`, `listGoneConversationsBefore`, `listPushes`, `listPushesForAttempt`, `listRecentGoneConversations`, `listTasks`, `markConversationClosed`, `pushesResource`, `PushSchema`, `RECENT_GONE_LIMIT`, `removeTaskDependency`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`, `updateConversation`, `updateTask`, `updateTaskTitle`
   - Exports (shared):
     - Types: `Attempt`, `AttemptStatus`, `Conversation`, `Push`, `Task`, `TaskStatus`
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `ConversationSchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`

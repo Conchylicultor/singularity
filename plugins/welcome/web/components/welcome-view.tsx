@@ -17,10 +17,11 @@ function formatRelativeTime(date: Date): string {
 }
 
 export function WelcomeView() {
-  const { conversations, isLoading } = useConversations();
+  const { active, recentGone, isLoading } = useConversations();
+  const conversations = [...active, ...recentGone];
 
-  const activeCount = conversations.filter((c) => c.active).length;
-  const idleCount = conversations.length - activeCount;
+  const activeCount = active.length;
+  const idleCount = recentGone.length;
 
   const openConversation = (name: string) => {
     Shell.OpenPane(conversationPane({ session_id: name }));

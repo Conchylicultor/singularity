@@ -4,24 +4,35 @@ import { z } from "zod";
 import { ConversationSchema } from "../shared/types";
 import { conversationsResource, type ConversationEntry } from "../shared/resources";
 
-const EntryArraySchema = z.array(ConversationSchema);
+const PayloadSchema = z.object({
+  active: z.array(ConversationSchema),
+  recentGone: z.array(ConversationSchema),
+  hasMoreGone: z.boolean(),
+});
+
+export const GonePageSchema = z.object({
+  items: z.array(ConversationSchema),
+  hasMore: z.boolean(),
+});
 
 export function useConversations(): {
-  conversations: ConversationEntry[];
+  active: ConversationEntry[];
+  recentGone: ConversationEntry[];
+  hasMoreGone: boolean;
   isLoading: boolean;
 } {
   const q = useResource(conversationsResource);
-  const conversations = useMemo<ConversationEntry[]>(() => {
-    if (!q.data) return [];
-    return EntryArraySchema.parse(q.data);
-  }, [q.data]);
-  return { conversations, isLoading: q.isLoading };
+  return useMemo(() => {
+    if (!q.data) return { active: [], recentGone: [], hasMoreGone: false, isLoading: q.isLoading };
+    const payload = PayloadSchema.parse(q.data);
+    return { ...payload, isLoading: q.isLoading };
+  }, [q.data, q.isLoading]);
 }
 
 export function useConversation(id: string): ConversationEntry | null {
-  const { conversations } = useConversations();
+  const { active, recentGone } = useConversations();
   return useMemo(
-    () => conversations.find((c) => c.id === id) ?? null,
-    [conversations, id],
+    () => [...active, ...recentGone].find((c) => c.id === id) ?? null,
+    [active, recentGone, id],
   );
 }
