@@ -56,7 +56,7 @@
   - Defines:
     - DB schema: `plugins/conversations/server/schema.ts`
   - Exports (web):
-    - Values: `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
+    - Values: `CONV_STATUS_DOT`, `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
   - Exports (server):
     - Types: `Conversation`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `RuntimeInfo`, `Turn`
     - Values: `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `Runtime`, `sendTurn`
