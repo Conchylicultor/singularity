@@ -253,14 +253,12 @@ export function registerBuild(program: Command) {
       }
       console.log("Restarting backend...");
       let gatewayUp = true;
-      let backendWasRunning = false;
       try {
         const resp = await fetch(
           `http://localhost:9000/gateway/worktrees/${name}/restart`,
           { method: "POST" },
         );
         if (resp.ok) {
-          backendWasRunning = true;
           console.log("Backend restarted (will respawn on next request)");
         } else if (resp.status === 404) {
           console.log("No running backend to restart");
@@ -277,7 +275,7 @@ export function registerBuild(program: Command) {
       // server can still fail to evaluate (missing env, init-time cycle, etc.)
       // and surface as a 502 on first request. Hit /api/health to force a boot
       // and fail the build if the server can't come up.
-      if (gatewayUp && backendWasRunning) {
+      if (gatewayUp) {
         await probeHealth(name);
       }
 
