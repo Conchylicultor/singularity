@@ -86,8 +86,20 @@ export function ShellLayout() {
     Array<{ id: string } & PaneDescriptor>
   >([]);
 
-  const openPane = (descriptor: PaneDescriptor) => {
+  // Maps stable component references to their assigned pane id so that
+  // navigating within the same panel type (e.g. /tasks → /tasks/:id) reuses
+  // the existing pane id. This prevents React from unmounting the panel, which
+  // would reset local state like filter toggles and scroll position.
+  const componentIds = useRef(new Map<React.ComponentType, string>());
+
+  const openPane = (descriptor: PaneDescriptor): string => {
+    const existing = componentIds.current.get(descriptor.component);
+    if (existing !== undefined) {
+      setPanels([{ id: existing, ...descriptor }]);
+      return existing;
+    }
     const id = `pane-${nextPaneId++}`;
+    componentIds.current.set(descriptor.component, id);
     setPanels([{ id, ...descriptor }]);
     return id;
   };
