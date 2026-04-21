@@ -1,10 +1,10 @@
 import { defineResource } from "../../../../../../../../server/src/resources";
 import {
-  Runtime,
   conversationsResource,
   deleteConversation,
   getConversationRow,
   readConversationTurns,
+  sendTurn,
   type Turn,
 } from "@plugins/conversations/server";
 import { CLEAN_TOKEN, FLAG_TOKEN, PUSH_AND_EXIT_PROMPT } from "./prompt";
@@ -52,10 +52,7 @@ function interpret(
 export async function runJob(conversationId: string): Promise<void> {
   const triggeredAt = new Date().toISOString();
   try {
-    const row = await getConversationRow(conversationId);
-    if (!row) throw new Error("Conversation not found");
-
-    await Runtime.get(row.runtime).send(conversationId, PUSH_AND_EXIT_PROMPT);
+    await sendTurn(conversationId, PUSH_AND_EXIT_PROMPT);
     await waitForCondition(conversationId, (s) => s === "working", 60_000);
     await waitForCondition(conversationId, (s) => s !== "working", 600_000);
 

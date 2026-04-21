@@ -52,6 +52,12 @@ export const Runtime = {
   },
 };
 
+export async function sendTurn(id: string, text: string): Promise<void> {
+  const row = await getConversationRuntime(id);
+  if (!row) throw new Error(`Conversation ${id} not found`);
+  await Runtime.get(row.runtime).send(id, text);
+}
+
 export async function getConversationRow(id: string): Promise<{
   status: string;
   runtime: string;

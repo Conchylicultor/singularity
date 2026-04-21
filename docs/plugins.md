@@ -57,7 +57,7 @@
     - Values: `useConversation`, `useConversations`
   - Exports (server):
     - Types: `Conversation`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `RuntimeInfo`, `Turn`
-    - Values: `ConversationModelSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `Runtime`
+    - Values: `ConversationModelSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `Runtime`, `sendTurn`
   - Exports (shared):
     - Types: `Conversation`, `ConversationEntry`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationModelSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`
@@ -128,7 +128,7 @@
           - Contributes:
             - `Conversation.Toolbar` → `PushAndExitButton`
           - Server:
-            - Uses: `conversations.Runtime`, `conversations.Turn`, `conversations.conversationsResource`, `conversations.deleteConversation`, `conversations.getConversationRow`, `conversations.readConversationTurns`
+            - Uses: `conversations.Turn`, `conversations.conversationsResource`, `conversations.deleteConversation`, `conversations.getConversationRow`, `conversations.readConversationTurns`, `conversations.sendTurn`
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
             - `DELETE /api/conversations/:id/push-and-exit`

@@ -1,5 +1,4 @@
-import { getConversationRuntime } from "@plugins/tasks-core/server";
-import { Runtime } from "./runtime";
+import { sendTurn } from "./runtime";
 
 export async function handlePostTurn(
   req: Request,
@@ -13,9 +12,13 @@ export async function handlePostTurn(
     return Response.json({ error: "body.text required" }, { status: 400 });
   }
 
-  const row = await getConversationRuntime(id);
-  if (!row) return new Response("Not found", { status: 404 });
-
-  await Runtime.get(row.runtime).send(id, body.text);
+  try {
+    await sendTurn(id, body.text);
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("not found")) {
+      return new Response("Not found", { status: 404 });
+    }
+    throw err;
+  }
   return Response.json({ ok: true });
 }
