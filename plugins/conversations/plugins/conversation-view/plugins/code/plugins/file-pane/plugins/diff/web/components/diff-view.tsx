@@ -78,6 +78,19 @@ export function DiffView({
     fileContentRef.current = null;
   }, [state]);
 
+  useEffect(() => {
+    if (!baseHunks) return;
+    const ref = base ?? "HEAD";
+    fetch(`/api/conversations/${conversationId}/file?path=${encodeURIComponent(path)}&ref=${encodeURIComponent(ref)}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((body: { content?: string } | null) => {
+        if (!body?.content) return;
+        fileContentRef.current = body.content;
+        setTotalLines(body.content.split("\n").length);
+      })
+      .catch(() => {});
+  }, [baseHunks, conversationId, path, base]);
+
   const effectiveHunks = expandedHunks ?? baseHunks;
   const tokens = useDiffTokens(effectiveHunks, path, dark, conversationId, base);
   const containerRef = useRef<HTMLDivElement>(null);
