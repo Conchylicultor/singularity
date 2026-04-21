@@ -27,6 +27,24 @@ async function exec(cmd: string[], cwd?: string): Promise<void> {
   }
 }
 
+async function execWarn(cmd: string[], cwd?: string): Promise<boolean> {
+  const proc = Bun.spawn(cmd, {
+    cwd,
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  const exitCode = await proc.exited;
+  return exitCode === 0;
+}
+
+async function depsChanged(cwd: string, fromRef: string): Promise<boolean> {
+  const { stdout } = await run(
+    ["git", "diff", "--name-only", fromRef, "HEAD", "--", "package.json", "bun.lockb"],
+    cwd,
+  );
+  return stdout.trim().length > 0;
+}
+
 async function getMainWorktree(): Promise<string> {
   const { stdout } = await run(["git", "worktree", "list", "--porcelain"]);
   // First worktree listed is always the main one
@@ -204,7 +222,8 @@ export function registerPush(program: Command) {
       console.log(`Pushing branch ${branch}...`);
       await exec(["git", "push", "--force-with-lease", "-u", "origin", branch]);
 
-      // 5. Fast-forward merge into main
+      // 6. Fast-forward merge into main
+      const { stdout: mainHeadBefore } = await run(["git", "rev-parse", "HEAD"], mainWorktree);
       console.log(`Merging ${branch} into main...`);
       await exec(["git", "merge", "--ff-only", branch], mainWorktree);
 
@@ -212,12 +231,17 @@ export function registerPush(program: Command) {
       console.log("Pushing main...");
       await exec(["git", "push"], mainWorktree);
 
-      // 7. Install deps in main so its long-running backend matches the code
-      //    it will respawn with. Without this, a dependency added in a worktree
-      //    lands in main's package.json but not its node_modules, and the
-      //    next backend respawn (via gateway restart or idle sweep) crashes.
-      console.log("Installing deps in main...");
-      await exec(["bun", "install"], mainWorktree);
+      // 7. Install deps only when package.json/bun.lockb changed — avoids a
+      //    file-lock race with the running main server on unchanged pushes.
+      if (await depsChanged(mainWorktree, mainHeadBefore)) {
+        console.log("Installing deps in main...");
+        const ok = await execWarn(["bun", "install"], mainWorktree);
+        if (!ok) {
+          console.warn(
+            "⚠ bun install failed — deps may be stale. Run `bun install` in the main worktree manually.",
+          );
+        }
+      }
 
       console.log(`Done. ${branch} merged into main and pushed.`);
     });
