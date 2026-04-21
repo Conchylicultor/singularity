@@ -10,26 +10,56 @@ export function ScreenshotView({ id }: { id: string }) {
   const [tool, setTool] = useState<Tool>("none");
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [draw, setDraw] = useState<DrawSettings>({ color: "#ef4444", width: 4 });
+  // Set to true once the blob is delivered (either via BroadcastChannel or
+  // server poll) so the other path knows to bail out.
+  const blobDelivered = useRef(false);
 
+  function resetEdits() {
+    setTool("none");
+    setStrokes([]);
+  }
+
+  // Primary delivery: BroadcastChannel receives the blob directly from the
+  // capturing tab the instant domToBlob finishes — no server roundtrip.
+  // Send a "ready" ping so the original tab replies even if it finished
+  // broadcasting before this tab's listener was set up.
+  useEffect(() => {
+    const ch = new BroadcastChannel(`screenshot:${id}`);
+    ch.onmessage = (e: MessageEvent) => {
+      if (e.data instanceof Blob) {
+        blobDelivered.current = true;
+        setImageBlob(e.data);
+        resetEdits();
+        ch.close();
+      }
+    };
+    ch.postMessage("ready");
+    return () => ch.close();
+  }, [id]);
+
+  // Fallback delivery: server poll handles page refreshes and cases where the
+  // BroadcastChannel message was missed (tab not yet listening when sent).
   const reload = useCallback(async () => {
     setError(null);
-    // The tab is opened before the upload completes; retry a 404 for a while
-    // so the view lights up as soon as the bytes arrive.
     const deadline = Date.now() + 30_000;
     while (true) {
+      if (blobDelivered.current) return;
       try {
         const res = await fetch(`/api/screenshots/${id}`);
         if (res.ok) {
-          setImageBlob(await res.blob());
-          resetEdits();
+          if (!blobDelivered.current) {
+            setImageBlob(await res.blob());
+            resetEdits();
+          }
           return;
         }
         if (res.status !== 404 || Date.now() > deadline) {
-          setError(res.status === 404 ? "Screenshot not found" : `Failed (${res.status})`);
+          if (!blobDelivered.current)
+            setError(res.status === 404 ? "Screenshot not found" : `Failed (${res.status})`);
           return;
         }
       } catch (err) {
-        setError((err as Error).message);
+        if (!blobDelivered.current) setError((err as Error).message);
         return;
       }
       await new Promise((r) => setTimeout(r, 150));
@@ -39,11 +69,6 @@ export function ScreenshotView({ id }: { id: string }) {
   useEffect(() => {
     reload();
   }, [reload]);
-
-  function resetEdits() {
-    setTool("none");
-    setStrokes([]);
-  }
 
   return (
     <div className="flex h-[calc(100svh-3rem)] min-h-0 w-full overflow-hidden">

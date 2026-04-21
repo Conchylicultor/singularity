@@ -16,20 +16,17 @@ export function ScreenshotButton() {
       aria-label="Screenshot"
       disabled={busy}
       onClick={async () => {
-        // Open the tab synchronously within the click event — browsers block
-        // window.open called after an await as an unsolicited popup.
-        const id = crypto.randomUUID();
-        window.open(`/screenshot/${id}`, "_blank", "noopener");
-
-        // flushSync + two rAFs guarantees the disabled state is committed
-        // AND painted before domToBlob blocks the main thread (CSS
-        // animations would freeze while blocked, so we only rely on the
-        // static `disabled:opacity-50` from the Button variant).
+        // flushSync + two rAFs: commit the disabled state and let it paint
+        // before domToBlob blocks the main thread.
         flushSync(() => setBusy(true));
         await new Promise<void>((r) =>
           requestAnimationFrame(() => requestAnimationFrame(() => r())),
         );
         try {
+          // Capture while the tab is still in the foreground.  Opening the
+          // new tab first would background this tab, which causes Chrome to
+          // pause SVG rasterization (the <img> load event that
+          // modern-screenshot relies on never fires in a hidden tab).
           const blob = await domToBlob(document.documentElement, {
             scale: window.devicePixelRatio || 1,
           });
@@ -37,6 +34,25 @@ export function ScreenshotButton() {
             ShellCommands.Toast({ description: "Screenshot failed", variant: "error" });
             return;
           }
+
+          const id = crypto.randomUUID();
+
+          // Open the tab after capture — typically < 2 s after the click,
+          // well within Chrome's 5-second user-activation window.
+          window.open(`/screenshot/${id}`, "_blank", "noopener");
+
+          // Deliver blob directly via BroadcastChannel so the new tab
+          // displays the screenshot without waiting for the server roundtrip.
+          // Use request-response: broadcast immediately (fast tab) AND reply
+          // to "ready" pings from tabs that load after the first broadcast.
+          const ch = new BroadcastChannel(`screenshot:${id}`);
+          ch.postMessage(blob);
+          ch.onmessage = (e: MessageEvent) => {
+            if (e.data === "ready") ch.postMessage(blob);
+          };
+          // Stop listening after the tab has had time to receive the blob.
+          setTimeout(() => ch.close(), 15_000);
+
           void upload(id, blob);
         } catch (err) {
           ShellCommands.Toast({
