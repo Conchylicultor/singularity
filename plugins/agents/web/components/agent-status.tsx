@@ -1,15 +1,8 @@
 import { useMemo } from "react";
 import { useResource } from "@core";
-import type { ConversationStatus } from "@plugins/conversations/shared";
+import { CONV_STATUS_DOT } from "@plugins/conversations/web/status-dot";
 import { agentLaunchesResource } from "../../shared/resources";
 import { cn } from "@/lib/utils";
-
-const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
-  starting: "bg-muted-foreground/60",
-  working: "bg-primary",
-  waiting: "bg-amber-500",
-  gone: "bg-muted-foreground/40",
-};
 
 export function AgentStatus({ agentId, size = "sm" }: { agentId: string; size?: "sm" | "md" }) {
   const launchesQ = useResource(agentLaunchesResource);

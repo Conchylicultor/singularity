@@ -3,7 +3,7 @@ import { MdOpenInNew } from "react-icons/md";
 import { useResource } from "@core";
 import { ShellCommands } from "@plugins/shell/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import type { ConversationStatus } from "@plugins/conversations/shared";
+import { CONV_STATUS_DOT } from "@plugins/conversations/web/status-dot";
 import {
   attemptsResource,
   pushesResource,
@@ -61,12 +61,6 @@ const ATTEMPT_STATUS_LABELS: Record<Attempt["status"], string> = {
   abandoned: "Abandoned",
 };
 
-const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
-  starting: "bg-muted-foreground/60",
-  working: "bg-primary",
-  waiting: "bg-amber-500",
-  gone: "bg-muted-foreground/40",
-};
 
 export function TaskEvents({ taskId }: { taskId: string }) {
   const attemptsQ = useResource(attemptsResource);

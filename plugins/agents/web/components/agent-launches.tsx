@@ -2,17 +2,10 @@ import { useMemo } from "react";
 import { useResource } from "@core";
 import { ShellCommands } from "@plugins/shell/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import type { ConversationStatus } from "@plugins/conversations/shared";
+import { CONV_STATUS_DOT } from "@plugins/conversations/web/status-dot";
 import { agentLaunchesResource } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 import { useConversationPane } from "./conversation-pane-context";
-
-const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
-  starting: "bg-muted-foreground/60",
-  working: "bg-primary",
-  waiting: "bg-amber-500",
-  gone: "bg-muted-foreground/40",
-};
 
 function formatDate(value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
