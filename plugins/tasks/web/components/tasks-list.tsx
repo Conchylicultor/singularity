@@ -513,7 +513,7 @@ function TaskNode({
 
   useEffect(() => {
     if (pendingFocusId === node.id && inputRef.current) {
-      inputRef.current.focus();
+      inputRef.current.focus({ preventScroll: true });
       inputRef.current.select();
       clearPendingFocus();
     }
