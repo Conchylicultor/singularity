@@ -1,9 +1,9 @@
 import { defineSlot } from "@core";
 import type { ComponentType } from "react";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 
 export const Code = {
   ToolbarButton: defineSlot<{
-    component: ComponentType<{ conversation: ConversationState }>;
+    component: ComponentType<{ conversation: ConversationRecord }>;
   }>("conversation.code.toolbar-button"),
 };

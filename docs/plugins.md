@@ -53,6 +53,8 @@
     - `DELETE /api/config/:key`
 
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
+  - Defines:
+    - DB schema: `plugins/conversations/server/schema.ts`
   - Exports (web):
     - Values: `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
   - Exports (server):
@@ -77,7 +79,7 @@
         - Slots: `Conversation.Toolbar`, `Conversation.Title`
         - Commands: `Conversation.OpenMiddlePane`, `Conversation.OpenRightPane`, `Conversation.OpenMainView`
       - Exports (web):
-        - Types: `ConversationState`, `MainViewDescriptor`, `MiddlePaneDescriptor`, `RightPaneDescriptor`
+        - Types: `ConversationRecord`, `MainViewDescriptor`, `MiddlePaneDescriptor`, `RightPaneDescriptor`
         - Values: `Conversation`, `ConversationCommands`, `conversationPane`, `ConversationView`, `MainViewContext`, `MiddlePaneContext`, `RightPaneContext`, `useMainView`, `useMiddlePane`, `useRightPane`
       - Contributes:
         - `Shell.Route` `/c/:id`

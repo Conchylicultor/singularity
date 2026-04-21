@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ShellCommands as Shell } from "@plugins/shell/web";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -11,7 +11,7 @@ import {
 export function ConversationTitle({
   conversation,
 }: {
-  conversation: ConversationState;
+  conversation: ConversationRecord;
 }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");

@@ -1,4 +1,4 @@
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import type { ConversationModel } from "@plugins/conversations/shared";
 
 const MODEL_CLASSES: Record<ConversationModel, string> = {
@@ -9,7 +9,7 @@ const MODEL_CLASSES: Record<ConversationModel, string> = {
 export function ModelBadge({
   conversation,
 }: {
-  conversation: ConversationState;
+  conversation: ConversationRecord;
 }) {
   return (
     <span

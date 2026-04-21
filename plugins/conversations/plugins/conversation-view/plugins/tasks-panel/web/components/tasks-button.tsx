@@ -1,5 +1,5 @@
 import { MdChecklist } from "react-icons/md";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   ConversationCommands as Conversation,
   useRightPane,
@@ -10,7 +10,7 @@ import { tasksRightPane, TASKS_PANE_ID } from "../views";
 export function TasksButton({
   conversation: _conversation,
 }: {
-  conversation: ConversationState;
+  conversation: ConversationRecord;
 }) {
   const current = useRightPane();
   const isOpen = current?.id === TASKS_PANE_ID;

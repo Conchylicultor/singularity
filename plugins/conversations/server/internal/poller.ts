@@ -6,7 +6,7 @@ import {
   recentConversationsResource,
 } from "@plugins/tasks-core/server";
 import { Runtime, type RuntimeInfo } from "./runtime";
-import type { ConversationStatus } from "../../shared/types";
+import type { ConversationStatus } from "../../shared";
 import { worktreePathFor } from "@server/worktree";
 
 function liveStatusFor(info: RuntimeInfo): ConversationStatus {

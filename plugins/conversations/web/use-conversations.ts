@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useResource } from "@core";
 import { z } from "zod";
-import { ConversationSchema } from "../shared/types";
+import { ConversationSchema } from "../shared";
 import { recentConversationsResource, type ConversationEntry } from "../shared/resources";
 
 const PayloadSchema = z.object({

@@ -2,17 +2,17 @@ import { defineSlot } from "@core";
 import type { ComponentType } from "react";
 import type { Conversation as ConversationRecord } from "@plugins/conversations/shared";
 
-export type ConversationState = ConversationRecord;
+export type { Conversation as ConversationRecord } from "@plugins/conversations/shared";
 
 export const Conversation = {
   Toolbar: defineSlot<{
     label?: string;
     icon?: ComponentType<{ className?: string }>;
-    onClick?: (conversation: ConversationState) => void;
-    component?: ComponentType<{ conversation: ConversationState }>;
+    onClick?: (conversation: ConversationRecord) => void;
+    component?: ComponentType<{ conversation: ConversationRecord }>;
     group?: string;
   }>("conversation.toolbar"),
   Title: defineSlot<{
-    component: ComponentType<{ conversation: ConversationState }>;
+    component: ComponentType<{ conversation: ConversationRecord }>;
   }>("conversation.title"),
 };

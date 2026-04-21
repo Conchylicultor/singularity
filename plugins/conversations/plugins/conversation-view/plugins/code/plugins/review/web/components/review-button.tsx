@@ -1,5 +1,5 @@
 import { MdRateReview, MdWarning } from "react-icons/md";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   ConversationCommands as Conversation,
   useMainView,
@@ -9,7 +9,7 @@ import { useEditedFiles } from "../../../../web/use-edited-files";
 import { reviewMainView, REVIEW_MAIN_VIEW_ID } from "../views";
 import { isCoreFile } from "../core-files";
 
-export function ReviewButton({ conversation }: { conversation: ConversationState }) {
+export function ReviewButton({ conversation }: { conversation: ConversationRecord }) {
   const { files } = useEditedFiles(conversation.id);
   const current = useMainView();
   const isOpen = current?.id === REVIEW_MAIN_VIEW_ID;

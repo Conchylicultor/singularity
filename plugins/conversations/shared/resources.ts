@@ -1,4 +1,4 @@
-import type { Conversation } from "./types";
+import type { Conversation } from "@plugins/tasks-core/shared";
 import { resourceDescriptor } from "@core/shared/resource";
 
 export type ConversationEntry = Conversation;

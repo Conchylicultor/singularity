@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { MdClose } from "react-icons/md";
 import { Button } from "@/components/ui/button";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { ConversationCommands as Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "../../../../web/use-edited-files";
 import { FilePaneView } from "../../../file-pane/web/components/file-pane";
 import { isDocFile } from "../views";
 import { DocRow } from "./doc-row";
 
-export function DocsPane({ conversation }: { conversation: ConversationState }) {
+export function DocsPane({ conversation }: { conversation: ConversationRecord }) {
   const { files } = useEditedFiles(conversation.id);
 
   const docs = useMemo(() => {

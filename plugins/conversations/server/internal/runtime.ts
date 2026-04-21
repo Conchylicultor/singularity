@@ -24,7 +24,7 @@ export interface ConversationRuntime {
     worktreePath: string,
     opts?: {
       prompt?: string;
-      model?: import("../model").ConversationModel;
+      model?: import("../schema").ConversationModel;
       spawnedBy?: string | null;
     },
   ): Promise<void>;

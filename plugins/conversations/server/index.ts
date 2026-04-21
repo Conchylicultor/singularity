@@ -10,8 +10,8 @@ import { handlePostTurn } from "./internal/handle-post-turn";
 import { startPoller } from "./internal/poller";
 import { forkErrorsResource } from "./internal/fork-errors";
 
-export { ConversationModelSchema } from "./model";
-export type { ConversationModel } from "./model";
+export { ConversationModelSchema } from "./schema";
+export type { ConversationModel } from "./schema";
 export { ConversationStatusSchema, isActiveStatus } from "./status";
 export type { ConversationStatus } from "./status";
 export {

@@ -1,4 +1,4 @@
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import type { ConversationStatus } from "@plugins/conversations/shared";
 
 const STATUS_CLASSES: Record<ConversationStatus, string> = {
@@ -15,7 +15,7 @@ function prettify(status: ConversationStatus): string {
 export function StatusBadge({
   conversation,
 }: {
-  conversation: ConversationState;
+  conversation: ConversationRecord;
 }) {
   return (
     <span

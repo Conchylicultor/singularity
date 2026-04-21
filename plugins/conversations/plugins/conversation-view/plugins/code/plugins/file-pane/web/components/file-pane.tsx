@@ -2,7 +2,7 @@ import { useMemo, useState, useCallback } from "react";
 import { MdClose, MdContentCopy, MdCheck } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { ConversationCommands as Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import type { EditedFileStatus } from "../../../../shared/protocol";
 import { FilePane, resolveRenderers } from "../slots";
@@ -13,7 +13,7 @@ export function FilePaneView({
   status,
   embedded = false,
 }: {
-  conversation: ConversationState;
+  conversation: ConversationRecord;
   path: string;
   status: EditedFileStatus;
   embedded?: boolean;

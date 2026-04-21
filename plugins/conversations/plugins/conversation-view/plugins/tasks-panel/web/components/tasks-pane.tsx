@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MdClose } from "react-icons/md";
 import { Button } from "@/components/ui/button";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { ConversationCommands as Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { TasksList } from "@plugins/tasks/web";
 import { TaskDetail } from "@plugins/tasks/web";
@@ -9,7 +9,7 @@ import { TaskDetail } from "@plugins/tasks/web";
 export function TasksPane({
   conversation,
 }: {
-  conversation: ConversationState;
+  conversation: ConversationRecord;
 }) {
   const rootId = conversation.taskId;
   const [selectedId, setSelectedId] = useState<string>(rootId);

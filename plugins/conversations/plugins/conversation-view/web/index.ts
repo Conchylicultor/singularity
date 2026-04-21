@@ -3,7 +3,7 @@ import { Shell } from "@plugins/shell/web";
 import { conversationPane } from "./views";
 
 export { Conversation } from "./slots";
-export type { ConversationState } from "./slots";
+export type { ConversationRecord } from "./slots";
 export { Conversation as ConversationCommands } from "./commands";
 export type { MiddlePaneDescriptor, RightPaneDescriptor, MainViewDescriptor } from "./commands";
 export { useMiddlePane, useRightPane, useMainView, MiddlePaneContext, RightPaneContext, MainViewContext } from "./commands";

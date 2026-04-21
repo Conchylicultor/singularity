@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PauseCircle } from "lucide-react";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 export function HoldAndExitButton({
   conversation,
 }: {
-  conversation: ConversationState;
+  conversation: ConversationRecord;
 }) {
   const live = useConversation(conversation.id) ?? conversation;
   const [busy, setBusy] = useState(false);

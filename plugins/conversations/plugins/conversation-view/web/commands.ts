@@ -1,10 +1,10 @@
 import { createContext, useContext, type ComponentType } from "react";
 import { defineCommand } from "@core";
-import type { ConversationState } from "./slots";
+import type { ConversationRecord } from "./slots";
 
 export interface MiddlePaneDescriptor {
   id: string;
-  component: ComponentType<{ conversation: ConversationState }>;
+  component: ComponentType<{ conversation: ConversationRecord }>;
 }
 
 export type RightPaneDescriptor = MiddlePaneDescriptor;

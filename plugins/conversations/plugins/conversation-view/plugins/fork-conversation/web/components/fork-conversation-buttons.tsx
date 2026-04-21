@@ -1,5 +1,5 @@
 import { GitFork } from "lucide-react";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { LaunchButtons } from "@plugins/launch/web";
 import {
   Tooltip,
@@ -10,7 +10,7 @@ import {
 export function ForkConversationButtons({
   conversation,
 }: {
-  conversation: ConversationState;
+  conversation: ConversationRecord;
 }) {
   return (
     <Tooltip>

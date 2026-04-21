@@ -9,8 +9,8 @@ import {
   getConversationRuntime,
 } from "@plugins/tasks-core/server";
 import { Runtime } from "./runtime";
-import type { ConversationModel } from "../model";
-import type { Conversation } from "../../shared/types";
+import type { ConversationModel } from "../schema";
+import type { Conversation } from "../../shared";
 import { forkDatabase } from "./db-fork";
 import { reportForkError } from "./fork-errors";
 import {

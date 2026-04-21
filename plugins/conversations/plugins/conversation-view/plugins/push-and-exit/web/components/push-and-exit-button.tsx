@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { MdRocketLaunch } from "react-icons/md";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { useResource } from "@core";
@@ -21,7 +21,7 @@ import {
 export function PushAndExitButton({
   conversation,
 }: {
-  conversation: ConversationState;
+  conversation: ConversationRecord;
 }) {
   const live = useConversation(conversation.id) ?? conversation;
   const { data: jobs } = useResource(pushAndExitResource);

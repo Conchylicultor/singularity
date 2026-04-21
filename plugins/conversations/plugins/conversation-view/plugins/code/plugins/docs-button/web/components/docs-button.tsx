@@ -1,5 +1,5 @@
 import { MdArticle } from "react-icons/md";
-import type { ConversationState } from "@plugins/conversations/plugins/conversation-view/web";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   ConversationCommands as Conversation,
   useRightPane,
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "../../../../web/use-edited-files";
 import { docsRightPane, DOCS_PANE_ID, isDocFile } from "../views";
 
-export function DocsButton({ conversation }: { conversation: ConversationState }) {
+export function DocsButton({ conversation }: { conversation: ConversationRecord }) {
   const { files } = useEditedFiles(conversation.id);
   const current = useRightPane();
   const isOpen = current?.id === DOCS_PANE_ID;
