@@ -126,7 +126,10 @@ export function ScreenshotView({ id }: { id: string }) {
             a.click();
             URL.revokeObjectURL(url);
           }}
-          onReset={reload}
+          onReset={() => {
+            blobDelivered.current = false;
+            reload();
+          }}
         />
       </div>
     </div>
