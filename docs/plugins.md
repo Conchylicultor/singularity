@@ -133,6 +133,15 @@
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
             - `DELETE /api/conversations/:id/push-and-exit`
+        - **`quick-prompts`** — Named prompt chips in the conversation floating bar. Click to send a preset message to the active conversation. Named prompts that appear as chips in the conversation toolbar. Click to send a preset message.
+          - Contributes:
+            - `Conversation.Toolbar` → `QuickPromptChips`
+            - `Config.Section` "Quick Prompts" → `QuickPromptsSettings`
+          - Server:
+            - `GET /api/quick-prompts`
+            - `POST /api/quick-prompts`
+            - `PATCH /api/quick-prompts/:id`
+            - `DELETE /api/quick-prompts/:id`
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Contributes:
             - `Conversation.Toolbar` (group `status`) → `StatusBadge`

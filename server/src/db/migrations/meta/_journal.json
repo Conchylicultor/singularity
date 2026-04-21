@@ -197,6 +197,13 @@
       "tag": "20260419_131304_156b5729__add_task_dependencies",
       "hash": "156b5729",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1776775097000,
+      "tag": "20260421_123817_4d324a02__add_quick_prompts_table",
+      "hash": "4d324a02",
+      "breakpoints": true
     }
   ]
 }
