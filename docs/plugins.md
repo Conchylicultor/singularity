@@ -126,7 +126,7 @@
           - Contributes:
             - `Conversation.Toolbar` (group `floating`) → `HoldAndExitButton`
           - Server:
-            - Uses: `conversations.conversationsResource`, `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.updateTask`
+            - Uses: `conversations.deleteConversation`, `conversations.recentConversationsResource`, `tasks-core.getConversation`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/hold-and-exit`
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Contributes:
