@@ -59,7 +59,7 @@
     - Types: `Conversation`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `RuntimeInfo`, `Turn`
     - Values: `ConversationModelSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `Runtime`, `sendTurn`
   - Exports (shared):
-    - Types: `Conversation`, `ConversationEntry`, `ConversationModel`, `ConversationStatus`, `ForkError`
+    - Types: `Conversation`, `ConversationEntry`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationModelSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`
   - Server:
     - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationsResource`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.insertConversation`, `tasks-core.listConversations`, `tasks-core.listGoneConversationsBefore`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
