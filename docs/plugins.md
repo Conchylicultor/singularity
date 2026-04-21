@@ -210,6 +210,13 @@
       - Server:
         - `GET /api/logs/channels`
         - `WS /ws/logs`
+    - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
+      - Contributes:
+        - `Debug.Item` "Worktree Cleanup"
+      - Server:
+        - Uses: `tasks-core.getAttempt`, `tasks-core.listAttempts`, `tasks-core.listTasks`
+        - `GET /api/debug/worktrees`
+        - `DELETE /api/debug/worktrees/:id`
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Exports (web):
