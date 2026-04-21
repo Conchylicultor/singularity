@@ -42,3 +42,16 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
     { stdout: "pipe", stderr: "pipe" },
   ).exited;
 }
+
+export async function removeWorktree(wtPath: string): Promise<void> {
+  const repoRoot = await ensureMainWorktreeRoot();
+  const proc = Bun.spawn(
+    [GIT, "-C", repoRoot, "worktree", "remove", wtPath, "--force"],
+    { stdout: "pipe", stderr: "pipe" },
+  );
+  await proc.exited;
+  if (proc.exitCode !== 0) {
+    const err = await new Response(proc.stderr).text();
+    throw new Error(`git worktree remove failed: ${err}`);
+  }
+}
