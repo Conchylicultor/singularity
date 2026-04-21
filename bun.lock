@@ -134,6 +134,10 @@
       "name": "@singularity/plugin-theme",
       "version": "0.0.1",
     },
+    "plugins/tree": {
+      "name": "@singularity/plugin-tree",
+      "version": "0.0.1",
+    },
     "plugins/welcome": {
       "name": "@singularity/plugin-welcome",
       "version": "0.0.1",
@@ -647,6 +651,8 @@
     "@singularity/plugin-terminal": ["@singularity/plugin-terminal@workspace:plugins/terminal"],
 
     "@singularity/plugin-theme": ["@singularity/plugin-theme@workspace:plugins/theme"],
+
+    "@singularity/plugin-tree": ["@singularity/plugin-tree@workspace:plugins/tree"],
 
     "@singularity/plugin-welcome": ["@singularity/plugin-welcome@workspace:plugins/welcome"],
 

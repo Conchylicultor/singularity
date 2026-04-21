@@ -341,6 +341,11 @@
     - `Shell.Toolbar` (group `actions`) → `ExperimentalToggle`
     - `Shell.Toolbar` (group `actions`) → `ThemeToggle`
 
+- **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) for list plugins.
+  - Exports (shared):
+    - Types: `DropZone`, `TreeNode`
+    - Values: `buildTree`, `computeDrop`, `isDescendant`
+
 - **`welcome`** — Landing pane shown at `/`.
   - Contributes:
     - `Shell.Route` `/`

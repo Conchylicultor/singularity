@@ -36,6 +36,13 @@ import {
 } from "@dnd-kit/core";
 import { generateKeyBetween } from "fractional-indexing";
 import { useResource } from "@core";
+import {
+  buildTree,
+  computeDrop,
+  isDescendant,
+  type DropZone,
+  type TreeNode,
+} from "@plugins/tree/shared";
 import { tasksResource } from "../../shared/resources";
 import { Tasks as TasksSlots } from "../slots";
 import { Tasks as TasksCommands } from "../commands";
@@ -59,8 +66,6 @@ type Task = {
   expanded: boolean;
   status: TaskStatus;
 };
-
-type DropZone = "before" | "after" | "child";
 
 const STATUS_META: Record<
   TaskStatus,
@@ -108,22 +113,6 @@ const STATUS_META: Record<
   },
 };
 
-type TreeNode = Task & { children: TreeNode[] };
-
-function buildTree(rows: readonly Task[]): TreeNode[] {
-  const byId = new Map<string, TreeNode>();
-  rows.forEach((r) => byId.set(r.id, { ...r, children: [] }));
-  const roots: TreeNode[] = [];
-  byId.forEach((node) => {
-    if (node.parentId && byId.has(node.parentId)) {
-      byId.get(node.parentId)!.children.push(node);
-    } else {
-      roots.push(node);
-    }
-  });
-  return roots;
-}
-
 type TaskPatch = {
   title?: string;
   expanded?: boolean;
@@ -137,71 +126,6 @@ async function patchTask(id: string, patch: TaskPatch) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
   });
-}
-
-function isDescendant(
-  rows: readonly Task[],
-  ancestorId: string,
-  candidateId: string,
-): boolean {
-  const parents = new Map(rows.map((r) => [r.id, r.parentId] as const));
-  let cur: string | null = candidateId;
-  const seen = new Set<string>();
-  while (cur) {
-    if (cur === ancestorId) return true;
-    if (seen.has(cur)) return false;
-    seen.add(cur);
-    cur = parents.get(cur) ?? null;
-  }
-  return false;
-}
-
-function computeDrop(
-  rows: readonly Task[],
-  draggedId: string,
-  zone: DropZone,
-  targetId: string,
-): { parentId: string | null; rank: string } | null {
-  const target = rows.find((r) => r.id === targetId);
-  if (!target) return null;
-
-  if (zone === "child") {
-    const children = rows
-      .filter((r) => r.parentId === target.id && r.id !== draggedId)
-      .sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0));
-    const last = children[children.length - 1];
-    try {
-      return {
-        parentId: target.id,
-        rank: generateKeyBetween(last?.rank ?? null, null),
-      };
-    } catch {
-      return null;
-    }
-  }
-
-  const siblings = rows
-    .filter((r) => r.parentId === target.parentId && r.id !== draggedId)
-    .sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0));
-  const idx = siblings.findIndex((s) => s.id === target.id);
-  if (idx === -1) return null;
-
-  try {
-    if (zone === "before") {
-      const prev = siblings[idx - 1];
-      return {
-        parentId: target.parentId,
-        rank: generateKeyBetween(prev?.rank ?? null, target.rank),
-      };
-    }
-    const next = siblings[idx + 1];
-    return {
-      parentId: target.parentId,
-      rank: generateKeyBetween(target.rank, next?.rank ?? null),
-    };
-  } catch {
-    return null;
-  }
 }
 
 let pendingFocusAcrossMount: string | null = null;
@@ -422,12 +346,12 @@ export function TasksList({
   );
 }
 
-function isFullyCompleted(node: TreeNode): boolean {
+function isFullyCompleted(node: TreeNode<Task>): boolean {
   const terminal = node.status === "done" || node.status === "dropped";
   return terminal && node.children.every(isFullyCompleted);
 }
 
-function hideCompletedSubtrees(tree: TreeNode[]): TreeNode[] {
+function hideCompletedSubtrees(tree: TreeNode<Task>[]): TreeNode<Task>[] {
   return tree
     .filter((n) => !isFullyCompleted(n))
     .map((n) => ({ ...n, children: hideCompletedSubtrees(n.children) }));
@@ -466,7 +390,7 @@ function TaskNode({
   clearPendingFocus,
   activeId,
 }: {
-  node: TreeNode;
+  node: TreeNode<Task>;
   depth: number;
   selectedId?: string;
   onToggle: (id: string) => void;

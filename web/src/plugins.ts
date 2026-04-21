@@ -29,6 +29,7 @@ import worktreeSwitcherPlugin from "@plugins/worktree-switcher/web";
 import themePlugin from "@plugins/theme/web";
 import welcomePlugin from "@plugins/welcome/web";
 import launchPlugin from "@plugins/launch/web";
+import treePlugin from "@plugins/tree/web";
 import healthPlugin from "@plugins/health/web";
 import crashesPlugin from "@plugins/crashes/web";
 import statsPlugin from "@plugins/stats/web";
@@ -43,6 +44,7 @@ export const plugins: PluginDefinition[] = [
   shellPlugin,
   welcomePlugin,
   launchPlugin,
+  treePlugin,
   terminalPlugin,
   worktreeSwitcherPlugin,
   buildPlugin,
