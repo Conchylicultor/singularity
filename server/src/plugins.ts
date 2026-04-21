@@ -9,6 +9,7 @@ import conversationsRuntimeApiPlugin from "@plugins/conversations/plugins/runtim
 import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import pushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server";
 import dropAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/server";
+import holdAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/hold-and-exit/server";
 import quickPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server";
 import healthPlugin from "@plugins/health/server";
 import mcpPlugin from "@plugins/mcp/server";
@@ -36,6 +37,7 @@ export const plugins: ServerPluginDefinition[] = [
   conversationCodePlugin,
   pushAndExitPlugin,
   dropAndExitPlugin,
+  holdAndExitPlugin,
   quickPromptsPlugin,
   healthPlugin,
   mcpPlugin,
