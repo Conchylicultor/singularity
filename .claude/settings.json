@@ -1,6 +1,7 @@
 {
   "permissions": {
-    "defaultMode": "bypassPermissions"
+    "defaultMode": "bypassPermissions",
+    "deny": ["EnterWorktree", "ExitWorktree"]
   },
   "enableAllProjectMcpServers": true,
   "hooks": {
