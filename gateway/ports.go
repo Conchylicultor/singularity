@@ -51,13 +51,18 @@ func (p *PortPool) Acquire() (int, error) {
 
 // Release returns a port to the pool. Releasing a port not owned by the pool
 // is a programming error.
+//
+// Ports are prepended (FIFO) rather than appended (LIFO) so a just-released
+// port is reused last. This gives the OS time to fully close the previous
+// server's socket before the port is handed back out, eliminating the TOCTOU
+// window between portFree's probe and Bun's bind.
 func (p *PortPool) Release(port int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if !p.all[port] {
 		panic(fmt.Sprintf("Release: port %d not in pool", port))
 	}
-	p.free = append(p.free, port)
+	p.free = append([]int{port}, p.free...)
 }
 
 // portFree probes whether a backend can bind the port. It must match the bind
