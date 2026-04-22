@@ -107,3 +107,30 @@ export async function deleteConversation(id: string): Promise<void> {
   const runtimeId = row?.runtime ?? DEFAULT_RUNTIME;
   await Runtime.get(runtimeId).delete(id);
 }
+
+export async function resumeConversation(id: string): Promise<Conversation> {
+  const row = await getConversation(id);
+  if (!row) throw new Error(`Conversation ${id} not found`);
+  if (row.status !== "gone") {
+    throw new Error(`Conversation ${id} is not gone (status: ${row.status})`);
+  }
+  if (!row.claudeSessionId) {
+    throw new Error(`Conversation ${id} has no saved Claude session to resume`);
+  }
+  if (!row.spawnedBy) {
+    throw new Error(`Conversation ${id} has no spawnedBy recorded`);
+  }
+
+  const runtime = Runtime.get(row.runtime);
+  // tmux refuses `new-session -s <name>` when a (dead) session by that name
+  // still exists. Clear any stale pane before re-spawning.
+  await runtime.delete(id);
+
+  await runtime.create(id, row.worktreePath, {
+    resumeSessionId: row.claudeSessionId,
+    model: row.model,
+    spawnedBy: row.spawnedBy,
+  });
+
+  return (await getConversation(id)) as Conversation;
+}

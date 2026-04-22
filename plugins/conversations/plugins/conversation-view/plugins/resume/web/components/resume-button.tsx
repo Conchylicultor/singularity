@@ -1,0 +1,67 @@
+import { useState } from "react";
+import { MdReplay } from "react-icons/md";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversation } from "@plugins/conversations/web";
+import { ShellCommands as Shell } from "@plugins/shell/web";
+import { Button } from "@/components/ui/button";
+
+export function ResumeButton({
+  conversation,
+}: {
+  conversation: ConversationRecord;
+}) {
+  const live = useConversation(conversation.id) ?? conversation;
+  const [busy, setBusy] = useState(false);
+
+  const isGone = live.status === "gone";
+  const hasSession = !!live.claudeSessionId;
+  const canResume = isGone && hasSession;
+  const disabled = busy || !canResume;
+
+  const tooltip = !isGone
+    ? "Resume is available once the session has exited"
+    : !hasSession
+      ? "No saved Claude session to resume"
+      : "Resume conversation (claude --resume)";
+
+  async function onClick() {
+    if (disabled) return;
+    setBusy(true);
+    try {
+      const res = await fetch(
+        `/api/conversations/${encodeURIComponent(conversation.id)}/resume`,
+        { method: "POST" },
+      );
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      Shell.Toast({
+        description: "Resuming conversation…",
+        variant: "success",
+      });
+    } catch (err) {
+      Shell.Toast({
+        description: `Resume failed: ${err instanceof Error ? err.message : String(err)}`,
+        variant: "error",
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Button
+      variant="default"
+      size="default"
+      title={tooltip}
+      aria-label="Resume"
+      disabled={disabled}
+      onClick={onClick}
+      className="gap-1.5 shadow-lg"
+    >
+      <MdReplay className="size-4" />
+      {busy ? "Resuming…" : "Resume"}
+    </Button>
+  );
+}

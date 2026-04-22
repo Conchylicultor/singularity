@@ -100,6 +100,7 @@ export const tmuxRuntime: ConversationRuntime = {
       prompt?: string;
       model?: ConversationModel;
       spawnedBy?: string | null;
+      resumeSessionId?: string;
     },
   ): Promise<void> {
     // SINGULARITY_CONVERSATION_ID is read by the .githooks/prepare-commit-msg
@@ -117,9 +118,11 @@ export const tmuxRuntime: ConversationRuntime = {
       throw new Error("tmux runtime requires spawnedBy to route MCP back to the parent server");
     }
     const claudeBase = opts?.model ? `${CLAUDE} --model ${opts.model}` : CLAUDE;
-    const claudeCmd = hasPrompt
-      ? `${claudeBase} "$SINGULARITY_PROMPT"`
-      : claudeBase;
+    const claudeCmd = opts?.resumeSessionId
+      ? `${claudeBase} --resume ${opts.resumeSessionId}`
+      : hasPrompt
+        ? `${claudeBase} "$SINGULARITY_PROMPT"`
+        : claudeBase;
     await Bun.spawn(
       [
         TMUX,

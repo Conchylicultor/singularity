@@ -26,6 +26,7 @@ export interface ConversationRuntime {
       prompt?: string;
       model?: import("../schema").ConversationModel;
       spawnedBy?: string | null;
+      resumeSessionId?: string;
     },
   ): Promise<void>;
   delete(conversationId: string): Promise<void>;

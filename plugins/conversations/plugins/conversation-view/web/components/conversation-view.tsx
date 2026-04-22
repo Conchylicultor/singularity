@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { Conversation, type ConversationRecord } from "../slots";
 import {
@@ -87,6 +87,20 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
     [sessionId],
   );
 
+  // The terminal mounts `tmux attach` once. After Resume re-spawns the pane,
+  // the existing PTY (which exited when the original session died) has to be
+  // replaced — bump a key whenever the conversation transitions from gone to
+  // live so the TerminalComponent remounts and reattaches.
+  const liveStatus = conversation?.status;
+  const [reattachKey, setReattachKey] = useState(0);
+  const wasGoneRef = useRef(liveStatus === "gone");
+  useEffect(() => {
+    if (wasGoneRef.current && liveStatus && liveStatus !== "gone") {
+      setReattachKey((k) => k + 1);
+    }
+    wasGoneRef.current = liveStatus === "gone";
+  }, [liveStatus]);
+
   const MiddlePaneComponent = middlePane?.component;
   const RightPaneComponent = rightPane?.component;
   const MainViewComponent = mainView?.component;
@@ -165,7 +179,7 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
               )}
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <div className="min-h-0 flex-1 overflow-hidden">
-                  <TerminalComponent />
+                  <TerminalComponent key={reattachKey} />
                 </div>
                 {conversation && promptBarItems.length > 0 && (
                   <PromptBar items={promptBarItems} conversation={conversation} />

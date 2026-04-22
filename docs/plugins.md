@@ -59,7 +59,7 @@
     - Values: `CONV_STATUS_DOT`, `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
   - Exports (server):
     - Types: `Conversation`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `RuntimeInfo`, `Turn`
-    - Values: `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `Runtime`, `sendTurn`
+    - Values: `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`
   - Exports (shared):
     - Types: `Conversation`, `ConversationEntry`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
@@ -153,6 +153,12 @@
             - `POST /api/quick-prompts`
             - `PATCH /api/quick-prompts/:id`
             - `DELETE /api/quick-prompts/:id`
+        - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
+          - Contributes:
+            - `Conversation.PromptBar` → `ResumeButton`
+          - Server:
+            - Uses: `conversations.recentConversationsResource`, `conversations.resumeConversation`
+            - `POST /api/conversations/:id/resume`
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Contributes:
             - `Conversation.Toolbar` (group `status`) → `StatusBadge`

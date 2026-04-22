@@ -6,6 +6,7 @@ import {
   recentConversationsResource,
 } from "@plugins/tasks-core/server";
 import { Runtime, type RuntimeInfo } from "./runtime";
+import { findTranscriptPath } from "./claude-transcript";
 import type { ConversationStatus } from "../../shared";
 import { worktreePathFor } from "@server/worktree";
 
@@ -94,17 +95,31 @@ async function tick(): Promise<void> {
       continue;
     }
 
-    const desiredTitle = info.title ? info.title : dbRow.title;
+    // Treat uninformative pane titles (e.g. the literal "Claude Code" the CLI
+    // sets right after resume) as "no info" so we don't overwrite a previously
+    // synthesised, meaningful title.
+    const informativeNew = info.title && !UNINFORMATIVE_TITLES.includes(info.title);
+    const desiredTitle = informativeNew ? info.title : dbRow.title;
     const desiredStatus = liveStatusFor(info);
     const titleChanged = desiredTitle !== dbRow.title;
-    const sessionChanged = info.claudeSessionId !== dbRow.claudeSessionId;
+    // Only adopt a new claudeSessionId once Claude has actually persisted a
+    // transcript for it. Otherwise a freshly-resumed session that dies before
+    // the user types anything would overwrite the (still-resumable) id with
+    // one that has no transcript on disk, breaking the next Resume.
+    const sessionCandidate =
+      info.claudeSessionId &&
+      info.claudeSessionId !== dbRow.claudeSessionId &&
+      (await findTranscriptPath(info.claudeSessionId))
+        ? info.claudeSessionId
+        : dbRow.claudeSessionId;
+    const sessionChanged = sessionCandidate !== dbRow.claudeSessionId;
     const statusChanged = desiredStatus !== dbRow.status;
     if (!titleChanged && !sessionChanged && !statusChanged) continue;
 
     const resurrecting = dbRow.status === "gone" && desiredStatus !== "gone";
     const patch: Parameters<typeof updateConversation>[1] = {};
     if (titleChanged) patch.title = desiredTitle;
-    if (sessionChanged) patch.claudeSessionId = info.claudeSessionId;
+    if (sessionChanged) patch.claudeSessionId = sessionCandidate;
     if (statusChanged) patch.status = desiredStatus;
     if (resurrecting) patch.endedAt = null;
     await updateConversation(id, patch);

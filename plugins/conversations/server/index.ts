@@ -19,7 +19,7 @@ export {
   recentConversationsResource,
 } from "@plugins/tasks-core/server";
 export type { Conversation } from "@plugins/tasks-core/server";
-export { createConversation, deleteConversation } from "./internal/lifecycle";
+export { createConversation, deleteConversation, resumeConversation } from "./internal/lifecycle";
 export type { Turn } from "./internal/claude-transcript";
 export { Runtime, getConversationRow, readConversationTurns, sendTurn } from "./internal/runtime";
 export type { RuntimeInfo, ConversationRuntime } from "./internal/runtime";
