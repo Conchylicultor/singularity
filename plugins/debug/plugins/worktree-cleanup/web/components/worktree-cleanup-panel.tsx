@@ -146,7 +146,8 @@ export function WorktreeCleanupPanel() {
         return next;
       });
     }
-  }, []);
+    await load();
+  }, [load]);
 
   const deleteSafe = useCallback(async () => {
     if (!entries) return;
@@ -318,7 +319,12 @@ function EntryRow({
           <DirtyIndicator entry={entry} />
         </td>
         <td className="px-4 py-2 text-right whitespace-nowrap">
-          {!entry.dirExists && !entry.dbExists ? null : (
+          {!entry.dirExists && !entry.dbExists ? (
+            <Button size="sm" variant="ghost" disabled className="h-7 text-xs opacity-40 cursor-default">
+              <MdDelete className="size-3.5 mr-1" />
+              Drop DB
+            </Button>
+          ) : (
             <Button
               size="sm"
               variant={entry.isSafe || !entry.dirExists ? "outline" : "ghost"}

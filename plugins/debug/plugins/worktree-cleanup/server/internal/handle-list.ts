@@ -107,7 +107,9 @@ export async function handleList(): Promise<Response> {
       const taskDeletable = task ? DELETABLE_TASK_STATUSES.has(task.status) : true;
       const ageMs = Date.now() - attempt.createdAt.getTime();
       const oldEnough = ageMs >= 72 * 60 * 60 * 1000;
-      const isSafe = exists && unpushedCount === 0 && !isDirty && taskDeletable && oldEnough;
+      // No worktree but DB remains: always safe (nothing to lose, just a DB drop).
+      // Worktree present: safe only when clean, old enough, and task is done/dropped.
+      const isSafe = (!exists && dbPresent) || (exists && unpushedCount === 0 && !isDirty && taskDeletable && oldEnough);
 
       return {
         attemptId: attempt.id,
