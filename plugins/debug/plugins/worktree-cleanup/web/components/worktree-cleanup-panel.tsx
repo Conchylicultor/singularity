@@ -11,6 +11,7 @@ type WorktreeEntry = {
   worktreePath: string;
   createdAt: string;
   dirExists: boolean;
+  dbExists: boolean;
   unpushedCount: number;
   isDirty: boolean;
   isSafe: boolean;
@@ -53,6 +54,9 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function DirtyIndicator({ entry }: { entry: WorktreeEntry }) {
+  if (!entry.dirExists && !entry.dbExists) {
+    return <span className="text-xs text-green-600 dark:text-green-400">fully clean</span>;
+  }
   if (!entry.dirExists) {
     return <span className="text-xs text-muted-foreground italic">no dir</span>;
   }
@@ -293,25 +297,27 @@ function EntryRow({
           <DirtyIndicator entry={entry} />
         </td>
         <td className="px-4 py-2 text-right whitespace-nowrap">
-          <Button
-            size="sm"
-            variant={entry.isSafe || !entry.dirExists ? "outline" : "ghost"}
-            onClick={onDelete}
-            disabled={deletingStep != null}
-            className="h-7 text-xs"
-          >
-            {deletingStep != null ? (
-              <>
-                <MdRefresh className="size-3.5 animate-spin mr-1" />
-                {STEP_LABEL[deletingStep]}
-              </>
-            ) : (
-              <>
-                <MdDelete className="size-3.5 mr-1" />
-                {entry.dirExists ? "Delete" : "Drop DB"}
-              </>
-            )}
-          </Button>
+          {!entry.dirExists && !entry.dbExists ? null : (
+            <Button
+              size="sm"
+              variant={entry.isSafe || !entry.dirExists ? "outline" : "ghost"}
+              onClick={onDelete}
+              disabled={deletingStep != null}
+              className="h-7 text-xs"
+            >
+              {deletingStep != null ? (
+                <>
+                  <MdRefresh className="size-3.5 animate-spin mr-1" />
+                  {STEP_LABEL[deletingStep]}
+                </>
+              ) : (
+                <>
+                  <MdDelete className="size-3.5 mr-1" />
+                  {entry.dirExists ? "Delete" : "Drop DB"}
+                </>
+              )}
+            </Button>
+          )}
         </td>
       </tr>
 

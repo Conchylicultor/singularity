@@ -1,5 +1,6 @@
 import { stat } from "node:fs/promises";
 import { listAttempts, listTasks } from "@plugins/tasks-core/server";
+import { databaseExists } from "../../../../../conversations/server/internal/db-fork";
 import { ensureMainWorktreeRoot } from "../../../../../../server/src/worktree";
 
 const GIT = "/usr/bin/git";
@@ -21,6 +22,7 @@ type WorktreeEntry = {
   worktreePath: string;
   createdAt: string;
   dirExists: boolean;
+  dbExists: boolean;
   unpushedCount: number;
   isDirty: boolean;
   isSafe: boolean;
@@ -88,7 +90,10 @@ export async function handleList(): Promise<Response> {
 
     const entries = await pMap(attempts, CONCURRENCY, async (attempt): Promise<WorktreeEntry> => {
       const task = taskMap.get(attempt.taskId);
-      const exists = await dirExists(attempt.worktreePath);
+      const [exists, dbPresent] = await Promise.all([
+        dirExists(attempt.worktreePath),
+        databaseExists(attempt.id),
+      ]);
 
       let unpushedCount = 0;
       let isDirty = false;
@@ -113,6 +118,7 @@ export async function handleList(): Promise<Response> {
         worktreePath: attempt.worktreePath,
         createdAt: attempt.createdAt.toISOString(),
         dirExists: exists,
+        dbExists: dbPresent,
         unpushedCount,
         isDirty,
         isSafe,
