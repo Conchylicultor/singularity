@@ -24,6 +24,9 @@ type DeleteEvent =
   | { ok: false; error: string };
 
 type DeletingStep = "worktree" | "database";
+type BulkDeleteResponse =
+  | { ok: true; succeeded: number; failed: { id: string; error: string }[] }
+  | { ok: false; error: string };
 
 function relativeAge(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -151,16 +154,34 @@ export function WorktreeCleanupPanel() {
     if (safeIds.length === 0) return;
 
     setBulkResult(null);
-    const results = await Promise.allSettled(safeIds.map((id) => deleteOne(id)));
-    const succeeded = results.filter((r) => r.status === "fulfilled").length;
-    const failed = results.filter((r) => r.status === "rejected").length;
-    setBulkResult(
-      failed === 0
-        ? `Deleted ${succeeded} worktree${succeeded !== 1 ? "s" : ""}`
-        : `Deleted ${succeeded}, ${failed} error${failed !== 1 ? "s" : ""}`,
-    );
+    setLoading(true);
+    try {
+      const res = await fetch("/api/debug/worktrees/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: safeIds }),
+      });
+      const data = (await res.json()) as BulkDeleteResponse;
+      if (data.ok) {
+        const { succeeded, failed } = data;
+        setBulkResult(
+          failed.length === 0
+            ? `Deleted ${succeeded} worktree${succeeded !== 1 ? "s" : ""}`
+            : `Deleted ${succeeded}, ${failed.length} error${failed.length !== 1 ? "s" : ""}`,
+        );
+        if (failed.length > 0) {
+          setRowErrors(new Map(failed.map((f) => [f.id, f.error])));
+        }
+      } else {
+        setBulkResult(`Error: ${data.error}`);
+      }
+    } catch (e) {
+      setBulkResult(`Error: ${String(e)}`);
+    } finally {
+      setLoading(false);
+    }
     await load();
-  }, [entries, deleteOne, load]);
+  }, [entries, load]);
 
   const safeCount = entries?.filter((e) => e.isSafe).length ?? 0;
 

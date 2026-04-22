@@ -218,6 +218,7 @@
       - Server:
         - Uses: `tasks-core.getAttempt`, `tasks-core.listAttempts`, `tasks-core.listTasks`
         - `GET /api/debug/worktrees`
+        - `POST /api/debug/worktrees/bulk-delete`
         - `DELETE /api/debug/worktrees/:id`
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
