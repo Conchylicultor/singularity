@@ -17,7 +17,12 @@ type WorktreeEntry = {
 };
 
 type ListResponse = { ok: true; entries: WorktreeEntry[] } | { ok: false; error: string };
-type DeleteResponse = { ok: true } | { ok: false; error: string };
+type DeleteEvent =
+  | { step: "worktree" | "database" }
+  | { ok: true }
+  | { ok: false; error: string };
+
+type DeletingStep = "worktree" | "database";
 
 function relativeAge(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -69,7 +74,7 @@ export function WorktreeCleanupPanel() {
   const [entries, setEntries] = useState<WorktreeEntry[] | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [deletingSteps, setDeletingSteps] = useState<Map<string, DeletingStep>>(new Map());
   const [confirmDirtyId, setConfirmDirtyId] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Map<string, string>>(new Map());
   const [bulkResult, setBulkResult] = useState<string | null>(null);
@@ -98,7 +103,7 @@ export function WorktreeCleanupPanel() {
   }, [load]);
 
   const deleteOne = useCallback(async (id: string) => {
-    setDeletingIds((prev) => new Set(prev).add(id));
+    setDeletingSteps((prev) => new Map(prev).set(id, "worktree"));
     setRowErrors((prev) => {
       const next = new Map(prev);
       next.delete(id);
@@ -106,15 +111,30 @@ export function WorktreeCleanupPanel() {
     });
     try {
       const res = await fetch(`/api/debug/worktrees/${id}`, { method: "DELETE" });
-      const data = (await res.json()) as DeleteResponse;
-      if (!data.ok) {
-        setRowErrors((prev) => new Map(prev).set(id, data.error));
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const event = JSON.parse(line) as DeleteEvent;
+          if ("step" in event) {
+            setDeletingSteps((prev) => new Map(prev).set(id, event.step));
+          } else if (!event.ok) {
+            setRowErrors((prev) => new Map(prev).set(id, event.error));
+          }
+        }
       }
     } catch (e) {
       setRowErrors((prev) => new Map(prev).set(id, String(e)));
     } finally {
-      setDeletingIds((prev) => {
-        const next = new Set(prev);
+      setDeletingSteps((prev) => {
+        const next = new Map(prev);
         next.delete(id);
         return next;
       });
@@ -157,7 +177,7 @@ export function WorktreeCleanupPanel() {
             size="sm"
             variant="destructive"
             onClick={deleteSafe}
-            disabled={loading || safeCount === 0 || deletingIds.size > 0}
+            disabled={loading || safeCount === 0 || deletingSteps.size > 0}
           >
             <MdFolderDelete className="size-4 mr-1.5" />
             Delete {safeCount} safe
@@ -198,7 +218,7 @@ export function WorktreeCleanupPanel() {
                 <EntryRow
                   key={entry.attemptId}
                   entry={entry}
-                  isDeleting={deletingIds.has(entry.attemptId)}
+                  deletingStep={deletingSteps.get(entry.attemptId) ?? null}
                   highlighted={entry.isSafe}
                   error={rowErrors.get(entry.attemptId) ?? null}
                   confirmOpen={confirmDirtyId === entry.attemptId}
@@ -224,9 +244,14 @@ export function WorktreeCleanupPanel() {
   );
 }
 
+const STEP_LABEL: Record<DeletingStep, string> = {
+  worktree: "Removing…",
+  database: "Dropping DB…",
+};
+
 function EntryRow({
   entry,
-  isDeleting,
+  deletingStep,
   highlighted,
   error,
   confirmOpen,
@@ -235,7 +260,7 @@ function EntryRow({
   onCancelConfirm,
 }: {
   entry: WorktreeEntry;
-  isDeleting: boolean;
+  deletingStep: DeletingStep | null;
   highlighted: boolean;
   error: string | null;
   confirmOpen: boolean;
@@ -272,11 +297,14 @@ function EntryRow({
             size="sm"
             variant={entry.isSafe || !entry.dirExists ? "outline" : "ghost"}
             onClick={onDelete}
-            disabled={isDeleting}
+            disabled={deletingStep != null}
             className="h-7 text-xs"
           >
-            {isDeleting ? (
-              <MdRefresh className="size-3.5 animate-spin" />
+            {deletingStep != null ? (
+              <>
+                <MdRefresh className="size-3.5 animate-spin mr-1" />
+                {STEP_LABEL[deletingStep]}
+              </>
             ) : (
               <>
                 <MdDelete className="size-3.5 mr-1" />

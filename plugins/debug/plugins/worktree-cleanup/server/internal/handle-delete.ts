@@ -13,23 +13,40 @@ export async function handleDelete(
   const attempt = await getAttempt(id);
   if (!attempt) return Response.json({ ok: false, error: "Attempt not found" }, { status: 404 });
 
-  let dirPresent = false;
-  try {
-    await stat(attempt.worktreePath);
-    dirPresent = true;
-  } catch {
-    // Directory already gone — skip git step
-  }
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const emit = (data: object) =>
+        controller.enqueue(encoder.encode(JSON.stringify(data) + "\n"));
 
-  if (dirPresent) {
-    try {
-      await removeWorktree(attempt.worktreePath);
-    } catch (e) {
-      return Response.json({ ok: false, error: String(e) }, { status: 500 });
-    }
-  }
+      let dirPresent = false;
+      try {
+        await stat(attempt.worktreePath);
+        dirPresent = true;
+      } catch {
+        // Directory already gone — skip git step
+      }
 
-  await dropDatabase(id);
+      if (dirPresent) {
+        emit({ step: "worktree" });
+        try {
+          await removeWorktree(attempt.worktreePath);
+        } catch (e) {
+          emit({ ok: false, error: String(e) });
+          controller.close();
+          return;
+        }
+      }
 
-  return Response.json({ ok: true });
+      emit({ step: "database" });
+      await dropDatabase(id);
+
+      emit({ ok: true });
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: { "Content-Type": "application/x-ndjson" },
+  });
 }
