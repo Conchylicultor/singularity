@@ -342,7 +342,10 @@
     - `Shell.Toolbar` (group `actions`) → `ExperimentalToggle`
     - `Shell.Toolbar` (group `actions`) → `ThemeToggle`
 
-- **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) for list plugins.
+- **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList component for list plugins.
+  - Exports (web):
+    - Types: `RowContext`, `RowMenuItem`, `TreeItem`, `TreeListProps`
+    - Values: `TreeList`
   - Exports (shared):
     - Types: `DropZone`, `TreeNode`
     - Values: `buildTree`, `computeDrop`, `isDescendant`
