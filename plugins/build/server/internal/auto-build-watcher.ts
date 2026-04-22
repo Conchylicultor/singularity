@@ -2,6 +2,7 @@ import { getLatestPush } from "@plugins/tasks-core/server";
 import { readConfig } from "@plugins/config/server";
 import { buildConfig } from "../../shared/config";
 import { isBuildInflight, runBuild } from "./run-build";
+import { getMainAheadCount } from "./git-status";
 
 const POLL_MS = 2000;
 
@@ -23,6 +24,18 @@ async function tick() {
   if (!initialized) {
     initialized = true;
     lastPushId = latestId;
+
+    // Catch up: if main has commits that weren't built before this server
+    // instance started (e.g. pushes that landed during a restart), trigger
+    // a build now rather than waiting for the next incremental push.
+    const { autoBuild } = await readConfig(buildConfig);
+    if (autoBuild) {
+      const aheadCount = await getMainAheadCount();
+      if (aheadCount > 0) {
+        lastAutoBuildAt = new Date().toISOString();
+        runBuild().catch(() => {});
+      }
+    }
     return;
   }
 
