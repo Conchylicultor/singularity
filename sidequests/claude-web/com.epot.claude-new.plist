@@ -10,7 +10,8 @@
         <string>-p</string>
         <string>8102</string>
         <string>-W</string>
-        <string>/Users/admin/__A__/dev/singularity/sidequests/claude-web/new-session.sh</string>
+        <string>/Users/admin/__A__/dev/singularity/sidequests/claude-web/session-picker.sh</string>
+        <string>--new</string>
     </array>
     <key>RunAtLoad</key>
     <true/>

@@ -1,8 +1,10 @@
 #!/bin/bash
 # session-picker.sh — List and reattach to existing Claude tmux sessions
 #
-# Bookmark: localhost:8103
+# Bookmark: localhost:8103 (picker menu)
+#           localhost:8102 (new session, via --new flag)
 # Shows existing sessions with arrow-key navigation, or creates a new one.
+# Pass --new to skip the menu and immediately create a fresh session.
 
 WORKDIR="/Users/admin/__A__/dev/singularity"
 PREFIX="claude"
@@ -19,7 +21,19 @@ create_new() {
   # Create a new worktree with a fresh branch off main
   $GIT -C "$WORKDIR" worktree add -b "$branch" "$wt_path" main 2>/dev/null
 
-  $TMUX -u new-session -d -s "$name" -c "$wt_path" "zsh -l -c '$CLAUDE'"
+  # Fork the DB from singularity so ./singularity build works without the server.
+  # Only drop if the DB already exists but the fork is incomplete (interrupted
+  # mid pg_restore); a fresh name won't exist at all so createdb runs clean.
+  if ! psql -d "$name" -tAc "SELECT 1 FROM __singularity_migrations LIMIT 1" 2>/dev/null | grep -q 1; then
+    if psql -lqt 2>/dev/null | cut -d'|' -f1 | grep -qw "$name"; then
+      psql -c "DROP DATABASE \"$name\""
+    fi
+    createdb "$name"
+    pg_dump -Fc singularity | pg_restore -d "$name"
+  fi
+
+  $TMUX -u new-session -d -s "$name" -c "$wt_path" \
+    "zsh -l -c 'export SINGULARITY_CONVERSATION_ID=$name; export SINGULARITY_PARENT_HOST=singularity; $CLAUDE'"
   exec $TMUX -u attach -t "$name"
 }
 
@@ -29,6 +43,8 @@ resume_session() {
   $TMUX -u new-session -d -s "$name" -c "$WORKDIR" "zsh -l -c '$CLAUDE --resume \"$query\"'"
   exec $TMUX -u attach -t "$name"
 }
+
+[[ "$1" == "--new" ]] && create_new
 
 # Collect existing sessions
 existing=$($TMUX list-sessions -F "#{session_name}" -f "#{m:${PREFIX}-*,#{session_name}}" 2>/dev/null)
