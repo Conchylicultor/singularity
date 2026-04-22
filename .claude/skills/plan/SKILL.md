@@ -28,6 +28,7 @@ Goal: Gain a comprehensive understanding of the user's request by reading throug
    - Use multiple agents when: the scope is uncertain, multiple areas of the codebase are involved, or you need to understand existing patterns before planning.
    - Quality over quantity - 3 agents maximum, but you should try to use the minimum number of agents necessary (usually just 1)
    - If using multiple agents: Provide each agent with a specific search focus or area to explore. Example: One agent searches for existing implementations, another explores related components, a third investigating testing patterns
+   - **Model**: Default to `sonnet` for all Explore agents. Only use `opus` when the exploration requires deep synthesis across many files or complex architectural reasoning.
 
 ### Phase 2: Design
 Goal: Design an implementation approach.
