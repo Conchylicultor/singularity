@@ -1,6 +1,6 @@
-// Paths that are load-bearing infrastructure — reviewers should apply extra care.
-const CORE_PREFIXES = ["cli/", "plugin-core/", "server/", "gateway/"];
+// Only plugin code is considered routine — everything else gets a warning.
+const SAFE_PREFIXES = ["plugins/", "docs/", "e2e/", "research/", "sidequests/", "bun.lock"];
 
 export function isCoreFile(path: string): boolean {
-  return CORE_PREFIXES.some((prefix) => path.startsWith(prefix));
+  return !SAFE_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
