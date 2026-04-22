@@ -2,7 +2,6 @@ import { defineResource } from "../../../../../../../../server/src/resources";
 import {
   recentConversationsResource,
   deleteConversation,
-  getConversationRow,
   readConversationTurns,
   sendTurn,
   type Turn,
@@ -22,19 +21,24 @@ function sleep(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
-async function waitForCondition(
+async function waitForFinalTurn(
   id: string,
-  predicate: (status: string) => boolean,
+  since: string,
   timeoutMs: number,
-): Promise<void> {
+): Promise<Turn | null> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const row = await getConversationRow(id);
-    if (!row) throw new Error(`Conversation ${id} not found`);
-    if (predicate(row.status)) return;
+    const turns = await readConversationTurns(id, since);
+    const match = turns.find(
+      (t) =>
+        t.role === "assistant" &&
+        t.stopReason === "end_turn" &&
+        (t.text.includes(CLEAN_TOKEN) || t.text.includes(FLAG_TOKEN)),
+    );
+    if (match) return match;
     await sleep(2000);
   }
-  throw new Error("Timed out waiting for conversation status");
+  return null;
 }
 
 function interpret(
@@ -53,17 +57,10 @@ export async function runJob(conversationId: string): Promise<void> {
   const triggeredAt = new Date().toISOString();
   try {
     await sendTurn(conversationId, PUSH_AND_EXIT_PROMPT);
-    await waitForCondition(conversationId, (s) => s === "working", 60_000);
-    await waitForCondition(conversationId, (s) => s !== "working", 600_000);
 
-    const turns = await readConversationTurns(conversationId, triggeredAt);
-    const finalAsst = [...turns]
-      .reverse()
-      .find(
-        (t: Turn) => t.role === "assistant" && t.stopReason === "end_turn",
-      );
+    const finalTurn = await waitForFinalTurn(conversationId, triggeredAt, 600_000);
 
-    if (!finalAsst) {
+    if (!finalTurn) {
       jobs.set(conversationId, {
         status: "flag",
         text: "Couldn't find Claude's final message in the transcript.",
@@ -72,7 +69,7 @@ export async function runJob(conversationId: string): Promise<void> {
       return;
     }
 
-    const verdict = interpret(finalAsst.text);
+    const verdict = interpret(finalTurn.text);
     jobs.set(conversationId, verdict);
     pushAndExitResource.notify();
 

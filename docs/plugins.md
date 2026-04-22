@@ -140,7 +140,7 @@
           - Contributes:
             - `Conversation.PromptBar` → `PushAndExitButton`
           - Server:
-            - Uses: `conversations.Turn`, `conversations.deleteConversation`, `conversations.getConversationRow`, `conversations.readConversationTurns`, `conversations.recentConversationsResource`, `conversations.sendTurn`
+            - Uses: `conversations.Turn`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.recentConversationsResource`, `conversations.sendTurn`
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
             - `DELETE /api/conversations/:id/push-and-exit`
