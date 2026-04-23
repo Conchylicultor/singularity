@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { MdClose, MdRefresh } from "react-icons/md";
+import { MdClose, MdCode, MdRefresh } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { ConversationCommands as Conversation } from "@plugins/conversations/plugins/conversation-view/web";
@@ -10,6 +10,7 @@ export function JsonlPane({ conversation }: { conversation: ConversationRecord }
   const [events, setEvents] = useState<JsonlEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [markdownMode, setMarkdownMode] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,7 +59,18 @@ export function JsonlPane({ conversation }: { conversation: ConversationRecord }
         <Button
           variant="ghost"
           size="icon"
-          className="ml-auto size-7 shrink-0"
+          className={`ml-auto size-7 shrink-0 ${markdownMode ? "bg-accent text-accent-foreground" : ""}`}
+          title={markdownMode ? "Show raw text" : "Render markdown"}
+          aria-label={markdownMode ? "Show raw text" : "Render markdown"}
+          aria-pressed={markdownMode}
+          onClick={() => setMarkdownMode((m) => !m)}
+        >
+          <MdCode className="size-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 shrink-0"
           title="Reload"
           aria-label="Reload"
           disabled={loading}
@@ -79,7 +91,7 @@ export function JsonlPane({ conversation }: { conversation: ConversationRecord }
         ) : (
           <div className="flex flex-col gap-2 p-2">
             {events.map((event, i) => (
-              <EventRow key={i} event={event} />
+              <EventRow key={i} event={event} markdownMode={markdownMode} />
             ))}
           </div>
         )}
