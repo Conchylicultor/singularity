@@ -1,12 +1,7 @@
 import type { PluginDefinition } from "@core";
-import { Pane } from "@plugins/pane/web";
-import { WelcomeView } from "./components/welcome-view";
+import "./panes";
 
-export const welcomePane = Pane.define({
-  id: "welcome",
-  path: "/",
-  component: WelcomeView,
-});
+export { welcomePane } from "./panes";
 
 export default {
   id: "welcome",
