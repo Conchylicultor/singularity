@@ -59,7 +59,7 @@
     - Values: `CONV_STATUS_DOT`, `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
   - Exports (server):
     - Types: `Conversation`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `RuntimeInfo`, `Turn`
-    - Values: `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`
+    - Values: `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `findTranscriptPath`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`
   - Exports (shared):
     - Types: `Conversation`, `ConversationEntry`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
@@ -136,7 +136,7 @@
           - Contributes:
             - `Conversation.Toolbar` → `JsonlButton`
           - Server:
-            - Uses: `tasks-core.getConversationClaudeSessionId`
+            - Uses: `conversations.findTranscriptPath`, `tasks-core.getConversationClaudeSessionId`
             - `GET /api/conversations/:id/jsonl`
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Contributes:

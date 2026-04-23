@@ -1,4 +1,4 @@
-import { findTranscriptPath } from "@plugins/conversations/server/internal/claude-transcript";
+import { findTranscriptPath } from "@plugins/conversations/server";
 import { getConversationClaudeSessionId } from "@plugins/tasks-core/server";
 import { readJsonlEvents } from "./parse-jsonl";
 

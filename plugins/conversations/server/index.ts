@@ -21,6 +21,7 @@ export {
 export type { Conversation } from "@plugins/tasks-core/server";
 export { createConversation, deleteConversation, resumeConversation } from "./internal/lifecycle";
 export type { Turn } from "./internal/claude-transcript";
+export { findTranscriptPath } from "./internal/claude-transcript";
 export { Runtime, getConversationRow, readConversationTurns, sendTurn } from "./internal/runtime";
 export type { RuntimeInfo, ConversationRuntime } from "./internal/runtime";
 
