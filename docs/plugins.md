@@ -99,13 +99,17 @@
             - Resources: `edited-files` (invalidate)
             - `GET /api/conversations/:id/file`
             - `GET /api/conversations/:id/diff`
+            - `GET /api/conversations/:id/image`
           - Plugins:
             - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
               - Contributes:
-                - `FilePane.Renderer` "Diff" → `DiffView`
+                - `FilePane.Renderer` "Diff" → `DiffOrImageView`
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
               - Contributes:
                 - `Code.ToolbarButton` → `DocsButton`
+            - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
+              - Contributes:
+                - `FilePane.Renderer` "Image" → `ImageView`
             - **`markdown`** — Rendered markdown preview for .md and .mdx files.
               - Contributes:
                 - `FilePane.Renderer` "Markdown" → `MarkdownView`
