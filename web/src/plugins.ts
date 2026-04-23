@@ -41,6 +41,7 @@ import tasksPlugin from "@plugins/tasks/web";
 import agentsPlugin from "@plugins/agents/web";
 import screenshotPlugin from "@plugins/screenshot/web";
 import configPlugin from "@plugins/config/web";
+import eventsTestPlugin from "@plugins/events-test/web";
 
 export const plugins: PluginDefinition[] = [
   shellPlugin,
@@ -85,4 +86,5 @@ export const plugins: PluginDefinition[] = [
   agentsPlugin,
   screenshotPlugin,
   configPlugin,
+  eventsTestPlugin,
 ];

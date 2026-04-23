@@ -89,6 +89,20 @@ Per-instance, per-plugin typed configuration with a unified storage and Settings
 - **`useConfigValues(descriptor, pluginId)`** — React hook returning a typed value object, kept in sync via the live-state primitive.
 - **Settings UI** — auto-generated panel; plugins contribute their descriptor to a slot and the panel renders a section per plugin.
 
+## Events & triggers
+
+Typed cross-plugin reactions to state changes. See [`events.md`](events.md) for the full mental model.
+
+- **Event** — a named fact a plugin emits when its state transitions (`defineTriggerEvent({ name, filters })`); dual-purpose handle with `.emit(payload)` for the owner and `.where(filter)` for subscribers.
+- **Action** — a named typed handler registered at plugin load (`defineAction({ name, config: zodSchema, run })`); returns a callable factory that produces an `ActionRef` for subscription and a `.deleteTargeting({...})` sweeper for cleanup.
+- **Source** — what `trigger({ on })` accepts. The bare event is a match-any Source; `.where({...})` refines it. Compound / cron sources slot into the same position without changing the `trigger` API.
+- **Trigger** — a persisted row binding a source's filter columns to an action's `{name, config}` (`trigger({ on, do, oneShot? })`). One row per subscription, stored in the event's own per-type table.
+- **Dispatcher** — in-process scanner invoked from `event.emit(payload)`; filters with AND-ed null-tolerant predicates, validates each row's `action_config` via the action's zod schema, runs matching handlers in parallel, and deletes `oneShot` rows on success.
+- **Preservation policy** — unknown action, config parse failure, and handler throws all log-and-skip without deleting, so drift across deploys is recoverable rather than destructive.
+- **Cleanup helpers** — `deleteTrigger(id)` sweeps by row id; `action.deleteTargeting(configMatch)` sweeps by JSONB `@>` containment; FK `ON DELETE CASCADE` on filter columns handles target-deletion automatically.
+
+Related: [`tasks-model.md`](tasks-model.md) documents the status vocabularies that feed the first production events (`tasks.completed`, `conversations.completed`).
+
 ## Frontend utilities
 
 Reusable client primitives plugins can rely on.

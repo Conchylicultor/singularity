@@ -235,6 +235,25 @@
         - `POST /api/debug/worktrees/bulk-delete`
         - `DELETE /api/debug/worktrees/:id`
 
+- **`events`** — Infrastructure for typed events, actions, and persisted triggers.
+  - Exports (server):
+    - Types: `ActionFactory`, `ActionRef`, `DefineActionSpec`, `DefineTriggerEventSpec`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`
+    - Values: `defineAction`, `defineTriggerEvent`, `deleteTrigger`, `trigger`
+
+- **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events API end-to-end.
+  - Contributes:
+    - `Shell.Sidebar` "Events Test" (group `System`)
+    - `Shell.Route` `/events-test`
+  - Server:
+    - Uses: `events.defineAction`, `events.defineTriggerEvent`, `events.deleteTrigger`, `events.trigger`
+    - `POST /api/events-test/subscribe`
+    - `POST /api/events-test/emit`
+    - `GET /api/events-test/log`
+    - `POST /api/events-test/reset`
+    - `DELETE /api/events-test/trigger/:id`
+    - `POST /api/events-test/delete-targeting`
+    - `GET /api/events-test/triggers`
+
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Exports (web):
     - Values: `getHealth`, `waitForRestart`

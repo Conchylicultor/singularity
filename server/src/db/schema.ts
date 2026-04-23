@@ -14,5 +14,6 @@ export * from "@plugins/config/server/internal/tables";
 export * from "@plugins/crashes/server/internal/tables";
 export * from "@plugins/stats/plugins/commits/server/internal/tables";
 export * from "@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server/internal/tables";
+export * from "@plugins/events-test/server/internal/tables";
 export * from "@plugins/tasks-core/server/internal/schema";
 export * from "@plugins/agents/server/internal/schema";
