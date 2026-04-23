@@ -4,9 +4,7 @@ import { PaneLevel } from "./outlet";
 
 /**
  * Top-level pane router. Reads the current URL and renders the longest
- * matching pane chain, root → leaf. Returns `null` when no pane matches;
- * Phase 1 ships with an empty registry, so this is the common case until
- * callers start migrating.
+ * matching pane chain, root → leaf. Returns `null` when no pane matches.
  */
 export function PaneRouter() {
   const pathname = usePathname();

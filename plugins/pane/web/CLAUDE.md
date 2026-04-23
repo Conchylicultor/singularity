@@ -4,10 +4,10 @@ The unified pane primitive. One pane = one URL segment + one component with
 its own `<Outlet/>`. Nested URLs map to nested panes; ancestor data flows to
 descendants via typed `provides` / `useData()`.
 
-See the design docs for the full rationale and migration plan:
+Design rationale lives in:
 
 - `research/2026-04-23-global-unified-pane-manager-v2.md` — core design.
-- `research/2026-04-23-global-unified-pane-manager-v3.md` — Phase 2 diffs
+- `research/2026-04-23-global-unified-pane-manager-v3.md` — refinements
   (`.open()` takes full params; `useParams()` is own-only; prefix matching).
 
 ## Define a pane
@@ -104,10 +104,7 @@ call itself), so the pane file must be imported — usually via the plugin's
 
 - Pane-scoped ‹ › history stack (chrome buttons currently fall back to
   `window.history.back/forward`).
-- Component-identity stability trick from `shell-layout.tsx` for pattern
-  changes (nested navigations within the same pane component reconcile
-  naturally).
-- `keepalive` for heavy panes.
+- `keepalive` for heavy panes — switching slots remounts by default.
 - Layout tree (drag-and-drop, tabs, overlays).
 
-See Phase 3+ in the design doc.
+See "Open questions" in the design doc.

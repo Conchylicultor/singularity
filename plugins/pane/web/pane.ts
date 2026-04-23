@@ -232,8 +232,6 @@ function navigate(url: string): void {
   if (typeof window === "undefined") return;
   if (window.location.pathname === url) return;
   window.history.pushState({}, "", url);
-  // Mirror the dispatch style the shell uses so both systems stay in sync
-  // during the Phase 1 transition.
   window.dispatchEvent(new PopStateEvent("popstate"));
   window.dispatchEvent(new CustomEvent("shell:navigate"));
 }
