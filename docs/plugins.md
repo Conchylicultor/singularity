@@ -334,17 +334,15 @@
 - **`tasks`** — Nested tasks with attempts; meta-plugin hosting sub-pane contributions. Nested tasks with attempts linking to conversations.
   - Defines:
     - Slots: `Tasks.List`, `Tasks.View`, `Tasks.TaskActions`
-    - Commands: `Tasks.OpenTask`
   - Exports (web):
-    - Values: `TaskDetail`, `Tasks`, `TasksList`
+    - Values: `taskConversationPane`, `TaskDetail`, `taskDetailPane`, `Tasks`, `TasksList`, `tasksRootPane`
   - Exports (server):
     - Types: `Attempt`, `AttemptStatus`, `Push`, `Task`, `TaskStatus`
     - Values: `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `CONVERSATIONS_META_TASK_ID`, `nextRankUnder`, `pushesResource`, `PushSchema`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `NewTaskButton`
     - `Shell.Sidebar` "Tasks" (group `System`)
-    - `Shell.Route` `/tasks`
-    - `Shell.Route` `/tasks/:id`
+    - `tasksRootPane.open`
     - `Tasks.TaskActions` → `ExpandCollapseAllAction`
     - `Tasks.TaskActions` → `DeleteTaskAction`
     - `Tasks.TaskActions` → `LaunchAgentAction`
@@ -389,8 +387,8 @@
     - Values: `buildTree`, `computeDrop`, `isDescendant`
 
 - **`welcome`** — Landing pane shown at `/`.
-  - Contributes:
-    - `Shell.Route` `/`
+  - Exports (web):
+    - Values: `welcomePane`
 
 - **`worktree-switcher`** — Toolbar dropdown to switch the active worktree namespace.
   - Contributes:

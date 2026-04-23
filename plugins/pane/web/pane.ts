@@ -120,6 +120,7 @@ export function buildUrl(
 export function matchPath(
   pattern: string,
   pathname: string,
+  options: { prefix?: boolean } = {},
 ): Record<string, string> | null {
   const normalize = (p: string) => {
     if (p === "/" || p === "") return "/";
@@ -148,13 +149,17 @@ export function matchPath(
     pi++;
     xi++;
   }
-  if (xi !== pathParts.length) return null;
+  if (!options.prefix && xi !== pathParts.length) return null;
   return params;
 }
 
 export interface MatchEntry {
   pane: PaneInternal;
+  /** Own-only params (only `:name`s from this pane's `ownPath`). */
   params: Record<string, string>;
+  /** All params up to and including this pane's `fullPath`. Used for
+   *  re-building URLs via `buildUrl(pane, fullParams)`. */
+  fullParams: Record<string, string>;
 }
 
 export interface PaneMatch {
@@ -174,11 +179,31 @@ export function matchRegistry(pathname: string): PaneMatch | null {
 
   const reversed: PaneInternal[] = [];
   for (let p: PaneInternal | null = best.pane; p; p = p.parent) reversed.push(p);
-  const chain: MatchEntry[] = reversed.reverse().map((pane) => ({
-    pane,
-    params: matchPath(pane.fullPath, pathname) ?? {},
-  }));
+  const orderedPanes = reversed.reverse();
+  // Ancestor panes have shorter fullPaths than `pathname`, so they can only
+  // match in prefix mode. The leaf match (exact) is re-derived with prefix=true
+  // too — its fullPath consumes the whole path, so prefix mode is equivalent.
+  //
+  // Params are kept own-only per design: each pane only receives the params
+  // whose `:name` appeared in that pane's own `ownPath`. Ancestor access is
+  // explicit via `ancestorPane.useParams()`.
+  const chain: MatchEntry[] = orderedPanes.map((pane) => {
+    const full = matchPath(pane.fullPath, pathname, { prefix: true }) ?? {};
+    const own: Record<string, string> = {};
+    for (const name of ownParamNames(pane.ownPath)) {
+      if (name in full) own[name] = full[name]!;
+    }
+    return { pane, params: own, fullParams: full };
+  });
   return { chain };
+}
+
+function ownParamNames(ownPath: string): string[] {
+  if (!ownPath) return [];
+  return ownPath
+    .split("/")
+    .filter((seg) => seg.startsWith(":"))
+    .map((seg) => seg.slice(1).replace(/\*$/, ""));
 }
 
 // ---------------------------------------------------------------------------
@@ -233,13 +258,26 @@ export function usePathname(): string {
 // PaneObject — the value returned by `Pane.define`.
 // ---------------------------------------------------------------------------
 
-export interface PaneObject<Params = Record<string, never>, Provides = void> {
+/**
+ * Typed handle returned by `Pane.define`.
+ *
+ * `FullParams` is the full resolved param set including ancestors — used for
+ * `open()` and path construction. `OwnParams` is only the `:name`s declared in
+ * this pane's own `path` — what `useParams()` returns. Keeping them separate
+ * matches design decision 6 ("params are own-only").
+ */
+export interface PaneObject<
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  FullParams = {},
+  Provides = void,
+  OwnParams = FullParams,
+> {
   id: string;
   path: string;
   Provider: ComponentType<{ value: Provides; children: ReactNode }>;
-  useParams(): Params;
+  useParams(): OwnParams;
   useData(): Provides;
-  open(params: Params): void;
+  open(params: FullParams): void;
   close(): void;
   expand(): void;
   back(): void;
@@ -249,7 +287,7 @@ export interface PaneObject<Params = Record<string, never>, Provides = void> {
   _internal: PaneInternal;
 }
 
-function makePaneObject(internal: PaneInternal): PaneObject<any, any> {
+function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
   const { dataContext, actionsSlot } = internal;
 
   const Provider = ({
@@ -296,7 +334,9 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any> {
     if (typeof window === "undefined") return;
     const match = matchRegistry(window.location.pathname);
     const parentEntry = match?.chain.find((e) => e.pane === parent);
-    const params = parentEntry?.params ?? {};
+    // Need fullParams here: buildUrl walks parent.fullPath and requires every
+    // `:name` along it, including ancestor-contributed ones.
+    const params = parentEntry?.fullParams ?? {};
     navigate(buildUrl(parent, params));
   }
 
@@ -305,7 +345,10 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any> {
     const match = matchRegistry(window.location.pathname);
     const entry = match?.chain.find((e) => e.pane === internal);
     if (!entry) return;
-    const target = internal.chrome.expand?.(entry.params);
+    // chrome.expand receives the full resolved params (ancestor + own) so it
+    // can build URLs that reference ancestor params, e.g.
+    // `expand: ({ convId }) => \`/c/${convId}\``.
+    const target = internal.chrome.expand?.(entry.fullParams);
     if (target) navigate(target);
   }
 
@@ -349,18 +392,30 @@ function normalizeChrome<Params>(
 // Pane.define — factory + registration.
 // ---------------------------------------------------------------------------
 
-interface DefineArgs<Path extends string, Provides> {
+// ParentParams defaults to `{}` so that top-level panes (no parent) end up
+// with `{} & InferParams<Path>` = `InferParams<Path>`. Using
+// `Record<string, never>` as the default would clash with any own params.
+interface DefineArgs<Path extends string, Provides, ParentParams> {
   id: string;
-  parent?: PaneObject<any, any>;
+  parent?: PaneObject<ParentParams, any, any>;
   path?: Path;
   component: ComponentType;
   provides?: TypeMarker<Provides>;
-  chrome?: PaneChromeConfig<InferParams<Path>> | false;
+  chrome?: PaneChromeConfig<ParentParams & InferParams<Path>> | false;
 }
 
-function define<Path extends string = "", Provides = void>(
-  args: DefineArgs<Path, Provides>,
-): PaneObject<InferParams<Path>, Provides> {
+function define<
+  Path extends string = "",
+  Provides = void,
+  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+  ParentParams = {},
+>(
+  args: DefineArgs<Path, Provides, ParentParams>,
+): PaneObject<
+  ParentParams & InferParams<Path>,
+  Provides,
+  InferParams<Path>
+> {
   if (registry.has(args.id)) {
     // HMR can redefine during development; keep the new internal and move on.
     console.warn(`Pane "${args.id}" redefined.`);
@@ -391,7 +446,11 @@ function define<Path extends string = "", Provides = void>(
   if (parentInternal) parentInternal.children.push(internal);
   else topLevel.push(internal);
 
-  return makePaneObject(internal) as PaneObject<InferParams<Path>, Provides>;
+  return makePaneObject(internal) as PaneObject<
+    ParentParams & InferParams<Path>,
+    Provides,
+    InferParams<Path>
+  >;
 }
 
 export const Pane = { define };

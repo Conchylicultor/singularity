@@ -4,10 +4,9 @@ import { Button } from "@/components/ui/button";
 import { TaskDependencies } from "./task-dependencies";
 import { TaskEvents } from "./task-events";
 import { useResource } from "@core";
-import { ShellCommands } from "@plugins/shell/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { tasksResource, type Task } from "../../shared/resources";
-import { tasksPane } from "../views";
+import { taskDetailPane } from "../panes";
 
 const STATUS_LABELS: Record<Task["status"], string> = {
   new: "New",
@@ -52,7 +51,7 @@ function AuthorDisplay({ author }: { author: string | null }) {
   return (
     <button
       type="button"
-      onClick={() => ShellCommands.OpenPane(tasksPane({ id: authorTask.id }))}
+      onClick={() => taskDetailPane.open({ taskId: authorTask.id })}
       className="hover:text-foreground text-sm underline underline-offset-2"
     >
       {authorTask.title}

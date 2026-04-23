@@ -13,7 +13,7 @@ import { useResource } from "@core";
 import { TreeList } from "@plugins/tree/web";
 import { tasksResource } from "../../shared/resources";
 import { Tasks as TasksSlots } from "../slots";
-import { Tasks as TasksCommands } from "../commands";
+import { taskDetailPane } from "../panes";
 import { cn } from "@/lib/utils";
 
 type TaskStatus =
@@ -130,7 +130,7 @@ export function TasksList({
       selectedId={selectedId}
       labelOf={(t) => t.title}
       onSelect={(id) =>
-        onSelect ? onSelect(id) : TasksCommands.OpenTask({ id })
+        onSelect ? onSelect(id) : taskDetailPane.open({ taskId: id })
       }
       onRename={(id, next) => patchTask(id, { title: next })}
       onToggleExpanded={(id, next) => patchTask(id, { expanded: next })}

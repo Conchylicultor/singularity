@@ -2,9 +2,8 @@ import { useCallback, useMemo } from "react";
 import { MdClose } from "react-icons/md";
 import { useResource } from "@core";
 import { Button } from "@/components/ui/button";
-import { ShellCommands } from "@plugins/shell/web";
 import { tasksResource, type Task } from "../../shared/resources";
-import { tasksPane } from "../views";
+import { taskDetailPane } from "../panes";
 
 const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 
@@ -71,7 +70,7 @@ function DepChip({
   const title = dep?.title ?? depId;
   const isTerminal = dep ? dep.status === "done" || dep.status === "dropped" : false;
 
-  const open = () => ShellCommands.OpenPane(tasksPane({ id: depId }));
+  const open = () => taskDetailPane.open({ taskId: depId });
   const remove = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await fetch(`/api/tasks/${taskId}/dependencies/${depId}`, {

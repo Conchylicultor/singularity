@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MdOpenInNew } from "react-icons/md";
 import { useResource } from "@core";
-import { ShellCommands } from "@plugins/shell/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { usePaneMatch } from "@plugins/pane/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/web";
 import {
   attemptsResource,
@@ -10,7 +9,7 @@ import {
   type Attempt,
 } from "../../shared/resources";
 import { cn } from "@/lib/utils";
-import { useConversationPane } from "./conversation-pane-context";
+import { taskConversationPane } from "../panes";
 
 type RepoInfo = { githubBase: string | null };
 
@@ -66,7 +65,10 @@ export function TaskEvents({ taskId }: { taskId: string }) {
   const attemptsQ = useResource(attemptsResource);
   const pushesQ = useResource(pushesResource);
   const githubBase = useGithubBase();
-  const convPane = useConversationPane();
+  const match = usePaneMatch();
+  const activeConvId = match?.chain.find(
+    (e) => e.pane === taskConversationPane._internal,
+  )?.params.convId;
 
   const attempts = useMemo(() => {
     const rows = attemptsQ.data ?? [];
@@ -174,18 +176,19 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                   ) : (
                     <ul className="flex flex-col gap-1">
                       {convs.map((c) => {
-                        const isActive = convPane?.activeId === c.id;
+                        const isActive = activeConvId === c.id;
                         return (
                         <li key={c.id}>
                           <button
                             type="button"
                             onClick={() => {
-                              if (convPane) {
-                                convPane.open(c.id);
+                              if (activeConvId === c.id) {
+                                taskConversationPane.close();
                               } else {
-                                ShellCommands.OpenPane(
-                                  conversationPane({ session_id: c.id }),
-                                );
+                                taskConversationPane.open({
+                                  taskId,
+                                  convId: c.id,
+                                });
                               }
                             }}
                             className={cn(

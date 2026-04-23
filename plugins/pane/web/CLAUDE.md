@@ -4,9 +4,11 @@ The unified pane primitive. One pane = one URL segment + one component with
 its own `<Outlet/>`. Nested URLs map to nested panes; ancestor data flows to
 descendants via typed `provides` / `useData()`.
 
-See the design doc at
-`research/2026-04-23-global-unified-pane-manager-v2.md` for the full rationale
-and migration plan.
+See the design docs for the full rationale and migration plan:
+
+- `research/2026-04-23-global-unified-pane-manager-v2.md` — core design.
+- `research/2026-04-23-global-unified-pane-manager-v3.md` — Phase 2 diffs
+  (`.open()` takes full params; `useParams()` is own-only; prefix matching).
 
 ## Define a pane
 
@@ -42,7 +44,7 @@ Rules:
 
 ```tsx
 function TaskDetail() {
-  const { taskId } = taskDetailPane.useParams();           // typed
+  const { taskId } = taskDetailPane.useParams();           // typed, own-only
   const task = useTask(taskId);
   if (!task) return <NotFound />;
   return (
@@ -54,17 +56,25 @@ function TaskDetail() {
 
 function SomeDescendant() {
   const { task } = taskDetailPane.useData();               // typed
-  const { convId } = taskConversationPane.useParams();     // typed
+  const { convId } = taskConversationPane.useParams();     // typed, own-only
 }
 ```
 
-`useParams()` is own-only. Reading an ancestor's params is explicit:
-`ancestorPane.useParams()`.
+`useParams()` is own-only: it returns only the `:name` segments from *this*
+pane's `path`, not any inherited from ancestors. Reading an ancestor's
+params is explicit: `ancestorPane.useParams()`.
 
 ## Navigate
 
 ```tsx
-<button onClick={() => taskDetailPane.open({ taskId })}>Open</button>
+// Top-level pane (no parent path segments):
+<button onClick={() => tasksRootPane.open({})}>Tasks</button>
+
+// Nested pane: open() takes the full ancestor+own param set, since the
+// router builds the URL from the pane's fullPath.
+<button
+  onClick={() => taskConversationPane.open({ taskId, convId })}
+>Open</button>
 ```
 
 `open(params)` pushes a new URL. `close()` navigates to the parent.
