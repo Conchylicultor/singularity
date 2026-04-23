@@ -10,6 +10,7 @@ import {
   handleLog,
   handleReset,
   handleSubscribe,
+  handleWaitIdle,
 } from "./internal/handle";
 
 export default {
@@ -24,5 +25,6 @@ export default {
     "DELETE /api/events-test/trigger/:id": handleDeleteTrigger,
     "POST /api/events-test/delete-targeting": handleDeleteTargeting,
     "GET /api/events-test/triggers": handleListTriggers,
+    "GET /api/events-test/wait-idle": handleWaitIdle,
   },
 } satisfies ServerPluginDefinition;

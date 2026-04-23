@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "../../../server/src/types";
+import { startWorker } from "./internal/worker";
 
 export { defineAction } from "./internal/action";
 export type { ActionFactory, ActionRef, DefineActionSpec } from "./internal/action";
@@ -17,4 +18,7 @@ export default {
   name: "Events",
   description:
     "Infrastructure for typed events, actions, and persisted triggers.",
+  onReady: async () => {
+    await startWorker();
+  },
 } satisfies ServerPluginDefinition;

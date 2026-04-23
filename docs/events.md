@@ -87,15 +87,54 @@ filters: {
 
 **Cross-column (rare).** Top-level `matchFn` overrides per-filter predicates with a single WHERE clause that can touch multiple columns.
 
+## Delivery semantics
+
+`emit()` enqueues one [Graphile Worker](https://worker.graphile.org/) job per matched trigger row and resolves once those jobs are durable in `graphile_worker.jobs`. **Handlers run asynchronously** in the events-plugin worker — not inline. `emit()` returning is "the fact is announced," not "the handlers have finished."
+
+| Thing                   | Behavior                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------------- |
+| **Durability**          | Jobs survive server restart. If the worker crashes mid-handler, the job re-runs after restart (Graphile at-least-once). |
+| **Retries**             | Graphile retries failed handlers with exponential backoff up to `maxAttempts` (default 5). |
+| **Dispatch latency**    | Sub-second via Postgres `LISTEN/NOTIFY`; falls back to ~1s polling if `LISTEN` is unavailable. |
+| **oneShot delete**      | Fires after a handler succeeds (post-retry), inside the worker. Preserved on permanent failure. |
+
+### Action idempotency — the new caller contract
+
+Retries mean **`run` may be invoked more than once for the same `triggerId`.** Actions must be idempotent. Guidance:
+
+- Use `ctx.triggerId` as a dedup key when mutating shared state. Either `INSERT … ON CONFLICT (trigger_id) DO NOTHING`, or track seen ids in memory for side-effect-only actions.
+- Naturally idempotent side-effects ("set task X status to done") need no extra work.
+- Non-idempotent side-effects (webhook POSTs without idempotency headers, unbounded counter increments) are the author's responsibility — if duplicates matter, dedup them at the action.
+
+### Transactional boundary on `emit()`
+
+Graphile Worker runs its own `pg.Pool` (node-postgres), separate from the server's `postgres.js` client. A caller's transaction can NOT share state with Graphile's INSERT into `graphile_worker.jobs`. **Rule: emit only after the fact is committed.** If `emit()` is inside a tx and the tx rolls back, the jobs stay in the queue and the handlers run for a fact that no longer exists.
+
+```ts
+// ✅ OK — emit after the tx commits
+await db.transaction(async (tx) => {
+  await markTaskComplete(tx, taskId);
+});
+await taskCompleted.emit({ taskId });
+
+// ❌ Wrong — rollback leaves jobs in the queue
+await db.transaction(async (tx) => {
+  await markTaskComplete(tx, taskId);
+  await taskCompleted.emit({ taskId }); // dual-write
+});
+```
+
+Shared-tx emit requires unifying the server on `pg.Pool`; tracked as future work.
+
 ## Preservation policy — rows outlive type definitions
 
-`action_config` is stored as JSONB; it outlives whatever TS type wrote it. Two things can go wrong at dispatch; both preserve the row rather than deleting it, so the situation is recoverable:
+`action_config` is stored as JSONB; it outlives whatever TS type wrote it. Two things can go wrong at dispatch, plus the retry-exhaustion case; all preserve the trigger row rather than deleting it, so the situation is recoverable:
 
 | At dispatch | Observable behavior                                                |
 | ----------- | ------------------------------------------------------------------ |
-| Action name not in the registry (plugin removed) | Log warning, skip, **row preserved** — re-adding the plugin picks it up. |
-| `safeParse` fails (config drift across deploys)  | Log warning, skip, **row preserved** — fixing the config or reverting the schema recovers it. |
-| Handler throws                                   | Log error, skip, **row preserved** (oneShot delete only happens on success). |
+| Action name not in the registry (plugin removed) | Log warning, job completes, **row preserved** — re-adding the plugin picks it up on next emit. |
+| `safeParse` fails (config drift across deploys)  | Log warning, job completes, **row preserved** — fixing the config or reverting the schema recovers it. |
+| Handler throws (retryable)                       | Graphile retries up to `maxAttempts`. On exhaustion, job stays in `graphile_worker.jobs` with `last_error`; **row preserved**. Operator can retry via Graphile, or the next emit will enqueue a fresh attempt. |
 
 ## Cleanup paths
 

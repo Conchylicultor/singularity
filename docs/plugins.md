@@ -279,6 +279,7 @@
     - `DELETE /api/events-test/trigger/:id`
     - `POST /api/events-test/delete-targeting`
     - `GET /api/events-test/triggers`
+    - `GET /api/events-test/wait-idle`
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Exports (web):

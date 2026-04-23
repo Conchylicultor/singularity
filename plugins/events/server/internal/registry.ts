@@ -5,6 +5,13 @@ export interface ActionContext {
   payload: unknown;
   triggerId: string;
   table: PgTable;
+  /**
+   * Stable identifier for this dispatch (Graphile job id). Same across retries
+   * of a single failed job; distinct across separate emits. Use as an
+   * idempotency key when your handler is non-idempotent and `triggerId` alone
+   * is insufficient (e.g., a non-oneShot trigger that fires on every emit).
+   */
+  runId: string;
 }
 
 export interface RegisteredAction {

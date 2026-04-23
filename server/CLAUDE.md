@@ -44,7 +44,7 @@ const plugin: ServerPluginDefinition = {
 export default plugin;
 ```
 
-The type is intentionally flat — no base classes, no lifecycle hooks. A plugin is just a data object with optional route maps.
+The type is intentionally flat — no base classes. A plugin is a data object with optional route maps and an optional `onReady` hook (called once after `runMigrations()` completes; use for background work like pollers or workers that need the DB ready).
 
 ### `defineResource` — live state
 

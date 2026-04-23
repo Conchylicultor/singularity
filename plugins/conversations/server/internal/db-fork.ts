@@ -1,4 +1,4 @@
-import { adminSql } from "../../../../server/src/db/client";
+import { adminSql, openShortLivedSql } from "../../../../server/src/db/client";
 
 function assertSafeName(name: string): void {
   if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
@@ -31,6 +31,18 @@ export async function forkDatabase(name: string, source = "singularity"): Promis
     const err = await new Response(restore.stderr).text();
     await adminSql.unsafe(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
     throw new Error(`forkDatabase(${name}) failed: ${err}`);
+  }
+
+  // The dump copies the Graphile Worker schema along with everything else.
+  // Inheriting the parent's `jobs`, `known_crontabs.last_execution`, and
+  // worker-lock rows is actively wrong for a fresh worktree — at minimum, a
+  // forked crontab would silently skip recent runs. Drop the whole schema;
+  // Graphile re-migrates (idempotent) on the first worker start.
+  const sql = openShortLivedSql(name);
+  try {
+    await sql.unsafe(`DROP SCHEMA IF EXISTS graphile_worker CASCADE`);
+  } finally {
+    await sql.end();
   }
 }
 

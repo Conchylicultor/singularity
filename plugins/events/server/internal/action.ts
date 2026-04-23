@@ -18,7 +18,7 @@ export interface DefineActionSpec<
   config: Schema;
   run: (
     config: z.infer<Schema>,
-    ctx: { payload: unknown; triggerId: string; table: unknown },
+    ctx: { payload: unknown; triggerId: string; table: unknown; runId: string },
   ) => Promise<void> | void;
 }
 
@@ -42,7 +42,7 @@ export function defineAction<
     schema: spec.config,
     run: spec.run as (
       config: unknown,
-      ctx: { payload: unknown; triggerId: string; table: unknown },
+      ctx: { payload: unknown; triggerId: string; table: unknown; runId: string },
     ) => Promise<void> | void,
   });
 

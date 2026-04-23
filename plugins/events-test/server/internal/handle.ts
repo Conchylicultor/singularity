@@ -1,7 +1,7 @@
-import { asc } from "drizzle-orm";
+import { asc, sql } from "drizzle-orm";
 import { db } from "../../../../server/src/db/client";
 import { deleteTrigger, trigger } from "@plugins/events/server";
-import { actionLog, logPing } from "./action";
+import { actionLog, logPing, resetActionLog } from "./action";
 import { _pingedTriggers, pinged } from "./tables";
 
 interface SubscribeBody {
@@ -46,8 +46,26 @@ export function handleLog(): Response {
 }
 
 export function handleReset(): Response {
-  actionLog.length = 0;
+  resetActionLog();
   return Response.json({ ok: true });
+}
+
+// Poll graphile_worker.jobs until no jobs for the events dispatch task are
+// pending. Lets e2e tests synchronize between emit() (which now returns once
+// jobs are durable, not once handlers finish) and /log.
+export async function handleWaitIdle(req: Request): Promise<Response> {
+  const url = new URL(req.url);
+  const timeoutMs = Number(url.searchParams.get("timeoutMs") ?? 2000);
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const rows = await db.execute(
+      sql`SELECT count(*)::int AS n FROM graphile_worker.jobs WHERE task_identifier = 'events.dispatch' AND attempts < max_attempts`,
+    );
+    const n = (rows[0] as { n: number } | undefined)?.n ?? 0;
+    if (n === 0) return Response.json({ idle: true });
+    await new Promise((r) => setTimeout(r, 25));
+  }
+  return Response.json({ idle: false, timeoutMs }, { status: 408 });
 }
 
 export async function handleDeleteTrigger(

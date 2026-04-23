@@ -19,3 +19,13 @@ export const adminSql = postgres(
   `postgres://${user}@${host}:${port}/postgres`,
   { max: 1, idle_timeout: 20 },
 );
+
+// Short-lived client against a named database. Used by db-fork to run
+// per-db cleanup (e.g. dropping a schema) without going through the
+// long-lived, per-worktree `sql` client.
+export function openShortLivedSql(dbName: string) {
+  return postgres(`postgres://${user}@${host}:${port}/${dbName}`, {
+    max: 1,
+    idle_timeout: 1,
+  });
+}

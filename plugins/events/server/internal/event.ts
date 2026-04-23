@@ -8,7 +8,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { db } from "../../../../server/src/db/client";
 import { eventTriggerColumns } from "./base-columns";
-import { actionRegistry, triggerTableRegistry } from "./registry";
+import { triggerTableRegistry } from "./registry";
+import { DEFAULT_MAX_ATTEMPTS, DISPATCH_TASK, getWorkerUtils } from "./worker";
 
 // A filter slot is either a plain column builder (identity-or-null match on
 // the same-named payload key) or an object with an explicit match predicate.
@@ -168,50 +169,24 @@ async function dispatch<T>(def: EventDef<T>, payload: T): Promise<void> {
     .from(def.table)
     .where(and(...predicates));
 
-  await Promise.all(rows.map((row) => runAction(def, row, payload)));
-}
+  if (rows.length === 0) return;
 
-async function runAction<T>(
-  def: EventDef<T>,
-  // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
-  row: any,
-  payload: T,
-): Promise<void> {
-  const action = actionRegistry.get(row.actionName);
-  if (!action) {
-    console.warn(
-      `[events] unknown action "${row.actionName}" (event "${def.name}", trigger ${row.id}); preserving row`,
-    );
-    return;
-  }
-
-  const parsed = action.schema.safeParse(row.actionConfig);
-  if (!parsed.success) {
-    console.warn(
-      `[events] config drift for action "${row.actionName}" (event "${def.name}", trigger ${row.id}); preserving row:`,
-      parsed.error.issues,
-    );
-    return;
-  }
-
-  try {
-    await action.run(parsed.data, {
-      payload,
-      triggerId: row.id,
-      table: def.table,
-    });
-  } catch (err) {
-    console.error(
-      `[events] action "${row.actionName}" threw (event "${def.name}", trigger ${row.id}):`,
-      err,
-    );
-    return;
-  }
-
-  if (row.oneShot) {
-    await db
-      .delete(def.table)
-      // biome-ignore lint/suspicious/noExplicitAny: dynamic id column access.
-      .where(eq((def.table as any).id as AnyPgColumn, row.id));
-  }
+  // Enqueue one durable Graphile job per matching row. Execution (including
+  // retries, oneShot deletes, and preservation on permanent failure) happens
+  // in the worker — see `./worker.ts`. emit() resolves once jobs are durable
+  // in `graphile_worker.jobs`, not when handlers finish.
+  const utils = await getWorkerUtils();
+  await Promise.all(
+    rows.map((row) =>
+      // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
+      utils.addJob(DISPATCH_TASK, {
+        actionName: (row as any).actionName,
+        actionConfig: (row as any).actionConfig,
+        eventPayload: payload,
+        triggerId: (row as any).id,
+        eventName: def.name,
+        oneShot: (row as any).oneShot,
+      }, { maxAttempts: DEFAULT_MAX_ATTEMPTS }),
+    ),
+  );
 }
