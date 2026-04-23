@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { MdClose, MdCode, MdRefresh } from "react-icons/md";
 import { Button } from "@/components/ui/button";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { ConversationCommands as Conversation } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { JsonlEvent, JsonlEventsResponse } from "../../shared";
+import { convJsonlPane } from "../panes";
 import { EventRow } from "./event-row";
 
-export function JsonlPane({ conversation }: { conversation: ConversationRecord }) {
+export function JsonlPane() {
+  const { conversation } = conversationPane.useData();
   const [events, setEvents] = useState<JsonlEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -46,7 +47,7 @@ export function JsonlPane({ conversation }: { conversation: ConversationRecord }
           className="size-7 shrink-0"
           title="Close JSONL"
           aria-label="Close JSONL"
-          onClick={() => Conversation.OpenRightPane(null)}
+          onClick={() => convJsonlPane.close()}
         >
           <MdClose className="size-4" />
         </Button>

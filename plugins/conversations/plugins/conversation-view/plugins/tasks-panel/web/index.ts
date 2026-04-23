@@ -2,6 +2,9 @@ import type { PluginDefinition } from "@core";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { TasksButton } from "./components/tasks-button";
 
+// Importing panes registers `convTasksPane` with the Pane registry.
+import "./panes";
+
 export default {
   id: "conversation-tasks-panel",
   name: "Conversation: Tasks panel",

@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useResource } from "@core";
-import { ShellCommands } from "@plugins/shell/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/web";
 import { agentLaunchesResource } from "../../shared/resources";
@@ -50,9 +49,7 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
                     if (convPane) {
                       convPane.open(primary.id);
                     } else {
-                      ShellCommands.OpenPane(
-                        conversationPane({ session_id: primary.id }),
-                      );
+                      conversationPane.open({ convId: primary.id });
                     }
                   }}
                   disabled={!primary}

@@ -1,19 +1,17 @@
 import { MdDataObject } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import {
-  ConversationCommands as Conversation,
-  useRightPane,
-} from "@plugins/conversations/plugins/conversation-view/web";
+import { usePaneMatch } from "@plugins/pane/web";
 import { Button } from "@/components/ui/button";
-import { jsonlRightPane, JSONL_PANE_ID } from "../views";
+import { convJsonlPane } from "../panes";
 
 export function JsonlButton({
-  conversation: _conversation,
+  conversation,
 }: {
   conversation: ConversationRecord;
 }) {
-  const current = useRightPane();
-  const isOpen = current?.id === JSONL_PANE_ID;
+  const match = usePaneMatch();
+  const isOpen =
+    match?.chain.some((e) => e.pane === convJsonlPane._internal) ?? false;
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
@@ -22,7 +20,9 @@ export function JsonlButton({
       aria-label="JSONL transcript"
       aria-pressed={isOpen}
       onClick={() =>
-        Conversation.OpenRightPane(isOpen ? null : jsonlRightPane())
+        isOpen
+          ? convJsonlPane.close()
+          : convJsonlPane.open({ convId: conversation.id })
       }
       className="gap-1.5"
     >

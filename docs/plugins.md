@@ -77,12 +77,9 @@
     - **`conversation-view`** — Conversation pane and toolbar host; nested plugins extend `Conversation.Toolbar`.
       - Defines:
         - Slots: `Conversation.Toolbar`, `Conversation.Title`, `Conversation.PromptBar`
-        - Commands: `Conversation.OpenMiddlePane`, `Conversation.OpenRightPane`, `Conversation.OpenMainView`
       - Exports (web):
-        - Types: `ConversationRecord`, `MainViewDescriptor`, `MiddlePaneDescriptor`, `RightPaneDescriptor`
-        - Values: `Conversation`, `ConversationCommands`, `conversationPane`, `ConversationView`, `MainViewContext`, `MiddlePaneContext`, `RightPaneContext`, `useMainView`, `useMiddlePane`, `useRightPane`
-      - Contributes:
-        - `Shell.Route` `/c/:id`
+        - Types: `ConversationRecord`
+        - Values: `Conversation`, `conversationPane`, `ConversationView`, `isMainPaneId`, `markMainPane`
       - Plugins:
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Defines:

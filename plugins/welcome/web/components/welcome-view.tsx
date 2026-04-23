@@ -1,5 +1,4 @@
 import { MdArrowForward } from "react-icons/md";
-import { ShellCommands as Shell } from "@plugins/shell/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations } from "@plugins/conversations/web";
 import { LaunchButtons } from "@plugins/launch/web";
@@ -24,7 +23,7 @@ export function WelcomeView() {
   const idleCount = recentGone.length;
 
   const openConversation = (name: string) => {
-    Shell.OpenPane(conversationPane({ session_id: name }));
+    conversationPane.open({ convId: name });
   };
 
   const recentConversations = conversations.slice(0, 5);

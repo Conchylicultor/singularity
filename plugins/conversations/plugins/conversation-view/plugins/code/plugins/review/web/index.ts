@@ -2,6 +2,9 @@ import type { PluginDefinition } from "@core";
 import { Code } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { ReviewButton } from "./components/review-button";
 
+// Importing panes registers `convReviewPane` with the Pane registry.
+import "./panes";
+
 export default {
   id: "conversation-code-review",
   name: "Conversation: Code — Review",

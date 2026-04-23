@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { MdClose } from "react-icons/md";
-import { ShellCommands as Shell } from "@plugins/shell/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, GonePageSchema } from "@plugins/conversations/web";
 import { LaunchButtons } from "@plugins/launch/web";
@@ -28,7 +27,7 @@ function formatRelativeTime(date: Date): string {
 }
 
 function openConversation(name: string) {
-  Shell.OpenPane(conversationPane({ session_id: name }));
+  conversationPane.open({ convId: name });
 }
 
 function activeIdFromPath(pathname: string): string | null {

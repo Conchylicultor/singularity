@@ -1,17 +1,15 @@
 import { MdArticle } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import {
-  ConversationCommands as Conversation,
-  useRightPane,
-} from "@plugins/conversations/plugins/conversation-view/web";
+import { usePaneMatch } from "@plugins/pane/web";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "../../../../web/use-edited-files";
-import { docsRightPane, DOCS_PANE_ID, isDocFile } from "../views";
+import { convDocsPane, isDocFile } from "../panes";
 
 export function DocsButton({ conversation }: { conversation: ConversationRecord }) {
   const { files } = useEditedFiles(conversation.id);
-  const current = useRightPane();
-  const isOpen = current?.id === DOCS_PANE_ID;
+  const match = usePaneMatch();
+  const isOpen =
+    match?.chain.some((e) => e.pane === convDocsPane._internal) ?? false;
 
   const docs = files?.filter((f) => isDocFile(f.path)) ?? null;
   const count = docs?.length ?? 0;
@@ -25,7 +23,11 @@ export function DocsButton({ conversation }: { conversation: ConversationRecord 
       aria-label="Design docs"
       aria-pressed={isOpen}
       disabled={disabled}
-      onClick={() => Conversation.OpenRightPane(isOpen ? null : docsRightPane())}
+      onClick={() =>
+        isOpen
+          ? convDocsPane.close()
+          : convDocsPane.open({ convId: conversation.id })
+      }
       className="gap-1.5"
     >
       <MdArticle className="size-4" />

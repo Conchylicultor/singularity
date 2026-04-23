@@ -2,6 +2,9 @@ import type { PluginDefinition } from "@core";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { JsonlButton } from "./components/jsonl-button";
 
+// Importing panes registers `convJsonlPane` with the Pane registry.
+import "./panes";
+
 export default {
   id: "conversation-jsonl-viewer",
   name: "Conversation: JSONL viewer",

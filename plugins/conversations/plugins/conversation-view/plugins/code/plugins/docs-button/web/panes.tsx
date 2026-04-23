@@ -1,0 +1,16 @@
+import { Pane } from "@plugins/pane/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { DocsPane } from "./components/docs-pane";
+
+export const convDocsPane = Pane.define({
+  id: "conv-docs",
+  parent: conversationPane,
+  path: "docs",
+  component: DocsPane,
+});
+
+const MD_RE = /\.mdx?$/i;
+
+export function isDocFile(path: string): boolean {
+  return MD_RE.test(path);
+}

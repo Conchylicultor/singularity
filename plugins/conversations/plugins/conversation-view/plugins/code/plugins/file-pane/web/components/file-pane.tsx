@@ -1,9 +1,8 @@
 import { useMemo, useState, useCallback } from "react";
-import { MdClose, MdContentCopy, MdCheck } from "react-icons/md";
+import { MdContentCopy, MdCheck } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { ConversationCommands as Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import type { EditedFileStatus } from "../../../../shared/protocol";
 import { FilePane, resolveRenderers } from "../slots";
 
@@ -11,12 +10,10 @@ export function FilePaneView({
   conversation,
   path,
   status,
-  embedded = false,
 }: {
   conversation: ConversationRecord;
   path: string;
   status: EditedFileStatus;
-  embedded?: boolean;
 }) {
   const contributions = FilePane.Renderer.useContributions();
   const resolved = useMemo(
@@ -43,18 +40,6 @@ export function FilePaneView({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2 border-b px-2 py-1.5">
-        {!embedded && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 shrink-0"
-            title="Close file"
-            aria-label="Close file"
-            onClick={() => Conversation.OpenRightPane(null)}
-          >
-            <MdClose className="size-4" />
-          </Button>
-        )}
         <div className="flex min-w-0 flex-1 items-baseline gap-1 text-sm">
           <span className="truncate text-muted-foreground">{dir}</span>
           <span className="truncate font-medium">{basename}</span>

@@ -1,19 +1,17 @@
 import { MdChecklist } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import {
-  ConversationCommands as Conversation,
-  useRightPane,
-} from "@plugins/conversations/plugins/conversation-view/web";
+import { usePaneMatch } from "@plugins/pane/web";
 import { Button } from "@/components/ui/button";
-import { tasksRightPane, TASKS_PANE_ID } from "../views";
+import { convTasksPane } from "../panes";
 
 export function TasksButton({
-  conversation: _conversation,
+  conversation,
 }: {
   conversation: ConversationRecord;
 }) {
-  const current = useRightPane();
-  const isOpen = current?.id === TASKS_PANE_ID;
+  const match = usePaneMatch();
+  const isOpen =
+    match?.chain.some((e) => e.pane === convTasksPane._internal) ?? false;
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
@@ -22,7 +20,9 @@ export function TasksButton({
       aria-label="Tasks"
       aria-pressed={isOpen}
       onClick={() =>
-        Conversation.OpenRightPane(isOpen ? null : tasksRightPane())
+        isOpen
+          ? convTasksPane.close()
+          : convTasksPane.open({ convId: conversation.id })
       }
       className="gap-1.5"
     >

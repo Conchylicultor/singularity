@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { MdClose } from "react-icons/md";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { ConversationCommands as Conversation } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "../../../../web/use-edited-files";
+import { convReviewPane } from "../panes";
 import { ReviewFileRow } from "./review-file-row";
 
-export function ReviewView({ conversation }: { conversation: ConversationRecord }) {
+export function ReviewView() {
+  const { conversation } = conversationPane.useData();
   const { files } = useEditedFiles(conversation.id);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -75,7 +76,7 @@ export function ReviewView({ conversation }: { conversation: ConversationRecord 
             size="icon"
             title="Close review"
             aria-label="Close review"
-            onClick={() => Conversation.OpenMainView(null)}
+            onClick={() => convReviewPane.close()}
           >
             <MdClose className="size-4" />
           </Button>

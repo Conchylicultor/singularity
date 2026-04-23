@@ -1,16 +1,13 @@
 import { useState } from "react";
 import { MdClose } from "react-icons/md";
 import { Button } from "@/components/ui/button";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { ConversationCommands as Conversation } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { TasksList } from "@plugins/tasks/web";
 import { TaskDetail } from "@plugins/tasks/web";
+import { convTasksPane } from "../panes";
 
-export function TasksPane({
-  conversation,
-}: {
-  conversation: ConversationRecord;
-}) {
+export function TasksPane() {
+  const { conversation } = conversationPane.useData();
   const rootId = conversation.taskId;
   const [selectedId, setSelectedId] = useState<string>(rootId);
   return (
@@ -22,7 +19,7 @@ export function TasksPane({
           className="size-7 shrink-0"
           title="Close tasks"
           aria-label="Close tasks"
-          onClick={() => Conversation.OpenRightPane(null)}
+          onClick={() => convTasksPane.close()}
         >
           <MdClose className="size-4" />
         </Button>

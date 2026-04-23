@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { MdAdd, MdPlayArrow } from "react-icons/md";
-import { ShellCommands as Shell } from "@plugins/shell/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   ConversationSchema,
@@ -52,7 +51,7 @@ export function LaunchButtons({
       if (!res.ok) return;
       const conversation = ConversationSchema.parse(await res.json());
       if (openAfterLaunch) {
-        Shell.OpenPane(conversationPane({ session_id: conversation.id }));
+        conversationPane.open({ convId: conversation.id });
       }
     } finally {
       setLaunching(null);

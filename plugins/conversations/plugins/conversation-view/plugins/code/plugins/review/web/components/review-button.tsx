@@ -1,18 +1,16 @@
 import { MdRateReview, MdWarning } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import {
-  ConversationCommands as Conversation,
-  useMainView,
-} from "@plugins/conversations/plugins/conversation-view/web";
+import { usePaneMatch } from "@plugins/pane/web";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "../../../../web/use-edited-files";
-import { reviewMainView, REVIEW_MAIN_VIEW_ID } from "../views";
+import { convReviewPane } from "../panes";
 import { isCoreFile } from "../core-files";
 
 export function ReviewButton({ conversation }: { conversation: ConversationRecord }) {
   const { files } = useEditedFiles(conversation.id);
-  const current = useMainView();
-  const isOpen = current?.id === REVIEW_MAIN_VIEW_ID;
+  const match = usePaneMatch();
+  const isOpen =
+    match?.chain.some((e) => e.pane === convReviewPane._internal) ?? false;
 
   const count = files?.length ?? 0;
   const additions = files?.reduce((sum, f) => sum + f.additions, 0) ?? 0;
@@ -29,7 +27,11 @@ export function ReviewButton({ conversation }: { conversation: ConversationRecor
       aria-label="Review changes"
       aria-pressed={isOpen}
       disabled={disabled}
-      onClick={() => Conversation.OpenMainView(isOpen ? null : reviewMainView())}
+      onClick={() =>
+        isOpen
+          ? convReviewPane.close()
+          : convReviewPane.open({ convId: conversation.id })
+      }
       className="gap-1.5"
     >
       <MdRateReview className="size-4" />

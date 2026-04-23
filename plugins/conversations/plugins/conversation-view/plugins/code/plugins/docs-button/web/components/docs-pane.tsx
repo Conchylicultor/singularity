@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { MdClose } from "react-icons/md";
 import { Button } from "@/components/ui/button";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { ConversationCommands as Conversation } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "../../../../web/use-edited-files";
 import { FilePaneView } from "../../../file-pane/web/components/file-pane";
-import { isDocFile } from "../views";
+import { convDocsPane, isDocFile } from "../panes";
 import { DocRow } from "./doc-row";
 
-export function DocsPane({ conversation }: { conversation: ConversationRecord }) {
+export function DocsPane() {
+  const { conversation } = conversationPane.useData();
   const { files } = useEditedFiles(conversation.id);
 
   const docs = useMemo(() => {
@@ -39,7 +39,7 @@ export function DocsPane({ conversation }: { conversation: ConversationRecord })
           className="size-7 shrink-0"
           title="Close docs"
           aria-label="Close docs"
-          onClick={() => Conversation.OpenRightPane(null)}
+          onClick={() => convDocsPane.close()}
         >
           <MdClose className="size-4" />
         </Button>
@@ -77,7 +77,6 @@ export function DocsPane({ conversation }: { conversation: ConversationRecord })
             conversation={conversation}
             path={selected.path}
             status={selected.status}
-            embedded
           />
         ) : (
           <div className="px-3 py-2 text-sm text-muted-foreground">
