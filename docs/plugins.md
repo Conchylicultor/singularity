@@ -107,21 +107,28 @@
             - Uses: `tasks-core.getConversation`
             - Resources: `edited-files` (invalidate)
           - Plugins:
-            - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
-              - Contributes:
-                - `FilePane.Renderer` "Diff" → `DiffOrImageView`
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
               - Contributes:
                 - `Code.ToolbarButton` → `DocsButton`
-            - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
-              - Contributes:
-                - `FilePane.Renderer` "Image" → `ImageView`
-            - **`markdown`** — Rendered markdown preview for .md and .mdx files.
-              - Contributes:
-                - `FilePane.Renderer` "Markdown" → `MarkdownView`
-            - **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
-              - Contributes:
-                - `FilePane.Renderer` "Raw" → `RawView`
+            - **`file-pane`**
+              - Defines:
+                - Slots: `FilePane.Renderer`
+              - Exports (web):
+                - Types: `FileRendererContribution`, `FileRendererTarget`, `RendererMatch`
+                - Values: `FilePane`, `FilePaneView`, `resolveRenderers`
+              - Plugins:
+                - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
+                  - Contributes:
+                    - `FilePane.Renderer` "Diff" → `DiffOrImageView`
+                - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
+                  - Contributes:
+                    - `FilePane.Renderer` "Image" → `ImageView`
+                - **`markdown`** — Rendered markdown preview for .md and .mdx files.
+                  - Contributes:
+                    - `FilePane.Renderer` "Markdown" → `MarkdownView`
+                - **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
+                  - Contributes:
+                    - `FilePane.Renderer` "Raw" → `RawView`
             - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file.
               - Contributes:
                 - `Code.ToolbarButton` → `ReviewButton`

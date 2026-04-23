@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FilePaneView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web/components/file-pane";
+import { FilePaneView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import {
   ResizableHandle,
   ResizablePanel,

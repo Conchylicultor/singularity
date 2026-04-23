@@ -3,13 +3,9 @@ import { MdFolderOpen } from "react-icons/md";
 import { Shell } from "@plugins/shell/web";
 import { Code } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { ConvTreeButton } from "./components/conv-tree-button";
-import { globalFileTreePane, convFileTreePane } from "./panes";
-
-// Import for side effects: registers the panes with the PaneRouter.
-void globalFileTreePane;
-void convFileTreePane;
-
-const MAIN_WORKTREE = "main";
+// Importing the panes module registers globalFileTreePane and convFileTreePane
+// with the PaneRouter as a side effect of Pane.define calls at module load.
+import { globalFileTreePane } from "./panes";
 
 export default {
   id: "code-explorer",
@@ -21,7 +17,7 @@ export default {
       title: "Explorer",
       icon: MdFolderOpen,
       group: "System",
-      onClick: () => globalFileTreePane.open({ worktree: MAIN_WORKTREE }),
+      onClick: () => globalFileTreePane.open({ worktree: "main" }),
     }),
     Code.ToolbarButton({ component: ConvTreeButton }),
   ],
