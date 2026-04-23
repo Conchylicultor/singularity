@@ -1,7 +1,13 @@
 import type { PluginDefinition } from "@core";
-import { Shell, ShellCommands } from "@plugins/shell/web";
+import { Shell } from "@plugins/shell/web";
 import { MdPrecisionManufacturing } from "react-icons/md";
-import { agentsPane } from "./views";
+import { agentsRootPane } from "./panes";
+
+export {
+  agentsRootPane,
+  agentDetailPane,
+  agentConversationPane,
+} from "./panes";
 
 export default {
   id: "agents",
@@ -12,15 +18,7 @@ export default {
       title: "Agents",
       icon: MdPrecisionManufacturing,
       group: "System",
-      onClick: () => ShellCommands.OpenPane(agentsPane()),
-    }),
-    Shell.Route({
-      pattern: "/agents",
-      resolve: () => agentsPane(),
-    }),
-    Shell.Route({
-      pattern: "/agents/:id",
-      resolve: (params) => agentsPane({ id: params.id }),
+      onClick: () => agentsRootPane.open({}),
     }),
   ],
 } satisfies PluginDefinition;

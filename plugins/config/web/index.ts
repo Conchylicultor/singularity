@@ -1,12 +1,12 @@
 import type { PluginDefinition } from "@core";
 import { Shell } from "@plugins/shell/web";
-import { ShellCommands } from "@plugins/shell/web";
 import { MdSettings } from "react-icons/md";
-import { settingsPane } from "./views";
+import { settingsPane } from "./panes";
 
 export { configResource, useConfigValues, setConfigValue, resetConfigValue } from "./internal/config-client";
 export { Config, useSpecsWithPlugin, useSectionsWithPlugin } from "./slots";
 export type { SpecWithPlugin, SectionWithPlugin } from "./slots";
+export { settingsPane } from "./panes";
 
 export default {
   id: "config",
@@ -18,8 +18,7 @@ export default {
       title: "Settings",
       icon: MdSettings,
       group: "System",
-      onClick: () => ShellCommands.OpenPane(settingsPane()),
+      onClick: () => settingsPane.open({}),
     }),
-    Shell.Route({ pattern: "/settings", resolve: () => settingsPane() }),
   ],
 } satisfies PluginDefinition;

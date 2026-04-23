@@ -1,8 +1,8 @@
 import { useResource } from "@core";
 import { TreeList } from "@plugins/tree/web";
 import { agentsResource } from "../../shared/resources";
-import { Agents as AgentsCommands } from "../commands";
 import { Agents as AgentsSlots } from "../slots";
+import { agentDetailPane } from "../panes";
 import { AgentStatus } from "./agent-status";
 
 type Agent = {
@@ -60,7 +60,7 @@ export function AgentsList({
       selectedId={selectedId}
       labelOf={(a) => a.name}
       onSelect={(id) =>
-        onSelect ? onSelect(id) : AgentsCommands.OpenAgent({ id })
+        onSelect ? onSelect(id) : agentDetailPane.open({ id })
       }
       onRename={(id, next) => patchAgent(id, { name: next })}
       onToggleExpanded={(id, next) => patchAgent(id, { expanded: next })}

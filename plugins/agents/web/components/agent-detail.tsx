@@ -3,9 +3,9 @@ import { MdPlayArrow } from "react-icons/md";
 import { useResource } from "@core";
 import { Button } from "@/components/ui/button";
 import { agentsResource } from "../../shared/resources";
+import { agentConversationPane } from "../panes";
 import { AgentLaunches } from "./agent-launches";
 import { AgentStatus } from "./agent-status";
-import { useConversationPane } from "./conversation-pane-context";
 
 type Patch = Partial<{
   name: string;
@@ -31,7 +31,6 @@ async function patchAgent(id: string, patch: Patch) {
 export function AgentDetail({ agentId }: { agentId: string }) {
   const { data } = useResource(agentsResource);
   const agent = data?.find((a) => a.id === agentId) ?? null;
-  const convPane = useConversationPane();
 
   const [name, setName] = useState(agent?.name ?? "");
   const [description, setDescription] = useState(agent?.description ?? "");
@@ -111,9 +110,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         taskId: string;
         conversationId: string;
       };
-      // Brief wait for the conversations resource to include the new row so
-      // the pane finds the conversation on open.
-      if (convPane) convPane.open(conversationId);
+      agentConversationPane.open({ id: agentId, convId: conversationId });
     } finally {
       setLaunching(false);
     }

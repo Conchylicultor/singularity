@@ -1,8 +1,9 @@
 import type { PluginDefinition } from "@core";
-import { ShellCommands } from "@plugins/shell/web";
 import { Debug } from "@plugins/debug/web";
 import { MdFolderDelete } from "react-icons/md";
-import { worktreeCleanupPane } from "./views";
+import { worktreeCleanupPane } from "./panes";
+
+export { worktreeCleanupPane } from "./panes";
 
 export default {
   id: "debug-worktree-cleanup",
@@ -13,7 +14,7 @@ export default {
       id: "worktree-cleanup",
       title: "Worktree Cleanup",
       icon: MdFolderDelete,
-      onClick: () => ShellCommands.OpenPane(worktreeCleanupPane()),
+      onClick: () => worktreeCleanupPane.open({}),
     }),
   ],
 } satisfies PluginDefinition;

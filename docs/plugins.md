@@ -5,14 +5,14 @@
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
   - Defines:
     - Slots: `Agents.List`, `Agents.View`, `Agents.AgentActions`
-    - Commands: `Agents.OpenAgent`
+  - Exports (web):
+    - Values: `agentConversationPane`, `agentDetailPane`, `agentsRootPane`
   - Exports (server):
     - Types: `Agent`, `AgentLaunch`
     - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
   - Contributes:
     - `Shell.Sidebar` "Agents" (group `System`)
-    - `Shell.Route` `/agents`
-    - `Shell.Route` `/agents/:id`
+    - `agentsRootPane.open`
   - Server:
     - Uses: `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversations`, `tasks-core.recentConversationsResource`
     - Resources: `agent-launches` (push), `agents` (push)
@@ -37,7 +37,7 @@
     - Slots: `Config.Spec`, `Config.Section`
   - Exports (web):
     - Types: `SectionWithPlugin`, `SpecWithPlugin`
-    - Values: `Config`, `configResource`, `resetConfigValue`, `setConfigValue`, `useConfigValues`, `useSectionsWithPlugin`, `useSpecsWithPlugin`
+    - Values: `Config`, `configResource`, `resetConfigValue`, `setConfigValue`, `settingsPane`, `useConfigValues`, `useSectionsWithPlugin`, `useSpecsWithPlugin`
   - Exports (server):
     - Values: `configResource`, `readConfig`
   - Exports (shared):
@@ -45,7 +45,7 @@
     - Values: `defineConfig`, `fullKey`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `validateKind`
   - Contributes:
     - `Shell.Sidebar` "Settings" (group `System`)
-    - `Shell.Route` `/settings`
+    - `settingsPane.open`
   - Server:
     - `GET /api/config`
     - `GET /api/config/specs`
@@ -212,24 +212,31 @@
     - `Shell.Sidebar` "Debug" → `DebugSidebar`
   - Plugins:
     - **`db-backup`** — Backup non-worktree Postgres databases to ~/.backups/singularity/. Backup non-worktree Postgres databases to ~/.backups/singularity/.
+      - Exports (web):
+        - Values: `dbBackupPane`
       - Contributes:
         - `Debug.Item` "DB Backup"
+        - `dbBackupPane.open`
       - Server:
         - `POST /api/debug/backup-db`
     - **`logs`** — System logs pane, opened from the Debug sidebar.
+      - Exports (web):
+        - Values: `logChannelPane`, `logsPane`
       - Exports (server):
         - Types: `LogChannel`, `LogStream`
         - Values: `Log`
       - Contributes:
         - `Debug.Item` "Logs"
-        - `Shell.Route` `/logs`
-        - `Shell.Route` `/logs/:channel`
+        - `logsPane.open`
       - Server:
         - `GET /api/logs/channels`
         - `WS /ws/logs`
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
+      - Exports (web):
+        - Values: `worktreeCleanupPane`
       - Contributes:
         - `Debug.Item` "Worktree Cleanup"
+        - `worktreeCleanupPane.open`
       - Server:
         - Uses: `tasks-core.getAttempt`, `tasks-core.listAttempts`, `tasks-core.listTasks`
         - `GET /api/debug/worktrees`
@@ -242,9 +249,11 @@
     - Values: `defineAction`, `defineTriggerEvent`, `deleteTrigger`, `trigger`
 
 - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events API end-to-end.
+  - Exports (web):
+    - Values: `eventsTestPane`
   - Contributes:
     - `Shell.Sidebar` "Events Test" (group `System`)
-    - `Shell.Route` `/events-test`
+    - `eventsTestPane.open`
   - Server:
     - Uses: `events.defineAction`, `events.defineTriggerEvent`, `events.deleteTrigger`, `events.trigger`
     - `POST /api/events-test/subscribe`
@@ -281,9 +290,10 @@
     - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
+  - Exports (web):
+    - Values: `screenshotPane`
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `ScreenshotButton`
-    - `Shell.Route` `/screenshot/:id`
   - Server:
     - `POST /api/screenshots/:id`
     - `GET /api/screenshots/:id`
@@ -291,10 +301,10 @@
 
 - **`shell`** — Foundational app layout; defines the slots and commands most other plugins extend.
   - Defines:
-    - Slots: `Shell.Sidebar`, `Shell.Toolbar`, `Shell.Route`
-    - Commands: `Shell.OpenPane`, `Shell.Toast`
+    - Slots: `Shell.Sidebar`, `Shell.Toolbar`
+    - Commands: `Shell.Toast`
   - Exports (web):
-    - Types: `PaneDescriptor`, `ToastArgs`, `ToastVariant`
+    - Types: `ToastArgs`, `ToastVariant`
     - Values: `Shell`, `ShellCommands`
   - Contributes:
     - `Core.Root` → `ShellLayout`
@@ -303,10 +313,10 @@
   - Defines:
     - Slots: `Stats.Chart`
   - Exports (web):
-    - Values: `Stats`
+    - Values: `Stats`, `statsPane`
   - Contributes:
     - `Shell.Sidebar` "Stats" (group `System`)
-    - `Shell.Route` `/stats`
+    - `statsPane.open`
   - Plugins:
     - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
       - Exports (web):

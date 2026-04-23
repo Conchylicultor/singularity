@@ -1,6 +1,5 @@
 import { defineSlot } from "@core";
 import type { ComponentType } from "react";
-import type { PaneDescriptor } from "./commands";
 
 export const Shell = {
   Sidebar: defineSlot<{
@@ -18,9 +17,4 @@ export const Shell = {
     component?: ComponentType;
     group?: string;
   }>("shell.toolbar"),
-
-  Route: defineSlot<{
-    pattern: string;
-    resolve: (params: Record<string, string>) => PaneDescriptor;
-  }>("shell.route"),
 };

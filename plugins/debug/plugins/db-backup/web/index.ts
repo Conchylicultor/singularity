@@ -1,8 +1,9 @@
 import type { PluginDefinition } from "@core";
-import { ShellCommands } from "@plugins/shell/web";
 import { Debug } from "@plugins/debug/web";
 import { MdBackup } from "react-icons/md";
-import { dbBackupPane } from "./views";
+import { dbBackupPane } from "./panes";
+
+export { dbBackupPane } from "./panes";
 
 export default {
   id: "debug-db-backup",
@@ -13,7 +14,7 @@ export default {
       id: "db-backup",
       title: "DB Backup",
       icon: MdBackup,
-      onClick: () => ShellCommands.OpenPane(dbBackupPane()),
+      onClick: () => dbBackupPane.open({}),
     }),
   ],
 } satisfies PluginDefinition;

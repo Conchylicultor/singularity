@@ -86,7 +86,7 @@ A command is created with `defineCommand<Args, Return>(id)`. The returned object
 import { defineCommand } from "@core";
 
 export const Shell = {
-  OpenPane: defineCommand<PaneDescriptor, string>("shell.open-pane"),
+  Toast: defineCommand<ToastArgs, void>("shell.toast"),
 };
 ```
 
@@ -95,10 +95,8 @@ export const Shell = {
 Call `.useHandler(fn)` inside a mounted React component. The handler typically closes over React state:
 
 ```typescript
-Shell.OpenPane.useHandler((descriptor) => {
-  const id = ...;
-  setPanels((prev) => { id, descriptor });
-  return id;
+Shell.Toast.useHandler((args) => {
+  showToast(args);
 });
 ```
 
@@ -107,32 +105,31 @@ Shell.OpenPane.useHandler((descriptor) => {
 Call the command directly — no hook needed:
 
 ```typescript
-import { Shell } from "@plugins/shell/web/commands";
+import { ShellCommands } from "@plugins/shell/web";
 
-<button onClick={() => Shell.OpenPane({ title: "Hello", component: MyView })}>Open</button>
+<button onClick={() => ShellCommands.Toast({ description: "Saved" })}>Save</button>
 ```
 
-### View factories
+### Panes: use `Pane.define`, not commands
 
-When a command accepts a component (like `Shell.OpenPane`), plugins should expose **factory functions** rather than raw components. This preserves encapsulation — consumers never import internal components:
-
-```typescript
-// plugins/terminal/web/views.ts (public API)
-import { TerminalComponent } from "./components/terminal"; // internal
-
-export function terminalPane(args: { worktree: string }): PaneDescriptor {
-  const Component = () => <TerminalComponent worktree={args.worktree} />;
-  return { title: `Agent: ${args.worktree}`, component: Component };
-}
-```
-
-Consumer composes factory + command:
+For opening a view or mounting a URL, use the `pane` plugin (`@plugins/pane/web`) — not a command. Each `Pane.define` call registers a pane with its own path, component, and typed params. See [`plugins/pane/web/CLAUDE.md`](../plugins/pane/web/CLAUDE.md).
 
 ```typescript
-import { Shell } from "@plugins/shell/web/commands";
-import { terminalPane } from "@plugins/terminal/web/views";
+// plugins/terminal/web/panes.ts
+import { Pane } from "@plugins/pane/web";
+import { TerminalComponent } from "./components/terminal";
 
-<button onClick={() => Shell.OpenPane(terminalPane({ worktree: path }))}>Launch</button>
+export const terminalPane = Pane.define({
+  id: "terminal",
+  path: "/terminal/:worktree",
+  component: () => {
+    const { worktree } = terminalPane.useParams();
+    return <TerminalComponent worktree={worktree} />;
+  },
+});
+
+// Consumer:
+<button onClick={() => terminalPane.open({ worktree: path })}>Launch</button>
 ```
 
 ## Live state — `useResource`

@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { useResource } from "@core";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { usePaneMatch } from "@plugins/pane/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/web";
 import { agentLaunchesResource } from "../../shared/resources";
+import { agentConversationPane } from "../panes";
 import { cn } from "@/lib/utils";
-import { useConversationPane } from "./conversation-pane-context";
 
 function formatDate(value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
@@ -18,7 +18,10 @@ function formatDate(value: Date | string): string {
 
 export function AgentLaunches({ agentId }: { agentId: string }) {
   const launchesQ = useResource(agentLaunchesResource);
-  const convPane = useConversationPane();
+  const match = usePaneMatch();
+  const activeConvId = match?.chain.find(
+    (e) => e.pane === agentConversationPane._internal,
+  )?.params.convId;
 
   const launches = useMemo(() => {
     const rows = launchesQ.data ?? [];
@@ -38,7 +41,7 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
         <ul className="flex flex-col gap-1">
           {launches.map((launch) => {
             const primary = launch.latestConversation;
-            const isActive = primary && convPane?.activeId === primary.id;
+            const isActive = primary ? activeConvId === primary.id : false;
             const title = primary?.title ?? `Launch ${formatDate(launch.createdAt)}`;
             return (
               <li key={launch.id}>
@@ -46,10 +49,13 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
                   type="button"
                   onClick={() => {
                     if (!primary) return;
-                    if (convPane) {
-                      convPane.open(primary.id);
+                    if (isActive) {
+                      agentConversationPane.close();
                     } else {
-                      conversationPane.open({ convId: primary.id });
+                      agentConversationPane.open({
+                        id: agentId,
+                        convId: primary.id,
+                      });
                     }
                   }}
                   disabled={!primary}

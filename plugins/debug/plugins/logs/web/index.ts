@@ -1,8 +1,9 @@
 import type { PluginDefinition } from "@core";
-import { Shell, ShellCommands } from "@plugins/shell/web";
 import { Debug } from "@plugins/debug/web";
 import { MdTerminal } from "react-icons/md";
-import { logPane } from "./views";
+import { logsPane } from "./panes";
+
+export { logsPane, logChannelPane } from "./panes";
 
 export default {
   id: "logs",
@@ -13,15 +14,7 @@ export default {
       id: "logs",
       title: "Logs",
       icon: MdTerminal,
-      onClick: () => ShellCommands.OpenPane(logPane()),
-    }),
-    Shell.Route({
-      pattern: "/logs",
-      resolve: () => logPane(),
-    }),
-    Shell.Route({
-      pattern: "/logs/:channel",
-      resolve: (params) => logPane({ channel: params.channel }),
+      onClick: () => logsPane.open({}),
     }),
   ],
 } satisfies PluginDefinition;

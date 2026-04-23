@@ -1,7 +1,9 @@
 import type { PluginDefinition } from "@core";
 import { MdBolt } from "react-icons/md";
-import { Shell, ShellCommands } from "@plugins/shell/web";
-import { eventsTestPane } from "./views";
+import { Shell } from "@plugins/shell/web";
+import { eventsTestPane } from "./panes";
+
+export { eventsTestPane } from "./panes";
 
 export default {
   id: "events-test",
@@ -12,8 +14,7 @@ export default {
       title: "Events Test",
       icon: MdBolt,
       group: "System",
-      onClick: () => ShellCommands.OpenPane(eventsTestPane()),
+      onClick: () => eventsTestPane.open({}),
     }),
-    Shell.Route({ pattern: "/events-test", resolve: () => eventsTestPane() }),
   ],
 } satisfies PluginDefinition;

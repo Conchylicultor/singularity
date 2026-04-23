@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import type { ComponentType } from "react";
 import { MdTune, MdChevronRight } from "react-icons/md";
 import { toast } from "sonner";
@@ -13,8 +13,6 @@ import { PluginErrorBoundary } from "@core";
 import { PaneRouter } from "@plugins/pane/web";
 import { Shell as ShellCommands } from "../commands";
 import { Shell } from "../slots";
-import { matchRoute } from "../routing";
-import type { PaneDescriptor } from "../commands";
 import { Toaster } from "./toaster";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -56,8 +54,6 @@ function ToolbarItem(item: {
   return null;
 }
 
-let nextPaneId = 0;
-
 const DEFAULT_COLLAPSED = new Set(["Debug"]);
 
 export function ShellLayout() {
@@ -81,69 +77,6 @@ export function ShellLayout() {
       return next;
     });
   const toolbarItems = Shell.Toolbar.useContributions();
-  const routes = Shell.Route.useContributions();
-
-  const [panels, setPanels] = useState<
-    Array<{ id: string } & PaneDescriptor>
-  >([]);
-
-  // Maps stable component references to their assigned pane id so that
-  // navigating within the same panel type (e.g. /tasks → /tasks/:id) reuses
-  // the existing pane id. This prevents React from unmounting the panel, which
-  // would reset local state like filter toggles and scroll position.
-  const componentIds = useRef(new Map<React.ComponentType, string>());
-
-  const openPane = (descriptor: PaneDescriptor): string => {
-    const existing = componentIds.current.get(descriptor.component);
-    if (existing !== undefined) {
-      setPanels([{ id: existing, ...descriptor }]);
-      return existing;
-    }
-    const id = `pane-${nextPaneId++}`;
-    componentIds.current.set(descriptor.component, id);
-    setPanels([{ id, ...descriptor }]);
-    return id;
-  };
-
-  ShellCommands.OpenPane.useHandler((descriptor) => {
-    const id = openPane(descriptor);
-    history.pushState({}, "", descriptor.path);
-    window.dispatchEvent(new CustomEvent("shell:navigate"));
-    return id;
-  });
-
-  // Resolve current URL on mount
-  const initialRouteResolved = useRef(false);
-  useEffect(() => {
-    if (initialRouteResolved.current || routes.length === 0) return;
-    initialRouteResolved.current = true;
-
-    const pathname = window.location.pathname;
-
-    for (const route of routes) {
-      const params = matchRoute(route.pattern, pathname);
-      if (params) {
-        openPane(route.resolve(params));
-        return;
-      }
-    }
-  }, [routes]);
-
-  // Handle back/forward navigation
-  useEffect(() => {
-    const onPopState = () => {
-      const pathname = window.location.pathname;
-      for (const route of routes) {
-        const params = matchRoute(route.pattern, pathname);
-        if (params) {
-          openPane(route.resolve(params));
-          return;
-        }
-      }
-    };
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, [routes]);
 
   ShellCommands.Toast.useHandler(({ title, description, variant }) => {
     const opts = { description: title ? description : undefined };
@@ -277,11 +210,6 @@ export function ShellLayout() {
 
           <main className="flex-1 overflow-hidden bg-muted/30">
             <ScrollArea className="h-full">
-              {panels.map((panel) => (
-                <PluginErrorBoundary key={panel.id} slot="shell.pane" label={panel.id}>
-                  <panel.component />
-                </PluginErrorBoundary>
-              ))}
               <PaneRouter />
             </ScrollArea>
           </main>

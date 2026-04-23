@@ -1,7 +1,7 @@
 import { Core, type PluginDefinition } from "@core";
 import { ShellLayout } from "./components/shell-layout";
 export { Shell } from "./slots";
-export { Shell as ShellCommands, type PaneDescriptor, type ToastVariant, type ToastArgs } from "./commands";
+export { Shell as ShellCommands, type ToastVariant, type ToastArgs } from "./commands";
 
 export default {
   id: "shell",
