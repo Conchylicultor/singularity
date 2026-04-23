@@ -96,6 +96,10 @@
         "@modelcontextprotocol/sdk": "^1.20.0",
       },
     },
+    "plugins/pane": {
+      "name": "@singularity/plugin-pane",
+      "version": "0.0.1",
+    },
     "plugins/screenshot": {
       "name": "@singularity/plugin-screenshot",
       "version": "0.0.1",
@@ -649,6 +653,8 @@
     "@singularity/plugin-launch": ["@singularity/plugin-launch@workspace:plugins/launch"],
 
     "@singularity/plugin-mcp": ["@singularity/plugin-mcp@workspace:plugins/mcp"],
+
+    "@singularity/plugin-pane": ["@singularity/plugin-pane@workspace:plugins/pane"],
 
     "@singularity/plugin-screenshot": ["@singularity/plugin-screenshot@workspace:plugins/screenshot"],
 

@@ -10,6 +10,7 @@ const SIDEBAR_GROUPS: Record<
   System: { icon: MdTune },
 };
 import { PluginErrorBoundary } from "@core";
+import { PaneRouter } from "@plugins/pane/web";
 import { Shell as ShellCommands } from "../commands";
 import { Shell } from "../slots";
 import { matchRoute } from "../routing";
@@ -281,6 +282,7 @@ export function ShellLayout() {
                   <panel.component />
                 </PluginErrorBoundary>
               ))}
+              <PaneRouter />
             </ScrollArea>
           </main>
 

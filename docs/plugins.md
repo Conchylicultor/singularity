@@ -274,6 +274,11 @@
   - Server:
     - `POST /api/mcp/:conversationId`
 
+- **`pane`** — Unified pane primitive: Pane.define, <Outlet/>, <PaneRouter/>, and chrome components.
+  - Exports (web):
+    - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
+    - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
+
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `ScreenshotButton`

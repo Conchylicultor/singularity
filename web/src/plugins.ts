@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@core";
 import shellPlugin from "@plugins/shell/web";
+import panePlugin from "@plugins/pane/web";
 import terminalPlugin from "@plugins/terminal/web";
 import buildPlugin from "@plugins/build/web";
 import debugPlugin from "@plugins/debug/web";
@@ -45,6 +46,7 @@ import eventsTestPlugin from "@plugins/events-test/web";
 
 export const plugins: PluginDefinition[] = [
   shellPlugin,
+  panePlugin,
   welcomePlugin,
   launchPlugin,
   treePlugin,
