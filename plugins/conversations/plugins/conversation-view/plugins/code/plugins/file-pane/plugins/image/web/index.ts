@@ -1,17 +1,7 @@
 import type { PluginDefinition } from "@core";
 import { FilePane } from "../../../web/slots";
 import { ImageView } from "./components/image-view";
-
-const IMAGE_EXTS = new Set([
-  "png", "jpg", "jpeg", "gif", "webp", "svg", "ico", "bmp", "avif",
-]);
-
-function isImagePath(path: string): boolean {
-  const base = path.slice(path.lastIndexOf("/") + 1).toLowerCase();
-  const dot = base.lastIndexOf(".");
-  if (dot < 0) return false;
-  return IMAGE_EXTS.has(base.slice(dot + 1));
-}
+import { supportsImage } from "./internal/supports";
 
 export default {
   id: "conversation-code-file-pane-image",
@@ -21,7 +11,7 @@ export default {
     FilePane.Renderer({
       id: "image",
       label: "Image",
-      supports: (file) => (isImagePath(file.path) ? "native" : false),
+      supports: supportsImage,
       component: ImageView,
     }),
   ],
