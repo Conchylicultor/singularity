@@ -234,6 +234,7 @@
         - `Debug.Item` "DB Backup"
         - `dbBackupPane.open`
       - Server:
+        - `GET /api/debug/backup-db`
         - `POST /api/debug/backup-db`
     - **`logs`** — System logs pane, opened from the Debug sidebar.
       - Exports (web):
