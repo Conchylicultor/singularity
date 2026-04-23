@@ -148,10 +148,15 @@ export const tmuxRuntime: ConversationRuntime = {
   },
 
   async send(conversationId: string, text: string): Promise<void> {
-    // Use send-keys -l (literal) so special characters are passed verbatim
-    // without shell interpretation. Both send-keys calls go to the same tmux
-    // server sequentially, so PTY receives [text][Enter] in guaranteed order
-    // with no timing race.
+    // Exit copy mode if the pane is in it (e.g. user scrolled up before
+    // clicking Push & Exit). copy-mode -q is a no-op when already in normal
+    // mode. Without this, send-keys goes to copy mode's vi key bindings
+    // instead of the running process — 'f' triggers "Jump to char", consuming
+    // the rest of the prompt without it ever reaching Claude.
+    await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
     await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "-l", text], {
       stdout: "pipe",
       stderr: "pipe",
