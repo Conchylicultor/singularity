@@ -9,6 +9,7 @@ const STATUS_LABEL: Record<EditedFileStatus, string> = {
   added: "new",
   untracked: "new",
   deleted: "deleted",
+  clean: "clean",
 };
 
 const STATUS_BADGE: Record<EditedFileStatus, string> = {
@@ -16,15 +17,16 @@ const STATUS_BADGE: Record<EditedFileStatus, string> = {
   added: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
   untracked: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
   deleted: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30",
+  clean: "bg-muted text-muted-foreground border-border",
 };
 
 export function ReviewFileRow({
-  conversationId,
+  worktree,
   file,
   expanded,
   onToggle,
 }: {
-  conversationId: string;
+  worktree: string;
   file: EditedFile;
   expanded: boolean;
   onToggle: () => void;
@@ -89,7 +91,7 @@ export function ReviewFileRow({
       </button>
       {expanded && (
         <div className="bg-background">
-          <DiffView conversationId={conversationId} path={file.path} base="main" />
+          <DiffView worktree={worktree} path={file.path} base="main" />
         </div>
       )}
     </div>

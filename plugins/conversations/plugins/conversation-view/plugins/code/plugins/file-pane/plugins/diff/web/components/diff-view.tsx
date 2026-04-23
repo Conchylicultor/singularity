@@ -47,15 +47,15 @@ function getSideFromNode(node: Node | null): DiffSide | null {
 const CODE_NTH: Record<DiffSide, number> = { old: 2, new: 4 };
 
 export function DiffView({
-  conversationId,
+  worktree,
   path,
   base,
 }: {
-  conversationId: string;
+  worktree: string;
   path: string;
   base?: string;
 }) {
-  const state = useFileDiff(conversationId, path, base);
+  const state = useFileDiff(worktree, path, base);
   const dark = useDarkMode();
 
   const files = useMemo<FileData[]>(() => {
@@ -81,7 +81,7 @@ export function DiffView({
   useEffect(() => {
     if (!baseHunks) return;
     const ref = base ?? "HEAD";
-    fetch(`/api/conversations/${conversationId}/file?path=${encodeURIComponent(path)}&ref=${encodeURIComponent(ref)}`)
+    fetch(`/api/code/${encodeURIComponent(worktree)}/file?path=${encodeURIComponent(path)}&ref=${encodeURIComponent(ref)}`)
       .then((res) => res.ok ? res.json() : null)
       .then((body: { content?: string } | null) => {
         if (!body?.content) return;
@@ -89,10 +89,10 @@ export function DiffView({
         setTotalLines(body.content.split("\n").length);
       })
       .catch(() => {});
-  }, [baseHunks, conversationId, path, base]);
+  }, [baseHunks, worktree, path, base]);
 
   const effectiveHunks = expandedHunks ?? baseHunks;
-  const tokens = useDiffTokens(effectiveHunks, path, dark, conversationId, base);
+  const tokens = useDiffTokens(effectiveHunks, path, dark, worktree, base);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastClickedSide = useRef<DiffSide | null>(null);
 
@@ -101,7 +101,7 @@ export function DiffView({
       if (!fileContentRef.current) {
         const ref = base ?? "HEAD";
         const res = await fetch(
-          `/api/conversations/${conversationId}/file?path=${encodeURIComponent(path)}&ref=${encodeURIComponent(ref)}`,
+          `/api/code/${encodeURIComponent(worktree)}/file?path=${encodeURIComponent(path)}&ref=${encodeURIComponent(ref)}`,
         );
         if (!res.ok) return;
         const body = (await res.json()) as { content?: string };
@@ -114,7 +114,7 @@ export function DiffView({
         return expandFromRawCode(current, content, start, end);
       });
     },
-    [conversationId, path, base, baseHunks],
+    [worktree, path, base, baseHunks],
   );
 
   function handleMouseDown(e: MouseEvent<HTMLDivElement>) {

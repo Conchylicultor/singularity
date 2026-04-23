@@ -13,8 +13,8 @@ function useImageStatus(src: string): ImgStatus {
   return status;
 }
 
-function imageUrl(conversationId: string, path: string, ref?: string): string {
-  const base = `/api/conversations/${conversationId}/image?path=${encodeURIComponent(path)}`;
+function imageUrl(worktree: string, path: string, ref?: string): string {
+  const base = `/api/code/${encodeURIComponent(worktree)}/image?path=${encodeURIComponent(path)}`;
   return ref ? `${base}&ref=${encodeURIComponent(ref)}` : base;
 }
 
@@ -48,17 +48,17 @@ function Panel({
 }
 
 export function ImageDiffView({
-  conversationId,
+  worktree,
   path,
   base,
 }: {
-  conversationId: string;
+  worktree: string;
   path: string;
   base?: string;
 }) {
   const ref = base ?? "HEAD";
-  const oldSrc = imageUrl(conversationId, path, ref);
-  const newSrc = imageUrl(conversationId, path);
+  const oldSrc = imageUrl(worktree, path, ref);
+  const newSrc = imageUrl(worktree, path);
 
   const oldStatus = useImageStatus(oldSrc);
   const newStatus = useImageStatus(newSrc);

@@ -1,11 +1,11 @@
 export function ImageView({
-  conversationId,
+  worktree,
   path,
 }: {
-  conversationId: string;
+  worktree: string;
   path: string;
 }) {
-  const src = `/api/conversations/${conversationId}/image?path=${encodeURIComponent(path)}`;
+  const src = `/api/code/${encodeURIComponent(worktree)}/image?path=${encodeURIComponent(path)}`;
   return (
     <div className="flex h-full items-center justify-center overflow-auto p-4">
       <img

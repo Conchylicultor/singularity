@@ -65,13 +65,13 @@ const MARKDOWN_COMPONENTS: Components = {
 };
 
 export function MarkdownView({
-  conversationId,
+  worktree,
   path,
 }: {
-  conversationId: string;
+  worktree: string;
   path: string;
 }) {
-  const state = useFileContent(conversationId, path);
+  const state = useFileContent(worktree, path);
 
   if (state.kind === "loading") {
     return <Placeholder>Loading…</Placeholder>;

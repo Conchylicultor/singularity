@@ -32,6 +32,18 @@
     - `POST /api/build`
     - `GET /api/build/status`
 
+- **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
+  - Contributes:
+    - `Shell.Sidebar` "Explorer" (group `System`)
+    - `globalFileTreePane.open`
+    - `Code.ToolbarButton` → `ConvTreeButton`
+  - Server:
+    - Uses: `tasks-core.getAttempt`
+    - `GET /api/code/:worktree/tree`
+    - `GET /api/code/:worktree/file`
+    - `GET /api/code/:worktree/diff`
+    - `GET /api/code/:worktree/image`
+
 - **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
   - Defines:
     - Slots: `Config.Spec`, `Config.Section`
@@ -94,9 +106,6 @@
           - Server:
             - Uses: `tasks-core.getConversation`
             - Resources: `edited-files` (invalidate)
-            - `GET /api/conversations/:id/file`
-            - `GET /api/conversations/:id/diff`
-            - `GET /api/conversations/:id/image`
           - Plugins:
             - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
               - Contributes:

@@ -1,4 +1,9 @@
-export type EditedFileStatus = "modified" | "added" | "deleted" | "untracked";
+export type EditedFileStatus =
+  | "modified"
+  | "added"
+  | "deleted"
+  | "untracked"
+  | "clean";
 
 export interface EditedFile {
   path: string;

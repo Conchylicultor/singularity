@@ -5,13 +5,13 @@ import { languageForPath, SHIKI_LANGS } from "../../../../web/lang";
 import { useDarkMode } from "../../../../web/use-dark-mode";
 
 export function RawView({
-  conversationId,
+  worktree,
   path,
 }: {
-  conversationId: string;
+  worktree: string;
   path: string;
 }) {
-  const state = useFileContent(conversationId, path);
+  const state = useFileContent(worktree, path);
   const dark = useDarkMode();
   const [html, setHtml] = useState<string | null>(null);
   const [highlightError, setHighlightError] = useState<string | null>(null);

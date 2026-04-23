@@ -28,12 +28,12 @@ function themedToTokens(lines: ThemedToken[][]): ShikiTokenNode[][] {
 }
 
 async function fetchFileContent(
-  conversationId: string,
+  worktree: string,
   path: string,
   ref?: string,
 ): Promise<string | null> {
   const refQuery = ref ? `&ref=${encodeURIComponent(ref)}` : "";
-  const url = `/api/conversations/${conversationId}/file?path=${encodeURIComponent(path)}${refQuery}`;
+  const url = `/api/code/${encodeURIComponent(worktree)}/file?path=${encodeURIComponent(path)}${refQuery}`;
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
@@ -95,7 +95,7 @@ export function useDiffTokens(
   hunks: HunkData[] | null,
   path: string,
   dark: boolean,
-  conversationId: string,
+  worktree: string,
   base?: string,
 ): DiffTokens | null {
   const [tokens, setTokens] = useState<DiffTokens | null>(null);
@@ -116,8 +116,8 @@ export function useDiffTokens(
     const oldRef = base ?? "HEAD";
 
     Promise.all([
-      fetchFileContent(conversationId, path, oldRef),
-      fetchFileContent(conversationId, path),
+      fetchFileContent(worktree, path, oldRef),
+      fetchFileContent(worktree, path),
       getHighlighter(),
     ]).then(([oldContent, newContent, hl]) => {
       if (cancelled) return;
@@ -141,7 +141,7 @@ export function useDiffTokens(
     return () => {
       cancelled = true;
     };
-  }, [hunks, path, dark, conversationId, base]);
+  }, [hunks, path, dark, worktree, base]);
 
   return tokens;
 }

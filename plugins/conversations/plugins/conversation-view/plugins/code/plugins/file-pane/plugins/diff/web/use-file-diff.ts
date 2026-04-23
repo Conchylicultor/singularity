@@ -6,7 +6,7 @@ export type FileDiffState =
   | { kind: "error"; status: number; message: string };
 
 export function useFileDiff(
-  conversationId: string,
+  worktree: string,
   path: string,
   base?: string,
 ): FileDiffState {
@@ -16,7 +16,7 @@ export function useFileDiff(
     let cancelled = false;
     setState({ kind: "loading" });
     const baseQuery = base ? `&base=${encodeURIComponent(base)}` : "";
-    const url = `/api/conversations/${conversationId}/diff?path=${encodeURIComponent(path)}${baseQuery}`;
+    const url = `/api/code/${encodeURIComponent(worktree)}/diff?path=${encodeURIComponent(path)}${baseQuery}`;
     fetch(url)
       .then(async (res) => {
         if (cancelled) return;
@@ -39,7 +39,7 @@ export function useFileDiff(
     return () => {
       cancelled = true;
     };
-  }, [conversationId, path, base]);
+  }, [worktree, path, base]);
 
   return state;
 }

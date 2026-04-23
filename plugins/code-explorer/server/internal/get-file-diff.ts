@@ -49,8 +49,6 @@ export async function getFileDiff(
     return { kind: "error", status: 400, message: "Invalid path" };
   }
 
-  // Resolve "main" to the merge-base so the diff shows only this branch's changes,
-  // not any new commits that have landed on main since the branch diverged.
   const resolvedBase =
     base === "main"
       ? ((await runGit(["merge-base", "main", "HEAD"], absRoot))?.trim() ?? base)
@@ -68,9 +66,6 @@ export async function getFileDiff(
   const isUntracked = statusLine?.startsWith("??") ?? false;
 
   if (!statusLine && resolvedBase === "HEAD") {
-    // Diffing against HEAD with no working-tree changes: disambiguate
-    // tracked-clean vs nonexistent. (When base is main, fall through so we
-    // pick up committed branch changes via `git diff <merge-base>`.)
     const file = Bun.file(absTarget);
     if (!(await file.exists())) {
       return { kind: "error", status: 404, message: "File not found" };

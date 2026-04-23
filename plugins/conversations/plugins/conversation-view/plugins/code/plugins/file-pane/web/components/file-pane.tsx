@@ -2,16 +2,15 @@ import { useMemo, useState, useCallback } from "react";
 import { MdContentCopy, MdCheck } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import type { EditedFileStatus } from "../../../../shared/protocol";
 import { FilePane, resolveRenderers } from "../slots";
 
 export function FilePaneView({
-  conversation,
+  worktree,
   path,
   status,
 }: {
-  conversation: ConversationRecord;
+  worktree: string;
   path: string;
   status: EditedFileStatus;
 }) {
@@ -84,7 +83,7 @@ export function FilePaneView({
       <div className="min-h-0 flex-1 overflow-auto">
         {active ? (
           <active.contribution.component
-            conversationId={conversation.id}
+            worktree={worktree}
             path={path}
           />
         ) : (

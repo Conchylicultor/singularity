@@ -92,7 +92,7 @@ export function ReviewView() {
             {sorted.map((file) => (
               <ReviewFileRow
                 key={file.path}
-                conversationId={conversation.id}
+                worktree={conversation.attemptId}
                 file={file}
                 expanded={expanded.has(file.path)}
                 onToggle={() => toggleOne(file.path)}

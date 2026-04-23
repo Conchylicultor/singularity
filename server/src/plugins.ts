@@ -7,6 +7,7 @@ import conversationsPlugin from "@plugins/conversations/server";
 import conversationsRuntimeTmuxPlugin from "@plugins/conversations/plugins/runtime-tmux/server";
 import conversationsRuntimeApiPlugin from "@plugins/conversations/plugins/runtime-api/server";
 import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
+import codeExplorerPlugin from "@plugins/code-explorer/server";
 import pushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server";
 import dropAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/server";
 import holdAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/hold-and-exit/server";
@@ -42,6 +43,7 @@ export const plugins: ServerPluginDefinition[] = [
   conversationsRuntimeApiPlugin,
   conversationsPlugin,
   conversationCodePlugin,
+  codeExplorerPlugin,
   pushAndExitPlugin,
   dropAndExitPlugin,
   holdAndExitPlugin,

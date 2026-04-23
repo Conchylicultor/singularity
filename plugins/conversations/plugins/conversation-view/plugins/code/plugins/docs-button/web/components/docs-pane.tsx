@@ -74,7 +74,7 @@ export function DocsPane() {
       <div className="min-h-0 flex-1 overflow-hidden">
         {selected ? (
           <FilePaneView
-            conversation={conversation}
+            worktree={conversation.attemptId}
             path={selected.path}
             status={selected.status}
           />

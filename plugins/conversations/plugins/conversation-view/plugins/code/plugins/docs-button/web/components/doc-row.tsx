@@ -7,6 +7,7 @@ const STATUS_DOT: Record<EditedFileStatus, string> = {
   added: "bg-emerald-500",
   untracked: "bg-amber-500",
   deleted: "bg-muted-foreground/40",
+  clean: "bg-muted-foreground/20",
 };
 
 export function DocRow({

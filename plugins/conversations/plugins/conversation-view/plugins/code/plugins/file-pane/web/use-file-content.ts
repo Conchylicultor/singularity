@@ -6,7 +6,7 @@ export type FileContentState =
   | { kind: "error"; status: number; message: string };
 
 export function useFileContent(
-  conversationId: string,
+  worktree: string,
   path: string,
 ): FileContentState {
   const [state, setState] = useState<FileContentState>({ kind: "loading" });
@@ -14,7 +14,7 @@ export function useFileContent(
   useEffect(() => {
     let cancelled = false;
     setState({ kind: "loading" });
-    const url = `/api/conversations/${conversationId}/file?path=${encodeURIComponent(path)}`;
+    const url = `/api/code/${encodeURIComponent(worktree)}/file?path=${encodeURIComponent(path)}`;
     fetch(url)
       .then(async (res) => {
         if (cancelled) return;
@@ -37,7 +37,7 @@ export function useFileContent(
     return () => {
       cancelled = true;
     };
-  }, [conversationId, path]);
+  }, [worktree, path]);
 
   return state;
 }
