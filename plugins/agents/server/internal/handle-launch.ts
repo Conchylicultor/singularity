@@ -36,11 +36,8 @@ export async function handleLaunch(
   }
 
   const body = (await req.json().catch(() => ({}))) as { model?: string };
-  const requestedModel = body.model ?? agent.model ?? undefined;
-  const model: ConversationModel | undefined =
-    requestedModel !== undefined
-      ? ConversationModelSchema.parse(requestedModel)
-      : undefined;
+  const requestedModel = body.model ?? agent.model ?? "sonnet";
+  const model: ConversationModel = ConversationModelSchema.parse(requestedModel);
 
   const now = new Date();
   const task = await createTask({
