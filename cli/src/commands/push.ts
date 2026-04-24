@@ -133,8 +133,7 @@ export function registerPush(program: Command) {
           if (!ok) {
             console.error(
               "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
-                "(your commit is still on HEAD; use `git reset --soft HEAD~1` to unstage it if needed), " +
-                "or re-run with --skip-checks.",
+                "(your commit is still on HEAD; use `git reset --soft HEAD~1` to unstage it if needed).",
             );
             process.exit(1);
           }
@@ -193,8 +192,7 @@ export function registerPush(program: Command) {
           console.error(
             `Checks failed after rebasing ${branch} onto main. ` +
               `Fix the issue and re-run ./singularity push ` +
-              `(your commits are on ${branch}; use \`git reset --soft HEAD~1\` to unstage the last one if needed), ` +
-              `or re-run with --skip-checks.`,
+              `(your commits are on ${branch}; use \`git reset --soft HEAD~1\` to unstage the last one if needed).`,
           );
           process.exit(1);
         }

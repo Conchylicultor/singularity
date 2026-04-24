@@ -39,10 +39,16 @@ export const typescript: Check = {
     if (!web.ok) sections.push(`web:\n    ${web.errors.split("\n").join("\n    ")}`);
     if (!server.ok) sections.push(`server:\n    ${server.errors.split("\n").join("\n    ")}`);
 
+    const combined = `${web.ok ? "" : web.errors}\n${server.ok ? "" : server.errors}`;
+    const hasMissingModule = /error TS2307: Cannot find module/.test(combined);
+    const hint = hasMissingModule
+      ? "A \"Cannot find module\" error for a dep you didn't touch is usually a missing workspace link — run ./singularity build first (it re-runs bun install) and re-push. Otherwise: fix type errors before pushing; if a cast is necessary, fix the type definition instead."
+      : "Fix type errors before pushing. If a cast is necessary, fix the type definition instead.";
+
     return {
       ok: false,
       message: `TypeScript type errors:\n  ${sections.join("\n  ")}`,
-      hint: "Fix type errors before pushing. If a cast is necessary, fix the type definition instead.",
+      hint,
     };
   },
 };
