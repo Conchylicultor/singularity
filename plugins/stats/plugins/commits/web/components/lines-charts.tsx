@@ -301,10 +301,11 @@ function flattenByExt(
   });
 }
 
-function extColor(ext: string, exts: string[]): string {
+function extColor(ext: string): string {
   if (ext === OTHER_KEY) return OTHER_COLOR;
-  const idx = exts.indexOf(ext);
-  return EXT_PALETTE[idx % EXT_PALETTE.length] ?? OTHER_COLOR;
+  let hash = 0;
+  for (let i = 0; i < ext.length; i++) hash = (hash * 31 + ext.charCodeAt(i)) >>> 0;
+  return EXT_PALETTE[hash % EXT_PALETTE.length] ?? OTHER_COLOR;
 }
 
 export function CumulativeLinesBreakdownChart({ filterKey }: { filterKey?: string }) {
@@ -358,8 +359,8 @@ export function CumulativeLinesBreakdownChart({ filterKey }: { filterKey?: strin
                 dataKey={ext}
                 name={ext}
                 stackId="ext"
-                stroke={extColor(ext, exts)}
-                fill={extColor(ext, exts)}
+                stroke={extColor(ext)}
+                fill={extColor(ext)}
                 fillOpacity={0.7}
                 strokeWidth={1}
                 dot={false}
@@ -423,7 +424,7 @@ export function LinesRateBreakdownChart({ bucket, filterKey }: { bucket: Bucket;
                 dataKey={ext}
                 name={ext}
                 stackId="ext"
-                fill={extColor(ext, exts)}
+                fill={extColor(ext)}
                 isAnimationActive={false}
               />
             ))}
