@@ -1,42 +1,33 @@
-import { useCallback, useEffect, useState } from "react";
-import { MdClose, MdCode, MdRefresh } from "react-icons/md";
+import { useEffect, useRef, useState } from "react";
+import { MdClose, MdCode } from "react-icons/md";
+import { useResource } from "@core";
 import { Button } from "@/components/ui/button";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import type { JsonlEvent, JsonlEventsResponse } from "../../shared";
+import { jsonlEventsResource } from "../../shared";
 import { convJsonlPane } from "../panes";
 import { EventRow } from "./event-row";
 
 export function JsonlPane() {
   const { conversation } = conversationPane.useData();
-  const [events, setEvents] = useState<JsonlEvent[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { data, error, isLoading } = useResource(jsonlEventsResource, {
+    id: conversation.id,
+  });
+  const events = data ?? null;
   const [markdownMode, setMarkdownMode] = useState(true);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/conversations/${conversation.id}/jsonl`);
-      if (!res.ok) {
-        setError(`${res.status} ${res.statusText}`);
-        setEvents([]);
-        return;
-      }
-      const body = (await res.json()) as JsonlEventsResponse;
-      setEvents(body.events);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      setEvents([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [conversation.id]);
-
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const lastCountRef = useRef(0);
   useEffect(() => {
-    setEvents(null);
-    void load();
-  }, [load]);
+    const el = scrollRef.current;
+    if (!el || !events) return;
+    const pinnedToBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+    const grew = events.length > lastCountRef.current;
+    lastCountRef.current = events.length;
+    if (grew && pinnedToBottom) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [events]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -68,24 +59,15 @@ export function JsonlPane() {
         >
           <MdCode className="size-4" />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 shrink-0"
-          title="Reload"
-          aria-label="Reload"
-          disabled={loading}
-          onClick={() => void load()}
-        >
-          <MdRefresh className={`size-4 ${loading ? "animate-spin" : ""}`} />
-        </Button>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto">
-        {events === null ? (
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
+        {events === null && isLoading ? (
           <div className="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
         ) : error ? (
-          <div className="px-3 py-2 text-xs text-destructive">{error}</div>
-        ) : events.length === 0 ? (
+          <div className="px-3 py-2 text-xs text-destructive">
+            {error instanceof Error ? error.message : String(error)}
+          </div>
+        ) : !events || events.length === 0 ? (
           <div className="px-3 py-2 text-xs text-muted-foreground">
             No transcript yet. Claude may not have written its session log.
           </div>

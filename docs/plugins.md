@@ -201,14 +201,15 @@
           - Server:
             - Uses: `conversations.deleteConversation`, `conversations.recentConversationsResource`, `tasks-core.getConversation`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/hold-and-exit`
-        - **`jsonl-viewer`** — Toolbar button that opens a right pane rendering the raw Claude JSONL session log in human-readable form. Parses Claude's raw JSONL session log and serves it as structured events for the viewer pane.
+        - **`jsonl-viewer`** — Toolbar button that opens a right pane rendering the raw Claude JSONL session log in human-readable form. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
           - Exports (shared):
             - Types: `JsonlEvent`, `JsonlEventsResponse`
+            - Values: `jsonlEventsResource`
           - Contributes:
             - `Conversation.Toolbar` → `JsonlButton`
           - Server:
             - Uses: `conversations.findTranscriptPath`, `tasks-core.getConversationClaudeSessionId`
-            - `GET /api/conversations/:id/jsonl`
+            - Resources: `jsonl-events` (push)
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Contributes:
             - `Conversation.Toolbar` (group `status`) → `ModelBadge`

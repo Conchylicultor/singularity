@@ -28,3 +28,12 @@ export type JsonlEvent =
 export interface JsonlEventsResponse {
   events: JsonlEvent[];
 }
+
+export interface ResourceDescriptor<T, P extends Record<string, string>> {
+  readonly key: string;
+  readonly __types?: { value: T; params: P };
+}
+
+export const jsonlEventsResource: ResourceDescriptor<JsonlEvent[], { id: string }> = {
+  key: "jsonl-events",
+};
