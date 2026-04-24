@@ -5,6 +5,8 @@
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
   - Defines:
     - Slots: `Agents.List`, `Agents.View`, `Agents.AgentActions`
+    - DB schema: `plugins/agents/server/internal/schema.ts`
+    - DB schema: `plugins/agents/server/internal/tables.ts`
   - Exports (web):
     - Values: `agentConversationPane`, `agentDetailPane`, `agentsRootPane`
   - Exports (server):
@@ -25,6 +27,8 @@
     - `GET /api/agents/:id/launches`
 
 - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Polymorphic file attachments on disk (UUID-named under ~/.singularity/attachments/). Staged upload with orphan sweep.
+  - Defines:
+    - DB schema: `plugins/attachments/server/internal/tables.ts`
   - Exports (web):
     - Types: `Attachment`, `UploadedAttachment`
     - Values: `listAttachments`, `uploadAttachment`
@@ -36,6 +40,12 @@
     - `POST /api/attachments/:id/attach`
     - `GET /api/attachments/:id`
     - `DELETE /api/attachments/:id`
+
+- **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
+  - Exports (web):
+    - Values: `attemptConversationPane`, `attemptPane`
+  - Contributes:
+    - `Conversation.Toolbar` → `AttemptSwitchButton`
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Shared OAuth/API-key infrastructure for third-party services. Tokens stored on main; worktrees fetch via unix socket.
   - Defines:
@@ -91,6 +101,7 @@
 - **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
   - Defines:
     - Slots: `Config.Spec`, `Config.Section`
+    - DB schema: `plugins/config/server/internal/tables.ts`
   - Exports (web):
     - Types: `SectionWithPlugin`, `SpecWithPlugin`
     - Values: `Config`, `configResource`, `resetConfigValue`, `setConfigValue`, `settingsPane`, `useConfigValues`, `useSectionsWithPlugin`, `useSpecsWithPlugin`
@@ -214,6 +225,8 @@
             - `POST /api/conversations/:id/push-and-exit`
             - `DELETE /api/conversations/:id/push-and-exit`
         - **`quick-prompts`** — Named prompt chips in the conversation floating bar. Click to send a preset message to the active conversation. Named prompts that appear as chips in the conversation toolbar. Click to send a preset message.
+          - Defines:
+            - DB schema: `plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server/internal/tables.ts`
           - Contributes:
             - `Conversation.PromptBar` → `QuickPromptChips`
             - `Config.Section` "Quick Prompts" → `QuickPromptsSettings`
@@ -251,7 +264,19 @@
       - Server:
         - Uses: `conversations.Runtime`
 
+- **`conversations-recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
+  - Exports (web):
+    - Values: `recoveryPane`
+  - Contributes:
+    - `Debug.Item` "Recovery"
+    - `recoveryPane.open`
+  - Server:
+    - Uses: `conversations.recentConversationsResource`, `conversations.resumeConversation`
+    - `POST /api/conversations-recover/restore-batch`
+
 - **`crashes`** — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
+  - Defines:
+    - DB schema: `plugins/crashes/server/internal/tables.ts`
   - Exports (web):
     - Values: `report`
   - Exports (server):
@@ -305,15 +330,19 @@
         - `DELETE /api/debug/worktrees/:id`
 
 - **`events`** — Infrastructure for typed events, actions, and persisted triggers.
+  - Defines:
+    - DB schema: `plugins/events/server/internal/event.ts`
   - Exports (server):
     - Types: `ActionFactory`, `ActionRef`, `DefineActionSpec`, `DefineTriggerEventSpec`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`
     - Values: `defineAction`, `defineTriggerEvent`, `deleteTrigger`, `trigger`
 
 - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events API end-to-end.
+  - Defines:
+    - DB schema: `plugins/events-test/server/internal/tables.ts`
   - Exports (web):
     - Values: `eventsTestPane`
   - Contributes:
-    - `Shell.Sidebar` "Events Test" (group `System`)
+    - `Debug.Item` "Events Test"
     - `eventsTestPane.open`
   - Server:
     - Uses: `events.defineAction`, `events.defineTriggerEvent`, `events.deleteTrigger`, `events.trigger`
@@ -335,6 +364,8 @@
     - `GET /api/health`
 
 - **`improve`**
+  - Defines:
+    - DB schema: `plugins/improve/server/internal/tables.ts`
   - Exports (server):
     - Values: `_improve_config`, `IMPROVEMENTS_META_TASK_ID`
   - Contributes:
@@ -390,6 +421,8 @@
     - `statsPane.open`
   - Plugins:
     - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
+      - Defines:
+        - DB schema: `plugins/stats/plugins/commits/server/internal/tables.ts`
       - Exports (web):
         - Values: `axisProps`, `barCursor`, `ChartState`, `gridProps`, `lineCursor`, `tooltipContentStyle`, `tooltipLabelStyle`, `tooltipNumberFormatter`, `useFetchJson`, `yAxisFormatter`
       - Contributes:
@@ -421,6 +454,9 @@
   - Exports (server):
     - Types: `Attempt`, `AttemptStatus`, `Push`, `Task`, `TaskStatus`
     - Values: `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `CONVERSATIONS_META_TASK_ID`, `nextRankUnder`, `pushesResource`, `PushSchema`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`
+  - Exports (shared):
+    - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
+    - Values: `attemptsResource`, `pushesResource`, `tasksResource`
   - Contributes:
     - `Shell.Sidebar` "Tasks" (group `System`)
     - `tasksRootPane.open`
@@ -439,6 +475,10 @@
     - `GET /api/repo-info`
 
 - **`tasks-core`** — Schema + repository layer for the tasks/attempts/conversations FK cluster.
+  - Defines:
+    - DB schema: `plugins/tasks-core/server/internal/mutations/cross-table.ts`
+    - DB schema: `plugins/tasks-core/server/internal/schema.ts`
+    - DB schema: `plugins/tasks-core/server/internal/tables.ts`
   - Exports (server):
     - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `Task`, `TaskFilters`, `TaskStatus`, `UpdateConversationPatch`, `UpdateTaskPatch`
     - Values: `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listAttempts`, `listAttemptsForTask`, `listConversations`, `listGoneConversationsBefore`, `listPushes`, `listPushesForAttempt`, `listRecentGoneConversations`, `listTasks`, `markConversationClosed`, `pushesResource`, `PushSchema`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`, `updateConversation`, `updateTask`, `updateTaskTitle`
