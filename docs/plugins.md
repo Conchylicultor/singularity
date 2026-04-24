@@ -224,7 +224,7 @@
   - Exports (web):
     - Values: `recoveryPane`
   - Contributes:
-    - `Shell.Sidebar` "Recovery" (group `System`)
+    - `Debug.Item` "Recovery"
     - `recoveryPane.open`
   - Server:
     - Uses: `conversations.recentConversationsResource`, `conversations.resumeConversation`
@@ -292,7 +292,7 @@
   - Exports (web):
     - Values: `eventsTestPane`
   - Contributes:
-    - `Shell.Sidebar` "Events Test" (group `System`)
+    - `Debug.Item` "Events Test"
     - `eventsTestPane.open`
   - Server:
     - Uses: `events.defineAction`, `events.defineTriggerEvent`, `events.deleteTrigger`, `events.trigger`

@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { MdRestore } from "react-icons/md";
-import { Shell } from "@plugins/shell/web";
+import { Debug } from "@plugins/debug/web";
 import { recoveryPane } from "./pane";
 
 export { recoveryPane } from "./pane";
@@ -11,10 +11,10 @@ export default {
   description:
     "Sidebar entry + pane listing recently-closed conversations with restore buttons.",
   contributions: [
-    Shell.Sidebar({
+    Debug.Item({
+      id: "conversations-recover",
       title: "Recovery",
       icon: MdRestore,
-      group: "System",
       onClick: () => recoveryPane.open({}),
     }),
   ],

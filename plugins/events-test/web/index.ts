@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { MdBolt } from "react-icons/md";
-import { Shell } from "@plugins/shell/web";
+import { Debug } from "@plugins/debug/web";
 import { eventsTestPane } from "./panes";
 
 export { eventsTestPane } from "./panes";
@@ -10,10 +10,10 @@ export default {
   name: "Events Test",
   description: "Dummy UI for exercising the events plugin end-to-end.",
   contributions: [
-    Shell.Sidebar({
+    Debug.Item({
+      id: "events-test",
       title: "Events Test",
       icon: MdBolt,
-      group: "System",
       onClick: () => eventsTestPane.open({}),
     }),
   ],
