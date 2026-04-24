@@ -1,0 +1,1 @@
+export { reviewConfig } from "./config";

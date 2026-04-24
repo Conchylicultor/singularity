@@ -186,7 +186,9 @@
                 - **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
                   - Contributes:
                     - `FilePane.Renderer` "Raw" → `RawView`
-            - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file.
+            - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file. Toolbar button and full-screen view to review all worktree changes file-by-file.
+              - Exports (shared):
+                - Values: `reviewConfig`
               - Contributes:
                 - `Code.ToolbarButton` → `ReviewButton`
         - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.

@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@core";
 import { Code } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { Config } from "@plugins/config/web";
 import { ReviewButton } from "./components/review-button";
-import { reviewConfig } from "./config";
+import { reviewConfig } from "../shared/config";
 
 // Importing panes registers `convReviewPane` with the Pane registry.
 import "./panes";

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "../../../../web/use-edited-files";
 import { convReviewPane } from "../panes";
 import { getFileWarningLevel, type FileWarningLevel } from "../core-files";
-import { reviewConfig } from "../config";
+import { reviewConfig } from "../../shared/config";
 
 const BUTTON_TITLE: Record<FileWarningLevel, string> = {
   safe: "Review changes",

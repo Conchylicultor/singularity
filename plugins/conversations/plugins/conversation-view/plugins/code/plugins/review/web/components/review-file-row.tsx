@@ -4,7 +4,7 @@ import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugin
 import { useConfigValues } from "@plugins/config/web";
 import { DiffView } from "../../../file-pane/plugins/diff/web/components/diff-view";
 import { getFileWarningLevel } from "../core-files";
-import { reviewConfig } from "../config";
+import { reviewConfig } from "../../shared/config";
 
 const STATUS_LABEL: Record<EditedFileStatus, string> = {
   modified: "modified",
