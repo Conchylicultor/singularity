@@ -5,7 +5,7 @@ import { SiGoogle } from "react-icons/si";
 import { googleAuthConfig } from "../shared";
 
 export default {
-  id: "auth-google-web",
+  id: "auth-google",
   name: "Auth: Google",
   description:
     "Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings.",
