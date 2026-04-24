@@ -7,7 +7,8 @@ type Submitting = false | "create" | "sonnet" | "opus";
 export interface ImproveFormProps {
   value: string;
   onChange: (value: string) => void;
-  url: string;
+  includeUrl: boolean;
+  onToggleUrl: (next: boolean) => void;
   includeScreenshot: boolean;
   onToggleScreenshot: (next: boolean) => void;
   submitting: Submitting;
@@ -18,7 +19,8 @@ export interface ImproveFormProps {
 export function ImproveForm({
   value,
   onChange,
-  url,
+  includeUrl,
+  onToggleUrl,
   includeScreenshot,
   onToggleScreenshot,
   submitting,
@@ -52,21 +54,27 @@ export function ImproveForm({
         rows={5}
         className="placeholder:text-muted-foreground w-full resize-y rounded border bg-transparent p-2 text-sm outline-none focus:ring-1 focus:ring-ring"
       />
-      <div
-        className="text-muted-foreground truncate text-xs"
-        title={url}
-      >
-        URL: <span className="font-mono">{url || "(unknown)"}</span>
+      <div className="flex flex-col gap-1">
+        <div className="text-muted-foreground text-xs font-medium">Context</div>
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            className="h-3.5 w-3.5 cursor-pointer"
+            checked={includeUrl}
+            onChange={(e) => onToggleUrl(e.target.checked)}
+          />
+          URL
+        </label>
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+          <input
+            type="checkbox"
+            className="h-3.5 w-3.5 cursor-pointer"
+            checked={includeScreenshot}
+            onChange={(e) => onToggleScreenshot(e.target.checked)}
+          />
+          Screenshot
+        </label>
       </div>
-      <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-        <input
-          type="checkbox"
-          className="h-3.5 w-3.5 cursor-pointer"
-          checked={includeScreenshot}
-          onChange={(e) => onToggleScreenshot(e.target.checked)}
-        />
-        Attach screenshot of current page
-      </label>
       <div className="flex justify-end gap-2">
         <Button size="sm" variant="ghost" onClick={onCancel}>
           Cancel

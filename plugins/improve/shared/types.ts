@@ -9,15 +9,3 @@ export interface ImproveSubmitResponse {
   taskId: string;
   conversationId: string | null;
 }
-
-export interface ImproveConfig {
-  promptTemplate: string;
-}
-
-export const DEFAULT_PROMPT_TEMPLATE = `{{text}}
-
----
-Context:
-- URL: {{url}}
-- Attachments: {{attachments}}
-`;

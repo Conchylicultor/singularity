@@ -1,17 +1,15 @@
-interface Vars {
+interface PromptVars {
   text: string;
   url: string;
-  attachments: string;
+  attachmentPaths: string[];
 }
 
-export function renderPrompt(template: string, vars: Vars): string {
-  return template
-    .replaceAll("{{text}}", vars.text)
-    .replaceAll("{{url}}", vars.url)
-    .replaceAll("{{attachments}}", vars.attachments);
-}
+export function renderPrompt({ text, url, attachmentPaths }: PromptVars): string {
+  const hasContext = url || attachmentPaths.length > 0;
+  if (!hasContext) return text;
 
-export function formatAttachmentsList(paths: string[]): string {
-  if (paths.length === 0) return "(none)";
-  return paths.map((p) => `- ${p}`).join("\n");
+  const lines: string[] = [text, "", "---", "Context:"];
+  if (url) lines.push(`- URL: ${url}`);
+  for (const p of attachmentPaths) lines.push(`- ${p}`);
+  return lines.join("\n");
 }

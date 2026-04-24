@@ -303,17 +303,14 @@
   - Server:
     - `GET /api/health`
 
-- **`improve`** — Prompt used when launching an agent from the Improve button. Supports {{text}}, {{url}}, and {{attachments}} placeholders.
+- **`improve`**
   - Exports (server):
-    - Values: `_improve_config`, `improveConfigResource`, `IMPROVEMENTS_META_TASK_ID`
+    - Values: `_improve_config`, `IMPROVEMENTS_META_TASK_ID`
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `ImproveButton`
-    - `Config.Section` "Improve prompt template" → `PromptTemplateSettings`
   - Server:
     - Uses: `attachments.attachAttachment`, `attachments.getAttachment`, `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`
     - `POST /api/improve/submit`
-    - `GET /api/improve/config`
-    - `PATCH /api/improve/config`
 
 - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
   - Exports (web):

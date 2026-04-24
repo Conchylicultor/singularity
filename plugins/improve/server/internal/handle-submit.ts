@@ -2,8 +2,7 @@ import { createTask } from "@plugins/tasks-core/server";
 import { attachAttachment, getAttachment } from "@plugins/attachments/server";
 import { createConversation } from "@plugins/conversations/server";
 import { IMPROVEMENTS_META_TASK_ID } from "./meta-improvements";
-import { getImproveConfig } from "./config-store";
-import { formatAttachmentsList, renderPrompt } from "./render-prompt";
+import { renderPrompt } from "./render-prompt";
 import type { ImproveSubmitBody, ImproveSubmitResponse } from "../../shared/types";
 
 const OWNER_TYPE = "task";
@@ -46,11 +45,10 @@ export async function handleSubmit(req: Request): Promise<Response> {
 
   let conversationId: string | null = null;
   if (launch) {
-    const cfg = await getImproveConfig();
-    const prompt = renderPrompt(cfg.promptTemplate, {
+    const prompt = renderPrompt({
       text,
       url,
-      attachments: formatAttachmentsList(attachments.map((a) => a.diskPath)),
+      attachmentPaths: attachments.map((a) => a.diskPath),
     });
     const conv = await createConversation({
       taskId: task.id,

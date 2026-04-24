@@ -18,6 +18,7 @@ type Submitting = false | "create" | "sonnet" | "opus";
 export function ImproveButton() {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
+  const [includeUrl, setIncludeUrl] = useState(false);
   const [includeScreenshot, setIncludeScreenshot] = useState(false);
   const [url, setUrl] = useState("");
   const [submitting, setSubmitting] = useState<Submitting>(false);
@@ -27,6 +28,7 @@ export function ImproveButton() {
       setUrl(window.location.href);
     } else {
       setValue("");
+      setIncludeUrl(false);
       setIncludeScreenshot(false);
     }
     setOpen(next);
@@ -59,7 +61,7 @@ export function ImproveButton() {
 
       const body: ImproveSubmitBody = {
         text,
-        url,
+        url: includeUrl ? url : "",
         attachmentIds,
         launch,
       };
@@ -84,6 +86,7 @@ export function ImproveButton() {
         variant: "success",
       });
       setValue("");
+      setIncludeUrl(false);
       setIncludeScreenshot(false);
       setOpen(false);
       void json; // reserved for follow-up (navigate to conversation)
@@ -107,7 +110,8 @@ export function ImproveButton() {
         <ImproveForm
           value={value}
           onChange={setValue}
-          url={url}
+          includeUrl={includeUrl}
+          onToggleUrl={setIncludeUrl}
           includeScreenshot={includeScreenshot}
           onToggleScreenshot={setIncludeScreenshot}
           submitting={submitting}
