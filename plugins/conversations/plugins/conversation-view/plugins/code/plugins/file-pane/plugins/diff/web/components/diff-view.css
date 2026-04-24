@@ -37,14 +37,18 @@
  *
  * Once a side is focused, keep the inactive side non-selectable so
  * the browser never shows a selection highlight there.
+ *
+ * Pure-add/pure-delete diffs render as monotonous 2-col rows (gutter + code);
+ * the nth-child indices below don't map, so the component flags the container
+ * with data-monotonous and these rules are skipped.
  */
-.diff-view[data-active-side="old"] .diff-line > td:nth-child(3),
-.diff-view[data-active-side="old"] .diff-line > td:nth-child(4) {
+.diff-view:not([data-monotonous])[data-active-side="old"] .diff-line > td:nth-child(3),
+.diff-view:not([data-monotonous])[data-active-side="old"] .diff-line > td:nth-child(4) {
   user-select: none;
 }
 
-.diff-view[data-active-side="new"] .diff-line > td:nth-child(1),
-.diff-view[data-active-side="new"] .diff-line > td:nth-child(2) {
+.diff-view:not([data-monotonous])[data-active-side="new"] .diff-line > td:nth-child(1),
+.diff-view:not([data-monotonous])[data-active-side="new"] .diff-line > td:nth-child(2) {
   user-select: none;
 }
 

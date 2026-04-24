@@ -17,10 +17,15 @@ import "./diff-view.css";
 
 type DiffSide = "old" | "new";
 
-// Split view rows have 4 cells: old-gutter(0), old-code(1), new-gutter(2), new-code(3).
-// Without hideGutter: 2 cells — old-code(0), new-code(1).
-// react-diff-view uses type-based class names (insert/delete/normal), not side-based,
-// so we rely on column index instead of class names.
+// 1-based :nth-child index of the code cell in 4-col split rows.
+// Monotonous (pure-add / pure-delete) rows always put the code cell at :nth-child(2).
+const CODE_NTH_SPLIT: Record<DiffSide, number> = { old: 2, new: 4 };
+const CODE_NTH_MONO = 2;
+
+// react-diff-view renders split rows with 4 cells (old-gutter, old-code,
+// new-gutter, new-code) or, for pure-add/pure-delete hunks, monotonous 2-cell
+// rows. In 4-col mode the side is unambiguous from the column index; 2-col
+// rows are ambiguous from the DOM — the caller passes fixedSide for those.
 function getSide(el: Element | null): DiffSide | null {
   while (el) {
     if (el.tagName === "TD") {
@@ -31,7 +36,6 @@ function getSide(el: Element | null): DiffSide | null {
       while (prev) { idx++; prev = prev.previousElementSibling; }
       const count = tr.children.length;
       if (count === 4) return idx <= 1 ? "old" : "new";
-      if (count === 2) return idx === 0 ? "old" : "new";
       return null;
     }
     el = el.parentElement;
@@ -42,9 +46,6 @@ function getSide(el: Element | null): DiffSide | null {
 function getSideFromNode(node: Node | null): DiffSide | null {
   return getSide(node instanceof Element ? node : node?.parentElement ?? null);
 }
-
-// 1-based :nth-child index of the code cell for each side (4-column layout with gutters)
-const CODE_NTH: Record<DiffSide, number> = { old: 2, new: 4 };
 
 export function DiffView({
   worktree,
@@ -66,6 +67,12 @@ export function DiffView({
       return [];
     }
   }, [state]);
+
+  // Pure-add / pure-delete diffs render in react-diff-view's monotonous 2-col
+  // layout (one gutter + one code cell per row). Only one side exists, so
+  // cross-side selection trimming is unnecessary — native selection just works.
+  const fixedSide: DiffSide | null =
+    files[0]?.type === "add" ? "new" : files[0]?.type === "delete" ? "old" : null;
 
   const baseHunks = files[0]?.hunks ?? null;
   const [expandedHunks, setExpandedHunks] = useState<HunkData[] | null>(null);
@@ -118,6 +125,14 @@ export function DiffView({
   );
 
   function handleMouseDown(e: MouseEvent<HTMLDivElement>) {
+    // Monotonous layout: only one side exists, so native selection is correct.
+    // Stash the side for copy; skip cross-side trimming and data-active-side,
+    // which would otherwise trigger the 4-col user-select CSS on the wrong cell.
+    if (fixedSide) {
+      lastClickedSide.current = fixedSide;
+      return;
+    }
+
     const side = getSide(e.target as Element);
     lastClickedSide.current = side;
     if (!side || !containerRef.current) return;
@@ -136,7 +151,7 @@ export function DiffView({
       // Selection crossed to the opposite side — trim it back
       const anchorNode = sel.anchorNode;
       const anchorOffset = sel.anchorOffset;
-      const nth = CODE_NTH[activeSide];
+      const nth = CODE_NTH_SPLIT[activeSide];
       const cells = Array.from(container.querySelectorAll<Element>(`.diff-line > td:nth-child(${nth})`));
       const firstCell = cells[0];
       const lastCell = cells[cells.length - 1];
@@ -171,12 +186,14 @@ export function DiffView({
       const sel = window.getSelection();
       if (!sel) return;
 
-      const side = lastClickedSide.current ?? getSideFromNode(sel.anchorNode);
+      const side = fixedSide ?? lastClickedSide.current ?? getSideFromNode(sel.anchorNode);
 
       sel.removeAllRanges();
       if (side) {
-        containerRef.current.setAttribute("data-active-side", side);
-        const nth = CODE_NTH[side];
+        // data-active-side drives 4-col user-select CSS that assumes 4 cells
+        // per row; don't set it in monotonous mode.
+        if (!fixedSide) containerRef.current.setAttribute("data-active-side", side);
+        const nth = fixedSide ? CODE_NTH_MONO : CODE_NTH_SPLIT[side];
         const cells = containerRef.current.querySelectorAll(`.diff-line > td:nth-child(${nth})`);
         const first = cells[0];
         const last = cells[cells.length - 1];
@@ -202,7 +219,7 @@ export function DiffView({
     if (!sel || sel.rangeCount === 0) return;
 
     const range = sel.getRangeAt(0);
-    const nth = CODE_NTH[side];
+    const nth = fixedSide ? CODE_NTH_MONO : CODE_NTH_SPLIT[side];
     const lines: string[] = [];
 
     for (const row of containerRef.current.querySelectorAll<HTMLElement>(".diff-line")) {
@@ -239,6 +256,7 @@ export function DiffView({
     <div
       ref={containerRef}
       className="diff-view overflow-auto font-mono text-xs leading-5"
+      data-monotonous={fixedSide ? "" : undefined}
       onKeyDown={handleKeyDown}
       onMouseDown={handleMouseDown}
       onCopy={handleCopy}
