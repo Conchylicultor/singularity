@@ -2,12 +2,7 @@ import { eq, getTableColumns, sql } from "drizzle-orm";
 import { pgView } from "drizzle-orm/pg-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { Attachments } from "@plugins/attachments/server";
 import { _attempts, _conversations, _taskDependencies, _tasks, pushes } from "./tables";
-
-// Task ↔ attachment link table. Defined here (rather than its own file) so
-// the drizzle-kit glob discovers it via `**/internal/schema.ts`.
-export const _taskAttachments = Attachments.defineLink(_tasks);
 
 // Derived views + Zod schemas + types. All tables live in `./tables.ts` so
 // this file can import them without any cross-plugin dependency, eliminating

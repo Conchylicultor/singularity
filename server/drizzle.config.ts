@@ -17,7 +17,9 @@ export default defineConfig({
   // `bun`, `bun-pty`, etc. and fail to resolve.
   schema: [
     "../plugins/**/server/**/internal/tables.ts",
+    "../plugins/**/server/**/internal/tables-*.ts",
     "../plugins/**/server/**/internal/schema.ts",
+    "../plugins/**/server/**/internal/schema-*.ts",
   ],
   out: "./src/db/migrations",
   dbCredentials: {

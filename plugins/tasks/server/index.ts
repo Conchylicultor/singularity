@@ -9,6 +9,7 @@ import {
   handleRemoveDependency,
 } from "./internal/handle-dependencies";
 import { handleRepoInfo } from "./internal/handle-repo-info";
+import { handleTaskAttachments } from "./internal/handle-task-attachments";
 import { startPushWatcher } from "./internal/push-watcher";
 import {
   backfillConversationsMetaParent,
@@ -48,6 +49,7 @@ export default {
     "GET /api/tasks/:id": handleGet,
     "PATCH /api/tasks/:id": handleUpdate,
     "DELETE /api/tasks/:id": handleDelete,
+    "GET /api/tasks/:id/attachments": handleTaskAttachments,
     "POST /api/tasks/:id/dependencies": handleAddDependency,
     "DELETE /api/tasks/:id/dependencies/:depId": handleRemoveDependency,
     "GET /api/repo-info": handleRepoInfo,

@@ -26,8 +26,9 @@
     - `POST /api/agents/:id/launch`
     - `GET /api/agents/:id/launches`
 
-- **`attachments`** — Attachments on disk (UUID-named under ~/.singularity/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
+- **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
   - Defines:
+    - DB schema: `plugins/attachments/server/internal/define-link.ts`
     - DB schema: `plugins/attachments/server/internal/tables.ts`
   - Exports (web):
     - Types: `Attachment`, `UploadedAttachment`
@@ -462,12 +463,13 @@
     - `Tasks.TaskActions` → `DeleteTaskAction`
     - `Tasks.TaskActions` → `LaunchAgentAction`
   - Server:
-    - Uses: `mcp.Mcp`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.updateTask`
+    - Uses: `attachments._attachments`, `mcp.Mcp`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.updateTask`
     - `GET /api/tasks`
     - `POST /api/tasks`
     - `GET /api/tasks/:id`
     - `PATCH /api/tasks/:id`
     - `DELETE /api/tasks/:id`
+    - `GET /api/tasks/:id/attachments`
     - `POST /api/tasks/:id/dependencies`
     - `DELETE /api/tasks/:id/dependencies/:depId`
     - `GET /api/repo-info`
@@ -475,6 +477,7 @@
 - **`tasks-core`** — Schema + repository layer for the tasks/attempts/conversations FK cluster.
   - Defines:
     - DB schema: `plugins/tasks-core/server/internal/mutations/cross-table.ts`
+    - DB schema: `plugins/tasks-core/server/internal/schema-attachments.ts`
     - DB schema: `plugins/tasks-core/server/internal/schema.ts`
     - DB schema: `plugins/tasks-core/server/internal/tables.ts`
   - Exports (server):
