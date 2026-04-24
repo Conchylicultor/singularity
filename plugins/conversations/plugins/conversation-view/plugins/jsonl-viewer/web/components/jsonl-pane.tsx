@@ -20,11 +20,12 @@ export function JsonlPane() {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || !events) return;
+    const isInitialLoad = lastCountRef.current === 0;
     const pinnedToBottom =
       el.scrollHeight - el.scrollTop - el.clientHeight < 40;
     const grew = events.length > lastCountRef.current;
     lastCountRef.current = events.length;
-    if (grew && pinnedToBottom) {
+    if (grew && (isInitialLoad || pinnedToBottom)) {
       el.scrollTop = el.scrollHeight;
     }
   }, [events]);
