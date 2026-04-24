@@ -11,6 +11,7 @@ import codeExplorerPlugin from "@plugins/code-explorer/server";
 import pushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server";
 import dropAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/server";
 import holdAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/hold-and-exit/server";
+import exitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/exit/server";
 import resumePlugin from "@plugins/conversations/plugins/conversation-view/plugins/resume/server";
 import quickPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server";
 import jsonlViewerPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/server";
@@ -56,6 +57,7 @@ export const plugins: ServerPluginDefinition[] = [
   pushAndExitPlugin,
   dropAndExitPlugin,
   holdAndExitPlugin,
+  exitPlugin,
   resumePlugin,
   quickPromptsPlugin,
   jsonlViewerPlugin,

@@ -197,6 +197,12 @@
           - Server:
             - Uses: `conversations.deleteConversation`, `conversations.recentConversationsResource`, `tasks-core.getConversation`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/drop-and-exit`
+        - **`exit`** — Toolbar button that closes the conversation without changing any task state.
+          - Contributes:
+            - `Conversation.PromptBar` → `ExitButton`
+          - Server:
+            - Uses: `conversations.deleteConversation`, `conversations.recentConversationsResource`, `tasks-core.getConversation`
+            - `POST /api/conversations/:id/exit`
         - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
           - Contributes:
             - `Conversation.PromptBar` → `ForkConversationButtons`

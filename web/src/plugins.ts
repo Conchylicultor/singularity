@@ -26,6 +26,7 @@ import conversationJsonlViewerSummaryPlugin from "@plugins/conversations/plugins
 import conversationPushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/web";
 import conversationDropAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/web";
 import conversationHoldAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/hold-and-exit/web";
+import conversationExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/exit/web";
 import conversationResumePlugin from "@plugins/conversations/plugins/conversation-view/plugins/resume/web";
 import conversationQuickPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/web";
 import conversationForkPlugin from "@plugins/conversations/plugins/conversation-view/plugins/fork-conversation/web";
@@ -93,6 +94,7 @@ export const plugins: PluginDefinition[] = [
   conversationPushAndExitPlugin,
   conversationDropAndExitPlugin,
   conversationHoldAndExitPlugin,
+  conversationExitPlugin,
   conversationResumePlugin,
   conversationCodePlugin,
   conversationCodeDocsButtonPlugin,
