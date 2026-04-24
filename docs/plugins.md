@@ -216,10 +216,12 @@
           - Contributes:
             - `Conversation.Toolbar` "Open"
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
+          - Defines:
+            - DB schema: `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables.ts`
           - Contributes:
             - `Conversation.PromptBar` → `PushAndExitButton`
           - Server:
-            - Uses: `conversations.Turn`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.recentConversationsResource`, `conversations.sendTurn`
+            - Uses: `conversations.Turn`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.recentConversationsResource`, `conversations.sendTurn`, `jobs.defineJob`
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
             - `DELETE /api/conversations/:id/push-and-exit`

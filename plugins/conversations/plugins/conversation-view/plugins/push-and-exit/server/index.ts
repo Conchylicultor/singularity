@@ -1,5 +1,8 @@
+import { eq } from "drizzle-orm";
+import { db } from "@server/db/client";
 import type { ServerPluginDefinition } from "@server/types";
-import { jobs, pushAndExitResource, runJob } from "./internal/job-runner";
+import { pushAndExitJob, pushAndExitResource } from "./internal/push-and-exit-job";
+import { _pushAndExitJobs } from "./internal/tables";
 
 export default {
   id: "push-and-exit",
@@ -7,18 +10,27 @@ export default {
   resources: [pushAndExitResource],
   httpRoutes: {
     "POST /api/conversations/:id/push-and-exit": async (_req, { id }) => {
-      if (jobs.get(id)?.status === "running") {
+      const existing = await db
+        .select({ status: _pushAndExitJobs.status })
+        .from(_pushAndExitJobs)
+        .where(eq(_pushAndExitJobs.conversationId, id))
+        .limit(1);
+      if (existing[0]?.status === "running") {
         return Response.json({ error: "Already running" }, { status: 409 });
       }
-      jobs.set(id, { status: "running" });
+      await db
+        .insert(_pushAndExitJobs)
+        .values({ conversationId: id, status: "running", detail: null })
+        .onConflictDoUpdate({
+          target: _pushAndExitJobs.conversationId,
+          set: { status: "running", detail: null, updatedAt: new Date() },
+        });
       pushAndExitResource.notify();
-      void runJob(id).catch((err) => {
-        console.error("[push-and-exit] runJob threw unexpectedly", err);
-      });
+      await pushAndExitJob.enqueue({ conversationId: id }, { jobKey: id });
       return Response.json({ ok: true }, { status: 202 });
     },
-    "DELETE /api/conversations/:id/push-and-exit": (_req, { id }) => {
-      jobs.delete(id);
+    "DELETE /api/conversations/:id/push-and-exit": async (_req, { id }) => {
+      await db.delete(_pushAndExitJobs).where(eq(_pushAndExitJobs.conversationId, id));
       pushAndExitResource.notify();
       return Response.json({ ok: true });
     },
