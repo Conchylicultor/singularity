@@ -94,8 +94,7 @@ Plain functions: `(req: Request) => Response | Promise<Response>`. No wrapper ty
 
 ```
 plugins/{name}/server/
-  index.ts        # Default export: ServerPluginDefinition (routes declared here)
-  api.ts          # Optional: public API for other plugins to import
+  index.ts        # Default export: ServerPluginDefinition (routes declared here); named exports are the public API for other plugins
   internal/       # Handler implementations, business logic (never imported externally)
 ```
 
@@ -214,6 +213,6 @@ The server is spawned and supervised by the gateway (`bun src/index.ts` with `PO
 - **Plugins own their routes** — each plugin declares routes in its `ServerPluginDefinition`, not in a central file
 - **No middleware** — plugins own their paths entirely; shared concerns (auth, logging) can be added as utilities later
 - **Route matching** — literal paths are matched exactly (O(1) map). Paths with `:param` segments (e.g. `GET /api/conversations/:id`) are matched linearly in registration order; captured params are passed as the second argument to the handler
-- **Internal/public separation** — `index.ts` and `api.ts` are public; `internal/` is never imported by other plugins
+- **Internal/public separation** — `index.ts` is the only public barrel (default export = plugin definition, named exports = public API); `internal/` is never imported by other plugins
 - **Plugin dependencies go in their own `package.json`** — resolved via bun workspaces
 - **Bun runs TypeScript directly** — no build step needed

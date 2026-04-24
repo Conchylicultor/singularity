@@ -171,8 +171,7 @@ plugins/
     │   ├── views.tsx     # Optional: view factories returning descriptor for commands
     │   └── components/   # Internal React components (never imported by other plugins)
     ├── server/           # Backend code (compiled by server tsconfig)
-    │   ├── index.ts      # Default export: ServerPluginDefinition (routes declared here)
-    │   ├── api.ts        # Optional: public API for other plugins to import
+    │   ├── index.ts      # Default export: ServerPluginDefinition; named exports are the public API for other plugins
     │   └── internal/     # Handler implementations, business logic (never imported externally)
     └── shared/           # Types shared between web and server
         └── protocol.ts   # e.g. WebSocket message types
