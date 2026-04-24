@@ -47,11 +47,18 @@ export async function createConversation(
 
   let attemptId = opts.attemptId;
   let worktreePath: string;
+  let conversationId: string;
+
+  const newConvId = () => {
+    const suffix = Math.random().toString(36).slice(2, 6);
+    return `${CONVERSATION_PREFIX}-${Math.floor(Date.now() / 1000)}-${suffix}`;
+  };
 
   if (attemptId) {
     const attempt = await getAttempt(attemptId);
     if (!attempt) throw new Error(`Unknown attemptId "${attemptId}"`);
     worktreePath = attempt.worktreePath;
+    conversationId = newConvId();
   } else {
     let taskId = opts.taskId;
     if (!taskId) {
@@ -65,8 +72,7 @@ export async function createConversation(
       await updateTaskTitle(taskId, synthesiseTitle(opts.prompt), UNINFORMATIVE_TITLES);
     }
 
-    const suffix = Math.random().toString(36).slice(2, 6);
-    attemptId = `${CONVERSATION_PREFIX}-${Math.floor(Date.now() / 1000)}-${suffix}`;
+    attemptId = newConvId();
     const newAttemptId = attemptId;
     worktreePath = await worktreePathFor(newAttemptId);
     await setupWorktree(newAttemptId, worktreePath);
@@ -75,9 +81,8 @@ export async function createConversation(
       reportForkError(newAttemptId, err);
     });
     await createAttempt({ id: newAttemptId, taskId, worktreePath });
+    conversationId = newAttemptId;
   }
-
-  const conversationId = attemptId;
 
   const spawnedBy = opts.spawnedBy ?? Bun.env.SINGULARITY_WORKTREE;
   if (!spawnedBy) {
