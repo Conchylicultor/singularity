@@ -6,6 +6,12 @@ export type FieldMeta<T> = {
   description?: string;
   /** Override the auto-derived label (camelCase → sentence case). */
   label?: string;
+  /**
+   * Store as a secret. String-only. Implies `kind: "secret"`: value is
+   * encrypted at rest in the secrets store (never in the config table) and
+   * never broadcast to the browser — the UI only sees a "set / not set" bit.
+   */
+  secret?: boolean;
 };
 
 export type Field<T = unknown> = T | FieldMeta<T>;
@@ -16,7 +22,7 @@ export type ValueOf<F> = F extends FieldMeta<infer T> ? T : F;
 
 export type Values<S extends Schema> = { [K in keyof S]: ValueOf<S[K]> };
 
-export type FieldKind = "string" | "number" | "boolean" | "string-list";
+export type FieldKind = "string" | "number" | "boolean" | "string-list" | "secret";
 
 export interface NormalizedField {
   key: string;
@@ -77,7 +83,9 @@ function toLabel(key: string): string {
 /**
  * Normalize a schema into a list of fields with concrete kinds + labels.
  * Fields with unsupported default types (e.g. `default: null`) are dropped and
- * a warning is printed.
+ * a warning is printed. Fields with `secret: true` are forced to kind `"secret"`
+ * and the default is coerced to an empty string (secrets have no non-empty
+ * default value — an unset secret reads as "").
  */
 export function normalize(schema: Schema): NormalizedField[] {
   const out: NormalizedField[] = [];
@@ -85,6 +93,23 @@ export function normalize(schema: Schema): NormalizedField[] {
     const meta: FieldMeta<unknown> = isFieldMeta(raw)
       ? (raw as FieldMeta<unknown>)
       : { default: raw };
+    if (meta.secret) {
+      if (typeof meta.default !== "string") {
+        // biome-ignore lint/suspicious/noConsole: misconfiguration surfaced at boot.
+        console.warn(
+          `[config] secret field "${key}" must have a string default; skipping.`,
+        );
+        continue;
+      }
+      out.push({
+        key,
+        label: meta.label ?? toLabel(key),
+        description: meta.description,
+        kind: "secret",
+        default: "",
+      });
+      continue;
+    }
     const kind = kindOf(meta.default);
     if (!kind) {
       // biome-ignore lint/suspicious/noConsole: surface skipped fields during boot.
@@ -135,5 +160,7 @@ export function validateKind(kind: FieldKind, value: unknown): boolean {
       return typeof value === "boolean";
     case "string-list":
       return Array.isArray(value) && value.every((v) => typeof v === "string");
+    case "secret":
+      return typeof value === "string";
   }
 }

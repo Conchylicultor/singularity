@@ -20,11 +20,11 @@ export function encrypt(plaintext: Buffer, key: Buffer): Buffer {
 
 export function decrypt(blob: Buffer, key: Buffer): Buffer {
   if (blob.length < 1 + IV_LEN + TAG_LEN) {
-    throw new Error("auth: encrypted blob too short");
+    throw new Error("secrets: encrypted blob too short");
   }
   const version = blob[0];
   if (version !== VERSION) {
-    throw new Error(`auth: unsupported blob version ${version}`);
+    throw new Error(`secrets: unsupported blob version ${version}`);
   }
   const iv = blob.subarray(1, 1 + IV_LEN);
   const tag = blob.subarray(blob.length - TAG_LEN);

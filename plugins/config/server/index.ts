@@ -1,7 +1,11 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { plugins as allPlugins } from "@server/plugins";
+import { ready as secretsReady } from "@plugins/secrets/server";
 import { configResource } from "./internal/resource";
+import { configSecretsResource } from "./internal/secrets-resource";
 import { buildRegistry } from "./internal/registry";
+import { migratePlaintextSecretsToSecretStore } from "./internal/migrate-secrets";
+import { isMain } from "./internal/paths";
 import {
   handleDelete,
   handleGet,
@@ -10,6 +14,7 @@ import {
 } from "./internal/handlers";
 
 export { configResource } from "./internal/resource";
+export { configSecretsResource } from "./internal/secrets-resource";
 export { readConfig } from "./internal/read-config";
 
 export default {
@@ -23,8 +28,21 @@ export default {
     "PATCH /api/config": handlePatch,
     "DELETE /api/config/:key": handleDelete,
   },
-  resources: [configResource],
+  resources: [configResource, configSecretsResource],
   async onReady() {
     buildRegistry(allPlugins);
+    // Plaintext→secrets migration is main-only: the secrets store is
+    // centralized on main, and running per-worktree would race multiple
+    // writers against each other via RPC.
+    if (!isMain()) return;
+    try {
+      await secretsReady;
+      await migratePlaintextSecretsToSecretStore();
+    } catch (err) {
+      console.error(
+        "[config] failed to migrate plaintext secrets into secrets store:",
+        err,
+      );
+    }
   },
 } satisfies ServerPluginDefinition;

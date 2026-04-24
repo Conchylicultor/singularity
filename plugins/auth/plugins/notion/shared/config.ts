@@ -15,7 +15,9 @@ export const notionAuthConfig = defineConfig({
   },
   clientSecret: {
     default: "",
+    secret: true,
     label: "Integration Client Secret",
-    description: "Notion integration client secret (kept on main only).",
+    description:
+      "Notion integration client secret. Stored encrypted on main only.",
   },
 });

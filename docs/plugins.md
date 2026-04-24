@@ -61,6 +61,8 @@
   - Contributes:
     - `Shell.Sidebar` "Accounts" (group `System`)
     - `accountsPane.open`
+  - Server:
+    - Uses: `secrets.SecretsKeychainLockedError`, `secrets.getSecret`, `secrets.ready`, `secrets.setSecret`
   - Plugins:
     - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
       - Exports (shared):
@@ -102,10 +104,10 @@
     - Slots: `Config.Spec`, `Config.Section`
     - DB schema: `plugins/config/server/internal/tables.ts`
   - Exports (web):
-    - Types: `SectionWithPlugin`, `SpecWithPlugin`
-    - Values: `Config`, `configResource`, `resetConfigValue`, `setConfigValue`, `settingsPane`, `useConfigValues`, `useSectionsWithPlugin`, `useSpecsWithPlugin`
+    - Types: `SecretFieldState`, `SectionWithPlugin`, `SpecWithPlugin`
+    - Values: `Config`, `configResource`, `configSecretsResource`, `resetConfigValue`, `setConfigValue`, `settingsPane`, `useConfigValues`, `useSecretFieldSet`, `useSectionsWithPlugin`, `useSpecsWithPlugin`
   - Exports (server):
-    - Values: `configResource`, `readConfig`
+    - Values: `configResource`, `configSecretsResource`, `readConfig`
   - Exports (shared):
     - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `Schema`, `ValueOf`, `Values`
     - Values: `defineConfig`, `fullKey`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `validateKind`
@@ -113,6 +115,7 @@
     - `Shell.Sidebar` "Settings" (group `System`)
     - `settingsPane.open`
   - Server:
+    - Uses: `secrets.SecretsMainOfflineError`, `secrets.deleteSecret`, `secrets.getSecret`, `secrets.getSecretMetadata`, `secrets.ready`, `secrets.setSecret`
     - `GET /api/config`
     - `GET /api/config/specs`
     - `PATCH /api/config`
@@ -449,6 +452,14 @@
     - `POST /api/screenshots/:id`
     - `GET /api/screenshots/:id`
     - `POST /api/screenshots/:id/file`
+
+- **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Consumers: auth (tokens), config (secret fields).
+  - Exports (server):
+    - Types: `SecretMetadata`, `SecretRef`
+    - Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`, `setSecret`
+  - Exports (shared):
+    - Types: `SecretMetadata`, `SecretRef`
+    - Values: `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`
 
 - **`shell`** — Foundational app layout; defines the slots and commands most other plugins extend.
   - Defines:

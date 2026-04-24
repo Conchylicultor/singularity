@@ -1,13 +1,14 @@
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { rename, writeFile, chmod, unlink } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
 import type {
   AuthIdentity,
   AuthProviderKind,
 } from "@plugins/auth/shared";
-import { decrypt, encrypt } from "./crypto";
-import { getOrCreateEncryptionKey } from "./key-store";
-import { AUTH_DIR, TOKEN_STORE_PATH } from "./paths";
+import { AuthKeychainLockedError } from "@plugins/auth/shared";
+import {
+  getSecret,
+  ready as secretsReady,
+  setSecret,
+  SecretsKeychainLockedError,
+} from "@plugins/secrets/server";
 
 export interface StoredAccount {
   kind: AuthProviderKind;
@@ -33,24 +34,19 @@ export interface TokenStoreBlob {
   };
 }
 
+const NAMESPACE = "auth-tokens";
+const BLOB_KEY = "blob-v1";
 const EMPTY_BLOB: TokenStoreBlob = { version: 1, providers: {} };
 
 let cached: TokenStoreBlob | null = null;
-let key: Buffer | null = null;
-// Single-writer mutex to serialize encrypt + write.
+// Single-writer mutex to serialize read-modify-write cycles on the in-memory
+// blob. The secrets store has its own write mutex for the rename-atomic file
+// write — both are needed (orthogonal concerns).
 let writeChain: Promise<unknown> = Promise.resolve();
 
-function ensureKey(): Buffer {
-  if (!key) key = getOrCreateEncryptionKey();
-  return key;
-}
-
-function loadFromDisk(): TokenStoreBlob {
-  if (!existsSync(TOKEN_STORE_PATH)) return { ...EMPTY_BLOB };
-  const k = ensureKey();
-  const blob = readFileSync(TOKEN_STORE_PATH);
-  const decrypted = decrypt(blob, k);
-  const parsed = JSON.parse(decrypted.toString("utf8")) as TokenStoreBlob;
+function parseBlob(raw: string | undefined): TokenStoreBlob {
+  if (!raw) return { ...EMPTY_BLOB };
+  const parsed = JSON.parse(raw) as TokenStoreBlob;
   if (parsed.version !== 1 || !parsed.providers) {
     throw new Error("auth: token store has unexpected shape");
   }
@@ -58,41 +54,37 @@ function loadFromDisk(): TokenStoreBlob {
 }
 
 export async function initTokenStore(): Promise<void> {
-  if (!existsSync(AUTH_DIR)) {
-    mkdirSync(AUTH_DIR, { mode: 0o700, recursive: true });
-  }
-  ensureKey();
-  cached = loadFromDisk();
-}
-
-function ensureLoaded(): TokenStoreBlob {
-  if (!cached) cached = loadFromDisk();
-  return cached;
-}
-
-async function persist(): Promise<void> {
-  const blob = ensureLoaded();
-  const json = Buffer.from(JSON.stringify(blob), "utf8");
-  const encrypted = encrypt(json, ensureKey());
-  const tmpPath = `${TOKEN_STORE_PATH}.tmp-${randomUUID()}`;
   try {
-    await writeFile(tmpPath, encrypted, { mode: 0o600 });
-    await chmod(tmpPath, 0o600);
-    await rename(tmpPath, TOKEN_STORE_PATH);
+    await secretsReady;
+    const raw = await getSecret({ namespace: NAMESPACE, key: BLOB_KEY });
+    cached = parseBlob(raw);
   } catch (err) {
-    // Best-effort cleanup of orphaned tmp file.
-    try {
-      await unlink(tmpPath);
-    } catch {
-      /* ignore */
+    if (err instanceof SecretsKeychainLockedError) {
+      throw new AuthKeychainLockedError(err.message);
     }
     throw err;
   }
 }
 
+function ensureLoaded(): TokenStoreBlob {
+  if (!cached) {
+    throw new Error(
+      "auth: token store not initialized; call initTokenStore() first",
+    );
+  }
+  return cached;
+}
+
+async function persist(): Promise<void> {
+  const blob = ensureLoaded();
+  await setSecret(
+    { namespace: NAMESPACE, key: BLOB_KEY },
+    JSON.stringify(blob),
+  );
+}
+
 function enqueueWrite<T>(fn: () => Promise<T>): Promise<T> {
   const next = writeChain.then(fn, fn);
-  // Swallow errors on the chain so a single failure doesn't poison subsequent writes.
   writeChain = next.catch(() => undefined);
   return next;
 }

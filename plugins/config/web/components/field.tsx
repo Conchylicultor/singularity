@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { NormalizedField } from "@plugins/config/shared";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useSecretFieldSet } from "../internal/config-client";
 
 interface Props {
   field: NormalizedField;
@@ -15,7 +17,7 @@ interface Props {
  * push from the resource doesn't clobber the user's in-progress edit), and
  * commits on blur / debounced change.
  */
-export function Field({ field, value, onCommit }: Props) {
+export function Field({ field, fullKey, value, onCommit }: Props) {
   switch (field.kind) {
     case "boolean":
       return <BooleanField field={field} value={!!value} onCommit={onCommit} />;
@@ -31,6 +33,8 @@ export function Field({ field, value, onCommit }: Props) {
           onCommit={onCommit}
         />
       );
+    case "secret":
+      return <SecretField field={field} fullKey={fullKey} onCommit={onCommit} />;
   }
 }
 
@@ -152,6 +156,68 @@ function StringListField({
           "w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm font-mono transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30",
         )}
       />
+    </div>
+  );
+}
+
+/**
+ * Secret field. Uncontrolled w.r.t. the server: the input holds a local
+ * draft. On blur with a non-empty draft we commit + clear the draft so the
+ * plaintext doesn't linger in React state. "Clear" commits an empty string
+ * which routes to deleteSecret on the server.
+ */
+function SecretField({
+  field,
+  fullKey,
+  onCommit,
+}: {
+  field: NormalizedField;
+  fullKey: string;
+  onCommit: (v: string) => void;
+}) {
+  const meta = useSecretFieldSet(fullKey);
+  const [draft, setDraft] = useState("");
+  const [reveal, setReveal] = useState(false);
+  return (
+    <div className="flex flex-col gap-1.5 py-3">
+      <FieldHeader field={field} />
+      <div className="flex items-center gap-2">
+        <Input
+          type={reveal ? "text" : "password"}
+          value={draft}
+          placeholder={meta.set ? "•••••••• (saved — enter new value to replace)" : "Enter value"}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => {
+            if (draft) {
+              onCommit(draft);
+              setDraft("");
+              setReveal(false);
+            }
+          }}
+        />
+        <Button
+          size="sm"
+          variant="ghost"
+          type="button"
+          onClick={() => setReveal((r) => !r)}
+        >
+          {reveal ? "Hide" : "Show"}
+        </Button>
+        {meta.set ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            type="button"
+            onClick={() => {
+              onCommit("");
+              setDraft("");
+              setReveal(false);
+            }}
+          >
+            Clear
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }

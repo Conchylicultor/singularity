@@ -29,6 +29,7 @@ import dbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
 import worktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/server";
 import jobsPlugin from "@plugins/jobs/server";
 import eventsPlugin from "@plugins/events/server";
+import secretsPlugin from "@plugins/secrets/server";
 import eventsTestPlugin from "@plugins/events-test/server";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
 import authPlugin from "@plugins/auth/server";
@@ -79,6 +80,11 @@ export const plugins: ServerPluginDefinition[] = [
   eventsPlugin,
   eventsTestPlugin,
   conversationsRecoverPlugin,
+  // Secrets primitive: encrypted key-value store on main, unix-socket RPC for
+  // worktrees. Consumed by auth (tokens) and config (secret fields). Load order
+  // doesn't matter because onReady runs in parallel; consumers coordinate via
+  // the exported `ready` promise.
+  secretsPlugin,
   // Auth plugin must load before its provider sub-plugins because the providers'
   // module bodies call `registerAuthProvider`. Both load via the same plugin
   // graph anyway (TS module init runs once per import); the order here only

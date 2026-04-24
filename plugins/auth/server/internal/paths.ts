@@ -3,10 +3,6 @@ import path from "node:path";
 
 const SINGULARITY_DIR = path.join(homedir(), ".singularity");
 
-export const AUTH_DIR = path.join(SINGULARITY_DIR, "auth");
-export const TOKEN_STORE_PATH = path.join(AUTH_DIR, "tokens.json.enc");
-export const KEY_PATH = path.join(AUTH_DIR, ".key");
-export const LOCK_PATH = path.join(AUTH_DIR, ".lock");
 export const SOCKET_PATH = path.join(SINGULARITY_DIR, "auth.sock");
 export const WORKTREES_DIR = path.join(SINGULARITY_DIR, "worktrees");
 

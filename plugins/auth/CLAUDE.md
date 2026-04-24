@@ -4,8 +4,8 @@ Centralized OAuth 2.0 / API key infrastructure for third-party services. Provide
 
 ## Topology
 
-- **Tokens live on main only.** `~/.singularity/auth/tokens.json.enc`, AES-256-GCM, key in `.key` (mode 0600). The store is on the host filesystem, outside any worktree's per-fork Postgres DB.
-- **Worktrees fetch tokens via unix socket.** `~/.singularity/auth.sock` — Bun's `serve({ unix })` on main, `fetch(url, { unix })` on worktrees. Cross-worktree authz is OS file permissions (mode 0600).
+- **Tokens persist via the secrets primitive.** The `auth-tokens` namespace holds a JSON-encoded `TokenStoreBlob` keyed `blob-v1`. Actual storage (AES-256-GCM at `~/.singularity/secrets.json.enc`, OS-keychain master key, worktree RPC) lives in `plugins/secrets/` — see [`plugins/secrets/CLAUDE.md`](../secrets/CLAUDE.md).
+- **Auth's own unix socket handles `getAccessToken`.** `~/.singularity/auth.sock` serves `/token`, `/status`, `/disconnect`, `/api-key` — the application-level RPC that includes refresh logic, consent errors, and in-flight-refresh dedup. Plain secret-store ops (`get`/`set`) use `secrets.sock` instead.
 - **Main detection.** `process.env.SINGULARITY_WORKTREE === "singularity"`. Set by the gateway when it spawns the backend.
 - **OAuth redirect URI.** `http://localhost:9000/api/auth/callback/<provider>` — bare `localhost`, not `singularity.localhost`. Google's Cloud Console rejects subdomains of localhost. The gateway has a scoped routing rule that forwards bare-`localhost` `/api/auth/{start,callback}/*` to the `singularity` backend.
 - **Cross-worktree sync.** Main mutates → calls `notify()` locally + fans out `POST /api/auth/invalidate` to every worktree from `~/.singularity/worktrees/*.json`. Each worktree's handler calls its local `authStateResource.notify()`.
@@ -36,7 +36,7 @@ The call routes via the unix socket on a worktree, or executes locally on main. 
 plugins/auth/plugins/<id>/
 ├── package.json
 ├── shared/
-│   ├── config.ts       # defineConfig({ clientId, ...optional secret })
+│   ├── config.ts       # defineConfig({ clientId, clientSecret? { secret: true }? })
 │   └── index.ts        # export the descriptor + scopes
 ├── server/
 │   ├── index.ts        # registerAuthProvider(descriptor) at top-level
@@ -49,18 +49,21 @@ Server `index.ts` calls `registerAuthProvider(descriptor)` at module top-level. 
 
 ## Credentials
 
-Per-provider OAuth client IDs are user-supplied via the Settings pane. Env-var override for developers (`SINGULARITY_AUTH_<PROVIDER>_CLIENT_ID`). Shipping our own verified Google credentials is deferred — see [research/2026-04-24-global-auth-plugin.md](../../research/2026-04-24-global-auth-plugin.md) §I.
+Per-provider OAuth client credentials are user-supplied via the Settings pane. `clientId` is a plain string field; `clientSecret` is declared with `secret: true` in `defineConfig`, which stores it in the secrets primitive (encrypted on main; never broadcast to the browser).
 
-Google uses Desktop-app + PKCE → no client secret needed. Notion uses web-integration → both clientId and clientSecret required.
+Env-var overrides for developers:
+- `SINGULARITY_AUTH_<PROVIDER>_CLIENT_ID`
+- `SINGULARITY_AUTH_<PROVIDER>_CLIENT_SECRET` (where applicable)
+
+Google uses Desktop-app + PKCE, but the token endpoint **still requires** `client_secret` (Google's implementation of RFC 8252 §8.6). Notion uses web-integration and also requires both. Shipping our own verified Google credentials is deferred — see [research/2026-04-24-global-auth-plugin.md](../../research/2026-04-24-global-auth-plugin.md) §I.
 
 ## Explicit deferrals
 
-- **OS keychain.** MVP stores the AES-256 key in `~/.singularity/auth/.key` (mode 0600). The original plan called for OS keychain via keytar; deferred to avoid the native-module setup pain. File-based key is functionally equivalent in the local-only threat model. Migration is a one-file swap when needed.
 - **Multi-account per provider.** Schema keys accounts by `accountId`; code paths assume `"primary"` until we add an account picker.
 - **Revoke on disconnect.** `descriptor.oauth.revoke` is a hook in the type but unused. MVP deletes locally only.
 - **Rate-limited refresh retries.** Unconditional 60 s tick. Acceptable until something proves otherwise.
 - **Scope-merging UI.** Incremental scope requests trigger full re-consent. Google's `include_granted_scopes=true` is already passed in `buildAuthorizeParams`, so providers should generally re-grant cleanly.
-- **Keychain unlock UX.** If key cannot be read at boot, `authStateResource` returns `mainOffline: true` after the unix socket times out. No web UI to repair.
+- **Keychain unlock UX.** If the secrets primitive cannot resolve its master key at boot, `authStateResource` returns `mainOffline: true` after the unix socket times out. No web UI to repair.
 
 ## Verification
 

@@ -3,7 +3,15 @@ import { Shell } from "@plugins/shell/web";
 import { MdSettings } from "react-icons/md";
 import { settingsPane } from "./panes";
 
-export { configResource, useConfigValues, setConfigValue, resetConfigValue } from "./internal/config-client";
+export {
+  configResource,
+  configSecretsResource,
+  useConfigValues,
+  useSecretFieldSet,
+  setConfigValue,
+  resetConfigValue,
+} from "./internal/config-client";
+export type { SecretFieldState } from "./internal/config-client";
 export { Config, useSpecsWithPlugin, useSectionsWithPlugin } from "./slots";
 export type { SpecWithPlugin, SectionWithPlugin } from "./slots";
 export { settingsPane } from "./panes";

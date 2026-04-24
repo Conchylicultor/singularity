@@ -4,6 +4,11 @@ import { config } from "./tables";
 import { getRegistry, getField } from "./registry";
 import { deleteValue, getAll, setValue } from "./read-cache";
 import { configResource } from "./resource";
+import {
+  CONFIG_SECRETS_NAMESPACE,
+  configSecretsResource,
+} from "./secrets-resource";
+import { deleteSecret, setSecret } from "@plugins/secrets/server";
 import { fullKey, validateKind, normalizeStringList } from "@plugins/config/shared";
 
 function json(body: unknown, status = 200): Response {
@@ -46,6 +51,20 @@ export async function handlePatch(req: Request): Promise<Response> {
   const field = getField(key);
   if (!field) return json({ error: "unknown-key", key }, 404);
 
+  if (field.kind === "secret") {
+    if (typeof body.value !== "string") {
+      return json({ error: "invalid-value", key, expected: "string" }, 400);
+    }
+    const ref = { namespace: CONFIG_SECRETS_NAMESPACE, key };
+    if (body.value === "") {
+      await deleteSecret(ref);
+    } else {
+      await setSecret(ref, body.value);
+    }
+    configSecretsResource.notify();
+    return json({ ok: true, key, set: body.value !== "" });
+  }
+
   let value = body.value;
   if (field.kind === "string-list" && Array.isArray(value)) {
     value = normalizeStringList(value as string[]);
@@ -67,13 +86,19 @@ export async function handlePatch(req: Request): Promise<Response> {
   return json({ ok: true, key, value });
 }
 
-/** DELETE /api/config/:key — resets the field to its default. */
+/** DELETE /api/config/:key — resets the field to its default (or clears the secret). */
 export async function handleDelete(
   _req: Request,
   params: Record<string, string>,
 ): Promise<Response> {
   const key = params.key;
   if (!key) return json({ error: "missing-key" }, 400);
+  const field = getField(key);
+  if (field?.kind === "secret") {
+    await deleteSecret({ namespace: CONFIG_SECRETS_NAMESPACE, key });
+    configSecretsResource.notify();
+    return json({ ok: true, key });
+  }
   await db.delete(config).where(eq(config.key, key));
   deleteValue(key);
   configResource.notify();

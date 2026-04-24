@@ -54,13 +54,18 @@ export const googleDescriptor: AuthProviderDescriptor = defineAuthProvider({
     }),
     fetchIdentity: fetchGoogleIdentity,
     resolveCredentials: async (env) => {
-      const fromEnv = env.get("SINGULARITY_AUTH_GOOGLE_CLIENT_ID");
-      if (fromEnv) return { clientId: fromEnv };
+      const idFromEnv = env.get("SINGULARITY_AUTH_GOOGLE_CLIENT_ID");
+      const secretFromEnv = env.get("SINGULARITY_AUTH_GOOGLE_CLIENT_SECRET");
+      if (idFromEnv) {
+        return { clientId: idFromEnv, clientSecret: secretFromEnv };
+      }
       const cfg = await readConfig(googleAuthConfig);
-      if (!cfg.clientId) {
+      // Google requires both; either missing means we can't complete the OAuth
+      // flow, so treat the provider as unconfigured.
+      if (!cfg.clientId || !cfg.clientSecret) {
         throw new AuthCredentialsMissingError("google");
       }
-      return { clientId: cfg.clientId };
+      return { clientId: cfg.clientId, clientSecret: cfg.clientSecret };
     },
   },
 });

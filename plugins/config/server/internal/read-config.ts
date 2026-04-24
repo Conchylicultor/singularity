@@ -1,6 +1,8 @@
 import type { ConfigDescriptor, Schema, Values } from "@plugins/config/shared";
 import { fullKey, getDefault, normalize } from "@plugins/config/shared";
+import { getSecret } from "@plugins/secrets/server";
 import { configResource } from "./resource";
+import { CONFIG_SECRETS_NAMESPACE } from "./secrets-resource";
 import { getValue } from "./read-cache";
 import { pluginIdOf } from "./registry";
 
@@ -9,6 +11,9 @@ export { configResource };
 /**
  * Read the current values for a plugin's config. Return type is inferred from
  * the descriptor's schema. Missing fields fall back to declared defaults.
+ *
+ * Secret fields are fetched from the secrets store (main-only at rest; via
+ * unix socket on worktrees). On main, a missing secret returns "".
  *
  * The descriptor must have been registered via a plugin's `config` field —
  * registration happens in the config plugin's `onReady`, so callers should
@@ -27,6 +32,14 @@ export async function readConfig<S extends Schema>(
   const fields = normalize(descriptor.schema);
   const out: Record<string, unknown> = {};
   for (const f of fields) {
+    if (f.kind === "secret") {
+      const v = await getSecret({
+        namespace: CONFIG_SECRETS_NAMESPACE,
+        key: fullKey(pluginId, f.key),
+      });
+      out[f.key] = v ?? "";
+      continue;
+    }
     const stored = await getValue(fullKey(pluginId, f.key));
     out[f.key] = stored ?? f.default;
   }
