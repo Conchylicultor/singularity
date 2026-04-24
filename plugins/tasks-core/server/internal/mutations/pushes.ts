@@ -1,5 +1,6 @@
 import { db } from "@server/db/client";
 import { pushes } from "../tables";
+import { pushLanded } from "../tables-events";
 import { pushesResource, attemptsResource } from "../resources";
 
 export interface InsertPushInput {
@@ -22,6 +23,14 @@ export async function insertPush(input: InsertPushInput): Promise<boolean> {
   if (row) {
     pushesResource.notify();
     attemptsResource.notify();
+    // Emit after the INSERT has committed (auto-commit: no tx wraps this call).
+    // See docs/events.md §"Transactional boundary on emit()".
+    await pushLanded.emit({
+      pushId: input.pushId,
+      sha: input.sha,
+      attemptId: input.attemptId,
+      conversationId: input.conversationId,
+    });
   }
   return !!row;
 }

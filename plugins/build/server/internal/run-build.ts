@@ -3,7 +3,7 @@ import { Log } from "@plugins/debug/plugins/logs/server";
 const buildLog = Log.channel("build");
 
 // In-process mutex. Coalesces overlapping runBuild() calls onto a single
-// `./singularity build` invocation. Every call site (auto-build-watcher,
+// `./singularity build` invocation. Every call site (build.run job,
 // POST /api/build) goes through this, so none of them can spawn a second
 // vite run in parallel with an in-flight one.
 let inflight: Promise<number> | null = null;

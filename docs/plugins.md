@@ -81,7 +81,7 @@
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `BuildButton`
   - Server:
-    - Uses: `config.readConfig`, `tasks-core.getLatestPush`
+    - Uses: `config.readConfig`, `events.deleteTriggersFor`, `events.trigger`, `jobs.defineJob`, `tasks-core.pushLanded`
     - `POST /api/build`
     - `GET /api/build/status`
 
@@ -487,15 +487,16 @@
     - DB schema: `plugins/tasks-core/server/internal/mutations/cross-table.ts`
     - DB schema: `plugins/tasks-core/server/internal/schema-attachments.ts`
     - DB schema: `plugins/tasks-core/server/internal/schema.ts`
+    - DB schema: `plugins/tasks-core/server/internal/tables-events.ts`
     - DB schema: `plugins/tasks-core/server/internal/tables.ts`
   - Exports (server):
-    - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `Task`, `TaskFilters`, `TaskStatus`, `UpdateConversationPatch`, `UpdateTaskPatch`
-    - Values: `_taskAttachments`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listAttempts`, `listAttemptsForTask`, `listConversations`, `listGoneConversationsBefore`, `listPushes`, `listPushesForAttempt`, `listRecentGoneConversations`, `listTasks`, `markConversationClosed`, `pushesResource`, `PushSchema`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`, `updateConversation`, `updateTask`, `updateTaskTitle`
+    - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskStatus`, `UpdateConversationPatch`, `UpdateTaskPatch`
+    - Values: `_pushLandedTriggers`, `_taskAttachments`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listAttempts`, `listAttemptsForTask`, `listConversations`, `listGoneConversationsBefore`, `listPushes`, `listPushesForAttempt`, `listRecentGoneConversations`, `listTasks`, `markConversationClosed`, `pushesResource`, `pushLanded`, `PushSchema`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`, `updateConversation`, `updateTask`, `updateTaskTitle`
   - Exports (shared):
     - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `ConversationSchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
-    - Uses: `attachments.Attachments`
+    - Uses: `attachments.Attachments`, `events.defineTriggerEvent`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.

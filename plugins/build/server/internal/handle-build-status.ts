@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lastAutoBuildAt } from "./auto-build-watcher";
+import { lastAutoBuildAt } from "./build-run-job";
 import { getMainAheadCount } from "./git-status";
 
 const repoRoot = import.meta.dir + "/../../../..";
