@@ -24,6 +24,19 @@
     - `POST /api/agents/:id/launch`
     - `GET /api/agents/:id/launches`
 
+- **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Polymorphic file attachments on disk (UUID-named under ~/.singularity/attachments/). Staged upload with orphan sweep.
+  - Exports (web):
+    - Types: `UploadedAttachment`
+    - Values: `uploadAttachment`
+  - Exports (server):
+    - Values: `_attachments`, `attachAttachment`, `deleteAttachment`, `deleteAttachmentsForOwner`, `getAttachment`, `listAttachmentsForOwner`
+  - Server:
+    - `POST /api/attachments`
+    - `GET /api/attachments`
+    - `POST /api/attachments/:id/attach`
+    - `GET /api/attachments/:id`
+    - `DELETE /api/attachments/:id`
+
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `BuildButton`
@@ -290,6 +303,18 @@
   - Server:
     - `GET /api/health`
 
+- **`improve`** — Prompt used when launching an agent from the Improve button. Supports {{text}}, {{url}}, and {{attachments}} placeholders.
+  - Exports (server):
+    - Values: `_improve_config`, `improveConfigResource`, `IMPROVEMENTS_META_TASK_ID`
+  - Contributes:
+    - `Shell.Toolbar` (group `actions`) → `ImproveButton`
+    - `Config.Section` "Improve prompt template" → `PromptTemplateSettings`
+  - Server:
+    - Uses: `attachments.attachAttachment`, `attachments.getAttachment`, `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`
+    - `POST /api/improve/submit`
+    - `GET /api/improve/config`
+    - `PATCH /api/improve/config`
+
 - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
   - Exports (web):
     - Types: `LaunchButtonsProps`, `LaunchRequest`
@@ -369,7 +394,6 @@
     - Types: `Attempt`, `AttemptStatus`, `Push`, `Task`, `TaskStatus`
     - Values: `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `CONVERSATIONS_META_TASK_ID`, `nextRankUnder`, `pushesResource`, `PushSchema`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`
   - Contributes:
-    - `Shell.Toolbar` (group `actions`) → `NewTaskButton`
     - `Shell.Sidebar` "Tasks" (group `System`)
     - `tasksRootPane.open`
     - `Tasks.TaskActions` → `ExpandCollapseAllAction`

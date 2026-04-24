@@ -21,6 +21,8 @@ import statsTasksPlugin from "@plugins/stats/plugins/tasks/server";
 import tasksPlugin from "@plugins/tasks/server";
 import agentsPlugin from "@plugins/agents/server";
 import screenshotPlugin from "@plugins/screenshot/server";
+import attachmentsPlugin from "@plugins/attachments/server";
+import improvePlugin from "@plugins/improve/server";
 import configPlugin from "@plugins/config/server";
 import crashesPlugin from "@plugins/crashes/server";
 import dbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
@@ -58,6 +60,8 @@ export const plugins: ServerPluginDefinition[] = [
   tasksPlugin,
   agentsPlugin,
   screenshotPlugin,
+  attachmentsPlugin,
+  improvePlugin,
   dbBackupPlugin,
   worktreeCleanupPlugin,
   // Events plugin must load before any plugin that defines events/actions,

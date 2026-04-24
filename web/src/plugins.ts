@@ -43,6 +43,8 @@ import statsTasksPlugin from "@plugins/stats/plugins/tasks/web";
 import tasksPlugin from "@plugins/tasks/web";
 import agentsPlugin from "@plugins/agents/web";
 import screenshotPlugin from "@plugins/screenshot/web";
+import attachmentsPlugin from "@plugins/attachments/web";
+import improvePlugin from "@plugins/improve/web";
 import configPlugin from "@plugins/config/web";
 import eventsTestPlugin from "@plugins/events-test/web";
 
@@ -91,6 +93,8 @@ export const plugins: PluginDefinition[] = [
   tasksPlugin,
   agentsPlugin,
   screenshotPlugin,
+  attachmentsPlugin,
+  improvePlugin,
   configPlugin,
   eventsTestPlugin,
 ];

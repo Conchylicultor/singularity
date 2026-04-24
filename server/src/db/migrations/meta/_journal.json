@@ -225,6 +225,20 @@
       "tag": "20260423_113616_9812227f__events_v1",
       "hash": "9812227f",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777022524000,
+      "tag": "20260424_092204_f637b03b__add_attachments",
+      "hash": "f637b03b",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777022804000,
+      "tag": "20260424_092644_66958274__add_improve_config",
+      "hash": "66958274",
+      "breakpoints": true
     }
   ]
 }

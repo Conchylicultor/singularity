@@ -6,7 +6,6 @@ import { Tasks as TasksSlots } from "./slots";
 import { LaunchAgentAction } from "./components/launch-agent-action";
 import { DeleteTaskAction } from "./components/delete-task-action";
 import { ExpandCollapseAllAction } from "./components/expand-collapse-all-action";
-import { NewTaskButton } from "./components/new-task-button";
 export { Tasks } from "./slots";
 export { TasksList } from "./components/tasks-list";
 export { TaskDetail } from "./components/task-detail";
@@ -17,10 +16,6 @@ export default {
   name: "Tasks",
   description: "Nested tasks with attempts; meta-plugin hosting sub-pane contributions.",
   contributions: [
-    Shell.Toolbar({
-      component: NewTaskButton,
-      group: "actions",
-    }),
     Shell.Sidebar({
       title: "Tasks",
       icon: MdChecklist,

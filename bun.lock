@@ -53,6 +53,10 @@
       "name": "@singularity/plugin-agents",
       "version": "0.0.1",
     },
+    "plugins/attachments": {
+      "name": "@singularity/plugin-attachments",
+      "version": "0.0.1",
+    },
     "plugins/build": {
       "name": "@singularity/plugin-build",
       "version": "0.0.1",
@@ -91,6 +95,13 @@
     "plugins/health": {
       "name": "@singularity/plugin-health",
       "version": "0.0.1",
+    },
+    "plugins/improve": {
+      "name": "@singularity/plugin-improve",
+      "version": "0.0.1",
+      "dependencies": {
+        "modern-screenshot": "^4.6.0",
+      },
     },
     "plugins/launch": {
       "name": "@singularity/plugin-launch",
@@ -641,6 +652,8 @@
 
     "@singularity/plugin-agents": ["@singularity/plugin-agents@workspace:plugins/agents"],
 
+    "@singularity/plugin-attachments": ["@singularity/plugin-attachments@workspace:plugins/attachments"],
+
     "@singularity/plugin-build": ["@singularity/plugin-build@workspace:plugins/build"],
 
     "@singularity/plugin-code-explorer": ["@singularity/plugin-code-explorer@workspace:plugins/code-explorer"],
@@ -660,6 +673,8 @@
     "@singularity/plugin-events-test": ["@singularity/plugin-events-test@workspace:plugins/events-test"],
 
     "@singularity/plugin-health": ["@singularity/plugin-health@workspace:plugins/health"],
+
+    "@singularity/plugin-improve": ["@singularity/plugin-improve@workspace:plugins/improve"],
 
     "@singularity/plugin-launch": ["@singularity/plugin-launch@workspace:plugins/launch"],
 

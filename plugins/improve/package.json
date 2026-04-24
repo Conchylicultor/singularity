@@ -1,0 +1,8 @@
+{
+  "name": "@singularity/plugin-improve",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "modern-screenshot": "^4.6.0"
+  }
+}
