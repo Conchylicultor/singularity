@@ -5,7 +5,7 @@ import { commitsConfig } from "../../shared/config";
 
 type PathStateMap = Record<string, boolean>;
 
-const excludedPathStateResource = resourceDescriptor<PathStateMap>(
+export const excludedPathStateResource = resourceDescriptor<PathStateMap>(
   "stats-commits.excluded-path-state",
 );
 

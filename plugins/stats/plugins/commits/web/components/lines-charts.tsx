@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useResource } from "@core";
 import {
   Area,
   Bar,
@@ -26,7 +27,7 @@ import {
   useFetchJson,
   yAxisFormatter,
 } from "./chart-primitives";
-import { ExcludedPathToggles } from "./excluded-path-toggles";
+import { ExcludedPathToggles, excludedPathStateResource } from "./excluded-path-toggles";
 
 const ADDED_COLOR = "var(--chart-added, #16a34a)";
 const REMOVED_COLOR = "var(--chart-removed, #dc2626)";
@@ -86,9 +87,10 @@ interface CumulativePoint {
   removed: number;
 }
 
-export function CumulativeLinesChart() {
+export function CumulativeLinesChart({ filterKey }: { filterKey?: string }) {
   const { data, error } = useFetchJson<{ points: CumulativePoint[] }>(
     "/api/stats/commits/lines/cumulative",
+    filterKey,
   );
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
   const points = (data?.points ?? []).map((p) => ({
@@ -190,9 +192,10 @@ interface RatePoint {
   removed: number;
 }
 
-export function LinesRateChart({ bucket }: { bucket: Bucket }) {
+export function LinesRateChart({ bucket, filterKey }: { bucket: Bucket; filterKey?: string }) {
   const { data, error } = useFetchJson<{ points: RatePoint[] }>(
     `/api/stats/commits/lines/rate?bucket=${bucket}`,
+    filterKey,
   );
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
 
@@ -304,9 +307,10 @@ function extColor(ext: string, exts: string[]): string {
   return EXT_PALETTE[idx % EXT_PALETTE.length] ?? OTHER_COLOR;
 }
 
-export function CumulativeLinesBreakdownChart() {
+export function CumulativeLinesBreakdownChart({ filterKey }: { filterKey?: string }) {
   const { data, error } = useFetchJson<{ points: ByExtPoint[] }>(
     "/api/stats/commits/lines/cumulative?breakdown=ext",
+    filterKey,
   );
   const points = data?.points ?? [];
   const exts = topExtensions(points);
@@ -370,9 +374,10 @@ export function CumulativeLinesBreakdownChart() {
   );
 }
 
-export function LinesRateBreakdownChart({ bucket }: { bucket: Bucket }) {
+export function LinesRateBreakdownChart({ bucket, filterKey }: { bucket: Bucket; filterKey?: string }) {
   const { data, error } = useFetchJson<{ points: ByExtPoint[] }>(
     `/api/stats/commits/lines/rate?bucket=${bucket}&breakdown=ext`,
+    filterKey,
   );
   const points = data?.points ?? [];
   const exts = topExtensions(points);
@@ -432,6 +437,8 @@ export function LinesRateBreakdownChart({ bucket }: { bucket: Bucket }) {
 export function LinesChartsSection() {
   const [byType, setByType] = useState(false);
   const [bucket, setBucket] = useState<Bucket>("day");
+  const { data: overrides } = useResource(excludedPathStateResource);
+  const filterKey = JSON.stringify(overrides ?? {});
 
   return (
     <div className="flex flex-col gap-6">
@@ -452,11 +459,11 @@ export function LinesChartsSection() {
       </div>
       <div>
         <h3 className="mb-3 text-xs font-medium text-muted-foreground">Over time</h3>
-        {byType ? <CumulativeLinesBreakdownChart /> : <CumulativeLinesChart />}
+        {byType ? <CumulativeLinesBreakdownChart filterKey={filterKey} /> : <CumulativeLinesChart filterKey={filterKey} />}
       </div>
       <div>
         <h3 className="mb-3 text-xs font-medium text-muted-foreground">Per period</h3>
-        {byType ? <LinesRateBreakdownChart bucket={bucket} /> : <LinesRateChart bucket={bucket} />}
+        {byType ? <LinesRateBreakdownChart bucket={bucket} filterKey={filterKey} /> : <LinesRateChart bucket={bucket} filterKey={filterKey} />}
         <div className="flex flex-wrap gap-1.5 mt-3">
           {BUCKETS.map((b) => (
             <button

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchWithRetry } from "@core";
 
-export function useFetchJson<T>(url: string): {
+export function useFetchJson<T>(url: string, cacheKey?: string): {
   data: T | null;
   error: string | null;
 } {
@@ -22,7 +22,7 @@ export function useFetchJson<T>(url: string): {
     return () => {
       cancelled = true;
     };
-  }, [url]);
+  }, [url, cacheKey]);
   return { data, error };
 }
 
