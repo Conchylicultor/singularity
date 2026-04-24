@@ -165,6 +165,7 @@ When working on this project, follow these instructions thoughtfully:
 - Most features first require a thoughtful design phase. Use the project `plan` SKILL for this phase. This is important to correctly write the plan doc at the right location. Do NOT use `EnterPlanMode` tool.
 - New features should be implemented as plugins in `plugins/`. See [`plugin-core/CLAUDE.md`](plugin-core/CLAUDE.md) for how to create one.
 - Always edit files in your worktree, not the main branch.
+- **Prefer the clean, modern, best-practice design over the hacky one, even when it's more work.** This applies to *both* bug fixes *and* new feature design. Every concrete task — a bug, a missing behavior, a requested feature — is a toy case for a larger structural question. Ask: "what general primitive, plugin, slot, or abstraction would make this *and* future similar cases trivial?" — then build that, rather than patching the symptom or bolting the feature onto existing code. This might include refactoring or creating new plugins.
 
 ------------------------------------
 
