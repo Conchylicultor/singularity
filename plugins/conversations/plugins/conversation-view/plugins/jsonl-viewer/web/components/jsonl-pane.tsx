@@ -7,8 +7,23 @@ import { jsonlEventsResource } from "../../shared";
 import { convJsonlPane } from "../panes";
 import { EventRow } from "./event-row";
 
+function WorkingIndicator() {
+  return (
+    <div className="flex items-center gap-1 px-1 py-1">
+      {[0, 150, 300].map((delay) => (
+        <span
+          key={delay}
+          className="size-1.5 animate-bounce rounded-full bg-muted-foreground/40"
+          style={{ animationDelay: `${delay}ms` }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function JsonlPane() {
   const { conversation } = conversationPane.useData();
+  const isWorking = conversation.status === "working" || conversation.status === "starting";
   const { data, error, isLoading } = useResource(jsonlEventsResource, {
     id: conversation.id,
   });
@@ -69,14 +84,16 @@ export function JsonlPane() {
             {error instanceof Error ? error.message : String(error)}
           </div>
         ) : !events || events.length === 0 ? (
-          <div className="px-3 py-2 text-xs text-muted-foreground">
-            No transcript yet. Claude may not have written its session log.
+          <div className="flex flex-col px-3 py-2 text-xs text-muted-foreground">
+            <span>No transcript yet. Claude may not have written its session log.</span>
+            {isWorking && <WorkingIndicator />}
           </div>
         ) : (
           <div className="flex flex-col gap-2 p-2">
             {events.map((event, i) => (
               <EventRow key={i} event={event} markdownMode={markdownMode} />
             ))}
+            {isWorking && <WorkingIndicator />}
           </div>
         )}
       </div>
