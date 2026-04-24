@@ -6,7 +6,7 @@ import {
   type Runner,
   type WorkerUtils,
 } from "graphile-worker";
-import { connectionString, db } from "../../../../server/src/db/client";
+import { connectionString, db } from "@server/db/client";
 import { actionRegistry, triggerTableRegistry } from "./registry";
 
 // Single shared task. Actions are resolved at invoke time via `actionRegistry`
