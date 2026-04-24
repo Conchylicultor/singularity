@@ -96,9 +96,6 @@
     "plugins/events": {
       "name": "@singularity/plugin-events",
       "version": "0.0.1",
-      "dependencies": {
-        "graphile-worker": "^0.16.6",
-      },
     },
     "plugins/events-test": {
       "name": "@singularity/plugin-events-test",
@@ -113,6 +110,13 @@
       "version": "0.0.1",
       "dependencies": {
         "modern-screenshot": "^4.6.0",
+      },
+    },
+    "plugins/jobs": {
+      "name": "@singularity/plugin-jobs",
+      "version": "0.0.1",
+      "dependencies": {
+        "graphile-worker": "^0.16.6",
       },
     },
     "plugins/launch": {
@@ -693,6 +697,8 @@
     "@singularity/plugin-health": ["@singularity/plugin-health@workspace:plugins/health"],
 
     "@singularity/plugin-improve": ["@singularity/plugin-improve@workspace:plugins/improve"],
+
+    "@singularity/plugin-jobs": ["@singularity/plugin-jobs@workspace:plugins/jobs"],
 
     "@singularity/plugin-launch": ["@singularity/plugin-launch@workspace:plugins/launch"],
 

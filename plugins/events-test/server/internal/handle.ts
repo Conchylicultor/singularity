@@ -1,7 +1,7 @@
 import { asc, sql } from "drizzle-orm";
+import { deleteTrigger, deleteTriggersFor, trigger } from "@plugins/events/server";
 import { db } from "@server/db/client";
-import { deleteTrigger, trigger } from "@plugins/events/server";
-import { actionLog, logPing, resetActionLog } from "./action";
+import { logEntries, logPing, resetLog } from "./log-job";
 import { _pingedTriggers, pinged } from "./tables";
 
 interface SubscribeBody {
@@ -18,7 +18,8 @@ export async function handleSubscribe(req: Request): Promise<Response> {
   const source = body.userId ? pinged.where({ userId: body.userId }) : pinged;
   const id = await trigger({
     on: source,
-    do: logPing({ label: body.label }),
+    do: logPing,
+    with: { label: body.label },
     oneShot: body.oneShot ?? true,
   });
   return Response.json({ id });
@@ -41,25 +42,47 @@ export async function handleEmit(req: Request): Promise<Response> {
   return Response.json({ ok: true });
 }
 
+interface DirectEnqueueBody {
+  label: string;
+  userId?: string;
+  message?: string;
+}
+
+// Exercises the Layer-1 `.enqueue()` path: no trigger row is involved, the
+// job runs straight from graphile_worker.jobs. Load-bearing for the
+// push-and-exit migration that will land after this split.
+export async function handleDirectEnqueue(req: Request): Promise<Response> {
+  const body = (await req.json()) as DirectEnqueueBody;
+  if (typeof body.label !== "string") {
+    return Response.json({ error: "label (string) required" }, { status: 400 });
+  }
+  const { jobId } = await logPing.enqueue({
+    label: body.label,
+    userId: body.userId ?? "direct",
+    message: body.message ?? "direct-enqueued",
+  });
+  return Response.json({ jobId });
+}
+
 export function handleLog(): Response {
-  return Response.json({ entries: actionLog });
+  return Response.json({ entries: logEntries });
 }
 
 export function handleReset(): Response {
-  resetActionLog();
+  resetLog();
   return Response.json({ ok: true });
 }
 
-// Poll graphile_worker.jobs until no jobs for the events dispatch task are
-// pending. Lets e2e tests synchronize between emit() (which now returns once
-// jobs are durable, not once handlers finish) and /log.
+// Poll graphile_worker.jobs until no jobs for the shared jobs.run task are
+// pending. Lets e2e tests synchronize between emit()/enqueue() (which now
+// return once jobs are durable, not once handlers finish) and /log.
 export async function handleWaitIdle(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const timeoutMs = Number(url.searchParams.get("timeoutMs") ?? 2000);
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const rows = await db.execute(
-      sql`SELECT count(*)::int AS n FROM graphile_worker.jobs WHERE task_identifier = 'events.dispatch' AND attempts < max_attempts`,
+      sql`SELECT count(*)::int AS n FROM graphile_worker.jobs WHERE task_identifier = 'jobs.run' AND attempts < max_attempts`,
     );
     const n = (rows[0] as { n: number } | undefined)?.n ?? 0;
     if (n === 0) return Response.json({ idle: true });
@@ -87,7 +110,7 @@ export async function handleDeleteTargeting(req: Request): Promise<Response> {
   if (typeof body.label !== "string") {
     return Response.json({ error: "label (string) required" }, { status: 400 });
   }
-  await logPing.deleteTargeting({ label: body.label });
+  await deleteTriggersFor(logPing, { label: body.label });
   return Response.json({ ok: true });
 }
 

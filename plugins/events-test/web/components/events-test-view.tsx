@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 
 interface TriggerRow {
   id: string;
-  actionName: string;
-  actionConfig: Record<string, unknown>;
+  jobName: string;
+  jobWith: Record<string, unknown>;
   enabled: boolean;
   oneShot: boolean;
   createdAt: string;
@@ -17,8 +17,9 @@ interface TriggerRow {
 
 interface LogEntry {
   label: string;
-  payload: { userId: string; message: string };
-  triggerId: string;
+  userId: string;
+  message: string;
+  jobId: string;
   firedAt: string;
 }
 
@@ -56,6 +57,12 @@ export function EventsTestView() {
   // Delete targeting form
   const [dtLabel, setDtLabel] = useState("");
   const [dtBusy, setDtBusy] = useState(false);
+
+  // Direct enqueue form (Layer-1 test — bypasses events entirely)
+  const [deLabel, setDeLabel] = useState("");
+  const [deUserId, setDeUserId] = useState("");
+  const [deMessage, setDeMessage] = useState("");
+  const [deBusy, setDeBusy] = useState(false);
 
   // Lists
   const [triggers, setTriggers] = useState<TriggerRow[]>([]);
@@ -180,6 +187,33 @@ export function EventsTestView() {
     }
   };
 
+  const onDirectEnqueue = async () => {
+    if (!deLabel.trim()) {
+      Shell.Toast({ description: "label is required", variant: "warning" });
+      return;
+    }
+    setDeBusy(true);
+    try {
+      const { jobId } = await postJson<{ jobId: string }>(
+        "/api/events-test/direct-enqueue",
+        {
+          label: deLabel.trim(),
+          userId: deUserId.trim() || undefined,
+          message: deMessage.trim() || undefined,
+        },
+      );
+      Shell.Toast({
+        description: `Enqueued job ${jobId}`,
+        variant: "success",
+      });
+      await refresh();
+    } catch (e) {
+      toastErr(e, "direct-enqueue failed");
+    } finally {
+      setDeBusy(false);
+    }
+  };
+
   const onResetLog = async () => {
     try {
       await fetch("/api/events-test/reset", { method: "POST" });
@@ -202,12 +236,12 @@ export function EventsTestView() {
             </h1>
             <p className="text-sm text-muted-foreground">
               Exercises the <code className="rounded bg-muted px-1">events</code>{" "}
-              plugin: subscribe a trigger, emit a payload, watch the action
-              fire. Backed by{" "}
-              <code className="rounded bg-muted px-1">events_test.pinged</code>{" "}
+              and <code className="rounded bg-muted px-1">jobs</code> plugins:
+              subscribe a trigger, emit a payload, watch the job fire. Backed
+              by <code className="rounded bg-muted px-1">events_test.pinged</code>{" "}
               event and{" "}
               <code className="rounded bg-muted px-1">events_test.log</code>{" "}
-              action.
+              job.
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={refresh}>
@@ -226,7 +260,7 @@ export function EventsTestView() {
                 onChange={(e) => setSubUserId(e.target.value)}
               />
             </FieldRow>
-            <FieldRow label="label (action config)">
+            <FieldRow label="label (job config)">
               <Input
                 placeholder="required"
                 value={subLabel}
@@ -275,6 +309,49 @@ export function EventsTestView() {
           </Section>
         </div>
 
+        {/* Direct enqueue — Layer 1 test (bypasses events) */}
+        <Section
+          title="Direct enqueue (Layer 1)"
+          action={
+            <span className="text-xs text-muted-foreground">
+              calls logPing.enqueue(...) — no trigger row involved
+            </span>
+          }
+        >
+          <div className="grid gap-3 md:grid-cols-3">
+            <FieldRow label="label">
+              <Input
+                placeholder="required"
+                value={deLabel}
+                onChange={(e) => setDeLabel(e.target.value)}
+              />
+            </FieldRow>
+            <FieldRow label="userId">
+              <Input
+                placeholder="default 'direct'"
+                value={deUserId}
+                onChange={(e) => setDeUserId(e.target.value)}
+              />
+            </FieldRow>
+            <FieldRow label="message">
+              <Input
+                placeholder="default 'direct-enqueued'"
+                value={deMessage}
+                onChange={(e) => setDeMessage(e.target.value)}
+              />
+            </FieldRow>
+          </div>
+          <Button
+            variant="secondary"
+            onClick={onDirectEnqueue}
+            disabled={deBusy}
+            className="self-start"
+          >
+            <MdSend className="size-4" />
+            {deBusy ? "Enqueueing…" : "Enqueue job"}
+          </Button>
+        </Section>
+
         {/* Active triggers */}
         <Section
           title={`Active triggers (${triggers.length})`}
@@ -302,9 +379,9 @@ export function EventsTestView() {
                         {t.userId ?? "(any)"}
                       </span>
                       <span className="text-muted-foreground">→</span>
-                      <span className="font-mono text-xs">{t.actionName}</span>
+                      <span className="font-mono text-xs">{t.jobName}</span>
                       <span className="truncate text-xs text-muted-foreground">
-                        {JSON.stringify(t.actionConfig)}
+                        {JSON.stringify(t.jobWith)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -328,7 +405,7 @@ export function EventsTestView() {
         </Section>
 
         {/* Cleanup by config */}
-        <Section title="Delete triggers by action config">
+        <Section title="Delete triggers by job config">
           <div className="flex items-end gap-2">
             <div className="flex-1">
               <FieldRow label="label match">
@@ -350,9 +427,9 @@ export function EventsTestView() {
           </div>
         </Section>
 
-        {/* Action log */}
+        {/* Job log */}
         <Section
-          title={`Action log (${log.length})`}
+          title={`Job log (${log.length})`}
           action={
             <Button variant="ghost" size="sm" onClick={onResetLog}>
               <MdDelete className="size-4" />
@@ -361,12 +438,12 @@ export function EventsTestView() {
           }
         >
           {log.length === 0 ? (
-            <Empty>No actions fired yet. Emit a payload above.</Empty>
+            <Empty>No jobs fired yet. Emit a payload above.</Empty>
           ) : (
             <div className="divide-y divide-border rounded-md border border-border">
               {log.map((e, i) => (
                 <div
-                  key={`${e.triggerId}-${e.firedAt}-${i}`}
+                  key={`${e.jobId}-${e.firedAt}-${i}`}
                   className="flex flex-col gap-0.5 px-3 py-2 text-sm"
                 >
                   <div className="flex items-center gap-2">
@@ -375,15 +452,15 @@ export function EventsTestView() {
                     </span>
                     <span className="text-muted-foreground">fired for</span>
                     <span className="font-mono text-xs">
-                      userId={e.payload.userId}
+                      userId={e.userId}
                     </span>
                     <span className="truncate text-xs text-muted-foreground">
-                      msg={JSON.stringify(e.payload.message)}
+                      msg={JSON.stringify(e.message)}
                     </span>
                   </div>
                   <div className="truncate text-xs text-muted-foreground">
                     {new Date(e.firedAt).toLocaleTimeString()} ·{" "}
-                    <span className="font-mono">{e.triggerId}</span>
+                    <span className="font-mono">job {e.jobId}</span>
                   </div>
                 </div>
               ))}

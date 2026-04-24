@@ -41,4 +41,11 @@ export interface ServerPluginDefinition {
    * plugin's module body races the migration runner.
    */
   onReady?: () => void | Promise<void>;
+  /**
+   * Called once on SIGTERM/SIGINT before the process exits. Use this to drain
+   * background workers, flush buffered state, and release DB connections.
+   * Run in parallel across plugins (same contract as `onReady`); rejections
+   * are logged but do not block other plugins' shutdown.
+   */
+  onShutdown?: () => void | Promise<void>;
 }

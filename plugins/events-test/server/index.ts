@@ -1,10 +1,8 @@
 import type { ServerPluginDefinition } from "@server/types";
-// Side-effect imports: both register with the events plugin at module load.
-import "./internal/tables";
-import "./internal/action";
 import {
   handleDeleteTargeting,
   handleDeleteTrigger,
+  handleDirectEnqueue,
   handleEmit,
   handleListTriggers,
   handleLog,
@@ -16,10 +14,11 @@ import {
 export default {
   id: "events-test",
   name: "Events Test",
-  description: "Dummy plugin exercising the events API end-to-end.",
+  description: "Dummy plugin exercising the events and jobs APIs end-to-end.",
   httpRoutes: {
     "POST /api/events-test/subscribe": handleSubscribe,
     "POST /api/events-test/emit": handleEmit,
+    "POST /api/events-test/direct-enqueue": handleDirectEnqueue,
     "GET /api/events-test/log": handleLog,
     "POST /api/events-test/reset": handleReset,
     "DELETE /api/events-test/trigger/:id": handleDeleteTrigger,

@@ -18,6 +18,28 @@ await Promise.all(
   ),
 );
 
+// Graceful shutdown: drain workers, flush state, release DB connections.
+// Guarded against double-entry so both SIGTERM and a follow-up SIGINT can't
+// run shutdown twice while the first pass is still draining.
+let shuttingDown = false;
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[server] ${signal} received; shutting down`);
+  await Promise.all(
+    plugins.map((p) =>
+      Promise.resolve()
+        .then(() => p.onShutdown?.())
+        .catch((err) =>
+          console.error(`[plugin.${p.id}] onShutdown failed`, err),
+        ),
+    ),
+  );
+  process.exit(0);
+}
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
 // Exit when orphaned (parent gateway died and we were reparented to init).
 // macOS has no PR_SET_PDEATHSIG equivalent, so poll. Without this, old
 // backends survive gateway crashes, leak PTYs, and hold onto ports.

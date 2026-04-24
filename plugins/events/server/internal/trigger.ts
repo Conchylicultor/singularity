@@ -1,19 +1,26 @@
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
+import type { z } from "zod";
+import type { JobFactory } from "@plugins/jobs/server";
 import { db } from "@server/db/client";
-import type { ActionRef } from "./action";
 import type { EventSource } from "./event";
 import { triggerTableRegistry } from "./registry";
 
-export interface TriggerSpec<P> {
+export interface TriggerSpec<P, I> {
   on: EventSource<P>;
-  do: ActionRef;
+  do: JobFactory<string, z.ZodType<I>>;
+  /**
+   * Static fields baked into the trigger row that the event payload does not
+   * supply. Merged with `eventPayload` at dispatch time (event payload wins
+   * on key overlap) to form the target job's input.
+   */
+  with?: Partial<I>;
   oneShot?: boolean;
 }
 
 // Persist a subscription. Inserts one row into the event's per-type table
-// with the filter values, action name, and serialized config.
-export async function trigger<P>(spec: TriggerSpec<P>): Promise<string> {
+// with the filter values, job name, and serialized `with` config.
+export async function trigger<P, I>(spec: TriggerSpec<P, I>): Promise<string> {
   if (spec.on.__kind !== "event") {
     throw new Error(
       `[events] trigger({ on }) got unsupported source kind: ${(spec.on as { __kind: string }).__kind}`,
@@ -24,8 +31,8 @@ export async function trigger<P>(spec: TriggerSpec<P>): Promise<string> {
   const oneShot = spec.oneShot ?? true;
 
   const values: Record<string, unknown> = {
-    actionName: spec.do.name,
-    actionConfig: spec.do.config as Record<string, unknown>,
+    jobName: spec.do.name,
+    jobWith: (spec.with ?? {}) as Record<string, unknown>,
     oneShot,
   };
   for (const key of Object.keys(def.filterColumns)) {
@@ -36,7 +43,7 @@ export async function trigger<P>(spec: TriggerSpec<P>): Promise<string> {
     .insert(def.table)
     .values(values)
     .returning({
-      // biome-ignore lint/suspicious/noExplicitAny: dynamic id column access.
+      // biome-ignore lint/suspicious/noExplicitAny: dynamic id column access on untyped PgTable.
       id: (def.table as any).id as AnyPgColumn,
     });
 
@@ -51,7 +58,41 @@ export async function deleteTrigger(id: string): Promise<void> {
   for (const table of triggerTableRegistry.values()) {
     await db
       .delete(table)
-      // biome-ignore lint/suspicious/noExplicitAny: dynamic id column access.
+      // biome-ignore lint/suspicious/noExplicitAny: dynamic id column access on untyped PgTable.
       .where(eq((table as any).id as AnyPgColumn, id));
+  }
+}
+
+// Sweep every trigger table, deleting rows whose target job matches and whose
+// persisted `jobWith` contains every key in `configMatch` (JSONB `@>`). Omit
+// `configMatch` to remove every trigger that binds this job.
+export async function deleteTriggersFor<
+  N extends string,
+  S extends z.ZodType,
+>(
+  job: JobFactory<N, S>,
+  configMatch?: Partial<z.input<S>>,
+): Promise<void> {
+  const matchJson =
+    configMatch && Object.keys(configMatch).length > 0
+      ? JSON.stringify(configMatch)
+      : null;
+  for (const table of triggerTableRegistry.values()) {
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic column access on base-columns.
+    const jobNameCol = (table as any).jobName as AnyPgColumn;
+    if (matchJson) {
+      // biome-ignore lint/suspicious/noExplicitAny: dynamic column access on base-columns.
+      const jobWithCol = (table as any).jobWith as AnyPgColumn;
+      await db
+        .delete(table)
+        .where(
+          and(
+            eq(jobNameCol, job.name),
+            sql`${jobWithCol} @> ${matchJson}::jsonb`,
+          ),
+        );
+    } else {
+      await db.delete(table).where(eq(jobNameCol, job.name));
+    }
   }
 }

@@ -1,8 +1,5 @@
 {
   "name": "@singularity/plugin-events",
   "private": true,
-  "version": "0.0.1",
-  "dependencies": {
-    "graphile-worker": "^0.16.6"
-  }
+  "version": "0.0.1"
 }

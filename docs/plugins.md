@@ -328,14 +328,16 @@
         - `POST /api/debug/worktrees/bulk-delete`
         - `DELETE /api/debug/worktrees/:id`
 
-- **`events`** — Infrastructure for typed events, actions, and persisted triggers.
+- **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
   - Defines:
     - DB schema: `plugins/events/server/internal/event.ts`
   - Exports (server):
-    - Types: `ActionFactory`, `ActionRef`, `DefineActionSpec`, `DefineTriggerEventSpec`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`
-    - Values: `defineAction`, `defineTriggerEvent`, `deleteTrigger`, `trigger`
+    - Types: `DefineTriggerEventSpec`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`
+    - Values: `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `trigger`
+  - Server:
+    - Uses: `jobs.DEFAULT_MAX_ATTEMPTS`, `jobs.UNSAFE_getRegisteredJob`, `jobs.defineJob`
 
-- **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events API end-to-end.
+- **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
   - Defines:
     - DB schema: `plugins/events-test/server/internal/tables.ts`
   - Exports (web):
@@ -344,9 +346,10 @@
     - `Debug.Item` "Events Test"
     - `eventsTestPane.open`
   - Server:
-    - Uses: `events.defineAction`, `events.defineTriggerEvent`, `events.deleteTrigger`, `events.trigger`
+    - Uses: `events.defineTriggerEvent`, `events.deleteTrigger`, `events.deleteTriggersFor`, `events.trigger`, `jobs.defineJob`
     - `POST /api/events-test/subscribe`
     - `POST /api/events-test/emit`
+    - `POST /api/events-test/direct-enqueue`
     - `GET /api/events-test/log`
     - `POST /api/events-test/reset`
     - `DELETE /api/events-test/trigger/:id`
@@ -372,6 +375,11 @@
   - Server:
     - Uses: `attachments.getAttachment`, `conversations.createConversation`, `tasks-core._taskAttachments`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`
     - `POST /api/improve/submit`
+
+- **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
+  - Exports (server):
+    - Types: `DefineJobSpec`, `JobCtx`, `JobFactory`, `RegisteredJob`
+    - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `UNSAFE_getRegisteredJob`
 
 - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
   - Exports (web):

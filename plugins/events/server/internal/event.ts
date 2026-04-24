@@ -6,10 +6,11 @@ import {
   type PgTable,
   pgTable,
 } from "drizzle-orm/pg-core";
+import { DEFAULT_MAX_ATTEMPTS, UNSAFE_getRegisteredJob } from "@plugins/jobs/server";
 import { db } from "@server/db/client";
 import { eventTriggerColumns } from "./base-columns";
+import { eventsDispatchJob } from "./dispatch-job";
 import { triggerTableRegistry } from "./registry";
-import { DEFAULT_MAX_ATTEMPTS, DISPATCH_TASK, getWorkerUtils } from "./worker";
 
 // A filter slot is either a plain column builder (identity-or-null match on
 // the same-named payload key) or an object with an explicit match predicate.
@@ -171,22 +172,36 @@ async function dispatch<T>(def: EventDef<T>, payload: T): Promise<void> {
 
   if (rows.length === 0) return;
 
-  // Enqueue one durable Graphile job per matching row. Execution (including
+  // Enqueue one events-dispatch job per matching row. Execution (including
   // retries, oneShot deletes, and preservation on permanent failure) happens
-  // in the worker — see `./worker.ts`. emit() resolves once jobs are durable
-  // in `graphile_worker.jobs`, not when handlers finish.
-  const utils = await getWorkerUtils();
+  // inside the dispatch job — see `./dispatch-job.ts`. emit() resolves once
+  // jobs are durable in `graphile_worker.jobs`, not when handlers finish.
+  //
+  // maxAttempts is threaded from the target job's definition so the wrapper
+  // dispatch job inherits the target's retry budget — otherwise every
+  // event-triggered call would get the Layer-1 default regardless of what
+  // `defineJob({ maxAttempts })` declared. Unknown target → fall through to
+  // DEFAULT_MAX_ATTEMPTS; the dispatcher's preservation branch returns
+  // without throwing, so retries never actually run in that case.
   await Promise.all(
-    rows.map((row) =>
+    rows.map((row) => {
       // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
-      utils.addJob(DISPATCH_TASK, {
-        actionName: (row as any).actionName,
-        actionConfig: (row as any).actionConfig,
-        eventPayload: payload,
-        triggerId: (row as any).id,
-        eventName: def.name,
-        oneShot: (row as any).oneShot,
-      }, { maxAttempts: DEFAULT_MAX_ATTEMPTS }),
-    ),
+      const jobName = (row as any).jobName as string;
+      const target = UNSAFE_getRegisteredJob(jobName);
+      return eventsDispatchJob.enqueue(
+        {
+          eventName: def.name,
+          // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
+          triggerId: (row as any).id as string,
+          jobName,
+          // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
+          jobWith: ((row as any).jobWith ?? {}) as Record<string, unknown>,
+          eventPayload: (payload ?? {}) as Record<string, unknown>,
+          // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
+          oneShot: (row as any).oneShot as boolean,
+        },
+        { maxAttempts: target?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS },
+      );
+    }),
   );
 }

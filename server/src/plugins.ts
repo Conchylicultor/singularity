@@ -27,6 +27,7 @@ import configPlugin from "@plugins/config/server";
 import crashesPlugin from "@plugins/crashes/server";
 import dbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
 import worktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/server";
+import jobsPlugin from "@plugins/jobs/server";
 import eventsPlugin from "@plugins/events/server";
 import eventsTestPlugin from "@plugins/events-test/server";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
@@ -68,8 +69,13 @@ export const plugins: ServerPluginDefinition[] = [
   improvePlugin,
   dbBackupPlugin,
   worktreeCleanupPlugin,
-  // Events plugin must load before any plugin that defines events/actions,
-  // so the `defineTriggerEvent` and `defineAction` factories are ready.
+  // Jobs plugin owns the graphile-worker lifecycle; must load before the
+  // events plugin (which enqueues a dispatcher job at module load) and any
+  // plugin that calls `defineJob`.
+  jobsPlugin,
+  // Events plugin layers event→job bindings on top of jobs. Must load before
+  // any plugin that defines events, so the `defineTriggerEvent` factory is
+  // ready when their tables.ts files execute.
   eventsPlugin,
   eventsTestPlugin,
   conversationsRecoverPlugin,

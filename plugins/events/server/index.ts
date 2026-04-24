@@ -1,8 +1,8 @@
 import type { ServerPluginDefinition } from "@server/types";
-import { startWorker } from "./internal/worker";
+// Side-effect import: registers the `events.dispatch` job at module load so
+// it's in `jobRegistry` before any `emit()` call happens post-boot.
+import "./internal/dispatch-job";
 
-export { defineAction } from "./internal/action";
-export type { ActionFactory, ActionRef, DefineActionSpec } from "./internal/action";
 export { defineTriggerEvent } from "./internal/event";
 export type {
   DefineTriggerEventSpec,
@@ -10,15 +10,12 @@ export type {
   EventSource,
   FilterSlot,
 } from "./internal/event";
-export { deleteTrigger, trigger } from "./internal/trigger";
+export { deleteTrigger, deleteTriggersFor, trigger } from "./internal/trigger";
 export type { TriggerSpec } from "./internal/trigger";
 
 export default {
   id: "events",
   name: "Events",
   description:
-    "Infrastructure for typed events, actions, and persisted triggers.",
-  onReady: async () => {
-    await startWorker();
-  },
+    "Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().",
 } satisfies ServerPluginDefinition;
