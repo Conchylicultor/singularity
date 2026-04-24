@@ -1,6 +1,6 @@
 {
-  "id": "0b4d233d-50db-49fa-add3-0e8dbf0a9168",
-  "prevId": "b5972a1f-d0b8-4240-8daa-28aa28e71927",
+  "id": "d4d2db87-54f5-4555-b68f-1c20b68d4771",
+  "prevId": "aaa87ff5-a7f9-4ffa-b4f0-33469481bad1",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1134,6 +1134,59 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.pushes_landed_triggers": {
+      "name": "pushes_landed_triggers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "job_name": {
+          "name": "job_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "job_with": {
+          "name": "job_with",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "one_shot": {
+          "name": "one_shot",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
