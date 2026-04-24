@@ -18,6 +18,7 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
       "@core": path.resolve(__dirname, "../plugin-core"),
       "@plugins": path.resolve(__dirname, "../plugins"),
+      "@server": path.resolve(__dirname, "../server/src"),
     },
   },
 });
