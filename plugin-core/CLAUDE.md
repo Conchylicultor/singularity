@@ -34,7 +34,7 @@ A plugin is a `PluginDefinition` — just `{ id, name, contributions? }`:
 
 ```typescript
 import { type PluginDefinition } from "@core";
-import { Shell } from "@plugins/shell/web/slots";
+import { Shell } from "@plugins/shell/web";
 
 const myPlugin: PluginDefinition = {
   id: "my-plugin",
@@ -138,7 +138,7 @@ Consume server live-state with one hook:
 
 ```typescript
 import { useResource } from "@core";
-import { tasksResource } from "@plugins/tasks/server/resources";
+import { tasksResource } from "@plugins/tasks/server";
 
 function TasksList() {
   const { data, isLoading } = useResource(tasksResource);
@@ -202,7 +202,7 @@ Empty regions are not rendered (collapsed). Most plugins will contribute to thes
 ## Adding a New Plugin
 
 1. Create `plugins/{name}/web/index.ts`
-2. Import slots from the plugins you want to extend (e.g., `Shell` from `@plugins/shell/web/slots`)
+2. Import slots from the plugins you want to extend (e.g., `Shell` from `@plugins/shell/web`)
 3. Export a default `PluginDefinition` with contributions
 4. Register it in `web/src/plugins.ts`
 5. Optionally define your own slots in `plugins/{name}/web/slots.ts` for other plugins to extend

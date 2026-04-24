@@ -36,6 +36,15 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
 
 Think carefully about the plugin's boundaries, APIs, etc. when designing plugins, as it is the load-bearing infra of the entire project.
 
+### Plugin boundary rules (enforced by `./singularity check --plugin-boundaries`)
+
+- **One barrel per runtime.** `plugins/<name>/<runtime>/index.ts` is the only cross-plugin entry point. No `api.ts`, no deep paths.
+- **Cross-plugin import grammar.** Only `@plugins/<name>/web`, `@plugins/<name>/server`, or `@plugins/<name>/shared` are legal import paths from outside the plugin. Any deeper path (e.g. `@plugins/shell/web/slots`) is forbidden.
+- **Barrel purity.** Each `index.ts` may only contain `import` statements, re-exports, type aliases, and a single `export default <definePlugin(...)>`. No `const`/`let`, no logic, no side effects.
+- **Registry exclusivity.** Default-export imports (`import fooPlugin from "@plugins/foo/web"`) are only allowed in `web/src/plugins.ts` and `server/src/plugins.ts`.
+- **No cycles.** The cross-plugin import graph must be a DAG. Type-only imports count as edges.
+- **Before writing a helper, search `docs/plugins.md` for it** — public exports of every plugin are listed there and kept in sync by the `plugins-doc-in-sync` check.
+
 ### Folder Structure
 
 ```

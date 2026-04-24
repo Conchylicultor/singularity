@@ -150,8 +150,8 @@ In production, a reverse proxy or the backend itself serves the static frontend.
 
 Drizzle ORM + Postgres, one DB per worktree (`SINGULARITY_WORKTREE` env var picks the database name).
 
-- Each plugin defines its tables in `plugins/{name}/server/schema.ts`.
-- `server/src/db/schema.ts` is a typed barrel: one `export * from "@plugins/{name}/server/schema"` line per plugin with tables.
+- Each plugin defines its tables in `plugins/{name}/server/internal/schema.ts` (and table handles in `internal/tables.ts`).
+- `server/src/db/schema.ts` is the Drizzle aggregator: one `export * from "../../../plugins/{name}/server/internal/schema"` line per plugin. This file is a framework-level exception — it imports from `internal/` directly and is whitelisted by the `plugin-boundaries` check. Application code must never import from it.
 - `server/src/db/client.ts` exports a typed `db` aggregating all plugin schemas.
 - Migrations live in `server/src/db/migrations/` (committed to git).
 
