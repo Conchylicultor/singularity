@@ -61,6 +61,10 @@
       "name": "@singularity/plugin-attempt-view",
       "version": "0.0.1",
     },
+    "plugins/auth": {
+      "name": "@singularity/plugin-auth",
+      "version": "0.0.1",
+    },
     "plugins/build": {
       "name": "@singularity/plugin-build",
       "version": "0.0.1",
@@ -663,6 +667,8 @@
     "@singularity/plugin-attachments": ["@singularity/plugin-attachments@workspace:plugins/attachments"],
 
     "@singularity/plugin-attempt-view": ["@singularity/plugin-attempt-view@workspace:plugins/attempt-view"],
+
+    "@singularity/plugin-auth": ["@singularity/plugin-auth@workspace:plugins/auth"],
 
     "@singularity/plugin-build": ["@singularity/plugin-build@workspace:plugins/build"],
 

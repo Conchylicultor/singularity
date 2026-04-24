@@ -1,0 +1,1 @@
+export { notionAuthConfig } from "./config";

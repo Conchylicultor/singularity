@@ -30,6 +30,9 @@ import worktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/serve
 import eventsPlugin from "@plugins/events/server";
 import eventsTestPlugin from "@plugins/events-test/server";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
+import authPlugin from "@plugins/auth/server";
+import authGooglePlugin from "@plugins/auth/plugins/google/server";
+import authNotionPlugin from "@plugins/auth/plugins/notion/server";
 
 // Runtime plugins must load before `conversationsPlugin` so they register
 // with the `Runtime` registry before the poller starts ticking on its import.
@@ -70,4 +73,11 @@ export const plugins: ServerPluginDefinition[] = [
   eventsPlugin,
   eventsTestPlugin,
   conversationsRecoverPlugin,
+  // Auth plugin must load before its provider sub-plugins because the providers'
+  // module bodies call `registerAuthProvider`. Both load via the same plugin
+  // graph anyway (TS module init runs once per import); the order here only
+  // affects the `onReady` sequence, which is independent.
+  authPlugin,
+  authGooglePlugin,
+  authNotionPlugin,
 ];

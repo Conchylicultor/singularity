@@ -32,10 +32,18 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// No subdomain → no app to serve. Tell the user to use a named worktree.
+	// Auth callbacks are forced to bare `localhost:9000` because Google rejects
+	// `*.localhost` redirect URIs in OAuth client config. Route the narrow
+	// `/api/auth/{start,callback}/*` prefix on bare-localhost to the singularity
+	// backend so it can complete the OAuth dance.
 	if worktreeName == "" {
-		http.Error(w, "Singularity gateway. Use <name>.localhost.", http.StatusNotFound)
-		return
+		if strings.HasPrefix(r.URL.Path, "/api/auth/start/") ||
+			strings.HasPrefix(r.URL.Path, "/api/auth/callback/") {
+			worktreeName = "singularity"
+		} else {
+			http.Error(w, "Singularity gateway. Use <name>.localhost.", http.StatusNotFound)
+			return
+		}
 	}
 
 	wt := p.reg.Get(worktreeName)
