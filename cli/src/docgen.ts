@@ -33,7 +33,7 @@ interface PluginInfo {
   description?: string;
   definedSlots: SlotDef[];
   definedCommands: CommandDef[];
-  hasSchema: boolean;
+  dbFiles: string[];
   contributions: Contribution[];
   httpRoutes: string[];
   wsRoutes: string[];
@@ -420,12 +420,39 @@ function parseResources(serverDir: string): { key: string; mode: string }[] {
   return out.sort((a, b) => a.key.localeCompare(b.key));
 }
 
+function findDbFiles(pluginDir: string): string[] {
+  const serverDir = join(pluginDir, "server");
+  if (!existsSync(serverDir)) return [];
+  const results: string[] = [];
+  function walk(d: string) {
+    let entries;
+    try {
+      entries = readdirSync(d, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const full = join(d, e.name);
+      if (e.isDirectory()) {
+        walk(full);
+      } else if (e.name.endsWith(".ts") && e.name !== "index.ts") {
+        const byName = /schema|tables?/.test(e.name.replace(/\.ts$/, ""));
+        const src = byName ? null : readIfExists(full);
+        const byContent = !byName && !!src && (src.includes("pgTable(") || src.includes("pgView("));
+        if (byName || byContent) results.push(full);
+      }
+    }
+  }
+  walk(serverDir);
+  return results.sort();
+}
+
 function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
   const webIndex = readIfExists(join(dir, "web", "index.ts"));
   const serverIndex = readIfExists(join(dir, "server", "index.ts"));
   const slotsSrc = readIfExists(join(dir, "web", "slots.ts"));
   const commandsSrc = readIfExists(join(dir, "web", "commands.ts"));
-  const hasSchema = existsSync(join(dir, "server", "schema.ts"));
+  const dbFiles = findDbFiles(dir);
 
   const webSrc = webIndex ? stripTypes(webIndex) : null;
   const serverSrc = serverIndex ? stripTypes(serverIndex) : null;
@@ -512,7 +539,7 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
     description,
     definedSlots,
     definedCommands,
-    hasSchema,
+    dbFiles,
     contributions,
     httpRoutes,
     wsRoutes,
@@ -586,9 +613,8 @@ function renderPlugin(p: PluginInfo, depth: number, root: string): string[] {
       `${indent}    - Commands: ${p.definedCommands.map((c) => `\`${c.groupName}.${c.memberName}\``).join(", ")}`,
     );
   }
-  if (p.hasSchema) {
-    const rel = relative(root, join(p.dir, "server", "schema.ts"));
-    defines.push(`${indent}    - DB schema: \`${rel}\``);
+  for (const f of p.dbFiles) {
+    defines.push(`${indent}    - DB schema: \`${relative(root, f)}\``);
   }
   if (defines.length > 0) {
     lines.push(`${indent}  - Defines:`);
