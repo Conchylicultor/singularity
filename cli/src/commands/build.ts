@@ -225,7 +225,7 @@ export function registerBuild(program: Command) {
     )
     .option(
       "--migration-name <slug>",
-      "Name for a new migration (required if schema.ts has changed)",
+      "Name for a new migration (required if any plugin schema has changed)",
     )
     .option("--no-restart", "Skip asking the gateway to restart the backend")
     .option(
@@ -273,7 +273,7 @@ export function registerBuild(program: Command) {
       console.log("Installing dependencies...");
       await exec(["bun", "install"], root);
 
-      // 2. Regenerate DB migrations from schema.ts
+      // 2. Regenerate DB migrations from plugin schema files
       console.log("Generating DB migrations...");
       await generateMigration({
         serverDir: resolve(root, "server"),

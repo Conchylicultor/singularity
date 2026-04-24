@@ -10,12 +10,15 @@ const user = process.env.PGUSER ?? process.env.USER ?? "postgres";
 
 export default defineConfig({
   dialect: "postgresql",
-  // Single-barrel schema discovery: drizzle-kit follows the export chains in
-  // schema.ts to find all tables and views. Plugin tables/views are registered
-  // there; adding a new plugin requires one line in that barrel.
-  // (Previously a glob; switched to the barrel after tasks-core migration so
-  // stub re-export files in tasks/ and conversations/ don't create duplicates.)
-  schema: ["./src/db/schema.ts"],
+  // Glob discovery: drizzle-kit picks up every plugin's schema files directly.
+  // These files are pure drizzle-orm definitions with no Bun imports in their
+  // transitive closure, so drizzle-kit's loader can process them — whereas
+  // going through plugin index.ts files would pull in handlers that import
+  // `bun`, `bun-pty`, etc. and fail to resolve.
+  schema: [
+    "../plugins/**/server/**/internal/tables.ts",
+    "../plugins/**/server/**/internal/schema.ts",
+  ],
   out: "./src/db/migrations",
   dbCredentials: {
     url: `postgres://${user}@${host}:${port}/${worktree}`,

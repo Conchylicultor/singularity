@@ -10,13 +10,10 @@ const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 // Principled exemptions:
 //   - web/src/plugins.ts / server/src/plugins.ts: plugin registries. Their
 //     entire purpose is to import every PluginDefinition (default exports).
-//   - server/src/db/schema.ts: drizzle aggregator. Intentionally `export *`s
-//     plugin internal schemas so `drizzle({ schema })` knows every table.
 //
 const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
   "web/src/plugins.ts",
   "server/src/plugins.ts",
-  "server/src/db/schema.ts",
   "server/src/index.ts",
 ]);
 

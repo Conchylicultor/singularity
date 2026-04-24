@@ -150,14 +150,14 @@ In production, a reverse proxy or the backend itself serves the static frontend.
 
 Drizzle ORM + Postgres, one DB per worktree (`SINGULARITY_WORKTREE` env var picks the database name).
 
-- Each plugin defines its tables in `plugins/{name}/server/internal/schema.ts` (and table handles in `internal/tables.ts`).
-- `server/src/db/schema.ts` is the Drizzle aggregator: one `export * from "../../../plugins/{name}/server/internal/schema"` line per plugin. This file is a framework-level exception — it imports from `internal/` directly and is whitelisted by the `plugin-boundaries` check. Application code must never import from it.
-- `server/src/db/client.ts` exports a typed `db` aggregating all plugin schemas.
+- Each plugin defines its tables in `plugins/{name}/server/internal/tables.ts` and any derived views/Zod schemas in `plugins/{name}/server/internal/schema.ts`.
+- `drizzle.config.ts` discovers plugin schemas via glob (`plugins/**/server/**/internal/{tables,schema}.ts`) — there is **no central aggregator file**. Adding a new plugin's tables requires no edits outside that plugin. The glob relies on those files being pure drizzle-orm definitions (no Bun imports in their transitive closure) because drizzle-kit's loader runs outside the server Bun runtime.
+- `server/src/db/client.ts` exports `db = drizzle(sql)` without a schema object — the codebase uses the SQL builder API (`db.select().from(...)`), not drizzle's relational query API (`db.query.<table>`), so no runtime schema aggregation is needed.
 - Migrations live in `server/src/db/migrations/` (committed to git).
 
 ### Schema change workflow
 
-Edit `schema.ts` → run `./singularity build`. The build runs `drizzle-kit generate` (writes a new SQL migration if the schema changed, renamed to `YYYYMMDD_HHMMSS_<hash>__<slug>.sql`) and restarts the server, which applies pending migrations on startup. There is no separate `db:generate` step — always go through `./singularity build`. First build after a schema change requires `--migration-name <slug>`; subsequent builds with no schema change don't.
+Edit `plugins/{name}/server/internal/tables.ts` (or `schema.ts` for views) → run `./singularity build`. The build runs `drizzle-kit generate` (writes a new SQL migration if any plugin schema changed, renamed to `YYYYMMDD_HHMMSS_<hash>__<slug>.sql`) and restarts the server, which applies pending migrations on startup. There is no separate `db:generate` step — always go through `./singularity build`. First build after a schema change requires `--migration-name <slug>`; subsequent builds with no schema change don't.
 
 ### Migration runner
 

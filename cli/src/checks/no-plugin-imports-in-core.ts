@@ -17,8 +17,6 @@ const ALLOWED_DIRS = ["plugins/"];
 const COMPOSITION_ROOTS = [
   "web/src/plugins.ts",
   "server/src/plugins.ts",
-  // Re-exports plugin DB tables so drizzle sees one unified schema
-  "server/src/db/schema.ts",
 ];
 
 export const noPluginImportsInCore: Check = {

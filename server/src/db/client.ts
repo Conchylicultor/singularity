@@ -1,6 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import * as schema from "./schema";
 
 const worktree = process.env.SINGULARITY_WORKTREE;
 if (!worktree) {
@@ -13,7 +12,7 @@ const user = process.env.PGUSER ?? process.env.USER ?? "postgres";
 export const connectionString = `postgres://${user}@${host}:${port}/${worktree}`;
 
 export const sql = postgres(connectionString, { max: 5, idle_timeout: 20 });
-export const db = drizzle(sql, { schema });
+export const db = drizzle(sql);
 
 export const adminSql = postgres(
   `postgres://${user}@${host}:${port}/postgres`,

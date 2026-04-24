@@ -91,7 +91,7 @@ export async function generateMigration(opts: {
   if (!migrationName) {
     removeGeneratedFiles(migrationsDir, added);
     console.error(
-      "\nError: schema.ts changed and would generate a new migration, " +
+      "\nError: plugin schema changed and would generate a new migration, " +
         "but --migration-name was not provided.\n" +
         "Re-run with:\n" +
         "  ./singularity build --migration-name <short_slug>\n" +

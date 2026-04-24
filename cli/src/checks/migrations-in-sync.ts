@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, readdirSync, rmSync } from "fs";
+import { cpSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "fs";
 import { join, relative, resolve } from "path";
 import type { Check } from "./types";
 
@@ -18,18 +18,28 @@ function listSql(dir: string): string[] {
 
 export const migrationsInSync: Check = {
   id: "migrations-in-sync",
-  description: "schema.ts matches committed migration files",
+  description: "plugin schema files match committed migration files",
   async run() {
     const root = await getRoot();
     const serverDir = resolve(root, "server");
     const committed = resolve(serverDir, "src/db/migrations");
 
-    // Temp dir must live inside the repo so drizzle-kit can resolve a
-    // relative --out (it mangles absolute paths) and node_modules.
+    // Temp dir must live inside the repo so drizzle-kit can resolve
+    // node_modules. We write a tmp drizzle config here that points `out` at
+    // a tmp migrations dir but reuses the real config's schema globs; then
+    // invoke drizzle-kit with `--config` (drizzle-kit 0.28 forbids mixing
+    // --config with other CLI flags, so per-flag overrides aren't possible).
     const tmp = mkdtempSync(join(serverDir, ".check-"));
     try {
       const tmpOut = join(tmp, "migrations");
       cpSync(committed, tmpOut, { recursive: true });
+
+      const tmpConfig = join(tmp, "drizzle.config.ts");
+      const realConfig = resolve(serverDir, "drizzle.config.ts");
+      writeFileSync(
+        tmpConfig,
+        `import base from ${JSON.stringify(realConfig)};\nexport default { ...base, out: ${JSON.stringify(tmpOut)} };\n`,
+      );
 
       const before = listSql(tmpOut);
       const proc = Bun.spawn(
@@ -37,12 +47,7 @@ export const migrationsInSync: Check = {
           "bunx",
           "drizzle-kit",
           "generate",
-          "--dialect",
-          "postgresql",
-          "--schema",
-          "./src/db/schema.ts",
-          "--out",
-          relative(serverDir, tmpOut),
+          `--config=${relative(serverDir, tmpConfig)}`,
         ],
         { cwd: serverDir, stdout: "pipe", stderr: "pipe" },
       );
@@ -60,7 +65,7 @@ export const migrationsInSync: Check = {
       if (added.length > 0) {
         return {
           ok: false,
-          message: `schema.ts diverges from committed migrations (would add: ${added.join(", ")})`,
+          message: `plugin schema files diverge from committed migrations (would add: ${added.join(", ")})`,
           hint: "Run `./singularity build` and commit the generated migration files.",
         };
       }
