@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "../../../server/src/types";
+import type { ServerPluginDefinition } from "@server/types";
 import { handleBuild } from "./internal/handle-build";
 import { handleBuildStatus } from "./internal/handle-build-status";
 import { startAutoBuildWatcher } from "./internal/auto-build-watcher";

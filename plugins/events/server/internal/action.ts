@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import type { z } from "zod";
-import { db } from "../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { actionRegistry, triggerTableRegistry } from "./registry";
 
 export interface ActionRef<Name extends string = string, C = unknown> {

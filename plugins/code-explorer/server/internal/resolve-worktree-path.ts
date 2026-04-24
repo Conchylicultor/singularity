@@ -1,5 +1,5 @@
 import { getAttempt } from "@plugins/tasks-core/server";
-import { ensureMainWorktreeRoot } from "../../../../server/src/worktree";
+import { ensureMainWorktreeRoot } from "@server/worktree";
 
 export const MAIN_WORKTREE = "main";
 

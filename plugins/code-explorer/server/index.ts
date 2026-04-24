@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "../../../server/src/types";
+import type { ServerPluginDefinition } from "@server/types";
 import { handleFileContent } from "./internal/file-content-handler";
 import { handleFileDiff } from "./internal/file-diff-handler";
 import { handleImageContent } from "./internal/image-handler";

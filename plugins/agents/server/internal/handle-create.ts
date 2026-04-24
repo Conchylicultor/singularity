@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { _agents } from "./tables";
 import { nextAgentRankUnder } from "./rank";
 import { agentsResource } from "./resources";

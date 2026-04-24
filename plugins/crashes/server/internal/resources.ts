@@ -1,6 +1,6 @@
 import { desc } from "drizzle-orm";
-import { db } from "../../../../server/src/db/client";
-import { defineResource } from "../../../../server/src/resources";
+import { db } from "@server/db/client";
+import { defineResource } from "@server/resources";
 import { _crashes } from "./tables";
 
 export const crashesResource = defineResource({

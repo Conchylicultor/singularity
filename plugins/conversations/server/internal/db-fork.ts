@@ -1,4 +1,4 @@
-import { adminSql, openShortLivedSql } from "../../../../server/src/db/client";
+import { adminSql, openShortLivedSql } from "@server/db/client";
 
 function assertSafeName(name: string): void {
   if (!/^[a-zA-Z0-9_-]+$/.test(name)) {

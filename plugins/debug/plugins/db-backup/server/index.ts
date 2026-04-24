@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "../../../../../server/src/types";
+import type { ServerPluginDefinition } from "@server/types";
 import { handleBackup } from "./internal/handle-backup";
 import { listBackups } from "./internal/list-backups";
 

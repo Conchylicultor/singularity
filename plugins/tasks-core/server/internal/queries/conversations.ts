@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, lt } from "drizzle-orm";
-import { db } from "../../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { _conversations } from "../tables";
 import { conversations } from "../schema";
 import type { Conversation } from "../schema";

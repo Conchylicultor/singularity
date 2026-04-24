@@ -20,7 +20,8 @@
       "@/*": ["./src/*"],
       "@core": ["../plugin-core"],
       "@core/*": ["../plugin-core/*"],
-      "@plugins/*": ["../plugins/*"]
+      "@plugins/*": ["../plugins/*"],
+      "@server/*": ["../server/src/*"]
     }
   },
   "include": [

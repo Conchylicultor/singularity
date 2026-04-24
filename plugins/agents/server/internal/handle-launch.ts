@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { createTask } from "@plugins/tasks-core/server";
 import { createConversation } from "@plugins/conversations/server";
 import {

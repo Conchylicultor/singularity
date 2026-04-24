@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "../../../server/src/types";
+import type { ServerPluginDefinition } from "@server/types";
 import { handleReport } from "./internal/handle-report";
 import { crashesResource } from "./internal/resources";
 import { ensureCrashesMetaTask } from "./internal/meta-crashes";

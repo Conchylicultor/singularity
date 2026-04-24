@@ -6,7 +6,7 @@ import {
   type PgTable,
   pgTable,
 } from "drizzle-orm/pg-core";
-import { db } from "../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { eventTriggerColumns } from "./base-columns";
 import { triggerTableRegistry } from "./registry";
 import { DEFAULT_MAX_ATTEMPTS, DISPATCH_TASK, getWorkerUtils } from "./worker";

@@ -4,6 +4,7 @@ import { noRawEventSource } from "./no-raw-event-source";
 import { noRawSse } from "./no-raw-sse";
 import { noPluginImportsInCore } from "./no-plugin-imports-in-core";
 import { noRawWebsocket } from "./no-raw-websocket";
+import { noRelativeServerImports } from "./no-relative-server-imports";
 import { noUseResourceCast } from "./no-use-resource-cast";
 import { pluginBoundaries } from "./plugin-boundaries";
 import { typescript } from "./typescript";
@@ -21,6 +22,7 @@ export const CHECKS: Check[] = [
   noRawEventSource,
   noRawSse,
   noRawWebsocket,
+  noRelativeServerImports,
   noUseResourceCast,
   typescript,
 ];

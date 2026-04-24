@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
-import { db } from "../../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { _attempts, _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../schema";
 import { tasksResource } from "../resources";

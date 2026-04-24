@@ -1,6 +1,6 @@
 import { asc, desc } from "drizzle-orm";
-import { db } from "../../../../server/src/db/client";
-import { defineResource } from "../../../../server/src/resources";
+import { db } from "@server/db/client";
+import { defineResource } from "@server/resources";
 import { pushes } from "./tables";
 import { attempts, tasks } from "./schema";
 import type { Conversation, Push, Task } from "./schema";

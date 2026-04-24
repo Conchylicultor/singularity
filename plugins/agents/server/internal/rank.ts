@@ -1,6 +1,6 @@
 import { desc, eq, isNull } from "drizzle-orm";
 import { generateKeyBetween } from "fractional-indexing";
-import { db } from "../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { _agents } from "./tables";
 
 export async function nextAgentRankUnder(

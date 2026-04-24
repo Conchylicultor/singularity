@@ -1,5 +1,5 @@
-import type { ServerPluginDefinition } from "../../../server/src/types";
-import { plugins as allPlugins } from "../../../server/src/plugins";
+import type { ServerPluginDefinition } from "@server/types";
+import { plugins as allPlugins } from "@server/plugins";
 import { configResource } from "./internal/resource";
 import { buildRegistry } from "./internal/registry";
 import {

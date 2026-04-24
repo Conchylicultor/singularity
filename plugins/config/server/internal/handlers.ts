@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { config } from "./tables";
 import { getRegistry, getField } from "./registry";
 import { deleteValue, getAll, setValue } from "./read-cache";

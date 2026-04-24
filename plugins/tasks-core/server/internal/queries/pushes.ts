@@ -1,5 +1,5 @@
 import { desc, eq } from "drizzle-orm";
-import { db } from "../../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { pushes } from "../tables";
 import type { Push } from "../schema";
 

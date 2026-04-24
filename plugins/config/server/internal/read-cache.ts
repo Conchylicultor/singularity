@@ -1,4 +1,4 @@
-import { db } from "../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { config } from "./tables";
 
 // In-memory cache of all config values, keyed by fullKey. Populated on first

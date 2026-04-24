@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "../../../../../../../server/src/types";
+import type { ServerPluginDefinition } from "@server/types";
 import { handleListEvents } from "./internal/handle-list-events";
 
 export default {

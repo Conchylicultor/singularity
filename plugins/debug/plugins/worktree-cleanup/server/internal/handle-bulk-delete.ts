@@ -1,7 +1,7 @@
 import { stat } from "node:fs/promises";
 import { getAttempt } from "@plugins/tasks-core/server";
 import { dropDatabase } from "../../../../../conversations/server/internal/db-fork";
-import { removeWorktree } from "../../../../../../server/src/worktree";
+import { removeWorktree } from "@server/worktree";
 
 const CONCURRENCY = 4;
 

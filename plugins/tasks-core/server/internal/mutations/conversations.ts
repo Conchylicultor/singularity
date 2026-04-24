@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "../../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { _conversations } from "../tables";
 import { conversations } from "../schema";
 import { recentConversationsResource } from "../resources";

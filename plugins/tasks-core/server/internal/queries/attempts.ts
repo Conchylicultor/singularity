@@ -1,5 +1,5 @@
 import { asc, eq } from "drizzle-orm";
-import { db } from "../../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { attempts } from "../schema";
 import type { Attempt } from "../schema";
 

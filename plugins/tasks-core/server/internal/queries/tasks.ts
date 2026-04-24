@@ -1,6 +1,6 @@
 import { asc, desc, eq, isNull } from "drizzle-orm";
 import { generateKeyBetween } from "fractional-indexing";
-import { db } from "../../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../schema";
 import type { Task } from "../schema";

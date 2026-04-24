@@ -1,4 +1,4 @@
-import { defineResource } from "../../../../server/src/resources";
+import { defineResource } from "@server/resources";
 import type { ForkError } from "../../shared/fork-errors";
 
 let latest: ForkError | null = null;

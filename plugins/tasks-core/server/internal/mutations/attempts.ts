@@ -1,4 +1,4 @@
-import { db } from "../../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { _attempts } from "../tables";
 import { attempts } from "../schema";
 import { attemptsResource } from "../resources";

@@ -1,5 +1,5 @@
 import type { ServerWebSocket } from "bun";
-import type { WsHandler, WsData } from "../../../../server/src/types";
+import type { WsHandler, WsData } from "@server/types";
 import type { ClientMessage, ServerMessage } from "../../shared/protocol";
 import {
   createSession,

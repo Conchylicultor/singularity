@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "../../../server/src/types";
+import type { ServerPluginDefinition } from "@server/types";
 import { startWorker } from "./internal/worker";
 
 export { defineAction } from "./internal/action";

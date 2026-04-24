@@ -1,4 +1,4 @@
-import { db } from "../../../../../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { quickPromptsTable } from "./tables";
 import { quickPromptsServerResource } from "./resources";
 import { nextRank } from "./rank";

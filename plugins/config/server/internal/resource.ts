@@ -1,4 +1,4 @@
-import { defineResource } from "../../../../server/src/resources";
+import { defineResource } from "@server/resources";
 import { getAll } from "./read-cache";
 
 // Single push resource holding all config values, keyed by fullKey

@@ -1,4 +1,4 @@
-import { defineResource } from "../../../../../../../../server/src/resources";
+import { defineResource } from "@server/resources";
 import {
   recentConversationsResource,
   deleteConversation,

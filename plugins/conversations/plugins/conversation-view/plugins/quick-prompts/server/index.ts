@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "../../../../../../../server/src/types";
+import type { ServerPluginDefinition } from "@server/types";
 import { quickPromptsServerResource } from "./internal/resources";
 import { handleList }   from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";

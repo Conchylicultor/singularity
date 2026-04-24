@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "../../../server/src/types";
+import type { ServerPluginDefinition } from "@server/types";
 import { handleClose } from "./internal/handle-close";
 import { handleList } from "./internal/handle-list";
 import { handleListGone } from "./internal/handle-list-gone";

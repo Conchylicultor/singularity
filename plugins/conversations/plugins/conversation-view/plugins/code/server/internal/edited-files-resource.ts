@@ -1,4 +1,4 @@
-import { defineResource } from "../../../../../../../../server/src/resources";
+import { defineResource } from "@server/resources";
 import { getConversation } from "@plugins/tasks-core/server";
 import { getEditedFiles } from "./get-edited-files";
 import { watchEditedFiles } from "./watch-edited-files";

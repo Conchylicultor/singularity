@@ -1,5 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import { adminSql } from "../../../../../../server/src/db/client";
+import { adminSql } from "@server/db/client";
 
 export async function handleBackup(): Promise<Response> {
   const user = process.env.PGUSER ?? process.env.USER ?? "postgres";

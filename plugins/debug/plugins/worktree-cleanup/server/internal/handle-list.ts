@@ -1,7 +1,7 @@
 import { stat } from "node:fs/promises";
 import { listAttempts, listTasks } from "@plugins/tasks-core/server";
 import { databaseExists } from "../../../../../conversations/server/internal/db-fork";
-import { ensureMainWorktreeRoot } from "../../../../../../server/src/worktree";
+import { ensureMainWorktreeRoot } from "@server/worktree";
 
 const GIT = "/usr/bin/git";
 const CONCURRENCY = 50;

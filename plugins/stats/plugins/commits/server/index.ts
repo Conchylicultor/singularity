@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "../../../../../server/src/types";
+import type { ServerPluginDefinition } from "@server/types";
 import { handleCumulative, handleLinesCumulative } from "./internal/handle-cumulative";
 import { handleLinesRate, handleRate } from "./internal/handle-rate";
 import {

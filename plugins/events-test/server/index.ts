@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "../../../server/src/types";
+import type { ServerPluginDefinition } from "@server/types";
 // Side-effect imports: both register with the events plugin at module load.
 import "./internal/tables";
 import "./internal/action";
