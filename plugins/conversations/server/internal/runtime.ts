@@ -15,6 +15,7 @@ export interface RuntimeInfo {
   working: boolean;
   dead: boolean;
   claudeSessionId: string | null;
+  worktreePath: string;
 }
 
 export interface ConversationRuntime {

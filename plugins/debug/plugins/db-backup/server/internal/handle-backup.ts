@@ -18,6 +18,7 @@ export async function handleBackup(): Promise<Response> {
     SELECT datname FROM pg_database
     WHERE datname NOT IN ('template0', 'template1', 'postgres')
       AND datname NOT LIKE 'claude-%'
+      AND datname NOT LIKE 'att-%'
     ORDER BY datname
   `;
 

@@ -7,7 +7,9 @@ import { resolveClaudeSessionId } from "./claude-session";
 
 const TMUX = "/opt/homebrew/bin/tmux";
 const CLAUDE = "/Users/admin/.local/bin/claude";
-const PREFIX = "claude";
+// Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename
+// legacy prefix kept so zombie sessions still get picked up by the poller.
+const SESSION_NAME_RE = /^(conv|claude)-\d+(-[a-z0-9]+)?$/;
 
 const SPINNER_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈]\s*/;
 const READY_RE = /^✳\s*/;
@@ -25,7 +27,7 @@ function cleanPaneTitle(raw: string): { title: string; working: boolean } {
   const isDefault =
     !title ||
     /^[a-zA-Z0-9-]+\.(local|internal|lan)$/.test(title) ||
-    /^claude-\d+(-[a-z0-9]+)?$/.test(title);
+    SESSION_NAME_RE.test(title);
 
   return {
     title: isDefault ? "" : title,
@@ -33,8 +35,15 @@ function cleanPaneTitle(raw: string): { title: string; working: boolean } {
   };
 }
 
+// Field separator: tab (not present in pane paths or titles) keeps splits
+// unambiguous even though pane titles can contain arbitrary characters.
+const SEP = "\t";
+
 async function listPanes(): Promise<
-  Map<string, { rawTitle: string; panePid: number; dead: boolean }>
+  Map<
+    string,
+    { rawTitle: string; panePid: number; dead: boolean; worktreePath: string }
+  >
 > {
   const proc = Bun.spawn(
     [
@@ -42,9 +51,9 @@ async function listPanes(): Promise<
       "list-panes",
       "-a",
       "-F",
-      "#{session_name}|#{pane_pid}|#{pane_dead}|#{pane_title}",
+      `#{session_name}${SEP}#{pane_pid}${SEP}#{pane_dead}${SEP}#{pane_start_path}${SEP}#{pane_title}`,
       "-f",
-      `#{m:${PREFIX}-*,#{session_name}}`,
+      `#{r:^(conv|claude)-,#{session_name}}`,
     ],
     { stdout: "pipe", stderr: "pipe" },
   );
@@ -52,11 +61,11 @@ async function listPanes(): Promise<
   const exit = await proc.exited;
   const map = new Map<
     string,
-    { rawTitle: string; panePid: number; dead: boolean }
+    { rawTitle: string; panePid: number; dead: boolean; worktreePath: string }
   >();
   if (exit !== 0) return map;
   for (const line of stdout.trim().split("\n").filter(Boolean)) {
-    const [name, pidStr, deadStr, ...rest] = line.split("|");
+    const [name, pidStr, deadStr, startPath, ...rest] = line.split(SEP);
     if (!name || !pidStr) continue;
     if (map.has(name)) continue;
     const pid = Number(pidStr);
@@ -64,7 +73,8 @@ async function listPanes(): Promise<
     map.set(name, {
       panePid: pid,
       dead: deadStr === "1",
-      rawTitle: rest.join("|"),
+      worktreePath: startPath ?? "",
+      rawTitle: rest.join(SEP),
     });
   }
   return map;
@@ -81,13 +91,14 @@ export const tmuxRuntime: ConversationRuntime = {
     );
     const out = new Map<string, RuntimeInfo>();
     ids.forEach((id, i) => {
-      const { rawTitle, dead } = panes.get(id)!;
+      const { rawTitle, dead, worktreePath } = panes.get(id)!;
       const { title, working } = cleanPaneTitle(rawTitle ?? "");
       out.set(id, {
         title,
         working: working && !dead,
         dead,
         claudeSessionId: sessionIds[i] ?? null,
+        worktreePath,
       });
     });
     return out;

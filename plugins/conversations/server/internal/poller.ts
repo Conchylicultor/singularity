@@ -8,7 +8,6 @@ import {
 import { Runtime, type RuntimeInfo } from "./runtime";
 import { findTranscriptPath } from "./claude-transcript";
 import type { ConversationStatus } from "../../shared";
-import { worktreePathFor } from "@server/worktree";
 
 function liveStatusFor(info: RuntimeInfo): ConversationStatus {
   return info.working ? "working" : "waiting";
@@ -60,10 +59,10 @@ async function tick(): Promise<void> {
     for (const id of orphans) {
       const live = next.get(id)!;
       if (live.dead) continue;
-      const worktreePath = await worktreePathFor(id);
+      if (!live.worktreePath) continue;
       const adopted = await adoptOrphanConversation({
         id,
-        worktreePath,
+        worktreePath: live.worktreePath,
         runtimeId: live.runtime,
         status: liveStatusFor(live),
         title: live.title || null,

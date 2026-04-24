@@ -13,14 +13,20 @@ import type { ConversationModel } from "../schema";
 import type { Conversation } from "../../shared";
 import { forkDatabase } from "./db-fork";
 import { reportForkError } from "./fork-errors";
-import {
-  CONVERSATION_PREFIX,
-  setupWorktree,
-  worktreePathFor,
-} from "@server/worktree";
+import { setupWorktree, worktreePathFor } from "@server/worktree";
 
 const DEFAULT_RUNTIME = "tmux";
 const DEFAULT_MODEL: ConversationModel = "opus";
+
+// Three independent id namespaces, each self-describing in logs and URLs.
+// Legacy rows may still carry the pre-rename `claude-…` prefix; matchers that
+// surface live sessions accept both.
+const ATTEMPT_PREFIX = "att";
+const CONVERSATION_PREFIX = "conv";
+const newId = (prefix: string) => {
+  const suffix = Math.random().toString(36).slice(2, 6);
+  return `${prefix}-${Math.floor(Date.now() / 1000)}-${suffix}`;
+};
 
 function synthesiseTitle(prompt: string | undefined): string {
   const trimmed = (prompt ?? "").trim();
@@ -49,16 +55,11 @@ export async function createConversation(
   let worktreePath: string;
   let conversationId: string;
 
-  const newConvId = () => {
-    const suffix = Math.random().toString(36).slice(2, 6);
-    return `${CONVERSATION_PREFIX}-${Math.floor(Date.now() / 1000)}-${suffix}`;
-  };
-
   if (attemptId) {
     const attempt = await getAttempt(attemptId);
     if (!attempt) throw new Error(`Unknown attemptId "${attemptId}"`);
     worktreePath = attempt.worktreePath;
-    conversationId = newConvId();
+    conversationId = newId(CONVERSATION_PREFIX);
   } else {
     let taskId = opts.taskId;
     if (!taskId) {
@@ -72,7 +73,7 @@ export async function createConversation(
       await updateTaskTitle(taskId, synthesiseTitle(opts.prompt), UNINFORMATIVE_TITLES);
     }
 
-    attemptId = newConvId();
+    attemptId = newId(ATTEMPT_PREFIX);
     const newAttemptId = attemptId;
     worktreePath = await worktreePathFor(newAttemptId);
     await setupWorktree(newAttemptId, worktreePath);
@@ -81,7 +82,7 @@ export async function createConversation(
       reportForkError(newAttemptId, err);
     });
     await createAttempt({ id: newAttemptId, taskId, worktreePath });
-    conversationId = newAttemptId;
+    conversationId = newId(CONVERSATION_PREFIX);
   }
 
   const spawnedBy = opts.spawnedBy ?? Bun.env.SINGULARITY_WORKTREE;

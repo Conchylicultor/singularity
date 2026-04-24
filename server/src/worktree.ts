@@ -32,8 +32,6 @@ export function worktreePathForSync(id: string): string {
   return `${cachedRepoRoot}/.claude/worktrees/${id}`;
 }
 
-export const CONVERSATION_PREFIX = "claude";
-
 export async function setupWorktree(id: string, wtPath: string): Promise<void> {
   const repoRoot = await ensureMainWorktreeRoot();
   const branch = `claude-web/${id}`;

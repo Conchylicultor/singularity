@@ -1,4 +1,4 @@
-import { listAttempts, insertPush } from "@plugins/tasks-core/server";
+import { listAttempts, insertPush, getConversation } from "@plugins/tasks-core/server";
 import { ensureMainWorktreeRoot } from "@server/worktree";
 
 const GIT = "/usr/bin/git";
@@ -76,10 +76,12 @@ async function recordCommits(commits: ParsedCommit[]): Promise<boolean> {
   const localAttemptIds = new Set(existing.map((a) => a.id));
   let inserted = false;
   for (const commit of [...commits].reverse()) {
-    if (!localAttemptIds.has(commit.conversationId)) continue;
+    const conv = await getConversation(commit.conversationId);
+    if (!conv) continue;
+    if (!localAttemptIds.has(conv.attemptId)) continue;
     const didInsert = await insertPush({
       id: `${commit.pushId}:${commit.sha}`,
-      attemptId: commit.conversationId,
+      attemptId: conv.attemptId,
       conversationId: commit.conversationId,
       sha: commit.sha,
       pushId: commit.pushId,
