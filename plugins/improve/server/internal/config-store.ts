@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { _improve_config } from "./tables";
 import { DEFAULT_PROMPT_TEMPLATE, type ImproveConfig } from "../../shared/types";
 

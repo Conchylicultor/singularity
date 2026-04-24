@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "../../../server/src/types";
+import type { ServerPluginDefinition } from "@server/types";
 import { handleUpload } from "./internal/handle-upload";
 import { handleAttach } from "./internal/handle-attach";
 import { handleGet } from "./internal/handle-get";

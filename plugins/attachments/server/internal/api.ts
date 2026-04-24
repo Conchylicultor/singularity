@@ -1,6 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { unlink } from "node:fs/promises";
-import { db } from "../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { _attachments } from "./tables";
 import type { Attachment } from "../../shared/types";
 

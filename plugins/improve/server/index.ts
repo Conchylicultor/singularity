@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "../../../server/src/types";
+import type { ServerPluginDefinition } from "@server/types";
 import { ensureImprovementsMetaTask } from "./internal/meta-improvements";
 import { improveConfigResource } from "./internal/resources";
 import { handleGetConfig, handlePatchConfig } from "./internal/handle-config";

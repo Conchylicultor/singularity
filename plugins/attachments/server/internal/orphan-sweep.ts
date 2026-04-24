@@ -1,6 +1,6 @@
 import { and, isNull, lt } from "drizzle-orm";
 import { unlink } from "node:fs/promises";
-import { db } from "../../../../server/src/db/client";
+import { db } from "@server/db/client";
 import { _attachments } from "./tables";
 
 const TTL_MS = 24 * 60 * 60 * 1000;
