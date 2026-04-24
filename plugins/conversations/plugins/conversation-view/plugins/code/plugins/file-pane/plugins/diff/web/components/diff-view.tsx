@@ -224,9 +224,18 @@ export function DiffView({
 
     for (const row of containerRef.current.querySelectorAll<HTMLElement>(".diff-line")) {
       const cell = row.children[nth - 1] as Element | undefined;
-      if (cell && range.intersectsNode(cell)) {
-        lines.push(cell.textContent ?? "");
+      if (!cell || !range.intersectsNode(cell)) continue;
+      // Clamp the selection range to the cell so partial-word selections
+      // don't get expanded to the whole line.
+      const cellRange = document.createRange();
+      cellRange.selectNodeContents(cell);
+      if (range.compareBoundaryPoints(Range.START_TO_START, cellRange) > 0) {
+        cellRange.setStart(range.startContainer, range.startOffset);
       }
+      if (range.compareBoundaryPoints(Range.END_TO_END, cellRange) < 0) {
+        cellRange.setEnd(range.endContainer, range.endOffset);
+      }
+      lines.push(cellRange.toString());
     }
 
     if (lines.length > 0) {
