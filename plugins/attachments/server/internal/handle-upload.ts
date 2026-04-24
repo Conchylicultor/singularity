@@ -4,9 +4,11 @@ import { diskPathFor, ensureAttachmentsRoot } from "./paths";
 
 const MAX_SIZE = 20 * 1024 * 1024; // 20 MB
 
-// Multipart/form-data upload: expects a `file` field (File blob). Creates a
-// staged row with owner_id = NULL; caller must subsequently call
-// POST /api/attachments/:id/attach to link it to an owner.
+// Multipart/form-data upload: expects a `file` field (File blob). Creates an
+// _attachments row with no link yet; callers link the returned id from their
+// own submit path by inserting into the appropriate `<owner>_attachments`
+// table (see `Attachments.defineLink`). Orphan sweep collects unlinked rows
+// past TTL.
 export async function handleUpload(req: Request): Promise<Response> {
   const ctype = req.headers.get("content-type") ?? "";
   if (!ctype.toLowerCase().includes("multipart/form-data")) {
@@ -44,8 +46,6 @@ export async function handleUpload(req: Request): Promise<Response> {
     .insert(_attachments)
     .values({
       id,
-      ownerType: null,
-      ownerId: null,
       filename,
       mime,
       size: file.size,

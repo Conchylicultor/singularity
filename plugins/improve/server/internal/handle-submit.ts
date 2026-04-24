@@ -1,11 +1,10 @@
-import { createTask } from "@plugins/tasks-core/server";
-import { attachAttachment, getAttachment } from "@plugins/attachments/server";
+import { createTask, _taskAttachments } from "@plugins/tasks-core/server";
+import { getAttachment } from "@plugins/attachments/server";
 import { createConversation } from "@plugins/conversations/server";
+import { db } from "@server/db/client";
 import { IMPROVEMENTS_META_TASK_ID } from "./meta-improvements";
 import { renderPrompt } from "./render-prompt";
 import type { ImproveSubmitBody, ImproveSubmitResponse } from "../../shared/types";
-
-const OWNER_TYPE = "task";
 
 export async function handleSubmit(req: Request): Promise<Response> {
   const body = (await req.json().catch(() => null)) as ImproveSubmitBody | null;
@@ -20,15 +19,12 @@ export async function handleSubmit(req: Request): Promise<Response> {
     : [];
   const launch = body.launch === "sonnet" || body.launch === "opus" ? body.launch : null;
 
-  // Validate every attachment exists and is still staged before creating the task.
-  // Partial failure after task creation would leave orphans.
+  // Validate every attachment exists before creating the task. Partial
+  // failure after task creation would leave the task with dangling ids.
   const attachments = [];
   for (const id of attachmentIds) {
     const row = await getAttachment(id);
     if (!row) return new Response(`attachment ${id} not found`, { status: 400 });
-    if (row.ownerId !== null) {
-      return new Response(`attachment ${id} is already attached`, { status: 409 });
-    }
     attachments.push(row);
   }
 
@@ -39,8 +35,11 @@ export async function handleSubmit(req: Request): Promise<Response> {
     author: "improve-plugin",
   });
 
-  for (const att of attachments) {
-    await attachAttachment(att.id, OWNER_TYPE, task.id);
+  if (attachments.length > 0) {
+    await db
+      .insert(_taskAttachments)
+      .values(attachments.map((a) => ({ ownerId: task.id, attachmentId: a.id })))
+      .onConflictDoNothing();
   }
 
   let conversationId: string | null = null;

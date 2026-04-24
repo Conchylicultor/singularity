@@ -6,7 +6,8 @@ import {
   recentConversationsResource,
 } from "./internal/resources";
 
-// Zod schemas and TS types
+// Zod schemas and TS types (also exports _taskAttachments link table).
+export { _taskAttachments } from "./internal/schema";
 export {
   TaskSchema,
   TaskStatusSchema,

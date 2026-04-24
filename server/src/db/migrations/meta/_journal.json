@@ -239,6 +239,13 @@
       "tag": "20260424_092644_66958274__add_improve_config",
       "hash": "66958274",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777038145000,
+      "tag": "20260424_134225_ba7d51eb__attachments_fk_link_tables",
+      "hash": "ba7d51eb",
+      "breakpoints": true
     }
   ]
 }

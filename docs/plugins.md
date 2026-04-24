@@ -26,18 +26,16 @@
     - `POST /api/agents/:id/launch`
     - `GET /api/agents/:id/launches`
 
-- **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Polymorphic file attachments on disk (UUID-named under ~/.singularity/attachments/). Staged upload with orphan sweep.
+- **`attachments`** — Attachments on disk (UUID-named under ~/.singularity/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
   - Defines:
     - DB schema: `plugins/attachments/server/internal/tables.ts`
   - Exports (web):
     - Types: `Attachment`, `UploadedAttachment`
     - Values: `listAttachments`, `uploadAttachment`
   - Exports (server):
-    - Values: `_attachments`, `attachAttachment`, `deleteAttachment`, `deleteAttachmentsForOwner`, `getAttachment`, `listAttachmentsForOwner`
+    - Values: `_attachments`, `Attachments`, `deleteAttachment`, `getAttachment`
   - Server:
     - `POST /api/attachments`
-    - `GET /api/attachments`
-    - `POST /api/attachments/:id/attach`
     - `GET /api/attachments/:id`
     - `DELETE /api/attachments/:id`
 
@@ -371,7 +369,7 @@
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `ImproveButton`
   - Server:
-    - Uses: `attachments.attachAttachment`, `attachments.getAttachment`, `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`
+    - Uses: `attachments.getAttachment`, `conversations.createConversation`, `tasks-core._taskAttachments`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`
     - `POST /api/improve/submit`
 
 - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
@@ -481,11 +479,12 @@
     - DB schema: `plugins/tasks-core/server/internal/tables.ts`
   - Exports (server):
     - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `Task`, `TaskFilters`, `TaskStatus`, `UpdateConversationPatch`, `UpdateTaskPatch`
-    - Values: `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listAttempts`, `listAttemptsForTask`, `listConversations`, `listGoneConversationsBefore`, `listPushes`, `listPushesForAttempt`, `listRecentGoneConversations`, `listTasks`, `markConversationClosed`, `pushesResource`, `PushSchema`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`, `updateConversation`, `updateTask`, `updateTaskTitle`
+    - Values: `_taskAttachments`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listAttempts`, `listAttemptsForTask`, `listConversations`, `listGoneConversationsBefore`, `listPushes`, `listPushesForAttempt`, `listRecentGoneConversations`, `listTasks`, `markConversationClosed`, `pushesResource`, `PushSchema`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`, `updateConversation`, `updateTask`, `updateTaskTitle`
   - Exports (shared):
     - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `ConversationSchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
+    - Uses: `attachments.Attachments`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
