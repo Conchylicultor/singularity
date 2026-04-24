@@ -1,0 +1,623 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { MdBolt, MdDelete, MdRefresh, MdReplay, MdWorkOutline } from "react-icons/md";
+import { ShellCommands as Shell } from "@plugins/shell/web";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+type Tab = "jobs" | "events" | "triggers";
+
+export function QueueView() {
+  const [tab, setTab] = useState<Tab>("jobs");
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden">
+      <div className="flex items-center gap-1 border-b px-3 py-2">
+        <TabButton active={tab === "jobs"} onClick={() => setTab("jobs")}>
+          <MdWorkOutline className="size-4" /> Jobs
+        </TabButton>
+        <TabButton active={tab === "events"} onClick={() => setTab("events")}>
+          <MdBolt className="size-4" /> Events
+        </TabButton>
+        <TabButton active={tab === "triggers"} onClick={() => setTab("triggers")}>
+          Triggers
+        </TabButton>
+      </div>
+      <div className="flex-1 overflow-auto">
+        {tab === "jobs" && <JobsTab />}
+        {tab === "events" && <EventsTab />}
+        {tab === "triggers" && <TriggersTab />}
+      </div>
+    </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium transition-colors",
+        active
+          ? "bg-accent text-accent-foreground"
+          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── Fetch helpers ───────────────────────────────────────────────────────
+
+async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, init);
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+  return res.json() as Promise<T>;
+}
+
+function toastErr(e: unknown, prefix: string) {
+  const msg = e instanceof Error ? e.message : String(e);
+  Shell.Toast({ description: `${prefix}: ${msg}`, variant: "error" });
+}
+
+function usePolling<T>(
+  load: () => Promise<T>,
+  intervalMs: number,
+): { data: T | null; error: string | null; reload: () => void } {
+  const [data, setData] = useState<T | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const refresh = useCallback(async () => {
+    try {
+      const v = await load();
+      setData(v);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }, [load]);
+  useEffect(() => {
+    refresh();
+    const h = setInterval(refresh, intervalMs);
+    return () => clearInterval(h);
+  }, [refresh, intervalMs]);
+  return { data, error, reload: refresh };
+}
+
+function relativeTime(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const abs = Math.abs(ms);
+  const sign = ms < 0 ? "in " : "";
+  const suffix = ms < 0 ? "" : " ago";
+  const s = Math.floor(abs / 1000);
+  if (s < 60) return `${sign}${s}s${suffix}`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${sign}${m}m${suffix}`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${sign}${h}h${suffix}`;
+  const d = Math.floor(h / 24);
+  return `${sign}${d}d${suffix}`;
+}
+
+function truncate(s: string, max: number): string {
+  return s.length <= max ? s : `${s.slice(0, max - 1)}…`;
+}
+
+// ─── Jobs tab ────────────────────────────────────────────────────────────
+
+type JobState = "pending" | "running" | "retrying" | "dead";
+
+interface JobRow {
+  id: string;
+  jobName: string;
+  input: unknown;
+  state: JobState;
+  attempts: number;
+  maxAttempts: number;
+  runAt: string;
+  lockedAt: string | null;
+  queueName: string | null;
+  lastError: string | null;
+}
+
+interface JobsPayload {
+  rows: JobRow[];
+  counts: Record<JobState, number>;
+}
+
+const STATE_STYLES: Record<JobState, string> = {
+  pending: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200",
+  running: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
+  retrying: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200",
+  dead: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
+};
+
+function JobsTab() {
+  const [filter, setFilter] = useState<JobState | "all">("all");
+  const [selected, setSelected] = useState<JobRow | null>(null);
+
+  const load = useCallback(
+    () => jsonFetch<JobsPayload>(`/api/jobs?limit=500`),
+    [],
+  );
+  const { data, error, reload } = usePolling(load, 2000);
+
+  const counts = data?.counts ?? { pending: 0, running: 0, retrying: 0, dead: 0 };
+  const total = counts.pending + counts.running + counts.retrying + counts.dead;
+  const visible = useMemo(
+    () =>
+      (data?.rows ?? []).filter((r) => filter === "all" || r.state === filter),
+    [data, filter],
+  );
+
+  async function retry(id: string) {
+    try {
+      await jsonFetch(`/api/jobs/${id}/retry`, { method: "POST" });
+      reload();
+    } catch (e) {
+      toastErr(e, "Retry failed");
+    }
+  }
+
+  async function cancel(id: string) {
+    try {
+      await jsonFetch(`/api/jobs/${id}`, { method: "DELETE" });
+      reload();
+    } catch (e) {
+      toastErr(e, "Cancel failed");
+    }
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center gap-1 border-b px-3 py-2">
+        <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
+          All <span className="opacity-60">{total}</span>
+        </FilterChip>
+        <FilterChip active={filter === "pending"} onClick={() => setFilter("pending")}>
+          Pending <span className="opacity-60">{counts.pending}</span>
+        </FilterChip>
+        <FilterChip active={filter === "running"} onClick={() => setFilter("running")}>
+          Running <span className="opacity-60">{counts.running}</span>
+        </FilterChip>
+        <FilterChip active={filter === "retrying"} onClick={() => setFilter("retrying")}>
+          Retrying <span className="opacity-60">{counts.retrying}</span>
+        </FilterChip>
+        <FilterChip active={filter === "dead"} onClick={() => setFilter("dead")}>
+          Dead <span className="opacity-60">{counts.dead}</span>
+        </FilterChip>
+        <div className="flex-1" />
+        <Button size="sm" variant="ghost" onClick={reload}>
+          <MdRefresh className="size-4" /> Refresh
+        </Button>
+      </div>
+      {error && <div className="border-b bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">{error}</div>}
+      <div className="flex-1 overflow-auto">
+        {visible.length === 0 ? (
+          <Empty>No jobs.</Empty>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 border-b bg-background text-left text-xs text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2">State</th>
+                <th className="px-3 py-2">Job</th>
+                <th className="px-3 py-2">Attempts</th>
+                <th className="px-3 py-2">Run at</th>
+                <th className="px-3 py-2">Last error</th>
+                <th className="px-3 py-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((r) => (
+                <tr
+                  key={r.id}
+                  className="cursor-pointer border-b hover:bg-accent/30"
+                  onClick={() => setSelected(r)}
+                >
+                  <td className="px-3 py-2">
+                    <span
+                      className={cn("inline-block rounded px-1.5 py-0.5 text-[11px] font-medium", STATE_STYLES[r.state])}
+                    >
+                      {r.state}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 font-mono text-xs">{r.jobName}</td>
+                  <td className="px-3 py-2 tabular-nums">
+                    {r.attempts}/{r.maxAttempts}
+                  </td>
+                  <td className="px-3 py-2 text-muted-foreground">{relativeTime(r.runAt)}</td>
+                  <td className="px-3 py-2 text-xs text-red-700 dark:text-red-400">
+                    {r.lastError ? truncate(r.lastError.split("\n")[0] ?? "", 60) : ""}
+                  </td>
+                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                    {(r.state === "retrying" || r.state === "dead") && (
+                      <Button size="sm" variant="ghost" onClick={() => retry(r.id)}>
+                        <MdReplay className="size-3.5" /> Retry
+                      </Button>
+                    )}
+                    {r.state === "pending" && (
+                      <Button size="sm" variant="ghost" onClick={() => cancel(r.id)}>
+                        <MdDelete className="size-3.5" /> Cancel
+                      </Button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      {selected && <JobDrawer job={selected} onClose={() => setSelected(null)} />}
+    </div>
+  );
+}
+
+function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-black/30"
+      onClick={onClose}
+    >
+      <div
+        className="flex h-full w-[560px] flex-col overflow-hidden border-l bg-background"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <div>
+            <div className="text-xs text-muted-foreground">Job</div>
+            <div className="font-mono text-sm">{job.jobName}</div>
+          </div>
+          <Button size="sm" variant="ghost" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+        <div className="flex-1 space-y-4 overflow-auto p-4 text-sm">
+          <Field label="ID">
+            <code className="text-xs">{job.id}</code>
+          </Field>
+          <Field label="State">
+            <span className={cn("inline-block rounded px-1.5 py-0.5 text-[11px] font-medium", STATE_STYLES[job.state])}>
+              {job.state}
+            </span>
+          </Field>
+          <Field label="Attempts">{job.attempts} / {job.maxAttempts}</Field>
+          <Field label="Run at">{new Date(job.runAt).toLocaleString()} ({relativeTime(job.runAt)})</Field>
+          {job.lockedAt && (
+            <Field label="Locked at">{new Date(job.lockedAt).toLocaleString()}</Field>
+          )}
+          <Field label="Queue">{job.queueName ?? "(default)"}</Field>
+          <Field label="Input">
+            <pre className="max-h-64 overflow-auto rounded bg-muted p-2 text-xs">
+              {JSON.stringify(job.input, null, 2)}
+            </pre>
+          </Field>
+          {job.lastError && (
+            <Field label="Last error">
+              <pre className="max-h-64 overflow-auto rounded bg-red-50 p-2 text-xs text-red-800 dark:bg-red-950 dark:text-red-200">
+                {job.lastError}
+              </pre>
+            </Field>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Events tab ──────────────────────────────────────────────────────────
+
+interface EmissionRow {
+  id: string;
+  eventName: string;
+  payload: Record<string, unknown>;
+  matchedCount: number;
+  matchedTriggerIds: string[];
+  emittedAt: string;
+}
+
+function EventsTab() {
+  const load = useCallback(
+    () => jsonFetch<{ rows: EmissionRow[] }>(`/api/events/emissions?limit=200`),
+    [],
+  );
+  const { data, error, reload } = usePolling(load, 2000);
+  const [selected, setSelected] = useState<EmissionRow | null>(null);
+  const rows = data?.rows ?? [];
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center border-b px-3 py-2">
+        <div className="text-xs text-muted-foreground">
+          Capped ring-buffer of last ~1000 emit() calls.
+        </div>
+        <div className="flex-1" />
+        <Button size="sm" variant="ghost" onClick={reload}>
+          <MdRefresh className="size-4" /> Refresh
+        </Button>
+      </div>
+      {error && <div className="border-b bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">{error}</div>}
+      <div className="flex-1 overflow-auto">
+        {rows.length === 0 ? (
+          <Empty>No emissions recorded yet. Emit an event to populate this log.</Empty>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 border-b bg-background text-left text-xs text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2">Time</th>
+                <th className="px-3 py-2">Event</th>
+                <th className="px-3 py-2">Matched</th>
+                <th className="px-3 py-2">Payload</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr
+                  key={r.id}
+                  className="cursor-pointer border-b hover:bg-accent/30"
+                  onClick={() => setSelected(r)}
+                >
+                  <td className="px-3 py-2 text-muted-foreground">{relativeTime(r.emittedAt)}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{r.eventName}</td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={cn(
+                        "inline-block rounded px-1.5 py-0.5 text-[11px] font-medium tabular-nums",
+                        r.matchedCount === 0
+                          ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200"
+                          : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
+                      )}
+                    >
+                      {r.matchedCount}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+                    {truncate(JSON.stringify(r.payload), 80)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      {selected && <EmissionDrawer emission={selected} onClose={() => setSelected(null)} />}
+    </div>
+  );
+}
+
+function EmissionDrawer({
+  emission,
+  onClose,
+}: {
+  emission: EmissionRow;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={onClose}>
+      <div
+        className="flex h-full w-[560px] flex-col overflow-hidden border-l bg-background"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <div>
+            <div className="text-xs text-muted-foreground">Emission</div>
+            <div className="font-mono text-sm">{emission.eventName}</div>
+          </div>
+          <Button size="sm" variant="ghost" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+        <div className="flex-1 space-y-4 overflow-auto p-4 text-sm">
+          <Field label="Emitted at">
+            {new Date(emission.emittedAt).toLocaleString()} ({relativeTime(emission.emittedAt)})
+          </Field>
+          <Field label="Matched triggers">
+            {emission.matchedCount === 0 ? (
+              <span className="text-red-700 dark:text-red-400">
+                0 — no trigger matched this emission.
+              </span>
+            ) : (
+              <ul className="space-y-1 font-mono text-xs">
+                {emission.matchedTriggerIds.map((id) => (
+                  <li key={id}>{id}</li>
+                ))}
+              </ul>
+            )}
+          </Field>
+          <Field label="Payload">
+            <pre className="max-h-96 overflow-auto rounded bg-muted p-2 text-xs">
+              {JSON.stringify(emission.payload, null, 2)}
+            </pre>
+          </Field>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Triggers tab ────────────────────────────────────────────────────────
+
+interface TriggerRow {
+  eventName: string;
+  id: string;
+  jobName: string;
+  jobWith: Record<string, unknown>;
+  enabled: boolean;
+  oneShot: boolean;
+  createdAt: string;
+  filters: Record<string, unknown>;
+}
+
+function TriggersTab() {
+  const load = useCallback(
+    () => jsonFetch<{ rows: TriggerRow[] }>(`/api/events/triggers`),
+    [],
+  );
+  const { data, error, reload } = usePolling(load, 2000);
+  const rows = data?.rows ?? [];
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, TriggerRow[]>();
+    for (const r of rows) {
+      const list = map.get(r.eventName) ?? [];
+      list.push(r);
+      map.set(r.eventName, list);
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [rows]);
+
+  async function toggle(id: string, enabled: boolean) {
+    try {
+      await jsonFetch(`/api/events/triggers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      });
+      reload();
+    } catch (e) {
+      toastErr(e, "Toggle failed");
+    }
+  }
+
+  async function remove(id: string) {
+    try {
+      await jsonFetch(`/api/events/triggers/${id}`, { method: "DELETE" });
+      reload();
+    } catch (e) {
+      toastErr(e, "Delete failed");
+    }
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center border-b px-3 py-2">
+        <div className="text-xs text-muted-foreground">
+          Active subscriptions across all registered events.
+        </div>
+        <div className="flex-1" />
+        <Button size="sm" variant="ghost" onClick={reload}>
+          <MdRefresh className="size-4" /> Refresh
+        </Button>
+      </div>
+      {error && <div className="border-b bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">{error}</div>}
+      <div className="flex-1 overflow-auto">
+        {grouped.length === 0 ? (
+          <Empty>No active triggers.</Empty>
+        ) : (
+          <div className="divide-y">
+            {grouped.map(([eventName, triggers]) => (
+              <div key={eventName}>
+                <div className="sticky top-0 border-b bg-muted/50 px-3 py-1.5 text-xs font-semibold">
+                  {eventName} <span className="text-muted-foreground">({triggers.length})</span>
+                </div>
+                <table className="w-full text-sm">
+                  <tbody>
+                    {triggers.map((t) => (
+                      <tr key={t.id} className={cn("border-b", !t.enabled && "opacity-60")}>
+                        <td className="px-3 py-2 font-mono text-xs">{t.jobName}</td>
+                        <td className="px-3 py-2 text-xs">
+                          {Object.keys(t.filters).length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {Object.entries(t.filters).map(([k, v]) => (
+                                <span
+                                  key={k}
+                                  className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]"
+                                >
+                                  {k}={v === null ? "*" : JSON.stringify(v)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">
+                          {Object.keys(t.jobWith).length > 0 && (
+                            <code>{truncate(JSON.stringify(t.jobWith), 40)}</code>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-xs">
+                          {t.oneShot && <span className="text-muted-foreground">oneShot</span>}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">
+                          {relativeTime(t.createdAt)}
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => toggle(t.id, !t.enabled)}
+                          >
+                            {t.enabled ? "Disable" : "Enable"}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => remove(t.id)}>
+                            <MdDelete className="size-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Shared bits ─────────────────────────────────────────────────────────
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors",
+        active
+          ? "bg-accent text-accent-foreground"
+          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+      {children}
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-1 text-xs font-medium uppercase text-muted-foreground">{label}</div>
+      <div>{children}</div>
+    </div>
+  );
+}

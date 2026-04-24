@@ -7,6 +7,7 @@ import debugPlugin from "@plugins/debug/web";
 import dbBackupPlugin from "@plugins/debug/plugins/db-backup/web";
 import logsPlugin from "@plugins/debug/plugins/logs/web";
 import worktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/web";
+import queuePlugin from "@plugins/debug/plugins/queue/web";
 import conversationsPlugin from "@plugins/conversations/plugins/conversations-view/web";
 import conversationPlugin from "@plugins/conversations/plugins/conversation-view/web";
 import conversationVscodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/vscode/web";
@@ -72,6 +73,7 @@ export const plugins: PluginDefinition[] = [
   logsPlugin,
   dbBackupPlugin,
   worktreeCleanupPlugin,
+  queuePlugin,
   conversationPlugin,
   conversationVscodePlugin,
   conversationOpenAppPlugin,

@@ -11,6 +11,7 @@ import { db } from "@server/db/client";
 import { eventTriggerColumns } from "./base-columns";
 import { eventsDispatchJob } from "./dispatch-job";
 import { triggerTableRegistry } from "./registry";
+import { _event_emissions, EMISSIONS_CAP } from "./tables";
 
 // A filter slot is either a plain column builder (identity-or-null match on
 // the same-named payload key) or an object with an explicit match predicate.
@@ -170,6 +171,10 @@ async function dispatch<T>(def: EventDef<T>, payload: T): Promise<void> {
     .from(def.table)
     .where(and(...predicates));
 
+  // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
+  const matchedIds = rows.map((r) => (r as any).id as string);
+  await recordEmission(def.name, payload, matchedIds);
+
   if (rows.length === 0) return;
 
   // Enqueue one events-dispatch job per matching row. Execution (including
@@ -203,5 +208,30 @@ async function dispatch<T>(def: EventDef<T>, payload: T): Promise<void> {
         { maxAttempts: target?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS },
       );
     }),
+  );
+}
+
+// Append to the emission log and trim back to the cap. Runs inside dispatch()
+// before jobs are enqueued so the log reflects "what fired" even when the
+// matched triggers are zero (the most interesting debug case).
+async function recordEmission(
+  eventName: string,
+  payload: unknown,
+  matchedTriggerIds: string[],
+): Promise<void> {
+  await db.insert(_event_emissions).values({
+    eventName,
+    payload: (payload ?? {}) as Record<string, unknown>,
+    matchedCount: matchedTriggerIds.length,
+    matchedTriggerIds,
+  });
+  // Cap at EMISSIONS_CAP rows — cheap single DELETE instead of a window.
+  await db.execute(
+    sql`DELETE FROM ${_event_emissions}
+        WHERE ${_event_emissions.id} IN (
+          SELECT id FROM ${_event_emissions}
+          ORDER BY ${_event_emissions.emittedAt} DESC
+          OFFSET ${EMISSIONS_CAP}
+        )`,
   );
 }

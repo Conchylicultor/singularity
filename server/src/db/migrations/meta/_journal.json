@@ -267,6 +267,13 @@
       "tag": "20260424_160949_f10e0c05__push_and_exit_jobs",
       "hash": "f10e0c05",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777049068000,
+      "tag": "20260424_164428_14d075cc__add_event_emissions",
+      "hash": "14d075cc",
+      "breakpoints": true
     }
   ]
 }

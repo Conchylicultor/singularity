@@ -343,6 +343,12 @@
       - Server:
         - `GET /api/logs/channels`
         - `WS /ws/logs`
+    - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
+      - Exports (web):
+        - Values: `queuePane`
+      - Contributes:
+        - `Debug.Item` "Queue"
+        - `queuePane.open`
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
       - Exports (web):
         - Values: `worktreeCleanupPane`
@@ -358,11 +364,16 @@
 - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
   - Defines:
     - DB schema: `plugins/events/server/internal/event.ts`
+    - DB schema: `plugins/events/server/internal/tables.ts`
   - Exports (server):
     - Types: `DefineTriggerEventSpec`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`
-    - Values: `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `trigger`
+    - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `trigger`, `triggerTableRegistry`
   - Server:
     - Uses: `jobs.DEFAULT_MAX_ATTEMPTS`, `jobs.UNSAFE_getRegisteredJob`, `jobs.defineJob`
+    - `GET /api/events/emissions`
+    - `GET /api/events/triggers`
+    - `DELETE /api/events/triggers/:id`
+    - `PATCH /api/events/triggers/:id`
 
 - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
   - Defines:
@@ -407,6 +418,10 @@
   - Exports (server):
     - Types: `DefineJobSpec`, `JobCtx`, `JobFactory`, `RegisteredJob`
     - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `UNSAFE_getRegisteredJob`
+  - Server:
+    - `GET /api/jobs`
+    - `POST /api/jobs/:id/retry`
+    - `DELETE /api/jobs/:id`
 
 - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
   - Exports (web):
