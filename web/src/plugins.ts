@@ -48,6 +48,7 @@ import improvePlugin from "@plugins/improve/web";
 import configPlugin from "@plugins/config/web";
 import eventsTestPlugin from "@plugins/events-test/web";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/web";
+import attemptViewPlugin from "@plugins/attempt-view/web";
 
 export const plugins: PluginDefinition[] = [
   shellPlugin,
@@ -99,4 +100,5 @@ export const plugins: PluginDefinition[] = [
   configPlugin,
   eventsTestPlugin,
   conversationsRecoverPlugin,
+  attemptViewPlugin,
 ];

@@ -37,6 +37,12 @@
     - `GET /api/attachments/:id`
     - `DELETE /api/attachments/:id`
 
+- **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
+  - Exports (web):
+    - Values: `attemptConversationPane`, `attemptPane`
+  - Contributes:
+    - `Conversation.Toolbar` → `AttemptSwitchButton`
+
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `BuildButton`
@@ -400,6 +406,9 @@
   - Exports (server):
     - Types: `Attempt`, `AttemptStatus`, `Push`, `Task`, `TaskStatus`
     - Values: `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `CONVERSATIONS_META_TASK_ID`, `nextRankUnder`, `pushesResource`, `PushSchema`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`
+  - Exports (shared):
+    - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
+    - Values: `attemptsResource`, `pushesResource`, `tasksResource`
   - Contributes:
     - `Shell.Sidebar` "Tasks" (group `System`)
     - `tasksRootPane.open`
