@@ -1,8 +1,10 @@
 import { useState, useCallback } from "react";
 import { MdChevronRight, MdWarning, MdContentCopy, MdCheck } from "react-icons/md";
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
+import { useConfigValues } from "@plugins/config/web";
 import { DiffView } from "../../../file-pane/plugins/diff/web/components/diff-view";
-import { isCoreFile } from "../core-files";
+import { getFileWarningLevel } from "../core-files";
+import { reviewConfig } from "../config";
 
 const STATUS_LABEL: Record<EditedFileStatus, string> = {
   modified: "modified",
@@ -20,6 +22,22 @@ const STATUS_BADGE: Record<EditedFileStatus, string> = {
   clean: "bg-muted text-muted-foreground border-border",
 };
 
+const LEVEL_BG = {
+  safe: "bg-muted",
+  careful: "bg-amber-500/10 dark:bg-amber-500/10",
+  critical: "bg-red-500/10 dark:bg-red-500/10",
+};
+
+const LEVEL_ICON_CLASS = {
+  careful: "size-3.5 text-amber-500 dark:text-amber-400",
+  critical: "size-3.5 text-red-500 dark:text-red-400",
+};
+
+const LEVEL_TOOLTIP = {
+  careful: "Careful — review this file with extra care",
+  critical: "Critical — core infrastructure file, review with maximum care",
+};
+
 export function ReviewFileRow({
   worktree,
   file,
@@ -34,7 +52,8 @@ export function ReviewFileRow({
   const slash = file.path.lastIndexOf("/");
   const dir = slash >= 0 ? file.path.slice(0, slash + 1) : "";
   const basename = slash >= 0 ? file.path.slice(slash + 1) : file.path;
-  const isCore = isCoreFile(file.path);
+  const { safePaths, carefulPaths } = useConfigValues(reviewConfig, "conversation-code-review");
+  const level = getFileWarningLevel(file.path, safePaths, carefulPaths);
   const [copied, setCopied] = useState(false);
   const copyPath = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -49,11 +68,9 @@ export function ReviewFileRow({
       <button
         type="button"
         onClick={onToggle}
-        className={`sticky top-0 z-[1] flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/80 ${
-          isCore ? "bg-amber-500/10 dark:bg-amber-500/10" : "bg-muted"
-        }`}
+        className={`sticky top-0 z-[1] flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/80 ${LEVEL_BG[level]}`}
         aria-expanded={expanded}
-        title={isCore ? "Core file — extra care required" : undefined}
+        title={level !== "safe" ? LEVEL_TOOLTIP[level] : undefined}
       >
         <MdChevronRight
           className={`size-4 shrink-0 text-muted-foreground transition-transform ${
@@ -81,10 +98,10 @@ export function ReviewFileRow({
         <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
           <span className="text-emerald-600 dark:text-emerald-400">+{file.additions}</span>
           <span className="text-red-600 dark:text-red-400">−{file.deletions}</span>
-          {isCore && (
+          {level !== "safe" && (
             <MdWarning
-              className="size-3.5 text-amber-500 dark:text-amber-400"
-              aria-label="Core file — extra care required"
+              className={LEVEL_ICON_CLASS[level]}
+              aria-label={LEVEL_TOOLTIP[level]}
             />
           )}
         </span>
