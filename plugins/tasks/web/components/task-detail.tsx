@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LaunchButtons } from "@plugins/launch/web";
 import { Button } from "@/components/ui/button";
+import { TaskAttachments } from "./task-attachments";
 import { TaskDependencies } from "./task-dependencies";
 import { TaskEvents } from "./task-events";
 import { useResource } from "@core";
@@ -218,6 +219,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
           openAfterLaunch={false}
         />
       </div>
+      <TaskAttachments taskId={taskId} />
       <TaskDependencies taskId={taskId} />
       <TaskEvents taskId={taskId} />
     </div>

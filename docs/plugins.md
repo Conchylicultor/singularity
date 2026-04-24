@@ -26,8 +26,8 @@
 
 - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Polymorphic file attachments on disk (UUID-named under ~/.singularity/attachments/). Staged upload with orphan sweep.
   - Exports (web):
-    - Types: `UploadedAttachment`
-    - Values: `uploadAttachment`
+    - Types: `Attachment`, `UploadedAttachment`
+    - Values: `listAttachments`, `uploadAttachment`
   - Exports (server):
     - Values: `_attachments`, `attachAttachment`, `deleteAttachment`, `deleteAttachmentsForOwner`, `getAttachment`, `listAttachmentsForOwner`
   - Server:
