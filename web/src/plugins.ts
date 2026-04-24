@@ -47,6 +47,7 @@ import attachmentsPlugin from "@plugins/attachments/web";
 import improvePlugin from "@plugins/improve/web";
 import configPlugin from "@plugins/config/web";
 import eventsTestPlugin from "@plugins/events-test/web";
+import conversationsRecoverPlugin from "@plugins/conversations-recover/web";
 
 export const plugins: PluginDefinition[] = [
   shellPlugin,
@@ -97,4 +98,5 @@ export const plugins: PluginDefinition[] = [
   improvePlugin,
   configPlugin,
   eventsTestPlugin,
+  conversationsRecoverPlugin,
 ];

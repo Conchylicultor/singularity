@@ -220,6 +220,16 @@
       - Server:
         - Uses: `conversations.Runtime`
 
+- **`conversations-recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
+  - Exports (web):
+    - Values: `recoveryPane`
+  - Contributes:
+    - `Shell.Sidebar` "Recovery" (group `System`)
+    - `recoveryPane.open`
+  - Server:
+    - Uses: `conversations.recentConversationsResource`, `conversations.resumeConversation`
+    - `POST /api/conversations-recover/restore-batch`
+
 - **`crashes`** — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
   - Exports (web):
     - Values: `report`

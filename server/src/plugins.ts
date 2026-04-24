@@ -29,6 +29,7 @@ import dbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
 import worktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/server";
 import eventsPlugin from "@plugins/events/server";
 import eventsTestPlugin from "@plugins/events-test/server";
+import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
 
 // Runtime plugins must load before `conversationsPlugin` so they register
 // with the `Runtime` registry before the poller starts ticking on its import.
@@ -68,4 +69,5 @@ export const plugins: ServerPluginDefinition[] = [
   // so the `defineTriggerEvent` and `defineAction` factories are ready.
   eventsPlugin,
   eventsTestPlugin,
+  conversationsRecoverPlugin,
 ];

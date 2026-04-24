@@ -73,6 +73,10 @@
       "name": "@singularity/plugin-conversations",
       "version": "0.0.1",
     },
+    "plugins/conversations-recover": {
+      "name": "@singularity/plugin-conversations-recover",
+      "version": "0.0.1",
+    },
     "plugins/crashes": {
       "name": "@singularity/plugin-crashes",
       "version": "0.0.1",
@@ -661,6 +665,8 @@
     "@singularity/plugin-config": ["@singularity/plugin-config@workspace:plugins/config"],
 
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
+
+    "@singularity/plugin-conversations-recover": ["@singularity/plugin-conversations-recover@workspace:plugins/conversations-recover"],
 
     "@singularity/plugin-core": ["@singularity/plugin-core@workspace:plugin-core"],
 
