@@ -202,6 +202,11 @@
             - Uses: `conversations.deleteConversation`, `conversations.recentConversationsResource`, `tasks-core.getConversation`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/hold-and-exit`
         - **`jsonl-viewer`** — Toolbar button that opens a right pane rendering the raw Claude JSONL session log in human-readable form. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
+          - Defines:
+            - Slots: `JsonlViewer.EventRenderer`
+          - Exports (web):
+            - Types: `EventRendererContribution`
+            - Values: `JsonlViewer`
           - Exports (shared):
             - Types: `JsonlEvent`, `JsonlEventsResponse`
             - Values: `jsonlEventsResource`
@@ -210,6 +215,25 @@
           - Server:
             - Uses: `conversations.findTranscriptPath`, `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
+          - Plugins:
+            - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
+              - Contributes:
+                - `JsonlViewer.EventRenderer` → `AssistantTextRow`
+            - **`assistant-tool-use`** — Renders assistant tool-use events in the JSONL viewer.
+              - Contributes:
+                - `JsonlViewer.EventRenderer` → `AssistantToolUseRow`
+            - **`summary`** — Renders summary separator events in the JSONL viewer.
+              - Contributes:
+                - `JsonlViewer.EventRenderer` → `SummaryRow`
+            - **`system`** — Renders system events in the JSONL viewer.
+              - Contributes:
+                - `JsonlViewer.EventRenderer` → `SystemRow`
+            - **`user-text`** — Renders user text events in the JSONL viewer.
+              - Contributes:
+                - `JsonlViewer.EventRenderer` → `UserTextRow`
+            - **`user-tool-result`** — Renders user tool-result events in the JSONL viewer.
+              - Contributes:
+                - `JsonlViewer.EventRenderer` → `UserToolResultRow`
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Contributes:
             - `Conversation.Toolbar` (group `status`) → `ModelBadge`

@@ -16,6 +16,12 @@ import conversationModelPlugin from "@plugins/conversations/plugins/conversation
 import conversationTitlePlugin from "@plugins/conversations/plugins/conversation-view/plugins/title/web";
 import conversationTasksPanelPlugin from "@plugins/conversations/plugins/conversation-view/plugins/tasks-panel/web";
 import conversationJsonlViewerPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import conversationJsonlViewerUserTextPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-text/web";
+import conversationJsonlViewerAssistantTextPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text/web";
+import conversationJsonlViewerAssistantToolUsePlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-tool-use/web";
+import conversationJsonlViewerUserToolResultPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-tool-result/web";
+import conversationJsonlViewerSystemPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/system/web";
+import conversationJsonlViewerSummaryPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary/web";
 import conversationPushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/web";
 import conversationDropAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/web";
 import conversationHoldAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/hold-and-exit/web";
@@ -74,6 +80,12 @@ export const plugins: PluginDefinition[] = [
   conversationTitlePlugin,
   conversationTasksPanelPlugin,
   conversationJsonlViewerPlugin,
+  conversationJsonlViewerUserTextPlugin,
+  conversationJsonlViewerAssistantTextPlugin,
+  conversationJsonlViewerAssistantToolUsePlugin,
+  conversationJsonlViewerUserToolResultPlugin,
+  conversationJsonlViewerSystemPlugin,
+  conversationJsonlViewerSummaryPlugin,
   conversationQuickPromptsPlugin,
   conversationForkPlugin,
   conversationPushAndExitPlugin,

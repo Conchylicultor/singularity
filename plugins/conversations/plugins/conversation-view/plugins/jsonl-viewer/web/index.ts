@@ -5,6 +5,9 @@ import { JsonlButton } from "./components/jsonl-button";
 // Importing panes registers `convJsonlPane` with the Pane registry.
 import "./panes";
 
+export { JsonlViewer } from "./slots";
+export type { EventRendererContribution } from "./slots";
+
 export default {
   id: "conversation-jsonl-viewer",
   name: "Conversation: JSONL viewer",
