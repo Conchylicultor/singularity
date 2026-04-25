@@ -55,7 +55,8 @@ export function ConversationList() {
   // the infinite query page chain stable even as recentGone updates in real-time.
   const cursorRef = useRef<string | null>(null);
   if (hasMoreGone && recentGone.length > 0 && cursorRef.current === null) {
-    cursorRef.current = recentGone[recentGone.length - 1]!.createdAt.toISOString();
+    const tail = recentGone[recentGone.length - 1]!;
+    cursorRef.current = (tail.endedAt ?? tail.createdAt).toISOString();
   }
 
   const { data: paginatedData, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -71,10 +72,11 @@ export function ConversationList() {
         return GonePageSchema.parse(await res.json());
       },
       initialPageParam: cursorRef.current ?? "",
-      getNextPageParam: (lastPage) =>
-        lastPage.hasMore
-          ? lastPage.items[lastPage.items.length - 1]?.createdAt.toISOString()
-          : undefined,
+      getNextPageParam: (lastPage) => {
+        if (!lastPage.hasMore) return undefined;
+        const tail = lastPage.items[lastPage.items.length - 1];
+        return (tail?.endedAt ?? tail?.createdAt)?.toISOString();
+      },
       enabled: hasMoreGone && cursorRef.current !== null,
       staleTime: Infinity,
     });

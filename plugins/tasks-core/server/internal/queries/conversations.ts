@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, lt } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, lt } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { _conversations } from "../tables";
 import { conversations } from "../schema";
@@ -39,8 +39,8 @@ export async function listRecentGoneConversations(limit: number): Promise<Conver
   return db
     .select()
     .from(conversations)
-    .where(eq(conversations.active, false))
-    .orderBy(desc(conversations.createdAt))
+    .where(and(eq(conversations.active, false), isNotNull(conversations.endedAt)))
+    .orderBy(desc(conversations.endedAt))
     .limit(limit);
 }
 
@@ -51,8 +51,14 @@ export async function listGoneConversationsBefore(
   return db
     .select()
     .from(conversations)
-    .where(and(eq(conversations.active, false), lt(conversations.createdAt, before)))
-    .orderBy(desc(conversations.createdAt))
+    .where(
+      and(
+        eq(conversations.active, false),
+        isNotNull(conversations.endedAt),
+        lt(conversations.endedAt, before),
+      ),
+    )
+    .orderBy(desc(conversations.endedAt))
     .limit(limit);
 }
 
