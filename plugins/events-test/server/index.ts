@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { handleCrashRecovery } from "./internal/crash-recovery";
 import {
   handleDeleteTargeting,
   handleDeleteTrigger,
@@ -25,5 +26,6 @@ export default {
     "POST /api/events-test/delete-targeting": handleDeleteTargeting,
     "GET /api/events-test/triggers": handleListTriggers,
     "GET /api/events-test/wait-idle": handleWaitIdle,
+    "POST /api/events-test/crash-recovery": handleCrashRecovery,
   },
 } satisfies ServerPluginDefinition;

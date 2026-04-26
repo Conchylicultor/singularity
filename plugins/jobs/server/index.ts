@@ -7,9 +7,14 @@ import {
 // Side-effect import: registers the `jobs.resume` builtin so it's in
 // `jobRegistry` before any `ctx.waitFor` / `ctx.sleep` call schedules one.
 import "./internal/resume-job";
+import {
+  startStuckLockSweeper,
+  stopStuckLockSweeper,
+} from "./internal/stuck-lock-sweeper";
 import { startWorker, stopWorker } from "./internal/worker";
 
 export { defineJob, UNSAFE_getRegisteredJob, DEFAULT_MAX_ATTEMPTS } from "./internal/registry";
+export { sweepOnce as UNSAFE_sweepStuckLocks } from "./internal/stuck-lock-sweeper";
 export type {
   DefineJobSpec,
   JobCtx,
@@ -34,8 +39,10 @@ export default {
   },
   onReady: async () => {
     await startWorker();
+    startStuckLockSweeper();
   },
   onShutdown: async () => {
+    stopStuckLockSweeper();
     await stopWorker();
   },
 } satisfies ServerPluginDefinition;

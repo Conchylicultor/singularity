@@ -402,7 +402,7 @@
     - `Debug.Item` "Events Test"
     - `eventsTestPane.open`
   - Server:
-    - Uses: `events.defineTriggerEvent`, `events.deleteTrigger`, `events.deleteTriggersFor`, `events.trigger`, `jobs.defineJob`
+    - Uses: `events.defineTriggerEvent`, `events.deleteTrigger`, `events.deleteTriggersFor`, `events.trigger`, `jobs.UNSAFE_sweepStuckLocks`, `jobs.defineJob`
     - `POST /api/events-test/subscribe`
     - `POST /api/events-test/emit`
     - `POST /api/events-test/direct-enqueue`
@@ -412,6 +412,7 @@
     - `POST /api/events-test/delete-targeting`
     - `GET /api/events-test/triggers`
     - `GET /api/events-test/wait-idle`
+    - `POST /api/events-test/crash-recovery`
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Exports (web):
@@ -437,7 +438,7 @@
     - DB schema: `plugins/jobs/server/internal/tables.ts`
   - Exports (server):
     - Types: `DefineJobSpec`, `DurableHooks`, `JobCtx`, `JobFactory`, `RegisteredJob`
-    - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `isSuspendSignal`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`
+    - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `isSuspendSignal`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
   - Server:
     - `GET /api/jobs`
     - `POST /api/jobs/:id/retry`
