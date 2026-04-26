@@ -4,5 +4,3 @@ export type TreeItem = {
   rank: string;
   expanded: boolean;
 };
-
-export type RowContext = { hasChildren: boolean };

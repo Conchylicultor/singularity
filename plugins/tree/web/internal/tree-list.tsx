@@ -16,7 +16,6 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { generateKeyBetween } from "fractional-indexing";
 import {
   buildTree,
   computeDrop,
@@ -25,20 +24,15 @@ import {
   type TreeNode,
 } from "../../shared";
 import { cn } from "@/lib/utils";
-import { TreeRow, type RowMenuItem } from "./tree-row";
 import { pendingFocus } from "./pending-focus";
-import type { RowContext, TreeItem } from "./types";
-
-export type { RowContext, TreeItem } from "./types";
-export type { RowMenuItem } from "./tree-row";
+import { TreeListProvider } from "./use-tree-row";
+import type { TreeItem } from "./types";
 
 export type TreeListProps<T extends TreeItem> = {
   rows: readonly T[];
   selectedId?: string;
   rootId?: string;
-  labelOf: (row: T) => string;
   onSelect: (id: string) => void;
-  onRename: (id: string, next: string) => void | Promise<void>;
   onToggleExpanded: (id: string, next: boolean) => void | Promise<void>;
   onMove: (
     id: string,
@@ -48,18 +42,16 @@ export type TreeListProps<T extends TreeItem> = {
     parentId: string | null;
     rank?: string;
   }) => Promise<string | null | undefined>;
-  renderLeading?: (row: T) => ReactNode;
-  renderActions?: (row: T, ctx: RowContext) => ReactNode;
-  rowClassName?: (row: T) => string | undefined;
-  rowMenu?: (
-    row: T,
-    helpers: { addBelow: (id: string) => void },
-  ) => RowMenuItem[];
+  /** The component used to render every row. Recursion through children is
+   * handled by RowChrome (which reads this from context). */
+  Row: (props: { node: TreeNode<T>; depth: number }) => ReactNode;
+  /** Content shown in the floating chip while a row is being dragged. */
+  dragOverlay?: (row: T) => ReactNode;
   toolbar?: {
     expandAll?: boolean;
     hideTerminal?: { isTerminal: (row: T) => boolean };
   };
-  // Root-level "Add" button. Pass `null` to hide (e.g. when scoped to a subtree).
+  /** Root-level "Add" button label. Pass `null` to hide (e.g. subtree mode). */
   addLabel?: string | null;
 };
 
@@ -68,16 +60,12 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     rows,
     selectedId,
     rootId,
-    labelOf,
     onSelect,
-    onRename,
     onToggleExpanded,
     onMove,
     onCreate,
-    renderLeading,
-    renderActions,
-    rowClassName,
-    rowMenu,
+    Row,
+    dragOverlay,
     toolbar,
     addLabel = "Add",
   } = props;
@@ -86,35 +74,17 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(() =>
     pendingFocus.take(),
   );
+  const clearPendingFocus = useCallback(() => setPendingFocusId(null), []);
 
-  const create = useCallback(
+  const createAtRoot = useCallback(
     async (parentId: string | null, rank?: string) => {
       const id = await onCreate({ parentId, rank });
       if (!id) return;
       pendingFocus.set(id);
+      setPendingFocusId(id);
       onSelect(id);
     },
     [onCreate, onSelect],
-  );
-
-  const addBelow = useCallback(
-    async (nodeId: string) => {
-      const node = rows.find((r) => r.id === nodeId);
-      if (!node) return;
-      const siblings = rows
-        .filter((r) => r.parentId === node.parentId)
-        .sort((a, b) => a.rank.localeCompare(b.rank));
-      const idx = siblings.findIndex((s) => s.id === nodeId);
-      const next = siblings[idx + 1];
-      let rank: string;
-      try {
-        rank = generateKeyBetween(node.rank, next?.rank ?? null);
-      } catch {
-        rank = generateKeyBetween(node.rank, null);
-      }
-      await create(node.parentId, rank);
-    },
-    [rows, create],
   );
 
   const scoped = useMemo(
@@ -151,11 +121,12 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
   const [activeId, setActiveId] = useState<string | null>(null);
-  const activeLabel = useMemo(() => {
+  const activeOverlay = useMemo(() => {
     if (!activeId) return null;
     const row = rows.find((r) => r.id === activeId);
-    return row ? labelOf(row) : null;
-  }, [activeId, rows, labelOf]);
+    if (!row) return null;
+    return dragOverlay ? dragOverlay(row) : "Item";
+  }, [activeId, rows, dragOverlay]);
 
   const onDragStart = useCallback((event: DragStartEvent) => {
     const id = event.active.data.current?.id as string | undefined;
@@ -190,9 +161,31 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
 
   const hasToolbar = showExpandAll || !!toolbar?.hideTerminal;
   const showRootAdd = !rootId && addLabel != null;
-  const boundRowMenu = rowMenu
-    ? (row: T) => rowMenu(row, { addBelow })
-    : undefined;
+
+  const ctxValue = useMemo(
+    () => ({
+      rows,
+      selectedId,
+      activeId,
+      pendingFocusId,
+      clearPendingFocus,
+      onSelect,
+      onToggleExpanded,
+      onCreate,
+      Row,
+    }),
+    [
+      rows,
+      selectedId,
+      activeId,
+      pendingFocusId,
+      clearPendingFocus,
+      onSelect,
+      onToggleExpanded,
+      onCreate,
+      Row,
+    ],
+  );
 
   return (
     <DndContext
@@ -202,80 +195,65 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       onDragEnd={onDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
-      <div className="flex flex-col gap-0.5">
-        {hasToolbar && (
-          <div className="mb-1 flex items-center justify-end gap-1">
-            {showExpandAll && (
-              <button
-                type="button"
-                onClick={expandAll}
-                title={allExpanded ? "Collapse all" : "Expand all"}
-                aria-label={allExpanded ? "Collapse all" : "Expand all"}
-                className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-7 items-center justify-center rounded"
-              >
-                {allExpanded ? (
-                  <MdUnfoldLess className="size-4" />
-                ) : (
-                  <MdUnfoldMore className="size-4" />
-                )}
-              </button>
-            )}
-            {toolbar?.hideTerminal && (
-              <button
-                type="button"
-                onClick={() => setHideTerminal((v) => !v)}
-                aria-pressed={hideTerminal}
-                title={hideTerminal ? "Show completed" : "Hide completed"}
-                className={cn(
-                  "hover:bg-accent flex w-fit items-center gap-1 rounded px-2 py-1 text-xs",
-                  hideTerminal ? "text-foreground" : "text-muted-foreground",
-                )}
-              >
-                {hideTerminal ? (
-                  <MdFilterAlt className="size-4" />
-                ) : (
-                  <MdFilterAltOff className="size-4" />
-                )}
-                {hideTerminal ? "Completed hidden" : "Hide completed"}
-              </button>
-            )}
-          </div>
-        )}
-        {visibleTree.map((node) => (
-          <TreeRow
-            key={node.id}
-            node={node}
-            depth={0}
-            selectedId={selectedId}
-            activeId={activeId}
-            labelOf={labelOf}
-            onSelect={onSelect}
-            onRename={onRename}
-            onToggleExpanded={onToggleExpanded}
-            onAddChild={(pid) => create(pid)}
-            renderLeading={renderLeading}
-            renderActions={renderActions}
-            rowClassName={rowClassName}
-            rowMenu={boundRowMenu}
-            pendingFocusId={pendingFocusId}
-            clearPendingFocus={() => setPendingFocusId(null)}
-          />
-        ))}
-        {showRootAdd && (
-          <button
-            type="button"
-            onClick={() => create(null)}
-            className="text-muted-foreground hover:bg-accent hover:text-foreground mt-1 flex w-fit items-center gap-1 rounded px-2 py-1 text-sm"
-          >
-            <MdAdd className="size-4" />
-            {addLabel}
-          </button>
-        )}
-      </div>
+      <TreeListProvider value={ctxValue}>
+        <div className="flex flex-col gap-0.5">
+          {hasToolbar && (
+            <div className="mb-1 flex items-center justify-end gap-1">
+              {showExpandAll && (
+                <button
+                  type="button"
+                  onClick={expandAll}
+                  title={allExpanded ? "Collapse all" : "Expand all"}
+                  aria-label={allExpanded ? "Collapse all" : "Expand all"}
+                  className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-7 items-center justify-center rounded"
+                >
+                  {allExpanded ? (
+                    <MdUnfoldLess className="size-4" />
+                  ) : (
+                    <MdUnfoldMore className="size-4" />
+                  )}
+                </button>
+              )}
+              {toolbar?.hideTerminal && (
+                <button
+                  type="button"
+                  onClick={() => setHideTerminal((v) => !v)}
+                  aria-pressed={hideTerminal}
+                  title={hideTerminal ? "Show completed" : "Hide completed"}
+                  className={cn(
+                    "hover:bg-accent flex w-fit items-center gap-1 rounded px-2 py-1 text-xs",
+                    hideTerminal ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {hideTerminal ? (
+                    <MdFilterAlt className="size-4" />
+                  ) : (
+                    <MdFilterAltOff className="size-4" />
+                  )}
+                  {hideTerminal ? "Completed hidden" : "Hide completed"}
+                </button>
+              )}
+            </div>
+          )}
+          {visibleTree.map((node) => (
+            <Row key={node.id} node={node} depth={0} />
+          ))}
+          {showRootAdd && (
+            <button
+              type="button"
+              onClick={() => void createAtRoot(null)}
+              className="text-muted-foreground hover:bg-accent hover:text-foreground mt-1 flex w-fit items-center gap-1 rounded px-2 py-1 text-sm"
+            >
+              <MdAdd className="size-4" />
+              {addLabel}
+            </button>
+          )}
+        </div>
+      </TreeListProvider>
       <DragOverlay dropAnimation={null}>
-        {activeLabel !== null ? (
+        {activeOverlay !== null ? (
           <div className="bg-background/90 border-accent rounded border px-2 py-1 text-sm shadow">
-            {activeLabel || "Untitled"}
+            {activeOverlay}
           </div>
         ) : null}
       </DragOverlay>

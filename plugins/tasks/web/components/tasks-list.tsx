@@ -10,7 +10,13 @@ import {
 } from "react-icons/md";
 import type { IconType } from "react-icons";
 import { useResource } from "@core";
-import { TreeList } from "@plugins/tree/web";
+import {
+  RenameInput,
+  RowChrome,
+  TreeList,
+  type TreeItem,
+} from "@plugins/tree/web";
+import type { TreeNode } from "@plugins/tree/shared";
 import { tasksResource } from "../../shared/resources";
 import { Tasks as TasksSlots } from "../slots";
 import { taskDetailPane } from "../panes";
@@ -26,12 +32,8 @@ type TaskStatus =
   | "dropped"
   | "blocked";
 
-type Task = {
-  id: string;
-  parentId: string | null;
+type Task = TreeItem & {
   title: string;
-  rank: string;
-  expanded: boolean;
   status: TaskStatus;
 };
 
@@ -110,6 +112,44 @@ async function createTaskRow(args: {
   return task.id;
 }
 
+function TaskRow({ node, depth }: { node: TreeNode<Task>; depth: number }) {
+  const actions = TasksSlots.TaskActions.useContributions();
+  const hasChildren = node.children.length > 0;
+  const dropped = node.status === "dropped";
+  const done = node.status === "done";
+  return (
+    <RowChrome
+      node={node}
+      depth={depth}
+      menu={({ addBelow }) => [
+        {
+          icon: MdAdd,
+          label: "Add item below",
+          onClick: () => void addBelow(),
+        },
+      ]}
+      actions={actions.map((a) => (
+        <a.component
+          key={a.id}
+          taskId={node.id}
+          hasChildren={hasChildren}
+        />
+      ))}
+    >
+      <StatusIcon status={node.status} />
+      <RenameInput
+        nodeId={node.id}
+        value={node.title}
+        onCommit={(next) => patchTask(node.id, { title: next })}
+        className={cn(
+          dropped && "text-muted-foreground/70 line-through italic",
+          done && "text-muted-foreground",
+        )}
+      />
+    </RowChrome>
+  );
+}
+
 export function TasksList({
   selectedId,
   rootTaskId,
@@ -121,45 +161,20 @@ export function TasksList({
 }) {
   const { data } = useResource(tasksResource);
   const rows = data ?? [];
-  const actions = TasksSlots.TaskActions.useContributions();
 
   return (
     <TreeList<Task>
       rows={rows}
       rootId={rootTaskId}
       selectedId={selectedId}
-      labelOf={(t) => t.title}
       onSelect={(id) =>
         onSelect ? onSelect(id) : taskDetailPane.open({ taskId: id })
       }
-      onRename={(id, next) => patchTask(id, { title: next })}
       onToggleExpanded={(id, next) => patchTask(id, { expanded: next })}
       onMove={(id, dest) => patchTask(id, dest)}
       onCreate={createTaskRow}
-      renderLeading={(t) => <StatusIcon status={t.status} />}
-      renderActions={(t, ctx) =>
-        actions.map((a) => (
-          <a.component
-            key={a.id}
-            taskId={t.id}
-            hasChildren={ctx.hasChildren}
-          />
-        ))
-      }
-      rowClassName={(t) =>
-        t.status === "dropped"
-          ? "text-muted-foreground/70 line-through italic"
-          : t.status === "done"
-            ? "text-muted-foreground"
-            : undefined
-      }
-      rowMenu={(t, { addBelow }) => [
-        {
-          icon: MdAdd,
-          label: "Add item below",
-          onClick: () => addBelow(t.id),
-        },
-      ]}
+      Row={TaskRow}
+      dragOverlay={(t) => t.title || "Untitled"}
       toolbar={{
         expandAll: true,
         hideTerminal: {

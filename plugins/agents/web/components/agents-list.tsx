@@ -1,17 +1,19 @@
 import { useResource } from "@core";
-import { TreeList } from "@plugins/tree/web";
+import {
+  RenameInput,
+  RowChrome,
+  TreeList,
+  type TreeItem,
+} from "@plugins/tree/web";
+import type { TreeNode } from "@plugins/tree/shared";
 import { agentsResource } from "../../shared/resources";
 import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";
 import { AgentStatus } from "./agent-status";
 
-type Agent = {
-  id: string;
-  parentId: string | null;
+type Agent = TreeItem & {
   name: string;
   prompt: string | null;
-  rank: string;
-  expanded: boolean;
 };
 
 type AgentPatch = {
@@ -43,6 +45,26 @@ async function createAgentRow(args: {
   return agent.id;
 }
 
+function AgentRow({ node, depth }: { node: TreeNode<Agent>; depth: number }) {
+  const actions = AgentsSlots.AgentActions.useContributions();
+  return (
+    <RowChrome
+      node={node}
+      depth={depth}
+      actions={actions.map((act) => (
+        <act.component key={act.id} agentId={node.id} />
+      ))}
+    >
+      <AgentStatus agentId={node.id} />
+      <RenameInput
+        nodeId={node.id}
+        value={node.name}
+        onCommit={(next) => patchAgent(node.id, { name: next })}
+      />
+    </RowChrome>
+  );
+}
+
 export function AgentsList({
   selectedId,
   onSelect,
@@ -52,24 +74,19 @@ export function AgentsList({
 }) {
   const { data } = useResource(agentsResource);
   const rows = data ?? [];
-  const actions = AgentsSlots.AgentActions.useContributions();
 
   return (
     <TreeList<Agent>
       rows={rows}
       selectedId={selectedId}
-      labelOf={(a) => a.name}
       onSelect={(id) =>
         onSelect ? onSelect(id) : agentDetailPane.open({ id })
       }
-      onRename={(id, next) => patchAgent(id, { name: next })}
       onToggleExpanded={(id, next) => patchAgent(id, { expanded: next })}
       onMove={(id, dest) => patchAgent(id, dest)}
       onCreate={createAgentRow}
-      renderLeading={(a) => <AgentStatus agentId={a.id} />}
-      renderActions={(a) =>
-        actions.map((act) => <act.component key={act.id} agentId={a.id} />)
-      }
+      Row={AgentRow}
+      dragOverlay={(a) => a.name || "Untitled"}
       addLabel="Agent"
     />
   );
