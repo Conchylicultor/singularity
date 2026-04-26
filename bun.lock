@@ -199,6 +199,10 @@
       "name": "@singularity/plugin-worktree-switcher",
       "version": "0.0.1",
     },
+    "plugins/yak-shaving": {
+      "name": "@singularity/plugin-yak-shaving",
+      "version": "0.0.1",
+    },
     "server": {
       "name": "@singularity/server",
       "dependencies": {
@@ -760,6 +764,8 @@
     "@singularity/plugin-welcome": ["@singularity/plugin-welcome@workspace:plugins/welcome"],
 
     "@singularity/plugin-worktree-switcher": ["@singularity/plugin-worktree-switcher@workspace:plugins/worktree-switcher"],
+
+    "@singularity/plugin-yak-shaving": ["@singularity/plugin-yak-shaving@workspace:plugins/yak-shaving"],
 
     "@singularity/server": ["@singularity/server@workspace:server"],
 

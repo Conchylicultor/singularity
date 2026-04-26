@@ -34,6 +34,7 @@ import eventsPlugin from "@plugins/events/server";
 import secretsPlugin from "@plugins/secrets/server";
 import eventsTestPlugin from "@plugins/events-test/server";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
+import yakShavingPlugin from "@plugins/yak-shaving/server";
 import authPlugin from "@plugins/auth/server";
 import authGooglePlugin from "@plugins/auth/plugins/google/server";
 import authNotionPlugin from "@plugins/auth/plugins/notion/server";
@@ -84,6 +85,7 @@ export const plugins: ServerPluginDefinition[] = [
   eventsPlugin,
   eventsTestPlugin,
   conversationsRecoverPlugin,
+  yakShavingPlugin,
   // Secrets primitive: encrypted key-value store on main, unix-socket RPC for
   // worktrees. Consumed by auth (tokens) and config (secret fields). Load order
   // doesn't matter because onReady runs in parallel; consumers coordinate via
