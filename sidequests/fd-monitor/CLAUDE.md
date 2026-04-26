@@ -60,7 +60,15 @@ Override thresholds via env vars on the LaunchAgent if needed:
 SUSPECT_PID_FDS=5000 SYSTEM_NUM_FILES_PCT=40 zsh sidequests/fd-monitor/fd-monitor.sh
 ```
 
-Incident dirs older than 14 days are auto-purged.
+Incident dirs older than 14 days are auto-purged. There's also a hard cap of `MAX_INCIDENT_DIRS` (default 200) — oldest are dropped if the cap is exceeded.
+
+### Self-protection
+
+The script protects itself from amplifying a crisis it's trying to observe:
+
+- **Lockfile** (`<incidents>/.lock`, atomic via `mkdir`): if a previous tick is still running (e.g., `lsof` hung under FD pressure), the new tick logs a `SKIPPED — prior tick still running` line and exits. Locks older than `LOCK_STALE_AFTER` seconds (default 90) are stolen.
+- **lsof sanity gate**: if `lsof` returns fewer than `MIN_LSOF_LINES` lines (default 500 — system idle baseline is ~12k), incident detection is skipped for this tick. Prevents writing forensics off truncated data when `lsof` itself failed.
+- **Cooldowns**: a system-wide dump won't fire again within `SYSTEM_COOLDOWN` seconds (default 300); a per-pid dump won't fire again for the same pid within `PID_COOLDOWN` seconds (default 300). Throttled ticks still log `!!!!! INCIDENT … all dumps throttled` so the elevation is visible without flooding disk.
 
 ## Files
 
