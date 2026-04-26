@@ -6,6 +6,7 @@ export {
   AttemptStatusSchema,
   PushSchema,
   ConversationSchema,
+  ConversationKindSchema,
 } from "../server/internal/schema";
 import type {
   Attempt,
@@ -18,6 +19,7 @@ export type {
   AttemptStatus,
   Push,
   Conversation,
+  ConversationKind,
 } from "../server/internal/schema";
 
 // The attemptsResource payload embeds a narrow summary of each attempt's

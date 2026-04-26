@@ -189,6 +189,8 @@ export type AttemptStatus = z.infer<typeof AttemptStatusSchema>;
 // consumers outside tasks-core; they define identical schemas.
 const ConversationModelSchema = z.enum(["opus", "sonnet"]);
 const ConversationStatusSchema = z.enum(["starting", "working", "waiting", "gone"]);
+export const ConversationKindSchema = z.enum(["user", "agent", "system"]);
+export type ConversationKind = z.infer<typeof ConversationKindSchema>;
 
 export const TaskSchema = createSelectSchema(_tasks, {
   createdAt: z.coerce.date(),
@@ -222,6 +224,7 @@ export type Push = z.infer<typeof PushSchema>;
 export const ConversationSchema = createSelectSchema(_conversations, {
   status: ConversationStatusSchema,
   model: ConversationModelSchema,
+  kind: ConversationKindSchema,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   endedAt: z.coerce.date().nullable(),

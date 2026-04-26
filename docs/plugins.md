@@ -129,13 +129,13 @@
   - Exports (web):
     - Values: `CONV_STATUS_DOT`, `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
   - Exports (server):
-    - Types: `Conversation`, `ConversationCreatedPayload`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`
-    - Values: `conversationCreated`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `findTranscriptPath`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`
+    - Types: `Conversation`, `ConversationCreatedPayload`, `ConversationKind`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`
+    - Values: `conversationCreated`, `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `findTranscriptPath`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_BATCH_ATTEMPT_ID`, `SYSTEM_META_TASK_ID`
   - Exports (shared):
-    - Types: `Conversation`, `ConversationEntry`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
-    - Values: `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
+    - Types: `Conversation`, `ConversationEntry`, `ConversationKind`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
+    - Values: `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
   - Server:
-    - Uses: `events.defineTriggerEvent`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.insertConversation`, `tasks-core.listConversations`, `tasks-core.listGoneConversationsBefore`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
+    - Uses: `events.defineTriggerEvent`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.insertConversation`, `tasks-core.listConversations`, `tasks-core.listGoneConversationsBefore`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/gone`
     - `GET /api/conversations/:id`
@@ -562,11 +562,11 @@
     - DB schema: `plugins/tasks-core/server/internal/tables-events.ts`
     - DB schema: `plugins/tasks-core/server/internal/tables.ts`
   - Exports (server):
-    - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskStatus`, `UpdateConversationPatch`, `UpdateTaskPatch`
-    - Values: `_pushLandedTriggers`, `_taskAttachments`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listAttempts`, `listAttemptsForTask`, `listConversations`, `listGoneConversationsBefore`, `listPushes`, `listPushesForAttempt`, `listRecentGoneConversations`, `listTasks`, `markConversationClosed`, `pushesResource`, `pushLanded`, `PushSchema`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`, `updateConversation`, `updateTask`, `updateTaskTitle`
+    - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskStatus`, `UpdateConversationPatch`, `UpdateTaskPatch`
+    - Values: `_pushLandedTriggers`, `_taskAttachments`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listAttempts`, `listAttemptsForTask`, `listConversations`, `listGoneConversationsBefore`, `listPushes`, `listPushesForAttempt`, `listRecentGoneConversations`, `listTasks`, `markConversationClosed`, `pushesResource`, `pushLanded`, `PushSchema`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`, `updateConversation`, `updateTask`, `updateTaskTitle`
   - Exports (shared):
-    - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
-    - Values: `AttemptSchema`, `AttemptStatusSchema`, `ConversationSchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
+    - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
+    - Values: `AttemptSchema`, `AttemptStatusSchema`, `ConversationKindSchema`, `ConversationSchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
     - Uses: `attachments.Attachments`, `events.defineTriggerEvent`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)

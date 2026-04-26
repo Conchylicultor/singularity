@@ -1,0 +1,3 @@
+DROP VIEW "public"."conversations_v";--> statement-breakpoint
+ALTER TABLE "conversations" ADD COLUMN "kind" text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+CREATE VIEW "public"."conversations_v" AS (select "conversations"."id", "conversations"."attempt_id", "conversations"."title", "conversations"."status", "conversations"."runtime", "conversations"."model", "conversations"."kind", "conversations"."claude_session_id", "conversations"."spawned_by", "conversations"."created_at", "conversations"."updated_at", "conversations"."ended_at", "attempts"."worktree_path", "attempts"."task_id", ("conversations"."status" <> 'gone') as "active" from "conversations" inner join "attempts" on "attempts"."id" = "conversations"."attempt_id");

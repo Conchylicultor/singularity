@@ -51,6 +51,7 @@ export async function handleLaunch(
     prompt: agent.prompt,
     model,
     spawnedBy: "agents-plugin",
+    kind: "agent",
   });
 
   const launchId = `launch-${Math.floor(Date.now() / 1000)}-${Math.random()

@@ -89,10 +89,15 @@ export const pushes = pgTable(
   ],
 );
 
-// Conversation model and status are owned here (co-located with the table)
-// and re-exported through conversations/server/api for backward compat.
+// Conversation model, status, and kind are owned here (co-located with the
+// table) and re-exported through conversations/server/api for backward compat.
 type ConversationModel = "opus" | "sonnet";
 type ConversationStatus = "starting" | "working" | "waiting" | "gone";
+// "user"   = manually created via the UI / default path
+// "agent"  = launched via the agents plugin (saved prompt + button click)
+// "system" = code-spawned by a job/trigger (yak classifier, etc.) — hidden
+//            from user-facing list/recovery/attempt surfaces.
+type ConversationKind = "user" | "agent" | "system";
 
 export const _conversations = pgTable("conversations", {
   id: text("id").primaryKey(),
@@ -103,6 +108,7 @@ export const _conversations = pgTable("conversations", {
   status: text("status").$type<ConversationStatus>().notNull().default("starting"),
   runtime: text("runtime").notNull().default("tmux"),
   model: text("model").$type<ConversationModel>().notNull().default("opus"),
+  kind: text("kind").$type<ConversationKind>().notNull().default("user"),
   claudeSessionId: text("claude_session_id"),
   spawnedBy: text("spawned_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

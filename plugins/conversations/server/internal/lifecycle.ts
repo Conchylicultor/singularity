@@ -10,7 +10,7 @@ import {
 } from "@plugins/tasks-core/server";
 import { Runtime } from "./runtime";
 import type { ConversationModel } from "../schema";
-import type { Conversation } from "../../shared";
+import type { Conversation, ConversationKind } from "../../shared";
 import { forkDatabase } from "./db-fork";
 import { reportForkError } from "./fork-errors";
 import { setupWorktree, worktreePathFor } from "@server/worktree";
@@ -46,6 +46,7 @@ export async function createConversation(
     prompt?: string;
     model?: ConversationModel;
     spawnedBy?: string;
+    kind?: ConversationKind;
     forkFromConversationId?: string;
   } = {},
 ): Promise<Conversation> {
@@ -123,6 +124,7 @@ export async function createConversation(
     runtime: runtimeId,
     model,
     spawnedBy,
+    kind: opts.kind ?? "user",
   });
 
   await runtime.create(conversationId, worktreePath, {

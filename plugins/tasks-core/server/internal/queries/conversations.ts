@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNotNull, lt } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, lt, ne } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { _conversations } from "../tables";
 import { conversations } from "../schema";
@@ -6,15 +6,24 @@ import type { Conversation } from "../schema";
 
 export const RECENT_GONE_LIMIT = 30;
 
+// Filter applied to every user-facing list. System conversations (yak
+// classifiers, future automation) live in the same table but never surface in
+// the sidebar, recovery pane, or attempt-view — they're machine plumbing.
+const notSystem = ne(conversations.kind, "system");
+
 export async function listConversations(): Promise<Conversation[]> {
-  return db.select().from(conversations).orderBy(desc(conversations.createdAt));
+  return db
+    .select()
+    .from(conversations)
+    .where(notSystem)
+    .orderBy(desc(conversations.createdAt));
 }
 
 export async function listActiveConversations(): Promise<Conversation[]> {
   return db
     .select()
     .from(conversations)
-    .where(eq(conversations.active, true))
+    .where(and(eq(conversations.active, true), notSystem))
     .orderBy(desc(conversations.createdAt));
 }
 
@@ -32,6 +41,7 @@ export async function listAllConversationSummaries(): Promise<
       status: conversations.status,
     })
     .from(conversations)
+    .where(notSystem)
     .orderBy(asc(conversations.createdAt));
 }
 
@@ -39,7 +49,7 @@ export async function listRecentGoneConversations(limit: number): Promise<Conver
   return db
     .select()
     .from(conversations)
-    .where(and(eq(conversations.active, false), isNotNull(conversations.endedAt)))
+    .where(and(eq(conversations.active, false), isNotNull(conversations.endedAt), notSystem))
     .orderBy(desc(conversations.endedAt))
     .limit(limit);
 }
@@ -56,6 +66,7 @@ export async function listGoneConversationsBefore(
         eq(conversations.active, false),
         isNotNull(conversations.endedAt),
         lt(conversations.endedAt, before),
+        notSystem,
       ),
     )
     .orderBy(desc(conversations.endedAt))

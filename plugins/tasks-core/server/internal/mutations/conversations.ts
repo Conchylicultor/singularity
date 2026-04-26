@@ -10,6 +10,7 @@ export interface InsertConversationInput {
   runtime: string;
   model: "opus" | "sonnet";
   spawnedBy: string;
+  kind?: "user" | "agent" | "system";
   status?: "starting" | "working" | "waiting" | "gone";
   title?: string | null;
 }
@@ -29,6 +30,7 @@ export async function insertConversation(input: InsertConversationInput) {
     runtime: input.runtime,
     model: input.model,
     spawnedBy: input.spawnedBy,
+    kind: input.kind ?? "user",
     status: input.status ?? "starting",
     title: input.title ?? null,
   });
@@ -51,6 +53,7 @@ export async function insertConversationOnConflictDoNothing(
       runtime: input.runtime,
       model: input.model,
       spawnedBy: input.spawnedBy,
+      kind: input.kind ?? "user",
       status: input.status,
       title: input.title ?? null,
     })

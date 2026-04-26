@@ -18,6 +18,7 @@ export {
   AttemptStatusSchema,
   PushSchema,
   ConversationSchema,
+  ConversationKindSchema,
 } from "./internal/schema";
 export type {
   Task,
@@ -26,6 +27,7 @@ export type {
   AttemptStatus,
   Push,
   Conversation,
+  ConversationKind,
 } from "./internal/schema";
 
 // Resources (four resources, all owned here)

@@ -10,6 +10,7 @@ import { handlePostTurn } from "./internal/handle-post-turn";
 import { startPoller } from "./internal/poller";
 import { startTurnEmitter } from "./internal/turn-emitter";
 import { forkErrorsResource } from "./internal/fork-errors";
+import { ensureSystemMeta } from "./internal/meta-system";
 
 export { ConversationModelSchema } from "./schema";
 export type { ConversationModel } from "./schema";
@@ -17,9 +18,10 @@ export { ConversationStatusSchema, isActiveStatus } from "./status";
 export type { ConversationStatus } from "./status";
 export {
   ConversationSchema,
+  ConversationKindSchema,
   recentConversationsResource,
 } from "@plugins/tasks-core/server";
-export type { Conversation } from "@plugins/tasks-core/server";
+export type { Conversation, ConversationKind } from "@plugins/tasks-core/server";
 export { createConversation, deleteConversation, resumeConversation } from "./internal/lifecycle";
 export type { Turn } from "./internal/claude-transcript";
 export { findTranscriptPath } from "./internal/claude-transcript";
@@ -29,6 +31,7 @@ export { conversationTurnCompleted } from "./internal/tables-turn-completed-even
 export type { ConversationTurnCompletedPayload } from "./internal/tables-turn-completed-event";
 export { conversationCreated } from "./internal/tables-created-event";
 export type { ConversationCreatedPayload } from "./internal/tables-created-event";
+export { SYSTEM_META_TASK_ID, SYSTEM_BATCH_ATTEMPT_ID } from "./internal/meta-system";
 
 export default {
   id: "conversations",
@@ -47,7 +50,8 @@ export default {
   },
   // recentConversationsResource is now mounted on tasks-core; only fork-errors stays here.
   resources: [forkErrorsResource],
-  onReady: () => {
+  onReady: async () => {
+    await ensureSystemMeta();
     startPoller();
     startTurnEmitter();
   },
