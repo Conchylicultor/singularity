@@ -20,4 +20,7 @@ export const Conversation = {
     sectionOrder?: number;
     component: ComponentType<{ conversation: ConversationRecord }>;
   }>("conversation.prompt-bar"),
+  PromptInput: defineSlot<{
+    component: ComponentType<{ conversation: ConversationRecord }>;
+  }>("conversation.prompt-input"),
 };

@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/resizable";
 import { Conversation, type ConversationRecord } from "../slots";
 import { conversationPane, isMainPaneId } from "../panes";
+import { PromptDraftProvider } from "../prompt-draft-context";
 import { terminalPane } from "@plugins/terminal/web";
 import { useConversation, useConversationById } from "@plugins/conversations/web";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ function PromptBar({
   const sorted = [...sections.entries()].sort(([, a], [, b]) => a.order - b.order);
 
   return (
-    <div className="flex shrink-0 items-end justify-end gap-3 border-t border-border px-3 pt-1.5 pb-2">
+    <div className="flex items-end gap-3">
       {sorted.map(([section, { items: sectionItems }], idx) => (
         <div key={section} className="flex items-center gap-3">
           {idx > 0 && <div className="h-4 w-px bg-border" />}
@@ -57,6 +58,8 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
   const toolbarItems = Conversation.Toolbar.useContributions();
   const titleItems = Conversation.Title.useContributions();
   const promptBarItems = Conversation.PromptBar.useContributions();
+  const promptInputItems = Conversation.PromptInput.useContributions();
+  const PromptInputComponent = promptInputItems[0]?.component ?? null;
   // useConversation subscribes to the live WebSocket resource (recentConversationsResource),
   // so status updates (starting → working → done) are reflected in real time.
   // Fall back to the point-lookup only for older conversations outside the recent window.
@@ -100,13 +103,25 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
 
   const TitleComponent = titleItems[0]?.component ?? null;
 
+  const showBottomBar =
+    !!conversation && (!!PromptInputComponent || promptBarItems.length > 0);
+
   const terminalBlock = (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="min-h-0 flex-1 overflow-hidden">
         <TerminalComponent key={reattachKey} />
       </div>
-      {conversation && promptBarItems.length > 0 && (
-        <PromptBar items={promptBarItems} conversation={conversation} />
+      {showBottomBar && conversation && (
+        <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-1.5 pb-2">
+          {PromptInputComponent && (
+            <PromptInputComponent conversation={conversation} />
+          )}
+          {promptBarItems.length > 0 && (
+            <div className="flex justify-end">
+              <PromptBar items={promptBarItems} conversation={conversation} />
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -202,10 +217,14 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
     </div>
   );
 
-  if (!conversation) return body;
+  if (!conversation) {
+    return <PromptDraftProvider>{body}</PromptDraftProvider>;
+  }
   return (
-    <conversationPane.Provider value={{ conversation }}>
-      {body}
-    </conversationPane.Provider>
+    <PromptDraftProvider>
+      <conversationPane.Provider value={{ conversation }}>
+        {body}
+      </conversationPane.Provider>
+    </PromptDraftProvider>
   );
 }

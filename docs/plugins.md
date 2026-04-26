@@ -146,10 +146,10 @@
   - Plugins:
     - **`conversation-view`** — Conversation pane and toolbar host; nested plugins extend `Conversation.Toolbar`.
       - Defines:
-        - Slots: `Conversation.Toolbar`, `Conversation.Title`, `Conversation.PromptBar`
+        - Slots: `Conversation.Toolbar`, `Conversation.Title`, `Conversation.PromptBar`, `Conversation.PromptInput`
       - Exports (web):
         - Types: `ConversationRecord`
-        - Values: `Conversation`, `conversationPane`, `ConversationView`, `isMainPaneId`, `markMainPane`
+        - Values: `Conversation`, `conversationPane`, `ConversationView`, `isMainPaneId`, `markMainPane`, `PromptDraftProvider`, `usePromptDraft`
       - Plugins:
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Defines:
@@ -252,6 +252,9 @@
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
           - Contributes:
             - `Conversation.Toolbar` "Open"
+        - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
+          - Contributes:
+            - `Conversation.PromptInput` → `PromptInput`
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables.ts`

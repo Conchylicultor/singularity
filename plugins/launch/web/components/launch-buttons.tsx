@@ -3,6 +3,7 @@ import { MdAdd, MdPlayArrow } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   ConversationSchema,
+  type Conversation,
   type ConversationModel,
 } from "@plugins/conversations/shared";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ export type LaunchRequest = {
 export type LaunchButtonsProps = {
   getRequest?: () => LaunchRequest | Promise<LaunchRequest>;
   openAfterLaunch?: boolean;
+  onLaunched?: (conversation: Conversation) => void;
   variant?: "default" | "outline";
   size?: "default" | "sm" | "icon";
   disabled?: boolean;
@@ -30,6 +32,7 @@ const ICON_SIZE: Record<ConversationModel, string> = { sonnet: "size-3", opus: "
 export function LaunchButtons({
   getRequest,
   openAfterLaunch = true,
+  onLaunched,
   variant = "default",
   size = "default",
   disabled,
@@ -50,6 +53,7 @@ export function LaunchButtons({
       });
       if (!res.ok) return;
       const conversation = ConversationSchema.parse(await res.json());
+      onLaunched?.(conversation);
       if (openAfterLaunch) {
         conversationPane.open({ convId: conversation.id });
       }
