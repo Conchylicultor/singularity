@@ -320,17 +320,7 @@ function parseBarrelExports(src: string): BarrelExport[] {
   );
 }
 
-function mergeBarrelExports(...lists: BarrelExport[][]): BarrelExport[] {
-  const map = new Map<string, "type" | "value">();
-  for (const list of lists) {
-    for (const e of list) {
-      if (!map.has(e.name)) map.set(e.name, e.kind);
-    }
-  }
-  return Array.from(map, ([name, kind]) => ({ name, kind })).sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
-}
+
 
 function walkFiles(dir: string, out: string[]): void {
   let entries;
@@ -497,29 +487,11 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
   // Parse barrels on raw source (not stripTypes): the Bun transpiler drops
   // `export type { ... }` re-exports entirely, and our regex is already
   // type-aware.
-  const legacyWebApi = readIfExists(join(dir, "web", "api.ts"));
-  const webExports = mergeBarrelExports(
-    webIndex ? parseBarrelExports(webIndex) : [],
-    legacyWebApi ? parseBarrelExports(legacyWebApi) : [],
-  );
+  const webExports = webIndex ? parseBarrelExports(webIndex) : [];
+  const serverExports = serverIndex ? parseBarrelExports(serverIndex) : [];
 
-  // Merge `server/index.ts` barrel with legacy `server/api.ts` during the
-  // v2 migration. Once api.ts is collapsed into index.ts, the legacy branch
-  // contributes nothing.
-  const legacyServerApiSrc = readIfExists(join(dir, "server", "api.ts"));
-  const serverBarrelExports = serverIndex ? parseBarrelExports(serverIndex) : [];
-  const legacyServerApiExports = legacyServerApiSrc
-    ? parseBarrelExports(legacyServerApiSrc)
-    : [];
-  const serverExports = mergeBarrelExports(serverBarrelExports, legacyServerApiExports);
-
-  // Same transitional treatment for `shared/index.ts` (+ legacy `shared/api.ts`).
   const sharedIndex = readIfExists(join(dir, "shared", "index.ts"));
-  const legacySharedApi = readIfExists(join(dir, "shared", "api.ts"));
-  const sharedExports = mergeBarrelExports(
-    sharedIndex ? parseBarrelExports(sharedIndex) : [],
-    legacySharedApi ? parseBarrelExports(legacySharedApi) : [],
-  );
+  const sharedExports = sharedIndex ? parseBarrelExports(sharedIndex) : [];
 
   const serverDir = join(dir, "server");
   const apiUses = existsSync(serverDir) ? parseServerApiUses(serverDir, basename(dir)) : [];

@@ -1,6 +1,6 @@
 import { listProviders } from "./registry";
 import { getAccount } from "./token-store";
-import { getAccessTokenInternal } from "./api";
+import { getAccessTokenInternal } from "./token-access";
 
 const TICK_INTERVAL_MS = 60_000;
 const REFRESH_LEAD_MS = 5 * 60 * 1000;

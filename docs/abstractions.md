@@ -23,7 +23,7 @@ Shared backend hosting plugin routes in a single Bun process.
 - **Server plugin** — declares `httpRoutes`, `wsRoutes`, and `resources` in a flat `ServerPluginDefinition`.
 - **HTTP route** — `"METHOD /path"` → handler function; literal and `:param` segments supported.
 - **WebSocket route** — `/ws/...` → `{ open, message, close }` handler matching Bun's native interface.
-- **Public API (`api.ts`)** — the subset a plugin exports for cross-plugin import; anything under `internal/` is private.
+- **Public API (`index.ts`)** — the subset a plugin exports for cross-plugin import; anything under `internal/` is private.
 
 ## Live state
 

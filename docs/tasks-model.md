@@ -124,7 +124,7 @@ Each plugin splits its Drizzle schema in two:
 - **`server/schema_internal.ts`** — physical `pgTable` definitions for entities that have a derived view. Names are underscore-prefixed (`_tasks`, `_attempts`, `_conversations`). Only in-plugin writers import from here.
 - **`server/schema.ts`** — `pgView` definitions (`tasks`, `attempts`, `conversations`), plain tables with no derivation (e.g. `pushes`), Zod schemas, TypeScript types. All cross-plugin consumers import from here.
 
-A plugin's public `api.ts` re-exports from `schema.ts` only. The internal file is never exported to other plugins.
+A plugin's public `index.ts` re-exports from `schema.ts` only. The internal file is never exported to other plugins.
 
 This is enforceable: a check rule forbids cross-plugin imports of `schema_internal.ts`. Writers can only reach the underscored tables inside their own plugin; everyone else sees the unified view.
 

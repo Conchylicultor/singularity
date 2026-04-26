@@ -8,7 +8,7 @@ export {
   hasSecret,
   getSecretMetadata,
   listKeysInNamespace,
-} from "./internal/api";
+} from "./internal/operations";
 export { ready } from "./internal/ready";
 export type { SecretRef, SecretMetadata } from "@plugins/secrets/shared";
 export {

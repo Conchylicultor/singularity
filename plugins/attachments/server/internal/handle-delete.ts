@@ -1,4 +1,4 @@
-import { deleteAttachment } from "./api";
+import { deleteAttachment } from "./operations";
 
 export async function handleDelete(
   _req: Request,

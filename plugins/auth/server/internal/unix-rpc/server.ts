@@ -8,7 +8,7 @@ import {
   type TokenResponse,
 } from "./protocol";
 import { SOCKET_PATH } from "../paths";
-import { getAccessTokenInternal } from "../api";
+import { getAccessTokenInternal } from "../token-access";
 import { setApiKey, disconnectAccount } from "../actions";
 import { computeAuthState } from "../auth-state";
 

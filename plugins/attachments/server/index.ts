@@ -5,7 +5,9 @@ import { handleDelete } from "./internal/handle-delete";
 import { startOrphanSweep } from "./internal/orphan-sweep";
 import { ensureAttachmentsRoot } from "./internal/paths";
 
-export { _attachments, Attachments, deleteAttachment, getAttachment } from "./api";
+export { _attachments } from "./internal/tables";
+export { deleteAttachment, getAttachment } from "./internal/operations";
+export { Attachments } from "./internal/attachments";
 
 export default {
   id: "attachments",

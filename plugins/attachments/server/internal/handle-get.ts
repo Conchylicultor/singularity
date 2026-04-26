@@ -1,5 +1,5 @@
 import { stat } from "node:fs/promises";
-import { getAttachment } from "./api";
+import { getAttachment } from "./operations";
 
 export async function handleGet(
   _req: Request,
