@@ -27,7 +27,7 @@ export async function handleCrashRecovery(): Promise<Response> {
   );
 
   // Find the row by payload — addJob doesn't return the private-table id.
-  const rows = await db.execute(drizzleSql`
+  const result = await db.execute<{ id: string }>(drizzleSql`
     SELECT id FROM graphile_worker._private_jobs
      WHERE task_id = (
        SELECT id FROM graphile_worker._private_tasks
@@ -36,7 +36,7 @@ export async function handleCrashRecovery(): Promise<Response> {
        AND payload->'input'->>'label' = ${label}
      LIMIT 1
   `);
-  const row = rows[0] as { id: string } | undefined;
+  const row = result.rows[0];
   if (!row) {
     return Response.json(
       { ok: false, error: "enqueued row not found" },

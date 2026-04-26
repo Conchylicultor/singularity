@@ -1,4 +1,5 @@
-import { sql } from "@server/db/client";
+import { sql as drizzleSql } from "drizzle-orm";
+import { db } from "@server/db/client";
 
 // Recovery floor for jobs that were mid-execution when their worker died
 // uncleanly (SIGKILL, OOM-killer, kernel panic, `process.exit()` from a
@@ -44,17 +45,17 @@ export function stopStuckLockSweeper(): void {
 // Exported for the events-test crash-recovery endpoint, which forces a
 // sweep instead of waiting up to a minute for the next tick.
 export async function sweepOnce(): Promise<void> {
-  await sql.unsafe(`
+  await db.execute(drizzleSql.raw(`
     UPDATE graphile_worker._private_jobs
        SET locked_at = NULL,
            locked_by = NULL,
            run_at = greatest(run_at, now())
      WHERE locked_at < now() - interval '${STUCK_LOCK_THRESHOLD}'
-  `);
-  await sql.unsafe(`
+  `));
+  await db.execute(drizzleSql.raw(`
     UPDATE graphile_worker._private_job_queues
        SET locked_at = NULL,
            locked_by = NULL
      WHERE locked_at < now() - interval '${STUCK_LOCK_THRESHOLD}'
-  `);
+  `));
 }
