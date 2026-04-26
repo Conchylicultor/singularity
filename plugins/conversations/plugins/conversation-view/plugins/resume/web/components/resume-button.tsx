@@ -53,15 +53,13 @@ export function ResumeButton({
   return (
     <Button
       variant="default"
-      size="default"
-      title={tooltip}
+      size="icon-sm"
+      title={busy ? "Resuming…" : tooltip}
       aria-label="Resume"
       disabled={disabled}
       onClick={onClick}
-      className="gap-1.5 shadow-lg"
     >
-      <MdReplay className="size-4" />
-      {busy ? "Resuming…" : "Resume"}
+      <MdReplay className="size-3.5" />
     </Button>
   );
 }

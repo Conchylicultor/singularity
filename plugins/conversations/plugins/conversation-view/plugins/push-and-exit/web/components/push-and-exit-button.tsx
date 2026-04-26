@@ -106,15 +106,15 @@ export function PushAndExitButton({
     <>
       <Button
         variant="default"
-        size="default"
+        size="sm"
         title="Push & Exit"
         aria-label="Push & Exit"
         disabled={disabled}
         onClick={onClick}
-        className="gap-1.5 shadow-lg"
+        className="gap-1.5"
       >
         <MdRocketLaunch
-          className={`size-4 ${busy ? "animate-pulse" : ""}`}
+          className={`size-3.5 ${busy ? "animate-pulse" : ""}`}
         />
         {busy ? "Pushing…" : "Push & Exit"}
       </Button>

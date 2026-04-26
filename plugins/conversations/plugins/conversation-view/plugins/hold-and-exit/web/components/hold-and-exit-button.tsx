@@ -42,15 +42,13 @@ export function HoldAndExitButton({
   return (
     <Button
       variant="default"
-      size="default"
-      title="Hold & Exit"
+      size="icon-sm"
+      title={busy ? "Holding…" : "Hold & Exit"}
       aria-label="Hold & Exit"
       disabled={disabled}
       onClick={onClick}
-      className="gap-1.5 shadow-lg"
     >
-      <PauseCircle className="size-4" />
-      {busy ? "Holding…" : "Hold & Exit"}
+      <PauseCircle className="size-3.5" />
     </Button>
   );
 }

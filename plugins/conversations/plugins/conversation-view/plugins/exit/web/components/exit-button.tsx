@@ -42,15 +42,13 @@ export function ExitButton({
   return (
     <Button
       variant="outline"
-      size="default"
-      title="Exit"
+      size="icon-sm"
+      title={busy ? "Exiting…" : "Exit"}
       aria-label="Exit"
       disabled={disabled}
       onClick={onClick}
-      className="gap-1.5 shadow-lg"
     >
-      <LogOut className="size-4" />
-      {busy ? "Exiting…" : "Exit"}
+      <LogOut className="size-3.5" />
     </Button>
   );
 }

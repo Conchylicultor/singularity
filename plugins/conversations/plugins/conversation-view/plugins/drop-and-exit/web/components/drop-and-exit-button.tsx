@@ -42,15 +42,14 @@ export function DropAndExitButton({
   return (
     <Button
       variant="default"
-      size="default"
-      title="Drop & Exit"
+      size="icon-sm"
+      title={busy ? "Dropping…" : "Drop & Exit"}
       aria-label="Drop & Exit"
       disabled={disabled}
       onClick={onClick}
-      className="gap-1.5 shadow-lg bg-destructive text-destructive-foreground hover:bg-destructive/90"
+      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
     >
-      <MdDeleteForever className="size-4" />
-      {busy ? "Dropping…" : "Drop & Exit"}
+      <MdDeleteForever className="size-3.5" />
     </Button>
   );
 }

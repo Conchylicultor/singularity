@@ -23,6 +23,7 @@ export function ForkSessionButtons({
         <div className="flex items-center gap-1">
           <GitBranchPlus className="size-3.5 text-muted-foreground" />
           <LaunchButtons
+            size="sm"
             disabled={!ready}
             getRequest={() => {
               const prompt = draft.trim();

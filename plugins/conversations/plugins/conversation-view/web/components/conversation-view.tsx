@@ -35,19 +35,14 @@ function PromptBar({
   const sorted = [...sections.entries()].sort(([, a], [, b]) => a.order - b.order);
 
   return (
-    <div className="flex items-end gap-3">
+    <div className="flex items-center gap-2">
       {sorted.map(([section, { items: sectionItems }], idx) => (
-        <div key={section} className="flex items-center gap-3">
-          {idx > 0 && <div className="h-4 w-px bg-border" />}
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-[10px] leading-none text-muted-foreground/60">{section}</span>
-            <div className="flex items-center gap-1.5">
-              {sectionItems.map((item, i) => {
-                const Component = item.component;
-                return <Component key={i} conversation={conversation} />;
-              })}
-            </div>
-          </div>
+        <div key={section} className="flex items-center gap-1.5">
+          {idx > 0 && <div className="h-5 w-px bg-border" />}
+          {sectionItems.map((item, i) => {
+            const Component = item.component;
+            return <Component key={i} conversation={conversation} />;
+          })}
         </div>
       ))}
     </div>
