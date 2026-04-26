@@ -90,6 +90,8 @@ This will:
 
 The gateway serves the app automatically at `http://<worktree>.localhost:9000`.
 
+> **NEVER run `./singularity start`** (compiles and daemonizes the gateway) unless the user explicitly asks — this is a one-time system-level operation, not part of the normal agent workflow.
+
 ### Check
 
 Run repo validation checks (e.g. `schema.ts` matches committed migrations):
