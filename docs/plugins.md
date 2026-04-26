@@ -207,6 +207,9 @@
         - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
           - Contributes:
             - `Conversation.PromptBar` → `ForkConversationButtons`
+        - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
+          - Contributes:
+            - `Conversation.PromptBar` → `ForkSessionButtons`
         - **`hold-and-exit`** — Toolbar button that marks the task as held and closes the conversation.
           - Contributes:
             - `Conversation.PromptBar` → `HoldAndExitButton`

@@ -13,6 +13,7 @@ export type LaunchRequest = {
   prompt?: string;
   taskId?: string;
   attemptId?: string;
+  forkFromConversationId?: string;
 };
 
 export type LaunchButtonsProps = {

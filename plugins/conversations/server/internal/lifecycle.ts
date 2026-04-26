@@ -45,13 +45,39 @@ export async function createConversation(
     prompt?: string;
     model?: ConversationModel;
     spawnedBy?: string;
+    forkFromConversationId?: string;
   } = {},
 ): Promise<Conversation> {
   const runtimeId = opts.runtimeId ?? DEFAULT_RUNTIME;
   const runtime = Runtime.get(runtimeId);
-  const model = opts.model ?? DEFAULT_MODEL;
 
+  // When forking, inherit the source's attempt (same worktree) and claude
+  // session id; let the caller still override `model` so the +Sonnet/+Opus
+  // buttons work as expected.
+  let resumeSessionId: string | undefined;
   let attemptId = opts.attemptId;
+  let inheritedModel: ConversationModel | undefined;
+  if (opts.forkFromConversationId) {
+    const source = await getConversation(opts.forkFromConversationId);
+    if (!source) {
+      throw new Error(`Source conversation ${opts.forkFromConversationId} not found`);
+    }
+    if (!source.claudeSessionId) {
+      throw new Error(
+        `Source conversation ${opts.forkFromConversationId} hasn't started yet — no Claude session id available to fork`,
+      );
+    }
+    if (attemptId && attemptId !== source.attemptId) {
+      throw new Error(
+        `forkFromConversationId requires attemptId to match the source attempt`,
+      );
+    }
+    attemptId = source.attemptId;
+    resumeSessionId = source.claudeSessionId;
+    inheritedModel = source.model;
+  }
+  const model = opts.model ?? inheritedModel ?? DEFAULT_MODEL;
+
   let worktreePath: string;
   let conversationId: string;
 
@@ -102,6 +128,8 @@ export async function createConversation(
     prompt: opts.prompt,
     model,
     spawnedBy,
+    resumeSessionId,
+    forkSession: !!opts.forkFromConversationId,
   });
 
   const row = await getConversation(conversationId);

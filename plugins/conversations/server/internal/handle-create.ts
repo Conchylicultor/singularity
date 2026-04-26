@@ -9,6 +9,7 @@ export async function handleCreate(req: Request): Promise<Response> {
     prompt?: string;
     runtime?: string;
     model?: string;
+    forkFromConversationId?: string;
   };
 
   const model =
@@ -20,6 +21,7 @@ export async function handleCreate(req: Request): Promise<Response> {
     prompt: body.prompt,
     runtimeId: body.runtime,
     model,
+    forkFromConversationId: body.forkFromConversationId,
   });
   recentConversationsResource.notify();
   return Response.json(session);
