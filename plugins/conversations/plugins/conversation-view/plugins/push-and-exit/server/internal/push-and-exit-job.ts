@@ -6,37 +6,15 @@ import { defineJob } from "@plugins/jobs/server";
 import {
   recentConversationsResource,
   deleteConversation,
-  readConversationTurns,
   sendTurn,
-  type Turn,
+  conversationTurnCompleted,
+  type ConversationTurnCompletedPayload,
 } from "@plugins/conversations/server";
 import type { JobState } from "../../shared/resources";
 import { CLEAN_TOKEN, FLAG_TOKEN, PUSH_AND_EXIT_PROMPT } from "./prompt";
 import { _pushAndExitJobs } from "./tables";
 
-function sleep(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
-}
-
-async function waitForFinalTurn(
-  id: string,
-  since: string,
-  timeoutMs: number,
-): Promise<Turn | null> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const turns = await readConversationTurns(id, since);
-    const match = turns.find(
-      (t) =>
-        t.role === "assistant" &&
-        t.stopReason === "end_turn" &&
-        (t.text.includes(CLEAN_TOKEN) || t.text.includes(FLAG_TOKEN)),
-    );
-    if (match) return match;
-    await sleep(2000);
-  }
-  return null;
-}
+const FINAL_TURN_TIMEOUT_MS = 600_000; // 10 min
 
 function interpret(
   turnText: string,
@@ -84,45 +62,51 @@ async function setStatus(
   pushAndExitResource.notify();
 }
 
-// maxAttempts: 1 — the handler catches every business failure and writes a
-// terminal row, so only infra errors (DB, network to Graphile) can throw.
-// Silently re-prompting Claude on infra retries would be worse than surfacing
-// the error. Server-crash-mid-job is an accepted edge (see the migration plan
-// at research/2026-04-24-push-and-exit-jobs-migration.md §Risks).
+// Durable rewrite: handler is restart-safe because every side effect is
+// wrapped in `ctx.step` and the 10-minute wait is a `ctx.waitFor` — the
+// worker suspends off-CPU and resumes on `conversation.turn-completed`
+// (or the timeout, whichever fires first). `maxAttempts: 3` is safe now
+// that steps memoize — transient infra failures get retried without
+// re-prompting Claude.
 export const pushAndExitJob = defineJob({
   name: "push_and_exit.run",
   input: z.object({ conversationId: z.string() }),
-  maxAttempts: 1,
-  run: async ({ conversationId }) => {
-    const triggeredAt = new Date().toISOString();
-    try {
+  maxAttempts: 3,
+  run: async ({ conversationId }, ctx) => {
+    await ctx.step("send-prompt", async () => {
       await sendTurn(conversationId, PUSH_AND_EXIT_PROMPT);
+    });
 
-      const finalTurn = await waitForFinalTurn(conversationId, triggeredAt, 600_000);
+    const turn = await ctx.waitFor<ConversationTurnCompletedPayload>(
+      conversationTurnCompleted,
+      { where: { conversationId }, timeoutMs: FINAL_TURN_TIMEOUT_MS },
+    );
 
-      if (!finalTurn) {
-        await setStatus(
+    if (!turn) {
+      await ctx.step("flag-timeout", () =>
+        setStatus(
           conversationId,
           "flag",
-          "Couldn't find Claude's final message in the transcript.",
-        );
-        return;
-      }
+          "Claude didn't emit a final message within 10 minutes.",
+        ),
+      );
+      return;
+    }
 
-      const verdict = interpret(finalTurn.text);
-      if (verdict.status === "clean") {
-        // Notify with status=clean BEFORE deleting the conversation so the UI
-        // sees the success state; otherwise the conversation disappears from
-        // listings before the toast can fire.
-        await setStatus(conversationId, "clean", null);
+    const verdict = interpret(turn.text);
+    if (verdict.status === "clean") {
+      // Notify with status=clean BEFORE deleting the conversation so the UI
+      // sees the success state; otherwise the conversation disappears from
+      // listings before the toast can fire.
+      await ctx.step("mark-clean", () => setStatus(conversationId, "clean", null));
+      await ctx.step("delete-conversation", async () => {
         await deleteConversation(conversationId);
         recentConversationsResource.notify();
-      } else {
-        await setStatus(conversationId, "flag", verdict.text);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      await setStatus(conversationId, "error", message);
+      });
+    } else {
+      await ctx.step("mark-flag", () =>
+        setStatus(conversationId, "flag", verdict.text),
+      );
     }
   },
 });

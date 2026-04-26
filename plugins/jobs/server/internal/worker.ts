@@ -1,19 +1,20 @@
+import { eq } from "drizzle-orm";
 import {
   makeWorkerUtils,
   run,
   type Runner,
   type WorkerUtils,
 } from "graphile-worker";
-import { connectionString } from "@server/db/client";
+import { connectionString, db } from "@server/db/client";
 import { JOB_TASK } from "./constants";
-import { UNSAFE_getRegisteredJob } from "./registry";
+import {
+  UNSAFE_getRegisteredJob,
+  type JobTaskPayload,
+} from "./registry";
+import { isSuspendSignal, makeDurableCtx } from "./step-ctx";
+import { _jobSteps, _jobWaits } from "./tables";
 
 const CONCURRENCY = 4;
-
-interface JobTaskPayload {
-  jobName: string;
-  input: unknown;
-}
 
 let runner: Runner | null = null;
 
@@ -74,17 +75,87 @@ export async function stopWorker(): Promise<void> {
 // preservation semantics catch those conditions in their own handler.
 async function dispatch(
   payload: JobTaskPayload,
-  ctx: { jobId: string; attempt: number },
+  meta: { jobId: string; attempt: number },
 ): Promise<void> {
   const job = UNSAFE_getRegisteredJob(payload.jobName);
   if (!job) {
     throw new Error(`[jobs] unknown job "${payload.jobName}"`);
   }
-  const parsed = job.inputSchema.safeParse(payload.input);
-  if (!parsed.success) {
+  // Validation only — DO NOT use `parsed.data` for the handler. The stored
+  // payload was already transformed at enqueue time; re-using `parsed.data`
+  // would re-run any `.transform()` in the schema on every retry/resume,
+  // which yields divergent results for non-idempotent transforms (e.g.
+  // `z.string().transform(s => s + "!")`). Contract: a job's input schema
+  // is parsed exactly once, at the original `enqueue()`. The worker
+  // re-validates only to catch schema drift after a redeploy.
+  const validation = job.inputSchema.safeParse(payload.input);
+  if (!validation.success) {
     throw new Error(
-      `[jobs] input schema drift for "${payload.jobName}": ${parsed.error.message}`,
+      `[jobs] input schema drift for "${payload.jobName}": ${validation.error.message}`,
     );
   }
-  await job.run(parsed.data, ctx);
+
+  const workflowRunId =
+    payload.workflowRunId ??
+    // Back-compat for any pre-workflowRunId rows that may still sit in the
+    // queue during a rolling upgrade: synthesise a stable id from jobId so
+    // the step log keys are consistent across retries of THIS graphile job.
+    `legacy:${meta.jobId}`;
+
+  const ctx = makeDurableCtx({
+    jobId: meta.jobId,
+    attempt: meta.attempt,
+    workflowRunId,
+    jobName: payload.jobName,
+    originalInput: payload.input,
+    scheduleResume: async (resumePayload, opts) => {
+      const resumeJob = UNSAFE_getRegisteredJob("jobs.resume");
+      if (!resumeJob) {
+        throw new Error(
+          "[jobs] jobs.resume not registered — jobs/server/index.ts must side-effect import resume-job.ts",
+        );
+      }
+      await resumeJob.enqueue(resumePayload, {
+        jobKey: opts.jobKey,
+        runAt: opts.runAt,
+      });
+    },
+  });
+
+  try {
+    await job.run(payload.input, ctx);
+  } catch (err) {
+    if (isSuspendSignal(err)) {
+      // Graphile sees a successful run — the current job completes and the
+      // row is deleted. Resume happens via a fresh `enqueue` issued by
+      // `jobs.resume` when the event fires or the timeout hits.
+      return;
+    }
+    throw err;
+  }
+
+  // Normal completion: drop the step + wait logs for this run. Trigger rows
+  // outlive this cleanup — oneShot rows are deleted by the events dispatcher
+  // after their target succeeds; an orphan from a never-fired trigger is
+  // harmless (it fires → `jobs.resume` finds no wait row → returns).
+  //
+  // Cleanup failures are logged but NOT thrown. The handler already
+  // succeeded; rethrowing would force graphile to retry an idempotent
+  // workflow whose only effect is dead-row cleanup. The leaked rows are
+  // bounded (one workflow's worth) and harmless on replay — the next
+  // dispatch of the same workflowRunId would short-circuit through the
+  // cached steps. A periodic sweep can reap them later if it ever matters.
+  try {
+    await db
+      .delete(_jobSteps)
+      .where(eq(_jobSteps.workflowRunId, workflowRunId));
+    await db
+      .delete(_jobWaits)
+      .where(eq(_jobWaits.workflowRunId, workflowRunId));
+  } catch (err) {
+    console.warn(
+      `[jobs] cleanup of step/wait logs failed for workflow ${workflowRunId}`,
+      err,
+    );
+  }
 }

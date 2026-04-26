@@ -123,17 +123,18 @@
 
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:
+    - DB schema: `plugins/conversations/server/internal/tables-turn-completed-event.ts`
     - DB schema: `plugins/conversations/server/schema.ts`
   - Exports (web):
     - Values: `CONV_STATUS_DOT`, `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
   - Exports (server):
-    - Types: `Conversation`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `RuntimeInfo`, `Turn`
-    - Values: `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `createConversation`, `deleteConversation`, `findTranscriptPath`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`
+    - Types: `Conversation`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`
+    - Values: `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `findTranscriptPath`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`
   - Exports (shared):
     - Types: `Conversation`, `ConversationEntry`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
   - Server:
-    - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.insertConversation`, `tasks-core.listConversations`, `tasks-core.listGoneConversationsBefore`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
+    - Uses: `events.defineTriggerEvent`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.insertConversation`, `tasks-core.listConversations`, `tasks-core.listGoneConversationsBefore`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/gone`
     - `GET /api/conversations/:id`
@@ -257,7 +258,7 @@
           - Contributes:
             - `Conversation.PromptBar` → `PushAndExitButton`
           - Server:
-            - Uses: `conversations.Turn`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.recentConversationsResource`, `conversations.sendTurn`, `jobs.defineJob`
+            - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.recentConversationsResource`, `conversations.sendTurn`, `jobs.defineJob`
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
             - `DELETE /api/conversations/:id/push-and-exit`
@@ -377,10 +378,10 @@
     - DB schema: `plugins/events/server/internal/event.ts`
     - DB schema: `plugins/events/server/internal/tables.ts`
   - Exports (server):
-    - Types: `DefineTriggerEventSpec`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`
-    - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `trigger`, `triggerTableRegistry`
+    - Types: `DefineTriggerEventSpec`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerByNameSpec`, `TriggerSpec`
+    - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `trigger`, `triggerByName`, `triggerTableRegistry`
   - Server:
-    - Uses: `jobs.DEFAULT_MAX_ATTEMPTS`, `jobs.UNSAFE_getRegisteredJob`, `jobs.defineJob`
+    - Uses: `jobs.DEFAULT_MAX_ATTEMPTS`, `jobs.UNSAFE_getRegisteredJob`, `jobs.UNSAFE_installDurableHooks`, `jobs.defineJob`
     - `GET /api/events/emissions`
     - `GET /api/events/triggers`
     - `DELETE /api/events/triggers/:id`
@@ -426,9 +427,11 @@
     - `POST /api/improve/submit`
 
 - **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
+  - Defines:
+    - DB schema: `plugins/jobs/server/internal/tables.ts`
   - Exports (server):
-    - Types: `DefineJobSpec`, `JobCtx`, `JobFactory`, `RegisteredJob`
-    - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `UNSAFE_getRegisteredJob`
+    - Types: `DefineJobSpec`, `DurableHooks`, `JobCtx`, `JobFactory`, `RegisteredJob`
+    - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `isSuspendSignal`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`
   - Server:
     - `GET /api/jobs`
     - `POST /api/jobs/:id/retry`

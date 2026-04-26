@@ -8,6 +8,7 @@ import { handleGet } from "./internal/handle-get";
 import { handleListTurns } from "./internal/handle-list-turns";
 import { handlePostTurn } from "./internal/handle-post-turn";
 import { startPoller } from "./internal/poller";
+import { startTurnEmitter } from "./internal/turn-emitter";
 import { forkErrorsResource } from "./internal/fork-errors";
 
 export { ConversationModelSchema } from "./schema";
@@ -24,6 +25,8 @@ export type { Turn } from "./internal/claude-transcript";
 export { findTranscriptPath } from "./internal/claude-transcript";
 export { Runtime, getConversationRow, readConversationTurns, sendTurn } from "./internal/runtime";
 export type { RuntimeInfo, ConversationRuntime } from "./internal/runtime";
+export { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
+export type { ConversationTurnCompletedPayload } from "./internal/tables-turn-completed-event";
 
 export default {
   id: "conversations",
@@ -42,5 +45,8 @@ export default {
   },
   // recentConversationsResource is now mounted on tasks-core; only fork-errors stays here.
   resources: [forkErrorsResource],
-  onReady: () => startPoller(),
+  onReady: () => {
+    startPoller();
+    startTurnEmitter();
+  },
 } satisfies ServerPluginDefinition;

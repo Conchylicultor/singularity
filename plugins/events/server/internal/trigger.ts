@@ -21,6 +21,44 @@ export interface TriggerSpec<P, I> {
 // Persist a subscription. Inserts one row into the event's per-type table
 // with the filter values, job name, and serialized `with` config.
 export async function trigger<P, I>(spec: TriggerSpec<P, I>): Promise<string> {
+  return insertTriggerRow({
+    on: spec.on,
+    jobName: spec.do.name,
+    with: spec.with as Record<string, unknown> | undefined,
+    oneShot: spec.oneShot,
+  });
+}
+
+export interface TriggerByNameSpec<P> {
+  on: EventSource<P>;
+  /**
+   * Target job, identified by registered name. Used by infrastructure code
+   * (e.g. the @plugins/jobs durable-hook bridge) that can't hold a typed
+   * `JobFactory` reference back to its own builtin without closing the
+   * plugin DAG. Plugin authors should prefer `trigger()` — passing the
+   * typed factory keeps `with` linked to the target's input schema.
+   */
+  jobName: string;
+  with?: Record<string, unknown>;
+  oneShot?: boolean;
+}
+
+// Same row-insert as `trigger()`, but typed for callers that only carry a
+// job name. Skips the JobFactory typing — `with` is therefore unconstrained.
+export async function triggerByName<P>(
+  spec: TriggerByNameSpec<P>,
+): Promise<string> {
+  return insertTriggerRow(spec);
+}
+
+interface RowInsertSpec<P> {
+  on: EventSource<P>;
+  jobName: string;
+  with?: Record<string, unknown>;
+  oneShot?: boolean;
+}
+
+async function insertTriggerRow<P>(spec: RowInsertSpec<P>): Promise<string> {
   if (spec.on.__kind !== "event") {
     throw new Error(
       `[events] trigger({ on }) got unsupported source kind: ${(spec.on as { __kind: string }).__kind}`,
@@ -31,8 +69,8 @@ export async function trigger<P, I>(spec: TriggerSpec<P, I>): Promise<string> {
   const oneShot = spec.oneShot ?? true;
 
   const values: Record<string, unknown> = {
-    jobName: spec.do.name,
-    jobWith: (spec.with ?? {}) as Record<string, unknown>,
+    jobName: spec.jobName,
+    jobWith: spec.with ?? {},
     oneShot,
   };
   for (const key of Object.keys(def.filterColumns)) {
