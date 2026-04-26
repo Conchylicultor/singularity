@@ -1,10 +1,10 @@
 # FD monitor — diagnose macOS "too many files open" crashes
 
-A launchd agent that snapshots system FD-table and process state every 30s into `~/.singularity/logs/fd-monitor.log`. Goal: when the Mac next hits a system-wide "too many files open" event, the log tells us *which process family* was burning FDs in the minute leading up to it.
+A launchd agent that snapshots system FD-table and process state every 30s into `~/.singularity/logs/fd-monitor.log`, plus dumps a forensic snapshot to `~/.singularity/logs/fd-monitor-incidents/<ts>/` whenever any single process holds an unusual number of FDs or `kern.num_files` crosses a fraction of `kern.maxfiles`.
 
 ## Why
 
-Singularity is a strong suspect for these crashes (long-lived gateway, many spawned bun backends, accumulating worktrees / Postgres DBs / tmux sessions), but the visible idle-state numbers don't add up to a crash on their own. The monitor captures the actual pressure at crash time so we can stop guessing.
+Originally set up because Singularity was the leading suspect for "too many files open" crashes (long-lived gateway, many spawned bun backends, accumulating worktrees / Postgres DBs / tmux sessions). The monitor captured a real spike on 2026-04-26 and showed the leak was a runaway **Claude CLI** child process (pid held 65,489 FDs in <30s; `lsof` itself failed mid-run; system rebooted seconds later). Singularity processes were normal throughout. The monitor is being kept active to catch future repeats and gather full forensics.
 
 ## What it captures
 
@@ -37,6 +37,30 @@ worktree_jsons=349
 ```
 
 When a crash happens, `tail -n 500` of the log reveals which command shot up.
+
+### Incident dumps
+
+If any pid holds more than `SUSPECT_PID_FDS` (default **3000**) FDs, or `kern.num_files` crosses `SYSTEM_NUM_FILES_PCT` (default **25%**) of `kern.maxfiles`, this tick *also* writes a forensic dump to:
+
+```
+~/.singularity/logs/fd-monitor-incidents/<YYYYMMDD-HHMMSS>/
+├── system.txt           # kernel state, top 50 cmd:pid, top 20 cmd groups, full ps
+├── system.lsof.gz       # gzipped system-wide lsof at incident time
+├── pid<pid>.txt         # ps line, FD type/kind breakdown, top 30 names per suspect pid
+└── pid<pid>.lsof.gz     # gzipped full lsof for that pid
+```
+
+The main log gets a `!!!!! INCIDENT <ts>` annotation pointing at the dir, so `grep '!!!!!' fd-monitor.log` is the fast way to find them.
+
+Why dump *during* the tick: the leaker often dies before the next tick (hits `kern.maxfilesperproc` and is killed, or the box crashes). The lsof we already captured this tick is the only evidence of what it had open.
+
+Override thresholds via env vars on the LaunchAgent if needed:
+
+```sh
+SUSPECT_PID_FDS=5000 SYSTEM_NUM_FILES_PCT=40 zsh sidequests/fd-monitor/fd-monitor.sh
+```
+
+Incident dirs older than 14 days are auto-purged.
 
 ## Files
 
