@@ -1,15 +1,30 @@
 import { useState } from "react";
-import { MdClose } from "react-icons/md";
+import { MdClose, MdArrowUpward } from "react-icons/md";
 import { Button } from "@/components/ui/button";
+import { useResource } from "@core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { TasksList } from "@plugins/tasks/web";
 import { TaskDetail } from "@plugins/tasks/web";
+import { tasksResource } from "@plugins/tasks/shared";
 import { convTasksPane } from "../panes";
 
 export function TasksPane() {
   const { conversation } = conversationPane.useData();
-  const rootId = conversation.taskId;
-  const [selectedId, setSelectedId] = useState<string>(rootId);
+  const convRootId = conversation.taskId;
+  const [viewRootId, setViewRootId] = useState<string>(convRootId);
+  const [selectedId, setSelectedId] = useState<string>(convRootId);
+
+  const { data: tasks } = useResource(tasksResource);
+  const viewRoot = tasks?.find((t) => t.id === viewRootId);
+  const parentId = viewRoot?.parentId ?? null;
+
+  const goToParent = parentId
+    ? () => {
+        setViewRootId(parentId);
+        setSelectedId(parentId);
+      }
+    : null;
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2 border-b px-2 py-1.5">
@@ -23,11 +38,23 @@ export function TasksPane() {
         >
           <MdClose className="size-4" />
         </Button>
-        <div className="text-sm font-medium">Tasks</div>
+        <div className="flex-1 text-sm font-medium">Tasks</div>
+        {goToParent && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 shrink-0"
+            title="Go to parent task"
+            aria-label="Go to parent task"
+            onClick={goToParent}
+          >
+            <MdArrowUpward className="size-4" />
+          </Button>
+        )}
       </div>
       <div className="max-h-[40%] min-h-0 shrink-0 overflow-auto border-b p-2">
         <TasksList
-          rootTaskId={rootId}
+          rootTaskId={viewRootId}
           selectedId={selectedId}
           onSelect={setSelectedId}
         />
