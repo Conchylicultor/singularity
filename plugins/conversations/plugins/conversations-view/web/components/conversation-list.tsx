@@ -10,6 +10,9 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuAction,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 type ConversationEntry = ReturnType<typeof useConversations>["active"][number];
 
@@ -33,6 +36,40 @@ function openConversation(name: string) {
 function activeIdFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/c\/([^/]+)/);
   return m ? decodeURIComponent(m[1]!) : null;
+}
+
+function statusDotClass(conv: ConversationEntry) {
+  return cn(
+    "mt-1.5 size-1.5 shrink-0 rounded-full",
+    conv.status === "working"
+      ? "bg-primary"
+      : conv.status === "waiting"
+        ? "bg-amber-500"
+        : conv.status === "gone"
+          ? "bg-muted-foreground/40"
+          : "bg-muted-foreground/60",
+  );
+}
+
+function ConversationContent({ conv }: { conv: ConversationEntry }) {
+  return (
+    <div className="flex items-start gap-2 overflow-hidden">
+      <span className={statusDotClass(conv)} />
+      <div className="flex flex-col gap-0.5 overflow-hidden">
+        <span
+          className={cn(
+            "truncate text-xs",
+            conv.active ? "font-medium" : "text-muted-foreground",
+          )}
+        >
+          {conv.title ?? "Starting..."}
+        </span>
+        <span className="truncate text-[10px] tabular-nums text-muted-foreground">
+          {formatRelativeTime(conv.createdAt)}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export function ConversationList() {
@@ -94,6 +131,22 @@ export function ConversationList() {
     [paginatedData, liveIds],
   );
 
+  // Group active conversations by attempt. Server sends newest-first, so the
+  // first conversation encountered per attempt is the most recently started —
+  // preserving that order for group priority. Within each group, sort
+  // oldest-first so the original conversation is at the top with forks below.
+  const attemptGroups = useMemo(() => {
+    const map = new Map<string, ConversationEntry[]>();
+    for (const c of active) {
+      const group = map.get(c.attemptId) ?? [];
+      group.push(c);
+      map.set(c.attemptId, group);
+    }
+    return Array.from(map.values()).map((group) =>
+      [...group].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
+    );
+  }, [active]);
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = sentinelRef.current;
@@ -107,61 +160,33 @@ export function ConversationList() {
     return () => obs.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const closeConversation = async (name: string, e: React.MouseEvent) => {
+  const closeConversation = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    await fetch(`/api/conversations/${name}/close`, { method: "POST" });
+    await fetch(`/api/conversations/${id}/close`, { method: "POST" });
   };
 
-  const renderItem = (conversation: ConversationEntry) => {
-    const working = conversation.status === "working";
-    const waiting = conversation.status === "waiting";
-    const gone = conversation.status === "gone";
-    const label = conversation.title ?? "Starting...";
-    return (
-      <SidebarMenuItem key={conversation.id}>
-        <SidebarMenuButton
-          className="h-auto py-1.5"
-          isActive={conversation.id === activeId}
-          onClick={() => {
-            openConversation(conversation.id);
-            setActiveId(conversation.id);
-          }}
-        >
-          <div className="flex items-start gap-2 overflow-hidden">
-            <span className={cn(
-              "mt-1.5 size-1.5 shrink-0 rounded-full",
-              working
-                ? "bg-primary"
-                : waiting
-                  ? "bg-amber-500"
-                  : gone
-                    ? "bg-muted-foreground/40"
-                    : "bg-muted-foreground/60",
-            )} />
-            <div className="flex flex-col gap-0.5 overflow-hidden">
-              <span
-                className={cn(
-                  "truncate text-xs",
-                  conversation.active ? "font-medium" : "text-muted-foreground",
-                )}
-              >
-                {label}
-              </span>
-              <span className="truncate text-[10px] tabular-nums text-muted-foreground">
-                {formatRelativeTime(conversation.createdAt)}
-              </span>
-            </div>
-          </div>
-        </SidebarMenuButton>
-        <SidebarMenuAction
-          onClick={(e: React.MouseEvent) => closeConversation(conversation.id, e)}
-          className="opacity-0 group-hover/menu-item:opacity-100"
-        >
-          <MdClose className="size-3.5" />
-        </SidebarMenuAction>
-      </SidebarMenuItem>
-    );
+  const navigate = (id: string) => {
+    openConversation(id);
+    setActiveId(id);
   };
+
+  const renderItem = (conv: ConversationEntry) => (
+    <SidebarMenuItem key={conv.id}>
+      <SidebarMenuButton
+        className="h-auto py-1.5"
+        isActive={conv.id === activeId}
+        onClick={() => navigate(conv.id)}
+      >
+        <ConversationContent conv={conv} />
+      </SidebarMenuButton>
+      <SidebarMenuAction
+        onClick={(e: React.MouseEvent) => closeConversation(conv.id, e)}
+        className="opacity-0 group-hover/menu-item:opacity-100"
+      >
+        <MdClose className="size-3.5" />
+      </SidebarMenuAction>
+    </SidebarMenuItem>
+  );
 
   const isEmpty = active.length === 0 && recentGone.length === 0;
 
@@ -169,7 +194,47 @@ export function ConversationList() {
     <div className="flex flex-col gap-1">
       <LaunchButtons variant="outline" size="sm" className="px-2" />
       <SidebarMenu>
-        {active.map(renderItem)}
+        {attemptGroups.map((group) => {
+          const [root, ...forks] = group;
+          if (!root) return null;
+          if (forks.length === 0) return renderItem(root);
+          return (
+            <SidebarMenuItem key={root.attemptId}>
+              <SidebarMenuButton
+                className="h-auto py-1.5"
+                isActive={root.id === activeId}
+                onClick={() => navigate(root.id)}
+              >
+                <ConversationContent conv={root} />
+              </SidebarMenuButton>
+              <SidebarMenuAction
+                onClick={(e: React.MouseEvent) => closeConversation(root.id, e)}
+                className="opacity-0 group-hover/menu-item:opacity-100"
+              >
+                <MdClose className="size-3.5" />
+              </SidebarMenuAction>
+              <SidebarMenuSub>
+                {forks.map((fork) => (
+                  <SidebarMenuSubItem key={fork.id} className="relative group/menu-item">
+                    <SidebarMenuSubButton
+                      className="h-auto py-1"
+                      isActive={fork.id === activeId}
+                      onClick={() => navigate(fork.id)}
+                    >
+                      <ConversationContent conv={fork} />
+                    </SidebarMenuSubButton>
+                    <SidebarMenuAction
+                      onClick={(e: React.MouseEvent) => closeConversation(fork.id, e)}
+                      className="opacity-0 group-hover/menu-item:opacity-100"
+                    >
+                      <MdClose className="size-3.5" />
+                    </SidebarMenuAction>
+                  </SidebarMenuSubItem>
+                ))}
+              </SidebarMenuSub>
+            </SidebarMenuItem>
+          );
+        })}
         {recentGone.map(renderItem)}
         {paginatedItems.map(renderItem)}
         {isFetchingNextPage && (
