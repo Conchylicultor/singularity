@@ -37,7 +37,7 @@ export async function handleListJobs(req: Request): Promise<Response> {
   // graphile_worker.jobs is a view that omits `payload` (payload lives on the
   // underlying _private_jobs table). Join in task_identifier + queue_name to
   // get the same shape the public view exposes, plus payload.
-  const rows = (await db.execute(
+  const result = await db.execute(
     sql`SELECT j.id::text,
                t.identifier AS task_identifier,
                j.payload,
@@ -52,9 +52,9 @@ export async function handleListJobs(req: Request): Promise<Response> {
          WHERE t.identifier = ${JOB_TASK}
          ORDER BY j.run_at DESC
          LIMIT ${limit}`,
-  )) as unknown as GraphileJobRow[];
+  );
 
-  const out = rows.map((r) => ({
+  const out = (result.rows as unknown as GraphileJobRow[]).map((r) => ({
     id: r.id,
     jobName: r.payload?.jobName ?? "(unknown)",
     input: r.payload?.input ?? null,

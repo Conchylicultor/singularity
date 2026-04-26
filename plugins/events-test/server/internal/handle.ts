@@ -81,10 +81,10 @@ export async function handleWaitIdle(req: Request): Promise<Response> {
   const timeoutMs = Number(url.searchParams.get("timeoutMs") ?? 2000);
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const rows = await db.execute(
+    const result = await db.execute<{ n: number }>(
       sql`SELECT count(*)::int AS n FROM graphile_worker.jobs WHERE task_identifier = 'jobs.run' AND attempts < max_attempts`,
     );
-    const n = (rows[0] as { n: number } | undefined)?.n ?? 0;
+    const n = result.rows[0]?.n ?? 0;
     if (n === 0) return Response.json({ idle: true });
     await new Promise((r) => setTimeout(r, 25));
   }

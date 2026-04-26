@@ -6,12 +6,24 @@ import {
   type PgTable,
   pgTable,
 } from "drizzle-orm/pg-core";
-import { DEFAULT_MAX_ATTEMPTS, UNSAFE_getRegisteredJob } from "@plugins/jobs/server";
+import {
+  DEFAULT_MAX_ATTEMPTS,
+  type EnqueueTx,
+  UNSAFE_getRegisteredJob,
+} from "@plugins/jobs/server";
 import { db } from "@server/db/client";
 import { eventTriggerColumns } from "./base-columns";
 import { eventsDispatchJob } from "./dispatch-job";
 import { triggerTableRegistry } from "./registry";
 import { _event_emissions, EMISSIONS_CAP } from "./tables";
+
+/**
+ * Drizzle node-postgres database/transaction handle, threaded through
+ * `emit(payload, { tx })` to make the trigger SELECT, the emission audit
+ * insert, and the `graphile_worker.jobs` INSERT all run on the caller's
+ * transaction client. Rollback drops all three atomically.
+ */
+export type EmitTx = EnqueueTx;
 
 // A filter slot is either a plain column builder (identity-or-null match on
 // the same-named payload key) or an object with an explicit match predicate.
@@ -48,7 +60,14 @@ export interface EventSource<T = unknown> {
 // Source and additionally exposes `.emit` (owner-only) and `.where` (subscriber).
 export type EventHandle<T, F extends Record<string, unknown>> = EventSource<T> & {
   readonly name: string;
-  emit(payload: T): Promise<void>;
+  /**
+   * Announce a fact. Pass `{ tx }` when emitting from inside a Drizzle
+   * transaction — the trigger SELECT, the emission audit, and the job
+   * INSERT all run on the same connection, so a rollback drops all three
+   * atomically. Without `tx`, dispatch goes through Graphile's own pool
+   * (correct for post-commit emit).
+   */
+  emit(payload: T, opts?: { tx?: EmitTx }): Promise<void>;
   where(filter: Partial<{ [K in keyof F & keyof T]: T[K] }>): EventSource<T>;
 };
 
@@ -135,8 +154,8 @@ export function defineTriggerEvent<
     },
     {
       name: spec.name,
-      emit: async (payload: T) => {
-        await dispatch(def, payload);
+      emit: async (payload: T, opts?: { tx?: EmitTx }) => {
+        await dispatch(def, payload, opts?.tx);
       },
       where: (filter: Partial<{ [K in keyof F & keyof T]: T[K] }>) => ({
         __kind: "event" as const,
@@ -151,7 +170,12 @@ export function defineTriggerEvent<
 
 // ─── Dispatch ────────────────────────────────────────────────────────────
 
-async function dispatch<T>(def: EventDef<T>, payload: T): Promise<void> {
+async function dispatch<T>(
+  def: EventDef<T>,
+  payload: T,
+  tx?: EmitTx,
+): Promise<void> {
+  const exec = tx ?? db;
   // biome-ignore lint/suspicious/noExplicitAny: base-column property access on PgTable.
   const enabledCol = (def.table as any).enabled as AnyPgColumn;
   const predicates: SQL[] = [eq(enabledCol, true)];
@@ -166,14 +190,14 @@ async function dispatch<T>(def: EventDef<T>, payload: T): Promise<void> {
     }
   }
 
-  const rows = await db
+  const rows = await exec
     .select()
     .from(def.table)
     .where(and(...predicates));
 
   // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
   const matchedIds = rows.map((r) => (r as any).id as string);
-  await recordEmission(def.name, payload, matchedIds);
+  await recordEmission(def.name, payload, matchedIds, tx);
 
   if (rows.length === 0) return;
 
@@ -188,6 +212,10 @@ async function dispatch<T>(def: EventDef<T>, payload: T): Promise<void> {
   // `defineJob({ maxAttempts })` declared. Unknown target → fall through to
   // DEFAULT_MAX_ATTEMPTS; the dispatcher's preservation branch returns
   // without throwing, so retries never actually run in that case.
+  //
+  // When `tx` is provided, `eventsDispatchJob.enqueue` writes the queue row
+  // on the caller's connection (see plugins/jobs/server/internal/registry.ts),
+  // so the job lives or dies with the caller's transaction.
   await Promise.all(
     rows.map((row) => {
       // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
@@ -205,7 +233,7 @@ async function dispatch<T>(def: EventDef<T>, payload: T): Promise<void> {
           // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
           oneShot: (row as any).oneShot as boolean,
         },
-        { maxAttempts: target?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS },
+        { maxAttempts: target?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS, tx },
       );
     }),
   );
@@ -218,15 +246,17 @@ async function recordEmission(
   eventName: string,
   payload: unknown,
   matchedTriggerIds: string[],
+  tx?: EmitTx,
 ): Promise<void> {
-  await db.insert(_event_emissions).values({
+  const exec = tx ?? db;
+  await exec.insert(_event_emissions).values({
     eventName,
     payload: (payload ?? {}) as Record<string, unknown>,
     matchedCount: matchedTriggerIds.length,
     matchedTriggerIds,
   });
   // Cap at EMISSIONS_CAP rows — cheap single DELETE instead of a window.
-  await db.execute(
+  await exec.execute(
     sql`DELETE FROM ${_event_emissions}
         WHERE ${_event_emissions.id} IN (
           SELECT id FROM ${_event_emissions}

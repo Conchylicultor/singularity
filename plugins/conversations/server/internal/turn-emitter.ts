@@ -172,12 +172,12 @@ async function pollRoom(conversationId: string): Promise<void> {
 // and would also miss future consumers that wait on this event for non-jobs
 // reasons.
 async function hasPendingTrigger(conversationId: string): Promise<boolean> {
-  const rows = (await db.execute(
+  const result = await db.execute<{ id: string }>(
     sql`SELECT id FROM ${_conversationTurnCompletedTriggers}
         WHERE enabled = true AND conversation_id = ${conversationId}
         LIMIT 1`,
-  )) as unknown as Array<{ id: string }>;
-  return rows.length > 0;
+  );
+  return result.rows.length > 0;
 }
 
 interface EndTurn {

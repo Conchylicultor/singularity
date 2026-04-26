@@ -14,8 +14,8 @@
  *   SINGULARITY_WORKTREE=singularity bun scripts/backfill-pushes.ts --write  # apply
  */
 
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import { pgTable, text, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
 
 const DRY_RUN = !process.argv.includes("--write");
@@ -151,8 +151,8 @@ const connectionString = `postgres://${user}@${host}:${port}/${worktree}`;
 console.log(`DB:   ${connectionString}`);
 console.log(`Mode: ${DRY_RUN ? "DRY RUN (pass --write to apply)" : "WRITE"}\n`);
 
-const sql = postgres(connectionString, { max: 1 });
-const db = drizzle(sql);
+const pool = new Pool({ connectionString, max: 1 });
+const db = drizzle(pool);
 
 const mainCwd = await getMainWorktree();
 console.log(`Main worktree: ${mainCwd}\n`);
@@ -172,7 +172,7 @@ console.log();
 
 if (missing.length === 0) {
   console.log("Nothing to backfill.");
-  await sql.end();
+  await pool.end();
   process.exit(0);
 }
 
@@ -225,4 +225,4 @@ if (DRY_RUN) {
   console.log(`Done. ${inserted.length} row(s) inserted.`);
 }
 
-await sql.end();
+await pool.end();

@@ -2,9 +2,7 @@
   "name": "@singularity/server",
   "private": true,
   "type": "module",
-  "dependencies": {
-    "postgres": "^3.4.4"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/bun": "latest",
     "drizzle-kit": "^0.28.0",

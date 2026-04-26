@@ -385,10 +385,10 @@
     - DB schema: `plugins/events/server/internal/event.ts`
     - DB schema: `plugins/events/server/internal/tables.ts`
   - Exports (server):
-    - Types: `DefineTriggerEventSpec`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerByNameSpec`, `TriggerSpec`
+    - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerByNameSpec`, `TriggerSpec`
     - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `trigger`, `triggerByName`, `triggerTableRegistry`
   - Server:
-    - Uses: `jobs.DEFAULT_MAX_ATTEMPTS`, `jobs.UNSAFE_getRegisteredJob`, `jobs.UNSAFE_installDurableHooks`, `jobs.defineJob`
+    - Uses: `jobs.DEFAULT_MAX_ATTEMPTS`, `jobs.EnqueueTx`, `jobs.UNSAFE_getRegisteredJob`, `jobs.UNSAFE_installDurableHooks`, `jobs.defineJob`
     - `GET /api/events/emissions`
     - `GET /api/events/triggers`
     - `DELETE /api/events/triggers/:id`
@@ -438,7 +438,7 @@
   - Defines:
     - DB schema: `plugins/jobs/server/internal/tables.ts`
   - Exports (server):
-    - Types: `DefineJobSpec`, `DurableHooks`, `JobCtx`, `JobFactory`, `RegisteredJob`
+    - Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`
     - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `isSuspendSignal`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
   - Server:
     - `GET /api/jobs`

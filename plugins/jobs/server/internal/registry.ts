@@ -1,9 +1,20 @@
 import { randomUUID } from "node:crypto";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { PoolClient } from "pg";
 import type { z } from "zod";
 import { DEFAULT_MAX_ATTEMPTS, JOB_TASK } from "./constants";
 import { getWorkerUtils } from "./worker";
 
 export { DEFAULT_MAX_ATTEMPTS } from "./constants";
+
+/**
+ * Drizzle node-postgres database/transaction handle. Both `db` and the
+ * `tx` passed by `db.transaction(...)` match this type — `NodePgTransaction`
+ * extends `NodePgDatabase`. Use the `tx` form when you need the job INSERT
+ * to participate in your transaction (rollback drops the job alongside
+ * your writes).
+ */
+export type EnqueueTx = NodePgDatabase<Record<string, never>>;
 
 export interface JobCtx {
   /**
@@ -68,8 +79,22 @@ export interface RegisteredJob {
    */
   enqueue: (
     input: unknown,
-    opts?: { jobKey?: string; maxAttempts?: number; runAt?: Date },
+    opts?: EnqueueOpts,
   ) => Promise<{ jobId: string }>;
+}
+
+export interface EnqueueOpts {
+  jobKey?: string;
+  maxAttempts?: number;
+  runAt?: Date;
+  /**
+   * Insert the job into `graphile_worker.jobs` on the same connection as
+   * this Drizzle transaction. The job is enqueued atomically with your
+   * writes — rollback drops it. Without `tx`, `enqueue` uses Graphile's
+   * own pool and the job commits independently of any caller transaction
+   * (current default; safe for post-commit emit).
+   */
+  tx?: EnqueueTx;
 }
 
 export interface DefineJobSpec<N extends string, S extends z.ZodType> {
@@ -98,7 +123,7 @@ export interface JobFactory<N extends string, S extends z.ZodType> {
   readonly inputSchema: S;
   enqueue(
     input: z.input<S>,
-    opts?: { jobKey?: string; maxAttempts?: number; runAt?: Date },
+    opts?: EnqueueOpts,
   ): Promise<{ jobId: string }>;
 }
 
@@ -123,27 +148,56 @@ export function defineJob<N extends string, S extends z.ZodType>(
 
   async function enqueue(
     input: unknown,
-    opts?: { jobKey?: string; maxAttempts?: number; runAt?: Date },
+    opts?: EnqueueOpts,
   ): Promise<{ jobId: string }> {
     // Parse once at enqueue time so the serialized payload is already in
     // the post-transform shape; the worker re-parses as a safety check.
     const parsed = spec.input.parse(input);
     const workflowRunId = opts?.jobKey ?? randomUUID();
+    const maxAttempts =
+      opts?.maxAttempts ?? spec.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
+    const payload: JobTaskPayload = {
+      jobName: spec.name,
+      workflowRunId,
+      input: parsed,
+    };
+
+    if (opts?.tx) {
+      // Shared-tx path: write into graphile_worker.jobs on the caller's
+      // transaction client by calling Graphile's documented public SQL
+      // function. Rollback drops the row alongside the caller's writes.
+      // The reach-in to `_.session.client` is the only facade-piercing in
+      // the system; isolated here so a future drizzle bump has exactly
+      // one line to fix.
+      // biome-ignore lint/suspicious/noExplicitAny: drizzle's session.client is private in d.ts but stable at runtime.
+      const client = (opts.tx as any)._.session.client as PoolClient;
+      const result = await client.query<{ id: string }>(
+        `SELECT (graphile_worker.add_job(
+           identifier   := $1,
+           payload      := $2::json,
+           run_at       := $3,
+           max_attempts := $4,
+           job_key      := $5
+         )).id::text AS id`,
+        [
+          JOB_TASK,
+          JSON.stringify(payload),
+          opts.runAt ?? null,
+          maxAttempts,
+          opts.jobKey ?? null,
+        ],
+      );
+      const id = result.rows[0]?.id;
+      if (!id) throw new Error("[jobs] graphile_worker.add_job returned no id");
+      return { jobId: id };
+    }
+
     const utils = await getWorkerUtils();
-    const job = await utils.addJob(
-      JOB_TASK,
-      {
-        jobName: spec.name,
-        workflowRunId,
-        input: parsed,
-      } satisfies JobTaskPayload,
-      {
-        jobKey: opts?.jobKey,
-        maxAttempts:
-          opts?.maxAttempts ?? spec.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
-        runAt: opts?.runAt,
-      },
-    );
+    const job = await utils.addJob(JOB_TASK, payload, {
+      jobKey: opts?.jobKey,
+      maxAttempts,
+      runAt: opts?.runAt,
+    });
     return { jobId: String(job.id) };
   }
 

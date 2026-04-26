@@ -1,5 +1,5 @@
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 
 const worktree = process.env.SINGULARITY_WORKTREE;
 if (!worktree) {
@@ -11,20 +11,26 @@ const user = process.env.PGUSER ?? process.env.USER ?? "postgres";
 
 export const connectionString = `postgres://${user}@${host}:${port}/${worktree}`;
 
-export const sql = postgres(connectionString, { max: 5, idle_timeout: 20 });
-export const db = drizzle(sql);
+export const pool = new Pool({
+  connectionString,
+  max: 5,
+  idleTimeoutMillis: 20_000,
+});
+export const db = drizzle(pool);
 
-export const adminSql = postgres(
-  `postgres://${user}@${host}:${port}/postgres`,
-  { max: 1, idle_timeout: 20 },
-);
+export const adminPool = new Pool({
+  connectionString: `postgres://${user}@${host}:${port}/postgres`,
+  max: 1,
+  idleTimeoutMillis: 20_000,
+});
 
-// Short-lived client against a named database. Used by db-fork to run
+// Short-lived pool against a named database. Used by db-fork to run
 // per-db cleanup (e.g. dropping a schema) without going through the
-// long-lived, per-worktree `sql` client.
-export function openShortLivedSql(dbName: string) {
-  return postgres(`postgres://${user}@${host}:${port}/${dbName}`, {
+// long-lived, per-worktree `pool`.
+export function openShortLivedClient(dbName: string): Pool {
+  return new Pool({
+    connectionString: `postgres://${user}@${host}:${port}/${dbName}`,
     max: 1,
-    idle_timeout: 1,
+    idleTimeoutMillis: 1_000,
   });
 }

@@ -1,5 +1,5 @@
 import { mkdir } from "node:fs/promises";
-import { adminSql } from "@server/db/client";
+import { adminPool } from "@server/db/client";
 
 export async function handleBackup(): Promise<Response> {
   const user = process.env.PGUSER ?? process.env.USER ?? "postgres";
@@ -14,17 +14,17 @@ export async function handleBackup(): Promise<Response> {
   const outDir = `${process.env.HOME}/.backups/singularity/${timestamp}`;
   await mkdir(outDir, { recursive: true });
 
-  const rows = await adminSql<{ datname: string }[]>`
-    SELECT datname FROM pg_database
-    WHERE datname NOT IN ('template0', 'template1', 'postgres')
-      AND datname NOT LIKE 'claude-%'
-      AND datname NOT LIKE 'att-%'
-    ORDER BY datname
-  `;
+  const result = await adminPool.query<{ datname: string }>(
+    `SELECT datname FROM pg_database
+     WHERE datname NOT IN ('template0', 'template1', 'postgres')
+       AND datname NOT LIKE 'claude-%'
+       AND datname NOT LIKE 'att-%'
+     ORDER BY datname`,
+  );
 
   const results: { name: string; file: string }[] = [];
 
-  for (const { datname } of rows) {
+  for (const { datname } of result.rows) {
     const file = `${outDir}/${datname}.dump`;
     const proc = Bun.spawn(
       ["pg_dump", "-h", host, "-p", port, "-U", user, "-Fc", datname],

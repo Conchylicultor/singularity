@@ -17,6 +17,7 @@ import {
 export { defineTriggerEvent } from "./internal/event";
 export type {
   DefineTriggerEventSpec,
+  EmitTx,
   EventHandle,
   EventSource,
   FilterSlot,

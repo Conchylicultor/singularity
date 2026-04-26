@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
-import { sql } from "./client";
+import { sql as drizzleSql } from "drizzle-orm";
+import { db } from "./client";
 
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 
@@ -31,18 +32,18 @@ export async function runMigrations(): Promise<void> {
   const dir = join(import.meta.dir, "migrations");
   const migrations = loadMigrations(dir);
 
-  await sql`
+  await db.execute(drizzleSql`
     CREATE TABLE IF NOT EXISTS __singularity_migrations (
       hash text PRIMARY KEY,
       file text NOT NULL,
       applied_at timestamptz NOT NULL DEFAULT now()
     )
-  `;
+  `);
 
-  const applied = (await sql`
-    SELECT hash FROM __singularity_migrations
-  `) as unknown as Array<{ hash: string }>;
-  const appliedHashes = new Set(applied.map((r) => r.hash));
+  const applied = await db.execute<{ hash: string }>(
+    drizzleSql`SELECT hash FROM __singularity_migrations`,
+  );
+  const appliedHashes = new Set(applied.rows.map((r) => r.hash));
 
   // Drift warning: a hash recorded as applied but with no matching file on disk
   // means someone rebased away a migration after it ran here. The DB retains
@@ -59,12 +60,11 @@ export async function runMigrations(): Promise<void> {
   for (const m of migrations) {
     if (appliedHashes.has(m.hash)) continue;
     console.log(`[migrate] applying ${m.file}`);
-    await sql.begin(async (tx) => {
-      await tx.unsafe(m.sqlText);
-      await tx`
-        INSERT INTO __singularity_migrations (hash, file)
-        VALUES (${m.hash}, ${m.file})
-      `;
+    await db.transaction(async (tx) => {
+      await tx.execute(drizzleSql.raw(m.sqlText));
+      await tx.execute(
+        drizzleSql`INSERT INTO __singularity_migrations (hash, file) VALUES (${m.hash}, ${m.file})`,
+      );
     });
   }
 }

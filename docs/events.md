@@ -108,23 +108,29 @@ Retries mean **`run` may be invoked more than once for the same logical job.** A
 
 ### Transactional boundary on `emit()`
 
-Graphile Worker runs its own `pg.Pool` (node-postgres), separate from the server's `postgres.js` client. A caller's transaction can NOT share state with Graphile's INSERT into `graphile_worker.jobs`. **Rule: emit only after the fact is committed.** If `emit()` is inside a tx and the tx rolls back, the jobs stay in the queue and the handlers run for a fact that no longer exists.
+The server's Drizzle client and Graphile Worker share a `pg.Pool`. When you emit inside a transaction, pass `{ tx }` — the trigger SELECT, the emission audit, and the `graphile_worker.jobs` INSERT all run on the caller's connection, so a rollback drops all three atomically.
 
 ```ts
-// ✅ OK — emit after the tx commits
+// ✅ atomic — emit lives or dies with the tx
+await db.transaction(async (tx) => {
+  await markTaskComplete(tx, taskId);
+  await taskCompleted.emit({ taskId }, { tx });
+});
+
+// ✅ also fine — emit after the tx commits (no `{ tx }`)
 await db.transaction(async (tx) => {
   await markTaskComplete(tx, taskId);
 });
 await taskCompleted.emit({ taskId });
 
-// ❌ Wrong — rollback leaves jobs in the queue
+// ❌ silent dual-write — emit goes out on Graphile's pool while the tx rolls back
 await db.transaction(async (tx) => {
   await markTaskComplete(tx, taskId);
-  await taskCompleted.emit({ taskId }); // dual-write
+  await taskCompleted.emit({ taskId }); // missing `, { tx }`
 });
 ```
 
-Shared-tx emit requires unifying the server on `pg.Pool`; tracked as future work.
+Mechanically, with `tx` provided, dispatch calls Graphile's documented `graphile_worker.add_job(...)` SQL function on the tx's `pg.Client`. Without `tx`, dispatch goes through Graphile's `WorkerUtils.addJob` which uses its own pool — equivalent for post-commit emit.
 
 ## Preservation policy — rows outlive type definitions
 

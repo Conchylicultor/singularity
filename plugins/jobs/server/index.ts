@@ -17,6 +17,8 @@ export { defineJob, UNSAFE_getRegisteredJob, DEFAULT_MAX_ATTEMPTS } from "./inte
 export { sweepOnce as UNSAFE_sweepStuckLocks } from "./internal/stuck-lock-sweeper";
 export type {
   DefineJobSpec,
+  EnqueueOpts,
+  EnqueueTx,
   JobCtx,
   JobFactory,
   RegisteredJob,
