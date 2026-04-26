@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { TaskAttachments } from "./task-attachments";
 import { TaskDependencies } from "./task-dependencies";
 import { TaskEvents } from "./task-events";
+import { DescriptionView } from "./description-view";
 import { useResource } from "@core";
 import { useConversationById } from "@plugins/conversations/web";
 import { tasksResource, type Task } from "../../shared/resources";
@@ -60,7 +61,13 @@ function AuthorDisplay({ author }: { author: string | null }) {
   );
 }
 
-export function TaskDetail({ taskId }: { taskId: string }) {
+export function TaskDetail({
+  taskId,
+  onFileOpen,
+}: {
+  taskId: string;
+  onFileOpen?: (path: string) => void;
+}) {
   const { data } = useResource(tasksResource);
   const task = data?.find((t) => t.id === taskId) ?? null;
 
@@ -203,12 +210,10 @@ export function TaskDetail({ taskId }: { taskId: string }) {
         </span>
         <AuthorDisplay author={task.author ?? "user"} />
       </div>
-      <textarea
+      <DescriptionView
         value={description}
-        onChange={(e) => onDescriptionChange(e.target.value)}
-        placeholder="Add a description…"
-        rows={10}
-        className="placeholder:text-muted-foreground min-h-48 w-full resize-y rounded border bg-transparent p-3 text-sm outline-none focus:ring-1 focus:ring-ring"
+        onChange={onDescriptionChange}
+        onFileOpen={onFileOpen}
       />
       <div className="flex justify-end">
         <LaunchButtons

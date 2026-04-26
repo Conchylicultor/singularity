@@ -3,7 +3,7 @@ import { MdClose } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "../../../../web/use-edited-files";
-import { FilePaneView } from "../../../file-pane/web/components/file-pane";
+import { FilePaneView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { convDocsPane, isDocFile } from "../panes";
 import { DocRow } from "./doc-row";
 

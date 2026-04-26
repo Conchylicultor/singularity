@@ -3,10 +3,9 @@ import { MdClose, MdArrowUpward } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { useResource } from "@core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { TasksList } from "@plugins/tasks/web";
-import { TaskDetail } from "@plugins/tasks/web";
+import { TasksList, TaskDetail } from "@plugins/tasks/web";
 import { tasksResource } from "@plugins/tasks/shared";
-import { convTasksPane } from "../panes";
+import { convTasksPane, convFilePeekPane } from "../panes";
 
 export function TasksPane() {
   const { conversation } = conversationPane.useData();
@@ -27,7 +26,7 @@ export function TasksPane() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-2 border-b px-2 py-1.5">
+      <div className="flex shrink-0 items-center gap-2 border-b px-2 py-1.5">
         <Button
           variant="ghost"
           size="icon"
@@ -60,7 +59,13 @@ export function TasksPane() {
         />
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
-        <TaskDetail key={selectedId} taskId={selectedId} />
+        <TaskDetail
+          key={selectedId}
+          taskId={selectedId}
+          onFileOpen={(path) =>
+            convFilePeekPane.open({ convId: conversation.id, filePath: path })
+          }
+        />
       </div>
     </div>
   );

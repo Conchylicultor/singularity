@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { type ReactElement, useState } from "react";
 import { useResource } from "@core";
 import { Outlet, Pane, type, usePaneMatch } from "@plugins/pane/web";
 import { ConversationView } from "@plugins/conversations/plugins/conversation-view/web";
@@ -11,6 +11,7 @@ import { tasksResource, type Task } from "../shared/resources";
 import { Tasks as TasksSlots } from "./slots";
 import { TasksList } from "./components/tasks-list";
 import { TaskDetail } from "./components/task-detail";
+import { TaskFilePeek } from "./components/task-file-peek";
 
 // Panes are declared first so their types are known before the component
 // bodies reference them. Component identifiers below are function
@@ -83,6 +84,7 @@ function TaskDetailBody(): ReactElement {
   const { data } = useResource(tasksResource);
   const task = data?.find((t) => t.id === taskId) ?? null;
   const views = TasksSlots.View.useContributions();
+  const [filePeekPath, setFilePeekPath] = useState<string | null>(null);
 
   const match = usePaneMatch();
   const hasConv = match?.chain.some(
@@ -91,7 +93,7 @@ function TaskDetailBody(): ReactElement {
 
   const body = (
     <div className="h-full overflow-auto">
-      <TaskDetail key={taskId} taskId={taskId} />
+      <TaskDetail key={taskId} taskId={taskId} onFileOpen={setFilePeekPath} />
       {views.length > 0 && (
         <div className="flex flex-col gap-4 px-6 pb-6">
           {views.map((v) => (
@@ -107,19 +109,27 @@ function TaskDetailBody(): ReactElement {
     </div>
   );
 
-  const content: ReactElement = hasConv ? (
-    <ResizablePanelGroup orientation="horizontal" className="h-full">
-      <ResizablePanel defaultSize={55} minSize={25}>
-        {body}
-      </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={45} minSize={25}>
-        <Outlet />
-      </ResizablePanel>
-    </ResizablePanelGroup>
-  ) : (
-    body
-  );
+  const rightPanel =
+    filePeekPath !== null ? (
+      <TaskFilePeek path={filePeekPath} onClose={() => setFilePeekPath(null)} />
+    ) : hasConv ? (
+      <Outlet />
+    ) : null;
+
+  const content: ReactElement =
+    rightPanel !== null ? (
+      <ResizablePanelGroup orientation="horizontal" className="h-full">
+        <ResizablePanel defaultSize={55} minSize={25}>
+          {body}
+        </ResizablePanel>
+        <ResizableHandle withHandle />
+        <ResizablePanel defaultSize={45} minSize={25}>
+          {rightPanel}
+        </ResizablePanel>
+      </ResizablePanelGroup>
+    ) : (
+      body
+    );
 
   // Only wrap with Provider when the task is loaded so descendants reading
   // useData() get a non-null task.
