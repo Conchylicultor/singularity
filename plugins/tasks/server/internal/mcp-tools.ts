@@ -11,9 +11,10 @@ Mcp.registerTool({
   description: `Add a task to the Singularity task tree.
 
 Task titles and descriptions should state the PROBLEM or ISSUE to solve —
-not instructions on how to solve it. The agent that picks up the task will
-design and plan the solution itself. Good: "Login button unresponsive on
-mobile". Bad: "Fix login button by adding a touchstart handler in auth.tsx".
+not instructions on how to solve it, and no hints or suggestions either.
+The agent that picks up the task will design and plan the solution itself.
+Good: "Login button unresponsive on mobile". Bad: "Fix login button by
+adding a touchstart handler in auth.tsx".
 
 \`parent\` places the task in the tree (containment / hierarchy). By default
 the new task is created as a child of the current conversation's task.
@@ -32,7 +33,7 @@ as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
       .string()
       .optional()
       .describe(
-        "Optional longer description of the problem or issue. Describe WHAT is wrong or needed, not HOW to fix it — the assigned agent will design the solution. If a relevant design doc exists, cross-link it here (e.g. 'See design doc: docs/path/to/design.md')."
+        "Optional longer description of the problem or issue. Describe WHAT is wrong or needed, not HOW to fix it — this includes hints, suggestions, or partial approaches. The assigned agent will design the solution. If a relevant design doc exists, cross-link it here (e.g. 'See design doc: docs/path/to/design.md')."
       ),
     parent: z
       .string()
