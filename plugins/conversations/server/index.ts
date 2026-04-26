@@ -27,6 +27,8 @@ export { Runtime, getConversationRow, readConversationTurns, sendTurn } from "./
 export type { RuntimeInfo, ConversationRuntime } from "./internal/runtime";
 export { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 export type { ConversationTurnCompletedPayload } from "./internal/tables-turn-completed-event";
+export { conversationCreated } from "./internal/tables-created-event";
+export type { ConversationCreatedPayload } from "./internal/tables-created-event";
 
 export default {
   id: "conversations",

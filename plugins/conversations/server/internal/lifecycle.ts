@@ -14,6 +14,7 @@ import type { Conversation } from "../../shared";
 import { forkDatabase } from "./db-fork";
 import { reportForkError } from "./fork-errors";
 import { setupWorktree, worktreePathFor } from "@server/worktree";
+import { conversationCreated } from "./tables-created-event";
 
 const DEFAULT_RUNTIME = "tmux";
 const DEFAULT_MODEL: ConversationModel = "opus";
@@ -133,7 +134,17 @@ export async function createConversation(
   });
 
   const row = await getConversation(conversationId);
-  return row as Conversation;
+  const conv = row as Conversation;
+
+  await conversationCreated.emit({
+    conversationId: conv.id,
+    taskId: conv.taskId,
+    model: conv.model,
+    spawnedBy: conv.spawnedBy!,
+    createdAt: conv.createdAt.toISOString(),
+  });
+
+  return conv;
 }
 
 export async function deleteConversation(id: string): Promise<void> {
