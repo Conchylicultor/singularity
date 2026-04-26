@@ -60,7 +60,10 @@ export function DescriptionView({
   const segments = value ? parseDescription(value) : [];
 
   return (
-    <div className="group relative min-h-48 w-full rounded border p-3 text-sm">
+    <div
+      className="group relative min-h-48 w-full cursor-text rounded border p-3 text-sm"
+      onClick={() => setEditing(true)}
+    >
       {value ? (
         <p className="whitespace-pre-wrap break-words">
           {segments.map((seg, i) =>
@@ -68,7 +71,7 @@ export function DescriptionView({
               <button
                 key={i}
                 type="button"
-                onClick={() => onFileOpen(seg.value)}
+                onClick={(e) => { e.stopPropagation(); onFileOpen(seg.value); }}
                 className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-primary hover:underline"
               >
                 {seg.value}
