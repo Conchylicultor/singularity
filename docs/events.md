@@ -100,9 +100,9 @@ filters: {
 
 ### Action idempotency — the new caller contract
 
-Retries mean **`run` may be invoked more than once for the same `triggerId`.** Actions must be idempotent. Guidance:
+Retries mean **`run` may be invoked more than once for the same logical job.** Actions must be idempotent. Guidance:
 
-- Use `ctx.triggerId` as a dedup key when mutating shared state. Either `INSERT … ON CONFLICT (trigger_id) DO NOTHING`, or track seen ids in memory for side-effect-only actions.
+- Use `ctx.jobId` as a dedup key when mutating shared state. Either `INSERT … ON CONFLICT (job_id) DO NOTHING`, or track seen ids in memory for side-effect-only actions. `jobId` is the Graphile job id: stable across retries of the same job, but **distinct per emit**. For `oneShot: true` triggers, deduping on the trigger row's UUID also works (one trigger lifetime = one job), but `jobId` is always safe. **Non-oneShot subscribers must use `jobId`** — the trigger row's UUID is identical for every emit of the same trigger, so deduping on it collapses N emits into a single side effect.
 - Naturally idempotent side-effects ("set task X status to done") need no extra work.
 - Non-idempotent side-effects (webhook POSTs without idempotency headers, unbounded counter increments) are the author's responsibility — if duplicates matter, dedup them at the action.
 

@@ -108,6 +108,12 @@ export interface DurableCtxInit {
 }
 
 export interface DurableCtx {
+  /**
+   * Graphile job id. Stable across retries of a single failed job, distinct
+   * per emit. Use as the dedup key in event-triggered handlers: non-oneShot
+   * subscribers MUST dedup on `jobId` rather than the trigger row's UUID,
+   * which is identical for every emit of the same trigger.
+   */
   jobId: string;
   attempt: number;
   workflowRunId: string;

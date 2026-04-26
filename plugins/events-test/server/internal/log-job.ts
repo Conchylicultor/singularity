@@ -15,8 +15,8 @@ export const logEntries: LogEntry[] = [];
 
 // Graphile retries on handler throw, so `run` may be invoked more than once
 // per jobId. Idempotency is the job author's contract — here we dedup on
-// jobId (the Graphile job id), which is stable across retries but distinct
-// across separate emits/enqueues. See docs/events.md §"Delivery semantics".
+// ctx.jobId, which is stable across retries but distinct across separate
+// emits/enqueues. See docs/events.md §"Delivery semantics".
 const seenRuns = new Set<string>();
 
 export function resetLog(): void {

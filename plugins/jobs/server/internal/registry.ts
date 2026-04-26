@@ -6,7 +6,12 @@ import { getWorkerUtils } from "./worker";
 export { DEFAULT_MAX_ATTEMPTS } from "./constants";
 
 export interface JobCtx {
-  /** Graphile job id. Stable across retries of a single failed job. */
+  /**
+   * Graphile job id. Stable across retries of a single failed job, distinct
+   * per emit. Use as the dedup key in event-triggered handlers: non-oneShot
+   * subscribers MUST dedup on `jobId` rather than the trigger row's UUID,
+   * which is identical for every emit of the same trigger.
+   */
   jobId: string;
   /** 1-indexed attempt number — starts at 1 on the first try. */
   attempt: number;
