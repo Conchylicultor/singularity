@@ -204,6 +204,9 @@
     "plugins/yak-shaving": {
       "name": "@singularity/plugin-yak-shaving",
       "version": "0.0.1",
+      "dependencies": {
+        "@singularity/plugin-mcp": "workspace:*",
+      },
     },
     "server": {
       "name": "@singularity/server",

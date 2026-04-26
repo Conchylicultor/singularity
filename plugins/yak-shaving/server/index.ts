@@ -1,6 +1,7 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { yakShavingNodesResource } from "./internal/resources";
 import { ensureYakMetaTask } from "./internal/meta-yak-shaving";
+import "./internal/mcp-tools";
 
 export { _yakShavingNodes } from "./internal/tables";
 export { YakShavingNodeSchema } from "./internal/schema";
