@@ -462,6 +462,10 @@
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
+    - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
+      - Exports (web):
+        - Types: `JumpToBottomButtonProps`, `StickyScrollHandle`, `UseStickyScrollOptions`
+        - Values: `JumpToBottomButton`, `useStickyScroll`
     - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
       - Exports (web):
         - Types: `EditableField`, `UseEditableFieldOptions`

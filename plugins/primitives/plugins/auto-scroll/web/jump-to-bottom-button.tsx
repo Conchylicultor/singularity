@@ -1,0 +1,33 @@
+import type { ReactElement, ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import type { StickyScrollHandle } from "./use-sticky-scroll";
+
+export interface JumpToBottomButtonProps {
+  handle: StickyScrollHandle;
+  className?: string;
+  /** Optional content rendered next to the chevron (e.g. "3 new"). */
+  label?: ReactNode;
+}
+
+export function JumpToBottomButton({
+  handle,
+  className,
+  label,
+}: JumpToBottomButtonProps): ReactElement | null {
+  if (handle.isPinned && !handle.hasUnread) return null;
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      size="sm"
+      onClick={handle.jumpToBottom}
+      aria-label="Jump to bottom"
+      className={cn("gap-1.5 rounded-full shadow-md", className)}
+    >
+      <ChevronDown className="size-4" />
+      {label}
+    </Button>
+  );
+}

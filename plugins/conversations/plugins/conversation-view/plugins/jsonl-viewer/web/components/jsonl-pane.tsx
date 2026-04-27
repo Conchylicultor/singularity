@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MdCode } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  JumpToBottomButton,
+  useStickyScroll,
+} from "@plugins/primitives/plugins/auto-scroll/web";
 import { Button } from "@/components/ui/button";
 import type { Conversation } from "@plugins/conversations/shared";
 import { jsonlEventsResource, type JsonlEvent } from "../../shared";
@@ -93,33 +97,10 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
   }
   const workingStartAt = workingStartAtRef.current ?? Date.now();
 
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const lastCountRef = useRef(0);
-  // Reset count when conversation changes so initial load always scrolls to bottom
-  useEffect(() => {
-    lastCountRef.current = 0;
-  }, [conversation.id]);
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el || !events) return;
-    const isInitialLoad = lastCountRef.current === 0;
-    const pinnedToBottom =
-      el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-    const grew = events.length > lastCountRef.current;
-    lastCountRef.current = events.length;
-    if (grew && (isInitialLoad || pinnedToBottom)) {
-      el.scrollTop = el.scrollHeight;
-    }
-  }, [events]);
-
-  // Sending a turn flips status into working/starting; force a scroll to bottom
-  // so the user sees their message even if they were scrolled up. The grow-based
-  // auto-scroll above then keeps the view pinned as new events stream in.
-  useEffect(() => {
-    if (!isWorking) return;
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [isWorking]);
+  const sticky = useStickyScroll({
+    resetKey: conversation.id,
+    forceScrollKey: isWorking ? 1 : 0,
+  });
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -144,28 +125,30 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
       </div>
       <div className="relative min-h-0 flex-1">
         <div
-          ref={scrollRef}
+          ref={sticky.scrollRef}
           className={`h-full overflow-auto transition-opacity ${isGone ? "opacity-50" : ""}`}
         >
-          {events === null && isLoading ? (
-            <div className="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
-          ) : error ? (
-            <div className="px-3 py-2 text-xs text-destructive">
-              {error instanceof Error ? error.message : String(error)}
-            </div>
-          ) : !events || events.length === 0 ? (
-            <div className="flex flex-col px-3 py-2 text-xs text-muted-foreground">
-              <span>No transcript yet. Claude may not have written its session log.</span>
-              {isWorking && <WorkingIndicator startAt={workingStartAt} />}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2 p-2 pb-10">
-              {events.map((event, i) => (
-                <EventRow key={i} event={event} markdownMode={markdownMode} />
-              ))}
-              {isWorking && <WorkingIndicator startAt={workingStartAt} />}
-            </div>
-          )}
+          <div ref={sticky.contentRef}>
+            {events === null && isLoading ? (
+              <div className="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
+            ) : error ? (
+              <div className="px-3 py-2 text-xs text-destructive">
+                {error instanceof Error ? error.message : String(error)}
+              </div>
+            ) : !events || events.length === 0 ? (
+              <div className="flex flex-col px-3 py-2 text-xs text-muted-foreground">
+                <span>No transcript yet. Claude may not have written its session log.</span>
+                {isWorking && <WorkingIndicator startAt={workingStartAt} />}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 p-2 pb-10">
+                {events.map((event, i) => (
+                  <EventRow key={i} event={event} markdownMode={markdownMode} />
+                ))}
+                {isWorking && <WorkingIndicator startAt={workingStartAt} />}
+              </div>
+            )}
+          </div>
         </div>
         {totals && (
           <div
@@ -175,6 +158,10 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
             {formatTokenCount(totals.latestContext)} ctx · {formatTokenCount(totals.output)} out
           </div>
         )}
+        <JumpToBottomButton
+          handle={sticky}
+          className="absolute bottom-12 right-4"
+        />
       </div>
     </div>
   );
