@@ -468,6 +468,24 @@
     - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
     - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
 
+- **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: live state, networking, editable fields.
+  - Plugins:
+    - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
+      - Exports (web):
+        - Types: `EditableField`, `UseEditableFieldOptions`
+        - Values: `useEditableField`
+    - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
+      - Exports (web):
+        - Types: `ResourceDescriptor`, `ResourceKey`
+        - Values: `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useResource`
+      - Exports (shared):
+        - Types: `ResourceDescriptor`
+        - Values: `resourceDescriptor`
+    - **`networking`** — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
+      - Exports (web):
+        - Types: `FetchWithRetryOptions`, `ReconnectingEventSourceOptions`, `ReconnectingWsHandle`, `ReconnectingWsOptions`, `WsStatus`, `WsStatusEvent`
+        - Values: `fetchWithRetry`, `publishWsStatus`, `ReconnectingEventSource`, `SharedWebSocket`, `subscribeWsStatus`, `useReconnectingWebSocket`
+
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Exports (web):
     - Values: `screenshotPane`

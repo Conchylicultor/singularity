@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { usePaneMatch } from "@plugins/pane/web";
 import { useConfigValues } from "@plugins/config/web";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pushesResource } from "@plugins/tasks/shared";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "../../../../web/use-edited-files";

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdRefresh, MdRestore } from "react-icons/md";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@/components/ui/button";
 import { recentConversationsResource } from "@plugins/conversations/shared";
 import { ConversationSchema, type Conversation } from "@plugins/tasks-core/shared";

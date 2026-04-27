@@ -8,7 +8,10 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-const ALLOWED_PATHS = ["plugin-core/", "cli/"];
+const ALLOWED_PATHS = [
+  "plugins/primitives/plugins/networking/",
+  "cli/",
+];
 
 export const noRawEventSource: Check = {
   id: "no-raw-event-source",
@@ -46,7 +49,7 @@ export const noRawEventSource: Check = {
       ok: false,
       message: `raw \`new EventSource(\` found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
       hint:
-        "Use `new ReconnectingEventSource(...)` from `@core` instead. It handles reconnection and inter-tab sharing (leader election) so opening many tabs doesn't saturate the server.",
+        "Use `new ReconnectingEventSource(...)` from `@plugins/primitives/plugins/networking/web` instead. It handles reconnection and inter-tab sharing (leader election) so opening many tabs doesn't saturate the server.",
     };
   },
 };

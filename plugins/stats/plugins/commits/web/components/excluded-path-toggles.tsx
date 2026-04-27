@@ -1,4 +1,4 @@
-import { resourceDescriptor, useResource } from "@core";
+import { resourceDescriptor, useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useConfigValues } from "@plugins/config/web";
 import { cn } from "@/lib/utils";
 import { commitsConfig } from "../../shared/config";

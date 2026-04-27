@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { z } from "zod";
 import { ConversationSchema } from "../shared";
 import { recentConversationsResource, type ConversationEntry } from "../shared/resources";

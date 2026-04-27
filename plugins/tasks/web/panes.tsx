@@ -1,5 +1,5 @@
 import { type ReactElement, useState } from "react";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Outlet, Pane, PaneChrome, type, usePaneMatch } from "@plugins/pane/web";
 import { ConversationView } from "@plugins/conversations/plugins/conversation-view/web";
 import {

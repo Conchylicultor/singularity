@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   Area,
   Bar,

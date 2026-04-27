@@ -47,6 +47,10 @@ import welcomePlugin from "@plugins/welcome/web";
 import launchPlugin from "@plugins/launch/web";
 import treePlugin from "@plugins/tree/web";
 import syntaxHighlightPlugin from "@plugins/syntax-highlight/web";
+import primitivesPlugin from "@plugins/primitives/web";
+import liveStatePlugin from "@plugins/primitives/plugins/live-state/web";
+import networkingPlugin from "@plugins/primitives/plugins/networking/web";
+import editableFieldPlugin from "@plugins/primitives/plugins/editable-field/web";
 import healthPlugin from "@plugins/health/web";
 import crashesPlugin from "@plugins/crashes/web";
 import statsPlugin from "@plugins/stats/web";
@@ -73,6 +77,10 @@ export const plugins: PluginDefinition[] = [
   launchPlugin,
   treePlugin,
   syntaxHighlightPlugin,
+  primitivesPlugin,
+  liveStatePlugin,
+  networkingPlugin,
+  editableFieldPlugin,
   terminalPlugin,
   worktreeSwitcherPlugin,
   buildPlugin,

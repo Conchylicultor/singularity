@@ -1,5 +1,5 @@
 import { MdUnfoldLess, MdUnfoldMore } from "react-icons/md";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { tasksResource } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 

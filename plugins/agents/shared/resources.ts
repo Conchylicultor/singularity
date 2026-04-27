@@ -3,7 +3,7 @@
 // `@plugins/agents/server/api`.
 import type { Agent, AgentLaunch } from "../server/internal/schema";
 import type { ConversationStatus } from "@plugins/conversations/shared";
-import { resourceDescriptor } from "@core/shared/resource";
+import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/shared";
 
 export type { Agent, AgentLaunch } from "../server/internal/schema";
 

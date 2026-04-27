@@ -1,4 +1,4 @@
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   RenameInput,
   RowChrome,

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { MdPlayArrow } from "react-icons/md";
-import { useEditableField, useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { Button } from "@/components/ui/button";
 import { agentsResource } from "../../shared/resources";
 import { agentConversationPane } from "../panes";

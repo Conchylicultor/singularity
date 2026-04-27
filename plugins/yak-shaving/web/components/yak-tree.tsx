@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { buildTree } from "@plugins/tree/shared";
 import { yakShavingNodesResource } from "../../shared/resources";
 import { YakTreeRow, type YakTreeItem } from "./yak-tree-row";

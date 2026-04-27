@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { quickPromptsResource } from "../../shared/resources";

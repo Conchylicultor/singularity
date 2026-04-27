@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MdClose, MdCode } from "react-icons/md";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@/components/ui/button";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { jsonlEventsResource } from "../../shared";

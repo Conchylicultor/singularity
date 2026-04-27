@@ -6,9 +6,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import { NotificationsClient, queryKeyFor } from "./notifications-client";
-import type { ResourceDescriptor } from "./shared/resource";
-export type { ResourceDescriptor } from "./shared/resource";
-export { resourceDescriptor } from "./shared/resource";
+import type { ResourceDescriptor } from "../shared/resource";
 
 type ResourceParams = Record<string, string>;
 

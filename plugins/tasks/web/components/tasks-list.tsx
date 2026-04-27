@@ -9,7 +9,7 @@ import {
   MdTimelapse,
 } from "react-icons/md";
 import type { IconType } from "react-icons";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   RenameInput,
   RowChrome,

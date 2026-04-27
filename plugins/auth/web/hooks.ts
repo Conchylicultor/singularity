@@ -1,4 +1,4 @@
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { AuthAccountState } from "@plugins/auth/shared";
 import { authStateResource } from "@plugins/auth/shared";
 

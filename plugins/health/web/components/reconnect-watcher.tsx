@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { subscribeWsStatus } from "@core";
+import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
 import { ShellCommands } from "@plugins/shell/web";
 
 export function ReconnectWatcher() {

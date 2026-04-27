@@ -132,25 +132,15 @@ export const terminalPane = Pane.define({
 <button onClick={() => terminalPane.open({ worktree: path })}>Launch</button>
 ```
 
-## Live state — `useResource`
+## Live state, networking, editable fields
 
-Consume server live-state with one hook:
+`@core` is the **framework** only — slots, commands, contributions, plugin context, error boundaries, and the `PluginDefinition` type. Cross-cutting client-side primitives live as plugins under [`plugins/primitives/`](../plugins/primitives/):
 
-```typescript
-import { useResource } from "@core";
-import { tasksResource } from "@plugins/tasks/server";
+- `useResource`, `NotificationsProvider`, `resourceDescriptor` → `@plugins/primitives/plugins/live-state/web` (and `…/shared` for plugin `shared/resources.ts` declarations)
+- `useReconnectingWebSocket`, `ReconnectingEventSource`, `SharedWebSocket`, `fetchWithRetry`, `subscribeWsStatus` → `@plugins/primitives/plugins/networking/web`
+- `useEditableField` → `@plugins/primitives/plugins/editable-field/web`
 
-function TasksList() {
-  const { data, isLoading } = useResource(tasksResource);
-  // ...
-}
-```
-
-`useResource` is a thin wrapper around TanStack Query. The app's single `NotificationsClient` owns one leader-elected WS to `/ws/notifications`; it writes `setQueryData` on `push` notifications and invalidates on `invalidate` notifications, automatically. Plugins never write reconnect, snapshot-replay, or cross-tab-sync code.
-
-See `server/CLAUDE.md` → `defineResource` for the server side, and `research/2026-04-15-global-sse-lifecycle-mental-model-v3.md` for the full model.
-
-For append-only firehoses (terminal output, log tails) keep using a dedicated WS route — those are `Stream`s, not `Resource`s. Raw `new EventSource(...)` in plugins is forbidden (use `ReconnectingEventSource` from `@core` only when consuming the gateway's external log SSE endpoint).
+Raw `new EventSource(...)` in plugins is forbidden — use `ReconnectingEventSource` from the networking sub-plugin when consuming the gateway's external log SSE endpoint.
 
 ## File Structure
 
@@ -160,6 +150,7 @@ plugin-core/              # This package — framework primitives
 ├── slots.ts              # defineSlot(), Slot<P>, Core.Root
 ├── commands.ts           # defineCommand()
 ├── context.tsx           # PluginProvider, PluginRuntimeContext
+├── error-boundary.tsx    # PluginErrorBoundary, registerBoundaryReporter
 └── index.ts              # Barrel export
 
 plugins/

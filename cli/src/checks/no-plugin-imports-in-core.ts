@@ -17,6 +17,7 @@ const ALLOWED_DIRS = ["plugins/"];
 const COMPOSITION_ROOTS = [
   "web/src/plugins.ts",
   "server/src/plugins.ts",
+  "web/src/App.tsx",
 ];
 
 export const noPluginImportsInCore: Check = {

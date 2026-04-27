@@ -6,7 +6,7 @@ import type {
   Push,
   Task,
 } from "@plugins/tasks-core/shared";
-import { resourceDescriptor } from "@core/shared/resource";
+import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/shared";
 
 export type {
   Attempt,

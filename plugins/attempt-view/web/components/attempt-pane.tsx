@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Outlet, usePaneMatch } from "@plugins/pane/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/web";
 import { attemptsResource } from "@plugins/tasks/shared";

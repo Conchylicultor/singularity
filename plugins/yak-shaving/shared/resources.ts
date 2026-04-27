@@ -2,7 +2,7 @@
 // pull `server/api`'s runtime surface. Cross-plugin consumers go through
 // `@plugins/yak-shaving/server`.
 import type { YakShavingNode } from "../server/internal/schema";
-import { resourceDescriptor } from "@core/shared/resource";
+import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/shared";
 
 export type { YakShavingNode } from "../server/internal/schema";
 

@@ -1,5 +1,5 @@
 import { MdSplitscreen } from "react-icons/md";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { usePaneMatch } from "@plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { attemptsResource } from "@plugins/tasks/shared";

@@ -1,4 +1,5 @@
-import { PluginProvider, PluginErrorBoundary, Core, NotificationsProvider } from "@core";
+import { PluginProvider, PluginErrorBoundary, Core } from "@core";
+import { NotificationsProvider } from "@plugins/primitives/plugins/live-state/web";
 import { plugins } from "./plugins";
 
 function RootRenderer() {

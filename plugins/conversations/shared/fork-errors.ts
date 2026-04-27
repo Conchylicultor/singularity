@@ -1,4 +1,4 @@
-import { resourceDescriptor } from "@core/shared/resource";
+import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/shared";
 
 export interface ForkError {
   id: string;

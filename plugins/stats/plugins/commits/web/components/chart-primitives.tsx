@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchWithRetry } from "@core";
+import { fetchWithRetry } from "@plugins/primitives/plugins/networking/web";
 
 export function useFetchJson<T>(url: string, cacheKey?: string): {
   data: T | null;

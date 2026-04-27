@@ -136,6 +136,10 @@
       "name": "@singularity/plugin-pane",
       "version": "0.0.1",
     },
+    "plugins/primitives": {
+      "name": "@singularity/plugin-primitives",
+      "version": "0.0.1",
+    },
     "plugins/screenshot": {
       "name": "@singularity/plugin-screenshot",
       "version": "0.0.1",
@@ -748,6 +752,8 @@
     "@singularity/plugin-mcp": ["@singularity/plugin-mcp@workspace:plugins/mcp"],
 
     "@singularity/plugin-pane": ["@singularity/plugin-pane@workspace:plugins/pane"],
+
+    "@singularity/plugin-primitives": ["@singularity/plugin-primitives@workspace:plugins/primitives"],
 
     "@singularity/plugin-screenshot": ["@singularity/plugin-screenshot@workspace:plugins/screenshot"],
 

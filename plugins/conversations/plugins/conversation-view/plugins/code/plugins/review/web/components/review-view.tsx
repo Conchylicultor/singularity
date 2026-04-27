@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { MdClose } from "react-icons/md";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { pushesResource, type Push } from "@plugins/tasks/shared";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";

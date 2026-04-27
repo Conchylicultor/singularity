@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MdClose, MdArrowUpward } from "react-icons/md";
 import { Button } from "@/components/ui/button";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { TasksList, TaskDetail } from "@plugins/tasks/web";
 import { tasksResource } from "@plugins/tasks/shared";

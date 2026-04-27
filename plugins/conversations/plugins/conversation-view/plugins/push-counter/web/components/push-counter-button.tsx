@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { MdPublish } from "react-icons/md";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { pushesResource } from "@plugins/tasks/shared";
 

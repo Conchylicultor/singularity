@@ -1,4 +1,4 @@
-import { useResource, resourceDescriptor } from "@core";
+import { useResource, resourceDescriptor } from "@plugins/primitives/plugins/live-state/web";
 import type { ConfigDescriptor, Schema, Values } from "@plugins/config/shared";
 import { getDefault } from "@plugins/config/shared";
 

@@ -1,5 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { SharedWebSocket } from "./shared-websocket";
+import { SharedWebSocket } from "@plugins/primitives/plugins/networking/web";
 
 // Drives the TanStack Query cache off server resource notifications. Uses
 // SharedWebSocket, which transparently shares a single `/ws/notifications`
