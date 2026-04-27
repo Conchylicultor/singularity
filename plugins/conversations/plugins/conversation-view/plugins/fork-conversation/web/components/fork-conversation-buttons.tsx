@@ -23,6 +23,7 @@ export function ForkConversationButtons({
           <GitFork className="size-3.5 text-muted-foreground" />
           <LaunchButtons
             size="sm"
+            variant="outline"
             getRequest={() => {
               const prompt = draft.trim();
               return {

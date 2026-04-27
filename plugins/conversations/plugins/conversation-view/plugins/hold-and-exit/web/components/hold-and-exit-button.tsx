@@ -41,7 +41,7 @@ export function HoldAndExitButton({
 
   return (
     <Button
-      variant="default"
+      variant="outline"
       size="icon-sm"
       title={busy ? "Holding…" : "Hold & Exit"}
       aria-label="Hold & Exit"

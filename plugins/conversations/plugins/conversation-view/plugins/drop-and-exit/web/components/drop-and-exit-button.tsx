@@ -53,13 +53,13 @@ export function DropAndExitButton({
   if (hasPush) {
     return (
       <Button
-        variant="default"
+        variant="outline"
         size="icon-sm"
         title={busy ? "Completing…" : "Complete & Exit"}
         aria-label="Complete & Exit"
         disabled={disabled}
         onClick={onClick}
-        className="bg-green-600 text-white hover:bg-green-700"
+        className="border-emerald-300/70 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-300"
       >
         <MdCheckCircle className="size-3.5" />
       </Button>
@@ -68,13 +68,12 @@ export function DropAndExitButton({
 
   return (
     <Button
-      variant="default"
+      variant="destructive"
       size="icon-sm"
       title={busy ? "Dropping…" : "Drop & Exit"}
       aria-label="Drop & Exit"
       disabled={disabled}
       onClick={onClick}
-      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
     >
       <MdDeleteForever className="size-3.5" />
     </Button>

@@ -24,6 +24,7 @@ export function ForkSessionButtons({
           <GitBranchPlus className="size-3.5 text-muted-foreground" />
           <LaunchButtons
             size="sm"
+            variant="outline"
             disabled={!ready}
             getRequest={() => {
               const prompt = draft.trim();

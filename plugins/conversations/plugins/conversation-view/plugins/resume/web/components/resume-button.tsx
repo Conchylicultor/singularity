@@ -52,7 +52,7 @@ export function ResumeButton({
 
   return (
     <Button
-      variant="default"
+      variant="outline"
       size="icon-sm"
       title={busy ? "Resuming…" : tooltip}
       aria-label="Resume"
