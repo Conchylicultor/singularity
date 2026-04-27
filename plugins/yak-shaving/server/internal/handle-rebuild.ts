@@ -1,3 +1,4 @@
+import fs from "node:fs/promises";
 import {
   createConversation,
   deleteConversation,
@@ -16,8 +17,17 @@ const CLEANUP_AFTER_MS = 5 * 60 * 1000;
 // re-label any that drifted. Runs in its own worktree like any other
 // conversation; `kind: "system"` keeps it out of user-facing lists and
 // parents the auto-created task under SYSTEM_META_TASK_ID.
+//
+// The bulky context (existing tree + active conversations with first-turn
+// excerpts) is written to /tmp instead of inlined in the prompt — tmux's
+// per-arg cap (~16KB on 3.6a) refuses long `-e SINGULARITY_PROMPT=…` values
+// with a silent "command too long" exit. The conversation reads the file
+// via its Read tool on first turn.
 export async function handleRebuild(_req: Request): Promise<Response> {
-  const prompt = await buildRebuildPayload();
+  const contextPath = `/tmp/singularity-yak-rebuild-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.xml`;
+  const { prompt, context } = await buildRebuildPayload(contextPath);
+  await fs.writeFile(contextPath, context, "utf8");
+
   const conv = await createConversation({
     prompt,
     model: "sonnet",
@@ -28,6 +38,7 @@ export async function handleRebuild(_req: Request): Promise<Response> {
     deleteConversation(conv.id).catch((err) => {
       console.error(`[yak-shaving] cleanup of ${conv.id} failed`, err);
     });
+    fs.unlink(contextPath).catch(() => {});
   }, CLEANUP_AFTER_MS).unref();
   return Response.json({ conversationId: conv.id }, { status: 202 });
 }

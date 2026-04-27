@@ -9,7 +9,11 @@ import { db } from "@server/db/client";
 import { _yakShavingCategories, _yakShavingNodes } from "./tables";
 import type { YakShavingCategory, YakShavingNode } from "./schema";
 
-const FIRST_TURN_MAX_CHARS = 1000;
+// Most first-user turns are well under 4000 chars. For the longer ones we
+// keep a head and tail slice so the model still sees both the original ask
+// and any follow-up clarifications, with the wandering middle dropped.
+const FIRST_TURN_HEAD_CHARS = 2500;
+const FIRST_TURN_TAIL_CHARS = 1500;
 
 const PROMPT_INSTRUCTIONS = `You are reconciling the yak-shaving tree against the user's currently active conversations.
 
@@ -47,9 +51,11 @@ Reconcile by:
 
 Use the MCP tools directly — do NOT invoke them via Bash, curl, or HTTP.
 
-When the tree matches reality, stop. Do not write a final assistant message, do not read files, do not run any other tool.`;
+When the tree matches reality, stop. Do not write a final assistant message, do not read any other files, do not run any other tool.`;
 
-export async function buildRebuildPayload(): Promise<string> {
+export async function buildRebuildPayload(
+  contextPath: string,
+): Promise<{ prompt: string; context: string }> {
   const convs = await listActiveConversations();
   const existingNodes = await db.select().from(_yakShavingNodes);
   const existingCategories = await db.select().from(_yakShavingCategories);
@@ -60,7 +66,7 @@ export async function buildRebuildPayload(): Promise<string> {
     (n) => !activeConvIds.has(n.conversationId),
   );
 
-  const sections: string[] = [PROMPT_INSTRUCTIONS, ""];
+  const sections: string[] = [];
 
   sections.push("<previous-tree>");
   if (existingNodes.length === 0 && existingCategories.length === 0) {
@@ -95,7 +101,9 @@ export async function buildRebuildPayload(): Promise<string> {
   }
   sections.push("</active-conversations>");
 
-  return sections.join("\n");
+  const context = sections.join("\n");
+  const prompt = `${PROMPT_INSTRUCTIONS}\n\nThe rebuild context (previous tree, stale nodes, active conversations) lives at \`${contextPath}\`. Read that file with the Read tool before doing anything else, then reconcile by calling the yak_* MCP tools as described above.`;
+  return { prompt, context };
 }
 
 function formatPreviousTree(
@@ -256,7 +264,11 @@ async function formatActiveConversations(
       );
       lines.push(`      <title>${escapeText(conv.title ?? "Untitled")}</title>`);
       if (firstUserTurn) {
-        const text = truncate(firstUserTurn.text.trim(), FIRST_TURN_MAX_CHARS);
+        const text = truncateHeadTail(
+          firstUserTurn.text.trim(),
+          FIRST_TURN_HEAD_CHARS,
+          FIRST_TURN_TAIL_CHARS,
+        );
         lines.push(`      <first-user-turn>${escapeText(text)}</first-user-turn>`);
       } else {
         lines.push(`      <first-user-turn />`);
@@ -289,9 +301,10 @@ async function buildTaskAncestry(
   return titles;
 }
 
-function truncate(text: string, max: number): string {
-  if (text.length <= max) return text;
-  return `${text.slice(0, max)}…`;
+function truncateHeadTail(text: string, head: number, tail: number): string {
+  if (text.length <= head + tail) return text;
+  const dropped = text.length - head - tail;
+  return `${text.slice(0, head)}\n…[truncated ${dropped} chars]…\n${text.slice(-tail)}`;
 }
 
 function escapeText(s: string): string {

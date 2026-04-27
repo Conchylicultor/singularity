@@ -151,7 +151,7 @@ export const tmuxRuntime: ConversationRuntime = {
     }
     if (hasPrompt) cmdParts.push(`"$SINGULARITY_PROMPT"`);
     const claudeCmd = cmdParts.join(" ");
-    await Bun.spawn(
+    const proc = Bun.spawn(
       [
         TMUX,
         "-u",
@@ -165,7 +165,20 @@ export const tmuxRuntime: ConversationRuntime = {
         `zsh -l -c 'export SINGULARITY_CONVERSATION_ID=${conversationId}; export SINGULARITY_PARENT_HOST=${parentHost}; ${claudeCmd}'`,
       ],
       { stdout: "pipe", stderr: "pipe" },
-    ).exited;
+    );
+    const [stderr, exit] = await Promise.all([
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    if (exit !== 0) {
+      // tmux's per-arg cap (~16KB on 3.6a) bites here when callers stuff a
+      // huge value into SINGULARITY_PROMPT — failure mode is a silent
+      // "command too long" with no session created. Surface it loudly so
+      // the conversation row never lands in a half-created state.
+      throw new Error(
+        `tmux new-session for ${conversationId} failed (exit ${exit}): ${stderr.trim() || "<no stderr>"}`,
+      );
+    }
   },
 
   async delete(conversationId: string): Promise<void> {
