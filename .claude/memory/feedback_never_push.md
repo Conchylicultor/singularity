@@ -4,7 +4,7 @@ description: Never push on own initiative (only on explicit "push"/"publish"/"sh
 type: feedback
 originSessionId: 01afc406-19bf-41ed-9504-50efa28e7638
 ---
-Never commit or push code on your own initiative. Only run `./singularity push` when the user explicitly says "push", "publish", or "ship".
+Never commit or push code on your own initiative. Only run `./singularity push` when the user explicitly says "push", "publish", or "ship". "Save in git" or "commit" means commit only — do NOT interpret it as permission to push to main.
 
 **Never treat `./singularity push` as a testing or verification step.** Design docs, plans, and verification checklists must not propose running push to exercise push-related flows. `push` promotes the branch to main — it is irreversible shared-state mutation, not a test fixture. Simulate the push path instead: insert `pushes` rows directly (SQL or test helper), or rely on dedicated integration tests in the push-watcher plugin.
 

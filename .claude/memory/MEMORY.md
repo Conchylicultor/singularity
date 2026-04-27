@@ -1,4 +1,3 @@
-- [User background](user_background.md) — Rebuilt Singularity from scratch after leaving previous company where they had a working version
 - [Understand the why](feedback_understand_why.md) — Always ask about reasoning/context before implementing; v1 experience holds non-obvious considerations
 - [Gateway design](project_gateway_design.md) — Gateway multiplexes agent worktree instances behind port 9000; core architectural piece
 - [Vision: Notion-like composable apps](project_vision_self_evolving_os.md) — Unified surface where agents compose per-user apps from plugin building blocks (Notion-meets-WeChat); agent manager is one composition
