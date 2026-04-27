@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNotNull, lt, ne } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, lt, ne, type SQL } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { _conversations } from "../tables";
 import { conversations } from "../schema";
@@ -6,43 +6,78 @@ import type { Conversation } from "../schema";
 
 export const RECENT_GONE_LIMIT = 30;
 
-// Filter applied to user-facing lists. System conversations (yak classifiers,
-// future automation) live in the same table but never surface in the sidebar,
-// recovery pane, or attempt-view — they're machine plumbing. Infra paths
-// (poller, turn-emitter) MUST see them so tmux death is detected and turn
-// events are emitted; those paths use listConversations() directly.
+// System conversations (yak classifiers, future automation) live in the same
+// table but never surface in the sidebar, recovery pane, or attempt-view —
+// they're machine plumbing. Only `listConversationsForInfra` opts out of this
+// filter; every other entry point excludes them.
 const notSystem = ne(conversations.kind, "system");
 
-// Canonical "all rows" query. Returns every conversation including system
-// kinds. Used by infra (poller, turn-emitter). UI lists go through
-// listConversationsForDisplay() instead.
-export async function listConversations(): Promise<Conversation[]> {
-  return db
-    .select()
-    .from(conversations)
-    .orderBy(desc(conversations.createdAt));
+type Filters = {
+  includeSystem?: boolean;
+  active?: boolean;
+  endedAtNotNull?: boolean;
+  endedAtBefore?: Date;
+};
+
+function buildWhere(f: Filters): SQL | undefined {
+  const clauses: SQL[] = [];
+  if (!f.includeSystem) clauses.push(notSystem);
+  if (f.active !== undefined) clauses.push(eq(conversations.active, f.active));
+  if (f.endedAtNotNull) clauses.push(isNotNull(conversations.endedAt));
+  if (f.endedAtBefore) clauses.push(lt(conversations.endedAt, f.endedAtBefore));
+  return clauses.length ? and(...clauses) : undefined;
 }
 
-export async function listConversationsForDisplay(): Promise<Conversation[]> {
-  return db
-    .select()
-    .from(conversations)
-    .where(notSystem)
-    .orderBy(desc(conversations.createdAt));
+type Order = {
+  col: typeof conversations.createdAt | typeof conversations.endedAt;
+  dir: "asc" | "desc";
+};
+
+function queryConversations(
+  filters: Filters,
+  order: Order,
+  limit?: number,
+): Promise<Conversation[]> {
+  const orderExpr = order.dir === "asc" ? asc(order.col) : desc(order.col);
+  const base = db.select().from(conversations).where(buildWhere(filters)).orderBy(orderExpr);
+  return limit !== undefined ? base.limit(limit) : base;
 }
 
-export async function listActiveConversations(): Promise<Conversation[]> {
-  return db
-    .select()
-    .from(conversations)
-    .where(and(eq(conversations.active, true), notSystem))
-    .orderBy(desc(conversations.createdAt));
+// Infra paths only: poller, turn-emitter. Returns ALL rows including system
+// kinds so tmux death is detected and turn events are emitted for system
+// conversations. UI must never call this.
+export function listConversationsForInfra(): Promise<Conversation[]> {
+  return queryConversations(
+    { includeSystem: true },
+    { col: conversations.createdAt, dir: "desc" },
+  );
 }
 
-// Narrow projection used by attemptsResource for the embedded conversations
-// field. Returns every conversation (no limit) sorted oldest-first so the
-// client can render them in attempt-order without further sorting.
-export async function listAllConversationSummaries(): Promise<
+// User-visible list, newest-first. Sidebar / list endpoint.
+export function listConversationsForDisplay(): Promise<Conversation[]> {
+  return queryConversations({}, { col: conversations.createdAt, dir: "desc" });
+}
+
+// User-visible + active=true. Yak rebuild + recentConversationsResource.
+export function listActiveConversations(): Promise<Conversation[]> {
+  return queryConversations({ active: true }, { col: conversations.createdAt, dir: "desc" });
+}
+
+// Ended user-visible rows, newest-first by endedAt. Pass `before` for pagination.
+export function listGoneConversations(opts: {
+  before?: Date;
+  limit?: number;
+} = {}): Promise<Conversation[]> {
+  return queryConversations(
+    { active: false, endedAtNotNull: true, endedAtBefore: opts.before },
+    { col: conversations.endedAt, dir: "desc" },
+    opts.limit,
+  );
+}
+
+// Narrow projection used by attemptsResource. Sorted oldest-first so the
+// client renders them in attempt-order without further sorting.
+export async function listConversationSummariesByAttempt(): Promise<
   Pick<Conversation, "id" | "attemptId" | "title" | "status">[]
 > {
   return db
@@ -55,34 +90,6 @@ export async function listAllConversationSummaries(): Promise<
     .from(conversations)
     .where(notSystem)
     .orderBy(asc(conversations.createdAt));
-}
-
-export async function listRecentGoneConversations(limit: number): Promise<Conversation[]> {
-  return db
-    .select()
-    .from(conversations)
-    .where(and(eq(conversations.active, false), isNotNull(conversations.endedAt), notSystem))
-    .orderBy(desc(conversations.endedAt))
-    .limit(limit);
-}
-
-export async function listGoneConversationsBefore(
-  before: Date,
-  limit: number,
-): Promise<Conversation[]> {
-  return db
-    .select()
-    .from(conversations)
-    .where(
-      and(
-        eq(conversations.active, false),
-        isNotNull(conversations.endedAt),
-        lt(conversations.endedAt, before),
-        notSystem,
-      ),
-    )
-    .orderBy(desc(conversations.endedAt))
-    .limit(limit);
 }
 
 export async function getConversation(id: string): Promise<Conversation | null> {

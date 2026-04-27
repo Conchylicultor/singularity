@@ -1,5 +1,5 @@
 import {
-  listConversations,
+  listConversationsForInfra,
   updateConversation,
   updateTaskTitle,
   adoptOrphanConversation,
@@ -54,7 +54,7 @@ async function tick(): Promise<void> {
   let changed = false;
   const [{ next, failedRuntimes }, rows] = await Promise.all([
     collectLive(),
-    listConversations(),
+    listConversationsForInfra(),
   ]);
   const dbById = new Map(rows.map((r) => [r.id, r]));
 

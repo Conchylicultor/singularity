@@ -59,11 +59,10 @@ export {
 } from "./internal/queries/attempts";
 
 export {
-  listConversations,
+  listConversationsForInfra,
   listConversationsForDisplay,
   listActiveConversations,
-  listRecentGoneConversations,
-  listGoneConversationsBefore,
+  listGoneConversations,
   getConversation,
   getConversationRuntime,
   getConversationClaudeSessionId,

@@ -1,4 +1,4 @@
-import { listGoneConversationsBefore } from "@plugins/tasks-core/server";
+import { listGoneConversations } from "@plugins/tasks-core/server";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -20,7 +20,7 @@ export async function handleListGone(req: Request): Promise<Response> {
   const parsed = parseInt(limitStr ?? "", 10);
   const limit = Math.min(MAX_LIMIT, Math.max(1, isNaN(parsed) ? DEFAULT_LIMIT : parsed));
 
-  const rows = await listGoneConversationsBefore(before, limit + 1);
+  const rows = await listGoneConversations({ before, limit: limit + 1 });
   return Response.json({
     items: rows.slice(0, limit),
     hasMore: rows.length > limit,

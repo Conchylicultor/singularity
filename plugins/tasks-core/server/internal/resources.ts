@@ -10,8 +10,8 @@ import type {
 } from "../../shared";
 import {
   listActiveConversations,
-  listAllConversationSummaries,
-  listRecentGoneConversations,
+  listConversationSummariesByAttempt,
+  listGoneConversations,
   RECENT_GONE_LIMIT,
 } from "./queries/conversations";
 
@@ -27,7 +27,7 @@ export const recentConversationsResource = defineResource({
   loader: async (): Promise<ConversationListPayload> => {
     const [active, goneRows] = await Promise.all([
       listActiveConversations(),
-      listRecentGoneConversations(RECENT_GONE_LIMIT + 1),
+      listGoneConversations({ limit: RECENT_GONE_LIMIT + 1 }),
     ]);
     const hasMoreGone = goneRows.length > RECENT_GONE_LIMIT;
     return {
@@ -52,7 +52,7 @@ export const attemptsResource = defineResource({
   loader: async (): Promise<AttemptWithConversations[]> => {
     const [attemptRows, convRows] = await Promise.all([
       db.select().from(attempts).orderBy(asc(attempts.createdAt)),
-      listAllConversationSummaries(),
+      listConversationSummariesByAttempt(),
     ]);
     const byAttempt = new Map<string, ConversationSummary[]>();
     for (const c of convRows) {

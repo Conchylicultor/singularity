@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { isActiveStatus } from "../../shared";
 import {
   getConversationClaudeSessionId,
-  listConversations,
+  listConversationsForInfra,
 } from "@plugins/tasks-core/server";
 import { db } from "@server/db/client";
 import { findTranscriptPath } from "./claude-transcript";
@@ -55,11 +55,11 @@ export function stopTurnEmitter(): void {
 }
 
 async function tick(): Promise<void> {
-  let convs: Awaited<ReturnType<typeof listConversations>>;
+  let convs: Awaited<ReturnType<typeof listConversationsForInfra>>;
   try {
-    convs = await listConversations();
+    convs = await listConversationsForInfra();
   } catch (err) {
-    console.error("[conversations.turn-emitter] listConversations failed", err);
+    console.error("[conversations.turn-emitter] listConversationsForInfra failed", err);
     return;
   }
 
