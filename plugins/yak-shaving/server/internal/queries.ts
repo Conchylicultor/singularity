@@ -13,17 +13,24 @@ const FIRST_TURN_MAX_CHARS = 1000;
 
 const PROMPT_INSTRUCTIONS = `You are reconciling the yak-shaving tree against the user's currently active conversations.
 
-The yak-shaving tree captures the user's "yak chains" — the original goal a conversation set out to achieve, and the sidequests, detours, and sub-questions that branched off from it. Yak shaving is what happens when "I want X" turns into "to do X I first need Y, but for Y I have to fix Z…". Each link in that chain is its own conversation. The tree must make those chains visible: roots are original goals, descendants are the sidequests they spawned.
+The tree groups conversations to minimise the user's mental overhead: roots are independent threads of work, and children are conversations that are blocked on, branch off, or share deep context with their parent. The goal is not to reconstruct a narrative ("what spawned what") but to answer two practical questions:
 
-A child node is the yak-chain descendant of a parent when one of these signals fires (in roughly this order of strength):
+1. **What must sequence?** Conversation B is a child of A when A's outcome directly gates B — a design that must be settled before implementation, a plan review before the fix, an investigation before the architectural decision.
+2. **What shares context?** Conversations tackling the same architectural concern from different angles (e.g. two parallel designs that must converge) belong together as siblings under a shared root, so the user knows they need to be reconciled before either proceeds.
 
-1. **Same worktree.** Conversations sharing a worktree are almost always sidequests of one another. Order them by createdAt — the earliest conversation in a worktree typically captures the original goal, and later ones are detours off it.
-2. **Task ancestry overlap.** Conversations whose task ancestries share a branch are usually a chain.
-3. **First-turn cues.** "While doing X I noticed Y", "follow-up to <id>", "to fix the bug from <prev>", or implementation-language picking up where a parent design left off.
+**Signals for parent-child placement (in order of strength):**
+
+1. **Same worktree.** Conversations sharing a worktree are almost always sequential. Order by createdAt — the earliest is the root, later ones are children (or grandchildren if they chain further).
+2. **Explicit blocking.** "Implement the design from X", "follow-up to X", "plan review before fixing X" — B cannot meaningfully proceed until A is done.
+3. **Convergence.** Two or more conversations addressing the same root problem from different angles should be grouped as siblings under a shared parent (or under the earliest one if it's clearly foundational), with the expectation that they must be reconciled.
+4. **Task ancestry overlap.** Conversations whose task trees share a branch are likely related work.
+5. **First-turn cues.** Phrasing that picks up where another conversation left off ("while doing X I noticed Y", "to fix the bug from <prev>").
+
+**What does NOT make a child:** thematic similarity alone (two separate bug fixes in the same subsystem), temporal proximity without a blocking relationship, or parallel investigations that don't need to converge.
 
 Reconcile by:
 
-- For each conversation in <active-conversations> with no node in <previous-tree>, call \`mcp__singularity__yak_add_node\`. Place it under its true yak-chain parent's conversation id, or pass \`parentConversationId: null\` for a brand-new root.
+- For each conversation in <active-conversations> with no node in <previous-tree>, call \`mcp__singularity__yak_add_node\`. Place it under its blocking/convergence parent, or pass \`parentConversationId: null\` for a standalone root.
 - For each entry in <stale-nodes>, call \`mcp__singularity__yak_remove_node\`. Remove leaves before their parents.
 - For each conversation that already has a node, call \`mcp__singularity__yak_update_node\` only if its current parent or oneLineContext is wrong. Don't update for the sake of updating.
 
