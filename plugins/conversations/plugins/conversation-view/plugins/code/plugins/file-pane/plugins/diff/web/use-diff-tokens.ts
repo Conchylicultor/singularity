@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import type { HunkData } from "react-diff-view";
 import type { BundledLanguage, ThemedToken } from "shiki";
-import { getHighlighter, themeForMode } from "../../../web/highlighter";
-import { languageForPath, SHIKI_LANGS } from "../../../web/lang";
+import {
+  getHighlighter,
+  languageForPath,
+  SHIKI_LANGS,
+  themeForMode,
+} from "@plugins/syntax-highlight/web";
 
 export type ShikiTokenNode = {
   type: "shiki";

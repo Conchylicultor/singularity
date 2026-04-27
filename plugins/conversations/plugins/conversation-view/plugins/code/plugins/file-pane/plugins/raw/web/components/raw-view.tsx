@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
+import {
+  getHighlighter,
+  languageForPath,
+  SHIKI_LANGS,
+  themeForMode,
+  useDarkMode,
+} from "@plugins/syntax-highlight/web";
 import { useFileContent } from "../../../../web/use-file-content";
-import { getHighlighter, themeForMode } from "../../../../web/highlighter";
-import { languageForPath, SHIKI_LANGS } from "../../../../web/lang";
-import { useDarkMode } from "../../../../web/use-dark-mode";
 
 export function RawView({
   worktree,

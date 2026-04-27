@@ -46,6 +46,7 @@ import themePlugin from "@plugins/theme/web";
 import welcomePlugin from "@plugins/welcome/web";
 import launchPlugin from "@plugins/launch/web";
 import treePlugin from "@plugins/tree/web";
+import syntaxHighlightPlugin from "@plugins/syntax-highlight/web";
 import healthPlugin from "@plugins/health/web";
 import crashesPlugin from "@plugins/crashes/web";
 import statsPlugin from "@plugins/stats/web";
@@ -71,6 +72,7 @@ export const plugins: PluginDefinition[] = [
   welcomePlugin,
   launchPlugin,
   treePlugin,
+  syntaxHighlightPlugin,
   terminalPlugin,
   worktreeSwitcherPlugin,
   buildPlugin,

@@ -531,6 +531,10 @@
         - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.listTasks`
         - `GET /api/stats/tasks/cumulative`
 
+- **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
+  - Exports (web):
+    - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
+
 - **`tasks`** — Nested tasks with attempts; meta-plugin hosting sub-pane contributions. Nested tasks with attempts linking to conversations.
   - Defines:
     - Slots: `Tasks.List`, `Tasks.View`, `Tasks.TaskActions`

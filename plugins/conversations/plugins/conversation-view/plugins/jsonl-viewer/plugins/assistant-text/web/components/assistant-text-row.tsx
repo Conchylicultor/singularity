@@ -1,12 +1,30 @@
+import { isValidElement, type ReactNode } from "react";
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { HighlightedCode } from "@plugins/syntax-highlight/web";
 import type { JsonlEvent } from "../../../../shared";
 import { formatTime } from "../../../../web/utils";
 
 type AssistantTextEvent = Extract<JsonlEvent, { kind: "assistant-text" }>;
 
 const REMARK_PLUGINS = [remarkGfm];
+
+function nodeToText(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(nodeToText).join("");
+  if (isValidElement(node)) {
+    const props = node.props as { children?: ReactNode };
+    return nodeToText(props.children);
+  }
+  return "";
+}
+
+function langFromClassName(className: string | undefined): string | null {
+  const match = /language-([\w+-]+)/.exec(className ?? "");
+  return match?.[1] ?? null;
+}
 
 const MD_COMPONENTS: Components = {
   h1: (p) => <h1 className="mt-4 mb-2 text-2xl font-semibold" {...p} />,
@@ -31,13 +49,15 @@ const MD_COMPONENTS: Components = {
   ),
   hr: (p) => <hr className="my-4 border-border" {...p} />,
   code: ({ className, children, ...rest }) => {
-    const isBlock = /language-/.test(className ?? "");
+    const lang = langFromClassName(className);
+    const text = nodeToText(children).replace(/\n$/, "");
+    const isBlock = lang !== null || text.includes("\n");
     if (isBlock) {
-      return <code className={`${className ?? ""} font-mono text-xs`} {...rest}>{children}</code>;
+      return <HighlightedCode code={text} lang={lang} />;
     }
     return <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs" {...rest}>{children}</code>;
   },
-  pre: (p) => <pre className="my-2 overflow-auto rounded bg-muted p-3 font-mono text-xs" {...p} />,
+  pre: ({ children }) => <>{children}</>,
   table: (p) => <table className="my-2 w-full border-collapse" {...p} />,
   th: (p) => <th className="border border-border bg-muted px-2 py-1 text-left" {...p} />,
   td: (p) => <td className="border border-border px-2 py-1" {...p} />,

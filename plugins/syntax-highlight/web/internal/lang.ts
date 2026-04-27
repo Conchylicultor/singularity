@@ -52,3 +52,25 @@ export function languageForPath(path: string): string {
   const ext = base.slice(dot + 1);
   return EXT_TO_LANG[ext] ?? "text";
 }
+
+const ALIAS_TO_LANG: Record<string, string> = {
+  typescript: "ts",
+  javascript: "js",
+  shell: "bash",
+  sh: "bash",
+  zsh: "bash",
+  yml: "yaml",
+  py: "python",
+  rs: "rust",
+  golang: "go",
+  dockerfile: "docker",
+  md: "markdown",
+  mdx: "markdown",
+};
+
+export function resolveLang(lang: string | undefined | null): string | null {
+  if (!lang) return null;
+  const normalized = lang.toLowerCase();
+  const canonical = ALIAS_TO_LANG[normalized] ?? normalized;
+  return SHIKI_LANGS.includes(canonical) ? canonical : null;
+}

@@ -164,6 +164,10 @@
         "recharts": "^2.15.0",
       },
     },
+    "plugins/syntax-highlight": {
+      "name": "@singularity/plugin-syntax-highlight",
+      "version": "0.0.1",
+    },
     "plugins/tasks": {
       "name": "@singularity/plugin-tasks",
       "version": "0.0.1",
@@ -752,6 +756,8 @@
     "@singularity/plugin-shell": ["@singularity/plugin-shell@workspace:plugins/shell"],
 
     "@singularity/plugin-stats": ["@singularity/plugin-stats@workspace:plugins/stats"],
+
+    "@singularity/plugin-syntax-highlight": ["@singularity/plugin-syntax-highlight@workspace:plugins/syntax-highlight"],
 
     "@singularity/plugin-tasks": ["@singularity/plugin-tasks@workspace:plugins/tasks"],
 
