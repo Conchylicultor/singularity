@@ -1,7 +1,10 @@
 import { MdRateReview, MdWarning } from "react-icons/md";
+import { useMemo } from "react";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { usePaneMatch } from "@plugins/pane/web";
 import { useConfigValues } from "@plugins/config/web";
+import { useResource } from "@core";
+import { pushesResource } from "@plugins/tasks/shared";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "../../../../web/use-edited-files";
 import { convReviewPane } from "../panes";
@@ -26,6 +29,12 @@ export function ReviewButton({ conversation }: { conversation: ConversationRecor
     match?.chain.some((e) => e.pane === convReviewPane._internal) ?? false;
   const { safePaths, carefulPaths } = useConfigValues(reviewConfig, "conversation-code-review");
 
+  const pushesQ = useResource(pushesResource);
+  const hasPastPushes = useMemo(
+    () => (pushesQ.data ?? []).some((p) => p.attemptId === conversation.attemptId),
+    [pushesQ.data, conversation.attemptId],
+  );
+
   const count = files?.length ?? 0;
   const additions = files?.reduce((sum, f) => sum + f.additions, 0) ?? 0;
   const deletions = files?.reduce((sum, f) => sum + f.deletions, 0) ?? 0;
@@ -39,7 +48,7 @@ export function ReviewButton({ conversation }: { conversation: ConversationRecor
       }, "safe")
     : "safe";
 
-  const disabled = files != null && count === 0;
+  const disabled = files != null && count === 0 && !hasPastPushes;
 
   return (
     <Button
