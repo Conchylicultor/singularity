@@ -1,34 +1,36 @@
+import { useMemo } from "react";
 import { useResource } from "@core";
+import { buildTree } from "@plugins/tree/shared";
 import { yakShavingNodesResource } from "../../shared/resources";
+import { YakTreeRow, type YakTreeItem } from "./yak-tree-row";
 
-// Placeholder tree. Sub-task C will land the `renderLabel` enhancement on
-// TreeList; sub-task E populates the rows. For now we render a flat list
-// of node IDs so the resource wiring is exercised end-to-end.
 export function YakTree({ selectedConvId }: { selectedConvId?: string }) {
   const { data } = useResource(yakShavingNodesResource);
   const rows = data ?? [];
 
+  const tree = useMemo(() => {
+    const items: YakTreeItem[] = rows
+      .map((n) => ({ ...n, parentId: n.parentNodeId, rank: n.rank ?? "" }))
+      .sort((a, b) => a.rank.localeCompare(b.rank));
+    return buildTree(items);
+  }, [rows]);
+
   if (rows.length === 0) {
     return (
-      <p className="text-muted-foreground px-2 py-1 text-sm">
-        No nodes yet.
-      </p>
+      <p className="text-muted-foreground px-2 py-1 text-sm">No nodes yet.</p>
     );
   }
 
   return (
-    <ul className="flex flex-col gap-0.5">
-      {rows.map((n) => (
-        <li
-          key={n.id}
-          className={
-            "rounded px-2 py-1 text-sm " +
-            (n.conversationId === selectedConvId ? "bg-accent" : "")
-          }
-        >
-          <span className="font-mono text-xs">{n.conversationId}</span>
-        </li>
+    <div className="flex flex-col gap-0.5">
+      {tree.map((node) => (
+        <YakTreeRow
+          key={node.id}
+          node={node}
+          depth={0}
+          selectedConvId={selectedConvId}
+        />
       ))}
-    </ul>
+    </div>
   );
 }
