@@ -15,7 +15,6 @@ import { Shell as ShellCommands } from "../commands";
 import { Shell } from "../slots";
 import { Toaster } from "./toaster";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
@@ -102,7 +101,7 @@ export function ShellLayout() {
   return (
     <>
     <TooltipProvider>
-      <SidebarProvider>
+      <SidebarProvider className="h-full min-h-0">
         <Sidebar>
           <SidebarHeader className="h-12 justify-center border-b px-4 py-0">
             <a
@@ -208,10 +207,8 @@ export function ShellLayout() {
             ))}
           </header>
 
-          <main className="flex-1 overflow-hidden bg-muted/30">
-            <ScrollArea className="h-full">
-              <PaneRouter />
-            </ScrollArea>
+          <main className="min-h-0 flex-1 overflow-hidden bg-muted/30">
+            <PaneRouter />
           </main>
 
         </SidebarInset>
