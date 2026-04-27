@@ -13,14 +13,21 @@ deny() {
 cmd=$(jq -r '.tool_input.command // empty')
 [ -z "$cmd" ] && exit 0
 
+# Strip single- and double-quoted segments so `find` inside string literals
+# (echo messages, rg/grep patterns, sed scripts) doesn't trigger the guard.
+# Only unquoted `find` would actually invoke the binary. Imperfect for
+# pathological cases like `$(find ...)` inside double quotes, but covers the
+# common false-positive surface.
+stripped=$(printf '%s' "$cmd" | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
+
 # `find ` at start of command or after a shell separator/operator.
 # Skips false positives like findutils, findstr.
-if ! [[ "$cmd" =~ (^|[^a-zA-Z0-9_-])find[[:space:]] ]]; then
+if ! [[ "$stripped" =~ (^|[^a-zA-Z0-9_-])find[[:space:]] ]]; then
   exit 0
 fi
 
 # Allow when the traversal is explicitly bounded.
-if [[ "$cmd" =~ -prune || "$cmd" =~ -maxdepth ]]; then
+if [[ "$stripped" =~ -prune || "$stripped" =~ -maxdepth ]]; then
   exit 0
 fi
 
