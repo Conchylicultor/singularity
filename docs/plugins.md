@@ -210,7 +210,7 @@
             - Types: `EventRendererContribution`
             - Values: `JsonlPane`, `JsonlViewer`
           - Exports (shared):
-            - Types: `JsonlEvent`, `JsonlEventsResponse`
+            - Types: `JsonlEvent`, `JsonlEventsResponse`, `TokenUsage`
             - Values: `jsonlEventsResource`
           - Server:
             - Uses: `conversations.findTranscriptPath`, `tasks-core.getConversationClaudeSessionId`

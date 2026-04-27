@@ -1,4 +1,4 @@
-import type { JsonlEvent } from "../../shared";
+import type { JsonlEvent, TokenUsage } from "../../shared";
 
 interface RawBlock {
   type?: string;
@@ -9,6 +9,27 @@ interface RawBlock {
   tool_use_id?: string;
   content?: unknown;
   is_error?: boolean;
+}
+
+function extractUsage(raw: unknown): TokenUsage | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const u = raw as Record<string, unknown>;
+  const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
+  const usage: TokenUsage = {
+    input: num(u.input_tokens),
+    output: num(u.output_tokens),
+    cacheRead: num(u.cache_read_input_tokens),
+    cacheCreation: num(u.cache_creation_input_tokens),
+  };
+  if (
+    usage.input === 0 &&
+    usage.output === 0 &&
+    usage.cacheRead === 0 &&
+    usage.cacheCreation === 0
+  ) {
+    return undefined;
+  }
+  return usage;
 }
 
 function extractText(content: unknown): string {
@@ -35,6 +56,10 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
     string,
     JsonlEvent & { kind: "assistant-text" }
   >();
+  // Same message.id can appear across multiple JSONL lines (streaming or
+  // resumes) with the same usage repeated. Track which msgIds have already
+  // been credited so totals don't double-count.
+  const usageAttributedMsgIds = new Set<string>();
 
   for (const line of raw.split("\n")) {
     if (!line) continue;
@@ -86,6 +111,25 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
     if (type === "assistant" && msg?.role === "assistant") {
       if (!Array.isArray(msg.content)) continue;
       const msgId = msg.id;
+      const lineUsage = extractUsage((msg as { usage?: unknown }).usage);
+      const shouldAttributeUsage =
+        !!lineUsage && !!msgId && !usageAttributedMsgIds.has(msgId);
+      // Anchor usage on the first assistant event we emit for this message,
+      // so totals don't double-count when one message spans text + tool_use,
+      // streamed chunks, or repeats across resume lines.
+      let usageAnchor: (JsonlEvent & ({ kind: "assistant-text" } | { kind: "assistant-tool-use" })) | null = null;
+      const setUsageOnce = (
+        event: JsonlEvent & ({ kind: "assistant-text" } | { kind: "assistant-tool-use" }),
+      ) => {
+        if (!shouldAttributeUsage || !lineUsage || !msgId) return;
+        if (usageAnchor) {
+          if (usageAnchor === event) event.usage = lineUsage;
+          return;
+        }
+        usageAnchor = event;
+        event.usage = lineUsage;
+        usageAttributedMsgIds.add(msgId);
+      };
       for (const block of msg.content as RawBlock[]) {
         if (block?.type === "text" && typeof block.text === "string") {
           if (msgId) {
@@ -93,6 +137,7 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
             if (existing) {
               existing.text += block.text;
               if (msg.stop_reason) existing.stopReason = msg.stop_reason;
+              setUsageOnce(existing);
               continue;
             }
           }
@@ -104,16 +149,19 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
             stopReason: msg.stop_reason,
           };
           if (msgId) assistantTextByMsgId.set(msgId, event);
+          setUsageOnce(event);
           events.push(event);
         } else if (block?.type === "tool_use") {
-          events.push({
+          const event: JsonlEvent & { kind: "assistant-tool-use" } = {
             kind: "assistant-tool-use",
             at: ts,
             messageId: msgId,
             toolUseId: typeof block.id === "string" ? block.id : "",
             name: typeof block.name === "string" ? block.name : "",
             input: block.input,
-          });
+          };
+          setUsageOnce(event);
+          events.push(event);
         }
       }
       if (msgId && msg.stop_reason) {

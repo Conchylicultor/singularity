@@ -1,3 +1,10 @@
+export interface TokenUsage {
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheCreation: number;
+}
+
 export type JsonlEvent =
   | { kind: "user-text"; at: string; text: string }
   | {
@@ -13,6 +20,7 @@ export type JsonlEvent =
       messageId?: string;
       text: string;
       stopReason?: string;
+      usage?: TokenUsage;
     }
   | {
       kind: "assistant-tool-use";
@@ -21,6 +29,7 @@ export type JsonlEvent =
       toolUseId: string;
       name: string;
       input: unknown;
+      usage?: TokenUsage;
     }
   | { kind: "system"; at: string; subtype?: string; text: string }
   | { kind: "summary"; at: string; text: string };

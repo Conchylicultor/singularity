@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import type { JsonlEvent } from "../../../../shared";
 import { CopyButton } from "../../../../web/components/copy-button";
+import { TokenBadge } from "../../../../web/components/token-badge";
 import { formatTime } from "../../../../web/utils";
 
 type AssistantTextEvent = Extract<JsonlEvent, { kind: "assistant-text" }>;
@@ -78,6 +79,7 @@ export function AssistantTextRow({
         <span>Assistant</span>
         <span className="tabular-nums">{formatTime(e.at)}</span>
         <div className="ml-auto flex items-center gap-2">
+          {e.usage ? <TokenBadge usage={e.usage} /> : null}
           {e.stopReason ? (
             <span className="text-muted-foreground/70">{e.stopReason}</span>
           ) : null}

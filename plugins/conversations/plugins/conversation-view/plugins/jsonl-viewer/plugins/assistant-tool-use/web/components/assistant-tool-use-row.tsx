@@ -1,4 +1,5 @@
 import type { JsonlEvent } from "../../../../shared";
+import { TokenBadge } from "../../../../web/components/token-badge";
 import { formatTime } from "../../../../web/utils";
 
 type AssistantToolUseEvent = Extract<JsonlEvent, { kind: "assistant-tool-use" }>;
@@ -20,7 +21,10 @@ export function AssistantToolUseRow({ event }: { event: JsonlEvent }) {
           tool_use
         </span>
         <span className="font-mono text-foreground">{e.name || "(unnamed)"}</span>
-        <span className="ml-auto tabular-nums">{formatTime(e.at)}</span>
+        <span className="ml-auto flex items-center gap-2">
+          {e.usage ? <TokenBadge usage={e.usage} /> : null}
+          <span className="tabular-nums">{formatTime(e.at)}</span>
+        </span>
       </summary>
       <pre className="mt-2 max-h-96 overflow-auto rounded bg-muted/60 p-2 text-xs">
         {formatInput(e.input)}

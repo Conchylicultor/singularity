@@ -1,10 +1,34 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MdCode } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@/components/ui/button";
 import type { Conversation } from "@plugins/conversations/shared";
-import { jsonlEventsResource } from "../../shared";
+import { jsonlEventsResource, type JsonlEvent } from "../../shared";
+import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
+
+interface UsageTotals {
+  output: number;
+  latestContext: number;
+}
+
+function aggregateUsage(events: JsonlEvent[] | null): UsageTotals | null {
+  if (!events || events.length === 0) return null;
+  let output = 0;
+  let latestContext = 0;
+  let sawAny = false;
+  for (const event of events) {
+    if (event.kind !== "assistant-text" && event.kind !== "assistant-tool-use") continue;
+    if (!event.usage) continue;
+    sawAny = true;
+    output += event.usage.output;
+    // Latest context (last message that produced output) reflects the most
+    // recent prompt size — useful as a "current context window" gauge.
+    latestContext =
+      event.usage.input + event.usage.cacheRead + event.usage.cacheCreation;
+  }
+  return sawAny ? { output, latestContext } : null;
+}
 
 function formatElapsed(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -49,6 +73,7 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
     id: conversation.id,
   });
   const events = data ?? null;
+  const totals = useMemo(() => aggregateUsage(events), [events]);
   const [markdownMode, setMarkdownMode] = useState(true);
 
   // Derive when "working" started: last event's timestamp, or now if none
@@ -117,27 +142,37 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
           <MdCode className="size-4" />
         </Button>
       </div>
-      <div
-        ref={scrollRef}
-        className={`min-h-0 flex-1 overflow-auto transition-opacity ${isGone ? "opacity-50" : ""}`}
-      >
-        {events === null && isLoading ? (
-          <div className="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
-        ) : error ? (
-          <div className="px-3 py-2 text-xs text-destructive">
-            {error instanceof Error ? error.message : String(error)}
-          </div>
-        ) : !events || events.length === 0 ? (
-          <div className="flex flex-col px-3 py-2 text-xs text-muted-foreground">
-            <span>No transcript yet. Claude may not have written its session log.</span>
-            {isWorking && <WorkingIndicator startAt={workingStartAt} />}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2 p-2">
-            {events.map((event, i) => (
-              <EventRow key={i} event={event} markdownMode={markdownMode} />
-            ))}
-            {isWorking && <WorkingIndicator startAt={workingStartAt} />}
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={scrollRef}
+          className={`h-full overflow-auto transition-opacity ${isGone ? "opacity-50" : ""}`}
+        >
+          {events === null && isLoading ? (
+            <div className="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
+          ) : error ? (
+            <div className="px-3 py-2 text-xs text-destructive">
+              {error instanceof Error ? error.message : String(error)}
+            </div>
+          ) : !events || events.length === 0 ? (
+            <div className="flex flex-col px-3 py-2 text-xs text-muted-foreground">
+              <span>No transcript yet. Claude may not have written its session log.</span>
+              {isWorking && <WorkingIndicator startAt={workingStartAt} />}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2 p-2 pb-10">
+              {events.map((event, i) => (
+                <EventRow key={i} event={event} markdownMode={markdownMode} />
+              ))}
+              {isWorking && <WorkingIndicator startAt={workingStartAt} />}
+            </div>
+          )}
+        </div>
+        {totals && (
+          <div
+            className="pointer-events-auto absolute bottom-2 right-3 rounded-md border border-border/60 bg-background/85 px-2 py-1 tabular-nums text-xs text-muted-foreground shadow-sm backdrop-blur"
+            title={`Latest context: ${totals.latestContext.toLocaleString()} tokens\nTotal output: ${totals.output.toLocaleString()} tokens`}
+          >
+            {formatTokenCount(totals.latestContext)} ctx · {formatTokenCount(totals.output)} out
           </div>
         )}
       </div>
