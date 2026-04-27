@@ -82,7 +82,7 @@ export function ImproveButton() {
       Shell.Toast({
         description: launch
           ? `Launched with ${launch === "sonnet" ? "Sonnet" : "Opus"}`
-          : "Improvement filed",
+          : "Queued",
         variant: "success",
       });
       setValue("");

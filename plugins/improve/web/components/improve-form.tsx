@@ -75,13 +75,21 @@ export function ImproveForm({
           Screenshot
         </label>
       </div>
-      <div className="flex justify-end gap-2">
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onSubmit(null)}
+          disabled={disabled}
+          className="mr-auto text-muted-foreground"
+        >
+          {submitting === "create" ? "Queuing…" : "Queue"}
+        </Button>
         <Button size="sm" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
         <Button
           size="sm"
-          variant="outline"
           onClick={() => onSubmit("sonnet")}
           disabled={disabled}
         >
@@ -90,15 +98,11 @@ export function ImproveForm({
         </Button>
         <Button
           size="sm"
-          variant="outline"
           onClick={() => onSubmit("opus")}
           disabled={disabled}
         >
           <MdAdd className="size-3.5" />
           {submitting === "opus" ? "Launching…" : "Opus"}
-        </Button>
-        <Button size="sm" onClick={() => onSubmit(null)} disabled={disabled}>
-          {submitting === "create" ? "Creating…" : "Create"}
         </Button>
       </div>
     </div>
