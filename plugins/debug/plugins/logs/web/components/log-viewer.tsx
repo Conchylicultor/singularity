@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { fetchWithRetry, ReconnectingEventSource, useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import type { ClientMessage, ServerMessage, LogEntryWire } from "../../shared/protocol";
 
@@ -26,8 +25,8 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
   const [channels, setChannels] = useState<ChannelRef[]>([]);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [entries, setEntries] = useState<LogEntryWire[]>([]);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const nearBottomRef = useRef(true);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
   const lastSeqRef = useRef<number>(0);
 
   const selected = channels.find((c) => channelKey(c) === selectedKey) ?? null;
@@ -71,28 +70,29 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
   }, [initialChannel]);
 
   useEffect(() => {
-    const sentinel = bottomRef.current;
-    if (!sentinel) return;
+    const viewport = viewportRef.current;
+    if (!viewport) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]) nearBottomRef.current = entries[0].isIntersecting;
-      },
-      { threshold: 0 },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
+    const handleScroll = () => {
+      const distance = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+      stickToBottomRef.current = distance < 32;
+    };
+
+    viewport.addEventListener("scroll", handleScroll, { passive: true });
+    return () => viewport.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
-    if (nearBottomRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: "instant" });
-    }
+    if (!stickToBottomRef.current) return;
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    viewport.scrollTop = viewport.scrollHeight;
   }, [entries]);
 
   // Reset on channel change
   useEffect(() => {
     lastSeqRef.current = 0;
+    stickToBottomRef.current = true;
     setEntries([]);
   }, [selectedKey]);
 
@@ -193,23 +193,23 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
         })}
       </div>
 
-      <ScrollArea className="flex-1 rounded-md border bg-muted/30">
-        <div className="p-4 font-mono text-xs leading-5">
-          {entries.map((entry) => (
-            <div
-              key={entry.seq}
-              className={
-                entry.stream === "stderr"
-                  ? "text-destructive"
-                  : "text-foreground"
-              }
-            >
-              {entry.line}
-            </div>
-          ))}
-          <div ref={bottomRef} />
-        </div>
-      </ScrollArea>
+      <div
+        ref={viewportRef}
+        className="flex-1 overflow-y-auto rounded-md border bg-muted/30 p-4 font-mono text-xs leading-5"
+      >
+        {entries.map((entry) => (
+          <div
+            key={entry.seq}
+            className={
+              entry.stream === "stderr"
+                ? "text-destructive"
+                : "text-foreground"
+            }
+          >
+            {entry.line}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
