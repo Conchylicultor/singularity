@@ -110,7 +110,6 @@ export const tmuxRuntime: ConversationRuntime = {
     opts?: {
       prompt?: string;
       model?: ConversationModel;
-      spawnedBy?: string | null;
       resumeSessionId?: string;
       forkSession?: boolean;
     },
@@ -118,16 +117,18 @@ export const tmuxRuntime: ConversationRuntime = {
     // SINGULARITY_CONVERSATION_ID is read by the .githooks/prepare-commit-msg
     // hook so any `git commit` made inside the pane gets stamped with a
     // Singularity-Conversation trailer. SINGULARITY_PARENT_HOST is the
-    // worktree slug Claude's .mcp.json dials back to over HTTP. The ids are
-    // generated slugs (no shell metacharacters) but we still keep them
-    // wrapped in single quotes.
+    // worktree slug Claude's .mcp.json dials back to over HTTP — it must be a
+    // host the gateway actually routes, so we read it straight from the
+    // server's own worktree env rather than from a caller-supplied label.
+    // The ids are generated slugs (no shell metacharacters) but we still
+    // keep them wrapped in single quotes.
     const hasPrompt = typeof opts?.prompt === "string" && opts.prompt.length > 0;
     const envArgs = hasPrompt
       ? ["-e", `SINGULARITY_PROMPT=${opts!.prompt}`]
       : [];
-    const parentHost = opts?.spawnedBy;
+    const parentHost = Bun.env.SINGULARITY_WORKTREE;
     if (!parentHost) {
-      throw new Error("tmux runtime requires spawnedBy to route MCP back to the parent server");
+      throw new Error("tmux runtime requires SINGULARITY_WORKTREE to route MCP back to the parent server");
     }
     const claudeBase = opts?.model ? `${CLAUDE} --model ${opts.model}` : CLAUDE;
     const cmdParts: string[] = [claudeBase];

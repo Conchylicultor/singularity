@@ -26,7 +26,6 @@ export interface ConversationRuntime {
     opts?: {
       prompt?: string;
       model?: import("../schema").ConversationModel;
-      spawnedBy?: string | null;
       resumeSessionId?: string;
       forkSession?: boolean;
     },

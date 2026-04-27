@@ -18,13 +18,6 @@ const CLEANUP_AFTER_MS = 5 * 60 * 1000;
 // The conversation is `kind: "system"` so it stays out of user-facing
 // listings; the SYSTEM_BATCH_ATTEMPT_ID sentinel exists exactly for this
 // pattern (see plugins/conversations/server/internal/meta-system.ts).
-//
-// `spawnedBy` is intentionally omitted so it defaults to SINGULARITY_WORKTREE.
-// That env var is what the tmux runtime exports as SINGULARITY_PARENT_HOST,
-// which Claude's .mcp.json uses to dial back to *this* worktree's MCP server.
-// Setting spawnedBy to anything else (e.g. "yak-shaving") routes MCP to a
-// non-existent host and the model falls back to bash+curl on the main
-// namespace, writing nodes into the wrong DB.
 export async function handleRebuild(_req: Request): Promise<Response> {
   const prompt = await buildRebuildPayload();
   await clearYakTree();
@@ -33,6 +26,7 @@ export async function handleRebuild(_req: Request): Promise<Response> {
     prompt,
     model: "sonnet",
     kind: "system",
+    spawnedBy: "yak-shaving",
   });
   setTimeout(() => {
     deleteConversation(conv.id).catch((err) => {
