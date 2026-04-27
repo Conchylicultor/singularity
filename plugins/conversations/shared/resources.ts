@@ -7,6 +7,7 @@ export type ConversationListPayload = {
   active: ConversationEntry[];
   recentGone: ConversationEntry[];
   hasMoreGone: boolean;
+  system: ConversationEntry[];
 };
 
 export const recentConversationsResource = resourceDescriptor<ConversationListPayload>("conversations");

@@ -136,7 +136,7 @@
     - Types: `Conversation`, `ConversationEntry`, `ConversationKind`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
   - Server:
-    - Uses: `events.defineTriggerEvent`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.insertConversation`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
+    - Uses: `events.defineTriggerEvent`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.insertConversation`, `tasks-core.listConversations`, `tasks-core.listConversationsForDisplay`, `tasks-core.listGoneConversationsBefore`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/gone`
     - `GET /api/conversations/:id`
@@ -200,7 +200,7 @@
           - Contributes:
             - `Conversation.PromptBar` → `DropAndExitButton`
           - Server:
-            - Uses: `conversations.deleteConversation`, `conversations.recentConversationsResource`, `tasks-core.getConversation`, `tasks-core.listPushesForAttempt`, `tasks-core.updateTask`
+            - Uses: `conversations.deleteConversation`, `conversations.recentConversationsResource`, `tasks-core.getConversation`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/drop-and-exit`
         - **`exit`** — Toolbar button that closes the conversation without changing any task state.
           - Contributes:
@@ -275,9 +275,6 @@
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
             - `DELETE /api/conversations/:id/push-and-exit`
-        - **`push-counter`** — Displays the number of pushes for the conversation's attempt in the toolbar.
-          - Contributes:
-            - `conversationPane.Actions` → `PushCounterButton`
         - **`quick-prompts`** — Named prompt chips in the conversation floating bar. Click to send a preset message to the active conversation. Named prompts that appear as chips in the conversation toolbar. Click to send a preset message.
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server/internal/tables.ts`
@@ -531,10 +528,6 @@
         - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.listTasks`
         - `GET /api/stats/tasks/cumulative`
 
-- **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
-  - Exports (web):
-    - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
-
 - **`tasks`** — Nested tasks with attempts; meta-plugin hosting sub-pane contributions. Nested tasks with attempts linking to conversations.
   - Defines:
     - Slots: `Tasks.List`, `Tasks.View`, `Tasks.TaskActions`
@@ -573,7 +566,7 @@
     - DB schema: `plugins/tasks-core/server/internal/tables.ts`
   - Exports (server):
     - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskStatus`, `UpdateConversationPatch`, `UpdateTaskPatch`
-    - Values: `_pushLandedTriggers`, `_taskAttachments`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listAttempts`, `listAttemptsForTask`, `listConversationsForDisplay`, `listConversationsForInfra`, `listGoneConversations`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listTasks`, `markConversationClosed`, `pushesResource`, `pushLanded`, `PushSchema`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`, `updateConversation`, `updateTask`, `updateTaskTitle`
+    - Values: `_pushLandedTriggers`, `_taskAttachments`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listAttempts`, `listAttemptsForTask`, `listConversations`, `listConversationsForDisplay`, `listGoneConversationsBefore`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listRecentGoneConversations`, `listTasks`, `markConversationClosed`, `pushesResource`, `pushLanded`, `PushSchema`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`, `updateConversation`, `updateTask`, `updateTaskTitle`
   - Exports (shared):
     - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `ConversationKindSchema`, `ConversationSchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`

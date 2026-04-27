@@ -10,6 +10,7 @@ import type {
 } from "../../shared";
 import {
   listActiveConversations,
+  listActiveSystemConversations,
   listConversationSummariesByAttempt,
   listGoneConversations,
   RECENT_GONE_LIMIT,
@@ -19,21 +20,24 @@ type ConversationListPayload = {
   active: Conversation[];
   recentGone: Conversation[];
   hasMoreGone: boolean;
+  system: Conversation[];
 };
 
 export const recentConversationsResource = defineResource({
   key: "conversations",
   mode: "push",
   loader: async (): Promise<ConversationListPayload> => {
-    const [active, goneRows] = await Promise.all([
+    const [active, goneRows, system] = await Promise.all([
       listActiveConversations(),
       listGoneConversations({ limit: RECENT_GONE_LIMIT + 1 }),
+      listActiveSystemConversations(),
     ]);
     const hasMoreGone = goneRows.length > RECENT_GONE_LIMIT;
     return {
       active,
       recentGone: hasMoreGone ? goneRows.slice(0, RECENT_GONE_LIMIT) : goneRows,
       hasMoreGone,
+      system,
     };
   },
 });

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { MdClose } from "react-icons/md";
+import { MdClose, MdSmartToy, MdExpandMore, MdChevronRight } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, GonePageSchema } from "@plugins/conversations/web";
 import { LaunchButtons } from "@plugins/launch/web";
@@ -14,6 +14,8 @@ import {
   SidebarMenuSubItem,
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
+
+const SYSTEM_EXPANDED_KEY = "conversations-view:system-expanded";
 type ConversationEntry = ReturnType<typeof useConversations>["active"][number];
 
 const PAGE_SIZE = 20;
@@ -73,10 +75,26 @@ function ConversationContent({ conv }: { conv: ConversationEntry }) {
 }
 
 export function ConversationList() {
-  const { active, recentGone, hasMoreGone, isLoading } = useConversations();
+  const { active, recentGone, hasMoreGone, system, isLoading } = useConversations();
   const [activeId, setActiveId] = useState<string | null>(() =>
     activeIdFromPath(window.location.pathname),
   );
+  const [systemExpanded, setSystemExpanded] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SYSTEM_EXPANDED_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const toggleSystem = () => {
+    setSystemExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SYSTEM_EXPANDED_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     const sync = () => setActiveId(activeIdFromPath(window.location.pathname));
@@ -170,6 +188,39 @@ export function ConversationList() {
     setActiveId(id);
   };
 
+  const renderSystemItem = (conv: ConversationEntry) => (
+    <SidebarMenuItem key={conv.id}>
+      <SidebarMenuButton
+        className="h-auto py-1.5"
+        isActive={conv.id === activeId}
+        onClick={() => navigate(conv.id)}
+      >
+        <div className="flex items-start gap-2 overflow-hidden">
+          <MdSmartToy className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/70" />
+          <div className="flex flex-col gap-0.5 overflow-hidden">
+            <span
+              className={cn(
+                "truncate text-xs",
+                conv.active ? "font-medium" : "text-muted-foreground",
+              )}
+            >
+              {conv.title ?? "Starting..."}
+            </span>
+            <span className="truncate text-[10px] tabular-nums text-muted-foreground">
+              {conv.spawnedBy ?? "system"} · {formatRelativeTime(conv.createdAt)}
+            </span>
+          </div>
+        </div>
+      </SidebarMenuButton>
+      <SidebarMenuAction
+        onClick={(e: React.MouseEvent) => closeConversation(conv.id, e)}
+        className="opacity-0 group-hover/menu-item:opacity-100"
+      >
+        <MdClose className="size-3.5" />
+      </SidebarMenuAction>
+    </SidebarMenuItem>
+  );
+
   const renderItem = (conv: ConversationEntry) => (
     <SidebarMenuItem key={conv.id}>
       <SidebarMenuButton
@@ -194,6 +245,27 @@ export function ConversationList() {
     <div className="flex flex-col gap-1">
       <LaunchButtons variant="outline" size="sm" className="px-2" />
       <SidebarMenu>
+        {system.length > 0 && (
+          <SidebarMenuItem>
+            <button
+              type="button"
+              onClick={toggleSystem}
+              className="flex w-full items-center gap-1.5 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80 hover:text-foreground"
+            >
+              {systemExpanded ? (
+                <MdExpandMore className="size-3.5" />
+              ) : (
+                <MdChevronRight className="size-3.5" />
+              )}
+              <MdSmartToy className="size-3.5" />
+              <span>System</span>
+              <span className="ml-auto tabular-nums text-muted-foreground/60">
+                {system.length}
+              </span>
+            </button>
+          </SidebarMenuItem>
+        )}
+        {systemExpanded && system.map(renderSystemItem)}
         {attemptGroups.map((group) => {
           const [root, ...forks] = group;
           if (!root) return null;

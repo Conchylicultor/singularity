@@ -62,6 +62,7 @@ export {
   listConversationsForInfra,
   listConversationsForDisplay,
   listActiveConversations,
+  listActiveSystemConversations,
   listGoneConversations,
   getConversation,
   getConversationRuntime,

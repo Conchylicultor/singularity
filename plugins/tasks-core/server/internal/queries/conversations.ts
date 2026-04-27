@@ -14,6 +14,7 @@ const notSystem = ne(conversations.kind, "system");
 
 type Filters = {
   includeSystem?: boolean;
+  onlySystem?: boolean;
   active?: boolean;
   endedAtNotNull?: boolean;
   endedAtBefore?: Date;
@@ -21,7 +22,8 @@ type Filters = {
 
 function buildWhere(f: Filters): SQL | undefined {
   const clauses: SQL[] = [];
-  if (!f.includeSystem) clauses.push(notSystem);
+  if (f.onlySystem) clauses.push(eq(conversations.kind, "system"));
+  else if (!f.includeSystem) clauses.push(notSystem);
   if (f.active !== undefined) clauses.push(eq(conversations.active, f.active));
   if (f.endedAtNotNull) clauses.push(isNotNull(conversations.endedAt));
   if (f.endedAtBefore) clauses.push(lt(conversations.endedAt, f.endedAtBefore));
@@ -61,6 +63,16 @@ export function listConversationsForDisplay(): Promise<Conversation[]> {
 // User-visible + active=true. Yak rebuild + recentConversationsResource.
 export function listActiveConversations(): Promise<Conversation[]> {
   return queryConversations({ active: true }, { col: conversations.createdAt, dir: "desc" });
+}
+
+// Active system-kind conversations only. Used to surface running plumbing
+// (yak-shaving rebuild, future automation) in the sidebar behind a debug
+// toggle. UI lists must NOT mix these into the regular active list.
+export function listActiveSystemConversations(): Promise<Conversation[]> {
+  return queryConversations(
+    { onlySystem: true, active: true },
+    { col: conversations.createdAt, dir: "desc" },
+  );
 }
 
 // Ended user-visible rows, newest-first by endedAt. Pass `before` for pagination.

@@ -9,6 +9,7 @@ const PayloadSchema = z.object({
   active: z.array(ConversationSchema),
   recentGone: z.array(ConversationSchema),
   hasMoreGone: z.boolean(),
+  system: z.array(ConversationSchema),
 });
 
 export const GonePageSchema = z.object({
@@ -20,21 +21,29 @@ export function useConversations(): {
   active: ConversationEntry[];
   recentGone: ConversationEntry[];
   hasMoreGone: boolean;
+  system: ConversationEntry[];
   isLoading: boolean;
 } {
   const q = useResource(recentConversationsResource);
   return useMemo(() => {
-    if (!q.data) return { active: [], recentGone: [], hasMoreGone: false, isLoading: q.isLoading };
+    if (!q.data)
+      return {
+        active: [],
+        recentGone: [],
+        hasMoreGone: false,
+        system: [],
+        isLoading: q.isLoading,
+      };
     const payload = PayloadSchema.parse(q.data);
     return { ...payload, isLoading: q.isLoading };
   }, [q.data, q.isLoading]);
 }
 
 export function useConversation(id: string): ConversationEntry | null {
-  const { active, recentGone } = useConversations();
+  const { active, recentGone, system } = useConversations();
   return useMemo(
-    () => [...active, ...recentGone].find((c) => c.id === id) ?? null,
-    [active, recentGone, id],
+    () => [...active, ...recentGone, ...system].find((c) => c.id === id) ?? null,
+    [active, recentGone, system, id],
   );
 }
 
