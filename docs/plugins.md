@@ -612,7 +612,7 @@
     - `Shell.Sidebar` "Yak" (group `System`)
     - `yakShavingPane.open`
   - Server:
-    - Uses: `conversations.SYSTEM_BATCH_ATTEMPT_ID`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `mcp.Mcp`, `tasks-core.Task`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.listActiveConversations`
+    - Uses: `conversations.SYSTEM_BATCH_ATTEMPT_ID`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `mcp.Mcp`, `tasks-core.Conversation`, `tasks-core.Task`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.listActiveConversations`
     - Resources: `yak-shaving-nodes` (push)
     - `POST /api/yak/rebuild`
 

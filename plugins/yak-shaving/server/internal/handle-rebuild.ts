@@ -3,7 +3,7 @@ import {
   deleteConversation,
   SYSTEM_BATCH_ATTEMPT_ID,
 } from "@plugins/conversations/server";
-import { buildRebuildPayload, clearYakTree } from "./queries";
+import { buildRebuildPayload } from "./queries";
 
 // Best-effort upper bound for how long the rebuild conversation should be
 // allowed to live. After this, the tmux pane is reaped even if Sonnet
@@ -11,16 +11,14 @@ import { buildRebuildPayload, clearYakTree } from "./queries";
 // (it filters out kind="system"), so nothing else cleans them up.
 const CLEANUP_AFTER_MS = 5 * 60 * 1000;
 
-// Wipes the yak-shaving tree and kicks off a one-shot Sonnet conversation
-// pinned to SYSTEM_BATCH_ATTEMPT_ID. The model uses the existing yak_*
-// MCP tools to repopulate the tree as it streams its turn.
-//
-// The conversation is `kind: "system"` so it stays out of user-facing
-// listings; the SYSTEM_BATCH_ATTEMPT_ID sentinel exists exactly for this
-// pattern (see plugins/conversations/server/internal/meta-system.ts).
+// Kicks off a one-shot Sonnet conversation that reconciles the yak-shaving
+// tree against the current set of active conversations. The model uses the
+// yak_* MCP tools to add new nodes, remove stale ones, and re-parent or
+// re-label any that drifted. The conversation is pinned to
+// SYSTEM_BATCH_ATTEMPT_ID and `kind: "system"` so it stays out of user
+// surfaces.
 export async function handleRebuild(_req: Request): Promise<Response> {
   const prompt = await buildRebuildPayload();
-  await clearYakTree();
   const conv = await createConversation({
     attemptId: SYSTEM_BATCH_ATTEMPT_ID,
     prompt,
