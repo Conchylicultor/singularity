@@ -44,6 +44,7 @@ function WorkingIndicator({ startAt }: { startAt: number }) {
 
 export function JsonlPane({ conversation }: { conversation: Conversation }) {
   const isWorking = conversation.status === "working" || conversation.status === "starting";
+  const isGone = conversation.status === "gone";
   const { data, error, isLoading } = useResource(jsonlEventsResource, {
     id: conversation.id,
   });
@@ -116,7 +117,10 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
           <MdCode className="size-4" />
         </Button>
       </div>
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
+      <div
+        ref={scrollRef}
+        className={`min-h-0 flex-1 overflow-auto transition-opacity ${isGone ? "opacity-50" : ""}`}
+      >
         {events === null && isLoading ? (
           <div className="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
         ) : error ? (
