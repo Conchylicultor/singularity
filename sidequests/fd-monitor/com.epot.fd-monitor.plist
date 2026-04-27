@@ -10,7 +10,7 @@
         <string>/Users/admin/__A__/dev/singularity/sidequests/fd-monitor/fd-monitor.sh</string>
     </array>
     <key>StartInterval</key>
-    <integer>30</integer>
+    <integer>5</integer>
     <key>RunAtLoad</key>
     <true/>
     <key>StandardOutPath</key>
