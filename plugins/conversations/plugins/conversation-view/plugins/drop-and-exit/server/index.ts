@@ -3,7 +3,11 @@ import {
   deleteConversation,
   recentConversationsResource,
 } from "@plugins/conversations/server";
-import { getConversation, updateTask } from "@plugins/tasks-core/server";
+import {
+  getConversation,
+  listPushesForAttempt,
+  updateTask,
+} from "@plugins/tasks-core/server";
 
 export default {
   id: "drop-and-exit",
@@ -17,12 +21,19 @@ export default {
         return new Response("Conversation not found", { status: 404 });
       }
 
-      await updateTask(conversation.taskId, { drop: true });
+      const pushes = conversation.attemptId
+        ? await listPushesForAttempt(conversation.attemptId)
+        : [];
+      const hasPush = pushes.length > 0;
+
+      if (!hasPush) {
+        await updateTask(conversation.taskId, { drop: true });
+      }
 
       await deleteConversation(id);
       recentConversationsResource.notify();
 
-      return Response.json({ ok: true });
+      return Response.json({ ok: true, dropped: !hasPush });
     },
   },
 } satisfies ServerPluginDefinition;

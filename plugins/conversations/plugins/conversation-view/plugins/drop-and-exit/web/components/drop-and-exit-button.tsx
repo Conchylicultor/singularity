@@ -25,8 +25,11 @@ export function DropAndExitButton({
         { method: "POST" },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
       Shell.Toast({
-        description: "Task dropped and conversation closed",
+        description: data.dropped
+          ? "Task dropped and conversation closed"
+          : "Conversation closed",
         variant: "success",
       });
     } catch (err) {
