@@ -31,7 +31,7 @@ export { conversationTurnCompleted } from "./internal/tables-turn-completed-even
 export type { ConversationTurnCompletedPayload } from "./internal/tables-turn-completed-event";
 export { conversationCreated } from "./internal/tables-created-event";
 export type { ConversationCreatedPayload } from "./internal/tables-created-event";
-export { SYSTEM_META_TASK_ID, SYSTEM_BATCH_ATTEMPT_ID } from "./internal/meta-system";
+export { SYSTEM_META_TASK_ID } from "./internal/meta-system";
 
 export default {
   id: "conversations",

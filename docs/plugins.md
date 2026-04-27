@@ -131,7 +131,7 @@
     - Values: `CONV_STATUS_DOT`, `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
   - Exports (server):
     - Types: `Conversation`, `ConversationCreatedPayload`, `ConversationKind`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`
-    - Values: `conversationCreated`, `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `findTranscriptPath`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_BATCH_ATTEMPT_ID`, `SYSTEM_META_TASK_ID`
+    - Values: `conversationCreated`, `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `findTranscriptPath`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`
   - Exports (shared):
     - Types: `Conversation`, `ConversationEntry`, `ConversationKind`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
@@ -639,7 +639,7 @@
     - `Shell.Sidebar` "Yak" (group `System`)
     - `yakShavingPane.open`
   - Server:
-    - Uses: `conversations.SYSTEM_BATCH_ATTEMPT_ID`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `mcp.Mcp`, `tasks-core.Conversation`, `tasks-core.Task`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.listActiveConversations`
+    - Uses: `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `mcp.Mcp`, `tasks-core.Conversation`, `tasks-core.Task`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.listActiveConversations`
     - Resources: `yak-shaving-nodes` (push)
     - `POST /api/yak/rebuild`
 

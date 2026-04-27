@@ -1,7 +1,6 @@
 import {
   createConversation,
   deleteConversation,
-  SYSTEM_BATCH_ATTEMPT_ID,
 } from "@plugins/conversations/server";
 import { buildRebuildPayload } from "./queries";
 
@@ -14,13 +13,12 @@ const CLEANUP_AFTER_MS = 5 * 60 * 1000;
 // Kicks off a one-shot Sonnet conversation that reconciles the yak-shaving
 // tree against the current set of active conversations. The model uses the
 // yak_* MCP tools to add new nodes, remove stale ones, and re-parent or
-// re-label any that drifted. The conversation is pinned to
-// SYSTEM_BATCH_ATTEMPT_ID and `kind: "system"` so it stays out of user
-// surfaces.
+// re-label any that drifted. Runs in its own worktree like any other
+// conversation; `kind: "system"` keeps it out of user-facing lists and
+// parents the auto-created task under SYSTEM_META_TASK_ID.
 export async function handleRebuild(_req: Request): Promise<Response> {
   const prompt = await buildRebuildPayload();
   const conv = await createConversation({
-    attemptId: SYSTEM_BATCH_ATTEMPT_ID,
     prompt,
     model: "sonnet",
     kind: "system",

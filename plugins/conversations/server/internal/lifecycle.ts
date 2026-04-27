@@ -15,6 +15,7 @@ import { forkDatabase } from "./db-fork";
 import { reportForkError } from "./fork-errors";
 import { setupWorktree, worktreePathFor } from "@server/worktree";
 import { conversationCreated } from "./tables-created-event";
+import { SYSTEM_META_TASK_ID } from "./meta-system";
 
 const DEFAULT_RUNTIME = "tmux";
 const DEFAULT_MODEL: ConversationModel = "opus";
@@ -91,8 +92,10 @@ export async function createConversation(
   } else {
     let taskId = opts.taskId;
     if (!taskId) {
+      const parentId =
+        opts.kind === "system" ? SYSTEM_META_TASK_ID : CONVERSATIONS_META_TASK_ID;
       const task = await createTask({
-        parentId: CONVERSATIONS_META_TASK_ID,
+        parentId,
         title: synthesiseTitle(opts.prompt),
         author: opts.spawnedBy ?? Bun.env.SINGULARITY_WORKTREE ?? "user",
       });
