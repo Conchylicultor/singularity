@@ -14,6 +14,15 @@
             "command": "bash .claude/hooks/guard-main-edits.sh"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/guard-find.sh"
+          }
+        ]
       }
     ]
   }
