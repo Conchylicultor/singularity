@@ -33,10 +33,14 @@ function parseDescription(text: string): Segment[] {
 export function DescriptionView({
   value,
   onChange,
+  onFocus,
+  onBlur,
   onFileOpen,
 }: {
   value: string;
   onChange: (v: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
   onFileOpen?: (path: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -48,7 +52,11 @@ export function DescriptionView({
         ref={textareaRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onBlur={() => setEditing(false)}
+        onFocus={onFocus}
+        onBlur={() => {
+          setEditing(false);
+          onBlur?.();
+        }}
         autoFocus
         placeholder="Add a description…"
         rows={10}

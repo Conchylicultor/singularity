@@ -25,3 +25,5 @@ export {
 export type { ResourceDescriptor } from "./use-resource";
 export { NotificationsClient, queryKeyFor } from "./notifications-client";
 export type { ResourceKey } from "./notifications-client";
+export { useEditableField } from "./use-editable-field";
+export type { EditableField, UseEditableFieldOptions } from "./use-editable-field";

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MdPlayArrow } from "react-icons/md";
-import { useResource } from "@core";
+import { useEditableField, useResource } from "@core";
 import { Button } from "@/components/ui/button";
 import { agentsResource } from "../../shared/resources";
 import { agentConversationPane } from "../panes";
@@ -32,23 +32,12 @@ export function AgentDetail({ agentId }: { agentId: string }) {
   const { data } = useResource(agentsResource);
   const agent = data?.find((a) => a.id === agentId) ?? null;
 
-  const [name, setName] = useState(agent?.name ?? "");
-  const [description, setDescription] = useState(agent?.description ?? "");
-  const [prompt, setPrompt] = useState(agent?.prompt ?? "");
   const [model, setModel] = useState<string | null>(agent?.model ?? null);
   const [launching, setLaunching] = useState(false);
 
-  const nameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const descTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const promptTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   useEffect(() => {
-    if (!agent) return;
-    if (!nameTimer.current) setName(agent.name);
-    if (!descTimer.current) setDescription(agent.description ?? "");
-    if (!promptTimer.current) setPrompt(agent.prompt ?? "");
-    setModel(agent.model ?? null);
-  }, [agent?.name, agent?.description, agent?.prompt, agent?.model]);
+    setModel(agent?.model ?? null);
+  }, [agent?.model]);
 
   const save = useCallback(
     async (patch: Patch) => {
@@ -57,30 +46,18 @@ export function AgentDetail({ agentId }: { agentId: string }) {
     [agentId],
   );
 
-  const onNameChange = (v: string) => {
-    setName(v);
-    if (nameTimer.current) clearTimeout(nameTimer.current);
-    nameTimer.current = setTimeout(() => {
-      nameTimer.current = null;
-      void save({ name: v.trim() || "Untitled" });
-    }, 500);
-  };
-  const onDescriptionChange = (v: string) => {
-    setDescription(v);
-    if (descTimer.current) clearTimeout(descTimer.current);
-    descTimer.current = setTimeout(() => {
-      descTimer.current = null;
-      void save({ description: v });
-    }, 500);
-  };
-  const onPromptChange = (v: string) => {
-    setPrompt(v);
-    if (promptTimer.current) clearTimeout(promptTimer.current);
-    promptTimer.current = setTimeout(() => {
-      promptTimer.current = null;
-      void save({ prompt: v });
-    }, 500);
-  };
+  const nameField = useEditableField({
+    value: agent?.name ?? "",
+    onSave: (v) => save({ name: v.trim() || "Untitled" }),
+  });
+  const descField = useEditableField({
+    value: agent?.description ?? "",
+    onSave: (v) => save({ description: v }),
+  });
+  const promptField = useEditableField({
+    value: agent?.prompt ?? "",
+    onSave: (v) => save({ prompt: v }),
+  });
 
   const onModelChange = async (v: string) => {
     const newModel = v === "" ? null : v;
@@ -93,12 +70,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
     if (launching) return;
     setLaunching(true);
     try {
-      // Flush pending debounced writes before launch.
-      if (promptTimer.current) {
-        clearTimeout(promptTimer.current);
-        promptTimer.current = null;
-        await save({ prompt });
-      }
+      await promptField.flush();
       const res = await fetch(`/api/agents/${agentId}/launch`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -125,15 +97,19 @@ export function AgentDetail({ agentId }: { agentId: string }) {
       <div className="flex items-center gap-3">
         <AgentStatus agentId={agentId} size="md" />
         <input
-          value={name}
-          onChange={(e) => onNameChange(e.target.value)}
+          value={nameField.value}
+          onChange={(e) => nameField.onChange(e.target.value)}
+          onFocus={nameField.onFocus}
+          onBlur={nameField.onBlur}
           placeholder="Untitled"
           className="placeholder:text-muted-foreground flex-1 bg-transparent text-xl font-semibold outline-none focus:ring-0"
         />
       </div>
       <textarea
-        value={description}
-        onChange={(e) => onDescriptionChange(e.target.value)}
+        value={descField.value}
+        onChange={(e) => descField.onChange(e.target.value)}
+        onFocus={descField.onFocus}
+        onBlur={descField.onBlur}
         placeholder="Describe what this agent does…"
         rows={2}
         className="placeholder:text-muted-foreground focus:ring-ring w-full resize-y rounded border bg-transparent p-2 text-sm outline-none focus:ring-1"
@@ -159,8 +135,10 @@ export function AgentDetail({ agentId }: { agentId: string }) {
           Prompt
         </label>
         <textarea
-          value={prompt}
-          onChange={(e) => onPromptChange(e.target.value)}
+          value={promptField.value}
+          onChange={(e) => promptField.onChange(e.target.value)}
+          onFocus={promptField.onFocus}
+          onBlur={promptField.onBlur}
           placeholder="Instructions the agent runs with…"
           rows={12}
           className="placeholder:text-muted-foreground focus:ring-ring min-h-56 w-full resize-y rounded border bg-transparent p-3 font-mono text-sm outline-none focus:ring-1"
@@ -169,7 +147,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
       <div className="flex justify-end">
         <Button
           onClick={launch}
-          disabled={launching || !prompt.trim()}
+          disabled={launching || !promptField.value.trim()}
           className="gap-1"
         >
           <MdPlayArrow className="size-4" />

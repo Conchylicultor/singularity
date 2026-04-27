@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { LaunchButtons } from "@plugins/launch/web";
 import { Button } from "@/components/ui/button";
 import { TaskAttachments } from "./task-attachments";
 import { TaskDependencies } from "./task-dependencies";
 import { TaskEvents } from "./task-events";
 import { DescriptionView } from "./description-view";
-import { useResource } from "@core";
+import { useEditableField, useResource } from "@core";
 import { useConversationById } from "@plugins/conversations/web";
 import { tasksResource, type Task } from "../../shared/resources";
 import { taskDetailPane } from "../panes";
@@ -71,21 +71,6 @@ export function TaskDetail({
   const { data } = useResource(tasksResource);
   const task = data?.find((t) => t.id === taskId) ?? null;
 
-  const [title, setTitle] = useState(task?.title ?? "");
-  const [description, setDescription] = useState(task?.description ?? "");
-  const [saving, setSaving] = useState(false);
-
-  const titleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const descTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const titleFocused = useRef(false);
-
-  // Sync local editing state from live resource when not actively editing.
-  useEffect(() => {
-    if (!task) return;
-    if (!titleTimer.current && !titleFocused.current) setTitle(task.title);
-    if (!descTimer.current) setDescription(task.description ?? "");
-  }, [task?.title, task?.description]);
-
   const save = useCallback(
     async (
       patch: Partial<{
@@ -95,41 +80,26 @@ export function TaskDetail({
         hold: boolean;
       }>,
     ) => {
-      setSaving(true);
-      try {
-        const res = await fetch(`/api/tasks/${taskId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(patch),
-        });
-        if (res.ok) {
-          // tasksResource broadcast will update task status; consume the body.
-          await res.json();
-        }
-      } finally {
-        setSaving(false);
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (res.ok) {
+        await res.json();
       }
     },
     [taskId],
   );
 
-  const onTitleChange = (v: string) => {
-    setTitle(v);
-    if (titleTimer.current) clearTimeout(titleTimer.current);
-    titleTimer.current = setTimeout(() => {
-      titleTimer.current = null;
-      void save({ title: v.trim() || "Untitled" });
-    }, 500);
-  };
-
-  const onDescriptionChange = (v: string) => {
-    setDescription(v);
-    if (descTimer.current) clearTimeout(descTimer.current);
-    descTimer.current = setTimeout(() => {
-      descTimer.current = null;
-      void save({ description: v });
-    }, 500);
-  };
+  const titleField = useEditableField({
+    value: task?.title ?? "",
+    onSave: (v) => save({ title: v.trim() || "Untitled" }),
+  });
+  const descField = useEditableField({
+    value: task?.description ?? "",
+    onSave: (v) => save({ description: v }),
+  });
 
   const toggleDrop = () => {
     if (!task) return;
@@ -142,21 +112,14 @@ export function TaskDetail({
   };
 
   const buildLaunchRequest = useCallback(async () => {
-    const trimmedTitle = title.trim() || "Untitled";
-    if (titleTimer.current) {
-      clearTimeout(titleTimer.current);
-      titleTimer.current = null;
-    }
-    if (descTimer.current) {
-      clearTimeout(descTimer.current);
-      descTimer.current = null;
-    }
-    await save({ title: trimmedTitle, description });
-    const prompt = description.trim()
-      ? `${trimmedTitle}\n\n${description}`
-      : trimmedTitle;
+    await Promise.all([titleField.flush(), descField.flush()]);
+    const trimmedTitle = titleField.value.trim() || "Untitled";
+    const desc = descField.value;
+    const prompt = desc.trim() ? `${trimmedTitle}\n\n${desc}` : trimmedTitle;
     return { taskId, prompt };
-  }, [taskId, title, description, save]);
+  }, [taskId, titleField, descField]);
+
+  const saving = titleField.isSaving || descField.isSaving;
 
   if (!task) {
     return <div className="text-muted-foreground p-6 text-sm">Loading…</div>;
@@ -166,13 +129,10 @@ export function TaskDetail({
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-start gap-3">
         <input
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
-          onFocus={() => { titleFocused.current = true; }}
-          onBlur={() => {
-            titleFocused.current = false;
-            void save({ title: title.trim() || "Untitled" });
-          }}
+          value={titleField.value}
+          onChange={(e) => titleField.onChange(e.target.value)}
+          onFocus={titleField.onFocus}
+          onBlur={titleField.onBlur}
           placeholder="Untitled"
           className="flex-1 bg-transparent text-xl font-semibold outline-none placeholder:text-muted-foreground focus:ring-0"
         />
@@ -211,15 +171,17 @@ export function TaskDetail({
         <AuthorDisplay author={task.author ?? "user"} />
       </div>
       <DescriptionView
-        value={description}
-        onChange={onDescriptionChange}
+        value={descField.value}
+        onChange={descField.onChange}
+        onFocus={descField.onFocus}
+        onBlur={descField.onBlur}
         onFileOpen={onFileOpen}
       />
       <div className="flex justify-end">
         <LaunchButtons
           size="sm"
           getRequest={buildLaunchRequest}
-          disabled={!title.trim()}
+          disabled={!titleField.value.trim()}
           className="w-auto"
           openAfterLaunch={false}
         />
