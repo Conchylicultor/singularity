@@ -18,6 +18,9 @@ web/.build.lock
 # TypeScript
 *.tsbuildinfo
 
+# Transient dirs created by ./singularity check (e.g. migrations-in-sync)
+.check-*/
+
 # v1 (Next.js) - extra lock file (uses bun.lock)
 v1/package-lock.json
 
