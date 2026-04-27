@@ -2,7 +2,7 @@ import { asc } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { defineResource } from "@server/resources";
 import {
-  listConversations,
+  listConversationsForDisplay,
   recentConversationsResource,
 } from "@plugins/tasks-core/server";
 import { _agent_launches } from "./tables";
@@ -28,10 +28,10 @@ export const agentLaunchesResource = defineResource({
   loader: async (): Promise<AgentLaunchWithStatus[]> => {
     const [launches, convRows] = await Promise.all([
       db.select().from(_agent_launches).orderBy(asc(_agent_launches.createdAt)),
-      listConversations(),
+      listConversationsForDisplay(),
     ]);
-    // listConversations() returns rows in createdAt desc order, so the first
-    // hit per taskId is the latest.
+    // Returned rows are in createdAt desc order, so the first hit per taskId
+    // is the latest.
     const latestByTask = new Map<string, AgentLaunchConversationRef>();
     for (const c of convRows) {
       if (latestByTask.has(c.taskId)) continue;

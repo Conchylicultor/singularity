@@ -1,6 +1,6 @@
-import { listConversations } from "@plugins/tasks-core/server";
+import { listConversationsForDisplay } from "@plugins/tasks-core/server";
 
 export async function handleList(_req: Request): Promise<Response> {
-  const rows = await listConversations();
+  const rows = await listConversationsForDisplay();
   return Response.json(rows);
 }

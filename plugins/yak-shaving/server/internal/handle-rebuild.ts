@@ -6,9 +6,9 @@ import {
 import { buildRebuildPayload } from "./queries";
 
 // Best-effort upper bound for how long the rebuild conversation should be
-// allowed to live. After this, the tmux pane is reaped even if Sonnet
-// hasn't finished — system conversations bypass the conversation poller
-// (it filters out kind="system"), so nothing else cleans them up.
+// allowed to live. After this, the tmux pane is reaped even if Sonnet hasn't
+// finished. The conversation poller (which sees system conversations via
+// listConversations()) will then mark the DB row gone.
 const CLEANUP_AFTER_MS = 5 * 60 * 1000;
 
 // Kicks off a one-shot Sonnet conversation that reconciles the yak-shaving

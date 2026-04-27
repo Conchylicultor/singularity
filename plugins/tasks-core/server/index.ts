@@ -60,6 +60,7 @@ export {
 
 export {
   listConversations,
+  listConversationsForDisplay,
   listActiveConversations,
   listRecentGoneConversations,
   listGoneConversationsBefore,

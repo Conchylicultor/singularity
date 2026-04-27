@@ -6,12 +6,24 @@ import type { Conversation } from "../schema";
 
 export const RECENT_GONE_LIMIT = 30;
 
-// Filter applied to every user-facing list. System conversations (yak
-// classifiers, future automation) live in the same table but never surface in
-// the sidebar, recovery pane, or attempt-view — they're machine plumbing.
+// Filter applied to user-facing lists. System conversations (yak classifiers,
+// future automation) live in the same table but never surface in the sidebar,
+// recovery pane, or attempt-view — they're machine plumbing. Infra paths
+// (poller, turn-emitter) MUST see them so tmux death is detected and turn
+// events are emitted; those paths use listConversations() directly.
 const notSystem = ne(conversations.kind, "system");
 
+// Canonical "all rows" query. Returns every conversation including system
+// kinds. Used by infra (poller, turn-emitter). UI lists go through
+// listConversationsForDisplay() instead.
 export async function listConversations(): Promise<Conversation[]> {
+  return db
+    .select()
+    .from(conversations)
+    .orderBy(desc(conversations.createdAt));
+}
+
+export async function listConversationsForDisplay(): Promise<Conversation[]> {
   return db
     .select()
     .from(conversations)
