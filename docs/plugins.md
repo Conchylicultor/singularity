@@ -220,17 +220,15 @@
           - Server:
             - Uses: `conversations.deleteConversation`, `conversations.recentConversationsResource`, `tasks-core.getConversation`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/hold-and-exit`
-        - **`jsonl-viewer`** — Toolbar button that opens a right pane rendering the raw Claude JSONL session log in human-readable form. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
+        - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
           - Defines:
             - Slots: `JsonlViewer.EventRenderer`
           - Exports (web):
             - Types: `EventRendererContribution`
-            - Values: `JsonlViewer`
+            - Values: `JsonlPane`, `JsonlViewer`
           - Exports (shared):
             - Types: `JsonlEvent`, `JsonlEventsResponse`
             - Values: `jsonlEventsResource`
-          - Contributes:
-            - `conversationPane.Actions` → `JsonlButton`
           - Server:
             - Uses: `conversations.findTranscriptPath`, `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
@@ -301,6 +299,9 @@
         - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
           - Contributes:
             - `conversationPane.Actions` → `TasksButton`
+        - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
+          - Contributes:
+            - `conversationPane.Actions` → `TerminalButton`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:
             - `conversationPane.Actions` → `VscodeButton`

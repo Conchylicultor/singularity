@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { MdClose, MdCode } from "react-icons/md";
+import { MdCode } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@/components/ui/button";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import type { Conversation } from "@plugins/conversations/shared";
 import { jsonlEventsResource } from "../../shared";
-import { convJsonlPane } from "../panes";
 import { EventRow } from "./event-row";
 
 function formatElapsed(seconds: number): string {
@@ -43,8 +42,7 @@ function WorkingIndicator({ startAt }: { startAt: number }) {
   );
 }
 
-export function JsonlPane() {
-  const { conversation } = conversationPane.useData();
+export function JsonlPane({ conversation }: { conversation: Conversation }) {
   const isWorking = conversation.status === "working" || conversation.status === "starting";
   const { data, error, isLoading } = useResource(jsonlEventsResource, {
     id: conversation.id,
@@ -87,16 +85,6 @@ export function JsonlPane() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2 border-b px-2 py-1.5">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-7 shrink-0"
-          title="Close JSONL"
-          aria-label="Close JSONL"
-          onClick={() => convJsonlPane.close()}
-        >
-          <MdClose className="size-4" />
-        </Button>
         <div className="text-sm font-medium">JSONL</div>
         {events !== null && (
           <span className="tabular-nums text-xs text-muted-foreground">
