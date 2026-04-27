@@ -31,6 +31,7 @@ import conversationResumePlugin from "@plugins/conversations/plugins/conversatio
 import conversationQuickPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/web";
 import conversationForkPlugin from "@plugins/conversations/plugins/conversation-view/plugins/fork-conversation/web";
 import conversationForkSessionPlugin from "@plugins/conversations/plugins/conversation-view/plugins/fork-session/web";
+import conversationPushCounterPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-counter/web";
 import conversationPromptInputPlugin from "@plugins/conversations/plugins/conversation-view/plugins/prompt-input/web";
 import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import conversationCodeDocsButtonPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/docs-button/web";
@@ -81,6 +82,7 @@ export const plugins: PluginDefinition[] = [
   conversationPlugin,
   conversationVscodePlugin,
   conversationOpenAppPlugin,
+  conversationPushCounterPlugin,
   conversationStatusPlugin,
   conversationModelPlugin,
   conversationNewChildTaskPlugin,

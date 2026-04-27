@@ -275,6 +275,9 @@
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
             - `DELETE /api/conversations/:id/push-and-exit`
+        - **`push-counter`** — Displays the number of pushes for the conversation's attempt in the toolbar.
+          - Contributes:
+            - `conversationPane.Actions` → `PushCounterButton`
         - **`quick-prompts`** — Named prompt chips in the conversation floating bar. Click to send a preset message to the active conversation. Named prompts that appear as chips in the conversation toolbar. Click to send a preset message.
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server/internal/tables.ts`
