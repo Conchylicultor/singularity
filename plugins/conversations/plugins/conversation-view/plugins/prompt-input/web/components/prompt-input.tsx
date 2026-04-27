@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
 import {
   type ConversationRecord,
   usePromptDraft,
@@ -11,8 +11,13 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
   const live = useConversation(conversation.id) ?? conversation;
   const { draft, setDraft, clearDraft } = usePromptDraft(conversation.id);
   const [sending, setSending] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const disabled = live.status === "gone" || live.status === "starting";
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, [conversation.id]);
 
   async function send() {
     const text = draft.trim();
@@ -48,6 +53,7 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
 
   return (
     <textarea
+      ref={textareaRef}
       rows={1}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
