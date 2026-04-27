@@ -2,7 +2,7 @@ import { MdChecklist } from "react-icons/md";
 import { usePaneMatch } from "@plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
-import { useResource } from "@core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { tasksResource } from "@plugins/tasks/shared";
 import { convTasksPane } from "../panes";
 
