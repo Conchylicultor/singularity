@@ -20,12 +20,7 @@ export const jsonlEventsResource = defineResource({
   },
   async onFirstSubscribe({ id }: Params) {
     if (unsubscribes.has(id)) return;
-    let first = true;
     const unsub = watchJsonl(id, () => {
-      if (first) {
-        first = false;
-        return;
-      }
       jsonlEventsResource.notify({ id });
     });
     unsubscribes.set(id, unsub);
