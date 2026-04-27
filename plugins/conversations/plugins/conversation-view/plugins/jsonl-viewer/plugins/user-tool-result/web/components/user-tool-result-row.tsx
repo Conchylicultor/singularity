@@ -1,4 +1,5 @@
 import type { JsonlEvent } from "../../../../shared";
+import { CopyButton } from "../../../../web/components/copy-button";
 import { formatTime } from "../../../../web/utils";
 
 type UserToolResultEvent = Extract<JsonlEvent, { kind: "user-tool-result" }>;
@@ -20,6 +21,7 @@ export function UserToolResultRow({ event }: { event: JsonlEvent }) {
           tool_result{e.isError ? " · error" : ""}
         </span>
         <span className="ml-auto tabular-nums">{formatTime(e.at)}</span>
+        <CopyButton text={e.content ?? ""} title="Copy result" />
       </summary>
       <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded bg-muted/60 p-2 text-xs">
         {e.content || "(empty)"}

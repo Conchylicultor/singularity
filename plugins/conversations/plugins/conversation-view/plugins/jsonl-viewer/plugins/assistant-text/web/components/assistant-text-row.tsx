@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { HighlightedCode } from "@plugins/syntax-highlight/web";
 import type { JsonlEvent } from "../../../../shared";
+import { CopyButton } from "../../../../web/components/copy-button";
 import { formatTime } from "../../../../web/utils";
 
 type AssistantTextEvent = Extract<JsonlEvent, { kind: "assistant-text" }>;
@@ -72,13 +73,16 @@ export function AssistantTextRow({
 }) {
   const e = event as AssistantTextEvent;
   return (
-    <div className="rounded-md border border-border/60 bg-background px-3 py-2">
+    <div className="group rounded-md border border-border/60 bg-background px-3 py-2">
       <div className="mb-1 flex items-center gap-2 text-[10px] uppercase tracking-wide text-muted-foreground">
         <span>Assistant</span>
         <span className="tabular-nums">{formatTime(e.at)}</span>
-        {e.stopReason ? (
-          <span className="ml-auto text-muted-foreground/70">{e.stopReason}</span>
-        ) : null}
+        <div className="ml-auto flex items-center gap-2">
+          {e.stopReason ? (
+            <span className="text-muted-foreground/70">{e.stopReason}</span>
+          ) : null}
+          <CopyButton text={e.text} title="Copy message" />
+        </div>
       </div>
       {markdownMode ? (
         <div className="text-sm leading-6">
