@@ -21,14 +21,19 @@ interface LiveEntry extends RuntimeInfo {
 
 let snapshot = new Map<string, LiveEntry>();
 
-async function collectLive(): Promise<Map<string, LiveEntry>> {
+async function collectLive(): Promise<{
+  next: Map<string, LiveEntry>;
+  failedRuntimes: Set<string>;
+}> {
   const merged = new Map<string, LiveEntry>();
+  const failedRuntimes = new Set<string>();
   for (const runtime of Runtime.all()) {
     let entries: Map<string, RuntimeInfo>;
     try {
       entries = await runtime.list();
     } catch (err) {
       console.error(`[conversations.poller] runtime "${runtime.id}" list failed`, err);
+      failedRuntimes.add(runtime.id);
       continue;
     }
     for (const [id, info] of entries) {
@@ -40,14 +45,14 @@ async function collectLive(): Promise<Map<string, LiveEntry>> {
       merged.set(id, { ...info, runtime: runtime.id });
     }
   }
-  return merged;
+  return { next: merged, failedRuntimes };
 }
 
 const UNINFORMATIVE_TITLES = ["Untitled", "Untitled conversation", "Claude Code"];
 
 async function tick(): Promise<void> {
   let changed = false;
-  const [next, rows] = await Promise.all([
+  const [{ next, failedRuntimes }, rows] = await Promise.all([
     collectLive(),
     listConversations(),
   ]);
@@ -133,6 +138,11 @@ async function tick(): Promise<void> {
     if (next.has(id)) continue;
     if (dbRow.status === "starting") continue;
     if (dbRow.status === "gone") continue;
+    // Runtime list failed (e.g. tmux unreachable under FD pressure). We
+    // can't tell whether the session is alive, so leave status alone and
+    // wait for a tick where the runtime answers — better than declaring
+    // every working/waiting conversation gone on a transient hiccup.
+    if (failedRuntimes.has(dbRow.runtime)) continue;
     await updateConversation(id, { status: "gone", endedAt: new Date() });
     changed = true;
   }

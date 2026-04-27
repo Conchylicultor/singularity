@@ -57,13 +57,26 @@ async function listPanes(): Promise<
     ],
     { stdout: "pipe", stderr: "pipe" },
   );
-  const stdout = await new Response(proc.stdout).text();
+  const [stdout, stderr] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
   const exit = await proc.exited;
   const map = new Map<
     string,
     { rawTitle: string; panePid: number; dead: boolean; worktreePath: string }
   >();
-  if (exit !== 0) return map;
+  if (exit !== 0) {
+    // "no server running" is a legitimate empty state — tmux had no sessions
+    // so it could not start a server to query. Any other non-zero exit
+    // (FD exhaustion, hung server, killed mid-call) means we cannot trust
+    // emptiness as truth; throw so the poller treats this runtime's state
+    // as unknown rather than declaring every conversation gone.
+    if (/no server running/i.test(stderr)) return map;
+    throw new Error(
+      `tmux list-panes failed (exit ${exit}): ${stderr.trim() || "<no stderr>"}`,
+    );
+  }
   for (const line of stdout.trim().split("\n").filter(Boolean)) {
     const [name, pidStr, deadStr, startPath, ...rest] = line.split(SEP);
     if (!name || !pidStr) continue;
