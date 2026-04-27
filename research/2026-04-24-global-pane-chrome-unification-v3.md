@@ -78,7 +78,7 @@ enough.
 
 ## 2. Reusable `<PaneIconAction>`
 
-New export from `@plugins/pane/web` (file:
+New export from `@plugins/primitives/plugins/pane/web` (file:
 `plugins/pane/web/components/pane-icon-action.tsx`):
 
 ```tsx
@@ -118,7 +118,7 @@ any contributor can use it.
 
 ```tsx
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { PaneIconAction } from "@plugins/pane/web";
+import { PaneIconAction } from "@plugins/primitives/plugins/pane/web";
 import { MdRocketLaunch } from "react-icons/md";
 
 function OpenAppButton() {

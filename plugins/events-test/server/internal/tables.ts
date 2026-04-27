@@ -1,5 +1,5 @@
 import { text } from "drizzle-orm/pg-core";
-import { defineTriggerEvent } from "@plugins/events/server";
+import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
 
 export interface PingedPayload {
   userId: string;

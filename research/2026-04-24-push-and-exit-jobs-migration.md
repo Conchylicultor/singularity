@@ -13,7 +13,7 @@ Today the plugin stores all per-conversation job state in a module-level `Map<st
 
 The jobs primitive now gives us all three for free. Migrating push-and-exit exercises the `defineJob + .enqueue()` path end-to-end on a real (non-test) feature and removes the last "fire-and-forget promise" pattern from the server.
 
-**Scope:** move job execution to `@plugins/jobs/server`, back the state with a Drizzle table, keep the existing resource key/shape and all HTTP routes. Zero UI changes.
+**Scope:** move job execution to `@plugins/infra/plugins/jobs/server`, back the state with a Drizzle table, keep the existing resource key/shape and all HTTP routes. Zero UI changes.
 
 ## Design
 
@@ -44,7 +44,7 @@ export const _pushAndExitJobs = pgTable("push_and_exit_jobs", {
 ```ts
 // plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/push-and-exit-job.ts
 import { z } from "zod";
-import { defineJob } from "@plugins/jobs/server";
+import { defineJob } from "@plugins/infra/plugins/jobs/server";
 
 export const pushAndExitJob = defineJob({
   name: "push_and_exit.run",
@@ -184,7 +184,7 @@ End-to-end in the UI (any conversation at `http://<worktree>.localhost:9000/c/<i
 3. **Error path:** click on a conversation whose worktree no longer exists (or stub `sendTurn` to throw). Row reaches `status=error, detail=<message>`; toast shown; UI auto-fires DELETE; row gone.
 4. **Duplicate click guard:** click twice in quick succession. Second POST returns 409 (existing guard works against the row, not the Map).
 5. **Server restart mid-push:** click Push & Exit; while `status=running`, `Ctrl-C` and re-start the server. Row is still `running`; Graphile picks the job back up (see Risks #2 for the re-prompt concern).
-6. **Plugin boundaries:** `./singularity check --plugin-boundaries` passes — the only new cross-plugin import is `defineJob` from `@plugins/jobs/server`, which events-test already validates is legal.
+6. **Plugin boundaries:** `./singularity check --plugin-boundaries` passes — the only new cross-plugin import is `defineJob` from `@plugins/infra/plugins/jobs/server`, which events-test already validates is legal.
 
 ## Critical Files
 

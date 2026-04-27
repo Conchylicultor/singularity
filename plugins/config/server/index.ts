@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { plugins as allPlugins } from "@server/plugins";
-import { ready as secretsReady } from "@plugins/secrets/server";
+import { ready as secretsReady } from "@plugins/infra/plugins/secrets/server";
 import { configResource } from "./internal/resource";
 import { configSecretsResource } from "./internal/secrets-resource";
 import { buildRegistry } from "./internal/registry";

@@ -1,4 +1,4 @@
-import { Pane, PaneChrome } from "@plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { TerminalPaneBody } from "./components/terminal-pane-body";
 

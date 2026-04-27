@@ -1,5 +1,5 @@
 import { MdRocketLaunch } from "react-icons/md";
-import { PaneIconAction } from "@plugins/pane/web";
+import { PaneIconAction } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 
 export function OpenAppButton() {

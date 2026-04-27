@@ -1,4 +1,4 @@
-import { Outlet, usePaneMatch } from "@plugins/pane/web";
+import { Outlet, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import {
   ResizableHandle,
   ResizablePanel,

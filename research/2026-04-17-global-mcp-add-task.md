@@ -12,7 +12,7 @@ We also add an `author` column to `_tasks` so the UI can later distinguish user-
 
 ### Plugin vs core
 
-**Keep MCP as a plugin.** CLAUDE.md is explicit: "Every feature is a plugin. The core app is thin plumbing." The pattern to mirror is `Runtime.register` in `plugins/conversations/server/api.ts` — a registration API exposed by a plugin, with other plugins (`runtime-tmux`, `runtime-api`) plugging in. MCP fits the same shape: one plugin owns the HTTP route + tool registry; other plugins contribute tools by importing from `@plugins/mcp/server/api`.
+**Keep MCP as a plugin.** CLAUDE.md is explicit: "Every feature is a plugin. The core app is thin plumbing." The pattern to mirror is `Runtime.register` in `plugins/conversations/server/api.ts` — a registration API exposed by a plugin, with other plugins (`runtime-tmux`, `runtime-api`) plugging in. MCP fits the same shape: one plugin owns the HTTP route + tool registry; other plugins contribute tools by importing from `@plugins/infra/plugins/mcp/server/api`.
 
 The cross-plugin dependency direction (`tasks` → `mcp`) is fine — `conversations` already imports from `tasks`, etc. The plugin graph is a directed graph, not a tree.
 
@@ -75,7 +75,7 @@ plugins/tasks/server/
 // plugins/tasks/server/internal/mcp-tools.ts
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { Mcp } from "@plugins/mcp/server/api";
+import { Mcp } from "@plugins/infra/plugins/mcp/server/api";
 import { db } from "../../../../server/src/db/client";
 import { _tasks } from "../schema_internal";
 import { conversations } from "@plugins/conversations/server/schema";

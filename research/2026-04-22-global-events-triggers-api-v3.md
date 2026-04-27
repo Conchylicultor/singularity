@@ -247,7 +247,7 @@ Down from v2's 5 internal files.
 - `plugins/tasks/server/api.ts` — declare `taskCompleted` + `tasks.launch` action.
 - `plugins/conversations/server/api.ts` — declare `conversationCompleted`; call `emit` in `lifecycle.markCompleted` ([`plugins/conversations/server/internal/lifecycle.ts:34`](../plugins/conversations/server/internal/lifecycle.ts)).
 - `plugins/agents/server/api.ts` — declare `agents.launch` action wrapping [`plugins/agents/server/internal/handle-launch.ts:21`](../plugins/agents/server/internal/handle-launch.ts).
-- `server/src/db/schema.ts` — add `export * from '@plugins/events/server/schema'`.
+- `server/src/db/schema.ts` — add `export * from '@plugins/infra/plugins/events/server/schema'`.
 
 ## Deferred (same as v2)
 

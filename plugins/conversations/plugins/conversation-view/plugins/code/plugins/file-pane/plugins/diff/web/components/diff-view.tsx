@@ -10,7 +10,7 @@ import {
 } from "react-diff-view";
 import type { FileData, HunkData, TokenNode } from "react-diff-view";
 import "react-diff-view/style/index.css";
-import { useDarkMode } from "@plugins/syntax-highlight/web";
+import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useFileDiff } from "../use-file-diff";
 import { useDiffTokens } from "../use-diff-tokens";
 import "./diff-view.css";

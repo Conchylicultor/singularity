@@ -3,7 +3,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { MdClose, MdSmartToy, MdExpandMore, MdChevronRight } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, GonePageSchema } from "@plugins/conversations/web";
-import { LaunchButtons } from "@plugins/launch/web";
+import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { cn } from "@/lib/utils";
 import {
   SidebarMenu,

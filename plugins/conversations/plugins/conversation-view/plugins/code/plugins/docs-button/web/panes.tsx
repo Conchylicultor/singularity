@@ -1,4 +1,4 @@
-import { Pane } from "@plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { DocsPane } from "./components/docs-pane";
 

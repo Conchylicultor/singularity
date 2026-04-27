@@ -8,7 +8,7 @@
 
 The deeper issue: graphile-worker restarts are only useful when the handler is short and idempotent. Our current shape bakes both the side-effect (`sendTurn`) and the wait (10-min poll) into one non-idempotent handler. `maxAttempts: 1` was chosen precisely because a retry would silently re-prompt Claude.
 
-Durable-execution engines (Temporal, Inngest, DBOS, Restate) solve this by making long handlers *replayable*: every side effect goes through a `step.run(name, fn)` wrapper that memoizes its result, and every wait (`step.sleep`, `step.waitFor`) suspends the handler off-CPU. On resume, the code runs from the top; completed steps short-circuit from the log; the wait returns its resolved value. This doc proposes adding just enough of that to `@plugins/jobs/server` to fix push-and-exit cleanly and become the default shape for future agent workflows.
+Durable-execution engines (Temporal, Inngest, DBOS, Restate) solve this by making long handlers *replayable*: every side effect goes through a `step.run(name, fn)` wrapper that memoizes its result, and every wait (`step.sleep`, `step.waitFor`) suspends the handler off-CPU. On resume, the code runs from the top; completed steps short-circuit from the log; the wait returns its resolved value. This doc proposes adding just enough of that to `@plugins/infra/plugins/jobs/server` to fix push-and-exit cleanly and become the default shape for future agent workflows.
 
 **Scope**: extend `JobCtx` with `ctx.step`, `ctx.waitFor`, `ctx.sleep`, plus the tables and builtin re-enqueue job that make them durable. Migrate push-and-exit as the first consumer. No new plugin; no separate `defineWorkflow` surface. Zero breaking changes to existing `defineJob` callers.
 

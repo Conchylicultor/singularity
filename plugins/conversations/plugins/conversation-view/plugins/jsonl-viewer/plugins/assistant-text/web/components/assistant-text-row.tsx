@@ -2,7 +2,7 @@ import { isValidElement, type ReactNode } from "react";
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { HighlightedCode } from "@plugins/syntax-highlight/web";
+import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import type { JsonlEvent } from "../../../../shared";
 import { CopyButton } from "../../../../web/components/copy-button";
 import { formatTime } from "../../../../web/utils";

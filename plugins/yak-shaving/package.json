@@ -1,8 +1,5 @@
 {
   "name": "@singularity/plugin-yak-shaving",
   "private": true,
-  "version": "0.0.1",
-  "dependencies": {
-    "@singularity/plugin-mcp": "workspace:*"
-  }
+  "version": "0.0.1"
 }

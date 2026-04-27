@@ -7,7 +7,7 @@ Encrypted-at-rest key-value primitive. Consumers: `auth` (OAuth tokens / API key
 - **Main-only storage.** `~/.singularity/secrets.json.enc` (AES-256-GCM). Worktrees never touch the file.
 - **OS keychain for the master key, file fallback.** Primary: `@napi-rs/keyring` (macOS Keychain / libsecret / Windows Credential Manager). Fallback: `~/.singularity/secrets/.key` mode 0600, when the native module is missing or fails at runtime. Either way the key is cached in-memory after first read.
 - **Worktrees RPC via `~/.singularity/secrets.sock`.** `get`/`set`/`delete`/`has`/`meta`/`list` by `(namespace, key)`. Mode 0600.
-- **Ready coordination.** `onReady` runs in parallel across plugins (see `server/src/index.ts`). Consumers `await ready` from `@plugins/secrets/server` before issuing API calls on main.
+- **Ready coordination.** `onReady` runs in parallel across plugins (see `server/src/index.ts`). Consumers `await ready` from `@plugins/infra/plugins/secrets/server` before issuing API calls on main.
 
 ## Namespaces
 
@@ -21,7 +21,7 @@ Add new namespaces freely; the store doesn't care. Keep namespaces short and low
 ## Using it
 
 ```ts
-import { getSecret, setSecret, ready } from "@plugins/secrets/server";
+import { getSecret, setSecret, ready } from "@plugins/infra/plugins/secrets/server";
 
 // In your onReady hook, before any call:
 await ready;

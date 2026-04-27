@@ -22,8 +22,8 @@ One link table per (attachments, owner) pair. First and only one today:
 ```ts
 // NEW FILE: plugins/tasks-core/server/internal/schema-attachments.ts
 import { pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
-import { _attachments } from "@plugins/attachments/server";
-import { registerAttachmentLink } from "@plugins/attachments/server";
+import { _attachments } from "@plugins/infra/plugins/attachments/server";
+import { registerAttachmentLink } from "@plugins/infra/plugins/attachments/server";
 import { _tasks } from "./tables";
 
 export const _taskAttachments = pgTable(
@@ -44,7 +44,7 @@ export const _taskAttachments = pgTable(
 registerAttachmentLink({ table: _taskAttachments, attachmentIdCol: _taskAttachments.attachmentId });
 ```
 
-Why a new file and not `tables.ts`: `tables.ts` is explicitly a load-order leaf (see comment at `plugins/tasks-core/server/internal/tables.ts:13-20`) and cannot import from other plugins. A sibling file in the same plugin is free to import `@plugins/attachments/server`.
+Why a new file and not `tables.ts`: `tables.ts` is explicitly a load-order leaf (see comment at `plugins/tasks-core/server/internal/tables.ts:13-20`) and cannot import from other plugins. A sibling file in the same plugin is free to import `@plugins/infra/plugins/attachments/server`.
 
 ### Attachments registry + sweep
 
@@ -96,7 +96,7 @@ The `attachments_owner_idx` and `attachments_staged_idx` (on `owner_type`/`owner
 - `DELETE /api/attachments/:id` — keep for now; manual-delete surface.
 - `_attachments`, `getAttachment(id)` — kept; used by improve's submit validation.
 
-**New export**: `registerAttachmentLink(source)` from `@plugins/attachments/server`.
+**New export**: `registerAttachmentLink(source)` from `@plugins/infra/plugins/attachments/server`.
 
 ### Multi-ownership semantics
 
@@ -153,7 +153,7 @@ END $$;
 
 1. `./singularity build` — regenerates migration, applies it, restarts server. Migration must succeed with zero warnings.
 2. `./singularity check` — `migrations-in-sync` and `plugins-doc-in-sync` must pass.
-3. `./singularity check --plugin-boundaries` — confirm the new `@plugins/attachments/server` imports from tasks-core and the new file pass.
+3. `./singularity check --plugin-boundaries` — confirm the new `@plugins/infra/plugins/attachments/server` imports from tasks-core and the new file pass.
 4. End-to-end via the app at `http://<worktree>.localhost:9000`:
    - Open the Improve button, paste text + attach a file, submit. Task is created; attachment row and `task_attachments` row both exist (check via `psql` or a debug query). File exists on disk under `~/.singularity/attachments/`.
    - Delete the task (from the Tasks pane, or via `DELETE /api/tasks/:id`). Verify: `task_attachments` row gone (FK cascade), `_attachments` row still present, file still on disk.

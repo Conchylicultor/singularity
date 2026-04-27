@@ -1,5 +1,5 @@
 import { createTask, _taskAttachments } from "@plugins/tasks-core/server";
-import { getAttachment } from "@plugins/attachments/server";
+import { getAttachment } from "@plugins/infra/plugins/attachments/server";
 import { createConversation } from "@plugins/conversations/server";
 import { db } from "@server/db/client";
 import { IMPROVEMENTS_META_TASK_ID } from "./meta-improvements";

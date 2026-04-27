@@ -1,4 +1,4 @@
-import { Pane, PaneChrome } from "@plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { WorktreeCleanupPanel } from "./components/worktree-cleanup-panel";
 
 export const worktreeCleanupPane = Pane.define({

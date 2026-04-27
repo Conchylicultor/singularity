@@ -85,7 +85,7 @@ export function computeDrop<T extends { id: string; parentId: string | null; ran
 Parameterize by generic `T` constrained to the shape used in both plugins (`id`, `parentId`, `rank`).
 
 **Consumers to update:**
-- `plugins/tasks/web/components/tasks-list.tsx:99,128,145` — delete locals, import from `@plugins/tree/shared/api`.
+- `plugins/tasks/web/components/tasks-list.tsx:99,128,145` — delete locals, import from `@plugins/primitives/plugins/tree/shared/api`.
 - `plugins/agents/web/components/agents-list.tsx:40,54,71` — same.
 
 **Register the plugin:**
@@ -138,7 +138,7 @@ If Phase 2b finds `nextAgentRankUnder` is still live, add a parameterized `nextR
 - A new file or addition in `plugin-core/shared/` for `descriptor<T>()`
 
 ### Modified
-- `plugins/tasks/web/components/tasks-list.tsx` — import tree helpers from `@plugins/tree/shared/api`.
+- `plugins/tasks/web/components/tasks-list.tsx` — import tree helpers from `@plugins/primitives/plugins/tree/shared/api`.
 - `plugins/agents/web/components/agents-list.tsx` — same.
 - `plugins/tasks/web/components/task-events.tsx` — import `formatDate` (if extracted).
 - `plugins/agents/web/components/agent-launches.tsx` — import `formatDate` and `CONV_STATUS_DOT`.

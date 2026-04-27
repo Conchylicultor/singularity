@@ -1,4 +1,4 @@
-import { Pane } from "@plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { AccountsPane } from "./components/accounts-pane";
 
 export const accountsPane = Pane.define({

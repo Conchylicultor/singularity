@@ -1,6 +1,6 @@
 import type { ConfigDescriptor, Schema, Values } from "@plugins/config/shared";
 import { fullKey, getDefault, normalize } from "@plugins/config/shared";
-import { getSecret } from "@plugins/secrets/server";
+import { getSecret } from "@plugins/infra/plugins/secrets/server";
 import { configResource } from "./resource";
 import { CONFIG_SECRETS_NAMESPACE } from "./secrets-resource";
 import { getValue } from "./read-cache";

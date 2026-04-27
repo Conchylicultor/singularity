@@ -6,7 +6,7 @@ import {
   languageForPath,
   SHIKI_LANGS,
   themeForMode,
-} from "@plugins/syntax-highlight/web";
+} from "@plugins/primitives/plugins/syntax-highlight/web";
 
 export type ShikiTokenNode = {
   type: "shiki";

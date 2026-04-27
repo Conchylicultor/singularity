@@ -20,7 +20,7 @@ Every modern durable-job system (Rails ActiveJob, Celery, BullMQ, River, Inngest
 ### Layer 1 — `plugins/jobs/` (the primitive)
 
 ```ts
-// API surface in @plugins/jobs/server
+// API surface in @plugins/infra/plugins/jobs/server
 defineJob<N extends string, S extends z.ZodType>(spec: {
   name: N;
   input: S;
@@ -53,7 +53,7 @@ getRegisteredJob(name: string): RegisteredJob | undefined;
 ### Layer 2 — `plugins/events/` (event→job bindings)
 
 ```ts
-// API surface in @plugins/events/server
+// API surface in @plugins/infra/plugins/events/server
 defineTriggerEvent<T, F>(spec: DefineTriggerEventSpec<T, F>): { table, event };   // unchanged
 trigger<P, I>(spec: {
   on: EventSource<P>;
@@ -126,7 +126,7 @@ Unified primitive: only `defineJob`. `ActionFactory`, `ActionRef`, `DefineAction
 ### Barrel boundaries
 
 - `plugins/jobs/server/index.ts` exports: `defineJob`, `getRegisteredJob`, types `JobFactory`, `JobCtx`, `RegisteredJob`. Default export: plugin definition with `onReady: startWorker`, `onShutdown: stopWorker`.
-- `plugins/events/server/index.ts` exports: `defineTriggerEvent`, `trigger`, `deleteTrigger`, `deleteTriggersFor`, related types. **Does not re-export `defineJob`** — users import jobs from `@plugins/jobs/server` directly. One primitive, one source.
+- `plugins/events/server/index.ts` exports: `defineTriggerEvent`, `trigger`, `deleteTrigger`, `deleteTriggersFor`, related types. **Does not re-export `defineJob`** — users import jobs from `@plugins/infra/plugins/jobs/server` directly. One primitive, one source.
 - Creates DAG edge `events → jobs`. Acyclic (jobs has no events dependency). Passes `./singularity check --plugin-boundaries`.
 
 ## Step-by-Step Migration
@@ -141,7 +141,7 @@ Files created:
 - `plugins/jobs/server/internal/registry.ts` — `jobRegistry: Map<string, RegisteredJob>`; `defineJob()` and `getRegisteredJob()`. `enqueue` stub (throws `"worker not started"` — wired up in Step 2).
 
 Files modified:
-- `server/src/plugins.ts` — add `import jobsPlugin from "@plugins/jobs/server"`, register **before** `eventsPlugin` in the array.
+- `server/src/plugins.ts` — add `import jobsPlugin from "@plugins/infra/plugins/jobs/server"`, register **before** `eventsPlugin` in the array.
 - `web/src/plugins.ts` — no change (jobs has no web surface).
 
 Checkpoint: `./singularity build` passes. Jobs plugin exists but is dormant; no callers.
@@ -162,7 +162,7 @@ Files modified:
 - `plugins/events/server/internal/event.ts` — `emit()` now calls `eventsDispatchJob.enqueue(...)` instead of `(await getWorkerUtils()).addJob(DISPATCH_TASK, ...)`.
 
 Files created:
-- `plugins/events/server/internal/dispatch-job.ts` — defines `eventsDispatchJob` via `defineJob` at module load. Imports `getRegisteredJob` from `@plugins/jobs/server`. Contains the preservation-policy dispatcher. Imported by `events/server/index.ts` for its side effect (module-load registration).
+- `plugins/events/server/internal/dispatch-job.ts` — defines `eventsDispatchJob` via `defineJob` at module load. Imports `getRegisteredJob` from `@plugins/infra/plugins/jobs/server`. Contains the preservation-policy dispatcher. Imported by `events/server/index.ts` for its side effect (module-load registration).
 
 Checkpoint: `./singularity build` passes. `events-test` still works end-to-end; only the Graphile task identifier changed (`events.dispatch` → `jobs.run`).
 

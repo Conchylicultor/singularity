@@ -1,4 +1,4 @@
-import { Pane, PaneChrome } from "@plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { StatsPanel } from "./components/stats-panel";
 
 export const statsPane = Pane.define({

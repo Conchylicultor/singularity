@@ -13,7 +13,7 @@ Design rationale lives in:
 ## Define a pane
 
 ```ts
-import { Pane, Outlet, type } from "@plugins/pane/web";
+import { Pane, Outlet, type } from "@plugins/primitives/plugins/pane/web";
 
 export const tasksRootPane = Pane.define({
   id: "tasks-root",
@@ -129,7 +129,7 @@ For the common ghost-icon-button case, use the shared
 `<PaneIconAction>`:
 
 ```tsx
-import { PaneIconAction } from "@plugins/pane/web";
+import { PaneIconAction } from "@plugins/primitives/plugins/pane/web";
 import { MdRocketLaunch } from "react-icons/md";
 
 function OpenAppButton() {

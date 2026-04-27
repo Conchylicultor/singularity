@@ -100,10 +100,10 @@ export {
   getSecretMetadata, listKeysInNamespace,
 } from "./internal/api";
 export { ready } from "./internal/ready";
-export type { SecretRef, SecretMetadata } from "@plugins/secrets/shared";
+export type { SecretRef, SecretMetadata } from "@plugins/infra/plugins/secrets/shared";
 export {
   SecretsError, SecretsMainOfflineError, SecretsKeychainLockedError,
-} from "@plugins/secrets/shared";
+} from "@plugins/infra/plugins/secrets/shared";
 
 import { onReady } from "./internal/boot";
 export default { id: "secrets", name: "Secrets", onReady };
@@ -285,7 +285,7 @@ New hook `useSecretFieldSet(fullKey)` reads the `configSecretsResource`.
 Keep all exported names (`getAccount`, `setAccount`, `patchAccount`, `deleteAccount`, `listAccounts`, `listProviderIdsWithAccounts`, the `StoredAccount`/`TokenStoreBlob` types). Replace persistence with secrets-backed blob:
 
 ```ts
-import { getSecret, setSecret, ready as secretsReady } from "@plugins/secrets/server";
+import { getSecret, setSecret, ready as secretsReady } from "@plugins/infra/plugins/secrets/server";
 
 const NS = "auth-tokens";
 const KEY = "blob-v1";

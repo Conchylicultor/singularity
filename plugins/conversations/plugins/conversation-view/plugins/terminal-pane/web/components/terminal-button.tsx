@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { MdTerminal } from "react-icons/md";
-import { usePaneMatch } from "@plugins/pane/web";
+import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import { convTerminalPane } from "../panes";

@@ -7,7 +7,7 @@ import {
 } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { SECRETS_DIR, KEY_PATH } from "./paths";
-import { SecretsKeychainLockedError } from "@plugins/secrets/shared";
+import { SecretsKeychainLockedError } from "@plugins/infra/plugins/secrets/shared";
 
 const KEYCHAIN_SERVICE = "singularity";
 const KEYCHAIN_ACCOUNT = "secrets-aes-256-gcm-v1";

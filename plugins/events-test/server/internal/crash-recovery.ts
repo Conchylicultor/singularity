@@ -1,6 +1,6 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { UNSAFE_sweepStuckLocks } from "@plugins/jobs/server";
+import { UNSAFE_sweepStuckLocks } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@server/db/client";
 import { logEntries, logPing, resetLog } from "./log-job";
 

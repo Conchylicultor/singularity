@@ -4,8 +4,8 @@ import {
   RowChrome,
   TreeList,
   type TreeItem,
-} from "@plugins/tree/web";
-import type { TreeNode } from "@plugins/tree/shared";
+} from "@plugins/primitives/plugins/tree/web";
+import type { TreeNode } from "@plugins/primitives/plugins/tree/shared";
 import { agentsResource } from "../../shared/resources";
 import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";

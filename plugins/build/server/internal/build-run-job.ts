@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineJob } from "@plugins/jobs/server";
+import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { readConfig } from "@plugins/config/server";
 import { buildConfig } from "../../shared/config";
 import { isBuildInflight, runBuild } from "./run-build";

@@ -1,5 +1,5 @@
 import { MdOpenInFull } from "react-icons/md";
-import { PaneIconAction, usePaneMatch } from "@plugins/pane/web";
+import { PaneIconAction, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "../panes";
 
 /**

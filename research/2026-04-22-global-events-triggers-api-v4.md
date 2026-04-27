@@ -64,7 +64,7 @@ A concrete event-trigger table is then a few lines:
 
 ```ts
 // plugins/tasks-core/server/internal/tables.ts (new addition)
-import { eventTriggerColumns } from "@plugins/events/server/api";
+import { eventTriggerColumns } from "@plugins/infra/plugins/events/server/api";
 
 export const _taskCompletedTriggers = pgTable(
   "task_completed_triggers",
@@ -190,7 +190,7 @@ The `tasks-core` plugin owns both the trigger tables and the `EventTypeDef`s for
 
 ```ts
 // plugins/tasks-core/server/api.ts
-import { defineEventType, registerAction } from "@plugins/events/server/api";
+import { defineEventType, registerAction } from "@plugins/infra/plugins/events/server/api";
 import { _taskCompletedTriggers, _conversationCompletedTriggers } from "./internal/tables";
 
 export interface TaskCompletedPayload { taskId: string; parentId: string | null; status: "success" | "failure"; }
@@ -227,7 +227,7 @@ The agents plugin registers its own action:
 
 ```ts
 // plugins/agents/server/api.ts
-import { registerAction } from "@plugins/events/server/api";
+import { registerAction } from "@plugins/infra/plugins/events/server/api";
 import { handleLaunch } from "./internal/handle-launch";
 
 registerAction<{ agentId: string; prompt?: string }>("agents.launch", async (cfg) => {
@@ -425,7 +425,7 @@ plugins/agents/
 - `plugins/tasks-core/server/internal/mutations/pushes.ts` — **modify**: emit `taskCompleted` after the attempt completes via push (re-deriving task status).
 - `plugins/conversations/server/internal/poller.ts` — **modify** [line 92 + 122](../plugins/conversations/server/internal/poller.ts): emit `conversationCompleted` after `updateConversation(..., { status: 'gone' })`.
 - `plugins/agents/server/api.ts` — **modify**: register `agents.launch` action wrapping [`handleLaunch` at line 21](../plugins/agents/server/internal/handle-launch.ts).
-- `server/src/db/schema.ts` — **modify**: add `export * from "@plugins/events/server/internal/tables"` (line ordering: leaves first, so put it before `tasks-core` if events/cron has no deps — but since `_task_completed_triggers` imports `eventTriggerColumns` from events, events/api can be imported as-needed without changing tables-export order).
+- `server/src/db/schema.ts` — **modify**: add `export * from "@plugins/infra/plugins/events/server/internal/tables"` (line ordering: leaves first, so put it before `tasks-core` if events/cron has no deps — but since `_task_completed_triggers` imports `eventTriggerColumns` from events, events/api can be imported as-needed without changing tables-export order).
 - `server/src/plugins.ts` — **modify**: register `eventsPlugin` in the plugins list.
 
 ## Deferred (same as v3)

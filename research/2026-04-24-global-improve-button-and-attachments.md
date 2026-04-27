@@ -265,7 +265,7 @@ Remove the `NewTaskButton` import + `Shell.Toolbar` contribution (lines 9 and 20
 Add imports and entries (order doesn't matter for these — no dependency on runtime plugins or mcp):
 
 ```ts
-import attachmentsPlugin from "@plugins/attachments/server";
+import attachmentsPlugin from "@plugins/infra/plugins/attachments/server";
 import improvePlugin from "@plugins/improve/server";
 // ...
 export const plugins: ServerPluginDefinition[] = [
@@ -284,7 +284,7 @@ Same pattern, parallel registry.
 Add the re-export so Drizzle picks up the new table:
 
 ```ts
-export * from "@plugins/attachments/server/internal/tables";
+export * from "@plugins/infra/plugins/attachments/server/internal/tables";
 ```
 
 Migration is generated automatically by `./singularity build` (per `server/CLAUDE.md` schema change workflow). First build after this change will need `--migration-name add-attachments`.

@@ -1,4 +1,4 @@
-import { Pane, PaneChrome } from "@plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { DbBackupPanel } from "./components/db-backup-panel";
 
 export const dbBackupPane = Pane.define({

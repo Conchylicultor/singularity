@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
-import { _attachments } from "@plugins/attachments/server";
+import { _attachments } from "@plugins/infra/plugins/attachments/server";
 import { _taskAttachments } from "@plugins/tasks-core/server";
 
 export async function handleTaskAttachments(

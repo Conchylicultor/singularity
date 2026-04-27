@@ -1,4 +1,4 @@
-import { Pane, PaneChrome } from "@plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { ScreenshotView } from "./components/screenshot-view";
 
 export const screenshotPane = Pane.define({

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { LaunchButtons } from "@plugins/launch/web";
+import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { Button } from "@/components/ui/button";
 import { TaskAttachments } from "./task-attachments";
 import { TaskDependencies } from "./task-dependencies";

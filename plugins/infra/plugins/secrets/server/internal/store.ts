@@ -6,7 +6,7 @@ import path from "node:path";
 import { decrypt, encrypt } from "./crypto";
 import { getEncryptionKey } from "./key-store";
 import { STORE_PATH } from "./paths";
-import type { SecretMetadata } from "@plugins/secrets/shared";
+import type { SecretMetadata } from "@plugins/infra/plugins/secrets/shared";
 
 interface Entry {
   value: string;

@@ -26,20 +26,6 @@
     - `POST /api/agents/:id/launch`
     - `GET /api/agents/:id/launches`
 
-- **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
-  - Defines:
-    - DB schema: `plugins/attachments/server/internal/define-link.ts`
-    - DB schema: `plugins/attachments/server/internal/tables.ts`
-  - Exports (web):
-    - Types: `Attachment`, `UploadedAttachment`
-    - Values: `listAttachments`, `uploadAttachment`
-  - Exports (server):
-    - Values: `_attachments`, `Attachments`, `deleteAttachment`, `getAttachment`
-  - Server:
-    - `POST /api/attachments`
-    - `GET /api/attachments/:id`
-    - `DELETE /api/attachments/:id`
-
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - Exports (web):
     - Values: `attemptConversationPane`, `attemptPane`
@@ -61,8 +47,6 @@
   - Contributes:
     - `Shell.Sidebar` "Accounts" (group `System`)
     - `accountsPane.open`
-  - Server:
-    - Uses: `secrets.SecretsKeychainLockedError`, `secrets.getSecret`, `secrets.ready`, `secrets.setSecret`
   - Plugins:
     - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
       - Exports (shared):
@@ -83,7 +67,7 @@
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `BuildButton`
   - Server:
-    - Uses: `config.readConfig`, `events.deleteTriggersFor`, `events.trigger`, `jobs.defineJob`, `tasks-core.pushLanded`
+    - Uses: `config.readConfig`, `tasks-core.pushLanded`
     - `POST /api/build`
     - `GET /api/build/status`
 
@@ -116,7 +100,6 @@
     - `Shell.Sidebar` "Settings" (group `System`)
     - `settingsPane.open`
   - Server:
-    - Uses: `secrets.SecretsMainOfflineError`, `secrets.deleteSecret`, `secrets.getSecret`, `secrets.getSecretMetadata`, `secrets.ready`, `secrets.setSecret`
     - `GET /api/config`
     - `GET /api/config/specs`
     - `PATCH /api/config`
@@ -136,7 +119,7 @@
     - Types: `Conversation`, `ConversationEntry`, `ConversationKind`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
   - Server:
-    - Uses: `events.defineTriggerEvent`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.insertConversation`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
+    - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.insertConversation`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/gone`
     - `GET /api/conversations/:id`
@@ -269,7 +252,7 @@
           - Contributes:
             - `Conversation.PromptBar` → `PushAndExitButton`
           - Server:
-            - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.recentConversationsResource`, `conversations.sendTurn`, `jobs.defineJob`
+            - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.recentConversationsResource`, `conversations.sendTurn`
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
             - `DELETE /api/conversations/:id/push-and-exit`
@@ -387,20 +370,6 @@
         - `POST /api/debug/worktrees/bulk-delete`
         - `DELETE /api/debug/worktrees/:id`
 
-- **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
-  - Defines:
-    - DB schema: `plugins/events/server/internal/event.ts`
-    - DB schema: `plugins/events/server/internal/tables.ts`
-  - Exports (server):
-    - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerByNameSpec`, `TriggerSpec`
-    - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `trigger`, `triggerByName`, `triggerTableRegistry`
-  - Server:
-    - Uses: `jobs.DEFAULT_MAX_ATTEMPTS`, `jobs.EnqueueTx`, `jobs.UNSAFE_getRegisteredJob`, `jobs.UNSAFE_installDurableHooks`, `jobs.defineJob`
-    - `GET /api/events/emissions`
-    - `GET /api/events/triggers`
-    - `DELETE /api/events/triggers/:id`
-    - `PATCH /api/events/triggers/:id`
-
 - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
   - Defines:
     - DB schema: `plugins/events-test/server/internal/tables.ts`
@@ -410,7 +379,6 @@
     - `Debug.Item` "Events Test"
     - `eventsTestPane.open`
   - Server:
-    - Uses: `events.defineTriggerEvent`, `events.deleteTrigger`, `events.deleteTriggersFor`, `events.trigger`, `jobs.UNSAFE_sweepStuckLocks`, `jobs.defineJob`
     - `POST /api/events-test/subscribe`
     - `POST /api/events-test/emit`
     - `POST /api/events-test/direct-enqueue`
@@ -438,43 +406,70 @@
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `ImproveButton`
   - Server:
-    - Uses: `attachments.getAttachment`, `conversations.createConversation`, `tasks-core._taskAttachments`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`
+    - Uses: `conversations.createConversation`, `tasks-core._taskAttachments`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`
     - `POST /api/improve/submit`
 
-- **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
-  - Defines:
-    - DB schema: `plugins/jobs/server/internal/tables.ts`
-  - Exports (server):
-    - Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`
-    - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `isSuspendSignal`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
-  - Server:
-    - `GET /api/jobs`
-    - `POST /api/jobs/:id/retry`
-    - `DELETE /api/jobs/:id`
+- **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
+  - Plugins:
+    - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
+      - Defines:
+        - DB schema: `plugins/infra/plugins/attachments/server/internal/define-link.ts`
+        - DB schema: `plugins/infra/plugins/attachments/server/internal/tables.ts`
+      - Exports (web):
+        - Types: `Attachment`, `UploadedAttachment`
+        - Values: `listAttachments`, `uploadAttachment`
+      - Exports (server):
+        - Values: `_attachments`, `Attachments`, `deleteAttachment`, `getAttachment`
+      - Server:
+        - `POST /api/attachments`
+        - `GET /api/attachments/:id`
+        - `DELETE /api/attachments/:id`
+    - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
+      - Defines:
+        - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`
+        - DB schema: `plugins/infra/plugins/events/server/internal/tables.ts`
+      - Exports (server):
+        - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerByNameSpec`, `TriggerSpec`
+        - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `trigger`, `triggerByName`, `triggerTableRegistry`
+      - Server:
+        - `GET /api/events/emissions`
+        - `GET /api/events/triggers`
+        - `DELETE /api/events/triggers/:id`
+        - `PATCH /api/events/triggers/:id`
+    - **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
+      - Defines:
+        - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
+      - Exports (server):
+        - Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`
+        - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `isSuspendSignal`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
+      - Server:
+        - `GET /api/jobs`
+        - `POST /api/jobs/:id/retry`
+        - `DELETE /api/jobs/:id`
+    - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.registerTool.
+      - Exports (server):
+        - Types: `McpTool`, `McpToolContext`, `McpToolResult`
+        - Values: `Mcp`
+      - Server:
+        - `POST /api/mcp/:conversationId`
+    - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Consumers: auth (tokens), config (secret fields).
+      - Exports (server):
+        - Types: `SecretMetadata`, `SecretRef`
+        - Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`, `setSecret`
+      - Exports (shared):
+        - Types: `SecretMetadata`, `SecretRef`
+        - Values: `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`
 
-- **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
-  - Exports (web):
-    - Types: `LaunchButtonsProps`, `LaunchRequest`
-    - Values: `LaunchButtons`
-
-- **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.registerTool.
-  - Exports (server):
-    - Types: `McpTool`, `McpToolContext`, `McpToolResult`
-    - Values: `Mcp`
-  - Server:
-    - `POST /api/mcp/:conversationId`
-
-- **`pane`** — Unified pane primitive: Pane.define, <Outlet/>, <PaneRouter/>, and chrome components.
-  - Exports (web):
-    - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
-    - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
-
-- **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: live state, networking, editable fields.
+- **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
     - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
       - Exports (web):
         - Types: `EditableField`, `UseEditableFieldOptions`
         - Values: `useEditableField`
+    - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
+      - Exports (web):
+        - Types: `LaunchButtonsProps`, `LaunchRequest`
+        - Values: `LaunchButtons`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
       - Exports (web):
         - Types: `ResourceDescriptor`, `ResourceKey`
@@ -486,6 +481,20 @@
       - Exports (web):
         - Types: `FetchWithRetryOptions`, `ReconnectingEventSourceOptions`, `ReconnectingWsHandle`, `ReconnectingWsOptions`, `WsStatus`, `WsStatusEvent`
         - Values: `fetchWithRetry`, `publishWsStatus`, `ReconnectingEventSource`, `SharedWebSocket`, `subscribeWsStatus`, `useReconnectingWebSocket`
+    - **`pane`** — Unified pane primitive: Pane.define, <Outlet/>, <PaneRouter/>, and chrome components.
+      - Exports (web):
+        - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
+        - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
+    - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
+      - Exports (web):
+        - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
+    - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
+      - Exports (web):
+        - Types: `RenameInputProps`, `RowChromeMenuHelpers`, `RowChromeProps`, `RowControls`, `RowMenuItem`, `TreeItem`, `TreeListContextValue`, `TreeListProps`
+        - Values: `RenameInput`, `RowChrome`, `TreeList`, `useTreeListContext`, `useTreeRow`
+      - Exports (shared):
+        - Types: `DropZone`, `TreeNode`
+        - Values: `buildTree`, `computeDrop`, `isDescendant`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Exports (web):
@@ -496,14 +505,6 @@
     - `POST /api/screenshots/:id`
     - `GET /api/screenshots/:id`
     - `POST /api/screenshots/:id/file`
-
-- **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Consumers: auth (tokens), config (secret fields).
-  - Exports (server):
-    - Types: `SecretMetadata`, `SecretRef`
-    - Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`, `setSecret`
-  - Exports (shared):
-    - Types: `SecretMetadata`, `SecretRef`
-    - Values: `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`
 
 - **`shell`** — Foundational app layout; defines the slots and commands most other plugins extend.
   - Defines:
@@ -550,10 +551,6 @@
         - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.listTasks`
         - `GET /api/stats/tasks/cumulative`
 
-- **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
-  - Exports (web):
-    - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
-
 - **`tasks`** — Nested tasks with attempts; meta-plugin hosting sub-pane contributions. Nested tasks with attempts linking to conversations.
   - Defines:
     - Slots: `Tasks.List`, `Tasks.View`, `Tasks.TaskActions`
@@ -572,7 +569,7 @@
     - `Tasks.TaskActions` → `DeleteTaskAction`
     - `Tasks.TaskActions` → `LaunchAgentAction`
   - Server:
-    - Uses: `attachments._attachments`, `mcp.Mcp`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.updateTask`
+    - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.updateTask`
     - `GET /api/tasks`
     - `POST /api/tasks`
     - `GET /api/tasks/:id`
@@ -597,7 +594,6 @@
     - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `ConversationKindSchema`, `ConversationSchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
-    - Uses: `attachments.Attachments`, `events.defineTriggerEvent`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
@@ -610,14 +606,6 @@
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `ExperimentalToggle`
     - `Shell.Toolbar` (group `actions`) → `ThemeToggle`
-
-- **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
-  - Exports (web):
-    - Types: `RenameInputProps`, `RowChromeMenuHelpers`, `RowChromeProps`, `RowControls`, `RowMenuItem`, `TreeItem`, `TreeListContextValue`, `TreeListProps`
-    - Values: `RenameInput`, `RowChrome`, `TreeList`, `useTreeListContext`, `useTreeRow`
-  - Exports (shared):
-    - Types: `DropZone`, `TreeNode`
-    - Values: `buildTree`, `computeDrop`, `isDescendant`
 
 - **`welcome`** — Landing pane shown at `/`.
   - Exports (web):
@@ -640,7 +628,7 @@
     - `Shell.Sidebar` "Yak" (group `System`)
     - `yakShavingPane.open`
   - Server:
-    - Uses: `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `mcp.Mcp`, `tasks-core.Conversation`, `tasks-core.Task`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.listActiveConversations`
+    - Uses: `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `tasks-core.Conversation`, `tasks-core.Task`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.listActiveConversations`
     - Resources: `yak-shaving-categories` (push), `yak-shaving-nodes` (push)
     - `POST /api/yak/rebuild`
 

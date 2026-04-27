@@ -1,5 +1,5 @@
 import { text } from "drizzle-orm/pg-core";
-import { defineTriggerEvent } from "@plugins/events/server";
+import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
 
 // Fires when the JSONL watcher detects a new assistant turn that ended with
 // `stop_reason === "end_turn"` — i.e. Claude finished speaking and is not

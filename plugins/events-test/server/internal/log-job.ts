@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineJob } from "@plugins/jobs/server";
+import { defineJob } from "@plugins/infra/plugins/jobs/server";
 
 // In-memory log for verification; cleared via the reset HTTP route.
 // Not persisted — restarts wipe the log.

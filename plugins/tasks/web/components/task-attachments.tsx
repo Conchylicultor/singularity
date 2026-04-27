@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { listAttachments, type Attachment } from "@plugins/attachments/web";
+import { listAttachments, type Attachment } from "@plugins/infra/plugins/attachments/web";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;

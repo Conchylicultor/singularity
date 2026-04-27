@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { LaunchButtons, type LaunchRequest } from "@plugins/launch/web";
+import { LaunchButtons, type LaunchRequest } from "@plugins/primitives/plugins/launch/web";
 import { cn } from "@/lib/utils";
 
 export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | null }) {

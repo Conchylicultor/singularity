@@ -1,5 +1,5 @@
 import { CONV_STATUS_DOT, useConversation } from "@plugins/conversations/web";
-import type { TreeNode } from "@plugins/tree/shared";
+import type { TreeNode } from "@plugins/primitives/plugins/tree/shared";
 import { cn } from "@/lib/utils";
 import type {
   YakShavingCategory,

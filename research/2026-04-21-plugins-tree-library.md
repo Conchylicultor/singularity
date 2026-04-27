@@ -146,7 +146,7 @@ export default {
 } satisfies PluginDefinition;
 ```
 
-No re-exports from `web/` — the public surface lives in `shared/`, consumers import from `@plugins/tree/shared`.
+No re-exports from `web/` — the public surface lives in `shared/`, consumers import from `@plugins/primitives/plugins/tree/shared`.
 
 ## Consumer migration
 
@@ -154,21 +154,21 @@ No re-exports from `web/` — the public surface lives in `shared/`, consumers i
 
 - Delete local `DropZone` type (line ~63), `TreeNode` type (line ~111), `buildTree` (113–125), `isDescendant` (142–157), `computeDrop` (159–205).
 - Remove the direct `generateKeyBetween` import (line 37) **only if** no other uses remain in the file — `addBelow` at lines 256–260 still calls it, so **keep the import**.
-- Add: `import { buildTree, computeDrop, isDescendant, type DropZone, type TreeNode } from "@plugins/tree/shared";`
+- Add: `import { buildTree, computeDrop, isDescendant, type DropZone, type TreeNode } from "@plugins/primitives/plugins/tree/shared";`
 - No call-site edits needed — generic inference picks up `Task`.
 
 ### `plugins/agents/web/components/agents-list.tsx`
 
 - Delete local `DropZone` type (line 38), `TreeNode` type (line 36), `buildTree` (40–52), `isDescendant` (54–69), `computeDrop` (71–117).
 - Keep `generateKeyBetween` import — not used locally after the deletion (verify: search shows only `computeDrop` uses it in this file, so the import **can be removed**). Confirm during execution with a grep.
-- Add: `import { buildTree, computeDrop, isDescendant, type DropZone, type TreeNode } from "@plugins/tree/shared";`
+- Add: `import { buildTree, computeDrop, isDescendant, type DropZone, type TreeNode } from "@plugins/primitives/plugins/tree/shared";`
 
 ### `web/src/plugins.ts`
 
 Append one import and one array entry. Library plugins have no UI so ordering is cosmetic; place next to `launchPlugin` to group pure-utility plugins:
 
 ```typescript
-import treePlugin from "@plugins/tree/web";
+import treePlugin from "@plugins/primitives/plugins/tree/web";
 // ...
 export const plugins: PluginDefinition[] = [
   shellPlugin,
@@ -197,5 +197,5 @@ No server-side registration (`server/src/plugins.ts` is untouched — plugin has
    - `grep -rn "function buildTree" plugins/tasks plugins/agents` → zero matches.
    - `grep -rn "function isDescendant" plugins/tasks/web plugins/agents/web` → zero matches.
    - `grep -rn "function computeDrop" plugins/tasks plugins/agents` → zero matches.
-   - `grep -rn "@plugins/tree/shared" plugins/tasks plugins/agents` → one match in each consumer.
+   - `grep -rn "@plugins/primitives/plugins/tree/shared" plugins/tasks plugins/agents` → one match in each consumer.
 4. Confirm `docs/plugins.md` regeneration (happens during build) includes a `tree` entry with empty Contributes block.

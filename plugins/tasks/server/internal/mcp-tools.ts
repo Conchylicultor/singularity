@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Mcp } from "@plugins/mcp/server";
+import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import {
   createTask,
   addTaskDependency,

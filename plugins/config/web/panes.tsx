@@ -1,4 +1,4 @@
-import { Pane, PaneChrome } from "@plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { SettingsPanel } from "./components/settings-panel";
 
 export const settingsPane = Pane.define({

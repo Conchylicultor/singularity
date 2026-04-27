@@ -1,6 +1,6 @@
 import { MdArticle } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { usePaneMatch } from "@plugins/pane/web";
+import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "../../../../web/use-edited-files";
 import { convDocsPane, isDocFile } from "../panes";

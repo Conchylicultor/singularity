@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@server/db/client";
 import { defineResource } from "@server/resources";
-import { defineJob } from "@plugins/jobs/server";
+import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import {
   recentConversationsResource,
   deleteConversation,

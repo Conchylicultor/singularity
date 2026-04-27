@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MdOpenInNew } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch } from "@plugins/pane/web";
+import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/web";
 import {
   attemptsResource,

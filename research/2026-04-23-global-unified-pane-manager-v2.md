@@ -72,7 +72,7 @@ interface Pane<Params, Provides> {
 
 ```ts
 // plugins/tasks/web/panes.ts
-import { Pane, Outlet, type } from "@plugins/pane/web";
+import { Pane, Outlet, type } from "@plugins/primitives/plugins/pane/web";
 
 export const tasksRootPane = Pane.define({
   id: "tasks-root",
@@ -229,7 +229,7 @@ plugins/pane/
 └── package.json
 ```
 
-Public exports from `@plugins/pane/web`:
+Public exports from `@plugins/primitives/plugins/pane/web`:
 
 ```ts
 export { Pane, Outlet, PaneRouter };
@@ -247,7 +247,7 @@ export type { PaneObject };
 
 ### Modified
 
-- `plugins/shell/web/components/shell-layout.tsx` — strip URL-matching / `panels` state / `ShellCommands.OpenPane` handler. Replace the `<ScrollArea>…panels.map(…)</ScrollArea>` body with `<PaneRouter />` imported from `@plugins/pane/web`.
+- `plugins/shell/web/components/shell-layout.tsx` — strip URL-matching / `panels` state / `ShellCommands.OpenPane` handler. Replace the `<ScrollArea>…panels.map(…)</ScrollArea>` body with `<PaneRouter />` imported from `@plugins/primitives/plugins/pane/web`.
 - `plugins/shell/web/slots.ts` — remove `Shell.Route`.
 - `plugins/shell/web/commands.ts` — remove `Shell.OpenPane` and `PaneDescriptor`. `Shell.Toast` stays.
 - `web/src/plugins.ts` — register the new pane plugin in the plugin list (must come before anything that defines panes, though ordering shouldn't matter in practice since registration happens at module-load time).

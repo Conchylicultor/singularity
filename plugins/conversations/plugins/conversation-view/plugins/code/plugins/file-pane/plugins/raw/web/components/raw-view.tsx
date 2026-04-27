@@ -5,7 +5,7 @@ import {
   SHIKI_LANGS,
   themeForMode,
   useDarkMode,
-} from "@plugins/syntax-highlight/web";
+} from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useFileContent } from "../../../../web/use-file-content";
 
 export function RawView({

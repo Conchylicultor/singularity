@@ -17,21 +17,22 @@ import quickPromptsPlugin from "@plugins/conversations/plugins/conversation-view
 import jsonlViewerPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/server";
 import conversationCodeReviewPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/server";
 import healthPlugin from "@plugins/health/server";
-import mcpPlugin from "@plugins/mcp/server";
+import mcpPlugin from "@plugins/infra/plugins/mcp/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/server";
 import tasksPlugin from "@plugins/tasks/server";
 import agentsPlugin from "@plugins/agents/server";
 import screenshotPlugin from "@plugins/screenshot/server";
-import attachmentsPlugin from "@plugins/attachments/server";
+import attachmentsPlugin from "@plugins/infra/plugins/attachments/server";
 import improvePlugin from "@plugins/improve/server";
 import configPlugin from "@plugins/config/server";
 import crashesPlugin from "@plugins/crashes/server";
 import dbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
 import worktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/server";
-import jobsPlugin from "@plugins/jobs/server";
-import eventsPlugin from "@plugins/events/server";
-import secretsPlugin from "@plugins/secrets/server";
+import infraPlugin from "@plugins/infra/server";
+import jobsPlugin from "@plugins/infra/plugins/jobs/server";
+import eventsPlugin from "@plugins/infra/plugins/events/server";
+import secretsPlugin from "@plugins/infra/plugins/secrets/server";
 import eventsTestPlugin from "@plugins/events-test/server";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
 import yakShavingPlugin from "@plugins/yak-shaving/server";
@@ -75,6 +76,7 @@ export const plugins: ServerPluginDefinition[] = [
   improvePlugin,
   dbBackupPlugin,
   worktreeCleanupPlugin,
+  infraPlugin,
   // Jobs plugin owns the graphile-worker lifecycle; must load before the
   // events plugin (which enqueues a dispatcher job at module load) and any
   // plugin that calls `defineJob`.

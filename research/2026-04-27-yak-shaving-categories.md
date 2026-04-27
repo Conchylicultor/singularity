@@ -154,7 +154,7 @@ Export `yakShavingCategoriesResource` descriptor and `YakShavingCategory` type a
 
 ### Tree assembly (`web/components/yak-tree.tsx`)
 
-Read both resources, merge into a single `TreeItem[]` keyed by id. The `buildTree` utility from `@plugins/tree/shared` already accepts `{ id, parentId }` items — we just need to compute `parentId` per kind:
+Read both resources, merge into a single `TreeItem[]` keyed by id. The `buildTree` utility from `@plugins/primitives/plugins/tree/shared` already accepts `{ id, parentId }` items — we just need to compute `parentId` per kind:
 
 ```ts
 type YakTreeItem =

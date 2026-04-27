@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { z } from "zod";
-import { defineJob, UNSAFE_getRegisteredJob } from "@plugins/jobs/server";
+import { defineJob, UNSAFE_getRegisteredJob } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@server/db/client";
 import { triggerTableRegistry } from "./registry";
 

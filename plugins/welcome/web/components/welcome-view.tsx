@@ -1,7 +1,7 @@
 import { MdArrowForward } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations } from "@plugins/conversations/web";
-import { LaunchButtons } from "@plugins/launch/web";
+import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { cn } from "@/lib/utils";
 
 function formatRelativeTime(date: Date): string {

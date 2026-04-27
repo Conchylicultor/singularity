@@ -10,12 +10,12 @@ export {
   listKeysInNamespace,
 } from "./internal/operations";
 export { ready } from "./internal/ready";
-export type { SecretRef, SecretMetadata } from "@plugins/secrets/shared";
+export type { SecretRef, SecretMetadata } from "@plugins/infra/plugins/secrets/shared";
 export {
   SecretsError,
   SecretsMainOfflineError,
   SecretsKeychainLockedError,
-} from "@plugins/secrets/shared";
+} from "@plugins/infra/plugins/secrets/shared";
 
 export default {
   id: "secrets",

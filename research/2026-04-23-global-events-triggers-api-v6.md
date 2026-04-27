@@ -79,7 +79,7 @@ Two things to notice:
 
 ```ts
 // plugins/tasks-core/server/internal/tables.ts
-import { eventTriggerColumns } from "@plugins/events/server/api";
+import { eventTriggerColumns } from "@plugins/infra/plugins/events/server/api";
 
 export const _taskCompletedTriggers = pgTable(
   "task_completed_triggers",
@@ -105,7 +105,7 @@ export const taskCompleted = defineEventType<TaskCompletedPayload, { taskId?: st
 
 ```ts
 // plugins/tasks-core/server/internal/tables.ts
-import { defineTriggerEvent } from "@plugins/events/server";
+import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
 
 export interface TaskCompletedPayload {
   taskId: string;
@@ -201,7 +201,7 @@ export * from "@plugins/tasks-core/server/internal/tables";
 
 This constrains where `defineTriggerEvent` can be called and how its result is exposed:
 
-**Placement.** Call it in `internal/tables.ts`. That keeps the physical-tables-live-in-tables.ts invariant, and `tables.ts` is allowed to import `@plugins/events/server` because the events plugin has no domain FK targets for `tables.ts` to cycle through — it's a pure helper module from this file's perspective. The leaf rule stays intact.
+**Placement.** Call it in `internal/tables.ts`. That keeps the physical-tables-live-in-tables.ts invariant, and `tables.ts` is allowed to import `@plugins/infra/plugins/events/server` because the events plugin has no domain FK targets for `tables.ts` to cycle through — it's a pure helper module from this file's perspective. The leaf rule stays intact.
 
 **Registration.** drizzle-kit inspects each named export of `tables.ts` and checks whether it's a drizzle-branded table. It does **not** recurse into nested properties. So `export const taskCompleted = defineTriggerEvent(...)` alone would leave `taskCompleted.table` invisible to drizzle-kit — no migration would be generated. The fix is to make the PgTable a top-level named export:
 

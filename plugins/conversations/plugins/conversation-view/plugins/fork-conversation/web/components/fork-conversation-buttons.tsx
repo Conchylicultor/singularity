@@ -3,7 +3,7 @@ import {
   type ConversationRecord,
   usePromptDraft,
 } from "@plugins/conversations/plugins/conversation-view/web";
-import { LaunchButtons } from "@plugins/launch/web";
+import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import {
   Tooltip,
   TooltipContent,

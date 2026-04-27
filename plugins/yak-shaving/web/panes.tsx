@@ -1,4 +1,4 @@
-import { Pane } from "@plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { YakShavingRoot } from "./components/yak-root";
 import { YakShavingConversationBody } from "./components/yak-conversation";
 

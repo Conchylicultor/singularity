@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import type { z } from "zod";
-import type { JobFactory } from "@plugins/jobs/server";
+import type { JobFactory } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@server/db/client";
 import type { EventSource } from "./event";
 import { triggerTableRegistry } from "./registry";

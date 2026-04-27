@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { buildTree } from "@plugins/tree/shared";
+import { buildTree } from "@plugins/primitives/plugins/tree/shared";
 import {
   yakShavingCategoriesResource,
   yakShavingNodesResource,

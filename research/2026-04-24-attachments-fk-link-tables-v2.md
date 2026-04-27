@@ -23,7 +23,7 @@ Only one consumer exists today (`improve` → `task`). The `_taskDependencies` j
 
 ```ts
 // NEW FILE: plugins/tasks-core/server/internal/schema-attachments.ts
-import { Attachments } from "@plugins/attachments/server";
+import { Attachments } from "@plugins/infra/plugins/attachments/server";
 import { _tasks } from "./tables";
 
 export const taskAttachments = Attachments.defineLink(_tasks);
@@ -35,7 +35,7 @@ Three lines including imports. The `defineLink` helper:
 - Composite PK `(owner_id, attachment_id)`.
 - Side effect: registers the returned table with the orphan-sweep's link registry, so the consumer cannot forget.
 
-This file cannot live in `plugins/tasks-core/server/internal/tables.ts` because that file is a documented load-order leaf (`tables.ts:13-20`) that may not import from other plugins. A sibling file in the same plugin can import `@plugins/attachments/server` freely.
+This file cannot live in `plugins/tasks-core/server/internal/tables.ts` because that file is a documented load-order leaf (`tables.ts:13-20`) that may not import from other plugins. A sibling file in the same plugin can import `@plugins/infra/plugins/attachments/server` freely.
 
 ### Helper internals
 

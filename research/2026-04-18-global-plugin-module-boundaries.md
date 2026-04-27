@@ -103,7 +103,7 @@ New check at `cli/src/checks/plugin-boundaries.ts`, registered in `cli/src/check
    - Plugin-registration entries (`web`, `server`) should only be imported by `web/src/plugins.ts` and `server/src/plugins.ts`; importing one plugin's registration from another is a separate warning.
 3. No import references a path inside an `internal/` folder from outside the owning plugin. Intra-plugin deep imports are fine.
 
-**Implementation:** walk `.ts`/`.tsx` files under `plugins/`, `web/src/`, `server/src/`, regex-match `from ["']@plugins/...["']`, compare the suffix against the allowed grammar. Emit the first ~10 violations with a hint pointing to the right barrel (e.g. "move this export to `plugins/tree/web/api.ts` and import from `@plugins/tree/web/api`"). Mirrors the shape of existing checks like `plugins-doc-in-sync.ts`.
+**Implementation:** walk `.ts`/`.tsx` files under `plugins/`, `web/src/`, `server/src/`, regex-match `from ["']@plugins/...["']`, compare the suffix against the allowed grammar. Emit the first ~10 violations with a hint pointing to the right barrel (e.g. "move this export to `plugins/tree/web/api.ts` and import from `@plugins/primitives/plugins/tree/web/api`"). Mirrors the shape of existing checks like `plugins-doc-in-sync.ts`.
 
 **Why a check, not `package.json` `exports`:** the root `tsconfig.json` has a `paths` alias (`@plugins/*` → `./plugins/*`) that resolves imports directly to folder paths, bypassing any `exports` field. Adding `exports` would require removing the alias and switching to package-name imports — a large mechanical churn for marginal gain over a dedicated check. Defer until the check proves insufficient.
 
@@ -168,7 +168,7 @@ New command at `cli/src/commands/plugin.ts`, registered in `cli/src/index.ts` al
 **Migration (prerequisite for the check to go green):** the first run of `plugin-boundaries` will surface existing violations. Fix iteratively:
 
 - Delete `plugins/push-and-exit/web/prompt.ts` (byte-identical to the server copy, appears unused).
-- `plugins/launch/web/index.ts:12` — move the `LaunchButtons` / `LaunchButtonsProps` / `LaunchRequest` named exports into a new `plugins/launch/web/api.ts`, leaving `index.ts` with only the `PluginDefinition` default export. Update consumers to import from `@plugins/launch/web/api`.
+- `plugins/launch/web/index.ts:12` — move the `LaunchButtons` / `LaunchButtonsProps` / `LaunchRequest` named exports into a new `plugins/launch/web/api.ts`, leaving `index.ts` with only the `PluginDefinition` default export. Update consumers to import from `@plugins/primitives/plugins/launch/web/api`.
 - Any cross-plugin import to a non-barrel path → either re-export the target from the owning plugin's `api.ts`, or refactor the consumer to use an allowed path.
 - Do not land the check in `CHECKS` until a clean run is achieved (guard with a commented-out registration during migration if needed).
 
@@ -185,6 +185,6 @@ New command at `cli/src/commands/plugin.ts`, registered in `cli/src/index.ts` al
 1. Run `./singularity check --plugin-boundaries` on the current tree. Expect violations; fix them iteratively until clean.
 2. Run `./singularity build`. Confirm `docs/plugins.md` now includes an "Exports:" section per plugin with library symbols.
 3. Run `./singularity plugin new tree`. Inspect the skeleton; it must pass `plugin-boundaries` immediately without edits, and its entries must appear in `web/src/plugins.ts` and `server/src/plugins.ts`.
-4. Add a deliberately forbidden deep import — e.g. `import { TreeView } from "@plugins/tree/web/components/tree-view"` — in a test file. Run the check; verify it fails with a hint pointing at `@plugins/tree/web/api`. Remove the test import.
+4. Add a deliberately forbidden deep import — e.g. `import { TreeView } from "@plugins/primitives/plugins/tree/web/components/tree-view"` — in a test file. Run the check; verify it fails with a hint pointing at `@plugins/primitives/plugins/tree/web/api`. Remove the test import.
 5. Run `./singularity check` (no flags). Confirm `plugin-boundaries` runs alongside existing checks.
 6. On a throwaway branch, run `./singularity push` and confirm the check runs as the first step before the merge flow.

@@ -1,9 +1,9 @@
 import { defineResource } from "@server/resources";
-import type { SecretMetadata } from "@plugins/secrets/shared";
+import type { SecretMetadata } from "@plugins/infra/plugins/secrets/shared";
 import {
   getSecretMetadata,
   SecretsMainOfflineError,
-} from "@plugins/secrets/server";
+} from "@plugins/infra/plugins/secrets/server";
 import { fullKey } from "@plugins/config/shared";
 import { getRegistry } from "./registry";
 

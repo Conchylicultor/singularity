@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
-import { setSecret } from "@plugins/secrets/server";
+import { setSecret } from "@plugins/infra/plugins/secrets/server";
 import { fullKey } from "@plugins/config/shared";
 import { config } from "./tables";
 import { getRegistry } from "./registry";

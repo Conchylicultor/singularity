@@ -1,4 +1,4 @@
-import { Pane } from "@plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { AttemptPane } from "./components/attempt-pane";
 import { AttemptConversationBody } from "./components/attempt-conversation";
 

@@ -1,4 +1,4 @@
-import { defineTriggerEvent } from "@plugins/events/server";
+import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
 
 export interface PushLandedPayload {
   pushId: string;

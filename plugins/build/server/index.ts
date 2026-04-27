@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
-import { deleteTriggersFor, trigger } from "@plugins/events/server";
+import { deleteTriggersFor, trigger } from "@plugins/infra/plugins/events/server";
 import { pushLanded } from "@plugins/tasks-core/server";
 import { readConfig } from "@plugins/config/server";
 import { handleBuild } from "./internal/handle-build";

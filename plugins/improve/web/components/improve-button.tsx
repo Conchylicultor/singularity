@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import { domToBlob } from "modern-screenshot";
 import { MdAdd } from "react-icons/md";
 import { ShellCommands as Shell } from "@plugins/shell/web";
-import { uploadAttachment } from "@plugins/attachments/web";
+import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Popover,

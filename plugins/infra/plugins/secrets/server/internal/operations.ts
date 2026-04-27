@@ -1,4 +1,4 @@
-import type { SecretMetadata, SecretRef } from "@plugins/secrets/shared";
+import type { SecretMetadata, SecretRef } from "@plugins/infra/plugins/secrets/shared";
 import { isMain } from "./paths";
 import {
   deleteLocal,

@@ -2,7 +2,7 @@ import { and, desc, eq, isNull } from "drizzle-orm";
 import { generateKeyBetween } from "fractional-indexing";
 import { z } from "zod";
 import { db } from "@server/db/client";
-import { Mcp } from "@plugins/mcp/server";
+import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { getConversation } from "@plugins/tasks-core/server";
 import { _yakShavingCategories, _yakShavingNodes } from "./tables";
 import {

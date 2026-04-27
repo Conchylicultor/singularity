@@ -8,7 +8,7 @@ import {
   ready as secretsReady,
   setSecret,
   SecretsKeychainLockedError,
-} from "@plugins/secrets/server";
+} from "@plugins/infra/plugins/secrets/server";
 
 export interface StoredAccount {
   kind: AuthProviderKind;

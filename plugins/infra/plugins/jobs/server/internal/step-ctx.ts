@@ -47,7 +47,7 @@ export function isSuspendSignal(err: unknown): boolean {
   );
 }
 
-// An `EventSource` shape from @plugins/events/server. We do not import the
+// An `EventSource` shape from @plugins/infra/plugins/events/server. We do not import the
 // type here because the jobs plugin must not depend on events (events already
 // depends on jobs; a reverse edge would close the cycle). Duck-typed via the
 // `__kind === "event"` brand and the `def.name` / `filter` fields.
@@ -246,7 +246,7 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
       if (!hooks.registerTrigger) {
         throw new Error(
           "[jobs] ctx.waitFor called but events plugin hooks are not installed. " +
-            "Import @plugins/events/server somewhere (its side-effect wires this up).",
+            "Import @plugins/infra/plugins/events/server somewhere (its side-effect wires this up).",
         );
       }
 

@@ -1,4 +1,4 @@
-import { Pane, type, type PaneObject } from "@plugins/pane/web";
+import { Pane, type, type PaneObject } from "@plugins/primitives/plugins/pane/web";
 import type { ConversationRecord } from "./slots";
 import { ConversationView } from "./components/conversation-view";
 

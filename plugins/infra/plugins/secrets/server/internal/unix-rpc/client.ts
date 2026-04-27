@@ -1,4 +1,4 @@
-import { SecretsMainOfflineError } from "@plugins/secrets/shared";
+import { SecretsMainOfflineError } from "@plugins/infra/plugins/secrets/shared";
 import { SOCKET_PATH } from "../paths";
 import {
   RPC_PATHS,

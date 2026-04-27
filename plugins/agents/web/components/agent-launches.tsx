@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch } from "@plugins/pane/web";
+import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/web";
 import { agentLaunchesResource } from "../../shared/resources";
 import { agentConversationPane } from "../panes";

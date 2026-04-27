@@ -8,7 +8,7 @@ import {
   CONFIG_SECRETS_NAMESPACE,
   configSecretsResource,
 } from "./secrets-resource";
-import { deleteSecret, setSecret } from "@plugins/secrets/server";
+import { deleteSecret, setSecret } from "@plugins/infra/plugins/secrets/server";
 import { fullKey, validateKind, normalizeStringList } from "@plugins/config/shared";
 
 function json(body: unknown, status = 200): Response {

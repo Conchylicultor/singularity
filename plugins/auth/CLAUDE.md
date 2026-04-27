@@ -4,7 +4,7 @@ Centralized OAuth 2.0 / API key infrastructure for third-party services. Provide
 
 ## Topology
 
-- **Tokens persist via the secrets primitive.** The `auth-tokens` namespace holds a JSON-encoded `TokenStoreBlob` keyed `blob-v1`. Actual storage (AES-256-GCM at `~/.singularity/secrets.json.enc`, OS-keychain master key, worktree RPC) lives in `plugins/secrets/` — see [`plugins/secrets/CLAUDE.md`](../secrets/CLAUDE.md).
+- **Tokens persist via the secrets primitive.** The `auth-tokens` namespace holds a JSON-encoded `TokenStoreBlob` keyed `blob-v1`. Actual storage (AES-256-GCM at `~/.singularity/secrets.json.enc`, OS-keychain master key, worktree RPC) lives in `plugins/infra/plugins/secrets/` — see [`plugins/infra/plugins/secrets/CLAUDE.md`](../infra/plugins/secrets/CLAUDE.md).
 - **Auth's own unix socket handles `getAccessToken`.** `~/.singularity/auth.sock` serves `/token`, `/status`, `/disconnect`, `/api-key` — the application-level RPC that includes refresh logic, consent errors, and in-flight-refresh dedup. Plain secret-store ops (`get`/`set`) use `secrets.sock` instead.
 - **Main detection.** `process.env.SINGULARITY_WORKTREE === "singularity"`. Set by the gateway when it spawns the backend.
 - **OAuth redirect URI.** `http://localhost:9000/api/auth/callback/<provider>` — bare `localhost`, not `singularity.localhost`. Google's Cloud Console rejects subdomains of localhost. The gateway has a scoped routing rule that forwards bare-`localhost` `/api/auth/{start,callback}/*` to the `singularity` backend.

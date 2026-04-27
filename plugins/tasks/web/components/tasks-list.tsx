@@ -15,8 +15,8 @@ import {
   RowChrome,
   TreeList,
   type TreeItem,
-} from "@plugins/tree/web";
-import type { TreeNode } from "@plugins/tree/shared";
+} from "@plugins/primitives/plugins/tree/web";
+import type { TreeNode } from "@plugins/primitives/plugins/tree/shared";
 import { tasksResource } from "../../shared/resources";
 import { Tasks as TasksSlots } from "../slots";
 import { taskDetailPane } from "../panes";

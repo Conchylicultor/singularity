@@ -236,7 +236,7 @@ export interface ActionContext {
 | `agents.launch` | `{ agentId: string, prompt?: string }` | `handleLaunch` at `plugins/agents/server/internal/handle-launch.ts:21` |
 | `tasks.launch` | `{ taskId: string, prompt?: string, model?: ConversationModel }` | `createConversation` at `plugins/conversations/server/internal/lifecycle.ts:34` with the given task |
 
-Each plugin defines its own actions in its own `server/api.ts`, importing `defineAction` from `@plugins/events/server`.
+Each plugin defines its own actions in its own `server/api.ts`, importing `defineAction` from `@plugins/infra/plugins/events/server`.
 
 ## End-to-end flows
 
@@ -396,7 +396,7 @@ await createTrigger({
 - `plugins/tasks/server/api.ts` — define `taskCompleted` event + `launchTask` action.
 - `plugins/conversations/server/api.ts` — define `conversationCompleted` event; call `.emit()` inside `lifecycle.markCompleted`.
 - `plugins/agents/server/api.ts` — define `launchAgent` action wrapping `handleLaunch` ([`plugins/agents/server/internal/handle-launch.ts:21`](../plugins/agents/server/internal/handle-launch.ts)).
-- `server/src/db/schema.ts` — add `export * from '@plugins/events/server/schema'`.
+- `server/src/db/schema.ts` — add `export * from '@plugins/infra/plugins/events/server/schema'`.
 
 ## Deferred (not in v1 shipping)
 

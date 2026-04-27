@@ -41,7 +41,7 @@ No `shared/` (nothing to share cross-runtime). No new DB tables. No config.
 
 ### Recovery pane
 
-`Pane.define()` from `@plugins/pane/web`:
+`Pane.define()` from `@plugins/primitives/plugins/pane/web`:
 
 ```ts
 export const recoveryPane = Pane.define({
@@ -91,7 +91,7 @@ plugins/conversations-recover/
 
 - Both barrels (`web/index.ts`, `server/index.ts`) contain only imports, re-exports, type aliases, and a single `export default { ... } satisfies PluginDefinition`. No const/let/logic. Match the pattern from `plugins/crashes/web/index.ts` and `plugins/crashes/server/index.ts`.
 - Cross-plugin imports use `@plugins/<name>/{web,server,shared}` only. Specifically:
-  - `web/components/recovery-view.tsx` imports `Shell` from `@plugins/shell/web`, `Pane` from `@plugins/pane/web`, and types + `recentConversationsResource` from `@plugins/conversations/web` (or `@plugins/tasks-core/shared` for `Conversation`).
+  - `web/components/recovery-view.tsx` imports `Shell` from `@plugins/shell/web`, `Pane` from `@plugins/primitives/plugins/pane/web`, and types + `recentConversationsResource` from `@plugins/conversations/web` (or `@plugins/tasks-core/shared` for `Conversation`).
   - `server/internal/handle-restore-batch.ts` imports `resumeConversation` and `recentConversationsResource` from `@plugins/conversations/server` / `@plugins/tasks-core/server`.
 - No new edges from other plugins into `conversations-recover`. To verify after writing, run `./singularity check --plugin-boundaries`.
 
@@ -103,7 +103,7 @@ plugins/conversations-recover/
 | Resume one conversation | `resumeConversation(id)` | `plugins/conversations/server/internal/lifecycle.ts:111` (public via `@plugins/conversations/server`) |
 | UI tick on conversation state changes | `recentConversationsResource` push resource | `@plugins/tasks-core/server` (consumed web-side via `@plugins/conversations/web`) |
 | Sidebar entry | `Shell.Sidebar({ title, icon, group, onClick })` | example: `plugins/tasks/web/index.ts` |
-| Pane | `Pane.define({ id, path, component })` from `@plugins/pane/web` | example: `plugins/welcome/web/panes.ts` |
+| Pane | `Pane.define({ id, path, component })` from `@plugins/primitives/plugins/pane/web` | example: `plugins/welcome/web/panes.ts` |
 
 ## Verification
 

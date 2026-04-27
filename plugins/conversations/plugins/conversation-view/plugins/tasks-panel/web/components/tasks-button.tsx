@@ -1,5 +1,5 @@
 import { MdChecklist } from "react-icons/md";
-import { usePaneMatch } from "@plugins/pane/web";
+import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";

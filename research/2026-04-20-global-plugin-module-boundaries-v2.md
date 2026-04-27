@@ -153,7 +153,7 @@ The first run surfaces known violations. Fix iteratively; guard the check regist
 
 **`api.ts` collapse.** For each plugin with an `api.ts`, merge its exports into `index.ts` and delete `api.ts`. Update consumers.
 
-- `plugins/launch/web/api.ts` → merge `LaunchButtons`, `LaunchButtonsProps`, `LaunchRequest` re-exports into `plugins/launch/web/index.ts`. Consumers switch from `@plugins/launch/web/api` → `@plugins/launch/web` (5 imports).
+- `plugins/launch/web/api.ts` → merge `LaunchButtons`, `LaunchButtonsProps`, `LaunchRequest` re-exports into `plugins/launch/web/index.ts`. Consumers switch from `@plugins/primitives/plugins/launch/web/api` → `@plugins/primitives/plugins/launch/web` (5 imports).
 - `plugins/tasks/server/api.ts` → merge all 20+ re-exports into `plugins/tasks/server/index.ts`. Consumers switch from `@plugins/tasks/server/api` → `@plugins/tasks/server` (5 imports).
 - `plugins/conversations/server/api.ts` and any other `api.ts` files (config, conversations shared, etc.) → same pattern.
 
@@ -187,8 +187,8 @@ The first run surfaces known violations. Fix iteratively; guard the check regist
 2. **Docgen.** Run `./singularity build`. Confirm `docs/plugins.md` now has an "Exports:" subsection per plugin with named symbols grouped by kind.
 3. **Scaffolder round-trip.** Run `./singularity plugin new tree`. Inspect the skeleton: it must pass `plugin-boundaries` immediately with no edits, and entries must appear in `web/src/plugins.ts` and `server/src/plugins.ts`.
 4. **Negative cases.** Deliberately add each of:
-   - `import { TreeView } from "@plugins/tree/web/components/tree-view"` (deep path) → expect R4 violation.
-   - `import treePlugin from "@plugins/tree/web"` in a non-registry file → expect R5 violation.
+   - `import { TreeView } from "@plugins/primitives/plugins/tree/web/components/tree-view"` (deep path) → expect R4 violation.
+   - `import treePlugin from "@plugins/primitives/plugins/tree/web"` in a non-registry file → expect R5 violation.
    - A `const foo = 1;` at the top of a plugin's `index.ts` → expect R3 violation.
    - A cycle: plugin A's `index.ts` imports from plugin B's `index.ts`, which imports from A's → expect R6 violation with the cycle path printed.
    Remove each after verifying the failure fires.

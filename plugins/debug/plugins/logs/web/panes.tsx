@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { Outlet, Pane, PaneChrome, usePaneMatch } from "@plugins/pane/web";
+import { Outlet, Pane, PaneChrome, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { LogViewer } from "./components/log-viewer";
 
 export const logsPane = Pane.define({

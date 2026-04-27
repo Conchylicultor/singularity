@@ -10,7 +10,7 @@ import {
   DEFAULT_MAX_ATTEMPTS,
   type EnqueueTx,
   UNSAFE_getRegisteredJob,
-} from "@plugins/jobs/server";
+} from "@plugins/infra/plugins/jobs/server";
 import { db } from "@server/db/client";
 import { eventTriggerColumns } from "./base-columns";
 import { eventsDispatchJob } from "./dispatch-job";

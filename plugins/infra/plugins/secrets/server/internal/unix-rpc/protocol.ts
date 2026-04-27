@@ -1,4 +1,4 @@
-import type { SecretMetadata } from "@plugins/secrets/shared";
+import type { SecretMetadata } from "@plugins/infra/plugins/secrets/shared";
 
 export const RPC_PATHS = {
   get: "/get",

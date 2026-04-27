@@ -113,7 +113,7 @@ export { insertPush } from "./internal/mutations/pushes";
 export type { InsertPushInput } from "./internal/mutations/pushes";
 
 // Event emitted after a push row is inserted. Consumers subscribe via
-// @plugins/events/server `trigger({ on: pushLanded, do: <job> })`.
+// @plugins/infra/plugins/events/server `trigger({ on: pushLanded, do: <job> })`.
 export { pushLanded, _pushLandedTriggers } from "./internal/tables-events";
 export type { PushLandedPayload } from "./internal/tables-events";
 

@@ -1,5 +1,5 @@
 import { asc, sql } from "drizzle-orm";
-import { deleteTrigger, deleteTriggersFor, trigger } from "@plugins/events/server";
+import { deleteTrigger, deleteTriggersFor, trigger } from "@plugins/infra/plugins/events/server";
 import { db } from "@server/db/client";
 import { logEntries, logPing, resetLog } from "./log-job";
 import { _pingedTriggers, pinged } from "./tables";

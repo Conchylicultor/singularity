@@ -10,7 +10,7 @@ const SIDEBAR_GROUPS: Record<
   System: { icon: MdTune },
 };
 import { PluginErrorBoundary } from "@core";
-import { PaneRouter } from "@plugins/pane/web";
+import { PaneRouter } from "@plugins/primitives/plugins/pane/web";
 import { Shell as ShellCommands } from "../commands";
 import { Shell } from "../slots";
 import { Toaster } from "./toaster";
