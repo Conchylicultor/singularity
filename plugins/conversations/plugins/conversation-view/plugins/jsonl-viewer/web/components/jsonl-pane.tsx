@@ -86,6 +86,15 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
     }
   }, [events]);
 
+  // Sending a turn flips status into working/starting; force a scroll to bottom
+  // so the user sees their message even if they were scrolled up. The grow-based
+  // auto-scroll above then keeps the view pinned as new events stream in.
+  useEffect(() => {
+    if (!isWorking) return;
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [isWorking]);
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2 border-b px-2 py-1.5">
