@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@server/types";
 import { handleFileContent } from "./internal/file-content-handler";
 import { handleFileDiff } from "./internal/file-diff-handler";
 import { handleImageContent } from "./internal/image-handler";
+import { handlePushFiles } from "./internal/push-handler";
 import { handleTree } from "./internal/tree-handler";
 
 export default {
@@ -14,5 +15,6 @@ export default {
     "GET /api/code/:worktree/file": handleFileContent,
     "GET /api/code/:worktree/diff": handleFileDiff,
     "GET /api/code/:worktree/image": handleImageContent,
+    "GET /api/code/:worktree/push": handlePushFiles,
   },
 } satisfies ServerPluginDefinition;

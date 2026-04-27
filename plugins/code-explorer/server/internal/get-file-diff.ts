@@ -1,4 +1,5 @@
 import { resolve, sep } from "node:path";
+import { isAllowedRef } from "./resolve-ref";
 
 const GIT = "/usr/bin/git";
 const MAX_BYTES = 2 * 1024 * 1024;
@@ -29,18 +30,20 @@ async function runGit(
   return null;
 }
 
-const ALLOWED_BASES = new Set(["HEAD", "main"]);
-
 export async function getFileDiff(
   worktreePath: string,
   relPath: string,
   base: string = "HEAD",
+  head?: string,
 ): Promise<FileDiffResult> {
   if (!relPath || relPath.includes("\0")) {
     return { kind: "error", status: 400, message: "Invalid path" };
   }
-  if (!ALLOWED_BASES.has(base)) {
+  if (!isAllowedRef(base)) {
     return { kind: "error", status: 400, message: "Invalid base" };
+  }
+  if (head !== undefined && !isAllowedRef(head)) {
+    return { kind: "error", status: 400, message: "Invalid head" };
   }
 
   const absRoot = resolve(worktreePath);
@@ -53,6 +56,22 @@ export async function getFileDiff(
     base === "main"
       ? ((await runGit(["merge-base", "main", "HEAD"], absRoot))?.trim() ?? base)
       : base;
+
+  // Range diff (commit-to-commit). Untracked / working-tree handling does not
+  // apply — both sides are real refs.
+  if (head !== undefined) {
+    const diff = await runGit(
+      ["diff", "--no-color", "--no-renames", resolvedBase, head, "--", relPath],
+      absRoot,
+    );
+    if (diff === null) {
+      return { kind: "error", status: 500, message: "git diff failed" };
+    }
+    if (diff.length > MAX_BYTES) {
+      return { kind: "error", status: 413, message: "Diff too large" };
+    }
+    return { kind: "ok", diff };
+  }
 
   const status = await runGit(
     ["status", "--porcelain", "--", relPath],

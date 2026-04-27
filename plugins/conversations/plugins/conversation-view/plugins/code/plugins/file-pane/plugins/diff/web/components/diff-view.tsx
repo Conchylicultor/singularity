@@ -51,12 +51,14 @@ export function DiffView({
   worktree,
   path,
   base,
+  head,
 }: {
   worktree: string;
   path: string;
   base?: string;
+  head?: string;
 }) {
-  const state = useFileDiff(worktree, path, base);
+  const state = useFileDiff(worktree, path, base, head);
   const dark = useDarkMode();
 
   const files = useMemo<FileData[]>(() => {
@@ -99,7 +101,7 @@ export function DiffView({
   }, [baseHunks, worktree, path, base]);
 
   const effectiveHunks = expandedHunks ?? baseHunks;
-  const tokens = useDiffTokens(effectiveHunks, path, dark, worktree, base);
+  const tokens = useDiffTokens(effectiveHunks, path, dark, worktree, base, head);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastClickedSide = useRef<DiffSide | null>(null);
 

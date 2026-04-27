@@ -72,6 +72,7 @@ export {
 export {
   listPushes,
   listPushesForAttempt,
+  listPushesByPushId,
   getLatestPush,
 } from "./internal/queries/pushes";
 

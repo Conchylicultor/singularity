@@ -43,11 +43,15 @@ export function ReviewFileRow({
   file,
   expanded,
   onToggle,
+  base,
+  head,
 }: {
   worktree: string;
   file: EditedFile;
   expanded: boolean;
   onToggle: () => void;
+  base?: string;
+  head?: string;
 }) {
   const slash = file.path.lastIndexOf("/");
   const dir = slash >= 0 ? file.path.slice(0, slash + 1) : "";
@@ -108,7 +112,12 @@ export function ReviewFileRow({
       </button>
       {expanded && (
         <div className="bg-background">
-          <DiffView worktree={worktree} path={file.path} base="main" />
+          <DiffView
+            worktree={worktree}
+            path={file.path}
+            base={base ?? "main"}
+            head={head}
+          />
         </div>
       )}
     </div>

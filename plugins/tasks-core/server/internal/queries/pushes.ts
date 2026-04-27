@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { pushes } from "../tables";
 import type { Push } from "../schema";
@@ -13,6 +13,14 @@ export async function listPushesForAttempt(attemptId: string): Promise<Push[]> {
     .from(pushes)
     .where(eq(pushes.attemptId, attemptId))
     .orderBy(desc(pushes.createdAt));
+}
+
+export async function listPushesByPushId(pushId: string): Promise<Push[]> {
+  return db
+    .select()
+    .from(pushes)
+    .where(eq(pushes.pushId, pushId))
+    .orderBy(asc(pushes.createdAt));
 }
 
 export async function getLatestPush(): Promise<Push | null> {
