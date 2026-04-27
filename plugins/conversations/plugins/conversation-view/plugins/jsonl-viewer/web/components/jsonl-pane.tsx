@@ -69,6 +69,10 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const lastCountRef = useRef(0);
+  // Reset count when conversation changes so initial load always scrolls to bottom
+  useEffect(() => {
+    lastCountRef.current = 0;
+  }, [conversation.id]);
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || !events) return;
