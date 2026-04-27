@@ -85,16 +85,19 @@ export function SettingsPanel() {
 
   if (groups.length === 0) {
     return (
-      <div className="mx-auto max-w-2xl px-6 py-8">
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          No plugins have declared configurable values yet.
-        </p>
+      <div className="h-full overflow-y-auto">
+        <div className="mx-auto max-w-2xl px-6 py-8">
+          <h1 className="text-2xl font-semibold">Settings</h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            No plugins have declared configurable values yet.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
+    <div className="h-full overflow-y-auto">
     <div className="mx-auto max-w-2xl px-6 py-8">
       <h1 className="text-2xl font-semibold">Settings</h1>
       {error ? (
@@ -159,6 +162,7 @@ export function SettingsPanel() {
           </section>
         ))}
       </div>
+    </div>
     </div>
   );
 }
