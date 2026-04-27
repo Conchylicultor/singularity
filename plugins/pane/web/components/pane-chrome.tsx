@@ -16,9 +16,8 @@ interface PaneChromeProps {
 }
 
 /**
- * Standard pane header: ‹ › history buttons, optional `position="left"`
- * actions, title, optional `position="right"` actions, and optional
- * expand button. Pane authors who want a fully custom header layout can
+ * Standard pane header: ‹ › history buttons, title, optional `position="left"`
+ * actions, optional `position="right"` actions, and optional expand button. Pane authors who want a fully custom header layout can
  * opt out (`chrome: false` in `Pane.define`) and compose the pieces
  * (`<PaneHistoryButtons/>`, `<PaneActionsSlot/>`) themselves.
  */
@@ -31,10 +30,10 @@ export function PaneChrome({ pane, title, children }: PaneChromeProps) {
     <div className="flex h-full flex-col">
       <div className="flex h-10 items-center gap-2 border-b px-2">
         {chrome.history && <PaneHistoryButtons pane={pane} />}
-        <PaneActionsSlot pane={pane} position="left" />
         {resolvedTitle != null && resolvedTitle !== "" && (
           <span className="truncate text-sm font-medium">{resolvedTitle}</span>
         )}
+        <PaneActionsSlot pane={pane} position="left" />
         <div className="flex-1" />
         <PaneActionsSlot pane={pane} position="right" />
         {chrome.expand && (

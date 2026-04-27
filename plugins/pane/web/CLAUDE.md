@@ -121,10 +121,9 @@ taskDetailPane.Actions({ component: RefreshButton });
 taskDetailPane.Actions({ component: StatusBadge, position: "left" });
 ```
 
-`position` defaults to `"right"`. `"left"` sits between the history
-buttons and the title — use it for status chips or context badges that
-hug the title. `"right"` sits after the title spacer with the rest of
-the toolbar.
+`position` defaults to `"right"`. `"left"` sits immediately after the
+title — use it for status chips or context badges that follow the title.
+`"right"` sits after the title spacer with the rest of the toolbar.
 
 For the common ghost-icon-button case, use the shared
 `<PaneIconAction>`:
