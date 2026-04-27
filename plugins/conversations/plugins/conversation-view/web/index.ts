@@ -4,6 +4,9 @@ import type { PluginDefinition } from "@core";
 // module load time; PaneRouter then matches `/c/:convId` automatically.
 import "./panes";
 
+import { conversationPane } from "./panes";
+import { ExpandConversationButton } from "./components/expand-button";
+
 export { Conversation } from "./slots";
 export type { ConversationRecord } from "./slots";
 export { conversationPane, markMainPane, isMainPaneId } from "./panes";
@@ -13,6 +16,9 @@ export { PromptDraftProvider, usePromptDraft } from "./prompt-draft-context";
 export default {
   id: "conversation",
   name: "Conversation",
-  description: "Conversation pane and toolbar host; nested plugins extend `Conversation.Toolbar`.",
-  contributions: [],
+  description: "Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.",
+  contributions: [
+    // Pop out of an embedding split (Tasks/Agents) into /c/:convId.
+    conversationPane.Actions({ component: ExpandConversationButton }),
+  ],
 } satisfies PluginDefinition;

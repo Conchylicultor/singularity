@@ -1,18 +1,16 @@
 import { useEffect, useRef, useState } from "react";
+import { MdAdd } from "react-icons/md";
 import { ShellCommands as Shell } from "@plugins/shell/web";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { Button } from "@/components/ui/button";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-export function ConversationTitle({
-  conversation,
-}: {
-  conversation: ConversationRecord;
-}) {
+export function NewChildTaskAction() {
+  const { conversation } = conversationPane.useData();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -56,8 +54,12 @@ export function ConversationTitle({
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger className="hover:bg-accent truncate rounded px-2 py-0.5 font-medium text-sm outline-none focus-visible:ring-1 focus-visible:ring-ring">
-        {conversation.title ?? conversation.id}
+      <PopoverTrigger
+        className={buttonVariants({ variant: "ghost", size: "icon" })}
+        title="New child task"
+        aria-label="New child task"
+      >
+        <MdAdd className="size-4" />
       </PopoverTrigger>
       <PopoverContent>
         <CreateChildTaskForm

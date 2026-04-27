@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Outlet, usePaneMatch } from "@plugins/pane/web";
+import { Outlet, PaneChrome, usePaneMatch } from "@plugins/pane/web";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -10,7 +10,6 @@ import { conversationPane, isMainPaneId } from "../panes";
 import { PromptDraftProvider } from "../prompt-draft-context";
 import { terminalPane } from "@plugins/terminal/web";
 import { useConversation, useConversationById } from "@plugins/conversations/web";
-import { Button } from "@/components/ui/button";
 
 const TMUX = "/opt/homebrew/bin/tmux";
 
@@ -50,8 +49,6 @@ function PromptBar({
 }
 
 export function ConversationView({ sessionId }: { sessionId: string }) {
-  const toolbarItems = Conversation.Toolbar.useContributions();
-  const titleItems = Conversation.Title.useContributions();
   const promptBarItems = Conversation.PromptBar.useContributions();
   const promptInputItems = Conversation.PromptInput.useContributions();
   const PromptInputComponent = promptInputItems[0]?.component ?? null;
@@ -95,8 +92,6 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
     }
     wasGoneRef.current = liveStatus === "gone";
   }, [liveStatus]);
-
-  const TitleComponent = titleItems[0]?.component ?? null;
 
   const showBottomBar =
     !!conversation && (!!PromptInputComponent || promptBarItems.length > 0);
@@ -154,60 +149,7 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
     );
 
   const body = (
-    <div className="flex h-[calc(100svh-3rem)] min-h-0 flex-col overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-2">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {conversation && TitleComponent ? (
-            <TitleComponent conversation={conversation} />
-          ) : (
-            <div className="truncate font-medium text-sm">
-              {conversation?.title ?? sessionId}
-            </div>
-          )}
-          {conversation &&
-            toolbarItems
-              .filter((item) => item.group === "status")
-              .map((item, idx) => {
-                if (!item.component) return null;
-                const Component = item.component;
-                return (
-                  <Component
-                    key={item.label ?? `status-${idx}`}
-                    conversation={conversation}
-                  />
-                );
-              })}
-        </div>
-        <div className="flex items-center gap-1">
-          {conversation &&
-            toolbarItems
-              .filter((item) => item.group !== "status")
-              .map((item, idx) => {
-                if (item.component) {
-                  const Component = item.component;
-                  return (
-                    <Component
-                      key={item.label ?? `toolbar-${idx}`}
-                      conversation={conversation}
-                    />
-                  );
-                }
-                const Icon = item.icon;
-                return (
-                  <Button
-                    key={item.label ?? `toolbar-${idx}`}
-                    variant="ghost"
-                    size="icon"
-                    title={item.label}
-                    aria-label={item.label}
-                    onClick={() => item.onClick?.(conversation)}
-                  >
-                    {Icon ? <Icon className="size-4" /> : null}
-                  </Button>
-                );
-              })}
-        </div>
-      </div>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="min-h-0 flex-1 overflow-hidden">{mainArea}</div>
     </div>
   );
@@ -215,10 +157,22 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
   if (!conversation) {
     return <PromptDraftProvider>{body}</PromptDraftProvider>;
   }
+  // Main sub-panes (e.g. Review, Files) replace the main area entirely and
+  // render their own PaneChrome; suppress the parent chrome so we don't
+  // stack two headers.
   return (
     <PromptDraftProvider>
       <conversationPane.Provider value={{ conversation }}>
-        {body}
+        {isMain ? (
+          body
+        ) : (
+          <PaneChrome
+            pane={conversationPane}
+            title={conversation.title ?? conversation.id}
+          >
+            {body}
+          </PaneChrome>
+        )}
       </conversationPane.Provider>
     </PromptDraftProvider>
   );

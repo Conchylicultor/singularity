@@ -66,7 +66,7 @@ export interface PaneInternal {
   chrome: NormalizedChrome;
   children: PaneInternal[];
   dataContext: ReturnType<typeof createContext<unknown>>;
-  actionsSlot: Slot<{ component: ComponentType }>;
+  actionsSlot: Slot<{ component: ComponentType; position?: "left" | "right" }>;
 }
 
 const registry = new Map<string, PaneInternal>();
@@ -280,7 +280,7 @@ export interface PaneObject<
   expand(): void;
   back(): void;
   forward(): void;
-  Actions: Slot<{ component: ComponentType }>;
+  Actions: Slot<{ component: ComponentType; position?: "left" | "right" }>;
   /** Internal. Consumers should not rely on this. */
   _internal: PaneInternal;
 }
@@ -424,9 +424,10 @@ function define<
   const dataContext = createContext<unknown>(DATA_NOT_PROVIDED);
   dataContext.displayName = `PaneData(${args.id})`;
 
-  const actionsSlot = defineSlot<{ component: ComponentType }>(
-    `pane.${args.id}.actions`,
-  );
+  const actionsSlot = defineSlot<{
+    component: ComponentType;
+    position?: "left" | "right";
+  }>(`pane.${args.id}.actions`);
 
   const internal: PaneInternal = {
     id: args.id,

@@ -82,15 +82,83 @@ params is explicit: `ancestorPane.useParams()`.
 
 ## Chrome
 
+**Every pane should wrap its body in `<PaneChrome pane={…}>`** — that's
+the convention. PaneChrome renders a standard header: ‹ › history
+buttons, optional left-side actions, the title, optional right-side
+actions, and an optional expand button. Layout containers whose body is
+a full-viewport split (e.g. `tasksRootPane`, `agentsRootPane`) opt out
+with `chrome: false` in `Pane.define` and render raw content.
+
+```tsx
+function TaskDetail() {
+  const { taskId } = taskDetailPane.useParams();
+  const task = useTask(taskId);
+  if (!task) return <NotFound />;
+  return (
+    <taskDetailPane.Provider value={{ task }}>
+      <PaneChrome pane={taskDetailPane} title={task.title}>
+        <Outlet />
+      </PaneChrome>
+    </taskDetailPane.Provider>
+  );
+}
+```
+
+Wrap `<PaneChrome>` *inside* `pane.Provider` so action contributors can
+read the pane's data via `useData()`.
+
+Title resolution: the `title` prop wins; otherwise PaneChrome falls
+back to the pane's `chrome.title` config (`string | (params) =>
+string`). Use the prop when the title needs loaded data; use the config
+when it's static or derivable from URL params.
+
+### Actions
+
 Each pane auto-creates an `Actions` slot. Other plugins contribute:
 
 ```ts
 taskDetailPane.Actions({ component: RefreshButton });
+taskDetailPane.Actions({ component: StatusBadge, position: "left" });
 ```
 
-`<PaneChrome pane={…} title="…">` renders a standard header (‹ › buttons,
-actions, expand). Opt out with `chrome: false` in `Pane.define` and compose
-pieces manually with `<PaneHistoryButtons/>` and `<PaneActionsSlot/>`.
+`position` defaults to `"right"`. `"left"` sits between the history
+buttons and the title — use it for status chips or context badges that
+hug the title. `"right"` sits after the title spacer with the rest of
+the toolbar.
+
+For the common ghost-icon-button case, use the shared
+`<PaneIconAction>`:
+
+```tsx
+import { PaneIconAction } from "@plugins/pane/web";
+import { MdRocketLaunch } from "react-icons/md";
+
+function OpenAppButton() {
+  const { task } = taskDetailPane.useData();
+  return (
+    <PaneIconAction
+      label="Open app"
+      icon={MdRocketLaunch}
+      onClick={() => window.open(`/foo/${task.id}`)}
+    />
+  );
+}
+```
+
+`<PaneIconAction>` forwards refs so it composes with components that
+need a button ref. (Base UI Popover triggers don't take `asChild` — use
+`<PopoverTrigger className={buttonVariants({variant:"ghost",size:"icon"})}>`
+directly when the trigger needs to be a popover.)
+
+### Opting out
+
+```ts
+Pane.define({ id: "tasks-root", path: "/tasks", component: TasksRoot, chrome: false });
+```
+
+Use this for layout containers that own a `<ResizablePanelGroup>` or
+similar full-viewport layout. The pane component renders raw content
+and is responsible for any chrome it wants to show itself.
 
 ## Router
 

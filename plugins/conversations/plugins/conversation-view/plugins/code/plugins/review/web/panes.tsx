@@ -1,4 +1,4 @@
-import { Pane } from "@plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/pane/web";
 import {
   conversationPane,
   markMainPane,
@@ -9,10 +9,18 @@ export const convReviewPane = Pane.define({
   id: "conv-review",
   parent: conversationPane,
   path: "review",
-  component: ReviewView,
+  component: ConvReviewBody,
 });
 
 // Review takes over the entire conversation main area rather than rendering
 // alongside the terminal. Flag it here so ConversationView swaps to the
 // full-outlet layout when this pane is the match leaf.
 markMainPane(convReviewPane);
+
+function ConvReviewBody() {
+  return (
+    <PaneChrome pane={convReviewPane} title="Review">
+      <ReviewView />
+    </PaneChrome>
+  );
+}

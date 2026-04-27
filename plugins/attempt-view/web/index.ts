@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { AttemptSwitchButton } from "./components/attempt-switch-button";
 
 import "./panes";
@@ -11,5 +11,5 @@ export default {
   name: "Attempt View",
   description:
     "Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.",
-  contributions: [Conversation.Toolbar({ component: AttemptSwitchButton })],
+  contributions: [conversationPane.Actions({ component: AttemptSwitchButton })],
 } satisfies PluginDefinition;

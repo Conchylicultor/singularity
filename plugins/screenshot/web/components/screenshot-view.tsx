@@ -71,7 +71,7 @@ export function ScreenshotView({ id }: { id: string }) {
   }, [reload]);
 
   return (
-    <div className="flex h-[calc(100svh-3rem)] min-h-0 w-full overflow-hidden">
+    <div className="flex h-full min-h-0 w-full overflow-hidden">
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/40">
           {error ? (

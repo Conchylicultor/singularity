@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useResource } from "@core";
-import { Outlet, Pane, type, usePaneMatch } from "@plugins/pane/web";
+import { Outlet, Pane, PaneChrome, type, usePaneMatch } from "@plugins/pane/web";
 import { ConversationView } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   ResizableHandle,
@@ -16,6 +16,8 @@ export const agentsRootPane = Pane.define({
   id: "agents-root",
   path: "/agents",
   component: AgentsRoot,
+  // Layout container — owns the full-viewport split, so no chrome of its own.
+  chrome: false,
 });
 
 export const agentDetailPane = Pane.define({
@@ -31,7 +33,8 @@ export const agentConversationPane = Pane.define({
   parent: agentDetailPane,
   path: "c/:convId",
   component: AgentConversationBody,
-  chrome: { history: true, expand: ({ convId }) => `/c/${convId}` },
+  // ConversationView owns its own PaneChrome (via conversationPane).
+  chrome: false,
 });
 
 function AgentsRoot(): ReactElement {
@@ -115,10 +118,16 @@ function AgentDetailBody(): ReactElement {
     body
   );
 
-  if (!agent) return content;
+  const wrapped = (
+    <PaneChrome pane={agentDetailPane} title={agent?.name}>
+      {content}
+    </PaneChrome>
+  );
+
+  if (!agent) return wrapped;
   return (
     <agentDetailPane.Provider value={{ agent }}>
-      {content}
+      {wrapped}
     </agentDetailPane.Provider>
   );
 }

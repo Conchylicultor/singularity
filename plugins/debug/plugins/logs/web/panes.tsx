@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { Outlet, Pane, usePaneMatch } from "@plugins/pane/web";
+import { Outlet, Pane, PaneChrome, usePaneMatch } from "@plugins/pane/web";
 import { LogViewer } from "./components/log-viewer";
 
 export const logsPane = Pane.define({
@@ -20,10 +20,20 @@ function LogsBody(): ReactElement {
   const hasChannel = match?.chain.some(
     (e) => e.pane === logChannelPane._internal,
   );
-  return hasChannel ? <Outlet /> : <LogViewer />;
+  // Child pane (logChannelPane) renders its own PaneChrome — don't double-wrap.
+  if (hasChannel) return <Outlet />;
+  return (
+    <PaneChrome pane={logsPane} title="Logs">
+      <LogViewer />
+    </PaneChrome>
+  );
 }
 
 function LogsChannelBody(): ReactElement {
   const { channel } = logChannelPane.useParams();
-  return <LogViewer initialChannel={channel} />;
+  return (
+    <PaneChrome pane={logChannelPane} title={`Logs · ${channel}`}>
+      <LogViewer initialChannel={channel} />
+    </PaneChrome>
+  );
 }

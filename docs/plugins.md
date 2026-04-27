@@ -44,7 +44,7 @@
   - Exports (web):
     - Values: `attemptConversationPane`, `attemptPane`
   - Contributes:
-    - `Conversation.Toolbar` → `AttemptSwitchButton`
+    - `conversationPane.Actions` → `AttemptSwitchButton`
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Shared OAuth/API-key infrastructure for third-party services. Tokens stored on main; worktrees fetch via unix socket.
   - Defines:
@@ -146,12 +146,14 @@
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
   - Plugins:
-    - **`conversation-view`** — Conversation pane and toolbar host; nested plugins extend `Conversation.Toolbar`.
+    - **`conversation-view`** — Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
       - Defines:
-        - Slots: `Conversation.Toolbar`, `Conversation.Title`, `Conversation.PromptBar`, `Conversation.PromptInput`
+        - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`
       - Exports (web):
         - Types: `ConversationRecord`
         - Values: `Conversation`, `conversationPane`, `ConversationView`, `isMainPaneId`, `markMainPane`, `PromptDraftProvider`, `usePromptDraft`
+      - Contributes:
+        - `conversationPane.Actions` → `ExpandConversationButton`
       - Plugins:
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Defines:
@@ -162,7 +164,7 @@
             - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`, `ResourceDescriptor`
             - Values: `editedFilesResource`
           - Contributes:
-            - `Conversation.Toolbar` → `CodeToolbarSlot`
+            - `conversationPane.Actions` → `CodeToolbarSlot`
           - Server:
             - Uses: `tasks-core.getConversation`
             - Resources: `edited-files` (invalidate)
@@ -228,7 +230,7 @@
             - Types: `JsonlEvent`, `JsonlEventsResponse`
             - Values: `jsonlEventsResource`
           - Contributes:
-            - `Conversation.Toolbar` → `JsonlButton`
+            - `conversationPane.Actions` → `JsonlButton`
           - Server:
             - Uses: `conversations.findTranscriptPath`, `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
@@ -253,10 +255,13 @@
                 - `JsonlViewer.EventRenderer` → `UserToolResultRow`
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Contributes:
-            - `Conversation.Toolbar` (group `status`) → `ModelBadge`
+            - `conversationPane.Actions` → `ModelBadge`
+        - **`new-child-task`** — Toolbar button that opens a popover to create a child task under the conversation's parent task.
+          - Contributes:
+            - `conversationPane.Actions` → `NewChildTaskAction`
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
           - Contributes:
-            - `Conversation.Toolbar` "Open"
+            - `conversationPane.Actions` → `OpenAppButton`
         - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
           - Contributes:
             - `Conversation.PromptInput` → `PromptInput`
@@ -289,16 +294,13 @@
             - `POST /api/conversations/:id/resume`
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Contributes:
-            - `Conversation.Toolbar` (group `status`) → `StatusBadge`
+            - `conversationPane.Actions` → `StatusBadge`
         - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
           - Contributes:
-            - `Conversation.Toolbar` → `TasksButton`
-        - **`title`** — Clickable conversation title that opens a popover to create a child task under the conversation's parent task.
-          - Contributes:
-            - `Conversation.Title` → `ConversationTitle`
+            - `conversationPane.Actions` → `TasksButton`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:
-            - `Conversation.Toolbar` "VSCode"
+            - `conversationPane.Actions` → `VscodeButton`
     - **`conversations-view`** — Sidebar list of all conversations.
       - Contributes:
         - `Shell.Sidebar` "Conversations" → `ConversationList`
@@ -461,7 +463,7 @@
 - **`pane`** — Unified pane primitive: Pane.define, <Outlet/>, <PaneRouter/>, and chrome components.
   - Exports (web):
     - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
-    - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
+    - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Exports (web):

@@ -2,16 +2,12 @@ import { MdSplitscreen } from "react-icons/md";
 import { useResource } from "@core";
 import { usePaneMatch } from "@plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { attemptsResource } from "@plugins/tasks/shared";
 import { Button } from "@/components/ui/button";
 import { attemptPane, attemptConversationPane } from "../panes";
 
-export function AttemptSwitchButton({
-  conversation,
-}: {
-  conversation: ConversationRecord;
-}) {
+export function AttemptSwitchButton() {
+  const { conversation } = conversationPane.useData();
   const { data } = useResource(attemptsResource);
   const match = usePaneMatch();
 

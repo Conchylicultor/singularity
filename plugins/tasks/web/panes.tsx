@@ -1,6 +1,6 @@
 import { type ReactElement, useState } from "react";
 import { useResource } from "@core";
-import { Outlet, Pane, type, usePaneMatch } from "@plugins/pane/web";
+import { Outlet, Pane, PaneChrome, type, usePaneMatch } from "@plugins/pane/web";
 import { ConversationView } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   ResizableHandle,
@@ -21,6 +21,8 @@ export const tasksRootPane = Pane.define({
   id: "tasks-root",
   path: "/tasks",
   component: TasksRoot,
+  // Layout container — owns the full-viewport split, so no chrome of its own.
+  chrome: false,
 });
 
 export const taskDetailPane = Pane.define({
@@ -36,7 +38,8 @@ export const taskConversationPane = Pane.define({
   parent: taskDetailPane,
   path: "c/:convId",
   component: TaskConversationBody,
-  chrome: { history: true, expand: ({ convId }) => `/c/${convId}` },
+  // ConversationView owns its own PaneChrome (via conversationPane).
+  chrome: false,
 });
 
 function TasksRoot(): ReactElement {
@@ -131,11 +134,17 @@ function TaskDetailBody(): ReactElement {
       body
     );
 
-  // Only wrap with Provider when the task is loaded so descendants reading
+  const wrapped = (
+    <PaneChrome pane={taskDetailPane} title={task?.title}>
+      {content}
+    </PaneChrome>
+  );
+
+  // Only mount the Provider once the task is loaded so descendants reading
   // useData() get a non-null task.
-  if (!task) return content;
+  if (!task) return wrapped;
   return (
-    <taskDetailPane.Provider value={{ task }}>{content}</taskDetailPane.Provider>
+    <taskDetailPane.Provider value={{ task }}>{wrapped}</taskDetailPane.Provider>
   );
 }
 

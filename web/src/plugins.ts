@@ -14,7 +14,7 @@ import conversationVscodePlugin from "@plugins/conversations/plugins/conversatio
 import conversationOpenAppPlugin from "@plugins/conversations/plugins/conversation-view/plugins/open-app/web";
 import conversationStatusPlugin from "@plugins/conversations/plugins/conversation-view/plugins/status/web";
 import conversationModelPlugin from "@plugins/conversations/plugins/conversation-view/plugins/model/web";
-import conversationTitlePlugin from "@plugins/conversations/plugins/conversation-view/plugins/title/web";
+import conversationNewChildTaskPlugin from "@plugins/conversations/plugins/conversation-view/plugins/new-child-task/web";
 import conversationTasksPanelPlugin from "@plugins/conversations/plugins/conversation-view/plugins/tasks-panel/web";
 import conversationJsonlViewerPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import conversationJsonlViewerUserTextPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-text/web";
@@ -83,7 +83,7 @@ export const plugins: PluginDefinition[] = [
   conversationOpenAppPlugin,
   conversationStatusPlugin,
   conversationModelPlugin,
-  conversationTitlePlugin,
+  conversationNewChildTaskPlugin,
   conversationTasksPanelPlugin,
   conversationJsonlViewerPlugin,
   conversationJsonlViewerUserTextPlugin,

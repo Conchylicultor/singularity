@@ -1,16 +1,12 @@
 import { useEffect, useRef } from "react";
 import { MdDataObject } from "react-icons/md";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { usePaneMatch } from "@plugins/pane/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import { convJsonlPane } from "../panes";
 
-export function JsonlButton({
-  conversation,
-}: {
-  conversation: ConversationRecord;
-}) {
+export function JsonlButton() {
+  const { conversation } = conversationPane.useData();
   const match = usePaneMatch();
   const isOpen =
     match?.chain.some((e) => e.pane === convJsonlPane._internal) ?? false;

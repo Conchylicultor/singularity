@@ -1,4 +1,4 @@
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { ConversationStatus } from "@plugins/conversations/shared";
 
 const STATUS_CLASSES: Record<ConversationStatus, string> = {
@@ -12,11 +12,8 @@ function prettify(status: ConversationStatus): string {
   return status.replace(/_/g, " ");
 }
 
-export function StatusBadge({
-  conversation,
-}: {
-  conversation: ConversationRecord;
-}) {
+export function StatusBadge() {
+  const { conversation } = conversationPane.useData();
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[conversation.status]}`}

@@ -1,7 +1,8 @@
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Code } from "../slots";
 
-export function CodeToolbarSlot({ conversation }: { conversation: ConversationRecord }) {
+export function CodeToolbarSlot() {
+  const { conversation } = conversationPane.useData();
   const items = Code.ToolbarButton.useContributions();
   return (
     <>

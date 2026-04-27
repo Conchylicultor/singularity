@@ -1,22 +1,11 @@
 import type { PluginDefinition } from "@core";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
-import { MdRocketLaunch } from "react-icons/md";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { OpenAppButton } from "./components/open-app-button";
 
 export default {
   id: "conversation-open-app",
   name: "Conversation: Open App",
   description:
     "Opens the conversation's namespace at `http://<id>.localhost:9000/`.",
-  contributions: [
-    Conversation.Toolbar({
-      label: "Open",
-      icon: MdRocketLaunch,
-      onClick: (conversation) => {
-        window.open(
-          `http://${conversation.attemptId}.localhost:9000/`,
-          "_blank",
-        );
-      },
-    }),
-  ],
+  contributions: [conversationPane.Actions({ component: OpenAppButton })],
 } satisfies PluginDefinition;

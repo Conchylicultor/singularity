@@ -1,4 +1,4 @@
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { ConversationModel } from "@plugins/conversations/shared";
 
 const MODEL_CLASSES: Record<ConversationModel, string> = {
@@ -6,11 +6,8 @@ const MODEL_CLASSES: Record<ConversationModel, string> = {
   sonnet: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
 };
 
-export function ModelBadge({
-  conversation,
-}: {
-  conversation: ConversationRecord;
-}) {
+export function ModelBadge() {
+  const { conversation } = conversationPane.useData();
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${MODEL_CLASSES[conversation.model]}`}

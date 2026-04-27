@@ -1,4 +1,4 @@
-import { Pane } from "@plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/pane/web";
 import { ScreenshotView } from "./components/screenshot-view";
 
 export const screenshotPane = Pane.define({
@@ -9,5 +9,9 @@ export const screenshotPane = Pane.define({
 
 function ScreenshotBody() {
   const { id } = screenshotPane.useParams();
-  return <ScreenshotView id={id} />;
+  return (
+    <PaneChrome pane={screenshotPane} title="Screenshot">
+      <ScreenshotView id={id} />
+    </PaneChrome>
+  );
 }
