@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-runtime-api",
+  "name": "@singularity/plugin-conversations-runtime-api",
   "private": true,
   "version": "0.0.1"
 }

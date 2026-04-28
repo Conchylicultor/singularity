@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-attachments",
+  "name": "@singularity/plugin-infra-attachments",
   "private": true,
   "version": "0.0.1"
 }

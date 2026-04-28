@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-pane",
+  "name": "@singularity/plugin-primitives-pane",
   "private": true,
   "version": "0.0.1"
 }

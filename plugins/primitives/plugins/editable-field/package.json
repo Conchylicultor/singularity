@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-editable-field",
+  "name": "@singularity/plugin-primitives-editable-field",
   "private": true,
   "version": "0.0.1"
 }

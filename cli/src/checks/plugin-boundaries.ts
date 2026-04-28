@@ -83,7 +83,7 @@ export const pluginBoundaries: Check = {
       }
     }
 
-    // R4 + R5 + R6: walk source files, extract cross-plugin imports
+    // R4 + R5 + R6 + R7: walk source files, extract cross-plugin imports
     const sourceFiles = findSourceFiles(root);
     const edges = new Set<string>();
 
@@ -94,6 +94,20 @@ export const pluginBoundaries: Check = {
 
       const src = safeRead(absFile);
       if (!src) continue;
+
+      // R7: forbid direct workspace-name imports (`@singularity/plugin-*`).
+      // Cross-plugin imports must go through `@plugins/...` so R4/R5/R6 can
+      // see them; workspace-name imports resolve via node_modules symlinks
+      // and silently bypass the boundary system.
+      for (const wsPath of extractWorkspaceImports(src)) {
+        violations.push({
+          rule: "workspace-import",
+          file: relFile,
+          message: `direct workspace import \`${wsPath}\` bypasses the boundary system`,
+          fix: `replace with the path-alias form \`@plugins/<path-to-plugin>/<runtime>\` (R4/R5/R6 only see those)`,
+        });
+      }
+
       const imports = extractPluginImports(src);
 
       for (const imp of imports) {
@@ -272,15 +286,28 @@ function safeRead(path: string): string | null {
 // R1: package.json naming
 // ============================================================================
 
+/**
+ * Expected `@singularity/plugin-<chain>` name for a plugin at `relPath`.
+ * The chain joins every non-`plugins` segment with `-`, guaranteeing
+ * uniqueness across the nested plugin tree (e.g. `plugins/tasks` and
+ * `plugins/stats/plugins/tasks` map to `plugin-tasks` and `plugin-stats-tasks`
+ * respectively).
+ */
+function expectedPackageName(relPath: string): string {
+  const chain = relPath.split("/").filter((s) => s !== "plugins").join("-");
+  return `@singularity/plugin-${chain}`;
+}
+
 function checkPackageNaming(p: PluginDir, violations: Violation[]) {
   const pkgPath = join(p.absPath, "package.json");
   const relPkg = `plugins/${p.relPath}/package.json`;
+  const expected = expectedPackageName(p.relPath);
   if (!existsSync(pkgPath)) {
     violations.push({
       rule: "package",
       file: relPkg,
       message: "plugin is missing package.json",
-      fix: `create \`${relPkg}\` with \`"name": "@singularity/plugin-${p.name}"\``,
+      fix: `create \`${relPkg}\` with \`"name": "${expected}"\``,
     });
     return;
   }
@@ -295,7 +322,6 @@ function checkPackageNaming(p: PluginDir, violations: Violation[]) {
     });
     return;
   }
-  const expected = `@singularity/plugin-${p.name}`;
   if (data.name !== expected) {
     violations.push({
       rule: "package",
@@ -625,6 +651,25 @@ interface Imp {
  * specifiers survive), then run line-anchored regexes. Misses only pathological
  * cases the linter in practice never encounters in this repo.
  */
+/**
+ * Extract module specifiers that target a sibling plugin via its bun-workspace
+ * name (`@singularity/plugin-<chain>`). Such imports bypass the `@plugins/*`
+ * path-alias system used by R4/R5/R6 — they resolve through `node_modules`
+ * symlinks instead, which means the boundary rules can't see them. R7 catches
+ * them and forces the alias form.
+ */
+function extractWorkspaceImports(rawSrc: string): string[] {
+  const src = stripComments(rawSrc);
+  const results: string[] = [];
+  const withFromRe =
+    /^[ \t]*(?:import|export)\s+[\s\S]*?\s+from\s+["'](@singularity\/plugin-[^"']+)["']/gm;
+  const bareRe = /^[ \t]*import\s+["'](@singularity\/plugin-[^"']+)["']/gm;
+  let m: RegExpExecArray | null;
+  while ((m = withFromRe.exec(src))) results.push(m[1]!);
+  while ((m = bareRe.exec(src))) results.push(m[1]!);
+  return results;
+}
+
 function extractPluginImports(rawSrc: string): Imp[] {
   const src = stripComments(rawSrc);
   const results: Imp[] = [];

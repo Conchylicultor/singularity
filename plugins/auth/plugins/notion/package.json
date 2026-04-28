@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-notion",
+  "name": "@singularity/plugin-auth-notion",
   "private": true,
   "version": "0.0.1"
 }

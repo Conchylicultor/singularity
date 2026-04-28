@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-syntax-highlight",
+  "name": "@singularity/plugin-primitives-syntax-highlight",
   "private": true,
   "version": "0.0.1"
 }

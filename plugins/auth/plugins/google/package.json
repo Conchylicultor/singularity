@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-google",
+  "name": "@singularity/plugin-auth-google",
   "private": true,
   "version": "0.0.1"
 }

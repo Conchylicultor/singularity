@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-assistant-tool-use",
+  "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-tool-use",
   "private": true,
   "version": "0.0.1"
 }
