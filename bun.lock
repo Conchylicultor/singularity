@@ -310,7 +310,7 @@
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/auto-scroll": {
-      "name": "@singularity/plugin-auto-scroll",
+      "name": "@singularity/plugin-primitives-auto-scroll",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/editable-field": {
@@ -911,8 +911,6 @@
 
     "@singularity/plugin-auth-notion": ["@singularity/plugin-auth-notion@workspace:plugins/auth/plugins/notion"],
 
-    "@singularity/plugin-auto-scroll": ["@singularity/plugin-auto-scroll@workspace:plugins/primitives/plugins/auto-scroll"],
-
     "@singularity/plugin-build": ["@singularity/plugin-build@workspace:plugins/build"],
 
     "@singularity/plugin-code-explorer": ["@singularity/plugin-code-explorer@workspace:plugins/code-explorer"],
@@ -1028,6 +1026,8 @@
     "@singularity/plugin-infra-secrets": ["@singularity/plugin-infra-secrets@workspace:plugins/infra/plugins/secrets"],
 
     "@singularity/plugin-primitives": ["@singularity/plugin-primitives@workspace:plugins/primitives"],
+
+    "@singularity/plugin-primitives-auto-scroll": ["@singularity/plugin-primitives-auto-scroll@workspace:plugins/primitives/plugins/auto-scroll"],
 
     "@singularity/plugin-primitives-editable-field": ["@singularity/plugin-primitives-editable-field@workspace:plugins/primitives/plugins/editable-field"],
 
