@@ -45,6 +45,7 @@ export default {
   name: "Conversations",
   description:
     "Conversation domain: shared server code and types; view plugins live under `plugins/`.",
+  loadBearing: true,
   httpRoutes: {
     "GET /api/conversations": handleList,
     "GET /api/conversations/gone": handleListGone,

@@ -9,6 +9,7 @@ export default {
   name: "MCP",
   description:
     "HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.registerTool.",
+  loadBearing: true,
   httpRoutes: {
     "POST /api/mcp/:conversationId": handleMcpRequest,
   },

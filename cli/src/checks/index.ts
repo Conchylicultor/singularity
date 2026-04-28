@@ -10,6 +10,7 @@ import { noUseResourceCast } from "./no-use-resource-cast";
 import { pluginBoundaries } from "./plugin-boundaries";
 import { typescript } from "./typescript";
 import { pluginsDocInSync } from "./plugins-doc-in-sync";
+import { pluginsHaveClaudeMd } from "./plugins-have-claudemd";
 import { snapshotChainIntact } from "./snapshot-chain-intact";
 import type { Check } from "./types";
 
@@ -18,6 +19,7 @@ export const CHECKS: Check[] = [
   migrationsInSync,
   snapshotChainIntact,
   pluginsDocInSync,
+  pluginsHaveClaudeMd,
   pluginBoundaries,
   noPluginImportsInCore,
   noPluginWorkspaceDeps,

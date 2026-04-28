@@ -11,5 +11,6 @@ export default {
   name: "Live State",
   description:
     "Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.",
+  loadBearing: true,
   contributions: [],
 } satisfies PluginDefinition;

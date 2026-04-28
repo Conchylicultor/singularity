@@ -1,6 +1,14 @@
 import { existsSync, readFileSync } from "fs";
 import type { Check } from "./types";
-import { pluginDocsPath, renderFullDoc } from "../docgen";
+import {
+  buildPluginTree,
+  pluginClaudeMdPath,
+  pluginCompactDocPath,
+  pluginDetailsDocPath,
+  renderCompactDoc,
+  renderDetailsDoc,
+  renderPluginClaudeMd,
+} from "../docgen";
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
@@ -12,27 +20,57 @@ async function getRoot(): Promise<string> {
 
 export const pluginsDocInSync: Check = {
   id: "plugins-doc-in-sync",
-  description: "docs/plugins.md matches the current plugin source",
+  description:
+    "docs/plugins-compact.md, docs/plugins-details.md, and every plugin's CLAUDE.md AUTOGEN block match the current plugin source",
   async run() {
     const root = await getRoot();
-    const file = pluginDocsPath(root);
-    if (!existsSync(file)) {
+
+    const compactFile = pluginCompactDocPath(root);
+    if (!existsSync(compactFile)) {
       return {
         ok: false,
-        message: "docs/plugins.md is missing",
+        message: "docs/plugins-compact.md is missing",
         hint: "Run `./singularity build` to generate it.",
       };
     }
-    const existing = readFileSync(file, "utf8");
-    const expected = renderFullDoc({ root });
-
-    if (existing !== expected) {
+    const detailsFile = pluginDetailsDocPath(root);
+    if (!existsSync(detailsFile)) {
       return {
         ok: false,
-        message: "docs/plugins.md is out of sync with plugin source",
+        message: "docs/plugins-details.md is missing",
+        hint: "Run `./singularity build` to generate it.",
+      };
+    }
+
+    if (readFileSync(compactFile, "utf8") !== renderCompactDoc({ root })) {
+      return {
+        ok: false,
+        message: "docs/plugins-compact.md is out of sync with plugin source",
         hint: "Run `./singularity build` and commit the regenerated file.",
       };
     }
+    if (readFileSync(detailsFile, "utf8") !== renderDetailsDoc({ root })) {
+      return {
+        ok: false,
+        message: "docs/plugins-details.md is out of sync with plugin source",
+        hint: "Run `./singularity build` and commit the regenerated file.",
+      };
+    }
+
+    const tree = buildPluginTree(root);
+    for (const info of tree.byDir.values()) {
+      const file = pluginClaudeMdPath(info);
+      const existing = existsSync(file) ? readFileSync(file, "utf8") : null;
+      const expected = renderPluginClaudeMd(info, existing, root);
+      if (existing !== expected) {
+        return {
+          ok: false,
+          message: `${file.replace(`${root}/`, "")} AUTOGEN block is out of sync with plugin source`,
+          hint: "Run `./singularity build` and commit the regenerated file.",
+        };
+      }
+    }
+
     return { ok: true };
   },
 };

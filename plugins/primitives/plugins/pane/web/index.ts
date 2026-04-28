@@ -23,5 +23,6 @@ export default {
   name: "Pane",
   description:
     "Unified pane primitive: Pane.define, <Outlet/>, <PaneRouter/>, and chrome components.",
+  loadBearing: true,
   contributions: [],
 } satisfies PluginDefinition;

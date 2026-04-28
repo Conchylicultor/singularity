@@ -29,6 +29,11 @@ export interface ServerPluginDefinition {
   id: string;
   name: string;
   description?: string;
+  /**
+   * Marks the plugin as critical core infrastructure. See
+   * `PluginDefinition.loadBearing` in `plugin-core/types.ts` for semantics.
+   */
+  loadBearing?: boolean;
   httpRoutes?: Record<string, HttpHandler>;
   wsRoutes?: Record<string, WsHandler>;
   /** Live-state resources declared via `defineResource`. */

@@ -14,6 +14,7 @@ export default {
   name: "Attachments",
   description:
     "Attachments on disk (UUID-named under ~/.singularity/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.",
+  loadBearing: true,
   httpRoutes: {
     "POST /api/attachments": handleUpload,
     "GET /api/attachments/:id": handleGet,

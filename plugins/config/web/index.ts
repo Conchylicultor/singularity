@@ -21,6 +21,7 @@ export default {
   name: "Config",
   description:
     "Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane.",
+  loadBearing: true,
   contributions: [
     Shell.Sidebar({
       title: "Settings",

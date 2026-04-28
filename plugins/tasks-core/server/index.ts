@@ -125,5 +125,6 @@ export default {
   name: "Tasks Core",
   description:
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
+  loadBearing: true,
   resources: [tasksResource, attemptsResource, pushesResource, recentConversationsResource],
 } satisfies ServerPluginDefinition;

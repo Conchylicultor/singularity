@@ -112,7 +112,7 @@ import { ShellCommands } from "@plugins/shell/web";
 
 ### Panes: use `Pane.define`, not commands
 
-For opening a view or mounting a URL, use the `pane` plugin (`@plugins/primitives/plugins/pane/web`) — not a command. Each `Pane.define` call registers a pane with its own path, component, and typed params. See [`plugins/primitives/plugins/pane/web/CLAUDE.md`](../plugins/primitives/plugins/pane/web/CLAUDE.md).
+For opening a view or mounting a URL, use the `pane` plugin (`@plugins/primitives/plugins/pane/web`) — not a command. Each `Pane.define` call registers a pane with its own path, component, and typed params. See [`plugins/primitives/plugins/pane/CLAUDE.md`](../plugins/primitives/plugins/pane/CLAUDE.md).
 
 ```typescript
 // plugins/terminal/web/panes.ts

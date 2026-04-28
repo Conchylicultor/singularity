@@ -34,6 +34,7 @@ export default {
   name: "Jobs",
   description:
     "Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.",
+  loadBearing: true,
   httpRoutes: {
     "GET /api/jobs": handleListJobs,
     "POST /api/jobs/:id/retry": handleRetryJob,

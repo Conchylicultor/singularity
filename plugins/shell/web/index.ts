@@ -7,5 +7,6 @@ export default {
   id: "shell",
   name: "Shell",
   description: "Foundational app layout; defines the slots and commands most other plugins extend.",
+  loadBearing: true,
   contributions: [Core.Root({ component: ShellLayout })],
 } satisfies PluginDefinition;

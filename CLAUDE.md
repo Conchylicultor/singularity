@@ -43,7 +43,7 @@ Think carefully about the plugin's boundaries, APIs, etc. when designing plugins
 - **Barrel purity.** Each `index.ts` may only contain `import` statements, re-exports, type aliases, and a single `export default <definePlugin(...)>`. No `const`/`let`, no logic, no side effects.
 - **Registry exclusivity.** Default-export imports (`import fooPlugin from "@plugins/foo/web"`) are only allowed in `web/src/plugins.ts` and `server/src/plugins.ts`.
 - **No cycles.** The cross-plugin import graph must be a DAG. Type-only imports count as edges.
-- **Before writing a helper, search `docs/plugins.md` for it** — public exports of every plugin are listed there and kept in sync by the `plugins-doc-in-sync` check.
+- **Before writing a helper, search `docs/plugins-details.md` for it** — public exports, contributions, server endpoints, and reverse indexes (who imports me, who contributes to my slots, who calls my endpoints) for every plugin. The slim `docs/plugins-compact.md` is auto-loaded by agents; read the full `plugins-details.md` on demand. Each plugin also has its own `plugins/<…>/CLAUDE.md` with hand-written prose plus an autogen reference block — open that one when working inside a specific plugin. All three are kept in sync by the `plugins-doc-in-sync` check.
 
 ### Folder Structure
 
@@ -183,4 +183,4 @@ When working on this project, follow these instructions thoughtfully:
 
 ------------------------------------
 
-@docs/plugins.md
+@docs/plugins-compact.md

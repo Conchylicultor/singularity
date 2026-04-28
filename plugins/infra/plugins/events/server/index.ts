@@ -37,6 +37,7 @@ export default {
   name: "Events",
   description:
     "Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().",
+  loadBearing: true,
   httpRoutes: {
     "GET /api/events/emissions": handleListEmissions,
     "GET /api/events/triggers": handleListTriggers,
