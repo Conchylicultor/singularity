@@ -58,6 +58,14 @@
         "react": "^19.1.0",
       },
     },
+    "plugins/active-data": {
+      "name": "@singularity/plugin-active-data",
+      "version": "0.0.1",
+    },
+    "plugins/active-data/plugins/conv": {
+      "name": "@singularity/plugin-active-data-conv",
+      "version": "0.0.1",
+    },
     "plugins/agents": {
       "name": "@singularity/plugin-agents",
       "version": "0.0.1",
@@ -972,6 +980,10 @@
     "@singularity/central": ["@singularity/central@workspace:central"],
 
     "@singularity/cli": ["@singularity/cli@workspace:cli"],
+
+    "@singularity/plugin-active-data": ["@singularity/plugin-active-data@workspace:plugins/active-data"],
+
+    "@singularity/plugin-active-data-conv": ["@singularity/plugin-active-data-conv@workspace:plugins/active-data/plugins/conv"],
 
     "@singularity/plugin-agents": ["@singularity/plugin-agents@workspace:plugins/agents"],
 

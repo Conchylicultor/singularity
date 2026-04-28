@@ -53,6 +53,8 @@ import treePlugin from "@plugins/primitives/plugins/tree/web";
 import syntaxHighlightPlugin from "@plugins/primitives/plugins/syntax-highlight/web";
 import fileLinksPlugin from "@plugins/primitives/plugins/file-links/web";
 import primitivesPlugin from "@plugins/primitives/web";
+import activeDataPlugin from "@plugins/active-data/web";
+import activeDataConvPlugin from "@plugins/active-data/plugins/conv/web";
 import liveStatePlugin from "@plugins/primitives/plugins/live-state/web";
 import networkingPlugin from "@plugins/primitives/plugins/networking/web";
 import editableFieldPlugin from "@plugins/primitives/plugins/editable-field/web";
@@ -85,6 +87,8 @@ export const plugins: PluginDefinition[] = [
   syntaxHighlightPlugin,
   fileLinksPlugin,
   primitivesPlugin,
+  activeDataPlugin,
+  activeDataConvPlugin,
   liveStatePlugin,
   networkingPlugin,
   editableFieldPlugin,

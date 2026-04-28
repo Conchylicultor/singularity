@@ -7,6 +7,7 @@ import {
   FileLinkText,
   linkifyChildren,
 } from "@plugins/primitives/plugins/file-links/web";
+import { useActiveDataRenderer } from "@plugins/active-data/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent } from "../../../../shared";
@@ -46,23 +47,25 @@ function isExternalUrl(src: string): boolean {
 function buildMdComponents(
   worktree: string,
   onFileOpen: (path: string) => void,
+  renderActiveData: (children: ReactNode) => ReactNode,
 ): Components {
-  const link = (children: ReactNode) => linkifyChildren(children, onFileOpen);
+  const transform = (children: ReactNode) =>
+    renderActiveData(linkifyChildren(children, onFileOpen));
   return {
     h1: ({ children, ...p }) => (
-      <h1 className="mt-4 mb-2 text-2xl font-semibold" {...p}>{link(children)}</h1>
+      <h1 className="mt-4 mb-2 text-2xl font-semibold" {...p}>{transform(children)}</h1>
     ),
     h2: ({ children, ...p }) => (
-      <h2 className="mt-4 mb-2 text-xl font-semibold" {...p}>{link(children)}</h2>
+      <h2 className="mt-4 mb-2 text-xl font-semibold" {...p}>{transform(children)}</h2>
     ),
     h3: ({ children, ...p }) => (
-      <h3 className="mt-3 mb-1.5 text-lg font-semibold" {...p}>{link(children)}</h3>
+      <h3 className="mt-3 mb-1.5 text-lg font-semibold" {...p}>{transform(children)}</h3>
     ),
     h4: ({ children, ...p }) => (
-      <h4 className="mt-3 mb-1 font-semibold" {...p}>{link(children)}</h4>
+      <h4 className="mt-3 mb-1 font-semibold" {...p}>{transform(children)}</h4>
     ),
     p: ({ children, ...p }) => (
-      <p className="my-2" {...p}>{link(children)}</p>
+      <p className="my-2" {...p}>{transform(children)}</p>
     ),
     a: ({ href, ...p }) => (
       <a
@@ -76,14 +79,14 @@ function buildMdComponents(
     ul: (p) => <ul className="my-2 list-disc pl-6" {...p} />,
     ol: (p) => <ol className="my-2 list-decimal pl-6" {...p} />,
     li: ({ children, ...p }) => (
-      <li className="my-0.5" {...p}>{link(children)}</li>
+      <li className="my-0.5" {...p}>{transform(children)}</li>
     ),
     blockquote: ({ children, ...p }) => (
       <blockquote
         className="my-2 border-l-2 border-muted-foreground/30 pl-3 text-muted-foreground"
         {...p}
       >
-        {link(children)}
+        {transform(children)}
       </blockquote>
     ),
     hr: (p) => <hr className="my-4 border-border" {...p} />,
@@ -134,10 +137,10 @@ function buildMdComponents(
     },
     table: (p) => <table className="my-2 w-full border-collapse" {...p} />,
     th: ({ children, ...p }) => (
-      <th className="border border-border bg-muted px-2 py-1 text-left" {...p}>{link(children)}</th>
+      <th className="border border-border bg-muted px-2 py-1 text-left" {...p}>{transform(children)}</th>
     ),
     td: ({ children, ...p }) => (
-      <td className="border border-border px-2 py-1" {...p}>{link(children)}</td>
+      <td className="border border-border px-2 py-1" {...p}>{transform(children)}</td>
     ),
   };
 }
@@ -151,13 +154,18 @@ export function AssistantTextRow({
 }) {
   const e = event as AssistantTextEvent;
   const { conversation } = conversationPane.useData();
+  const renderActiveData = useActiveDataRenderer();
   const onFileOpen = (path: string) =>
     convFilePeekPane.open({
       convId: conversation.id,
       worktree: conversation.attemptId,
       filePath: path,
     });
-  const mdComponents = buildMdComponents(conversation.attemptId, onFileOpen);
+  const mdComponents = buildMdComponents(
+    conversation.attemptId,
+    onFileOpen,
+    renderActiveData,
+  );
 
   return (
     <div className="rounded-md border border-border/60 bg-background px-3 py-2">

@@ -1,0 +1,11 @@
+import type { PluginDefinition } from "@core";
+import { ActiveData } from "../../../web/slots";
+import { ConvChip } from "./components/conv-chip";
+
+export default {
+  id: "active-data-conv",
+  name: "Active Data: <conv> chip",
+  description:
+    "Renders <conv>conv-xxx</conv> as a clickable chip that opens the referenced conversation in a side pane.",
+  contributions: [ActiveData.Tag({ tag: "conv", component: ConvChip })],
+} satisfies PluginDefinition;
