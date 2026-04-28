@@ -26,9 +26,29 @@ A task with any non-terminal dependency is shown as \`blocked\` and is not
 active. Use \`dependencies\` when one task must wait on others — don't
 encode that by nesting.
 
+Prefer **linear chains** over fan-out. Each downstream task picks up cold
+from the prior task's outcome, and intermediate work frequently surfaces
+issues that should reshape what comes after — a linear chain lets the next
+agent see the actual outcome instead of executing a stale plan. Branch
+only when the steps are genuinely independent.
+
 \`autoStart\` queues the task: it auto-launches a conversation as soon as
 all its dependencies are non-blocking. Combine with \`dependencies\` to emit
-a fully-armed DAG of follow-up work in a single planning pass.
+a fully-armed DAG of follow-up work in a single planning pass. Pick the
+model based on the task's nature: \`opus\` for design, planning,
+architecture, open-ended problem-solving, load-bearing infrastructure
+work, or otherwise complex implementations; \`sonnet\` for execution,
+well-scoped fixes, and routine work.
+
+When you (the calling agent) are doing the planning, anchor the chain on
+yourself: pass \`dependencies: ["current"]\` on the *first* follow-up so it
+only starts once your planning conversation is reviewed and your task is
+marked done. Chain subsequent follow-ups off that first task linearly.
+
+Do NOT create a meta "holder" task to group follow-ups under. Every task
+gets executed — a holder would just auto-launch an empty agent with
+nothing to do. Chain follow-ups linearly off the current task instead of
+inventing a parent for them.
 
 The response always includes the new task's \`task_id\` so it can be passed
 as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
@@ -56,7 +76,9 @@ as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
       .object({
         model: z
           .enum(["sonnet", "opus"])
-          .describe("Model to use when the auto-launched conversation starts."),
+          .describe(
+            "Model to use when the auto-launched conversation starts. Use \"opus\" for design, planning, complex problem-solving, load-bearing infrastructure, or complex implementations; \"sonnet\" for execution and well-scoped tasks."
+          ),
       })
       .optional()
       .describe(
