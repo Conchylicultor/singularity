@@ -34,6 +34,44 @@ export async function findTranscriptPath(
   return null;
 }
 
+export async function rewindLastUserTurn(path: string): Promise<string | null> {
+  const file = Bun.file(path);
+  if (!(await file.exists())) return null;
+  const raw = await file.text();
+  const lines = raw.split("\n");
+
+  // Find the last non-empty line
+  let lastIdx = lines.length - 1;
+  while (lastIdx >= 0 && !lines[lastIdx].trim()) lastIdx--;
+  if (lastIdx < 0) return null;
+
+  let obj: Record<string, unknown>;
+  try {
+    obj = JSON.parse(lines[lastIdx]);
+  } catch {
+    return null;
+  }
+
+  const msg = obj.message as { role?: string; content?: unknown } | undefined;
+
+  // Only rewind pure-text user turns (string content, no tool_result arrays)
+  if (
+    obj.type !== "user" ||
+    msg?.role !== "user" ||
+    typeof msg.content !== "string" ||
+    !msg.content
+  ) {
+    return null;
+  }
+
+  const text = msg.content;
+
+  // Remove the last non-empty line and write back
+  await Bun.write(path, lines.slice(0, lastIdx).join("\n") + "\n");
+
+  return text;
+}
+
 export async function readTurns(
   path: string,
   sinceIso?: string,

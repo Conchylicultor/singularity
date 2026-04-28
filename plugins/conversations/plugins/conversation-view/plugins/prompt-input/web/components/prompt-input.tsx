@@ -57,6 +57,8 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
         { method: "POST" },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json() as { ok: boolean; rewindText: string | null };
+      if (data.rewindText) setDraft(data.rewindText);
     } catch (err) {
       Shell.Toast({
         description: `Failed to stop: ${err instanceof Error ? err.message : String(err)}`,

@@ -5,6 +5,7 @@ import {
 import {
   findTranscriptPath,
   readTurns,
+  rewindLastUserTurn,
   type Turn,
 } from "./claude-transcript";
 
@@ -84,4 +85,12 @@ export async function readConversationTurns(
   const path = await findTranscriptPath(claudeSessionId);
   if (!path) return [];
   return readTurns(path, since);
+}
+
+export async function rewindConversationTurn(id: string): Promise<string | null> {
+  const claudeSessionId = await getConversationClaudeSessionId(id);
+  if (!claudeSessionId) return null;
+  const path = await findTranscriptPath(claudeSessionId);
+  if (!path) return null;
+  return rewindLastUserTurn(path);
 }

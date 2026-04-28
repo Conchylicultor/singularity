@@ -1,4 +1,4 @@
-import { interruptConversation } from "./runtime";
+import { interruptConversation, rewindConversationTurn } from "./runtime";
 
 export async function handleStop(
   _req: Request,
@@ -15,5 +15,6 @@ export async function handleStop(
     }
     throw err;
   }
-  return Response.json({ ok: true });
+  const rewindText = await rewindConversationTurn(id);
+  return Response.json({ ok: true, rewindText: rewindText ?? null });
 }
