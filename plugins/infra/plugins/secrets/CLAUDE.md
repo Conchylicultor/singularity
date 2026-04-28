@@ -54,6 +54,9 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.si
 - Exports (server):
   - Types: `SecretMetadata`, `SecretRef`
   - Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`, `setSecret`
+- Exports (central):
+  - Types: `SecretMetadata`, `SecretRef`
+  - Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `setSecret`
 - Exports (shared):
   - Types: `SecretMetadata`, `SecretRef`
   - Values: `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`

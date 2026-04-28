@@ -34,21 +34,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `conversationPane.Actions` → `AttemptSwitchButton`
 
-- **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Shared OAuth/API-key infrastructure for third-party services. Tokens stored on main; worktrees fetch via unix socket.
+- **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Defines:
     - Slots: `Auth.Provider`
   - Exports (web):
     - Types: `AuthProviderContribution`, `AuthProviderRowProps`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`
     - Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
-  - Exports (server):
+  - Exports (central):
     - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
-    - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthMainOfflineError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `registerAuthProvider`
+    - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `readGlobalConfig`, `registerAuthProvider`
   - Exports (shared):
     - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
-    - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthMainOfflineError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`
+    - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`
   - Contributes:
     - `Shell.Sidebar` "Accounts" (group `System`)
     - `accountsPane.open`
+  - Central:
+    - `GET /api/auth/start/:provider`
+    - `GET /api/auth/callback/:provider`
+    - `POST /api/auth/disconnect/:provider`
+    - `POST /api/auth/api-key/:provider`
+    - `GET /api/auth/state`
   - Imported by: `google`, `notion`
   - Slot contributors: `google`, `notion`
   - Plugins:
@@ -57,15 +63,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `GOOGLE_DEFAULT_SCOPES`, `googleAuthConfig`
       - Contributes:
         - `Auth.Provider`
-      - Server:
-        - Uses: `auth.registerAuthProvider`, `config.readConfig`
+      - Central:
+        - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
     - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
       - Exports (shared):
         - Values: `notionAuthConfig`
       - Contributes:
         - `Auth.Provider`
-      - Server:
-        - Uses: `auth.registerAuthProvider`, `config.readConfig`
+      - Central:
+        - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
 
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Contributes:
@@ -109,7 +115,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/config/specs`
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
-  - Imported by: `build`, `commits`, `google`, `notion`
+  - Imported by: `build`, `commits`
   - Slot contributors: `commits`, `quick-prompts`
 
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
@@ -495,6 +501,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Types: `SecretMetadata`, `SecretRef`
         - Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`, `setSecret`
+      - Exports (central):
+        - Types: `SecretMetadata`, `SecretRef`
+        - Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `setSecret`
       - Exports (shared):
         - Types: `SecretMetadata`, `SecretRef`
         - Values: `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`
@@ -526,11 +535,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `LaunchButtons`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
       - Exports (web):
-        - Types: `ResourceDescriptor`, `ResourceKey`
-        - Values: `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useResource`
+        - Types: `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`
+        - Values: `centralResourceDescriptor`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useResource`
       - Exports (shared):
-        - Types: `ResourceDescriptor`
-        - Values: `resourceDescriptor`
+        - Types: `ResourceDescriptor`, `ResourceOrigin`
+        - Values: `centralResourceDescriptor`, `resourceDescriptor`
     - **`networking`** — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
       - Exports (web):
         - Types: `FetchWithRetryOptions`, `ReconnectingEventSourceOptions`, `ReconnectingWsHandle`, `ReconnectingWsOptions`, `WsStatus`, `WsStatusEvent`

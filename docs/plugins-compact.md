@@ -8,21 +8,27 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
 
-- **`auth`** [load-bearing] — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Shared OAuth/API-key infrastructure for third-party services. Tokens stored on main; worktrees fetch via unix socket.
+- **`auth`** [load-bearing] — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Defines:
     - Slots: `Auth.Provider`
   - Exports (web):
     - Types: `AuthProviderContribution`, `AuthProviderRowProps`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`
     - Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
-  - Exports (server):
+  - Exports (central):
     - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
-    - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthMainOfflineError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `registerAuthProvider`
+    - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `readGlobalConfig`, `registerAuthProvider`
   - Exports (shared):
     - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
-    - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthMainOfflineError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`
+    - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`
   - Contributes:
     - `Shell.Sidebar` "Accounts" (group `System`)
     - `accountsPane.open`
+  - Central:
+    - `GET /api/auth/start/:provider`
+    - `GET /api/auth/callback/:provider`
+    - `POST /api/auth/disconnect/:provider`
+    - `POST /api/auth/api-key/:provider`
+    - `GET /api/auth/state`
   - Imported by: `google`, `notion`
   - Slot contributors: `google`, `notion`
   - Plugins:
@@ -53,7 +59,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - `GET /api/config/specs`
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
-  - Imported by: `build`, `commits`, `google`, `notion`
+  - Imported by: `build`, `commits`
   - Slot contributors: `commits`, `quick-prompts`
 
 - **`conversations`** [load-bearing] — Conversation domain: shared server code and types; view plugins live under `plugins/`.
@@ -193,6 +199,9 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
       - Exports (server):
         - Types: `SecretMetadata`, `SecretRef`
         - Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`, `setSecret`
+      - Exports (central):
+        - Types: `SecretMetadata`, `SecretRef`
+        - Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `setSecret`
       - Exports (shared):
         - Types: `SecretMetadata`, `SecretRef`
         - Values: `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`
@@ -212,11 +221,11 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
     - **`live-state`** [load-bearing] — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
       - Exports (web):
-        - Types: `ResourceDescriptor`, `ResourceKey`
-        - Values: `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useResource`
+        - Types: `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`
+        - Values: `centralResourceDescriptor`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useResource`
       - Exports (shared):
-        - Types: `ResourceDescriptor`
-        - Values: `resourceDescriptor`
+        - Types: `ResourceDescriptor`, `ResourceOrigin`
+        - Values: `centralResourceDescriptor`, `resourceDescriptor`
     - **`networking`** [load-bearing] — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
       - Exports (web):
         - Types: `FetchWithRetryOptions`, `ReconnectingEventSourceOptions`, `ReconnectingWsHandle`, `ReconnectingWsOptions`, `WsStatus`, `WsStatusEvent`
