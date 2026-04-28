@@ -71,6 +71,9 @@ function renderTaskDescription(opts: {
   url: string;
   attachments: { id: string; filename: string }[];
 }): string {
+  const hasContext = opts.url || opts.attachments.length > 0;
+  if (!hasContext) return opts.text;
+
   const lines: string[] = [opts.text, "", "---"];
   if (opts.url) lines.push(`**URL:** ${opts.url}`);
   if (opts.attachments.length > 0) {
