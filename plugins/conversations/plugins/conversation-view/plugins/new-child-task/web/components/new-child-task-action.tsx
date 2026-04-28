@@ -34,6 +34,10 @@ export function NewChildTaskAction() {
       };
       if (mode.kind === "queue") {
         body.autoStart = { model: mode.model };
+        // Auto-start engine fires when all deps are non-blocking. Containment
+        // (parentId) is preserved for the tree list; execution order is
+        // expressed via the dep on the parent.
+        body.dependencies = [conversation.taskId];
       }
       const res = await fetch("/api/tasks", {
         method: "POST",

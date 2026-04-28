@@ -1,8 +1,8 @@
-import { and, asc, desc, eq, isNotNull, isNull } from "drizzle-orm";
+import { asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { generateKeyBetween } from "fractional-indexing";
 import { db } from "@server/db/client";
 import { _taskDependencies, _tasks } from "../tables";
-import { tasks } from "../schema";
+import { attempts, tasks } from "../schema";
 import type { Task } from "../schema";
 
 export interface TaskFilters {
@@ -27,15 +27,26 @@ export async function getTask(id: string): Promise<Task | null> {
   return row ?? null;
 }
 
-// Children of `parentId` whose autoStart has not yet been consumed. The
-// queued-children launcher in the conversations plugin reads this to know
-// which tasks to spawn when the parent reaches a terminal state.
-export async function listAutoStartChildren(parentId: string): Promise<Task[]> {
-  return db
-    .select()
-    .from(tasks)
-    .where(and(eq(tasks.parentId, parentId), isNotNull(tasks.autoStartAt)))
-    .orderBy(asc(tasks.rank), asc(tasks.createdAt));
+// True iff `taskId` has at least one dependency that is neither dropped nor
+// associated with a completed attempt. Held deps still block. Mirrors the
+// `hasBlockingDep` SQL embedded in the `tasks_v` view's status derivation
+// (schema.ts), exposed as a standalone query so the auto-start engine can
+// gate launches on the same definition the UI sees.
+export async function hasBlockingDep(taskId: string): Promise<boolean> {
+  const result = await db.execute(
+    sql`SELECT EXISTS (
+      SELECT 1 FROM ${_taskDependencies} td
+        JOIN ${_tasks} dep ON dep.id = td.depends_on_task_id
+       WHERE td.task_id = ${taskId}
+         AND dep.dropped_at IS NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM ${attempts} a
+            WHERE a.task_id = dep.id AND a.status = 'completed'
+         )
+    ) AS blocking`,
+  );
+  const row = result.rows[0] as { blocking?: boolean } | undefined;
+  return Boolean(row?.blocking);
 }
 
 export async function findNextRankUnder(

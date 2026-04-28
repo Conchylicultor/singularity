@@ -1,9 +1,9 @@
 import { setTaskAutoStart } from "@plugins/tasks-core/server";
 
-// Clear the autoStart columns on a single task. Trigger rows registered for
-// the parent stay alive but no-op the next time they fire (the launcher
-// scans for autoStartAt-set rows and finds none for this task). Cheaper
-// than reverse-walking trigger tables to delete them up-front.
+// Clear the autoStart columns on a single task. Per-dep trigger rows stay
+// alive but no-op when they fire (maybe-launch reads autoStartAt and exits
+// early if it's null). Cheaper than reverse-walking trigger tables to
+// delete them up-front.
 export async function handleClearAutoStart(
   _req: Request,
   params: Record<string, string>,

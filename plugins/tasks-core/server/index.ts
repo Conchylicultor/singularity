@@ -46,7 +46,7 @@ export type {
 export {
   listTasks,
   getTask,
-  listAutoStartChildren,
+  hasBlockingDep,
   findNextRankUnder,
   isDescendant,
   taskDependsOn,
