@@ -22,6 +22,7 @@ import conversationJsonlViewerUserTextPlugin from "@plugins/conversations/plugin
 import conversationJsonlViewerAssistantTextPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text/web";
 import conversationJsonlViewerAssistantToolUsePlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-tool-use/web";
 import conversationJsonlViewerUserToolResultPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-tool-result/web";
+import conversationJsonlViewerUserImagePlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-image/web";
 import conversationJsonlViewerSystemPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/system/web";
 import conversationJsonlViewerSummaryPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary/web";
 import conversationPushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/web";
@@ -108,6 +109,7 @@ export const plugins: PluginDefinition[] = [
   conversationJsonlViewerAssistantTextPlugin,
   conversationJsonlViewerAssistantToolUsePlugin,
   conversationJsonlViewerUserToolResultPlugin,
+  conversationJsonlViewerUserImagePlugin,
   conversationJsonlViewerSystemPlugin,
   conversationJsonlViewerSummaryPlugin,
   conversationQuickPromptsPlugin,

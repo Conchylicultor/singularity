@@ -8,6 +8,12 @@ export interface TokenUsage {
 export type JsonlEvent =
   | { kind: "user-text"; at: string; text: string }
   | {
+      kind: "user-image";
+      at: string;
+      mime: string;
+      data: string; // base64-encoded
+    }
+  | {
       kind: "user-tool-result";
       at: string;
       toolUseId: string;

@@ -1,6 +1,7 @@
 import { GitBranchPlus } from "lucide-react";
 import {
   type ConversationRecord,
+  draftToPlainText,
   usePromptDraft,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
@@ -16,6 +17,7 @@ export function ForkSessionButtons({
   conversation: ConversationRecord;
 }) {
   const { draft, clearDraft } = usePromptDraft(conversation.id);
+  const plainPrompt = draftToPlainText(draft);
   const ready = !!conversation.claudeSessionId;
   return (
     <Tooltip>
@@ -26,13 +28,10 @@ export function ForkSessionButtons({
             size="sm"
             variant="outline"
             disabled={!ready}
-            getRequest={() => {
-              const prompt = draft.trim();
-              return {
-                forkFromConversationId: conversation.id,
-                ...(prompt ? { prompt } : {}),
-              };
-            }}
+            getRequest={() => ({
+              forkFromConversationId: conversation.id,
+              ...(plainPrompt ? { prompt: plainPrompt } : {}),
+            })}
             onLaunched={clearDraft}
           />
         </div>
@@ -41,7 +40,7 @@ export function ForkSessionButtons({
         <p>
           {!ready
             ? "Waiting for Claude session…"
-            : `Fork conversation${draft.trim() ? " — sends typed message" : ""}`}
+            : `Fork conversation${plainPrompt ? " — sends typed message" : ""}`}
         </p>
       </TooltipContent>
     </Tooltip>

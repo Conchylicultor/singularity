@@ -1,40 +1,72 @@
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MdStop } from "react-icons/md";
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
+import { ContentEditable } from "@lexical/react/LexicalContentEditable";
+import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
+import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   type ConversationRecord,
+  isDraftEmpty,
+  type PromptDraft,
   usePromptDraft,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { buildInitialConfig } from "./editor/lexical-config";
+import { DraftSyncPlugin } from "./editor/draft-sync-plugin";
+import { EnterKeyPlugin } from "./editor/enter-key-plugin";
+import { ImagePastePlugin } from "./editor/image-paste-plugin";
+import { clearEditor, draftToTurnFormData } from "./editor/serialize";
 
 export function PromptInput({ conversation }: { conversation: ConversationRecord }) {
   const live = useConversation(conversation.id) ?? conversation;
   const { draft, setDraft, clearDraft } = usePromptDraft(conversation.id);
   const [sending, setSending] = useState(false);
   const [stopping, setStopping] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const disabled = live.status === "gone" || live.status === "starting";
   const working = live.status === "working";
 
-  useEffect(() => {
-    textareaRef.current?.focus();
-  }, [conversation.id]);
+  const initialConfig = useMemo(
+    () =>
+      buildInitialConfig({
+        namespace: "prompt-input",
+        onError: (err) => {
+          Shell.Toast({
+            description: `Editor error: ${err.message}`,
+            variant: "error",
+          });
+        },
+      }),
+    [],
+  );
 
-  async function send() {
-    const text = draft.trim();
-    if (!text || disabled || sending) return;
+  // Drafts are scoped per conversation; keep a stable reference into the latest
+  // draft for the send handler so it doesn't capture stale state.
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+
+  const send = useCallback(async () => {
+    const current = draftRef.current;
+    const trimmedText = current.text.trim();
+    if (
+      isDraftEmpty(current) ||
+      (trimmedText.length === 0 && current.images.length === 0) ||
+      disabled ||
+      sending
+    ) {
+      return;
+    }
     setSending(true);
     try {
+      const fd = await draftToTurnFormData(current);
       const res = await fetch(
         `/api/conversations/${encodeURIComponent(conversation.id)}/turn`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text }),
-        },
+        { method: "POST", body: fd },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       clearDraft();
@@ -46,7 +78,7 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
     } finally {
       setSending(false);
     }
-  }
+  }, [conversation.id, disabled, sending, clearDraft]);
 
   async function stop() {
     if (!working || stopping) return;
@@ -69,38 +101,36 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
     }
   }
 
-  function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
-      e.preventDefault();
-      void send();
-    }
-  }
+  const placeholder = disabled
+    ? live.status === "gone"
+      ? "Conversation is gone"
+      : "Starting…"
+    : "Send a message — Enter to send, Shift+Enter for newline";
 
   return (
     <div className="flex items-end gap-2">
-      <textarea
-        ref={textareaRef}
-        rows={1}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={onKeyDown}
-        disabled={disabled || sending}
-        placeholder={
-          disabled
-            ? live.status === "gone"
-              ? "Conversation is gone"
-              : "Starting…"
-            : "Send a message — Enter to send, Shift+Enter for newline"
-        }
-        style={{ fieldSizing: "content" } as CSSProperties}
-        className={cn(
-          "flex-1 resize-none rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm leading-5 outline-none transition-colors",
-          "max-h-40 overflow-y-auto",
-          "placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
-          "disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50",
-          "dark:bg-input/30 dark:disabled:bg-input/80",
-        )}
-      />
+      <LexicalComposer initialConfig={initialConfig}>
+        <EditorShell
+          disabled={disabled || sending}
+          placeholder={placeholder}
+        />
+        <DraftSyncPlugin
+          convId={conversation.id}
+          initialDraft={draft}
+          onChange={setDraft}
+        />
+        <ImagePastePlugin
+          onError={(msg) =>
+            Shell.Toast({
+              description: `Failed to paste image: ${msg}`,
+              variant: "error",
+            })
+          }
+        />
+        <EnterKeyPlugin onSend={send} />
+        <HistoryPlugin />
+        <SendOnPostMount draft={draft} />
+      </LexicalComposer>
       {working && (
         <Button
           variant="default"
@@ -116,4 +146,66 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
       )}
     </div>
   );
+}
+
+function EditorShell({
+  disabled,
+  placeholder,
+}: {
+  disabled: boolean;
+  placeholder: string;
+}) {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(() => {
+    editor.setEditable(!disabled);
+  }, [editor, disabled]);
+
+  // Mount focus.
+  useEffect(() => {
+    if (!disabled) editor.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="relative flex-1 min-w-0">
+      <PlainTextPlugin
+        contentEditable={
+          <ContentEditable
+            className={cn(
+              "resize-none rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm leading-5 outline-none transition-colors",
+              "max-h-40 min-h-[2rem] overflow-y-auto",
+              "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+              "aria-disabled:pointer-events-none aria-disabled:cursor-not-allowed aria-disabled:bg-input/50 aria-disabled:opacity-50",
+              "dark:bg-input/30 dark:aria-disabled:bg-input/80",
+            )}
+            aria-disabled={disabled}
+            aria-placeholder={placeholder}
+            placeholder={
+              <div className="pointer-events-none absolute inset-0 px-2.5 py-1.5 text-sm leading-5 text-muted-foreground">
+                {placeholder}
+              </div>
+            }
+          />
+        }
+        ErrorBoundary={LexicalErrorBoundary}
+      />
+    </div>
+  );
+}
+
+// Defensive: when a draft was just cleared (after send), make sure the editor
+// reflects empty state immediately rather than waiting for the convId-keyed
+// reset (which doesn't fire here since convId hasn't changed).
+function SendOnPostMount({ draft }: { draft: PromptDraft }) {
+  const [editor] = useLexicalComposerContext();
+  const wasNonEmpty = useRef(false);
+  useEffect(() => {
+    const empty = isDraftEmpty(draft);
+    if (empty && wasNonEmpty.current) {
+      clearEditor(editor);
+    }
+    wasNonEmpty.current = !empty;
+  }, [editor, draft]);
+  return null;
 }

@@ -7,21 +7,44 @@ import {
   type ReactNode,
 } from "react";
 
+export type PromptImageDraft = {
+  id: string;
+  mime: string;
+  dataUrl: string;
+};
+
+export type PromptDraft = {
+  text: string;
+  images: PromptImageDraft[];
+};
+
+export const EMPTY_DRAFT: PromptDraft = { text: "", images: [] };
+
+export function isDraftEmpty(draft: PromptDraft): boolean {
+  return draft.text.trim().length === 0 && draft.images.length === 0;
+}
+
+export function draftToPlainText(draft: PromptDraft): string {
+  return draft.text.replace(/<<<image:\d+>>>/g, "").trim();
+}
+
 type DraftStore = {
-  drafts: Map<string, string>;
-  setDraft: (convId: string, value: string) => void;
+  drafts: Map<string, PromptDraft>;
+  setDraft: (convId: string, value: PromptDraft) => void;
   clearDraft: (convId: string) => void;
 };
 
 const PromptDraftContext = createContext<DraftStore | null>(null);
 
 export function PromptDraftProvider({ children }: { children: ReactNode }) {
-  const [drafts, setDrafts] = useState<Map<string, string>>(() => new Map());
+  const [drafts, setDrafts] = useState<Map<string, PromptDraft>>(
+    () => new Map(),
+  );
 
-  const setDraft = useCallback((convId: string, value: string) => {
+  const setDraft = useCallback((convId: string, value: PromptDraft) => {
     setDrafts((prev) => {
       const next = new Map(prev);
-      if (value.length === 0) next.delete(convId);
+      if (isDraftEmpty(value)) next.delete(convId);
       else next.set(convId, value);
       return next;
     });
@@ -53,9 +76,9 @@ export function usePromptDraft(convId: string) {
   if (!store) {
     throw new Error("usePromptDraft must be used within PromptDraftProvider");
   }
-  const draft = store.drafts.get(convId) ?? "";
+  const draft = store.drafts.get(convId) ?? EMPTY_DRAFT;
   const setDraft = useCallback(
-    (value: string) => store.setDraft(convId, value),
+    (value: PromptDraft) => store.setDraft(convId, value),
     [store, convId],
   );
   const clearDraft = useCallback(

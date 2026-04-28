@@ -1,6 +1,7 @@
 import { GitFork } from "lucide-react";
 import {
   type ConversationRecord,
+  draftToPlainText,
   usePromptDraft,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
@@ -16,6 +17,7 @@ export function ForkConversationButtons({
   conversation: ConversationRecord;
 }) {
   const { draft, clearDraft } = usePromptDraft(conversation.id);
+  const plainPrompt = draftToPlainText(draft);
   return (
     <Tooltip>
       <TooltipTrigger>
@@ -24,13 +26,10 @@ export function ForkConversationButtons({
           <LaunchButtons
             size="sm"
             variant="outline"
-            getRequest={() => {
-              const prompt = draft.trim();
-              return {
-                attemptId: conversation.attemptId,
-                ...(prompt ? { prompt } : {}),
-              };
-            }}
+            getRequest={() => ({
+              attemptId: conversation.attemptId,
+              ...(plainPrompt ? { prompt: plainPrompt } : {}),
+            })}
             onLaunched={clearDraft}
           />
         </div>
@@ -38,7 +37,7 @@ export function ForkConversationButtons({
       <TooltipContent side="top">
         <p>
           New conversation in this worktree
-          {draft.trim() ? " — sends typed message" : ""}
+          {plainPrompt ? " — sends typed message" : ""}
         </p>
       </TooltipContent>
     </Tooltip>

@@ -9,6 +9,11 @@ interface RawBlock {
   tool_use_id?: string;
   content?: unknown;
   is_error?: boolean;
+  source?: {
+    type?: string;
+    media_type?: string;
+    data?: string;
+  };
 }
 
 function extractUsage(raw: unknown): TokenUsage | undefined {
@@ -102,6 +107,20 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
           } else if (block?.type === "text" && typeof block.text === "string") {
             // Rare, but the user turn can have a plain text block inside an array.
             events.push({ kind: "user-text", at: ts, text: block.text });
+          } else if (
+            block?.type === "image" &&
+            block.source?.type === "base64" &&
+            typeof block.source.data === "string"
+          ) {
+            events.push({
+              kind: "user-image",
+              at: ts,
+              mime:
+                typeof block.source.media_type === "string"
+                  ? block.source.media_type
+                  : "image/jpeg",
+              data: block.source.data,
+            });
           }
         }
       }

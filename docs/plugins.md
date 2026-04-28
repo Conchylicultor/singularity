@@ -134,8 +134,8 @@
       - Defines:
         - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`
       - Exports (web):
-        - Types: `ConversationRecord`
-        - Values: `Conversation`, `conversationPane`, `ConversationView`, `isMainPaneId`, `markMainPane`, `PromptDraftProvider`, `usePromptDraft`
+        - Types: `ConversationRecord`, `PromptDraft`, `PromptImageDraft`
+        - Values: `Conversation`, `conversationPane`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `isMainPaneId`, `markMainPane`, `PromptDraftProvider`, `usePromptDraft`
       - Contributes:
         - `conversationPane.Actions` → `ExpandConversationButton`
       - Plugins:
@@ -232,6 +232,9 @@
             - **`system`** — Renders system events in the JSONL viewer.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `SystemRow`
+            - **`user-image`** — Renders inline image thumbnails for user-image events.
+              - Contributes:
+                - `JsonlViewer.EventRenderer` → `UserImageRow`
             - **`user-text`** — Renders user text events in the JSONL viewer.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `UserTextRow`
