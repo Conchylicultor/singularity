@@ -1,6 +1,13 @@
 import { useCallback, useMemo } from "react";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { TaskAttachments } from "./task-attachments";
 import { TaskDependencies } from "./task-dependencies";
 import { TaskEvents } from "./task-events";
@@ -112,6 +119,21 @@ export function TaskDetail({
     void save({ hold: task.status !== "held" });
   };
 
+  const setAutoStart = useCallback(
+    async (model: "opus" | "sonnet" | "none") => {
+      if (model === "none") {
+        await fetch(`/api/tasks/${taskId}/auto-start`, { method: "DELETE" });
+      } else {
+        await fetch(`/api/tasks/${taskId}/auto-start`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model }),
+        });
+      }
+    },
+    [taskId],
+  );
+
   const buildLaunchRequest = useCallback(async () => {
     await Promise.all([titleField.flush(), descField.flush()]);
     const trimmedTitle = titleField.value.trim() || "Untitled";
@@ -170,6 +192,24 @@ export function TaskDetail({
           Author
         </span>
         <AuthorDisplay author={task.author ?? "user"} />
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-muted-foreground text-xs uppercase tracking-wide">
+          Auto-start
+        </span>
+        <Select
+          value={task.autoStartModel ?? "none"}
+          onValueChange={(v: string | null) => { if (v) void setAutoStart(v as "opus" | "sonnet" | "none"); }}
+        >
+          <SelectTrigger className="h-7 w-32 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Off</SelectItem>
+            <SelectItem value="sonnet">Sonnet</SelectItem>
+            <SelectItem value="opus">Opus</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <DescriptionView
         value={descField.value}

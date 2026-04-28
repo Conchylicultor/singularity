@@ -32,6 +32,7 @@
   - `PATCH /api/tasks/:id`
   - `DELETE /api/tasks/:id`
   - `GET /api/tasks/:id/attachments`
+  - `POST /api/tasks/:id/auto-start`
   - `DELETE /api/tasks/:id/auto-start`
   - `POST /api/tasks/:id/dependencies`
   - `DELETE /api/tasks/:id/dependencies/:depId`

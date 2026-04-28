@@ -687,6 +687,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `PATCH /api/tasks/:id`
     - `DELETE /api/tasks/:id`
     - `GET /api/tasks/:id/attachments`
+    - `POST /api/tasks/:id/auto-start`
     - `DELETE /api/tasks/:id/auto-start`
     - `POST /api/tasks/:id/dependencies`
     - `DELETE /api/tasks/:id/dependencies/:depId`
