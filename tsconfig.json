@@ -3,12 +3,14 @@
     "paths": {
       "@plugins/*": ["./plugins/*"],
       "@server/*": ["./server/src/*"],
+      "@central/*": ["./central/src/*"],
       "@core/*": ["./plugin-core/*"]
     }
   },
   "files": [],
   "references": [
     { "path": "./web" },
-    { "path": "./server" }
+    { "path": "./server" },
+    { "path": "./central" }
   ]
 }

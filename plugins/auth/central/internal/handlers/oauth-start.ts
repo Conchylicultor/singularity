@@ -1,4 +1,4 @@
-import type { HttpHandler } from "@server/types";
+import type { HttpHandler } from "@central/types";
 import { tryGetProvider } from "../registry";
 import { resolveCredentials } from "../credentials";
 import {
@@ -9,25 +9,18 @@ import {
   recordPendingState,
   redirectUriFor,
 } from "../oauth-flow";
-import { isMain } from "../paths";
 import { AuthCredentialsMissingError } from "@plugins/auth/shared";
 
 /**
  * GET /api/auth/start/:provider
  *
- * Reached on main via the gateway's bare-localhost auth routing.
- * Defensive on worktrees: if somehow hit there, redirect to the bare-localhost
- * URL so the gateway routes us correctly.
+ * Routed to central by the gateway's central-routes manifest regardless of
+ * which host the request arrived on (including bare-localhost).
  */
 export const handleOAuthStart: HttpHandler = async (req, params) => {
   const providerId = params.provider;
   if (!providerId) return new Response("missing provider id", { status: 400 });
   const url = new URL(req.url);
-
-  if (!isMain()) {
-    const redirect = `http://localhost:9000/api/auth/start/${encodeURIComponent(providerId)}${url.search}`;
-    return new Response(null, { status: 307, headers: { Location: redirect } });
-  }
 
   const descriptor = tryGetProvider(providerId);
   if (!descriptor) return new Response(`unknown provider: ${providerId}`, { status: 404 });

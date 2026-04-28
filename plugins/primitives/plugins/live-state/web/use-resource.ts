@@ -67,21 +67,23 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
     throw new Error("useResource must be used within a NotificationsProvider");
   }
   const key = resource.key;
+  const origin = resource.origin;
   const p = (params ?? ({} as P)) as ResourceParams;
 
   // Refcount sub/unsub on mount/unmount.
   useEffect(() => {
-    notifications.observe(key, p);
-    return () => notifications.unobserve(key, p);
+    notifications.observe(key, p, origin);
+    return () => notifications.unobserve(key, p, origin);
     // Stringify params for stable dependency; callers are expected to pass
     // stable shapes (small flat objects of strings).
-  }, [notifications, key, JSON.stringify(p)]);
+  }, [notifications, key, origin, JSON.stringify(p)]);
 
   return useQuery<T>({
     queryKey: queryKeyFor(key, p),
     queryFn: async () => {
       const qs = new URLSearchParams(p).toString();
-      const url = `/api/resources/${encodeURIComponent(key)}${qs ? `?${qs}` : ""}`;
+      const base = origin === "central" ? "/api/central-resources" : "/api/resources";
+      const url = `${base}/${encodeURIComponent(key)}${qs ? `?${qs}` : ""}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Resource ${key} fetch failed: ${res.status}`);
       const body = (await res.json()) as { value: T; version: number };

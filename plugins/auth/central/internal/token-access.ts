@@ -1,4 +1,3 @@
-import { isMain } from "./paths";
 import { getProvider, listProviders } from "./registry";
 import {
   getAccount,
@@ -12,8 +11,6 @@ import type {
   AuthProviderDescriptor,
 } from "@plugins/auth/shared";
 import { AuthNeedsConsentError } from "@plugins/auth/shared";
-import { rpcToken } from "./unix-rpc/client";
-import type { TokenResponse } from "./unix-rpc/protocol";
 
 const REFRESH_LEAD_MS = 60_000;
 const inFlightRefreshes = new Map<string, Promise<StoredAccount>>();
@@ -99,7 +96,31 @@ export interface GetAccessTokenArgs {
   scopes?: string[];
 }
 
-/** Internal main-side token resolver. Returns a structured TokenResponse. */
+export interface TokenSuccess {
+  ok: true;
+  accessToken: string;
+  expiresAt: number;
+  scopes: string[];
+  identity: AuthIdentity;
+}
+
+export interface TokenNeedsConsent {
+  ok: false;
+  needsConsent: true;
+  reason: "no-account" | "needs-reconsent" | "missing-scopes";
+  missingScopes?: string[];
+}
+
+export interface TokenFailure {
+  ok: false;
+  needsConsent?: false;
+  message: string;
+  code?: string;
+}
+
+export type TokenResponse = TokenSuccess | TokenNeedsConsent | TokenFailure;
+
+/** Token resolver. Returns a structured TokenResponse. */
 export async function getAccessTokenInternal(
   args: GetAccessTokenArgs,
 ): Promise<TokenResponse> {
@@ -206,10 +227,8 @@ export async function getAccessTokenInternal(
 
 /**
  * Public consumer API. Throws AuthNeedsConsentError or generic Error for
- * non-consent failures. Callers (e.g. backup-gdrive) await this and use the
- * returned access token to make their own provider requests.
- *
- * Routes via unix socket on worktree namespaces; resolves locally on main.
+ * non-consent failures. In-process callers (other central plugins) await this
+ * and use the returned access token to make their own provider requests.
  */
 export async function getAccessToken(args: GetAccessTokenArgs): Promise<{
   accessToken: string;
@@ -217,9 +236,7 @@ export async function getAccessToken(args: GetAccessTokenArgs): Promise<{
   scopes: string[];
   identity: AuthIdentity;
 }> {
-  const result = isMain()
-    ? await getAccessTokenInternal(args)
-    : await rpcToken(args);
+  const result = await getAccessTokenInternal(args);
 
   if (result.ok) {
     return {
@@ -229,14 +246,14 @@ export async function getAccessToken(args: GetAccessTokenArgs): Promise<{
       identity: result.identity,
     };
   }
-  if ("needsConsent" in result && result.needsConsent) {
+  if (result.needsConsent) {
     throw new AuthNeedsConsentError({
       providerId: args.providerId,
       reason: result.reason,
       missingScopes: result.missingScopes,
     });
   }
-  throw new Error((result as { message: string }).message);
+  throw new Error(result.message);
 }
 
 export async function getAccountIdentity(

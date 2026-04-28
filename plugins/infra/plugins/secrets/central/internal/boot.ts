@@ -4,6 +4,15 @@ import { migrateLegacyAuthTokens } from "./migrate-auth-tokens";
 import { SecretsKeychainLockedError } from "@plugins/infra/plugins/secrets/shared";
 
 let booted = false;
+let resolveReady: () => void;
+/**
+ * Resolves when the encryption key is loaded and the store is hydrated. Used
+ * by sibling central plugins (auth) so their own onReady can `await ready`
+ * regardless of the order plugins start in.
+ */
+export const ready: Promise<void> = new Promise<void>((r) => {
+  resolveReady = r;
+});
 
 export async function onReady(): Promise<void> {
   if (booted) return;
@@ -19,6 +28,7 @@ export async function onReady(): Promise<void> {
     }
     // Resolve anyway — downstream HTTP handlers will surface their own errors
     // when they try to read/write.
+    resolveReady();
     return;
   }
 
@@ -26,6 +36,7 @@ export async function onReady(): Promise<void> {
     await initStore();
   } catch (err) {
     console.error("[secrets] failed to initialize store:", err);
+    resolveReady();
     return;
   }
 
@@ -39,4 +50,6 @@ export async function onReady(): Promise<void> {
   } catch (err) {
     console.error("[secrets] legacy auth-token migration failed:", err);
   }
+
+  resolveReady();
 }

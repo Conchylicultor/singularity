@@ -14,7 +14,6 @@ export type {
 export {
   AuthError,
   AuthNeedsConsentError,
-  AuthMainOfflineError,
   AuthProviderUnknownError,
   AuthKeychainLockedError,
   AuthCredentialsMissingError,

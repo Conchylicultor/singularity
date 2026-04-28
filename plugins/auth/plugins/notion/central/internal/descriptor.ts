@@ -4,7 +4,7 @@ import {
   type AuthIdentity,
   type AuthProviderDescriptor,
 } from "@plugins/auth/shared";
-import { readConfig } from "@plugins/config/server";
+import { readGlobalConfig } from "@plugins/auth/central";
 import { notionAuthConfig } from "../../shared";
 
 interface NotionMe {
@@ -63,7 +63,7 @@ export const notionDescriptor: AuthProviderDescriptor = defineAuthProvider({
       if (idFromEnv && secretFromEnv) {
         return { clientId: idFromEnv, clientSecret: secretFromEnv };
       }
-      const cfg = await readConfig(notionAuthConfig);
+      const cfg = await readGlobalConfig("auth-notion", notionAuthConfig);
       if (!cfg.clientId || !cfg.clientSecret) {
         throw new AuthCredentialsMissingError("notion");
       }

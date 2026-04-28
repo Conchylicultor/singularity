@@ -1,5 +1,6 @@
 import type { WsData, HttpHandler, WsHandler } from "./types";
 import { plugins } from "./plugins";
+import { notificationsWsHandler, handleResourceHttp } from "./resources";
 
 await Promise.all(
   plugins.map((p) =>
@@ -101,6 +102,11 @@ for (const plugin of plugins) {
   }
   if (plugin.wsRoutes) Object.assign(wsRoutes, plugin.wsRoutes);
 }
+
+// Core-owned routes for the live-state primitive on the central runtime.
+// Browsers reach these paths via the gateway's central-routes manifest.
+wsRoutes["/ws/central-notifications"] = notificationsWsHandler;
+registerHttpRoute("GET /api/central-resources/:key", handleResourceHttp);
 
 const server = Bun.serve<WsData>({
   port: (() => {

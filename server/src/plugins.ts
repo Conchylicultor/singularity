@@ -36,7 +36,10 @@ import eventsPlugin from "@plugins/infra/plugins/events/server";
 import eventsTestPlugin from "@plugins/events-test/server";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
 import yakShavingPlugin from "@plugins/yak-shaving/server";
-import authPlugin from "@plugins/auth/server";
+// Auth lives on the central runtime — these stubs only register the OAuth
+// client config schemas (clientId/clientSecret) so config's per-worktree
+// Settings UI can render the credentials sections. The OAuth runtime,
+// descriptors, and token store live in `@plugins/auth/{,plugins/<id>}/central`.
 import authGooglePlugin from "@plugins/auth/plugins/google/server";
 import authNotionPlugin from "@plugins/auth/plugins/notion/server";
 
@@ -89,11 +92,6 @@ export const plugins: ServerPluginDefinition[] = [
   conversationsRecoverPlugin,
   yakShavingPlugin,
   conversationSummaryPlugin,
-  // Auth plugin must load before its provider sub-plugins because the providers'
-  // module bodies call `registerAuthProvider`. Both load via the same plugin
-  // graph anyway (TS module init runs once per import); the order here only
-  // affects the `onReady` sequence, which is independent.
-  authPlugin,
   authGooglePlugin,
   authNotionPlugin,
 ];

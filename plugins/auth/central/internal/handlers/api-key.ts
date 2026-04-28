@@ -1,7 +1,5 @@
-import type { HttpHandler } from "@server/types";
-import { isMain } from "../paths";
+import type { HttpHandler } from "@central/types";
 import { setApiKey } from "../actions";
-import { rpcSetApiKey } from "../unix-rpc/client";
 
 /**
  * POST /api/auth/api-key/:provider
@@ -15,9 +13,7 @@ export const handleSetApiKey: HttpHandler = async (req, params) => {
     return new Response("missing apiKey in body", { status: 400 });
   }
   try {
-    const identity = isMain()
-      ? await setApiKey(providerId, body.apiKey)
-      : (await rpcSetApiKey({ providerId, apiKey: body.apiKey })).identity;
+    const identity = await setApiKey(providerId, body.apiKey);
     return Response.json({ ok: true, identity });
   } catch (err) {
     return Response.json(

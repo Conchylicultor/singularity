@@ -1,12 +1,11 @@
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/shared";
+import { centralResourceDescriptor } from "@plugins/primitives/plugins/live-state/shared";
 import type { AuthStateValue } from "./internal/lib";
 
 /**
- * Web-facing typed view of the auth state resource. The server defines the
- * runtime backing in `plugins/auth/server/internal/auth-resource.ts` with the
- * same key. Following the `agents` pattern: web reads via the descriptor (no
- * server-side import), server registers via `defineResource`.
+ * Web-facing typed view of the auth state resource. Marked `origin: "central"`
+ * so the browser's NotificationsClient subscribes via `/ws/central-notifications`
+ * — auth tokens live on the central runtime, shared across all worktrees.
  */
-export const authStateResource = resourceDescriptor<AuthStateValue>(
+export const authStateResource = centralResourceDescriptor<AuthStateValue>(
   "auth-state",
 );

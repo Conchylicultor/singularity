@@ -4,7 +4,7 @@ import {
   type AuthIdentity,
   type AuthProviderDescriptor,
 } from "@plugins/auth/shared";
-import { readConfig } from "@plugins/config/server";
+import { readGlobalConfig } from "@plugins/auth/central";
 import { googleAuthConfig, GOOGLE_DEFAULT_SCOPES } from "../../shared";
 
 interface GoogleUserInfo {
@@ -59,7 +59,7 @@ export const googleDescriptor: AuthProviderDescriptor = defineAuthProvider({
       if (idFromEnv) {
         return { clientId: idFromEnv, clientSecret: secretFromEnv };
       }
-      const cfg = await readConfig(googleAuthConfig);
+      const cfg = await readGlobalConfig("auth-google", googleAuthConfig);
       // Google requires both; either missing means we can't complete the OAuth
       // flow, so treat the provider as unconfigured.
       if (!cfg.clientId || !cfg.clientSecret) {

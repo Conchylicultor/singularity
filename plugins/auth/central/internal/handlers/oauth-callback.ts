@@ -1,4 +1,4 @@
-import type { HttpHandler } from "@server/types";
+import type { HttpHandler } from "@central/types";
 import { tryGetProvider } from "../registry";
 import { resolveCredentials } from "../credentials";
 import {
@@ -8,17 +8,17 @@ import {
   redirectUriFor,
 } from "../oauth-flow";
 import { setAccount } from "../token-store";
-import { isMain } from "../paths";
 import { emitAuthChanged } from "../actions";
 
 /**
  * GET /api/auth/callback/:provider?code=...&state=...
  *
- * Only meaningful on main (the registered redirect URI is bare localhost).
- * On worktrees: 404 — should never be reached due to gateway routing.
+ * Routed to central by the central-routes manifest. The registered redirect
+ * URI is bare-localhost (Google rejects subdomains of localhost), and the
+ * gateway forwards bare-localhost `/api/auth/callback/*` here regardless of
+ * subdomain.
  */
 export const handleOAuthCallback: HttpHandler = async (req, params) => {
-  if (!isMain()) return new Response("not found", { status: 404 });
   const providerId = params.provider;
   if (!providerId) return new Response("missing provider id", { status: 400 });
 

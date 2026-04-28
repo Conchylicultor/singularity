@@ -27,15 +27,6 @@ export class AuthNeedsConsentError extends AuthError {
   }
 }
 
-export class AuthMainOfflineError extends AuthError {
-  constructor() {
-    super(
-      "Auth: main worktree server unreachable via unix socket. Tokens are stored on main; the worktree cannot fetch them while main is down.",
-    );
-    this.name = "AuthMainOfflineError";
-  }
-}
-
 export class AuthProviderUnknownError extends AuthError {
   readonly providerId: string;
   constructor(providerId: string) {

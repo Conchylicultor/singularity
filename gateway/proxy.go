@@ -37,24 +37,16 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// to the singleton central backend regardless of which host the request
 	// arrived on (including bare localhost). The manifest is written by
 	// `./singularity build` to ~/.singularity/central-routes.json and watched
-	// for changes — see central_routes.go.
+	// for changes — see central_routes.go. Auth's `/api/auth/{start,callback}/*`
+	// callbacks (which Google requires on bare-localhost) reach central through
+	// this same mechanism since auth migrated to the central runtime.
 	if backend := p.routes.Get().Match(r.URL.Path); backend != "" {
 		worktreeName = backend
 	}
 
-	// Auth callbacks are forced to bare `localhost:9000` because Google rejects
-	// `*.localhost` redirect URIs in OAuth client config. Route the narrow
-	// `/api/auth/{start,callback}/*` prefix on bare-localhost to the singularity
-	// backend so it can complete the OAuth dance. (Will be replaced by the
-	// central routing manifest once the auth plugin migrates to central.)
 	if worktreeName == "" {
-		if strings.HasPrefix(r.URL.Path, "/api/auth/start/") ||
-			strings.HasPrefix(r.URL.Path, "/api/auth/callback/") {
-			worktreeName = "singularity"
-		} else {
-			http.Error(w, "Singularity gateway. Use <name>.localhost.", http.StatusNotFound)
-			return
-		}
+		http.Error(w, "Singularity gateway. Use <name>.localhost.", http.StatusNotFound)
+		return
 	}
 
 	wt := p.reg.Get(worktreeName)

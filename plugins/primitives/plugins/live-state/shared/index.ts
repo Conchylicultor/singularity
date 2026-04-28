@@ -1,2 +1,2 @@
-export { resourceDescriptor } from "./resource";
-export type { ResourceDescriptor } from "./resource";
+export { resourceDescriptor, centralResourceDescriptor } from "./resource";
+export type { ResourceDescriptor, ResourceOrigin } from "./resource";

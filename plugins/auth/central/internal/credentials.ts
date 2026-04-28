@@ -18,10 +18,11 @@ const credCache = new Map<string, Promise<ResolvedCredentials>>();
  * Resolve a provider's OAuth client credentials.
  *
  * Each provider plugin's descriptor implements `resolveCredentials`. Typical
- * implementation: try Config plugin first (user-pasted), then env vars
- * (`SINGULARITY_AUTH_<PROVIDER>_CLIENT_ID` / `..._CLIENT_SECRET`). If neither
- * yields a clientId, throw AuthCredentialsMissingError so the UI can render
- * the "configure credentials" empty state.
+ * implementation: try env vars first (`SINGULARITY_AUTH_<PROVIDER>_CLIENT_ID`
+ * / `..._CLIENT_SECRET`), then read user-pasted values from the secrets store
+ * via `readGlobalConfig` (auth runs on central — there is no per-worktree DB
+ * to consult). If neither yields a clientId, throw AuthCredentialsMissingError
+ * so the UI can render the "configure credentials" empty state.
  *
  * Cached per-provider so concurrent token requests share one resolution.
  */

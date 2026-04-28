@@ -1,18 +1,29 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { SharedWebSocket } from "@plugins/primitives/plugins/networking/web";
+import type { ResourceOrigin } from "../shared/resource";
 
 // Drives the TanStack Query cache off server resource notifications. Uses
-// SharedWebSocket, which transparently shares a single `/ws/notifications`
-// connection across all tabs of the origin. On every (re)open of the real
-// socket (including leader handoff and server restart), `replaySubs` resends
-// every active subscription — the server's sub state is per-connection and
-// this client is the source of truth for what the UI wants to observe.
+// SharedWebSocket, which transparently shares the connection across all tabs
+// of the origin. On every (re)open of the real socket (including leader
+// handoff and backend restart), `replaySubs` resends every active
+// subscription — the server's sub state is per-connection and this client is
+// the source of truth for what the UI wants to observe.
 //
-// See research/2026-04-15-global-sse-lifecycle-mental-model-v3.md for the
-// underlying protocol, and research/2026-04-16-plugin-core-shared-websocket-v2.md
-// for the SharedWebSocket abstraction.
+// The client maintains one socket per *resource origin*: the per-worktree
+// backend (default) at /ws/notifications, and the central runtime at
+// /ws/central-notifications. Subscriptions route to the right socket based on
+// the descriptor's `origin` field.
 
-const WS_URL = "/ws/notifications";
+const WS_URLS = {
+  worktree: "/ws/notifications",
+  central: "/ws/central-notifications",
+} as const;
+
+type SocketKind = keyof typeof WS_URLS;
+
+function socketKindFor(origin: ResourceOrigin | undefined): SocketKind {
+  return origin === "central" ? "central" : "worktree";
+}
 
 type ResourceParams = Record<string, string>;
 
@@ -46,68 +57,88 @@ interface ActiveSub {
   key: string;
   params: ResourceParams;
   version: number;
+  socket: SocketKind;
+}
+
+interface SocketChannel {
+  ws: SharedWebSocket;
+  /** (key, paramsKey) -> subscription state for subs routed to this socket. */
+  subs: Map<string, ActiveSub>;
 }
 
 export class NotificationsClient {
-  private ws: SharedWebSocket;
-  /** (key, paramsKey) -> refcount + subscription state */
-  private subs = new Map<string, ActiveSub>();
+  private channels: Record<SocketKind, SocketChannel>;
   private nextMsgId = 1;
 
   constructor(private queryClient: QueryClient) {
-    this.ws = new SharedWebSocket(WS_URL);
-    this.ws.onopen = this.replaySubs;
-    this.ws.onmessage = (ev) => {
+    this.channels = {
+      worktree: this.openChannel("worktree"),
+      central: this.openChannel("central"),
+    };
+  }
+
+  /** Observer count increased for (key, params). Sub on 0→1. */
+  observe(key: string, params: ResourceParams = {}, origin?: ResourceOrigin): void {
+    const kind = socketKindFor(origin);
+    const channel = this.channels[kind];
+    const id = `${key}\0${paramsKey(params)}`;
+    const existing = channel.subs.get(id);
+    if (existing) {
+      existing.refcount++;
+      return;
+    }
+    channel.subs.set(id, { refcount: 1, key, params, version: 0, socket: kind });
+    this.sendSub(channel, key, params);
+  }
+
+  /** Observer count decreased. Unsub on 1→0. */
+  unobserve(key: string, params: ResourceParams = {}, origin?: ResourceOrigin): void {
+    const kind = socketKindFor(origin);
+    const channel = this.channels[kind];
+    const id = `${key}\0${paramsKey(params)}`;
+    const existing = channel.subs.get(id);
+    if (!existing) return;
+    existing.refcount--;
+    if (existing.refcount > 0) return;
+    channel.subs.delete(id);
+    channel.ws.send(JSON.stringify({ op: "unsub", key, params }));
+  }
+
+  private openChannel(kind: SocketKind): SocketChannel {
+    const channel: SocketChannel = {
+      ws: new SharedWebSocket(WS_URLS[kind]),
+      subs: new Map(),
+    };
+    channel.ws.onopen = () => this.replaySubs(channel);
+    channel.ws.onmessage = (ev) => {
       let msg: ServerMsg;
       try {
         msg = JSON.parse(ev.data);
       } catch {
         return;
       }
-      this.handleServerMessage(msg);
+      this.handleServerMessage(channel, msg);
     };
+    return channel;
   }
 
-  /** Observer count increased for (key, params). Sub on 0→1. */
-  observe(key: string, params: ResourceParams = {}): void {
-    const id = `${key}\0${paramsKey(params)}`;
-    const existing = this.subs.get(id);
-    if (existing) {
-      existing.refcount++;
-      return;
-    }
-    this.subs.set(id, { refcount: 1, key, params, version: 0 });
-    this.sendSub(key, params);
-  }
-
-  /** Observer count decreased. Unsub on 1→0. */
-  unobserve(key: string, params: ResourceParams = {}): void {
-    const id = `${key}\0${paramsKey(params)}`;
-    const existing = this.subs.get(id);
-    if (!existing) return;
-    existing.refcount--;
-    if (existing.refcount > 0) return;
-    this.subs.delete(id);
-    this.ws.send(JSON.stringify({ op: "unsub", key, params }));
-  }
-
-  private replaySubs = (): void => {
+  private replaySubs(channel: SocketChannel): void {
     // Fresh connection means the server has no record of our subs. Reset
     // local versions so a new sub-ack (which will come with a possibly lower
     // version if the server process restarted) isn't dropped as stale.
-    for (const sub of this.subs.values()) {
+    for (const sub of channel.subs.values()) {
       sub.version = 0;
-      this.sendSub(sub.key, sub.params);
+      this.sendSub(channel, sub.key, sub.params);
     }
-  };
+  }
 
-  private sendSub(key: string, params: ResourceParams): void {
-    this.ws.send(
+  private sendSub(channel: SocketChannel, key: string, params: ResourceParams): void {
+    channel.ws.send(
       JSON.stringify({ op: "sub", id: this.nextMsgId++, key, params }),
     );
   }
 
-  private handleServerMessage(msg: ServerMsg): void {
+  private handleServerMessage(channel: SocketChannel, msg: ServerMsg): void {
     if (msg.kind === "ping") {
       // Server keepalive; no app-level action needed. Per-tab duplicate
       // responses would be harmless (server ignores `pong`) but skipping
@@ -119,23 +150,24 @@ export class NotificationsClient {
       return;
     }
     if (msg.kind === "sub-ack" || msg.kind === "update") {
-      this.applyUpdate(msg.key, msg.params, msg.value, msg.version);
+      this.applyUpdate(channel, msg.key, msg.params, msg.value, msg.version);
       return;
     }
     if (msg.kind === "invalidate") {
-      this.applyInvalidate(msg.key, msg.params, msg.version);
+      this.applyInvalidate(channel, msg.key, msg.params, msg.version);
       return;
     }
   }
 
   private applyUpdate(
+    channel: SocketChannel,
     key: string,
     params: ResourceParams,
     value: unknown,
     version: number,
   ): void {
     const id = `${key}\0${paramsKey(params)}`;
-    const entry = this.subs.get(id);
+    const entry = channel.subs.get(id);
     if (entry) {
       if (version <= entry.version) return;
       entry.version = version;
@@ -144,12 +176,13 @@ export class NotificationsClient {
   }
 
   private applyInvalidate(
+    channel: SocketChannel,
     key: string,
     params: ResourceParams,
     version: number,
   ): void {
     const id = `${key}\0${paramsKey(params)}`;
-    const entry = this.subs.get(id);
+    const entry = channel.subs.get(id);
     if (entry) {
       if (version <= entry.version) return;
       entry.version = version;

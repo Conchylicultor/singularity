@@ -4,16 +4,17 @@ Centralized OAuth 2.0 / API key infrastructure for third-party services. Provide
 
 ## Topology
 
-- **Tokens persist via the secrets primitive.** The `auth-tokens` namespace holds a JSON-encoded `TokenStoreBlob` keyed `blob-v1`. Actual storage (AES-256-GCM at `~/.singularity/secrets.json.enc`, OS-keychain master key, worktree RPC) lives in `plugins/infra/plugins/secrets/` — see [`plugins/infra/plugins/secrets/CLAUDE.md`](../infra/plugins/secrets/CLAUDE.md).
-- **Auth's own unix socket handles `getAccessToken`.** `~/.singularity/auth.sock` serves `/token`, `/status`, `/disconnect`, `/api-key` — the application-level RPC that includes refresh logic, consent errors, and in-flight-refresh dedup. Plain secret-store ops (`get`/`set`) use `secrets.sock` instead.
-- **Main detection.** `process.env.SINGULARITY_WORKTREE === "singularity"`. Set by the gateway when it spawns the backend.
-- **OAuth redirect URI.** `http://localhost:9000/api/auth/callback/<provider>` — bare `localhost`, not `singularity.localhost`. Google's Cloud Console rejects subdomains of localhost. The gateway has a scoped routing rule that forwards bare-`localhost` `/api/auth/{start,callback}/*` to the `singularity` backend.
-- **Cross-worktree sync.** Main mutates → calls `notify()` locally + fans out `POST /api/auth/invalidate` to every worktree from `~/.singularity/worktrees/*.json`. Each worktree's handler calls its local `authStateResource.notify()`.
+- **Auth runs on the central runtime.** The OAuth flow handlers, token store, refresh loop, provider registry, and `authStateResource` all live under `plugins/auth/central/`. There is one auth process for the user, shared across every worktree.
+- **Tokens persist via the central secrets store.** Encrypted blob at `~/.singularity/secrets.json.enc`, keyed `{ namespace: "auth-tokens", key: "blob-v1" }`. Auth/central calls into secrets/central directly (same process; no HTTP round-trip). See [`plugins/infra/plugins/secrets/CLAUDE.md`](../infra/plugins/secrets/CLAUDE.md).
+- **Browsers reach auth through the gateway's central-routes manifest.** `/api/auth/*` and the live-state WebSocket `/ws/central-notifications` are listed in `~/.singularity/central-routes.json` and forwarded to the central backend regardless of which subdomain the request arrived on. The OAuth redirect URI stays at bare `http://localhost:9000/api/auth/callback/<provider>` — the manifest covers it.
+- **Cross-worktree sync is automatic.** When central mutates auth state (connect, disconnect, refresh) it calls `authStateResource.notify()` and central pushes updates to every browser tab subscribed to `/ws/central-notifications`. No fanout, no `~/.singularity/worktrees/*.json` enumeration.
 
 ## How a consumer plugin uses it
 
+In-process (another central plugin):
+
 ```ts
-import { getAccessToken, AuthNeedsConsentError } from "@plugins/auth/server";
+import { getAccessToken, AuthNeedsConsentError } from "@plugins/auth/central";
 
 try {
   const { accessToken } = await getAccessToken({
@@ -28,7 +29,7 @@ try {
 }
 ```
 
-The call routes via the unix socket on a worktree, or executes locally on main. Either way, on success it returns a fresh access token.
+A worktree backend that needs a token currently has no in-process helper — it would `fetch("http://localhost:9000/api/auth/token", …)` against central via the gateway. No such consumer exists yet; we add the helper when one does.
 
 ## How a provider sub-plugin is structured
 
@@ -36,20 +37,25 @@ The call routes via the unix socket on a worktree, or executes locally on main. 
 plugins/auth/plugins/<id>/
 ├── package.json
 ├── shared/
-│   ├── config.ts       # defineConfig({ clientId, clientSecret? { secret: true }? })
+│   ├── config.ts       # defineConfig({ clientId { secret: true }, clientSecret { secret: true } })
 │   └── index.ts        # export the descriptor + scopes
 ├── server/
-│   ├── index.ts        # registerAuthProvider(descriptor) at top-level
-│   └── internal/descriptor.ts
+│   └── index.ts        # tiny stub: `{ id, name, config: <descriptor> }` only — registers
+│                       #   the schema with the per-worktree config plugin's Settings UI
+├── central/
+│   ├── index.ts        # default-export plugin definition + side-effect import of register.ts
+│   └── internal/
+│       ├── descriptor.ts  # defineAuthProvider(...)
+│       └── register.ts    # registerAuthProvider(descriptor) at module top-level
 └── web/
     └── index.ts        # Auth.Provider({ id, name, icon }) + Config.Spec(authConfig)
 ```
 
-Server `index.ts` calls `registerAuthProvider(descriptor)` at module top-level. JS module init order guarantees this runs before the auth plugin's `onReady`.
+The provider's `central/internal/register.ts` runs at module init and calls `registerAuthProvider`. Module init order in `central/src/plugins.ts` puts the auth root plugin before its providers, so the registry is populated before any provider's first OAuth request. The worktree-side `server/index.ts` exists *only* to surface the config schema to the per-worktree config plugin (which renders the Settings UI section and migrates plaintext secrets into the secrets store) — no routes, no logic, no `internal/`.
 
 ## Credentials
 
-Per-provider OAuth client credentials are user-supplied via the Settings pane. `clientId` is a plain string field; `clientSecret` is declared with `secret: true` in `defineConfig`, which stores it in the secrets primitive (encrypted on main; never broadcast to the browser).
+OAuth client credentials (`clientId`, `clientSecret`) are user-supplied via the Settings pane. **Both are declared `secret: true`** in `defineConfig` so they live in the central secrets store under `{ namespace: "config-fields", key: "auth-<provider>.<field>" }` — auth/central reads them directly via `readGlobalConfig` (see `plugins/auth/central/internal/global-config.ts`). This is required because central is not a worktree and has no per-worktree Postgres `config` table to consult.
 
 Env-var overrides for developers:
 - `SINGULARITY_AUTH_<PROVIDER>_CLIENT_ID`
@@ -63,36 +69,16 @@ Google uses Desktop-app + PKCE, but the token endpoint **still requires** `clien
 - **Revoke on disconnect.** `descriptor.oauth.revoke` is a hook in the type but unused. MVP deletes locally only.
 - **Rate-limited refresh retries.** Unconditional 60 s tick. Acceptable until something proves otherwise.
 - **Scope-merging UI.** Incremental scope requests trigger full re-consent. Google's `include_granted_scopes=true` is already passed in `buildAuthorizeParams`, so providers should generally re-grant cleanly.
-- **Keychain unlock UX.** If the secrets primitive cannot resolve its master key at boot, `authStateResource` returns `mainOffline: true` after the unix socket times out. No web UI to repair.
+- **Keychain unlock UX.** If the secrets primitive cannot resolve its master key at boot, `authStateResource` returns providers with `credentialsConfigured: false` and the UI surfaces the configuration empty-state. No web UI to repair the keychain itself.
 
 ## Verification
 
-See [research/2026-04-24-global-auth-plugin.md](../../research/2026-04-24-global-auth-plugin.md) §Verification for the manual smoke test.
+See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](../../research/2026-04-28-global-phase-3-auth-to-central.md) for the manual smoke test.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Shared OAuth/API-key infrastructure for third-party services. Tokens stored on main; worktrees fetch via unix socket.
-- Load-bearing: yes
-- Defines:
-  - Slots: `Auth.Provider`
-- Exports (web):
-  - Types: `AuthProviderContribution`, `AuthProviderRowProps`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`
-  - Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
-- Exports (server):
-  - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
-  - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthMainOfflineError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `registerAuthProvider`
-- Exports (shared):
-  - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
-  - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthMainOfflineError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`
-- Contributes:
-  - `Shell.Sidebar` "Accounts" (group `System`)
-  - `accountsPane.open`
-- Imported by: `google`, `notion`
-- Slot contributors: `google`, `notion`
-- Sub-plugins:
-  - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
-  - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
+(autogenerated content regenerated by `./singularity build`)
 
 <!-- AUTOGENERATED:END -->

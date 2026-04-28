@@ -17,13 +17,24 @@ interface CentralRoutesManifest {
 }
 
 /**
- * Collect path prefixes from every plugin's `central/index.ts`. HTTP route
- * keys are method-prefixed (`"GET /api/auth/state"`); we strip the method
- * and truncate at the first `/:param` to get a forward-routable prefix.
- * WS routes are taken as-is (literal paths).
+ * Runtime-level routes registered by `central/src/index.ts` itself rather
+ * than by any plugin's barrel. The build pipeline can't see these via plugin
+ * scanning, so they're hard-coded baseline entries on the manifest.
+ */
+const CENTRAL_RUNTIME_ROUTES: ReadonlyArray<string> = [
+  "/ws/central-notifications",
+  "/api/central-resources/",
+];
+
+/**
+ * Collect path prefixes from every plugin's `central/index.ts`, plus the
+ * runtime-level routes above. HTTP route keys are method-prefixed
+ * (`"GET /api/auth/state"`); we strip the method and truncate at the first
+ * `/:param` to get a forward-routable prefix. WS routes are taken as-is
+ * (literal paths).
  */
 function collectCentralRoutes(root: string): string[] {
-  const out = new Set<string>();
+  const out = new Set<string>(CENTRAL_RUNTIME_ROUTES);
   for (const p of collectAllPlugins(root)) {
     for (const route of p.centralHttpRoutes) {
       const space = route.indexOf(" ");
