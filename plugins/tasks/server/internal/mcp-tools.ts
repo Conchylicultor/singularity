@@ -5,6 +5,7 @@ import {
   addTaskDependency,
   getConversation,
 } from "@plugins/tasks-core/server";
+import { armTaskAutoStart } from "./arm-auto-start";
 
 Mcp.registerTool({
   name: "add_task",
@@ -24,6 +25,10 @@ that must finish (reach \`done\` or \`dropped\`) before this task can proceed.
 A task with any non-terminal dependency is shown as \`blocked\` and is not
 active. Use \`dependencies\` when one task must wait on others — don't
 encode that by nesting.
+
+\`autoStart\` queues the task: it auto-launches a conversation as soon as
+all its dependencies are non-blocking. Combine with \`dependencies\` to emit
+a fully-armed DAG of follow-up work in a single planning pass.
 
 The response always includes the new task's \`task_id\` so it can be passed
 as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
@@ -47,8 +52,21 @@ as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
       .describe(
         "Task IDs this task depends on (blocking). The new task is 'blocked' until each one is 'done' or 'dropped'. Use the literal string \"current\" to depend on the task the calling agent is running in — useful when scheduling follow-up work that should wait until your current conversation finishes."
       ),
+    autoStart: z
+      .object({
+        model: z
+          .enum(["sonnet", "opus"])
+          .describe("Model to use when the auto-launched conversation starts."),
+      })
+      .optional()
+      .describe(
+        "Queue the task for auto-launch once all dependencies are non-blocking. Omit to leave the task in the user's queue as a regular open task."
+      ),
   },
-  async handler({ title, description, parent, dependencies }, { conversationId }) {
+  async handler(
+    { title, description, parent, dependencies, autoStart },
+    { conversationId },
+  ) {
     const conv = await getConversation(conversationId);
     if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);
     const currentTaskId = conv.taskId;
@@ -75,6 +93,14 @@ as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
       }
     }
 
+    if (autoStart) {
+      await armTaskAutoStart({
+        taskId: task.id,
+        model: autoStart.model,
+        dependencies: depIds,
+      });
+    }
+
     return {
       content: [
         {
@@ -83,6 +109,7 @@ as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
             task_id: task.id,
             parent_id: parentId,
             dependencies: depIds,
+            auto_start: autoStart ? { model: autoStart.model } : null,
           }),
         },
       ],

@@ -2,14 +2,8 @@ import {
   addTaskDependency,
   createTask,
   getTask,
-  hasBlockingDep,
-  setTaskAutoStart,
-  taskStatusChanged,
 } from "@plugins/tasks-core/server";
-import { triggerByName } from "@plugins/infra/plugins/events/server";
-import { UNSAFE_getRegisteredJob } from "@plugins/infra/plugins/jobs/server";
-
-const MAYBE_LAUNCH_JOB = "tasks.maybe-launch";
+import { armTaskAutoStart } from "./arm-auto-start";
 
 interface AutoStartInput {
   model?: "opus" | "sonnet";
@@ -54,37 +48,11 @@ export async function handleCreate(req: Request): Promise<Response> {
   }
 
   if (body.autoStart) {
-    const model = body.autoStart.model ?? "sonnet";
-    await setTaskAutoStart(row.id, { model });
-
-    if (await hasBlockingDep(row.id)) {
-      // Per-dep oneShot triggers: fire on done (the typical unblock path) and
-      // on dropped (also non-blocking per the tasks_v derivation). Held deps
-      // don't fire — the task stays blocked until the user un-holds and the
-      // dep eventually reaches done. Multiple deps stack: each one fires
-      // maybe-launch, the job re-checks hasBlockingDep, and only the last
-      // unblocking transition actually launches.
-      for (const depId of dependencies) {
-        await triggerByName({
-          on: taskStatusChanged.where({ taskId: depId, status: "done" }),
-          jobName: MAYBE_LAUNCH_JOB,
-          with: { taskId: row.id },
-          oneShot: true,
-        });
-        await triggerByName({
-          on: taskStatusChanged.where({ taskId: depId, status: "dropped" }),
-          jobName: MAYBE_LAUNCH_JOB,
-          with: { taskId: row.id },
-          oneShot: true,
-        });
-      }
-    } else {
-      // No blocking deps — either no deps at all, or every dep was already
-      // done/dropped at queue time. Enqueue immediately rather than arm
-      // triggers that would never fire.
-      const job = UNSAFE_getRegisteredJob(MAYBE_LAUNCH_JOB);
-      if (job) await job.enqueue({ taskId: row.id });
-    }
+    await armTaskAutoStart({
+      taskId: row.id,
+      model: body.autoStart.model ?? "sonnet",
+      dependencies,
+    });
     // Re-fetch so the response reflects the autoStart columns and any
     // dependencies we just wrote.
     const fresh = await getTask(row.id);
