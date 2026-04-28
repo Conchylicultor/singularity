@@ -114,7 +114,7 @@
     - Values: `CONV_STATUS_DOT`, `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
   - Exports (server):
     - Types: `Conversation`, `ConversationCreatedPayload`, `ConversationKind`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`
-    - Values: `conversationCreated`, `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `findTranscriptPath`, `getConversationRow`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`
+    - Values: `conversationCreated`, `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `findTranscriptPath`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`
   - Exports (shared):
     - Types: `Conversation`, `ConversationEntry`, `ConversationKind`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
@@ -126,6 +126,7 @@
     - `POST /api/conversations`
     - `DELETE /api/conversations`
     - `POST /api/conversations/:id/turn`
+    - `POST /api/conversations/:id/stop`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
   - Plugins:

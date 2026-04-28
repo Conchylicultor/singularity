@@ -22,6 +22,9 @@ const apiRuntime: ConversationRuntime = {
   async send(): Promise<void> {
     throw new Error("api runtime: send() not implemented");
   },
+  async interrupt(): Promise<void> {
+    throw new Error("api runtime: interrupt() not implemented");
+  },
 };
 
 Runtime.register(apiRuntime);

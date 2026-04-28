@@ -188,6 +188,20 @@ export const tmuxRuntime: ConversationRuntime = {
     }).exited;
   },
 
+  async interrupt(conversationId: string): Promise<void> {
+    // Escape interrupts Claude Code's current operation (same as pressing
+    // Esc in the TUI). Exit copy mode first so the key reaches Claude
+    // rather than tmux's vi bindings (see send() for the same rationale).
+    await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
+    await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Escape"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
+  },
+
   async send(conversationId: string, text: string): Promise<void> {
     // Exit copy mode if the pane is in it (e.g. user scrolled up before
     // clicking Push & Exit). copy-mode -q is a no-op when already in normal

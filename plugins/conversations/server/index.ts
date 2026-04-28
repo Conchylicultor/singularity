@@ -7,6 +7,7 @@ import { handleDelete } from "./internal/handle-delete";
 import { handleGet } from "./internal/handle-get";
 import { handleListTurns } from "./internal/handle-list-turns";
 import { handlePostTurn } from "./internal/handle-post-turn";
+import { handleStop } from "./internal/handle-stop";
 import { startPoller } from "./internal/poller";
 import { startTurnEmitter } from "./internal/turn-emitter";
 import { forkErrorsResource } from "./internal/fork-errors";
@@ -25,7 +26,13 @@ export type { Conversation, ConversationKind } from "@plugins/tasks-core/server"
 export { createConversation, deleteConversation, resumeConversation } from "./internal/lifecycle";
 export type { Turn } from "./internal/claude-transcript";
 export { findTranscriptPath } from "./internal/claude-transcript";
-export { Runtime, getConversationRow, readConversationTurns, sendTurn } from "./internal/runtime";
+export {
+  Runtime,
+  getConversationRow,
+  interruptConversation,
+  readConversationTurns,
+  sendTurn,
+} from "./internal/runtime";
 export type { RuntimeInfo, ConversationRuntime } from "./internal/runtime";
 export { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 export type { ConversationTurnCompletedPayload } from "./internal/tables-turn-completed-event";
@@ -45,6 +52,7 @@ export default {
     "POST /api/conversations": handleCreate,
     "DELETE /api/conversations": handleDelete,
     "POST /api/conversations/:id/turn": handlePostTurn,
+    "POST /api/conversations/:id/stop": handleStop,
     "GET /api/conversations/:id/turns": handleListTurns,
     "POST /api/conversations/:id/close": handleClose,
   },

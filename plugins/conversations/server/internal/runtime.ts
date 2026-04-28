@@ -33,6 +33,7 @@ export interface ConversationRuntime {
   delete(conversationId: string): Promise<void>;
   list(): Promise<Map<string, RuntimeInfo>>;
   send(conversationId: string, text: string): Promise<void>;
+  interrupt(conversationId: string): Promise<void>;
 }
 
 const registry = new Map<string, ConversationRuntime>();
@@ -58,6 +59,12 @@ export async function sendTurn(id: string, text: string): Promise<void> {
   const row = await getConversationRuntime(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
   await Runtime.get(row.runtime).send(id, text);
+}
+
+export async function interruptConversation(id: string): Promise<void> {
+  const row = await getConversationRuntime(id);
+  if (!row) throw new Error(`Conversation ${id} not found`);
+  await Runtime.get(row.runtime).interrupt(id);
 }
 
 export async function getConversationRow(id: string): Promise<{
