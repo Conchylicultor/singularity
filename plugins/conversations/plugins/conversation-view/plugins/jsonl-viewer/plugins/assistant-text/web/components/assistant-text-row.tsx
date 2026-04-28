@@ -109,8 +109,7 @@ function buildMdComponents(
           />
         );
       }
-      const isAbsolute = src.startsWith("/") || src.startsWith("~");
-      if (isImage && !isAbsolute) {
+      if (isImage) {
         const apiSrc = `/api/code/${encodeURIComponent(worktree)}/image?path=${encodeURIComponent(src)}`;
         return (
           <img
