@@ -45,19 +45,15 @@ as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
       .array(z.string())
       .optional()
       .describe(
-        "Task IDs this task depends on (blocking). The new task is 'blocked' until each one is 'done' or 'dropped'."
+        "Task IDs this task depends on (blocking). The new task is 'blocked' until each one is 'done' or 'dropped'. Use the literal string \"current\" to depend on the task the calling agent is running in — useful when scheduling follow-up work that should wait until your current conversation finishes."
       ),
   },
   async handler({ title, description, parent, dependencies }, { conversationId }) {
-    let parentId: string;
+    const conv = await getConversation(conversationId);
+    if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);
+    const currentTaskId = conv.taskId;
 
-    if (parent) {
-      parentId = parent;
-    } else {
-      const conv = await getConversation(conversationId);
-      if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);
-      parentId = conv.taskId;
-    }
+    const parentId = parent ?? currentTaskId;
 
     const task = await createTask({
       parentId,
@@ -66,9 +62,9 @@ as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
       author: conversationId,
     });
 
-    const depIds = Array.from(new Set(dependencies ?? [])).filter(
-      (d) => d !== "" && d !== parent,
-    );
+    const depIds = Array.from(new Set(dependencies ?? []))
+      .map((d) => (d === "current" ? currentTaskId : d))
+      .filter((d) => d !== "" && d !== parentId && d !== task.id);
     for (const depId of depIds) {
       try {
         await addTaskDependency(task.id, depId);
