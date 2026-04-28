@@ -9,6 +9,7 @@ import conversationsRuntimeApiPlugin from "@plugins/conversations/plugins/runtim
 import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import codeExplorerPlugin from "@plugins/code-explorer/server";
 import pushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server";
+import conversationSummaryPlugin from "@plugins/conversations/plugins/summary/server";
 import dropAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/server";
 import holdAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/hold-and-exit/server";
 import exitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/exit/server";
@@ -87,6 +88,7 @@ export const plugins: ServerPluginDefinition[] = [
   eventsTestPlugin,
   conversationsRecoverPlugin,
   yakShavingPlugin,
+  conversationSummaryPlugin,
   // Auth plugin must load before its provider sub-plugins because the providers'
   // module bodies call `registerAuthProvider`. Both load via the same plugin
   // graph anyway (TS module init runs once per import); the order here only

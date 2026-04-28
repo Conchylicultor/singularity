@@ -250,6 +250,10 @@
       "name": "@singularity/plugin-conversations-runtime-tmux",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/summary": {
+      "name": "@singularity/plugin-conversations-summary",
+      "version": "0.0.1",
+    },
     "plugins/crashes": {
       "name": "@singularity/plugin-crashes",
       "version": "0.0.1",
@@ -1062,6 +1066,8 @@
     "@singularity/plugin-conversations-runtime-api": ["@singularity/plugin-conversations-runtime-api@workspace:plugins/conversations/plugins/runtime-api"],
 
     "@singularity/plugin-conversations-runtime-tmux": ["@singularity/plugin-conversations-runtime-tmux@workspace:plugins/conversations/plugins/runtime-tmux"],
+
+    "@singularity/plugin-conversations-summary": ["@singularity/plugin-conversations-summary@workspace:plugins/conversations/plugins/summary"],
 
     "@singularity/plugin-core": ["@singularity/plugin-core@workspace:plugin-core"],
 

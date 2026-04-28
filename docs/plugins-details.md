@@ -136,7 +136,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/conversations/:id/stop`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
-  - Imported by: `agents`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `yak-shaving`
+  - Imported by: `agents`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `yak-shaving`
   - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `hold-and-exit`, `launch`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
   - Plugins:
     - **`conversation-view`** — Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
@@ -320,6 +320,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
       - Server:
         - Uses: `conversations.Runtime`
+    - **`summary`** — Toolbar button that generates a structured Sonnet summary of the conversation (phase, flags, next action) and surfaces it as a chip with a detail popover. On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
+      - Defines:
+        - DB schema: `plugins/conversations/plugins/summary/server/internal/tables.ts`
+      - Exports (server):
+        - Values: `_conversationSummaries`, `conversationSummariesResource`
+      - Contributes:
+        - `conversationPane.Actions` → `SummarizeButton`
+      - Server:
+        - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `tasks-core.getConversation`, `tasks-core.getTask`
+        - Resources: `conversation-summaries` (push)
+        - `POST /api/conversation-summary/:conversationId/generate`
 
 - **`conversations-recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
   - Exports (web):
@@ -641,7 +652,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `ConversationKindSchema`, `ConversationSchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `agents`, `build`, `code`, `code-explorer`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `tasks`, `worktree-cleanup`, `yak-shaving`
+  - Imported by: `agents`, `build`, `code`, `code-explorer`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `worktree-cleanup`, `yak-shaving`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):
