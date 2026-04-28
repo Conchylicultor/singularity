@@ -20,9 +20,12 @@ cmd=$(jq -r '.tool_input.command // empty')
 # common false-positive surface.
 stripped=$(printf '%s' "$cmd" | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g")
 
-# `find ` at start of command or after a shell separator/operator.
-# Skips false positives like findutils, findstr.
-if ! [[ "$stripped" =~ (^|[^a-zA-Z0-9_-])find[[:space:]] ]]; then
+# `find ` at start of a line or after a shell separator/operator.
+# grep -E is used so ^ matches per-line (handles multiline commands correctly).
+# Only matches after ;|&()` or line-start — NOT after plain spaces mid-line,
+# which avoids false positives where "find" appears in prose or JS comments
+# inside heredoc bodies. Skips false positives like findutils, findstr.
+if ! printf '%s' "$stripped" | grep -qE '(^|[;|&()`])[[:space:]]*find[[:space:]]'; then
   exit 0
 fi
 
