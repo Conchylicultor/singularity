@@ -6,3 +6,4 @@ export type {
   RendererMatch,
 } from "./slots";
 export { convFilePeekPane } from "./file-peek-pane";
+export { FileOpenProvider } from "./file-open-context";

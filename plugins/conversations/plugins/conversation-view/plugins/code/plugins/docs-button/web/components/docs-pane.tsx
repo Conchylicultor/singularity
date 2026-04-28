@@ -1,14 +1,27 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "../../../../web/use-edited-files";
-import { FilePaneView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import {
+  convFilePeekPane,
+  FileOpenProvider,
+  FilePaneView,
+} from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { convDocsPane, isDocFile } from "../panes";
 import { DocRow } from "./doc-row";
 
 export function DocsPane() {
   const { conversation } = conversationPane.useData();
   const { files } = useEditedFiles(conversation.id);
+  const onFileOpen = useCallback(
+    (fp: string) =>
+      convFilePeekPane.open({
+        convId: conversation.id,
+        worktree: conversation.attemptId,
+        filePath: fp,
+      }),
+    [conversation.id, conversation.attemptId],
+  );
 
   const docs = useMemo(() => {
     if (!files) return null;
@@ -66,11 +79,13 @@ export function DocsPane() {
         )}
         <div className="min-h-0 flex-1 overflow-hidden">
           {selected ? (
-            <FilePaneView
-              worktree={conversation.attemptId}
-              path={selected.path}
-              status={selected.status}
-            />
+            <FileOpenProvider value={onFileOpen}>
+              <FilePaneView
+                worktree={conversation.attemptId}
+                path={selected.path}
+                status={selected.status}
+              />
+            </FileOpenProvider>
           ) : (
             <div className="px-3 py-2 text-sm text-muted-foreground">
               Select a document above.

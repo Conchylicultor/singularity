@@ -161,7 +161,7 @@
                 - Slots: `FilePane.Renderer`
               - Exports (web):
                 - Types: `FileRendererContribution`, `FileRendererTarget`, `RendererMatch`
-                - Values: `convFilePeekPane`, `FilePane`, `FilePaneView`, `resolveRenderers`
+                - Values: `convFilePeekPane`, `FileOpenProvider`, `FilePane`, `FilePaneView`, `resolveRenderers`
               - Plugins:
                 - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
                   - Contributes:
