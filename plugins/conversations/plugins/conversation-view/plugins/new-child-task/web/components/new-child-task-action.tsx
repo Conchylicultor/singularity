@@ -11,7 +11,10 @@ import {
 
 type Model = "opus" | "sonnet";
 
-type SubmitMode = { kind: "create" } | { kind: "queue"; model: Model };
+type SubmitMode =
+  | { kind: "followup" }
+  | { kind: "prerequisite" }
+  | { kind: "queue"; model: Model };
 
 export function NewChildTaskAction() {
   const { conversation } = conversationPane.useData();
@@ -38,16 +41,39 @@ export function NewChildTaskAction() {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        Shell.Toast({
-          description: "Failed to create task",
-          variant: "error",
-        });
+        Shell.Toast({ description: "Failed to create task", variant: "error" });
         return;
       }
+      const newTask = (await res.json()) as { id: string };
+
+      if (mode.kind === "followup" || mode.kind === "prerequisite") {
+        const [depTaskId, dependsOnId] =
+          mode.kind === "followup"
+            ? [newTask.id, conversation.taskId]
+            : [conversation.taskId, newTask.id];
+        const depRes = await fetch(`/api/tasks/${depTaskId}/dependencies`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dependsOnTaskId: dependsOnId }),
+        });
+        if (!depRes.ok) {
+          Shell.Toast({
+            description: "Task created but dependency failed",
+            variant: "error",
+          });
+          setValue("");
+          return;
+        }
+      }
+
       const successDescription =
         mode.kind === "queue"
           ? `Queued · ${labelFor(mode.model)}`
-          : "Child task created";
+          : mode.kind === "followup"
+            ? "Follow-up task created"
+            : mode.kind === "prerequisite"
+              ? "Prerequisite task created"
+              : "Child task created";
       Shell.Toast({ description: successDescription, variant: "success" });
       setValue("");
     } finally {
@@ -61,9 +87,7 @@ export function NewChildTaskAction() {
         cancelledRef.current = false;
         setValue("");
       } else if (value.trim() && !submitting) {
-        // Implicit close (click-outside / escape) preserves the existing
-        // "submit on dismiss" behavior — fire the plain Create path.
-        void submit({ kind: "create" });
+        void submit({ kind: "followup" });
       }
     }
     setOpen(next);
@@ -135,7 +159,7 @@ function CreateChildTaskForm({
         onKeyDown={(e) => {
           if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
-            onSubmit({ kind: "create" });
+            onSubmit({ kind: "followup" });
           }
         }}
         placeholder="Describe the task…"
@@ -148,10 +172,20 @@ function CreateChildTaskForm({
         </Button>
         <Button
           size="sm"
-          onClick={() => onSubmit({ kind: "create" })}
+          variant="outline"
+          onClick={() => onSubmit({ kind: "prerequisite" })}
           disabled={empty || isBusy}
+          title="This task must complete before the current task"
         >
-          {submitting?.kind === "create" ? "Creating…" : "Create"}
+          {submitting?.kind === "prerequisite" ? "Creating…" : "Prerequisite"}
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => onSubmit({ kind: "followup" })}
+          disabled={empty || isBusy}
+          title="Start this task after the current task is done"
+        >
+          {submitting?.kind === "followup" ? "Creating…" : "Follow-up"}
         </Button>
       </div>
       <div className="border-t pt-2">
