@@ -171,8 +171,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Defines:
                 - Slots: `FilePane.Renderer`
               - Exports (web):
-                - Types: `FileRendererContribution`, `FileRendererTarget`, `RendererMatch`
-                - Values: `convFilePeekPane`, `FileOpenProvider`, `FilePane`, `FilePaneView`, `resolveRenderers`
+                - Types: `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`
+                - Values: `convFilePeekPane`, `FileContent`, `FileOpenProvider`, `FilePane`, `FilePaneView`, `FilePathLabel`, `FileTabs`, `resolveRenderers`, `useFileRenderers`
               - Slot contributors: `diff`, `image`, `markdown`, `raw`
               - Plugins:
                 - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.

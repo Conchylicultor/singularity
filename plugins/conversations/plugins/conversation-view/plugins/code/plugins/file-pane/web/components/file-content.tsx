@@ -1,0 +1,21 @@
+import type { ResolvedRenderer } from "../slots";
+
+export function FileContent({
+  worktree,
+  path,
+  active,
+}: {
+  worktree: string;
+  path: string;
+  active: ResolvedRenderer | null;
+}) {
+  if (!active) {
+    return (
+      <div className="px-3 py-2 text-sm text-muted-foreground">
+        No renderer available for this file.
+      </div>
+    );
+  }
+  const Component = active.contribution.component;
+  return <Component worktree={worktree} path={path} />;
+}

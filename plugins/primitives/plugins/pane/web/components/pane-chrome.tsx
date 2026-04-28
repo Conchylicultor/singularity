@@ -17,6 +17,13 @@ interface PaneChromeProps {
    * needs loaded data (e.g. a task name) or custom layout.
    */
   title?: ReactNode;
+  /**
+   * Per-instance right-side actions, rendered after slot-based
+   * `position="right"` Actions contributions and before expand/close. Use
+   * for stateful, host-coupled controls (e.g. file-pane tabs) that don't
+   * fit the contribution model.
+   */
+  actions?: ReactNode;
   children: ReactNode;
 }
 
@@ -29,7 +36,7 @@ interface PaneChromeProps {
  * layout can opt out (`chrome: false` in `Pane.define`) and compose the
  * pieces (`<PaneHistoryButtons/>`, `<PaneActionsSlot/>`) themselves.
  */
-export function PaneChrome({ pane, title, children }: PaneChromeProps) {
+export function PaneChrome({ pane, title, actions, children }: PaneChromeProps) {
   const chrome = pane._internal.chrome;
   const fallbackTitle = useChromeTitle(pane);
   if (!chrome.enabled) return <>{children}</>;
@@ -45,6 +52,7 @@ export function PaneChrome({ pane, title, children }: PaneChromeProps) {
         <PaneActionsSlot pane={pane} position="left" />
         <div className="flex-1" />
         <PaneActionsSlot pane={pane} position="right" />
+        {actions}
         {chrome.expand && (
           <Button
             variant="ghost"
