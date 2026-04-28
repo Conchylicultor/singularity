@@ -17,8 +17,8 @@ export function TasksPane() {
   useResource(tasksResource);
 
   const ctx = useMemo(
-    () => ({ viewRootId, setViewRootId, setSelectedId }),
-    [viewRootId],
+    () => ({ viewRootId, selectedId, setViewRootId, setSelectedId }),
+    [viewRootId, selectedId],
   );
 
   return (

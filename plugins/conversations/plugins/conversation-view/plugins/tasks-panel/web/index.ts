@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { TasksButton } from "./components/tasks-button";
 import { GoToParentAction } from "./components/go-to-parent-action";
+import { ExpandToTasksAction } from "./components/expand-to-tasks-action";
 import { convTasksPane } from "./panes";
 
 export default {
@@ -12,5 +13,6 @@ export default {
   contributions: [
     conversationPane.Actions({ component: TasksButton }),
     convTasksPane.Actions({ component: GoToParentAction }),
+    convTasksPane.Actions({ component: ExpandToTasksAction }),
   ],
 } satisfies PluginDefinition;

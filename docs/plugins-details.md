@@ -310,6 +310,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `conversationPane.Actions` → `TasksButton`
             - `convTasksPane.Actions` → `GoToParentAction`
+            - `convTasksPane.Actions` → `ExpandToTasksAction`
         - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
           - Contributes:
             - `conversationPane.Actions` → `TerminalButton`
