@@ -1,7 +1,7 @@
-// Matches relative file paths with at least one directory separator, e.g.
-// research/2026-04-26-foo.md, docs/plugins.md, src/app/page.tsx
+// Matches file paths with at least one directory separator, e.g.
+// research/2026-04-26-foo.md, docs/plugins.md, ~/.singularity/worktrees/central.json
 export const FILE_PATH_RE =
-  /\b((?:[\w.\-]+\/)+[\w.\-]+\.(?:md|mdx|ts|tsx|js|jsx|py|go|yaml|yml|json|txt))\b/g;
+  /(?<![\w./~-])((?:~\/)?(?:[\w.\-]+\/)+[\w.\-]+\.(?:md|mdx|ts|tsx|js|jsx|py|go|yaml|yml|json|txt))(?![\w/-])/g;
 
 export interface FileLinkSegment {
   type: "text" | "path";
