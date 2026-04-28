@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { MdClose, MdSmartToy, MdExpandMore, MdChevronRight } from "react-icons/md";
+import { MdClose, MdVisibility, MdVisibilityOff } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, GonePageSchema } from "@plugins/conversations/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
@@ -15,7 +15,7 @@ import {
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 
-const SYSTEM_EXPANDED_KEY = "conversations-view:system-expanded";
+const SHOW_SYSTEM_KEY = "conversations-view:show-system";
 type ConversationEntry = ReturnType<typeof useConversations>["active"][number];
 
 const PAGE_SIZE = 20;
@@ -54,20 +54,30 @@ function statusDotClass(conv: ConversationEntry) {
 }
 
 function ConversationContent({ conv }: { conv: ConversationEntry }) {
+  const isSystem = conv.kind === "system";
   return (
     <div className="flex items-start gap-2 overflow-hidden">
       <span className={statusDotClass(conv)} />
       <div className="flex flex-col gap-0.5 overflow-hidden">
-        <span
-          className={cn(
-            "truncate text-xs",
-            conv.active ? "font-medium" : "text-muted-foreground",
+        <div className="flex items-center gap-1.5 overflow-hidden">
+          <span
+            className={cn(
+              "truncate text-xs",
+              conv.active ? "font-medium" : "text-muted-foreground",
+            )}
+          >
+            {conv.title ?? "Starting..."}
+          </span>
+          {isSystem && (
+            <span className="shrink-0 rounded-sm bg-muted px-1 text-[9px] uppercase tracking-wide text-muted-foreground/80">
+              sys
+            </span>
           )}
-        >
-          {conv.title ?? "Starting..."}
-        </span>
+        </div>
         <span className="truncate text-[10px] tabular-nums text-muted-foreground">
-          {formatRelativeTime(conv.createdAt)}
+          {isSystem && conv.spawnedBy
+            ? `${conv.spawnedBy} · ${formatRelativeTime(conv.createdAt)}`
+            : formatRelativeTime(conv.createdAt)}
         </span>
       </div>
     </div>
@@ -79,18 +89,18 @@ export function ConversationList() {
   const [activeId, setActiveId] = useState<string | null>(() =>
     activeIdFromPath(window.location.pathname),
   );
-  const [systemExpanded, setSystemExpanded] = useState<boolean>(() => {
+  const [showSystem, setShowSystem] = useState<boolean>(() => {
     try {
-      return localStorage.getItem(SYSTEM_EXPANDED_KEY) === "1";
+      return localStorage.getItem(SHOW_SYSTEM_KEY) === "1";
     } catch {
       return false;
     }
   });
-  const toggleSystem = () => {
-    setSystemExpanded((prev) => {
+  const toggleShowSystem = () => {
+    setShowSystem((prev) => {
       const next = !prev;
       try {
-        localStorage.setItem(SYSTEM_EXPANDED_KEY, next ? "1" : "0");
+        localStorage.setItem(SHOW_SYSTEM_KEY, next ? "1" : "0");
       } catch {}
       return next;
     });
@@ -153,9 +163,12 @@ export function ConversationList() {
   // first conversation encountered per attempt is the most recently started —
   // preserving that order for group priority. Within each group, sort
   // oldest-first so the original conversation is at the top with forks below.
+  // System conversations share their parent attempt's id (see summary plugin),
+  // so they group naturally as forks under the parent when showSystem is on.
   const attemptGroups = useMemo(() => {
+    const merged = showSystem ? [...active, ...system] : active;
     const map = new Map<string, ConversationEntry[]>();
-    for (const c of active) {
+    for (const c of merged) {
       const group = map.get(c.attemptId) ?? [];
       group.push(c);
       map.set(c.attemptId, group);
@@ -163,7 +176,7 @@ export function ConversationList() {
     return Array.from(map.values()).map((group) =>
       [...group].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
     );
-  }, [active]);
+  }, [active, system, showSystem]);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -188,43 +201,13 @@ export function ConversationList() {
     setActiveId(id);
   };
 
-  const renderSystemItem = (conv: ConversationEntry) => (
-    <SidebarMenuItem key={conv.id}>
-      <SidebarMenuButton
-        className="h-auto py-1.5"
-        isActive={conv.id === activeId}
-        onClick={() => navigate(conv.id)}
-      >
-        <div className="flex items-start gap-2 overflow-hidden">
-          <MdSmartToy className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/70" />
-          <div className="flex flex-col gap-0.5 overflow-hidden">
-            <span
-              className={cn(
-                "truncate text-xs",
-                conv.active ? "font-medium" : "text-muted-foreground",
-              )}
-            >
-              {conv.title ?? "Starting..."}
-            </span>
-            <span className="truncate text-[10px] tabular-nums text-muted-foreground">
-              {conv.spawnedBy ?? "system"} · {formatRelativeTime(conv.createdAt)}
-            </span>
-          </div>
-        </div>
-      </SidebarMenuButton>
-      <SidebarMenuAction
-        onClick={(e: React.MouseEvent) => closeConversation(conv.id, e)}
-        className="opacity-0 group-hover/menu-item:opacity-100"
-      >
-        <MdClose className="size-3.5" />
-      </SidebarMenuAction>
-    </SidebarMenuItem>
-  );
+  const rowTint = (conv: ConversationEntry) =>
+    conv.kind === "system" ? "bg-muted/30" : undefined;
 
   const renderItem = (conv: ConversationEntry) => (
     <SidebarMenuItem key={conv.id}>
       <SidebarMenuButton
-        className="h-auto py-1.5"
+        className={cn("h-auto py-1.5", rowTint(conv))}
         isActive={conv.id === activeId}
         onClick={() => navigate(conv.id)}
       >
@@ -243,29 +226,26 @@ export function ConversationList() {
 
   return (
     <div className="flex flex-col gap-1">
-      <LaunchButtons variant="outline" size="sm" className="px-2" />
+      <div className="flex items-center gap-1 px-2">
+        <LaunchButtons variant="outline" size="sm" className="flex-1" />
+        <button
+          type="button"
+          onClick={toggleShowSystem}
+          title={showSystem ? "Hide system conversations" : "Show system conversations"}
+          aria-pressed={showSystem}
+          className={cn(
+            "flex size-7 shrink-0 items-center justify-center rounded-md hover:bg-accent",
+            showSystem ? "text-foreground" : "text-muted-foreground/60",
+          )}
+        >
+          {showSystem ? (
+            <MdVisibility className="size-4" />
+          ) : (
+            <MdVisibilityOff className="size-4" />
+          )}
+        </button>
+      </div>
       <SidebarMenu>
-        {system.length > 0 && (
-          <SidebarMenuItem>
-            <button
-              type="button"
-              onClick={toggleSystem}
-              className="flex w-full items-center gap-1.5 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80 hover:text-foreground"
-            >
-              {systemExpanded ? (
-                <MdExpandMore className="size-3.5" />
-              ) : (
-                <MdChevronRight className="size-3.5" />
-              )}
-              <MdSmartToy className="size-3.5" />
-              <span>System</span>
-              <span className="ml-auto tabular-nums text-muted-foreground/60">
-                {system.length}
-              </span>
-            </button>
-          </SidebarMenuItem>
-        )}
-        {systemExpanded && system.map(renderSystemItem)}
         {attemptGroups.map((group) => {
           const [root, ...forks] = group;
           if (!root) return null;
@@ -273,7 +253,7 @@ export function ConversationList() {
           return (
             <SidebarMenuItem key={root.attemptId}>
               <SidebarMenuButton
-                className="h-auto py-1.5"
+                className={cn("h-auto py-1.5", rowTint(root))}
                 isActive={root.id === activeId}
                 onClick={() => navigate(root.id)}
               >
@@ -289,7 +269,7 @@ export function ConversationList() {
                 {forks.map((fork) => (
                   <SidebarMenuSubItem key={fork.id} className="relative group/menu-item">
                     <SidebarMenuSubButton
-                      className="h-auto py-1"
+                      className={cn("h-auto py-1", rowTint(fork))}
                       isActive={fork.id === activeId}
                       onClick={() => navigate(fork.id)}
                     >

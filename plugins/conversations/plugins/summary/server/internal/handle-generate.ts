@@ -3,6 +3,7 @@ import {
   createConversation,
   deleteConversation,
 } from "@plugins/conversations/server";
+import { getConversation } from "@plugins/tasks-core/server";
 import { buildSummarizePayload } from "./prompt";
 
 // Cap how long the summarising conversation may live before we reap it,
@@ -35,11 +36,20 @@ export async function handleGenerate(
 
   await fs.writeFile(contextPath, payload.context, "utf8");
 
+  const parent = await getConversation(conversationId);
+  if (!parent) {
+    return Response.json(
+      { error: `Parent conversation ${conversationId} not found` },
+      { status: 404 },
+    );
+  }
+
   const conv = await createConversation({
     prompt: payload.prompt,
     model: "sonnet",
     kind: "system",
     spawnedBy: "conversation-summary",
+    attemptId: parent.attemptId,
   });
 
   setTimeout(() => {
