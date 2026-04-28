@@ -95,7 +95,7 @@ export function LaunchButtons({
           key={model}
           variant={variant}
           size={buttonSize}
-          className="flex-1 gap-1"
+          className={cn("flex-1 gap-1", variant === "default" && "bg-[oklch(0.44_0.09_240)] hover:bg-[oklch(0.5_0.09_240)] text-white")}
           onClick={(e: React.MouseEvent) => launch(e, model)}
           disabled={disabled || launching !== null}
         >

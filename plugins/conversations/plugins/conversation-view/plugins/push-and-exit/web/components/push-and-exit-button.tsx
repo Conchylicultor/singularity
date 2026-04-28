@@ -111,7 +111,7 @@ export function PushAndExitButton({
         aria-label="Push & Exit"
         disabled={disabled}
         onClick={onClick}
-        className="gap-1.5"
+        className="gap-1.5 bg-[oklch(0.44_0.09_240)] hover:bg-[oklch(0.5_0.09_240)] text-white"
       >
         <MdRocketLaunch
           className={`size-3.5 ${busy ? "animate-pulse" : ""}`}

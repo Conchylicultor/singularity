@@ -44,7 +44,7 @@ function statusDotClass(conv: ConversationEntry) {
   return cn(
     "mt-1.5 size-1.5 shrink-0 rounded-full",
     conv.status === "working"
-      ? "bg-primary"
+      ? "bg-[oklch(0.58_0.1_240)]"
       : conv.status === "waiting"
         ? "bg-amber-500"
         : conv.status === "gone"

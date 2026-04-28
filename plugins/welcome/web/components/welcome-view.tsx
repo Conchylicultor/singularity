@@ -85,7 +85,7 @@ export function WelcomeView() {
                       "size-1.5 shrink-0 rounded-full",
                       !conversation.active
                         ? "bg-muted-foreground/40"
-                        : "bg-primary",
+                        : "bg-[oklch(0.58_0.1_240)]",
                     )}
                   />
                   <div className="flex flex-col gap-0.5 overflow-hidden flex-1">
