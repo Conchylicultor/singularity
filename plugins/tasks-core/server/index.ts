@@ -76,6 +76,7 @@ export {
   listPushesForAttempt,
   listPushesByPushId,
   getLatestPush,
+  listPushShasIn,
 } from "./internal/queries/pushes";
 
 // Mutation functions — writes (all call .notify() internally)

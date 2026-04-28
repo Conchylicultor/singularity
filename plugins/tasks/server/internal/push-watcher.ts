@@ -1,8 +1,19 @@
-import { listAttempts, insertPush, getConversation } from "@plugins/tasks-core/server";
+import {
+  listAttempts,
+  insertPush,
+  getConversation,
+  listPushShasIn,
+} from "@plugins/tasks-core/server";
 import { ensureMainWorktreeRoot } from "@server/worktree";
 
 const GIT = "/usr/bin/git";
 const TICK_MS = 1000;
+// Periodic self-heal scan: a bounded recent window reconciled against
+// the DB. Catches commits the delta path missed, e.g. a process restart
+// during a `./singularity push` merge where `lastSha` got seeded just
+// before main advanced.
+const HEAL_LIMIT = 200;
+const HEAL_INTERVAL_MS = 60_000;
 
 const FORMAT =
   "%H%x00%cI%x00" +
@@ -70,6 +81,17 @@ async function readCommits(
   return parseLog(raw);
 }
 
+async function readRecentCommits(
+  cwd: string,
+  limit: number,
+): Promise<ParsedCommit[]> {
+  const raw = await runGit(
+    ["log", "--no-color", "-n", String(limit), `--format=${FORMAT}`, "main"],
+    cwd,
+  );
+  return parseLog(raw);
+}
+
 async function recordCommits(commits: ParsedCommit[]): Promise<boolean> {
   if (commits.length === 0) return false;
   const existing = await listAttempts();
@@ -93,7 +115,18 @@ async function recordCommits(commits: ParsedCommit[]): Promise<boolean> {
   return inserted;
 }
 
+// Filter to commits not already in the DB before re-running per-commit
+// conversation/attempt resolution. One indexed SELECT keeps the heal
+// scan cheap in the steady state.
+async function recordMissing(commits: ParsedCommit[]): Promise<boolean> {
+  if (commits.length === 0) return false;
+  const have = await listPushShasIn(commits.map((c) => c.sha));
+  const missing = commits.filter((c) => !have.has(c.sha));
+  return recordCommits(missing);
+}
+
 let lastSha: string | null = null;
+let lastHealAt = 0;
 
 async function tick(cwd: string): Promise<void> {
   let head: string;
@@ -103,16 +136,23 @@ async function tick(cwd: string): Promise<void> {
     console.error("[tasks.push-watcher] rev-parse failed", err);
     return;
   }
-  if (head === lastSha) return;
-  const range = lastSha ? `${lastSha}..${head}` : null;
+  const headChanged = head !== lastSha;
+  const dueForHeal = Date.now() - lastHealAt >= HEAL_INTERVAL_MS;
+  if (!headChanged && !dueForHeal) return;
   try {
-    const commits = await readCommits(range, cwd);
-    await recordCommits(commits);
+    if (dueForHeal) {
+      const commits = await readRecentCommits(cwd, HEAL_LIMIT);
+      await recordMissing(commits);
+      lastHealAt = Date.now();
+    } else {
+      const range = lastSha ? `${lastSha}..${head}` : null;
+      const commits = await readCommits(range, cwd);
+      await recordCommits(commits);
+    }
+    lastSha = head;
   } catch (err) {
     console.error("[tasks.push-watcher] tick failed", err);
-    return;
   }
-  lastSha = head;
 }
 
 export async function startPushWatcher(): Promise<void> {
@@ -123,12 +163,17 @@ export async function startPushWatcher(): Promise<void> {
     console.error("[tasks.push-watcher] cannot resolve main worktree", err);
     return;
   }
+  // Initial reconcile: full main history diffed against the DB. The
+  // only unbounded scan; subsequent ticks use the bounded HEAL_LIMIT
+  // window. One-time cost on a fresh DB; near-zero on a DB forked from
+  // main where most pushes are already present.
   try {
     const commits = await readCommits(null, cwd);
-    await recordCommits(commits);
+    await recordMissing(commits);
     lastSha = await resolveMainSha(cwd);
+    lastHealAt = Date.now();
   } catch (err) {
-    console.error("[tasks.push-watcher] backfill failed", err);
+    console.error("[tasks.push-watcher] initial reconcile failed", err);
   }
   setInterval(() => {
     tick(cwd).catch((err) =>
