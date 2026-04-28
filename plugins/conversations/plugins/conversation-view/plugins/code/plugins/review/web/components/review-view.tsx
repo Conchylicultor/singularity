@@ -1,12 +1,10 @@
 import { useMemo, useState } from "react";
-import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { pushesResource, type Push } from "@plugins/tasks/shared";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "../../../../web/use-edited-files";
-import { convReviewPane } from "../panes";
 import { usePushFiles } from "../use-push-files";
 import { ReviewFileRow } from "./review-file-row";
 
@@ -308,15 +306,6 @@ function ToolbarRow({
           disabled={!canToggle}
         >
           {allExpanded ? "Collapse all" : "Expand all"}
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          title="Close review"
-          aria-label="Close review"
-          onClick={() => convReviewPane.close()}
-        >
-          <MdClose className="size-4" />
         </Button>
       </div>
     </div>

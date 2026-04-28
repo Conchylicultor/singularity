@@ -84,9 +84,10 @@ params is explicit: `ancestorPane.useParams()`.
 
 **Every pane should wrap its body in `<PaneChrome pane={…}>`** — that's
 the convention. PaneChrome renders a standard header: ‹ › history
-buttons, optional left-side actions, the title, optional right-side
-actions, and an optional expand button. Layout containers whose body is
-a full-viewport split (e.g. `tasksRootPane`, `agentsRootPane`) opt out
+buttons, the title, optional left-side actions, optional right-side
+actions, an optional expand button, and a × close button on the far
+right (for panes with a parent). Layout containers whose body is a
+full-viewport split (e.g. `tasksRootPane`, `agentsRootPane`) opt out
 with `chrome: false` in `Pane.define` and render raw content.
 
 ```tsx
@@ -148,6 +149,22 @@ function OpenAppButton() {
 need a button ref. (Base UI Popover triggers don't take `asChild` — use
 `<PopoverTrigger className={buttonVariants({variant:"ghost",size:"icon"})}>`
 directly when the trigger needs to be a popover.)
+
+### Hiding the close button
+
+```ts
+Pane.define({
+  id: "task-detail",
+  parent: tasksRootPane,
+  path: ":taskId",
+  component: TaskDetailBody,
+  chrome: { close: false },
+});
+```
+
+Use this when the close button doesn't belong (e.g. a pane that
+already navigates somewhere else on close, or one whose parent isn't
+a meaningful "back" target).
 
 ### Opting out
 

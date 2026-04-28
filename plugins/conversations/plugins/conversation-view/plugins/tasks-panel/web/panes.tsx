@@ -7,4 +7,5 @@ export const convTasksPane = Pane.define({
   parent: conversationPane,
   path: "tasks",
   component: TasksPane,
+  chrome: { history: false },
 });

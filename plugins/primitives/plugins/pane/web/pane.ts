@@ -47,6 +47,13 @@ export function type<T>(): TypeMarker<T> {
 export interface PaneChromeConfig<Params> {
   title?: string | ((params: Params) => string);
   history?: boolean;
+  /**
+   * Show a close button (leftmost) that calls `pane.close()`. Defaults to
+   * `true` for panes with a parent. Set to `false` to hide it (e.g. for
+   * top-level panes where "close" has no meaningful destination, or panes
+   * that render their own bespoke header).
+   */
+  close?: boolean;
   expand?: (params: Params) => string;
 }
 
@@ -54,6 +61,7 @@ interface NormalizedChrome {
   enabled: boolean;
   title?: string | ((params: Record<string, string>) => string);
   history: boolean;
+  close: boolean;
   expand?: (params: Record<string, string>) => string;
 }
 
@@ -377,11 +385,12 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
 function normalizeChrome<Params>(
   chrome: PaneChromeConfig<Params> | false | undefined,
 ): NormalizedChrome {
-  if (chrome === false) return { enabled: false, history: false };
+  if (chrome === false) return { enabled: false, history: false, close: false };
   return {
     enabled: true,
     title: chrome?.title as NormalizedChrome["title"],
     history: chrome?.history ?? true,
+    close: chrome?.close ?? true,
     expand: chrome?.expand as NormalizedChrome["expand"],
   };
 }

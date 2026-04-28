@@ -287,6 +287,7 @@
         - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
           - Contributes:
             - `conversationPane.Actions` → `TasksButton`
+            - `convTasksPane.Actions` → `GoToParentAction`
         - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
           - Contributes:
             - `conversationPane.Actions` → `TerminalButton`

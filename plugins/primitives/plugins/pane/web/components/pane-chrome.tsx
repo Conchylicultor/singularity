@@ -1,5 +1,10 @@
 import { useContext, type ReactNode } from "react";
-import { MdChevronLeft, MdChevronRight, MdOpenInFull } from "react-icons/md";
+import {
+  MdChevronLeft,
+  MdChevronRight,
+  MdClose,
+  MdOpenInFull,
+} from "react-icons/md";
 import { PluginErrorBoundary } from "@core";
 import { Button } from "@/components/ui/button";
 import { PaneMatchContext, type PaneObject } from "../pane";
@@ -16,16 +21,20 @@ interface PaneChromeProps {
 }
 
 /**
- * Standard pane header: ‹ › history buttons, title, optional `position="left"`
- * actions, optional `position="right"` actions, and optional expand button. Pane authors who want a fully custom header layout can
- * opt out (`chrome: false` in `Pane.define`) and compose the pieces
- * (`<PaneHistoryButtons/>`, `<PaneActionsSlot/>`) themselves.
+ * Standard pane header: ‹ › history buttons, title, optional
+ * `position="left"` actions, optional `position="right"` actions, an optional
+ * expand button, and a × close button on the far right. The close button is
+ * shown by default for panes with a parent (opt out via
+ * `chrome: { close: false }`). Pane authors who want a fully custom header
+ * layout can opt out (`chrome: false` in `Pane.define`) and compose the
+ * pieces (`<PaneHistoryButtons/>`, `<PaneActionsSlot/>`) themselves.
  */
 export function PaneChrome({ pane, title, children }: PaneChromeProps) {
   const chrome = pane._internal.chrome;
   const fallbackTitle = useChromeTitle(pane);
   if (!chrome.enabled) return <>{children}</>;
   const resolvedTitle = title ?? fallbackTitle;
+  const showClose = chrome.close && pane._internal.parent != null;
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-10 items-center gap-2 border-b px-2">
@@ -44,6 +53,16 @@ export function PaneChrome({ pane, title, children }: PaneChromeProps) {
             aria-label="Expand"
           >
             <MdOpenInFull className="size-4" />
+          </Button>
+        )}
+        {showClose && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => pane.close()}
+            aria-label="Close"
+          >
+            <MdClose className="size-4" />
           </Button>
         )}
       </div>

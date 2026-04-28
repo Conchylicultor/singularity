@@ -7,6 +7,7 @@ export const convDocsPane = Pane.define({
   parent: conversationPane,
   path: "docs",
   component: DocsPane,
+  chrome: { history: false },
 });
 
 const MD_RE = /\.mdx?$/i;
