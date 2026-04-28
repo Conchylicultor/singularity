@@ -123,7 +123,7 @@ export function useDiffTokens(
     Promise.all([
       fetchFileContent(worktree, path, oldRef),
       fetchFileContent(worktree, path, head),
-      getHighlighter(),
+      getHighlighter(lang),
     ]).then(([oldContent, newContent, hl]) => {
       if (cancelled) return;
 

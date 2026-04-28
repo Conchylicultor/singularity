@@ -24,7 +24,7 @@ export function HighlightedCode({
     }
     let cancelled = false;
     const theme = themeForMode(dark);
-    getHighlighter()
+    getHighlighter(resolved)
       .then((hl) => {
         if (cancelled) return;
         setHtml(

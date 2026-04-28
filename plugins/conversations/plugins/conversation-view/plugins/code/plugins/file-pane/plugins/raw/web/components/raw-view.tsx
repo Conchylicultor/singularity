@@ -32,7 +32,7 @@ export function RawView({
     const resolvedLang = SHIKI_LANGS.includes(lang) ? lang : "text";
     const theme = themeForMode(dark);
 
-    getHighlighter()
+    getHighlighter(resolvedLang)
       .then((hl) => {
         if (cancelled) return;
         const out = hl.codeToHtml(content, { lang: resolvedLang, theme });
