@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useConfigValues } from "@plugins/config/web";
+import { commitsConfig } from "../../shared/config";
 import {
   Area,
   Bar,
@@ -87,10 +89,11 @@ interface CumulativePoint {
   removed: number;
 }
 
-export function CumulativeLinesChart({ filterKey }: { filterKey?: string }) {
+export function CumulativeLinesChart({ filterKey, dedup }: { filterKey?: string; dedup?: boolean }) {
+  const dedupParam = dedup ? "?dedup=1" : "";
   const { data, error } = useFetchJson<{ points: CumulativePoint[] }>(
-    "/api/stats/commits/lines/cumulative",
-    filterKey,
+    `/api/stats/commits/lines/cumulative${dedupParam}`,
+    `${filterKey ?? ""}:${dedup ? "1" : "0"}`,
   );
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
   const points = (data?.points ?? []).map((p) => ({
@@ -192,10 +195,11 @@ interface RatePoint {
   removed: number;
 }
 
-export function LinesRateChart({ bucket, filterKey }: { bucket: Bucket; filterKey?: string }) {
+export function LinesRateChart({ bucket, filterKey, dedup }: { bucket: Bucket; filterKey?: string; dedup?: boolean }) {
+  const dedupParam = dedup ? "&dedup=1" : "";
   const { data, error } = useFetchJson<{ points: RatePoint[] }>(
-    `/api/stats/commits/lines/rate?bucket=${bucket}`,
-    filterKey,
+    `/api/stats/commits/lines/rate?bucket=${bucket}${dedupParam}`,
+    `${filterKey ?? ""}:${dedup ? "1" : "0"}`,
   );
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
 
@@ -308,10 +312,11 @@ function extColor(ext: string): string {
   return EXT_PALETTE[hash % EXT_PALETTE.length] ?? OTHER_COLOR;
 }
 
-export function CumulativeLinesBreakdownChart({ filterKey }: { filterKey?: string }) {
+export function CumulativeLinesBreakdownChart({ filterKey, dedup }: { filterKey?: string; dedup?: boolean }) {
+  const dedupParam = dedup ? "&dedup=1" : "";
   const { data, error } = useFetchJson<{ points: ByExtPoint[] }>(
-    "/api/stats/commits/lines/cumulative?breakdown=ext",
-    filterKey,
+    `/api/stats/commits/lines/cumulative?breakdown=ext${dedupParam}`,
+    `${filterKey ?? ""}:${dedup ? "1" : "0"}`,
   );
   const points = data?.points ?? [];
   const exts = topExtensions(points);
@@ -375,10 +380,11 @@ export function CumulativeLinesBreakdownChart({ filterKey }: { filterKey?: strin
   );
 }
 
-export function LinesRateBreakdownChart({ bucket, filterKey }: { bucket: Bucket; filterKey?: string }) {
+export function LinesRateBreakdownChart({ bucket, filterKey, dedup }: { bucket: Bucket; filterKey?: string; dedup?: boolean }) {
+  const dedupParam = dedup ? "&dedup=1" : "";
   const { data, error } = useFetchJson<{ points: ByExtPoint[] }>(
-    `/api/stats/commits/lines/rate?bucket=${bucket}&breakdown=ext`,
-    filterKey,
+    `/api/stats/commits/lines/rate?bucket=${bucket}&breakdown=ext${dedupParam}`,
+    `${filterKey ?? ""}:${dedup ? "1" : "0"}`,
   );
   const points = data?.points ?? [];
   const exts = topExtensions(points);
@@ -439,6 +445,7 @@ export function LinesChartsSection() {
   const [byType, setByType] = useState(false);
   const [bucket, setBucket] = useState<Bucket>("day");
   const { data: overrides } = useResource(excludedPathStateResource);
+  const { filterRebases } = useConfigValues(commitsConfig, "stats-commits");
   const filterKey = JSON.stringify(overrides ?? {});
 
   return (
@@ -460,11 +467,11 @@ export function LinesChartsSection() {
       </div>
       <div>
         <h3 className="mb-3 text-xs font-medium text-muted-foreground">Over time</h3>
-        {byType ? <CumulativeLinesBreakdownChart filterKey={filterKey} /> : <CumulativeLinesChart filterKey={filterKey} />}
+        {byType ? <CumulativeLinesBreakdownChart filterKey={filterKey} dedup={filterRebases} /> : <CumulativeLinesChart filterKey={filterKey} dedup={filterRebases} />}
       </div>
       <div>
         <h3 className="mb-3 text-xs font-medium text-muted-foreground">Per period</h3>
-        {byType ? <LinesRateBreakdownChart bucket={bucket} filterKey={filterKey} /> : <LinesRateChart bucket={bucket} filterKey={filterKey} />}
+        {byType ? <LinesRateBreakdownChart bucket={bucket} filterKey={filterKey} dedup={filterRebases} /> : <LinesRateChart bucket={bucket} filterKey={filterKey} dedup={filterRebases} />}
         <div className="flex flex-wrap gap-1.5 mt-3">
           {BUCKETS.map((b) => (
             <button

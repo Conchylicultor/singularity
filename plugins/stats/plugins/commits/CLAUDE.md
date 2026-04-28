@@ -10,8 +10,7 @@
 - Exports (web):
   - Values: `axisProps`, `barCursor`, `ChartState`, `gridProps`, `lineCursor`, `tooltipContentStyle`, `tooltipLabelStyle`, `tooltipNumberFormatter`, `useFetchJson`, `yAxisFormatter`
 - Contributes:
-  - `Stats.Chart` "Commits over time" → `CumulativeCommitsChart`
-  - `Stats.Chart` "Commits per period" → `CommitsRateChart`
+  - `Stats.Chart` "Commits" → `CommitsSection`
   - `Stats.Chart` "Lines changed" → `LinesChartsSection`
   - `Config.Section` "Excluded path toggles" → `ExcludedPathToggles`
 - Server:

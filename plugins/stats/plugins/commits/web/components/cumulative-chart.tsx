@@ -27,11 +27,14 @@ interface Point {
 export function CumulativeChart({
   url,
   valueLabel,
+  dedup,
 }: {
   url: string;
   valueLabel: string;
+  dedup?: boolean;
 }) {
-  const { data, error } = useFetchJson<{ points: Point[] }>(url);
+  const fullUrl = dedup ? `${url}?dedup=1` : url;
+  const { data, error } = useFetchJson<{ points: Point[] }>(fullUrl, dedup ? "dedup" : undefined);
   return (
     <div className="h-64 w-full">
       <ChartState
@@ -78,6 +81,6 @@ export function CumulativeChart({
   );
 }
 
-export function CumulativeCommitsChart() {
-  return <CumulativeChart url="/api/stats/commits/cumulative" valueLabel="Commits" />;
+export function CumulativeCommitsChart({ dedup }: { dedup?: boolean }) {
+  return <CumulativeChart url="/api/stats/commits/cumulative" valueLabel="Commits" dedup={dedup} />;
 }

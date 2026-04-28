@@ -6,6 +6,7 @@ const TTL_MS = 30_000;
 export interface CommitInfo {
   sha: string;
   iso: string;
+  pushId: string | null;
   added: number;
   removed: number;
   byExt: Record<string, { added: number; removed: number }>;
@@ -14,7 +15,11 @@ export interface CommitInfo {
 async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
   const root = await ensureMainWorktreeRoot();
   const proc = Bun.spawn(
-    [GIT, "-C", root, "log", "--format=__C__%H %cI", "--numstat", "--reverse", ...args],
+    [
+      GIT, "-C", root, "log",
+      "--format=__C__%H %cI %(trailers:key=Singularity-Push,valueonly)",
+      "--numstat", "--reverse", ...args,
+    ],
     { stdout: "pipe", stderr: "pipe" },
   );
   const text = await new Response(proc.stdout).text();
@@ -26,10 +31,14 @@ async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
     if (line.startsWith("__C__")) {
       if (current) commits.push(current);
       const header = line.slice(5).trim();
-      const spaceIdx = header.indexOf(" ");
-      const sha = spaceIdx === -1 ? header : header.slice(0, spaceIdx);
-      const iso = spaceIdx === -1 ? "" : header.slice(spaceIdx + 1);
-      current = { sha, iso, added: 0, removed: 0, byExt: {} };
+      const firstSpace = header.indexOf(" ");
+      const sha = firstSpace === -1 ? header : header.slice(0, firstSpace);
+      const rest = firstSpace === -1 ? "" : header.slice(firstSpace + 1);
+      const secondSpace = rest.indexOf(" ");
+      const iso = secondSpace === -1 ? rest : rest.slice(0, secondSpace);
+      const rawPushId = secondSpace === -1 ? "" : rest.slice(secondSpace + 1).trim();
+      const pushId = rawPushId || null;
+      current = { sha, iso, pushId, added: 0, removed: 0, byExt: {} };
     } else if (current && line.trim()) {
       const parts = line.split("\t");
       if (parts.length >= 3) {
@@ -73,4 +82,39 @@ export async function getCommitsExcludingPaths(excludedPaths: string[]): Promise
 
 export async function getCommitTimestamps(): Promise<string[]> {
   return (await getCommits()).map((c) => c.iso);
+}
+
+/**
+ * Collapses commits sharing a Singularity-Push trailer into one representative
+ * commit per push group: timestamp of the last commit, line stats summed.
+ * Commits without a push id are kept as-is.
+ */
+export function deduplicateByPushId(commits: CommitInfo[]): CommitInfo[] {
+  const result: CommitInfo[] = [];
+  const byPushId = new Map<string, CommitInfo>();
+
+  for (const commit of commits) {
+    if (!commit.pushId) {
+      result.push(commit);
+      continue;
+    }
+    const existing = byPushId.get(commit.pushId);
+    if (!existing) {
+      const merged: CommitInfo = { ...commit, byExt: { ...commit.byExt } };
+      byPushId.set(commit.pushId, merged);
+      result.push(merged);
+    } else {
+      existing.iso = commit.iso;
+      existing.added += commit.added;
+      existing.removed += commit.removed;
+      for (const [ext, stats] of Object.entries(commit.byExt)) {
+        const e = existing.byExt[ext] ?? { added: 0, removed: 0 };
+        e.added += stats.added;
+        e.removed += stats.removed;
+        existing.byExt[ext] = e;
+      }
+    }
+  }
+
+  return result;
 }

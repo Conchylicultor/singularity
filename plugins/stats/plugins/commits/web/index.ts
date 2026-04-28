@@ -1,10 +1,9 @@
 import type { PluginDefinition } from "@core";
 import { Stats } from "@plugins/stats/web";
 import { Config } from "@plugins/config/web";
-import { CumulativeCommitsChart } from "./components/cumulative-chart";
+import { CommitsSection } from "./components/commits-section";
 import { ExcludedPathToggles } from "./components/excluded-path-toggles";
 import { LinesChartsSection } from "./components/lines-charts";
-import { CommitsRateChart } from "./components/rate-chart";
 import { commitsConfig } from "../shared/config";
 
 export {
@@ -26,14 +25,9 @@ export default {
   description: "Commit-based stats: commits and lines of change over time.",
   contributions: [
     Stats.Chart({
-      id: "commits-cumulative",
-      title: "Commits over time",
-      component: CumulativeCommitsChart,
-    }),
-    Stats.Chart({
-      id: "commits-rate",
-      title: "Commits per period",
-      component: CommitsRateChart,
+      id: "commits",
+      title: "Commits",
+      component: CommitsSection,
     }),
     Stats.Chart({
       id: "lines",

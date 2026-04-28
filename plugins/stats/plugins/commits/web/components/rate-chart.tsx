@@ -38,13 +38,17 @@ interface Point {
 export function RateChart({
   baseUrl,
   valueLabel,
+  dedup,
 }: {
   baseUrl: string;
   valueLabel: string;
+  dedup?: boolean;
 }) {
   const [bucket, setBucket] = useState<Bucket>("day");
+  const dedupParam = dedup ? "&dedup=1" : "";
   const { data, error } = useFetchJson<{ points: Point[] }>(
-    `${baseUrl}?bucket=${bucket}`,
+    `${baseUrl}?bucket=${bucket}${dedupParam}`,
+    dedup ? "dedup" : undefined,
   );
 
   return (
@@ -109,6 +113,6 @@ export function RateChart({
   );
 }
 
-export function CommitsRateChart() {
-  return <RateChart baseUrl="/api/stats/commits/rate" valueLabel="Commits" />;
+export function CommitsRateChart({ dedup }: { dedup?: boolean }) {
+  return <RateChart baseUrl="/api/stats/commits/rate" valueLabel="Commits" dedup={dedup} />;
 }

@@ -1,13 +1,18 @@
 import { readConfig } from "@plugins/config/server";
 import { commitsConfig } from "../../shared/config";
-import { getCommits, getCommitsExcludingPaths } from "./commit-timestamps";
+import { deduplicateByPushId, getCommits, getCommitsExcludingPaths } from "./commit-timestamps";
 import { activeExcludedPaths } from "./excluded-paths";
 
-async function resolveCommits(): Promise<ReturnType<typeof getCommits>> {
+function shouldDedup(req: Request): boolean {
+  return new URL(req.url).searchParams.get("dedup") === "1";
+}
+
+async function resolveCommits(req: Request): Promise<Awaited<ReturnType<typeof getCommits>>> {
   const { excludedPaths } = await readConfig(commitsConfig);
   const active = await activeExcludedPaths(excludedPaths);
-  if (active.length === 0) return getCommits();
-  return getCommitsExcludingPaths(active);
+  let commits = active.length === 0 ? await getCommits() : await getCommitsExcludingPaths(active);
+  if (shouldDedup(req)) commits = deduplicateByPushId(commits);
+  return commits;
 }
 
 type Bucket = "hour" | "day" | "week" | "month" | "year";
@@ -47,7 +52,8 @@ function parseBucket(req: Request): Bucket {
 
 export async function handleRate(req: Request): Promise<Response> {
   const bucket = parseBucket(req);
-  const commits = await getCommits();
+  let commits = await getCommits();
+  if (shouldDedup(req)) commits = deduplicateByPushId(commits);
   const counts = new Map<string, number>();
   for (const c of commits) {
     const k = keyFor(c.iso, bucket);
@@ -62,7 +68,7 @@ export async function handleRate(req: Request): Promise<Response> {
 export async function handleLinesRate(req: Request): Promise<Response> {
   const bucket = parseBucket(req);
   const breakdown = new URL(req.url).searchParams.get("breakdown") === "ext";
-  const commits = await resolveCommits();
+  const commits = await resolveCommits(req);
 
   if (breakdown) {
     const counts = new Map<string, Record<string, { added: number; removed: number }>>();
