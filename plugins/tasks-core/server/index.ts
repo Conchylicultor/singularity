@@ -46,6 +46,7 @@ export type {
 export {
   listTasks,
   getTask,
+  listAutoStartChildren,
   findNextRankUnder,
   isDescendant,
   taskDependsOn,
@@ -83,6 +84,7 @@ export {
   createTask,
   updateTask,
   updateTaskTitle,
+  setTaskAutoStart,
   deleteTask,
   addTaskDependency,
   removeTaskDependency,
@@ -116,6 +118,20 @@ export type { InsertPushInput } from "./internal/mutations/pushes";
 // @plugins/infra/plugins/events/server `trigger({ on: pushLanded, do: <job> })`.
 export { pushLanded, _pushLandedTriggers } from "./internal/tables-events";
 export type { PushLandedPayload } from "./internal/tables-events";
+
+// Emitted when a task's computed status flips. Filterable by taskId and
+// status so consumers can subscribe to a specific transition (e.g. parent
+// task X reaching status='done').
+export {
+  taskStatusChanged,
+  _taskStatusChangedTriggers,
+} from "./internal/tables-events";
+export type { TaskStatusChangedPayload } from "./internal/tables-events";
+
+// Helpers to read the derived status of a task and emit a status-change
+// event when it flips. Used internally by tasks-core mutations and exposed
+// for plugins that perform writes outside the core mutation surface.
+export { readTaskStatus, emitStatusChangeIfChanged } from "./internal/status-emit";
 
 export { adoptOrphanConversation } from "./internal/mutations/cross-table";
 export type { AdoptOrphanInput } from "./internal/mutations/cross-table";

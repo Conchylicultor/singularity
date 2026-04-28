@@ -316,6 +316,13 @@
       "tag": "20260428_115930_dacd04e3__conversation_summaries",
       "hash": "dacd04e3",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777401145000,
+      "tag": "20260428_183225_8256aca7__add_task_auto_start_and_status_event",
+      "hash": "8256aca7",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import { generateKeyBetween } from "fractional-indexing";
 import { db } from "@server/db/client";
 import { _taskDependencies, _tasks } from "../tables";
@@ -25,6 +25,17 @@ export async function listTasks(filters?: TaskFilters): Promise<Task[]> {
 export async function getTask(id: string): Promise<Task | null> {
   const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
   return row ?? null;
+}
+
+// Children of `parentId` whose autoStart has not yet been consumed. The
+// queued-children launcher in the conversations plugin reads this to know
+// which tasks to spawn when the parent reaches a terminal state.
+export async function listAutoStartChildren(parentId: string): Promise<Task[]> {
+  return db
+    .select()
+    .from(tasks)
+    .where(and(eq(tasks.parentId, parentId), isNotNull(tasks.autoStartAt)))
+    .orderBy(asc(tasks.rank), asc(tasks.createdAt));
 }
 
 export async function findNextRankUnder(

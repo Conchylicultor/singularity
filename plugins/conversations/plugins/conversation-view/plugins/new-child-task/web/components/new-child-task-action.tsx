@@ -9,22 +9,33 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+type Model = "opus" | "sonnet";
+
+type SubmitMode = { kind: "create" } | { kind: "queue"; model: Model };
+
 export function NewChildTaskAction() {
   const { conversation } = conversationPane.useData();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState<SubmitMode | null>(null);
   const cancelledRef = useRef(false);
 
-  const submit = async () => {
+  const submit = async (mode: SubmitMode) => {
     const title = value.trim();
     if (!title || submitting) return;
-    setSubmitting(true);
+    setSubmitting(mode);
     try {
+      const body: Record<string, unknown> = {
+        parentId: conversation.taskId,
+        title,
+      };
+      if (mode.kind === "queue") {
+        body.autoStart = { model: mode.model };
+      }
       const res = await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ parentId: conversation.taskId, title }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         Shell.Toast({
@@ -33,10 +44,14 @@ export function NewChildTaskAction() {
         });
         return;
       }
-      Shell.Toast({ description: "Child task created", variant: "success" });
+      const successDescription =
+        mode.kind === "queue"
+          ? `Queued · ${labelFor(mode.model)}`
+          : "Child task created";
+      Shell.Toast({ description: successDescription, variant: "success" });
       setValue("");
     } finally {
-      setSubmitting(false);
+      setSubmitting(null);
     }
   };
 
@@ -46,7 +61,9 @@ export function NewChildTaskAction() {
         cancelledRef.current = false;
         setValue("");
       } else if (value.trim() && !submitting) {
-        void submit();
+        // Implicit close (click-outside / escape) preserves the existing
+        // "submit on dismiss" behavior — fire the plain Create path.
+        void submit({ kind: "create" });
       }
     }
     setOpen(next);
@@ -66,8 +83,8 @@ export function NewChildTaskAction() {
           value={value}
           onChange={setValue}
           submitting={submitting}
-          onSubmit={async () => {
-            await submit();
+          onSubmit={async (mode) => {
+            await submit(mode);
             setOpen(false);
           }}
           onCancel={() => {
@@ -80,6 +97,10 @@ export function NewChildTaskAction() {
   );
 }
 
+function labelFor(model: Model): string {
+  return model === "opus" ? "Opus" : "Sonnet";
+}
+
 function CreateChildTaskForm({
   value,
   onChange,
@@ -89,8 +110,8 @@ function CreateChildTaskForm({
 }: {
   value: string;
   onChange: (value: string) => void;
-  submitting: boolean;
-  onSubmit: () => void;
+  submitting: SubmitMode | null;
+  onSubmit: (mode: SubmitMode) => void;
   onCancel: () => void;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -98,6 +119,9 @@ function CreateChildTaskForm({
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
+
+  const empty = !value.trim();
+  const isBusy = submitting !== null;
 
   return (
     <div className="flex w-80 flex-col gap-2">
@@ -111,7 +135,7 @@ function CreateChildTaskForm({
         onKeyDown={(e) => {
           if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
             e.preventDefault();
-            onSubmit();
+            onSubmit({ kind: "create" });
           }
         }}
         placeholder="Describe the task…"
@@ -124,11 +148,38 @@ function CreateChildTaskForm({
         </Button>
         <Button
           size="sm"
-          onClick={onSubmit}
-          disabled={!value.trim() || submitting}
+          onClick={() => onSubmit({ kind: "create" })}
+          disabled={empty || isBusy}
         >
-          {submitting ? "Creating…" : "Create"}
+          {submitting?.kind === "create" ? "Creating…" : "Create"}
         </Button>
+      </div>
+      <div className="border-t pt-2">
+        <div className="text-muted-foreground mb-1 text-xs">
+          Auto-start when parent is done
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onSubmit({ kind: "queue", model: "sonnet" })}
+            disabled={empty || isBusy}
+          >
+            {submitting?.kind === "queue" && submitting.model === "sonnet"
+              ? "Queueing…"
+              : "+ Sonnet"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onSubmit({ kind: "queue", model: "opus" })}
+            disabled={empty || isBusy}
+          >
+            {submitting?.kind === "queue" && submitting.model === "opus"
+              ? "Queueing…"
+              : "+ Opus"}
+          </Button>
+        </div>
       </div>
     </div>
   );

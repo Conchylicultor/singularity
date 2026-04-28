@@ -4,6 +4,7 @@ import { _attempts, _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../schema";
 import { tasksResource } from "../resources";
 import { findNextRankUnder, isDescendant, taskDependsOn } from "../queries/tasks";
+import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
 
 export const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 
@@ -47,6 +48,11 @@ export async function createTask(input: CreateTaskInput) {
   }
   tasksResource.notify();
   const [full] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+  // New tasks emit their first-ever status (typically "new"). Subscribers
+  // bound via `where({ taskId })` only register after creation, so this
+  // first emit is a no-op for them; emitting unconditionally keeps the
+  // mutation/event surface uniform with updateTask.
+  await emitStatusChangeIfChanged(id, null);
   return full!;
 }
 
@@ -77,6 +83,9 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
   if (typeof patch.rank === "string" && patch.rank.length > 0) {
     dbPatch.rank = patch.rank;
   }
+  // Snapshot status before the write so we can detect a flip
+  // (typical: drop/hold transitions).
+  const before = await readTaskStatus(id);
   const [updated] = await db
     .update(_tasks)
     .set(dbPatch)
@@ -90,8 +99,29 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
       .where(eq(_tasks.id, patch.parentId));
   }
   tasksResource.notify();
+  await emitStatusChangeIfChanged(id, before);
   const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
   return row ?? null;
+}
+
+// Write or clear the auto-start columns on a task. Pass `null` to clear.
+// Used by the new-child-task popover (Create & queue) and the queued-children
+// launcher/canceller jobs in the conversations plugin.
+export async function setTaskAutoStart(
+  id: string,
+  autoStart: { model: "opus" | "sonnet" } | null,
+): Promise<boolean> {
+  const [row] = await db
+    .update(_tasks)
+    .set({
+      autoStartAt: autoStart ? new Date() : null,
+      autoStartModel: autoStart ? autoStart.model : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(_tasks.id, id))
+    .returning({ id: _tasks.id });
+  if (row) tasksResource.notify();
+  return !!row;
 }
 
 export async function updateTaskTitle(

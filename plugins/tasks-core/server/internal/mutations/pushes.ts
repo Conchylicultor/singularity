@@ -1,7 +1,9 @@
+import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
-import { pushes } from "../tables";
+import { _attempts, pushes } from "../tables";
 import { pushLanded } from "../tables-events";
 import { pushesResource, attemptsResource } from "../resources";
+import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
 
 export interface InsertPushInput {
   id: string;
@@ -15,6 +17,15 @@ export interface InsertPushInput {
 
 // Returns true if the row was inserted (false = already existed).
 export async function insertPush(input: InsertPushInput): Promise<boolean> {
+  // Resolve the owning task before the write so we can detect a status flip
+  // (e.g. attempt → done) once the push lands and the conversation closes.
+  const [attemptRow] = await db
+    .select({ taskId: _attempts.taskId })
+    .from(_attempts)
+    .where(eq(_attempts.id, input.attemptId))
+    .limit(1);
+  const taskId = attemptRow?.taskId ?? null;
+  const before = taskId ? await readTaskStatus(taskId) : null;
   const [row] = await db
     .insert(pushes)
     .values(input)
@@ -31,6 +42,7 @@ export async function insertPush(input: InsertPushInput): Promise<boolean> {
       attemptId: input.attemptId,
       conversationId: input.conversationId,
     });
+    if (taskId) await emitStatusChangeIfChanged(taskId, before);
   }
   return !!row;
 }

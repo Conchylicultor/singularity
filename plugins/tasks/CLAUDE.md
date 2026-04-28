@@ -25,13 +25,14 @@
   - `Tasks.TaskActions` → `DeleteTaskAction`
   - `Tasks.TaskActions` → `LaunchAgentAction`
 - Server:
-  - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.updateTask`
+  - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.setTaskAutoStart`, `tasks-core.taskStatusChanged`, `tasks-core.updateTask`
   - `GET /api/tasks`
   - `POST /api/tasks`
   - `GET /api/tasks/:id`
   - `PATCH /api/tasks/:id`
   - `DELETE /api/tasks/:id`
   - `GET /api/tasks/:id/attachments`
+  - `DELETE /api/tasks/:id/auto-start`
   - `POST /api/tasks/:id/dependencies`
   - `DELETE /api/tasks/:id/dependencies/:depId`
   - `GET /api/repo-info`

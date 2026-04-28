@@ -1,4 +1,6 @@
+import { text } from "drizzle-orm/pg-core";
 import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
+import type { TaskStatus } from "./schema";
 
 export interface PushLandedPayload {
   pushId: string;
@@ -14,4 +16,25 @@ export const { event: pushLanded, table: _pushLandedTriggers } =
   defineTriggerEvent<PushLandedPayload>({
     name: "pushes.landed",
     filters: {},
+  });
+
+export interface TaskStatusChangedPayload {
+  taskId: string;
+  parentId: string | null;
+  status: TaskStatus;
+  previousStatus: TaskStatus;
+  [key: string]: unknown;
+}
+
+// Emitted when a task's computed status flips. Subscribers can scope by
+// `taskId` and/or `status` (the helper `or(isNull, eq)` matches a column
+// left null on the trigger row, so subscribing to a specific task without
+// a status filter matches every transition for that task).
+export const { event: taskStatusChanged, table: _taskStatusChangedTriggers } =
+  defineTriggerEvent<TaskStatusChangedPayload>({
+    name: "tasks.statusChanged",
+    filters: {
+      taskId: text("task_id"),
+      status: text("status"),
+    },
   });

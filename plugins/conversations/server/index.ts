@@ -12,6 +12,10 @@ import { startPoller } from "./internal/poller";
 import { startTurnEmitter } from "./internal/turn-emitter";
 import { forkErrorsResource } from "./internal/fork-errors";
 import { ensureSystemMeta } from "./internal/meta-system";
+// Side-effect import: registers the queued-children launch/cancel jobs at
+// module load so they're in the registry before any taskStatusChanged
+// trigger row tries to dispatch them.
+import "./internal/auto-start-jobs";
 
 export { ConversationModelSchema } from "./schema";
 export type { ConversationModel } from "./schema";

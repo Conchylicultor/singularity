@@ -1,6 +1,7 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { handleList } from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";
+import { handleClearAutoStart } from "./internal/handle-clear-auto-start";
 import { handleGet } from "./internal/handle-get";
 import { handleUpdate } from "./internal/handle-update";
 import { handleDelete } from "./internal/handle-delete";
@@ -50,6 +51,7 @@ export default {
     "PATCH /api/tasks/:id": handleUpdate,
     "DELETE /api/tasks/:id": handleDelete,
     "GET /api/tasks/:id/attachments": handleTaskAttachments,
+    "DELETE /api/tasks/:id/auto-start": handleClearAutoStart,
     "POST /api/tasks/:id/dependencies": handleAddDependency,
     "DELETE /api/tasks/:id/dependencies/:depId": handleRemoveDependency,
     "GET /api/repo-info": handleRepoInfo,

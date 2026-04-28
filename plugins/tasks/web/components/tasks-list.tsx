@@ -35,6 +35,8 @@ type TaskStatus =
 type Task = TreeItem & {
   title: string;
   status: TaskStatus;
+  autoStartAt: Date | string | null;
+  autoStartModel: "opus" | "sonnet" | null;
 };
 
 const STATUS_META: Record<
@@ -98,6 +100,10 @@ async function patchTask(id: string, patch: TaskPatch) {
   });
 }
 
+async function clearAutoStart(id: string) {
+  await fetch(`/api/tasks/${id}/auto-start`, { method: "DELETE" });
+}
+
 async function createTaskRow(args: {
   parentId: string | null;
   rank?: string;
@@ -117,6 +123,7 @@ function TaskRow({ node, depth }: { node: TreeNode<Task>; depth: number }) {
   const hasChildren = node.children.length > 0;
   const dropped = node.status === "dropped";
   const done = node.status === "done";
+  const queuedModel = node.autoStartAt ? node.autoStartModel : null;
   return (
     <RowChrome
       node={node}
@@ -146,7 +153,26 @@ function TaskRow({ node, depth }: { node: TreeNode<Task>; depth: number }) {
           done && "text-muted-foreground",
         )}
       />
+      {queuedModel && <QueuedChip taskId={node.id} model={queuedModel} />}
     </RowChrome>
+  );
+}
+
+function QueuedChip({ taskId, model }: { taskId: string; model: "opus" | "sonnet" }) {
+  const label = model === "opus" ? "Opus" : "Sonnet";
+  return (
+    <button
+      type="button"
+      title="Auto-start when parent is done — click to cancel"
+      aria-label={`Cancel auto-start (${label})`}
+      onClick={(e) => {
+        e.stopPropagation();
+        void clearAutoStart(taskId);
+      }}
+      className="ml-1 inline-flex shrink-0 items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
+    >
+      Queued · {label}
+    </button>
   );
 }
 
