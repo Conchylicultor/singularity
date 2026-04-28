@@ -94,7 +94,13 @@ export function ScreenshotView({ id }: { id: string }) {
             />
           )}
         </div>
-        <PromptForm id={id} getBlob={() => imageBlob} />
+        <PromptForm
+          id={id}
+          getBlob={async () => {
+            if (!imageBlob) return null;
+            return strokes.length > 0 ? await applyStrokes(imageBlob, strokes) : imageBlob;
+          }}
+        />
       </div>
       <div className="w-72 shrink-0 border-l bg-background">
         <ToolsPane
@@ -113,13 +119,15 @@ export function ScreenshotView({ id }: { id: string }) {
           onUndoStroke={() => setStrokes((s) => s.slice(0, -1))}
           onCopy={async () => {
             if (!imageBlob) return;
+            const blob = strokes.length > 0 ? await applyStrokes(imageBlob, strokes) : imageBlob;
             await navigator.clipboard.write([
-              new ClipboardItem({ "image/png": imageBlob }),
+              new ClipboardItem({ "image/png": blob }),
             ]);
           }}
-          onDownload={() => {
+          onDownload={async () => {
             if (!imageBlob) return;
-            const url = URL.createObjectURL(imageBlob);
+            const blob = strokes.length > 0 ? await applyStrokes(imageBlob, strokes) : imageBlob;
+            const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
             a.download = `screenshot-${id}.png`;
@@ -212,7 +220,7 @@ function ImageStage({
           onCommit={onCropCommit}
         />
       )}
-      {(tool === "draw" || (tool === "crop" && strokes.length > 0)) && naturalSize && displayedRect && (
+      {(tool === "draw" || strokes.length > 0) && naturalSize && displayedRect && (
         <DrawOverlay
           displayed={displayedRect}
           natural={naturalSize}

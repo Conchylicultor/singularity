@@ -2,13 +2,13 @@ import { useRef, useState } from "react";
 import { LaunchButtons, type LaunchRequest } from "@plugins/primitives/plugins/launch/web";
 import { cn } from "@/lib/utils";
 
-export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | null }) {
+export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | null | Promise<Blob | null> }) {
   const [text, setText] = useState("");
   const textRef = useRef(text);
   textRef.current = text;
 
   const getRequest = async (): Promise<LaunchRequest> => {
-    const blob = getBlob();
+    const blob = await getBlob();
     if (!blob) return { prompt: textRef.current.trim() || undefined };
     const res = await fetch(`/api/screenshots/${id}/file`, {
       method: "POST",
