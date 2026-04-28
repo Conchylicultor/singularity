@@ -39,6 +39,7 @@ import conversationPromptInputPlugin from "@plugins/conversations/plugins/conver
 import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import conversationCodeDocsButtonPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/docs-button/web";
 import conversationCodeReviewPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/web";
+import conversationCodeFilePanePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import conversationCodeFilePaneRawPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/raw/web";
 import conversationCodeFilePaneMarkdownPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/markdown/web";
 import conversationCodeFilePaneDiffPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
@@ -126,6 +127,7 @@ export const plugins: PluginDefinition[] = [
   conversationCodePlugin,
   conversationCodeDocsButtonPlugin,
   conversationCodeReviewPlugin,
+  conversationCodeFilePanePlugin,
   conversationCodeFilePaneRawPlugin,
   conversationCodeFilePaneMarkdownPlugin,
   conversationCodeFilePaneDiffPlugin,

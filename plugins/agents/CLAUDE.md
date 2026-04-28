@@ -15,6 +15,9 @@
   - Types: `Agent`, `AgentLaunch`
   - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
 - Contributes:
+  - `Pane.Register`
+  - `Pane.Register`
+  - `Pane.Register`
   - `Shell.Sidebar` "Agents" (group `System`)
   - `agentsRootPane.open`
 - Server:

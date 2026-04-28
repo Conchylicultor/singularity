@@ -1,9 +1,5 @@
 import type { PluginDefinition } from "@core";
-
-// Importing panes registers `conversationPane` with the Pane registry at
-// module load time; PaneRouter then matches `/c/:convId` automatically.
-import "./panes";
-
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "./panes";
 import { ExpandConversationButton } from "./components/expand-button";
 
@@ -28,6 +24,7 @@ export default {
   name: "Conversation",
   description: "Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.",
   contributions: [
+    Pane.Register({ pane: conversationPane }),
     // Pop out of an embedding split (Tasks/Agents) into /c/:convId.
     conversationPane.Actions({ component: ExpandConversationButton }),
   ],

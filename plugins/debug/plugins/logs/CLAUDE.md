@@ -11,6 +11,8 @@
   - Types: `LogChannel`, `LogStream`
   - Values: `Log`
 - Contributes:
+  - `Pane.Register`
+  - `Pane.Register`
   - `Debug.Item` "Logs"
   - `logsPane.open`
 - Server:

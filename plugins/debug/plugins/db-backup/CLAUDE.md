@@ -8,6 +8,7 @@
 - Exports (web):
   - Values: `dbBackupPane`
 - Contributes:
+  - `Pane.Register`
   - `Debug.Item` "DB Backup"
   - `dbBackupPane.open`
 - Server:

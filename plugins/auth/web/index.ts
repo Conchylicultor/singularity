@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@core";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
 import { MdKey } from "react-icons/md";
 import { accountsPane } from "./panes";
@@ -22,6 +23,7 @@ export default {
     "Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot.",
   loadBearing: true,
   contributions: [
+    Pane.Register({ pane: accountsPane }),
     Shell.Sidebar({
       title: "Accounts",
       icon: MdKey,

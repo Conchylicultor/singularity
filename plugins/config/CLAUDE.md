@@ -72,6 +72,7 @@ If you're tempted to store `{ [item]: { enabled: boolean, … } }` as a JSON blo
   - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `Schema`, `ValueOf`, `Values`
   - Values: `defineConfig`, `fullKey`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `validateKind`
 - Contributes:
+  - `Pane.Register`
   - `Shell.Sidebar` "Settings" (group `System`)
   - `settingsPane.open`
 - Server:

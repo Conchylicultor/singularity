@@ -1,3 +1,7 @@
+import type { PluginDefinition } from "@core";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { convFilePeekPane } from "./file-peek-pane";
+
 export { FilePaneView } from "./components/file-pane";
 export { FileContent } from "./components/file-content";
 export { FilePathLabel } from "./components/file-path-label";
@@ -14,3 +18,11 @@ export type {
 } from "./slots";
 export { convFilePeekPane } from "./file-peek-pane";
 export { FileOpenProvider } from "./file-open-context";
+
+export default {
+  id: "conversation-code-file-pane",
+  name: "Conversation: Code — File pane",
+  description:
+    "Hosts the per-conversation file-peek pane and the FilePane.Renderer slot.",
+  contributions: [Pane.Register({ pane: convFilePeekPane })],
+} satisfies PluginDefinition;

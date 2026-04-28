@@ -6,6 +6,8 @@
 
 - Description: Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
 - Contributes:
+  - `Pane.Register`
+  - `Pane.Register`
   - `Shell.Sidebar` "Explorer" (group `System`)
   - `globalFileTreePane.open`
   - `Code.ToolbarButton` → `ConvTreeButton`

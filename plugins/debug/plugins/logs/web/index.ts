@@ -1,7 +1,8 @@
 import type { PluginDefinition } from "@core";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Debug } from "@plugins/debug/web";
 import { MdTerminal } from "react-icons/md";
-import { logsPane } from "./panes";
+import { logsPane, logChannelPane } from "./panes";
 
 export { logsPane, logChannelPane } from "./panes";
 
@@ -10,6 +11,8 @@ export default {
   name: "Logs",
   description: "System logs pane, opened from the Debug sidebar.",
   contributions: [
+    Pane.Register({ pane: logsPane }),
+    Pane.Register({ pane: logChannelPane }),
     Debug.Item({
       id: "logs",
       title: "Logs",

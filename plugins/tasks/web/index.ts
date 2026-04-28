@@ -1,7 +1,12 @@
 import type { PluginDefinition } from "@core";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
 import { MdChecklist } from "react-icons/md";
-import { tasksRootPane } from "./panes";
+import {
+  tasksRootPane,
+  taskDetailPane,
+  taskConversationPane,
+} from "./panes";
 import { Tasks as TasksSlots } from "./slots";
 import { LaunchAgentAction } from "./components/launch-agent-action";
 import { DeleteTaskAction } from "./components/delete-task-action";
@@ -16,6 +21,9 @@ export default {
   name: "Tasks",
   description: "Nested tasks with attempts; meta-plugin hosting sub-pane contributions.",
   contributions: [
+    Pane.Register({ pane: tasksRootPane }),
+    Pane.Register({ pane: taskDetailPane }),
+    Pane.Register({ pane: taskConversationPane }),
     Shell.Sidebar({
       title: "Tasks",
       icon: MdChecklist,

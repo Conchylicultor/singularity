@@ -1,7 +1,8 @@
 import type { PluginDefinition } from "@core";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
 import { MdAccountTree } from "react-icons/md";
-import { yakShavingPane } from "./panes";
+import { yakShavingPane, yakShavingConversationPane } from "./panes";
 
 export { yakShavingPane, yakShavingConversationPane } from "./panes";
 
@@ -11,6 +12,8 @@ export default {
   description:
     "Persisted tree of conversations annotated with one-line context, status, and next-action. Curated by a Sonnet model.",
   contributions: [
+    Pane.Register({ pane: yakShavingPane }),
+    Pane.Register({ pane: yakShavingConversationPane }),
     Shell.Sidebar({
       title: "Yak",
       icon: MdAccountTree,

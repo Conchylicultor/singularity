@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@core";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
 import { MdSettings } from "react-icons/md";
 import { settingsPane } from "./panes";
@@ -23,6 +24,7 @@ export default {
     "Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane.",
   loadBearing: true,
   contributions: [
+    Pane.Register({ pane: settingsPane }),
     Shell.Sidebar({
       title: "Settings",
       icon: MdSettings,

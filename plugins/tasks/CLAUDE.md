@@ -16,6 +16,9 @@
   - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
   - Values: `attemptsResource`, `pushesResource`, `tasksResource`
 - Contributes:
+  - `Pane.Register`
+  - `Pane.Register`
+  - `Pane.Register`
   - `Shell.Sidebar` "Tasks" (group `System`)
   - `tasksRootPane.open`
   - `Tasks.TaskActions` → `ExpandCollapseAllAction`

@@ -21,6 +21,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
     - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`
   - Contributes:
+    - `Pane.Register`
     - `Shell.Sidebar` "Accounts" (group `System`)
     - `accountsPane.open`
   - Central:
@@ -52,6 +53,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `Schema`, `ValueOf`, `Values`
     - Values: `defineConfig`, `fullKey`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `validateKind`
   - Contributes:
+    - `Pane.Register`
     - `Shell.Sidebar` "Settings" (group `System`)
     - `settingsPane.open`
   - Server:
@@ -94,7 +96,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Plugins:
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
-            - **`file-pane`**
+            - **`file-pane`** — Hosts the per-conversation file-peek pane and the FilePane.Renderer slot.
               - Plugins:
                 - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
                 - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
@@ -231,9 +233,12 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - Types: `FetchWithRetryOptions`, `ReconnectingEventSourceOptions`, `ReconnectingWsHandle`, `ReconnectingWsOptions`, `WsStatus`, `WsStatusEvent`
         - Values: `fetchWithRetry`, `publishWsStatus`, `ReconnectingEventSource`, `SharedWebSocket`, `subscribeWsStatus`, `useReconnectingWebSocket`
     - **`pane`** [load-bearing] — Unified pane primitive: Pane.define, <Outlet/>, <PaneRouter/>, and chrome components.
+      - Defines:
+        - Slots: `Pane.Register`
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
         - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `stats`, `summary`, `tasks`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`, `yak-shaving`
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
     - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
 

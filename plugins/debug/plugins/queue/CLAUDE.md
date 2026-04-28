@@ -8,6 +8,7 @@
 - Exports (web):
   - Values: `queuePane`
 - Contributes:
+  - `Pane.Register`
   - `Debug.Item` "Queue"
   - `queuePane.open`
 

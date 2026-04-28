@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { defineSlot, type Slot } from "@core";
+import { Pane as PaneSlots } from "./slots";
 
 // ---------------------------------------------------------------------------
 // Type machinery — extract `:param` and `:param*` names from a path template.
@@ -72,21 +73,14 @@ export interface PaneInternal {
   fullPath: string;
   component: ComponentType;
   chrome: NormalizedChrome;
-  children: PaneInternal[];
   dataContext: ReturnType<typeof createContext<unknown>>;
   actionsSlot: Slot<{ component: ComponentType; position?: "left" | "right" }>;
 }
 
+// Populated synchronously during <PaneRouter/> render via useSyncPaneRegistry.
+// matchRegistry / pane.close / pane.expand read from it; nobody writes to it
+// outside the sync hook.
 const registry = new Map<string, PaneInternal>();
-const topLevel: PaneInternal[] = [];
-
-export function _getAllPanes(): PaneInternal[] {
-  return Array.from(registry.values());
-}
-
-export function _getTopLevelPanes(): PaneInternal[] {
-  return topLevel;
-}
 
 const DATA_NOT_PROVIDED = Symbol("pane.data-not-provided");
 
@@ -423,10 +417,6 @@ function define<
   Provides,
   InferParams<Path>
 > {
-  if (registry.has(args.id)) {
-    // HMR can redefine during development; keep the new internal and move on.
-    console.warn(`Pane "${args.id}" redefined.`);
-  }
   const parentInternal = args.parent?._internal ?? null;
   const fullPath = joinPath(parentInternal, args.path);
 
@@ -445,14 +435,9 @@ function define<
     fullPath,
     component: args.component,
     chrome: normalizeChrome(args.chrome),
-    children: [],
     dataContext,
     actionsSlot,
   };
-
-  registry.set(args.id, internal);
-  if (parentInternal) parentInternal.children.push(internal);
-  else topLevel.push(internal);
 
   return makePaneObject(internal) as PaneObject<
     ParentParams & InferParams<Path>,
@@ -461,7 +446,31 @@ function define<
   >;
 }
 
-export const Pane = { define };
+export const Pane = { define, Register: PaneSlots.Register };
+
+// ---------------------------------------------------------------------------
+// Registry sync — populates the module-local `registry` from the
+// `Pane.Register` slot. Called once from <PaneRouter/> at the start of
+// every render, synchronously via useMemo so matchRegistry() and the
+// pane.close() / pane.expand() event handlers always see fresh state.
+// ---------------------------------------------------------------------------
+
+export function useSyncPaneRegistry(): void {
+  const contributions = PaneSlots.Register.useContributions();
+  useMemo(() => {
+    registry.clear();
+    const seen = new Set<string>();
+    for (const { pane } of contributions) {
+      const internal = pane._internal;
+      if (seen.has(internal.id)) {
+        console.warn(`Pane "${internal.id}" registered twice.`);
+        continue;
+      }
+      seen.add(internal.id);
+      registry.set(internal.id, internal);
+    }
+  }, [contributions]);
+}
 
 // ---------------------------------------------------------------------------
 // Memoized match used by the router and Outlet.

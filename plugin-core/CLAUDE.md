@@ -112,7 +112,7 @@ import { ShellCommands } from "@plugins/shell/web";
 
 ### Panes: use `Pane.define`, not commands
 
-For opening a view or mounting a URL, use the `pane` plugin (`@plugins/primitives/plugins/pane/web`) — not a command. Each `Pane.define` call registers a pane with its own path, component, and typed params. See [`plugins/primitives/plugins/pane/CLAUDE.md`](../plugins/primitives/plugins/pane/CLAUDE.md).
+For opening a view or mounting a URL, use the `pane` plugin (`@plugins/primitives/plugins/pane/web`) — not a command. `Pane.define` declares a pane (path, component, typed params); `Pane.Register` contributes it to the router. See [`plugins/primitives/plugins/pane/CLAUDE.md`](../plugins/primitives/plugins/pane/CLAUDE.md).
 
 ```typescript
 // plugins/terminal/web/panes.ts
@@ -127,6 +127,12 @@ export const terminalPane = Pane.define({
     return <TerminalComponent worktree={worktree} />;
   },
 });
+
+// plugins/terminal/web/index.ts
+export default {
+  id: "terminal",
+  contributions: [Pane.Register({ pane: terminalPane })],
+} satisfies PluginDefinition;
 
 // Consumer:
 <button onClick={() => terminalPane.open({ worktree: path })}>Launch</button>

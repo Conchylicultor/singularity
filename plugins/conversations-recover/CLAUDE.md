@@ -8,6 +8,7 @@
 - Exports (web):
   - Values: `recoveryPane`
 - Contributes:
+  - `Pane.Register`
   - `Debug.Item` "Recovery"
   - `recoveryPane.open`
 - Server:

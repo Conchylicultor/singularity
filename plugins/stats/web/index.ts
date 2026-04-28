@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@core";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
 import { MdInsights } from "react-icons/md";
 import { statsPane } from "./panes";
@@ -11,6 +12,7 @@ export default {
   name: "Stats",
   description: "Root plugin hosting stacked chart contributions from child plugins.",
   contributions: [
+    Pane.Register({ pane: statsPane }),
     Shell.Sidebar({
       title: "Stats",
       icon: MdInsights,
