@@ -565,7 +565,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable buttons that fire onFileOpen. Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides.
       - Exports (web):
         - Types: `FileLinkSegment`, `FileLinkTextProps`
-        - Values: `FILE_PATH_RE`, `FileLinkText`, `linkifyChildren`, `parseFileLinks`
+        - Values: `FILE_PATH_RE`, `FileLinkText`, `linkifyChildren`, `parseFileLinks`, `URL_RE`
     - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
       - Exports (web):
         - Types: `LaunchButtonsProps`, `LaunchRequest`

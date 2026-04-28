@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 
-export { FILE_PATH_RE, parseFileLinks } from "./internal/parse";
+export { FILE_PATH_RE, URL_RE, parseFileLinks } from "./internal/parse";
 export type { FileLinkSegment } from "./internal/parse";
 export { FileLinkText } from "./internal/file-link-text";
 export type { FileLinkTextProps } from "./internal/file-link-text";

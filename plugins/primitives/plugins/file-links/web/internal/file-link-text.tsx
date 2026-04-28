@@ -12,6 +12,20 @@ export function FileLinkText({ text, onFileOpen }: FileLinkTextProps): ReactNode
   return (
     <>
       {segments.map((seg, i) => {
+        if (seg.type === "url") {
+          return (
+            <a
+              key={i}
+              href={seg.value}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {seg.value}
+            </a>
+          );
+        }
         if (seg.type !== "path") return <Fragment key={i}>{seg.value}</Fragment>;
         if (onFileOpen) {
           return (
