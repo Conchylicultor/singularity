@@ -4,17 +4,15 @@ import { attemptsResource, tasksResource } from "@plugins/tasks/shared";
 
 const currentWorktree = (() => {
   const host = window.location.hostname;
-  return host.endsWith(".localhost") ? host.replace(/\.localhost$/, "") : "head";
+  return host.endsWith(".localhost") ? host.replace(/\.localhost$/, "") : null;
 })();
 
-const isAgentWorktree = currentWorktree !== "head" && currentWorktree !== "singularity";
-
-export function WorktreeDropdown() {
+export function AttemptTitle() {
   const { data: attempts } = useResource(attemptsResource);
   const { data: tasks } = useResource(tasksResource);
 
-  const taskTitle = useMemo(() => {
-    if (!isAgentWorktree || !attempts || !tasks) return null;
+  const title = useMemo(() => {
+    if (!currentWorktree || !attempts || !tasks) return null;
     const attempt = attempts.find((a) =>
       a.worktreePath.endsWith("/" + currentWorktree),
     );
@@ -22,10 +20,11 @@ export function WorktreeDropdown() {
     return tasks.find((t) => t.id === attempt.taskId)?.title ?? null;
   }, [attempts, tasks]);
 
+  if (!title) return null;
+
   return (
-    <span className="flex items-center gap-1.5 px-2 py-1 text-sm text-muted-foreground">
-      <span className="size-1.5 rounded-full bg-primary shrink-0" />
-      {taskTitle ?? currentWorktree}
+    <span className="text-sm font-medium truncate max-w-xs" title={title}>
+      {title}
     </span>
   );
 }
