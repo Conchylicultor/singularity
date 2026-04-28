@@ -10,7 +10,6 @@ import {
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent } from "../../../../shared";
-import { CopyButton } from "../../../../web/components/copy-button";
 import { TokenBadge } from "../../../../web/components/token-badge";
 import { formatTime } from "../../../../web/utils";
 
@@ -113,7 +112,7 @@ export function AssistantTextRow({
   const mdComponents = buildMdComponents(onFileOpen);
 
   return (
-    <div className="group rounded-md border border-border/60 bg-background px-3 py-2">
+    <div className="rounded-md border border-border/60 bg-background px-3 py-2">
       <div className="mb-1 flex items-center gap-2 text-[10px] uppercase tracking-wide text-muted-foreground">
         <span>Assistant</span>
         <span className="tabular-nums">{formatTime(e.at)}</span>
@@ -122,7 +121,6 @@ export function AssistantTextRow({
           {e.stopReason ? (
             <span className="text-muted-foreground/70">{e.stopReason}</span>
           ) : null}
-          <CopyButton text={e.text} title="Copy message" />
         </div>
       </div>
       {markdownMode ? (

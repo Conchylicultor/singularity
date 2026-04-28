@@ -1,5 +1,4 @@
 import type { JsonlEvent } from "../../../../shared";
-import { CopyButton } from "../../../../web/components/copy-button";
 import { formatTime } from "../../../../web/utils";
 
 type UserToolResultEvent = Extract<JsonlEvent, { kind: "user-tool-result" }>;
@@ -9,7 +8,7 @@ export function UserToolResultRow({ event }: { event: JsonlEvent }) {
   const borderClass = e.isError ? "border-destructive/60" : "border-border/60";
   const bgClass = e.isError ? "bg-destructive/5" : "bg-muted/20";
   return (
-    <details className={`group rounded-md border ${borderClass} ${bgClass} px-3 py-2`}>
+    <details className={`rounded-md border ${borderClass} ${bgClass} px-3 py-2`}>
       <summary className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
         <span
           className={`rounded px-1.5 py-0.5 font-mono text-[11px] ${
@@ -21,7 +20,6 @@ export function UserToolResultRow({ event }: { event: JsonlEvent }) {
           tool_result{e.isError ? " · error" : ""}
         </span>
         <span className="ml-auto tabular-nums">{formatTime(e.at)}</span>
-        <CopyButton text={e.content ?? ""} title="Copy result" />
       </summary>
       <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded bg-muted/60 p-2 text-xs">
         {e.content || "(empty)"}

@@ -10,9 +10,29 @@ function UnknownEventRow({ event }: { event: JsonlEvent }) {
   );
 }
 
+function RowActions({ event }: { event: JsonlEvent }) {
+  const actions = JsonlViewer.RowAction.useContributions();
+  if (actions.length === 0) return null;
+  return (
+    <div className="absolute right-1 top-1 z-10 flex items-center gap-1 rounded-md bg-background/80 px-0.5 py-0.5 opacity-0 backdrop-blur-sm transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
+      {actions.map((a) => (
+        <a.component key={a.id} event={event} />
+      ))}
+    </div>
+  );
+}
+
 export function EventRow({ event, markdownMode }: { event: JsonlEvent; markdownMode?: boolean }) {
-  const contributions = JsonlViewer.EventRenderer.useContributions();
-  const match = contributions.find((c) => c.kind === event.kind);
-  if (!match) return <UnknownEventRow event={event} />;
-  return <match.component event={event} markdownMode={markdownMode} />;
+  const renderers = JsonlViewer.EventRenderer.useContributions();
+  const match = renderers.find((c) => c.kind === event.kind);
+  return (
+    <div className="group/row relative">
+      {match ? (
+        <match.component event={event} markdownMode={markdownMode} />
+      ) : (
+        <UnknownEventRow event={event} />
+      )}
+      <RowActions event={event} />
+    </div>
+  );
 }

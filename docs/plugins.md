@@ -206,13 +206,15 @@
             - `POST /api/conversations/:id/hold-and-exit`
         - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
           - Defines:
-            - Slots: `JsonlViewer.EventRenderer`
+            - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.RowAction`
           - Exports (web):
-            - Types: `EventRendererContribution`
+            - Types: `EventRendererContribution`, `RowActionContribution`
             - Values: `JsonlPane`, `JsonlViewer`
           - Exports (shared):
             - Types: `JsonlEvent`, `JsonlEventsResponse`, `TokenUsage`
             - Values: `jsonlEventsResource`
+          - Contributes:
+            - `JsonlViewer.RowAction` → `RawJsonAction`
           - Server:
             - Uses: `conversations.findTranscriptPath`, `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
@@ -220,6 +222,7 @@
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `AssistantTextRow`
+                - `JsonlViewer.RowAction` → `CopyAssistantTextAction`
             - **`assistant-tool-use`** — Renders assistant tool-use events in the JSONL viewer.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `AssistantToolUseRow`
@@ -235,6 +238,7 @@
             - **`user-tool-result`** — Renders user tool-result events in the JSONL viewer.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `UserToolResultRow`
+                - `JsonlViewer.RowAction` → `CopyToolResultAction`
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Contributes:
             - `conversationPane.Actions` → `ModelBadge`
