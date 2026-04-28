@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { MdEdit } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
@@ -19,6 +19,14 @@ export function DescriptionView({
   const [editing, setEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  useLayoutEffect(() => {
+    if (!editing) return;
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = `${ta.scrollHeight}px`;
+  }, [editing, value]);
+
   if (editing) {
     return (
       <textarea
@@ -32,8 +40,7 @@ export function DescriptionView({
         }}
         autoFocus
         placeholder="Add a description…"
-        rows={10}
-        className="placeholder:text-muted-foreground min-h-48 w-full resize-y rounded border bg-transparent p-3 text-sm outline-none focus:ring-1 focus:ring-ring"
+        className="placeholder:text-muted-foreground min-h-48 w-full resize-none overflow-hidden rounded border bg-transparent p-3 text-sm outline-none focus:ring-1 focus:ring-ring"
       />
     );
   }
