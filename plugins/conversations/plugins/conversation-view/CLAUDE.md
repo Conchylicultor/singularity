@@ -11,7 +11,7 @@
   - Types: `ConversationRecord`, `PromptDraft`, `PromptImageDraft`
   - Values: `Conversation`, `conversationPane`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `isMainPaneId`, `markMainPane`, `PromptDraftProvider`, `usePromptDraft`
 - Contributes:
-  - `Pane.Register`
+  - `Pane.Register` `conversation` (path `/c/:convId`)
   - `conversationPane.Actions` → `ExpandConversationButton`
 - Slot contributors: `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `hold-and-exit`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
 - Sub-plugins:

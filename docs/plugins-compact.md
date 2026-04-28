@@ -21,7 +21,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
     - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`
   - Contributes:
-    - `Pane.Register`
+    - `Pane.Register` `accounts` (path `/accounts`)
     - `Shell.Sidebar` "Accounts" (group `System`)
     - `accountsPane.open`
   - Central:
@@ -53,7 +53,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `Schema`, `ValueOf`, `Values`
     - Values: `defineConfig`, `fullKey`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `validateKind`
   - Contributes:
-    - `Pane.Register`
+    - `Pane.Register` `settings` (path `/settings`)
     - `Shell.Sidebar` "Settings" (group `System`)
     - `settingsPane.open`
   - Server:

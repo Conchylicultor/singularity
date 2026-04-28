@@ -8,7 +8,7 @@
 - Exports (web):
   - Values: `worktreeCleanupPane`
 - Contributes:
-  - `Pane.Register`
+  - `Pane.Register` `worktree-cleanup` (path `/debug/worktree-cleanup`)
   - `Debug.Item` "Worktree Cleanup"
   - `worktreeCleanupPane.open`
 - Server:

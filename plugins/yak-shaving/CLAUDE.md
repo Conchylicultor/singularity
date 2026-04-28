@@ -14,8 +14,8 @@
   - Types: `YakShavingCategory`, `YakShavingNode`
   - Values: `_yakShavingCategories`, `_yakShavingNodes`, `YAK_META_TASK_ID`, `yakShavingCategoriesResource`, `YakShavingCategorySchema`, `YakShavingNodeSchema`, `yakShavingNodesResource`
 - Contributes:
-  - `Pane.Register`
-  - `Pane.Register`
+  - `Pane.Register` `yak-shaving` (path `/yak`)
+  - `Pane.Register` `yak-shaving-conversation` (path `c/:convId`)
   - `Shell.Sidebar` "Yak" (group `System`)
   - `yakShavingPane.open`
 - Server:

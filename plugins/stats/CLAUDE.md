@@ -10,7 +10,7 @@
 - Exports (web):
   - Values: `Stats`, `statsPane`
 - Contributes:
-  - `Pane.Register`
+  - `Pane.Register` `stats` (path `/stats`)
   - `Shell.Sidebar` "Stats" (group `System`)
   - `statsPane.open`
 - Slot contributors: `commits`, `tasks`

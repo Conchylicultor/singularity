@@ -19,6 +19,13 @@ interface CommandDef {
 interface Contribution {
   slot: string; // rendered label like "Shell.Toolbar"
   props: Record<string, string>;
+  paneId?: string;
+  panePath?: string;
+}
+
+interface PaneDefinition {
+  id: string;
+  path?: string;
 }
 
 interface BarrelExport {
@@ -360,6 +367,31 @@ function walkFiles(dir: string, out: string[]): void {
   }
 }
 
+function parsePaneDefinitions(webDir: string): Map<string, PaneDefinition> {
+  const out = new Map<string, PaneDefinition>();
+  if (!existsSync(webDir)) return out;
+  const files: string[] = [];
+  walkFiles(webDir, files);
+  const re = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*Pane\.define\s*\(\s*\{/g;
+  for (const f of files) {
+    const src = readIfExists(f);
+    if (!src) continue;
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src))) {
+      const varName = m[1]!;
+      const openIdx = m.index + m[0].length - 1;
+      const closeIdx = matchBracket(src, openIdx, "{", "}");
+      if (closeIdx < 0) continue;
+      const body = src.slice(openIdx + 1, closeIdx);
+      const id = parseStringField(body, "id");
+      const path = parseStringField(body, "path");
+      if (id) out.set(varName, { id, path });
+    }
+  }
+  return out;
+}
+
 function parseServerApiUses(serverDir: string, selfName: string, runtime: "server" | "central" = "server"): string[] {
   const files: string[] = [];
   walkFiles(serverDir, files);
@@ -497,6 +529,8 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
       )
     : [];
 
+  const paneDefs = parsePaneDefinitions(join(dir, "web"));
+
   const contributions: Contribution[] = [];
   if (webSrc) {
     const block = extractContributionsBlock(webSrc);
@@ -507,7 +541,17 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
         const tail = rest.join(".");
         const imp = importMap.get(head!);
         const displayHead = imp && imp.original !== "default" ? imp.original : head!;
-        contributions.push({ slot: `${displayHead}.${tail}`, props: parsePropsBlock(call.argsBody) });
+        const slot = `${displayHead}.${tail}`;
+        const props = parsePropsBlock(call.argsBody);
+        const contribution: Contribution = { slot, props };
+        if (slot === "Pane.Register" && props["pane"]) {
+          const def = paneDefs.get(props["pane"].trim());
+          if (def) {
+            contribution.paneId = def.id;
+            contribution.panePath = def.path;
+          }
+        }
+        contributions.push(contribution);
       }
     }
   }
@@ -586,7 +630,10 @@ function stripQuotes(s: string): string {
 function renderContribution(c: Contribution): string {
   const parts = [`\`${c.slot}\``];
   const p = c.props;
-  if (p["pattern"]) parts.push(`\`${stripQuotes(p["pattern"])}\``);
+  if (c.paneId) {
+    parts.push(`\`${c.paneId}\``);
+    if (c.panePath) parts.push(`(path \`${c.panePath}\`)`);
+  } else if (p["pattern"]) parts.push(`\`${stripQuotes(p["pattern"])}\``);
   else if (p["title"]) parts.push(`"${stripQuotes(p["title"])}"`);
   else if (p["label"]) parts.push(`"${stripQuotes(p["label"])}"`);
   if (p["group"]) parts.push(`(group \`${stripQuotes(p["group"])}\`)`);
