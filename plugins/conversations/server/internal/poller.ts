@@ -5,6 +5,7 @@ import {
   adoptOrphanConversation,
   recentConversationsResource,
 } from "@plugins/tasks-core/server";
+import { recordCrash } from "@plugins/crashes/server";
 import { Runtime, type RuntimeInfo } from "./runtime";
 import { findTranscriptPath } from "./claude-transcript";
 import type { ConversationStatus } from "../../shared";
@@ -14,6 +15,13 @@ function liveStatusFor(info: RuntimeInfo): ConversationStatus {
 }
 
 const TICK_MS = 1000;
+
+// Grace window between insertConversation and the tmux pane becoming visible
+// to `list-panes`. Within this window, a "starting" row with no live session
+// is normal (worktree git fork, claude warmup). Past it, assume the runtime
+// never came up (crash mid-create, server restart, claude exited before the
+// first poll) and mark gone so the UI moves off "Starting…".
+const STARTING_TIMEOUT_MS = 30_000;
 
 interface LiveEntry extends RuntimeInfo {
   runtime: string;
@@ -134,15 +142,34 @@ async function tick(): Promise<void> {
     changed = true;
   }
 
+  const now = Date.now();
   for (const [id, dbRow] of dbById) {
     if (next.has(id)) continue;
-    if (dbRow.status === "starting") continue;
     if (dbRow.status === "gone") continue;
     // Runtime list failed (e.g. tmux unreachable under FD pressure). We
     // can't tell whether the session is alive, so leave status alone and
     // wait for a tick where the runtime answers — better than declaring
     // every working/waiting conversation gone on a transient hiccup.
     if (failedRuntimes.has(dbRow.runtime)) continue;
+    if (dbRow.status === "starting") {
+      const ageMs = now - dbRow.createdAt.getTime();
+      if (ageMs < STARTING_TIMEOUT_MS) continue;
+      // Stuck-in-"starting" past the grace window means runtime.create's
+      // error path didn't run (server killed mid-create, runtime succeeded
+      // but the pane vanished before the first tick, future code path that
+      // bypassed handle-create's wrapper). The originating exception — if
+      // any — was already reported by process-hooks; this is a separate
+      // signal that the safety net actually fired. Dedup keeps repeats
+      // collapsed into one task with a growing count.
+      await recordCrash({
+        source: "server-caught",
+        errorType: "StuckStartingError",
+        message: `Conversation ${id} stuck in "starting" for ${Math.round(ageMs / 1000)}s with no live session — sweeping to gone`,
+        label: "conversations.poller.startingTimeout",
+      }).catch((e) => {
+        console.error("[conversations.poller] recordCrash failed", e);
+      });
+    }
     await updateConversation(id, { status: "gone", endedAt: new Date() });
     changed = true;
   }

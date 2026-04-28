@@ -1,6 +1,7 @@
 export type CrashSource =
   | "server-uncaught"
   | "server-unhandled"
+  | "server-caught"
   | "browser-error"
   | "browser-rejection"
   | "react-boundary";

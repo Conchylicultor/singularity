@@ -126,7 +126,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `Conversation`, `ConversationEntry`, `ConversationKind`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
   - Server:
-    - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.insertConversation`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
+    - Uses: `crashes.recordCrash`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.insertConversation`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/gone`
     - `GET /api/conversations/:id`
@@ -355,6 +355,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
     - Resources: `crashes` (push)
     - `POST /api/crashes`
+  - Imported by: `conversations`
 
 - **`debug`** — Debug tools sidebar group.
   - Defines:

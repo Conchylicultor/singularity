@@ -52,7 +52,14 @@ export function LaunchButtons({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model, ...request }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(
+          `Launch failed (${res.status}${res.statusText ? ` ${res.statusText}` : ""})${
+            detail ? `: ${detail.slice(0, 200)}` : ""
+          }`,
+        );
+      }
       const conversation = ConversationSchema.parse(await res.json());
       onLaunched?.(conversation);
       if (openAfterLaunch) {

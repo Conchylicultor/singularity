@@ -7,6 +7,7 @@ import {
   insertConversation,
   getConversation,
   getConversationRuntime,
+  updateConversation,
 } from "@plugins/tasks-core/server";
 import { Runtime } from "./runtime";
 import type { ConversationModel } from "../schema";
@@ -130,12 +131,28 @@ export async function createConversation(
     kind: opts.kind ?? "user",
   });
 
-  await runtime.create(conversationId, worktreePath, {
-    prompt: opts.prompt,
-    model,
-    resumeSessionId,
-    forkSession: !!opts.forkFromConversationId,
-  });
+  try {
+    await runtime.create(conversationId, worktreePath, {
+      prompt: opts.prompt,
+      model,
+      resumeSessionId,
+      forkSession: !!opts.forkFromConversationId,
+    });
+  } catch (err) {
+    // Without this, the row stays at "starting" forever — the poller skips
+    // starting rows, and the UI just shows "Starting…" with a terminal pane
+    // that prints "can't find session" because tmux never created one.
+    await updateConversation(conversationId, {
+      status: "gone",
+      endedAt: new Date(),
+    }).catch((e) => {
+      console.error(
+        `[conversations] failed to mark ${conversationId} gone after runtime.create error`,
+        e,
+      );
+    });
+    throw err;
+  }
 
   const row = await getConversation(conversationId);
   const conv = row as Conversation;
