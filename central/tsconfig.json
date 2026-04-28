@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "types": ["@types/bun"],
+    "paths": {
+      "@plugins/*": ["../plugins/*"],
+      "@central/*": ["./src/*"],
+      "@core/*": ["../plugin-core/*"]
+    }
+  },
+  "include": [
+    "src",
+    "../plugin-core/shared",
+    "../plugins/*/central",
+    "../plugins/*/plugins/*/central",
+    "../plugins/*/plugins/*/plugins/*/central",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/central"
+  ]
+}

@@ -1,13 +1,51 @@
 import type { Command } from "commander";
-import { mkdirSync, unlinkSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
 import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
 import { basename, join, resolve } from "path";
 import { homedir } from "os";
 import { generateMigration } from "../migrations";
-import { generatePluginDocs } from "../docgen";
+import { generatePluginDocs, collectAllPlugins } from "../docgen";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
-const WORKTREES_DIR = join(homedir(), ".singularity", "worktrees");
+const SINGULARITY_DIR = join(homedir(), ".singularity");
+const WORKTREES_DIR = join(SINGULARITY_DIR, "worktrees");
+const CENTRAL_ROUTES_FILE = join(SINGULARITY_DIR, "central-routes.json");
+
+interface CentralRoutesManifest {
+  backend: string;
+  routes: string[];
+}
+
+/**
+ * Collect path prefixes from every plugin's `central/index.ts`. HTTP route
+ * keys are method-prefixed (`"GET /api/auth/state"`); we strip the method
+ * and truncate at the first `/:param` to get a forward-routable prefix.
+ * WS routes are taken as-is (literal paths).
+ */
+function collectCentralRoutes(root: string): string[] {
+  const out = new Set<string>();
+  for (const p of collectAllPlugins(root)) {
+    for (const route of p.centralHttpRoutes) {
+      const space = route.indexOf(" ");
+      const path = space >= 0 ? route.slice(space + 1) : route;
+      const colon = path.indexOf("/:");
+      out.add(colon >= 0 ? path.slice(0, colon + 1) : path);
+    }
+    for (const route of p.centralWsRoutes) out.add(route);
+  }
+  return Array.from(out).sort();
+}
+
+async function writeCentralRoutesManifest(root: string): Promise<void> {
+  const manifest: CentralRoutesManifest = {
+    backend: "central",
+    routes: collectCentralRoutes(root),
+  };
+  mkdirSync(SINGULARITY_DIR, { recursive: true });
+  const tmp = `${CENTRAL_ROUTES_FILE}.tmp.${process.pid}`;
+  writeFileSync(tmp, JSON.stringify(manifest, null, 2) + "\n");
+  await rename(tmp, CENTRAL_ROUTES_FILE);
+}
 
 // Staging / old-dir prefixes inside web/ for atomic publish. Each invocation
 // builds into `dist.staging.<pid>/` and atomically renames to `dist/` at the
@@ -292,6 +330,13 @@ export function registerBuild(program: Command) {
       console.log("Type-checking server...");
       await exec(["bunx", "tsc"], resolve(root, "server"));
 
+      // 4b. Type-check central if present. Same rationale as server.
+      const centralDir = resolve(root, "central");
+      if (existsSync(join(centralDir, "src", "index.ts"))) {
+        console.log("Type-checking central...");
+        await exec(["bunx", "tsc"], centralDir);
+      }
+
       // 5. Build frontend into a per-pid staging dir, then atomically
       // publish. Vite reads `VITE_OUT_DIR` (see web/vite.config.ts).
       const stagingName = `${STAGING_PREFIX}${process.pid}`;
@@ -327,6 +372,12 @@ export function registerBuild(program: Command) {
         join(WORKTREES_DIR, `${name}.json`),
         JSON.stringify(spec, null, 2) + "\n",
       );
+
+      // 6b. Emit the central routing manifest. The gateway watches this file
+      // and forwards listed paths to the central backend regardless of host.
+      // Phase 1 produces an empty `routes` list (no central plugins yet);
+      // subsequent phases populate it as auth/secrets migrate to central.
+      await writeCentralRoutesManifest(root);
 
       // 4. Restart the backend if the gateway has it running
       if (!opts.restart) {

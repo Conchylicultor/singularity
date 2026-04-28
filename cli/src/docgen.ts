@@ -39,9 +39,14 @@ interface PluginInfo {
   wsRoutes: string[];
   webExports: BarrelExport[];
   serverExports: BarrelExport[];
+  centralExports: BarrelExport[];
   sharedExports: BarrelExport[];
   apiUses: string[];
   resources: { key: string; mode: string }[];
+  centralHttpRoutes: string[];
+  centralWsRoutes: string[];
+  centralApiUses: string[];
+  centralResources: { key: string; mode: string }[];
   children: PluginInfo[];
 }
 
@@ -67,7 +72,8 @@ function findAllPluginDirs(pluginsRoot: string): string[] {
     if (depth > 10) return;
     const hasWeb = existsSync(join(dir, "web", "index.ts"));
     const hasServer = existsSync(join(dir, "server", "index.ts"));
-    if ((hasWeb || hasServer) && dir !== pluginsRoot) out.push(dir);
+    const hasCentral = existsSync(join(dir, "central", "index.ts"));
+    if ((hasWeb || hasServer || hasCentral) && dir !== pluginsRoot) out.push(dir);
 
     let entries;
     try {
@@ -340,11 +346,11 @@ function walkFiles(dir: string, out: string[]): void {
   }
 }
 
-function parseServerApiUses(serverDir: string, selfName: string): string[] {
+function parseServerApiUses(serverDir: string, selfName: string, runtime: "server" | "central" = "server"): string[] {
   const files: string[] = [];
   walkFiles(serverDir, files);
   const uses = new Set<string>();
-  const modRe = /@plugins\/([^/"'`]+)\/server(?:\/(?:api(?:\/index)?|index))?$/;
+  const modRe = new RegExp(`@plugins\\/([^/"'\`]+)\\/${runtime}(?:\\/(?:api(?:\\/index)?|index))?$`);
   const namedRe =
     /import\s+(?:([A-Za-z_$][\w$]*)\s*,\s*)?\{([^}]+)\}\s*from\s*["']([^"']+)["']/g;
   const nsRe =
@@ -440,16 +446,20 @@ function findDbFiles(pluginDir: string): string[] {
 function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
   const webIndex = readIfExists(join(dir, "web", "index.ts"));
   const serverIndex = readIfExists(join(dir, "server", "index.ts"));
+  const centralIndex = readIfExists(join(dir, "central", "index.ts"));
   const slotsSrc = readIfExists(join(dir, "web", "slots.ts"));
   const commandsSrc = readIfExists(join(dir, "web", "commands.ts"));
   const dbFiles = findDbFiles(dir);
 
   const webSrc = webIndex ? stripTypes(webIndex) : null;
   const serverSrc = serverIndex ? stripTypes(serverIndex) : null;
+  const centralSrc = centralIndex ? stripTypes(centralIndex) : null;
 
   const webDesc = webSrc ? parseStringField(webSrc, "description") : undefined;
   const serverDesc = serverSrc ? parseStringField(serverSrc, "description") : undefined;
-  const description = [webDesc, serverDesc].filter(Boolean).join(" ") || undefined;
+  const centralDesc = centralSrc ? parseStringField(centralSrc, "description") : undefined;
+  const description =
+    [webDesc, serverDesc, centralDesc].filter(Boolean).join(" ") || undefined;
 
   const definedSlots = slotsSrc
     ? parseDefineGroup(stripTypes(slotsSrc), "defineSlot", (memberName, slotId, groupName) => ({
@@ -483,12 +493,15 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
 
   const httpRoutes = serverSrc ? parseRouteMap(serverSrc, "httpRoutes") : [];
   const wsRoutes = serverSrc ? parseRouteMap(serverSrc, "wsRoutes") : [];
+  const centralHttpRoutes = centralSrc ? parseRouteMap(centralSrc, "httpRoutes") : [];
+  const centralWsRoutes = centralSrc ? parseRouteMap(centralSrc, "wsRoutes") : [];
 
   // Parse barrels on raw source (not stripTypes): the Bun transpiler drops
   // `export type { ... }` re-exports entirely, and our regex is already
   // type-aware.
   const webExports = webIndex ? parseBarrelExports(webIndex) : [];
   const serverExports = serverIndex ? parseBarrelExports(serverIndex) : [];
+  const centralExports = centralIndex ? parseBarrelExports(centralIndex) : [];
 
   const sharedIndex = readIfExists(join(dir, "shared", "index.ts"));
   const sharedExports = sharedIndex ? parseBarrelExports(sharedIndex) : [];
@@ -496,6 +509,11 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
   const serverDir = join(dir, "server");
   const apiUses = existsSync(serverDir) ? parseServerApiUses(serverDir, basename(dir)) : [];
   const resources = existsSync(serverDir) ? parseResources(serverDir) : [];
+  const centralDir = join(dir, "central");
+  const centralApiUses = existsSync(centralDir)
+    ? parseServerApiUses(centralDir, basename(dir), "central")
+    : [];
+  const centralResources = existsSync(centralDir) ? parseResources(centralDir) : [];
 
   const rel = relative(pluginsRoot, dir);
   const segs = rel.split(/[\\/]+/);
@@ -517,9 +535,14 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
     wsRoutes,
     webExports,
     serverExports,
+    centralExports,
     sharedExports,
     apiUses,
     resources,
+    centralHttpRoutes,
+    centralWsRoutes,
+    centralApiUses,
+    centralResources,
     children: [],
   };
 }
@@ -547,7 +570,7 @@ function renderContribution(c: Contribution): string {
 }
 
 function renderExports(
-  runtime: "web" | "server" | "shared",
+  runtime: "web" | "server" | "central" | "shared",
   exports: BarrelExport[],
   indent: string,
   lines: string[],
@@ -595,6 +618,7 @@ function renderPlugin(p: PluginInfo, depth: number, root: string): string[] {
 
   renderExports("web", p.webExports, indent, lines);
   renderExports("server", p.serverExports, indent, lines);
+  renderExports("central", p.centralExports, indent, lines);
   renderExports("shared", p.sharedExports, indent, lines);
 
   if (p.contributions.length > 0) {
@@ -621,6 +645,29 @@ function renderPlugin(p: PluginInfo, depth: number, root: string): string[] {
     for (const r of serverEntries) lines.push(`${indent}    - \`${r}\``);
   }
 
+  const centralEntries = [
+    ...p.centralHttpRoutes,
+    ...p.centralWsRoutes.map((r) => `WS ${r}`),
+  ];
+  if (
+    centralEntries.length > 0 ||
+    p.centralApiUses.length > 0 ||
+    p.centralResources.length > 0
+  ) {
+    lines.push(`${indent}  - Central:`);
+    if (p.centralApiUses.length > 0) {
+      lines.push(
+        `${indent}    - Uses: ${p.centralApiUses.map((n) => `\`${n}\``).join(", ")}`,
+      );
+    }
+    if (p.centralResources.length > 0) {
+      lines.push(
+        `${indent}    - Resources: ${p.centralResources.map((r) => `\`${r.key}\` (${r.mode})`).join(", ")}`,
+      );
+    }
+    for (const r of centralEntries) lines.push(`${indent}    - \`${r}\``);
+  }
+
   if (p.children.length > 0) {
     lines.push(`${indent}  - Plugins:`);
     for (const c of p.children) lines.push(...renderPlugin(c, depth + 2, root));
@@ -632,6 +679,19 @@ function renderPlugin(p: PluginInfo, depth: number, root: string): string[] {
 export interface GenerateDocsOptions {
   root: string;
 }
+
+/**
+ * Walk plugins/ and return one PluginInfo per discovered plugin (flat list,
+ * including nested sub-plugins). Used by build to derive the central routing
+ * manifest.
+ */
+export function collectAllPlugins(root: string): PluginInfo[] {
+  const pluginsRoot = resolve(root, "plugins");
+  const dirs = findAllPluginDirs(pluginsRoot);
+  return dirs.map((d) => collectPlugin(d, pluginsRoot));
+}
+
+export type { PluginInfo };
 
 export function renderPluginDocs({ root }: GenerateDocsOptions): string {
   const pluginsRoot = resolve(root, "plugins");

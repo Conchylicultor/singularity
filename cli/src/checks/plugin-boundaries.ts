@@ -15,9 +15,11 @@ const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
   "web/src/plugins.ts",
   "server/src/plugins.ts",
   "server/src/index.ts",
+  "central/src/plugins.ts",
+  "central/src/index.ts",
 ]);
 
-const VALID_RUNTIMES = new Set(["web", "server", "shared"]);
+const VALID_RUNTIMES = new Set(["web", "server", "central", "shared"]);
 
 const PUSH_BACK_HINT =
   "Do NOT work around these violations by editing `plugin-boundaries.ts`, expanding the skip list, " +
@@ -76,7 +78,7 @@ export const pluginBoundaries: Check = {
     // R3: barrel purity for every index.ts under each plugin's runtime folders
     for (const p of plugins) {
       if (skippedSet.has(p.relPath)) continue;
-      for (const runtime of ["web", "server", "shared"] as const) {
+      for (const runtime of ["web", "server", "central", "shared"] as const) {
         const barrel = join(p.absPath, runtime, "index.ts");
         if (!existsSync(barrel)) continue;
         checkBarrelPurity(barrel, relative(root, barrel), violations);
@@ -147,16 +149,17 @@ export const pluginBoundaries: Check = {
       }
     }
 
-    // R6: detect cycles — run separately per runtime so web and server graphs
+    // R6: detect cycles — run separately per runtime so web/server/central graphs
     // are never conflated (a cross-runtime path is not a real cycle).
     const edgeList = Array.from(edges).map((e) => {
       const parts = e.split("\0");
-      return { from: parts[0]!, to: parts[1]!, runtime: parts[2] as "web" | "server" | "shared" };
+      return { from: parts[0]!, to: parts[1]!, runtime: parts[2] as "web" | "server" | "central" | "shared" };
     });
-    // Shared code is reachable from both runtimes.
+    // Shared code is reachable from every runtime.
     const webEdges = edgeList.filter((e) => e.runtime === "web" || e.runtime === "shared");
     const serverEdges = edgeList.filter((e) => e.runtime === "server" || e.runtime === "shared");
-    const cycle = detectCycle(webEdges) ?? detectCycle(serverEdges);
+    const centralEdges = edgeList.filter((e) => e.runtime === "central" || e.runtime === "shared");
+    const cycle = detectCycle(webEdges) ?? detectCycle(serverEdges) ?? detectCycle(centralEdges);
     if (cycle) {
       violations.push({
         rule: "cycle",
@@ -186,7 +189,8 @@ function discoverPlugins(pluginsRoot: string): PluginDir[] {
     if (depth > 10) return;
     const hasWeb = existsSync(join(dir, "web", "index.ts"));
     const hasServer = existsSync(join(dir, "server", "index.ts"));
-    if ((hasWeb || hasServer) && dir !== pluginsRoot) {
+    const hasCentral = existsSync(join(dir, "central", "index.ts"));
+    if ((hasWeb || hasServer || hasCentral) && dir !== pluginsRoot) {
       const relPath = relative(pluginsRoot, dir).split(sep).join("/");
       out.push({ relPath, absPath: dir, name: basename(dir) });
     }
@@ -210,8 +214,11 @@ function discoverPlugins(pluginsRoot: string): PluginDir[] {
   return out;
 }
 
-/** Return the runtime ("web" | "server" | "shared") of `relFile`, or null if unknown. */
-function runtimeForPath(relFile: string, pluginSet: Set<string>): "web" | "server" | "shared" | null {
+/** Return the runtime ("web" | "server" | "central" | "shared") of `relFile`, or null if unknown. */
+function runtimeForPath(
+  relFile: string,
+  pluginSet: Set<string>,
+): "web" | "server" | "central" | "shared" | null {
   const norm = relFile.split(sep).join("/");
   const pluginPath = pluginForPath(relFile, pluginSet);
   if (!pluginPath) return null;
@@ -219,6 +226,7 @@ function runtimeForPath(relFile: string, pluginSet: Set<string>): "web" | "serve
   const segment = afterPlugin.split("/")[0];
   if (segment === "web") return "web";
   if (segment === "server") return "server";
+  if (segment === "central") return "central";
   if (segment === "shared") return "shared";
   return null;
 }
@@ -241,7 +249,7 @@ function pluginForPath(relFile: string, pluginSet: Set<string>): string | null {
 // Source-file discovery
 // ============================================================================
 
-const SOURCE_ROOTS = ["plugins", "web/src", "server/src"];
+const SOURCE_ROOTS = ["plugins", "web/src", "server/src", "central/src"];
 const IGNORED_DIRS = new Set(["node_modules", "dist", "build", ".git"]);
 
 function findSourceFiles(root: string): string[] {

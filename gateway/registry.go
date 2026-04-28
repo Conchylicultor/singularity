@@ -211,11 +211,15 @@ func loadSpec(path string) (*Spec, error) {
 	if err := json.Unmarshal(data, &spec); err != nil {
 		return nil, fmt.Errorf("parse: %w", err)
 	}
-	if spec.Server == "" || spec.Web == "" {
-		return nil, errors.New("server and web are required")
+	if spec.Server == "" {
+		return nil, errors.New("server is required")
 	}
-	if !filepath.IsAbs(spec.Server) || !filepath.IsAbs(spec.Web) {
-		return nil, errors.New("server and web must be absolute paths")
+	if !filepath.IsAbs(spec.Server) {
+		return nil, errors.New("server must be an absolute path")
+	}
+	// Web is optional — headless backends (e.g. central) have no UI bundle.
+	if spec.Web != "" && !filepath.IsAbs(spec.Web) {
+		return nil, errors.New("web must be an absolute path when provided")
 	}
 	return &spec, nil
 }

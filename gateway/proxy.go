@@ -16,11 +16,12 @@ import (
 // Proxy is the gateway's top-level http.Handler. It dispatches every request
 // to one of: gateway API, static file, backend HTTP proxy, or backend WS proxy.
 type Proxy struct {
-	reg *Registry
+	reg    *Registry
+	routes *CentralRoutesStore
 }
 
-func NewProxy(reg *Registry) *Proxy {
-	return &Proxy{reg: reg}
+func NewProxy(reg *Registry, routes *CentralRoutesStore) *Proxy {
+	return &Proxy{reg: reg, routes: routes}
 }
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -32,10 +33,20 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Central routing manifest: paths declared by central plugins are forwarded
+	// to the singleton central backend regardless of which host the request
+	// arrived on (including bare localhost). The manifest is written by
+	// `./singularity build` to ~/.singularity/central-routes.json and watched
+	// for changes — see central_routes.go.
+	if backend := p.routes.Get().Match(r.URL.Path); backend != "" {
+		worktreeName = backend
+	}
+
 	// Auth callbacks are forced to bare `localhost:9000` because Google rejects
 	// `*.localhost` redirect URIs in OAuth client config. Route the narrow
 	// `/api/auth/{start,callback}/*` prefix on bare-localhost to the singularity
-	// backend so it can complete the OAuth dance.
+	// backend so it can complete the OAuth dance. (Will be replaced by the
+	// central routing manifest once the auth plugin migrates to central.)
 	if worktreeName == "" {
 		if strings.HasPrefix(r.URL.Path, "/api/auth/start/") ||
 			strings.HasPrefix(r.URL.Path, "/api/auth/callback/") {
@@ -71,6 +82,11 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // so the SPA can handle client-side routing.
 func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktree) {
 	webDir := wt.Spec().Web
+	if webDir == "" {
+		// Headless backend (e.g. central) — no static bundle to serve.
+		http.NotFound(w, r)
+		return
+	}
 	upath := path.Clean(r.URL.Path)
 	if upath == "/" || upath == "." {
 		upath = "/index.html"

@@ -14,18 +14,19 @@ import (
 
 // Config holds all gateway settings, parsed from command-line flags.
 type Config struct {
-	Listen         string
-	IdleTimeout    time.Duration
-	ShutdownGrace  time.Duration
-	ReadyTimeout   time.Duration
-	PortMin        int
-	PortMax        int
-	SweepInterval  time.Duration
-	BrokenCooldown time.Duration
-	LogLevel       string
-	LogFormat      string
-	LogBufferLines int
-	RegistryDir    string
+	Listen            string
+	IdleTimeout       time.Duration
+	ShutdownGrace     time.Duration
+	ReadyTimeout      time.Duration
+	PortMin           int
+	PortMax           int
+	SweepInterval     time.Duration
+	BrokenCooldown    time.Duration
+	LogLevel          string
+	LogFormat         string
+	LogBufferLines    int
+	RegistryDir       string
+	CentralRoutesFile string
 }
 
 func parseFlags() Config {
@@ -45,6 +46,8 @@ func parseFlags() Config {
 	home, _ := os.UserHomeDir()
 	defaultRegistry := filepath.Join(home, ".singularity", "worktrees")
 	flag.StringVar(&cfg.RegistryDir, "registry-dir", defaultRegistry, "directory of worktree JSON files")
+	defaultCentralRoutes := filepath.Join(home, ".singularity", "central-routes.json")
+	flag.StringVar(&cfg.CentralRoutesFile, "central-routes-file", defaultCentralRoutes, "path to the central routing manifest")
 
 	flag.Parse()
 	return cfg
@@ -83,6 +86,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	routes := NewCentralRoutesStore(cfg.CentralRoutesFile)
+
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
@@ -91,11 +96,16 @@ func main() {
 			slog.Error("watcher exited with error", "err", err)
 		}
 	}()
+	go func() {
+		if err := routes.Watch(ctx); err != nil {
+			slog.Error("central routes watcher exited with error", "err", err)
+		}
+	}()
 	go reg.Sweep(ctx)
 
 	srv := &http.Server{
 		Addr:              cfg.Listen,
-		Handler:           NewProxy(reg),
+		Handler:           NewProxy(reg, routes),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
