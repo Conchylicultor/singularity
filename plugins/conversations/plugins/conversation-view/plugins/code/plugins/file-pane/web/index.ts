@@ -5,3 +5,4 @@ export type {
   FileRendererTarget,
   RendererMatch,
 } from "./slots";
+export { convFilePeekPane } from "./file-peek-pane";

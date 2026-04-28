@@ -48,6 +48,7 @@ import welcomePlugin from "@plugins/welcome/web";
 import launchPlugin from "@plugins/primitives/plugins/launch/web";
 import treePlugin from "@plugins/primitives/plugins/tree/web";
 import syntaxHighlightPlugin from "@plugins/primitives/plugins/syntax-highlight/web";
+import fileLinksPlugin from "@plugins/primitives/plugins/file-links/web";
 import primitivesPlugin from "@plugins/primitives/web";
 import liveStatePlugin from "@plugins/primitives/plugins/live-state/web";
 import networkingPlugin from "@plugins/primitives/plugins/networking/web";
@@ -79,6 +80,7 @@ export const plugins: PluginDefinition[] = [
   launchPlugin,
   treePlugin,
   syntaxHighlightPlugin,
+  fileLinksPlugin,
   primitivesPlugin,
   liveStatePlugin,
   networkingPlugin,

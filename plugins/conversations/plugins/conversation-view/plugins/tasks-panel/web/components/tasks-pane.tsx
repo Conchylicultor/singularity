@@ -3,9 +3,10 @@ import { MdClose, MdArrowUpward } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { TasksList, TaskDetail } from "@plugins/tasks/web";
 import { tasksResource } from "@plugins/tasks/shared";
-import { convTasksPane, convFilePeekPane } from "../panes";
+import { convTasksPane } from "../panes";
 
 export function TasksPane() {
   const { conversation } = conversationPane.useData();
@@ -63,7 +64,11 @@ export function TasksPane() {
           key={selectedId}
           taskId={selectedId}
           onFileOpen={(path) =>
-            convFilePeekPane.open({ convId: conversation.id, filePath: path })
+            convFilePeekPane.open({
+              convId: conversation.id,
+              worktree: "main",
+              filePath: path,
+            })
           }
         />
       </div>

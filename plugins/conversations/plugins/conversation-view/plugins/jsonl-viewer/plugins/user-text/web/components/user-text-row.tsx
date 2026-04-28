@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
+import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent } from "../../../../shared";
 import { formatTime } from "../../../../web/utils";
 
@@ -21,9 +24,17 @@ const FADE_MASK = "linear-gradient(to bottom, black 65%, transparent 100%)";
 
 export function UserTextRow({ event }: { event: JsonlEvent }) {
   const e = event as UserTextEvent;
+  const { conversation } = conversationPane.useData();
   const collapsible = isLong(e.text);
   const [expanded, setExpanded] = useState(false);
   const showCollapsed = collapsible && !expanded;
+
+  const onFileOpen = (path: string) =>
+    convFilePeekPane.open({
+      convId: conversation.id,
+      worktree: conversation.attemptId,
+      filePath: path,
+    });
 
   return (
     <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2">
@@ -41,7 +52,7 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
             : undefined
         }
       >
-        {e.text}
+        <FileLinkText text={e.text} onFileOpen={onFileOpen} />
       </div>
       {collapsible ? (
         <button

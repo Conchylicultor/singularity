@@ -1,0 +1,43 @@
+import {
+  Children,
+  cloneElement,
+  Fragment,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+} from "react";
+import { FileLinkText } from "./file-link-text";
+
+const SKIP_TYPES = new Set(["code", "pre", "a"]);
+
+// Recursively walks a ReactNode tree and replaces plain string nodes with
+// linkified versions. Skips `code`, `pre`, and `a` so file paths inside code
+// blocks or existing links aren't double-handled. Use this in ReactMarkdown
+// component overrides:
+//
+//   p: ({ children, ...p }) => (
+//     <p {...p}>{linkifyChildren(children, onFileOpen)}</p>
+//   )
+export function linkifyChildren(
+  children: ReactNode,
+  onFileOpen?: (path: string) => void,
+): ReactNode {
+  if (children == null || typeof children === "boolean") return children;
+  if (typeof children === "string") {
+    return <FileLinkText text={children} onFileOpen={onFileOpen} />;
+  }
+  if (typeof children === "number") return children;
+  if (Array.isArray(children)) {
+    return Children.map(children, (child, i) => (
+      <Fragment key={i}>{linkifyChildren(child, onFileOpen)}</Fragment>
+    ));
+  }
+  if (isValidElement(children)) {
+    const el = children as ReactElement<{ children?: ReactNode }>;
+    if (typeof el.type === "string" && SKIP_TYPES.has(el.type)) return el;
+    const inner = el.props?.children;
+    if (inner === undefined) return el;
+    return cloneElement(el, undefined, linkifyChildren(inner, onFileOpen));
+  }
+  return children;
+}

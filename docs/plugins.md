@@ -161,7 +161,7 @@
                 - Slots: `FilePane.Renderer`
               - Exports (web):
                 - Types: `FileRendererContribution`, `FileRendererTarget`, `RendererMatch`
-                - Values: `FilePane`, `FilePaneView`, `resolveRenderers`
+                - Values: `convFilePeekPane`, `FilePane`, `FilePaneView`, `resolveRenderers`
               - Plugins:
                 - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
                   - Contributes:
@@ -471,6 +471,10 @@
       - Exports (web):
         - Types: `EditableField`, `UseEditableFieldOptions`
         - Values: `useEditableField`
+    - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable buttons that fire onFileOpen. Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides.
+      - Exports (web):
+        - Types: `FileLinkSegment`, `FileLinkTextProps`
+        - Values: `FILE_PATH_RE`, `FileLinkText`, `linkifyChildren`, `parseFileLinks`
     - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
       - Exports (web):
         - Types: `LaunchButtonsProps`, `LaunchRequest`

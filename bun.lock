@@ -324,6 +324,10 @@
       "name": "@singularity/plugin-primitives-editable-field",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/file-links": {
+      "name": "@singularity/plugin-primitives-file-links",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/launch": {
       "name": "@singularity/plugin-primitives-launch",
       "version": "0.0.1",
@@ -1039,6 +1043,8 @@
     "@singularity/plugin-primitives-auto-scroll": ["@singularity/plugin-primitives-auto-scroll@workspace:plugins/primitives/plugins/auto-scroll"],
 
     "@singularity/plugin-primitives-editable-field": ["@singularity/plugin-primitives-editable-field@workspace:plugins/primitives/plugins/editable-field"],
+
+    "@singularity/plugin-primitives-file-links": ["@singularity/plugin-primitives-file-links@workspace:plugins/primitives/plugins/file-links"],
 
     "@singularity/plugin-primitives-launch": ["@singularity/plugin-primitives-launch@workspace:plugins/primitives/plugins/launch"],
 

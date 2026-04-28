@@ -1,10 +1,18 @@
 import { MdClose } from "react-icons/md";
 import { Button } from "@/components/ui/button";
-import { FilePaneView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
-import { convFilePeekPane } from "../panes";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { FilePaneView } from "./components/file-pane";
 
-export function ConvFilePeekPane() {
-  const { filePath } = convFilePeekPane.useParams();
+export const convFilePeekPane = Pane.define({
+  id: "conv-file-peek",
+  parent: conversationPane,
+  path: "file/:worktree/:filePath*",
+  component: ConvFilePeekPaneBody,
+});
+
+function ConvFilePeekPaneBody() {
+  const { worktree, filePath } = convFilePeekPane.useParams();
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex shrink-0 items-center gap-2 border-b px-2 py-1.5">
@@ -20,7 +28,7 @@ export function ConvFilePeekPane() {
         </Button>
       </div>
       <div className="min-h-0 flex-1 overflow-hidden">
-        <FilePaneView worktree="main" path={filePath} status="clean" />
+        <FilePaneView worktree={worktree} path={filePath} status="clean" />
       </div>
     </div>
   );

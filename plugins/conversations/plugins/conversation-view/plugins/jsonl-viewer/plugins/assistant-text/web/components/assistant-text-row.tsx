@@ -3,6 +3,12 @@ import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
+import {
+  FileLinkText,
+  linkifyChildren,
+} from "@plugins/primitives/plugins/file-links/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent } from "../../../../shared";
 import { CopyButton } from "../../../../web/components/copy-button";
 import { TokenBadge } from "../../../../web/components/token-badge";
@@ -28,42 +34,66 @@ function langFromClassName(className: string | undefined): string | null {
   return match?.[1] ?? null;
 }
 
-const MD_COMPONENTS: Components = {
-  h1: (p) => <h1 className="mt-4 mb-2 text-2xl font-semibold" {...p} />,
-  h2: (p) => <h2 className="mt-4 mb-2 text-xl font-semibold" {...p} />,
-  h3: (p) => <h3 className="mt-3 mb-1.5 text-lg font-semibold" {...p} />,
-  h4: (p) => <h4 className="mt-3 mb-1 font-semibold" {...p} />,
-  p: (p) => <p className="my-2" {...p} />,
-  a: ({ href, ...p }) => (
-    <a
-      className="text-primary underline"
-      href={href}
-      target={href?.startsWith("http") ? "_blank" : undefined}
-      rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
-      {...p}
-    />
-  ),
-  ul: (p) => <ul className="my-2 list-disc pl-6" {...p} />,
-  ol: (p) => <ol className="my-2 list-decimal pl-6" {...p} />,
-  li: (p) => <li className="my-0.5" {...p} />,
-  blockquote: (p) => (
-    <blockquote className="my-2 border-l-2 border-muted-foreground/30 pl-3 text-muted-foreground" {...p} />
-  ),
-  hr: (p) => <hr className="my-4 border-border" {...p} />,
-  code: ({ className, children, ...rest }) => {
-    const lang = langFromClassName(className);
-    const text = nodeToText(children).replace(/\n$/, "");
-    const isBlock = lang !== null || text.includes("\n");
-    if (isBlock) {
-      return <HighlightedCode code={text} lang={lang} />;
-    }
-    return <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs" {...rest}>{children}</code>;
-  },
-  pre: ({ children }) => <>{children}</>,
-  table: (p) => <table className="my-2 w-full border-collapse" {...p} />,
-  th: (p) => <th className="border border-border bg-muted px-2 py-1 text-left" {...p} />,
-  td: (p) => <td className="border border-border px-2 py-1" {...p} />,
-};
+function buildMdComponents(onFileOpen: (path: string) => void): Components {
+  const link = (children: ReactNode) => linkifyChildren(children, onFileOpen);
+  return {
+    h1: ({ children, ...p }) => (
+      <h1 className="mt-4 mb-2 text-2xl font-semibold" {...p}>{link(children)}</h1>
+    ),
+    h2: ({ children, ...p }) => (
+      <h2 className="mt-4 mb-2 text-xl font-semibold" {...p}>{link(children)}</h2>
+    ),
+    h3: ({ children, ...p }) => (
+      <h3 className="mt-3 mb-1.5 text-lg font-semibold" {...p}>{link(children)}</h3>
+    ),
+    h4: ({ children, ...p }) => (
+      <h4 className="mt-3 mb-1 font-semibold" {...p}>{link(children)}</h4>
+    ),
+    p: ({ children, ...p }) => (
+      <p className="my-2" {...p}>{link(children)}</p>
+    ),
+    a: ({ href, ...p }) => (
+      <a
+        className="text-primary underline"
+        href={href}
+        target={href?.startsWith("http") ? "_blank" : undefined}
+        rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
+        {...p}
+      />
+    ),
+    ul: (p) => <ul className="my-2 list-disc pl-6" {...p} />,
+    ol: (p) => <ol className="my-2 list-decimal pl-6" {...p} />,
+    li: ({ children, ...p }) => (
+      <li className="my-0.5" {...p}>{link(children)}</li>
+    ),
+    blockquote: ({ children, ...p }) => (
+      <blockquote
+        className="my-2 border-l-2 border-muted-foreground/30 pl-3 text-muted-foreground"
+        {...p}
+      >
+        {link(children)}
+      </blockquote>
+    ),
+    hr: (p) => <hr className="my-4 border-border" {...p} />,
+    code: ({ className, children, ...rest }) => {
+      const lang = langFromClassName(className);
+      const text = nodeToText(children).replace(/\n$/, "");
+      const isBlock = lang !== null || text.includes("\n");
+      if (isBlock) {
+        return <HighlightedCode code={text} lang={lang} />;
+      }
+      return <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs" {...rest}>{children}</code>;
+    },
+    pre: ({ children }) => <>{children}</>,
+    table: (p) => <table className="my-2 w-full border-collapse" {...p} />,
+    th: ({ children, ...p }) => (
+      <th className="border border-border bg-muted px-2 py-1 text-left" {...p}>{link(children)}</th>
+    ),
+    td: ({ children, ...p }) => (
+      <td className="border border-border px-2 py-1" {...p}>{link(children)}</td>
+    ),
+  };
+}
 
 export function AssistantTextRow({
   event,
@@ -73,6 +103,15 @@ export function AssistantTextRow({
   markdownMode?: boolean;
 }) {
   const e = event as AssistantTextEvent;
+  const { conversation } = conversationPane.useData();
+  const onFileOpen = (path: string) =>
+    convFilePeekPane.open({
+      convId: conversation.id,
+      worktree: conversation.attemptId,
+      filePath: path,
+    });
+  const mdComponents = buildMdComponents(onFileOpen);
+
   return (
     <div className="group rounded-md border border-border/60 bg-background px-3 py-2">
       <div className="mb-1 flex items-center gap-2 text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -88,12 +127,14 @@ export function AssistantTextRow({
       </div>
       {markdownMode ? (
         <div className="text-sm leading-6">
-          <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>
+          <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={mdComponents}>
             {e.text}
           </ReactMarkdown>
         </div>
       ) : (
-        <div className="whitespace-pre-wrap break-words text-sm">{e.text}</div>
+        <div className="whitespace-pre-wrap break-words text-sm">
+          <FileLinkText text={e.text} onFileOpen={onFileOpen} />
+        </div>
       )}
     </div>
   );
