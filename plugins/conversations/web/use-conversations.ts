@@ -9,6 +9,7 @@ const PayloadSchema = z.object({
   active: z.array(ConversationSchema),
   recentGone: z.array(ConversationSchema),
   hasMoreGone: z.boolean(),
+  totalGoneCount: z.number(),
   system: z.array(ConversationSchema),
 });
 
@@ -21,6 +22,7 @@ export function useConversations(): {
   active: ConversationEntry[];
   recentGone: ConversationEntry[];
   hasMoreGone: boolean;
+  totalGoneCount: number;
   system: ConversationEntry[];
   isLoading: boolean;
 } {
@@ -31,6 +33,7 @@ export function useConversations(): {
         active: [],
         recentGone: [],
         hasMoreGone: false,
+        totalGoneCount: 0,
         system: [],
         isLoading: q.isLoading,
       };

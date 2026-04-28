@@ -16,11 +16,11 @@ function formatRelativeTime(date: Date): string {
 }
 
 export function WelcomeView() {
-  const { active, recentGone, isLoading } = useConversations();
+  const { active, recentGone, totalGoneCount, isLoading } = useConversations();
   const conversations = [...active, ...recentGone];
 
   const activeCount = active.length;
-  const idleCount = recentGone.length;
+  const totalCount = activeCount + totalGoneCount;
 
   const openConversation = (name: string) => {
     conversationPane.open({ convId: name });
@@ -40,12 +40,12 @@ export function WelcomeView() {
         </div>
 
         {/* Stats */}
-        {!isLoading && conversations.length > 0 && (
+        {!isLoading && totalCount > 0 && (
           <div className="flex w-full gap-3">
             {[
-              { label: "Total", value: conversations.length },
+              { label: "Total", value: totalCount },
               { label: "Active", value: activeCount },
-              { label: "Idle", value: idleCount },
+              { label: "Idle", value: totalGoneCount },
             ].map((stat) => (
               <div
                 key={stat.label}

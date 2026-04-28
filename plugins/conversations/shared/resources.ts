@@ -7,6 +7,7 @@ export type ConversationListPayload = {
   active: ConversationEntry[];
   recentGone: ConversationEntry[];
   hasMoreGone: boolean;
+  totalGoneCount: number;
   system: ConversationEntry[];
 };
 

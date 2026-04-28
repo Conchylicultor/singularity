@@ -9,6 +9,7 @@ import type {
   ConversationSummary,
 } from "../../shared";
 import {
+  countGoneConversations,
   listActiveConversations,
   listActiveSystemConversations,
   listConversationSummariesByAttempt,
@@ -20,6 +21,7 @@ type ConversationListPayload = {
   active: Conversation[];
   recentGone: Conversation[];
   hasMoreGone: boolean;
+  totalGoneCount: number;
   system: Conversation[];
 };
 
@@ -27,9 +29,10 @@ export const recentConversationsResource = defineResource({
   key: "conversations",
   mode: "push",
   loader: async (): Promise<ConversationListPayload> => {
-    const [active, goneRows, system] = await Promise.all([
+    const [active, goneRows, totalGoneCount, system] = await Promise.all([
       listActiveConversations(),
       listGoneConversations({ limit: RECENT_GONE_LIMIT + 1 }),
+      countGoneConversations(),
       listActiveSystemConversations(),
     ]);
     const hasMoreGone = goneRows.length > RECENT_GONE_LIMIT;
@@ -37,6 +40,7 @@ export const recentConversationsResource = defineResource({
       active,
       recentGone: hasMoreGone ? goneRows.slice(0, RECENT_GONE_LIMIT) : goneRows,
       hasMoreGone,
+      totalGoneCount,
       system,
     };
   },

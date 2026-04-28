@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNotNull, lt, ne, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, lt, ne, type SQL } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { _conversations } from "../tables";
 import { conversations } from "../schema";
@@ -73,6 +73,14 @@ export function listActiveSystemConversations(): Promise<Conversation[]> {
     { onlySystem: true, active: true },
     { col: conversations.createdAt, dir: "desc" },
   );
+}
+
+export async function countGoneConversations(): Promise<number> {
+  const [row] = await db
+    .select({ value: count() })
+    .from(conversations)
+    .where(buildWhere({ active: false, endedAtNotNull: true }));
+  return row?.value ?? 0;
 }
 
 // Ended user-visible rows, newest-first by endedAt. Pass `before` for pagination.
