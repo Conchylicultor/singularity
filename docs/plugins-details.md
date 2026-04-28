@@ -15,6 +15,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `Agent`, `AgentLaunch`
     - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
   - Contributes:
+    - `Pane.Register`
+    - `Pane.Register`
+    - `Pane.Register`
     - `Shell.Sidebar` "Agents" (group `System`)
     - `agentsRootPane.open`
   - Server:
@@ -32,6 +35,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `attemptConversationPane`, `attemptPane`
   - Contributes:
+    - `Pane.Register`
+    - `Pane.Register`
     - `conversationPane.Actions` → `AttemptSwitchButton`
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
@@ -47,6 +52,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
     - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`
   - Contributes:
+    - `Pane.Register`
     - `Shell.Sidebar` "Accounts" (group `System`)
     - `accountsPane.open`
   - Central:
@@ -83,6 +89,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Contributes:
+    - `Pane.Register`
+    - `Pane.Register`
     - `Shell.Sidebar` "Explorer" (group `System`)
     - `globalFileTreePane.open`
     - `Code.ToolbarButton` → `ConvTreeButton`
@@ -108,6 +116,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `Schema`, `ValueOf`, `Values`
     - Values: `defineConfig`, `fullKey`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `validateKind`
   - Contributes:
+    - `Pane.Register`
     - `Shell.Sidebar` "Settings" (group `System`)
     - `settingsPane.open`
   - Server:
@@ -152,6 +161,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `ConversationRecord`, `PromptDraft`, `PromptImageDraft`
         - Values: `Conversation`, `conversationPane`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `isMainPaneId`, `markMainPane`, `PromptDraftProvider`, `usePromptDraft`
       - Contributes:
+        - `Pane.Register`
         - `conversationPane.Actions` → `ExpandConversationButton`
       - Slot contributors: `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `hold-and-exit`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
       - Plugins:
@@ -172,13 +182,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
               - Contributes:
+                - `Pane.Register`
                 - `Code.ToolbarButton` → `DocsButton`
-            - **`file-pane`**
+            - **`file-pane`** — Hosts the per-conversation file-peek pane and the FilePane.Renderer slot.
               - Defines:
                 - Slots: `FilePane.Renderer`
               - Exports (web):
                 - Types: `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`
                 - Values: `convFilePeekPane`, `FileContent`, `FileOpenProvider`, `FilePane`, `FilePaneView`, `FilePathLabel`, `FileTabs`, `resolveRenderers`, `useFileRenderers`
+              - Contributes:
+                - `Pane.Register`
               - Slot contributors: `diff`, `image`, `markdown`, `raw`
               - Plugins:
                 - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
@@ -197,6 +210,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Exports (shared):
                 - Values: `reviewConfig`
               - Contributes:
+                - `Pane.Register`
                 - `Code.ToolbarButton` → `ReviewButton`
         - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
           - Contributes:
@@ -308,11 +322,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `conversationPane.Actions` → `StatusBadge`
         - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
           - Contributes:
+            - `Pane.Register`
             - `conversationPane.Actions` → `TasksButton`
             - `convTasksPane.Actions` → `GoToParentAction`
             - `convTasksPane.Actions` → `ExpandToTasksAction`
         - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
           - Contributes:
+            - `Pane.Register`
             - `conversationPane.Actions` → `TerminalButton`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:
@@ -333,6 +349,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Values: `_conversationSummaries`, `conversationSummariesResource`
       - Contributes:
+        - `Pane.Register`
         - `conversationPane.Actions` → `SummarizeButton`
       - Server:
         - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `tasks-core.getConversation`, `tasks-core.getTask`
@@ -343,6 +360,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `recoveryPane`
   - Contributes:
+    - `Pane.Register`
     - `Debug.Item` "Recovery"
     - `recoveryPane.open`
   - Server:
@@ -377,6 +395,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Values: `dbBackupPane`
       - Contributes:
+        - `Pane.Register`
         - `Debug.Item` "DB Backup"
         - `dbBackupPane.open`
       - Server:
@@ -389,6 +408,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `LogChannel`, `LogStream`
         - Values: `Log`
       - Contributes:
+        - `Pane.Register`
+        - `Pane.Register`
         - `Debug.Item` "Logs"
         - `logsPane.open`
       - Server:
@@ -398,12 +419,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Values: `queuePane`
       - Contributes:
+        - `Pane.Register`
         - `Debug.Item` "Queue"
         - `queuePane.open`
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
       - Exports (web):
         - Values: `worktreeCleanupPane`
       - Contributes:
+        - `Pane.Register`
         - `Debug.Item` "Worktree Cleanup"
         - `worktreeCleanupPane.open`
       - Server:
@@ -419,6 +442,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `eventsTestPane`
   - Contributes:
+    - `Pane.Register`
     - `Debug.Item` "Events Test"
     - `eventsTestPane.open`
   - Server:
@@ -546,9 +570,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `FetchWithRetryOptions`, `ReconnectingEventSourceOptions`, `ReconnectingWsHandle`, `ReconnectingWsOptions`, `WsStatus`, `WsStatusEvent`
         - Values: `fetchWithRetry`, `publishWsStatus`, `ReconnectingEventSource`, `SharedWebSocket`, `subscribeWsStatus`, `useReconnectingWebSocket`
     - **`pane`** — Unified pane primitive: Pane.define, <Outlet/>, <PaneRouter/>, and chrome components.
+      - Defines:
+        - Slots: `Pane.Register`
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
         - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `stats`, `summary`, `tasks`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`, `yak-shaving`
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
       - Exports (web):
         - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
@@ -564,6 +591,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `screenshotPane`
   - Contributes:
+    - `Pane.Register`
     - `Shell.Toolbar` (group `actions`) → `ScreenshotButton`
   - Server:
     - `POST /api/screenshots/:id`
@@ -587,6 +615,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `Stats`, `statsPane`
   - Contributes:
+    - `Pane.Register`
     - `Shell.Sidebar` "Stats" (group `System`)
     - `statsPane.open`
   - Slot contributors: `commits`, `tasks`
@@ -630,6 +659,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
     - Values: `attemptsResource`, `pushesResource`, `tasksResource`
   - Contributes:
+    - `Pane.Register`
+    - `Pane.Register`
+    - `Pane.Register`
     - `Shell.Sidebar` "Tasks" (group `System`)
     - `tasksRootPane.open`
     - `Tasks.TaskActions` → `ExpandCollapseAllAction`
@@ -679,6 +711,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`welcome`** — Landing pane shown at `/`.
   - Exports (web):
     - Values: `welcomePane`
+  - Contributes:
+    - `Pane.Register`
 
 - **`worktree-switcher`** — Toolbar dropdown to switch the active worktree namespace.
   - Contributes:
@@ -694,6 +728,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `YakShavingCategory`, `YakShavingNode`
     - Values: `_yakShavingCategories`, `_yakShavingNodes`, `YAK_META_TASK_ID`, `yakShavingCategoriesResource`, `YakShavingCategorySchema`, `YakShavingNodeSchema`, `yakShavingNodesResource`
   - Contributes:
+    - `Pane.Register`
+    - `Pane.Register`
     - `Shell.Sidebar` "Yak" (group `System`)
     - `yakShavingPane.open`
   - Server:
