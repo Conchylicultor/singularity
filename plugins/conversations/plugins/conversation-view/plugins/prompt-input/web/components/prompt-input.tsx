@@ -90,7 +90,7 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json() as { ok: boolean; rewindText: string | null };
-      if (data.rewindText) setDraft(data.rewindText);
+      if (data.rewindText) setDraft({ text: data.rewindText, images: [] });
     } catch (err) {
       Shell.Toast({
         description: `Failed to stop: ${err instanceof Error ? err.message : String(err)}`,
