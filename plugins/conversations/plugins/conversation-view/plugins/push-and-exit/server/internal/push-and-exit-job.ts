@@ -8,6 +8,7 @@ import {
   deleteConversation,
   sendTurn,
   conversationTurnCompleted,
+  readConversationTurns,
   type ConversationTurnCompletedPayload,
 } from "@plugins/conversations/server";
 import type { JobState } from "../../shared/resources";
@@ -62,6 +63,37 @@ async function setStatus(
   pushAndExitResource.notify();
 }
 
+// Returns true iff the assistant end_turn with `endTurnMessageId` appears
+// in the JSONL transcript AFTER our PUSH_AND_EXIT_PROMPT user message.
+// The prompt is the only user message that contains both PUSH_EXIT_CLEAN
+// and PUSH_EXIT_FLAG (those tokens are mentioned nowhere else by the user
+// or by Claude in normal flow), so it's a reliable anchor for "the prompt
+// landed in the transcript". Used to filter out a racing end_turn that
+// belongs to whatever Claude was doing when push-and-exit was clicked.
+async function endTurnIsAfterPushPrompt(
+  conversationId: string,
+  endTurnMessageId: string | null,
+): Promise<boolean> {
+  if (!endTurnMessageId) return false;
+  const turns = await readConversationTurns(conversationId);
+  let promptIdx = -1;
+  let endTurnIdx = -1;
+  for (let i = 0; i < turns.length; i++) {
+    const t = turns[i];
+    if (
+      t.role === "user" &&
+      t.text.includes(CLEAN_TOKEN) &&
+      t.text.includes(FLAG_TOKEN)
+    ) {
+      promptIdx = i;
+    }
+    if (t.role === "assistant" && t.messageId === endTurnMessageId) {
+      endTurnIdx = i;
+    }
+  }
+  return promptIdx !== -1 && endTurnIdx !== -1 && endTurnIdx > promptIdx;
+}
+
 // Durable rewrite: handler is restart-safe because every side effect is
 // wrapped in `ctx.step` and the 10-minute wait is a `ctx.waitFor` — the
 // worker suspends off-CPU and resumes on `conversation.turn-completed`
@@ -77,12 +109,37 @@ export const pushAndExitJob = defineJob({
       await sendTurn(conversationId, PUSH_AND_EXIT_PROMPT);
     });
 
-    const turn = await ctx.waitFor<ConversationTurnCompletedPayload>(
-      conversationTurnCompleted,
-      { where: { conversationId }, timeoutMs: FINAL_TURN_TIMEOUT_MS },
-    );
+    // Loop because `waitFor` resolves on the FIRST end_turn after registration:
+    // if Claude was mid-flow when push-and-exit was clicked, that end_turn
+    // belongs to the previous user input, not to our injected prompt. Skip
+    // any turn whose JSONL position precedes our prompt and wait again, until
+    // we see one written after the prompt landed (or the deadline expires).
+    const deadline = Date.now() + FINAL_TURN_TIMEOUT_MS;
+    let finalText: string | null = null;
+    let attempt = 0;
+    while (true) {
+      attempt++;
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) break;
+      const candidate = await ctx.waitFor<ConversationTurnCompletedPayload>(
+        conversationTurnCompleted,
+        {
+          where: { conversationId },
+          timeoutMs: remaining,
+          name: `wait-turn-${attempt}`,
+        },
+      );
+      if (!candidate) break;
+      const isOurs = await ctx.step(`check-anchor-${attempt}`, () =>
+        endTurnIsAfterPushPrompt(conversationId, candidate.messageId),
+      );
+      if (isOurs) {
+        finalText = candidate.text;
+        break;
+      }
+    }
 
-    if (!turn) {
+    if (finalText === null) {
       await ctx.step("flag-timeout", () =>
         setStatus(
           conversationId,
@@ -93,7 +150,7 @@ export const pushAndExitJob = defineJob({
       return;
     }
 
-    const verdict = interpret(turn.text);
+    const verdict = interpret(finalText);
     if (verdict.status === "clean") {
       // Notify with status=clean BEFORE deleting the conversation so the UI
       // sees the success state; otherwise the conversation disappears from

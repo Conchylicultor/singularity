@@ -10,7 +10,7 @@
 - Contributes:
   - `Conversation.PromptBar` → `PushAndExitButton`
 - Server:
-  - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.recentConversationsResource`, `conversations.sendTurn`
+  - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.recentConversationsResource`, `conversations.sendTurn`
   - Resources: `push-and-exit` (push)
   - `POST /api/conversations/:id/push-and-exit`
   - `DELETE /api/conversations/:id/push-and-exit`
