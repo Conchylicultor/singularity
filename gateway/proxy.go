@@ -69,9 +69,9 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // ─── route handlers ──────────────────────────────────────────
 
-// handleStatic serves a file from the worktree's web/dist directory. For paths
-// without a known file (and no extension), it falls back to serving index.html
-// so the SPA can handle client-side routing.
+// handleStatic serves a file from the worktree's web/dist directory. Any path
+// that doesn't match an existing file falls back to index.html so the SPA
+// client router can handle it (including paths with extensions like /file/foo.ts).
 func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktree) {
 	webDir := wt.Spec().Web
 	if webDir == "" {
@@ -90,13 +90,12 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 		http.ServeFile(w, r, full)
 		return
 	}
-	// Missing or directory → SPA fallback for non-asset URLs.
-	if path.Ext(upath) == "" || (err == nil && info.IsDir()) {
-		indexPath := filepath.Join(webDir, "index.html")
-		if _, ierr := os.Stat(indexPath); ierr == nil {
-			http.ServeFile(w, r, indexPath)
-			return
-		}
+	// File not found or is a directory → SPA fallback regardless of extension.
+	// The client router decides whether it's a real route or a 404.
+	indexPath := filepath.Join(webDir, "index.html")
+	if _, ierr := os.Stat(indexPath); ierr == nil {
+		http.ServeFile(w, r, indexPath)
+		return
 	}
 	http.NotFound(w, r)
 }
