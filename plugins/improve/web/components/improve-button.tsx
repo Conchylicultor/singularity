@@ -26,10 +26,6 @@ export function ImproveButton() {
   const openForm = (next: boolean) => {
     if (next) {
       setUrl(window.location.href);
-    } else {
-      setValue("");
-      setIncludeUrl(false);
-      setIncludeScreenshot(false);
     }
     setOpen(next);
   };
