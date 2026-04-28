@@ -1,7 +1,8 @@
 // Matches file paths with at least one directory separator, e.g.
 // research/2026-04-26-foo.md, docs/plugins.md, ~/.singularity/worktrees/central.json
+// The : in the lookbehind prevents matching URL port numbers (e.g. localhost:9000/plugins/...)
 export const FILE_PATH_RE =
-  /(?<![\w./~-])((?:~\/)?(?:[\w.\-]+\/)+[\w.\-]+\.(?:md|mdx|ts|tsx|js|jsx|py|go|yaml|yml|json|txt))(?![\w/-])/g;
+  /(?<![\w./~:-])((?:~\/)?(?:[\w.\-]+\/)+[\w.\-]+\.(?:md|mdx|ts|tsx|js|jsx|py|go|yaml|yml|json|txt))(?![\w/-])/g;
 
 export interface FileLinkSegment {
   type: "text" | "path";
