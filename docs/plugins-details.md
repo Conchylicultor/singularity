@@ -320,7 +320,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
       - Server:
         - Uses: `conversations.Runtime`
-    - **`summary`** — Toolbar button that generates a structured Sonnet summary of the conversation (phase, flags, next action) and surfaces it as a chip with a detail popover. On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
+    - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
       - Defines:
         - DB schema: `plugins/conversations/plugins/summary/server/internal/tables.ts`
       - Exports (server):

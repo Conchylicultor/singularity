@@ -124,7 +124,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - **`conversations-view`** — Sidebar list of all conversations.
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
-    - **`summary`** — Toolbar button that generates a structured Sonnet summary of the conversation (phase, flags, next action) and surfaces it as a chip with a detail popover. On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
+    - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
 
 - **`conversations-recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
 
