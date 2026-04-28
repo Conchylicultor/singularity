@@ -52,7 +52,7 @@ export async function initStore(): Promise<void> {
 function ensureLoaded(): StoreBlob {
   if (!cached) {
     throw new Error(
-      "secrets: store not initialized; secrets.onReady must run before any API call on main",
+      "secrets: store not initialized; secrets.onReady must run before any API call",
     );
   }
   return cached;

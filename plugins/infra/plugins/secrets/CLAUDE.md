@@ -4,10 +4,10 @@ Encrypted-at-rest key-value primitive. Consumers: `auth` (OAuth tokens / API key
 
 ## Topology
 
-- **Main-only storage.** `~/.singularity/secrets.json.enc` (AES-256-GCM). Worktrees never touch the file.
+- **Storage lives on the central runtime.** `~/.singularity/secrets.json.enc` (AES-256-GCM) is read and written by the singleton `central` backend (gateway-supervised, headless). Worktree backends never touch the file.
 - **OS keychain for the master key, file fallback.** Primary: `@napi-rs/keyring` (macOS Keychain / libsecret / Windows Credential Manager). Fallback: `~/.singularity/secrets/.key` mode 0600, when the native module is missing or fails at runtime. Either way the key is cached in-memory after first read.
-- **Worktrees RPC via `~/.singularity/secrets.sock`.** `get`/`set`/`delete`/`has`/`meta`/`list` by `(namespace, key)`. Mode 0600.
-- **Ready coordination.** `onReady` runs in parallel across plugins (see `server/src/index.ts`). Consumers `await ready` from `@plugins/infra/plugins/secrets/server` before issuing API calls on main.
+- **Worktrees call central over HTTP via the gateway.** `getSecret`/`setSecret`/`deleteSecret`/`hasSecret`/`getSecretMetadata`/`listKeysInNamespace` POST JSON to `http://localhost:9000/api/secrets/*`. The gateway routes those prefixes to `central` regardless of host (see `~/.singularity/central-routes.json`). The previous unix-socket RPC and `~/.singularity/secrets.sock` are gone.
+- **Boot is in central's `onReady`.** Central's plugin definition (`plugins/infra/plugins/secrets/central/index.ts`) loads the keychain, hydrates the encrypted blob, and runs the legacy `~/.singularity/auth/tokens.json.enc` migration before the HTTP handlers are reachable. The server-side `ready` promise resolves immediately — there's nothing to wait for in-process.
 
 ## Namespaces
 
@@ -21,16 +21,15 @@ Add new namespaces freely; the store doesn't care. Keep namespaces short and low
 ## Using it
 
 ```ts
-import { getSecret, setSecret, ready } from "@plugins/infra/plugins/secrets/server";
-
-// In your onReady hook, before any call:
-await ready;
+import { getSecret, setSecret } from "@plugins/infra/plugins/secrets/server";
 
 await setSecret({ namespace: "my-plugin", key: "api-key" }, "sk-…");
 const v = await getSecret({ namespace: "my-plugin", key: "api-key" }); // "sk-…"
 ```
 
-All four of `get` / `set` / `has` / `delete` execute locally on main and route via the unix socket on worktrees. `getSecretMetadata` returns `{ set: boolean, updatedAt?: number }` without ever exposing the value — use it when all you need is a "configured?" bit.
+The server-side barrel is a thin HTTP client; every call hits central through the gateway. `getSecretMetadata` returns `{ set: boolean, updatedAt?: number }` without ever exposing the value — use it when all you need is a "configured?" bit.
+
+If central is unreachable (gateway down, central crash-looped, manifest not yet loaded) the call throws `SecretsMainOfflineError` after one quick retry.
 
 ## No `web/`
 
@@ -38,10 +37,10 @@ The secrets plugin has no frontend. Plaintext secret values must never flow to a
 
 ## Migration from pre-secrets auth
 
-On first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.singularity/auth/tokens.json.enc` with its own `.key`, writes the blob under `auth-tokens/blob-v1`, and renames both legacy files to `.migrated-<timestamp>`. Idempotent — subsequent boots see the secret already present and no-op.
+On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.singularity/auth/tokens.json.enc` with its own `.key`, writes the blob under `auth-tokens/blob-v1`, and renames both legacy files to `.migrated-<timestamp>`. Idempotent — subsequent boots see the secret already present and no-op.
 
 ## Explicit deferrals
 
 - **Hardware-backed keys** (Secure Enclave / TPM). Overkill for a dev tool.
 - **Key rotation.** No `rotateKey()` yet; the blob version byte in `crypto.ts` gives us a hook if we need it.
-- **Per-secret ACLs.** Socket access is gated by 0600 file permissions — same threat model as every other dev tool.
+- **Per-secret ACLs.** HTTP access is gated by the localhost trust boundary — same threat model as every other dev tool, and unchanged from when the unix socket gated reads with 0600 file permissions.

@@ -1,19 +1,8 @@
-let resolveReady!: () => void;
-
 /**
- * Resolves once the secrets plugin's onReady has finished (key loaded, store
- * hydrated, unix socket up). Consumers on main (auth, config) await this from
- * inside their own onReady before issuing secrets API calls — onReady runs
- * with Promise.all, so plugin registration order is not load order.
- *
- * On worktrees this resolves immediately: worktree secrets calls go over the
- * unix socket to main, and the socket server on the main process is what
- * needs readiness coordination.
+ * Resolves immediately. Secrets storage now lives on the central runtime; the
+ * server-side barrel is a thin HTTP client, so there is no per-process boot
+ * step to coordinate. Kept as an exported promise so existing consumers
+ * (auth, config) can `await ready` from inside their own onReady without
+ * caring whether secrets is local or remote.
  */
-export const ready: Promise<void> = new Promise<void>((r) => {
-  resolveReady = r;
-});
-
-export function markReady(): void {
-  resolveReady();
-}
+export const ready: Promise<void> = Promise.resolve();

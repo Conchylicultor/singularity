@@ -375,9 +375,23 @@ export function registerBuild(program: Command) {
 
       // 6b. Emit the central routing manifest. The gateway watches this file
       // and forwards listed paths to the central backend regardless of host.
-      // Phase 1 produces an empty `routes` list (no central plugins yet);
-      // subsequent phases populate it as auth/secrets migrate to central.
+      // Routes are populated from each plugin's `central/index.ts` httpRoutes
+      // and wsRoutes maps.
       await writeCentralRoutesManifest(root);
+
+      // 6c. Register the `central` worktree spec if any central plugins exist.
+      // Central is the singleton headless backend that hosts the central
+      // routing manifest's targets; the gateway lazy-spawns it on the first
+      // request that matches a manifest prefix. We always overwrite so the
+      // most recently built worktree's `central/` directory is what runs —
+      // matches the per-worktree spec write above.
+      if (existsSync(join(centralDir, "src", "index.ts"))) {
+        const centralSpec = { server: centralDir };
+        writeFileSync(
+          join(WORKTREES_DIR, "central.json"),
+          JSON.stringify(centralSpec, null, 2) + "\n",
+        );
+      }
 
       // 4. Restart the backend if the gateway has it running
       if (!opts.restart) {
