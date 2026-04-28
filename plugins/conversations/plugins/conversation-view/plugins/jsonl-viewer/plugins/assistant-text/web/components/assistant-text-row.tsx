@@ -33,7 +33,20 @@ function langFromClassName(className: string | undefined): string | null {
   return match?.[1] ?? null;
 }
 
-function buildMdComponents(onFileOpen: (path: string) => void): Components {
+const IMG_HREF_RE = /\.(png|jpe?g|gif|webp|svg|bmp|avif|ico)(?:[?#].*)?$/i;
+
+function isExternalUrl(src: string): boolean {
+  return (
+    src.startsWith("http://") ||
+    src.startsWith("https://") ||
+    src.startsWith("data:")
+  );
+}
+
+function buildMdComponents(
+  worktree: string,
+  onFileOpen: (path: string) => void,
+): Components {
   const link = (children: ReactNode) => linkifyChildren(children, onFileOpen);
   return {
     h1: ({ children, ...p }) => (
@@ -84,6 +97,42 @@ function buildMdComponents(onFileOpen: (path: string) => void): Components {
       return <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs" {...rest}>{children}</code>;
     },
     pre: ({ children }) => <>{children}</>,
+    img: ({ src, alt }) => {
+      if (typeof src !== "string" || !src) return null;
+      const isImage = IMG_HREF_RE.test(src);
+      if (isExternalUrl(src) && isImage) {
+        return (
+          <img
+            src={src}
+            alt={alt ?? ""}
+            className="my-2 max-w-full rounded border border-border"
+          />
+        );
+      }
+      const isAbsolute = src.startsWith("/") || src.startsWith("~");
+      if (isImage && !isAbsolute) {
+        const apiSrc = `/api/code/${encodeURIComponent(worktree)}/image?path=${encodeURIComponent(src)}`;
+        return (
+          <img
+            src={apiSrc}
+            alt={alt ?? ""}
+            className="my-2 max-w-full rounded border border-border"
+          />
+        );
+      }
+      return (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onFileOpen(src);
+          }}
+          className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-primary hover:underline"
+        >
+          {alt || src}
+        </button>
+      );
+    },
     table: (p) => <table className="my-2 w-full border-collapse" {...p} />,
     th: ({ children, ...p }) => (
       <th className="border border-border bg-muted px-2 py-1 text-left" {...p}>{link(children)}</th>
@@ -109,7 +158,7 @@ export function AssistantTextRow({
       worktree: conversation.attemptId,
       filePath: path,
     });
-  const mdComponents = buildMdComponents(onFileOpen);
+  const mdComponents = buildMdComponents(conversation.attemptId, onFileOpen);
 
   return (
     <div className="rounded-md border border-border/60 bg-background px-3 py-2">
