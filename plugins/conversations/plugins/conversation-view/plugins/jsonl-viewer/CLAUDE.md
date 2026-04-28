@@ -9,7 +9,7 @@
   - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.RowAction`
 - Exports (web):
   - Types: `EventRendererContribution`, `RowActionContribution`
-  - Values: `JsonlPane`, `JsonlViewer`
+  - Values: `JsonlPane`, `JsonlViewer`, `useRowMarkdown`
 - Exports (shared):
   - Types: `JsonlEvent`, `JsonlEventsResponse`, `TokenUsage`
   - Values: `jsonlEventsResource`

@@ -5,6 +5,7 @@ import { RawJsonAction } from "./components/raw-json-button";
 export { JsonlViewer } from "./slots";
 export type { EventRendererContribution, RowActionContribution } from "./slots";
 export { JsonlPane } from "./components/jsonl-pane";
+export { useRowMarkdown } from "./components/row-markdown-context";
 
 export default {
   id: "conversation-jsonl-viewer",

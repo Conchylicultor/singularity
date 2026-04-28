@@ -4,7 +4,7 @@ import type { JsonlEvent } from "../shared";
 
 export interface EventRendererContribution {
   kind: JsonlEvent["kind"];
-  component: ComponentType<{ event: JsonlEvent; markdownMode?: boolean }>;
+  component: ComponentType<{ event: JsonlEvent }>;
 }
 
 // Action buttons rendered in a unified hover strip on every event row.

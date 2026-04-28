@@ -11,6 +11,7 @@ import { useActiveDataRenderer } from "@plugins/active-data/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent } from "../../../../shared";
+import { useRowMarkdown } from "../../../../web/components/row-markdown-context";
 import { TokenBadge } from "../../../../web/components/token-badge";
 import { formatTime } from "../../../../web/utils";
 
@@ -145,14 +146,9 @@ function buildMdComponents(
   };
 }
 
-export function AssistantTextRow({
-  event,
-  markdownMode,
-}: {
-  event: JsonlEvent;
-  markdownMode?: boolean;
-}) {
+export function AssistantTextRow({ event }: { event: JsonlEvent }) {
   const e = event as AssistantTextEvent;
+  const { markdownMode } = useRowMarkdown();
   const { conversation } = conversationPane.useData();
   const renderActiveData = useActiveDataRenderer();
   const onFileOpen = (path: string) =>

@@ -1,5 +1,6 @@
 import type { JsonlEvent } from "../../shared";
 import { JsonlViewer } from "../slots";
+import { RowMarkdownProvider } from "./row-markdown-context";
 
 function UnknownEventRow({ event }: { event: JsonlEvent }) {
   return (
@@ -22,17 +23,19 @@ function RowActions({ event }: { event: JsonlEvent }) {
   );
 }
 
-export function EventRow({ event, markdownMode }: { event: JsonlEvent; markdownMode?: boolean }) {
+export function EventRow({ event }: { event: JsonlEvent }) {
   const renderers = JsonlViewer.EventRenderer.useContributions();
   const match = renderers.find((c) => c.kind === event.kind);
   return (
-    <div className="group/row relative">
-      {match ? (
-        <match.component event={event} markdownMode={markdownMode} />
-      ) : (
-        <UnknownEventRow event={event} />
-      )}
-      <RowActions event={event} />
-    </div>
+    <RowMarkdownProvider>
+      <div className="group/row relative">
+        {match ? (
+          <match.component event={event} />
+        ) : (
+          <UnknownEventRow event={event} />
+        )}
+        <RowActions event={event} />
+      </div>
+    </RowMarkdownProvider>
   );
 }

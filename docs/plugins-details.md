@@ -253,7 +253,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.RowAction`
           - Exports (web):
             - Types: `EventRendererContribution`, `RowActionContribution`
-            - Values: `JsonlPane`, `JsonlViewer`
+            - Values: `JsonlPane`, `JsonlViewer`, `useRowMarkdown`
           - Exports (shared):
             - Types: `JsonlEvent`, `JsonlEventsResponse`, `TokenUsage`
             - Values: `jsonlEventsResource`
@@ -267,6 +267,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `AssistantTextRow`
+                - `JsonlViewer.RowAction` → `MarkdownToggleAction`
                 - `JsonlViewer.RowAction` → `CopyAssistantTextAction`
             - **`assistant-tool-use`** — Renders assistant tool-use events in the JSONL viewer.
               - Contributes:

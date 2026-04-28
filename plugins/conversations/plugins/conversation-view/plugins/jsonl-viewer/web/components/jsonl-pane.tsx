@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MdCode } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   JumpToBottomButton,
   useStickyScroll,
 } from "@plugins/primitives/plugins/auto-scroll/web";
-import { Button } from "@/components/ui/button";
+
 import type { Conversation } from "@plugins/conversations/shared";
 import { jsonlEventsResource, type JsonlEvent } from "../../shared";
 import { formatTokenCount } from "../utils";
@@ -78,8 +77,6 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
   });
   const events = data ?? null;
   const totals = useMemo(() => aggregateUsage(events), [events]);
-  const [markdownMode, setMarkdownMode] = useState(true);
-
   // Derive when "working" started: last event's timestamp, or now if none
   const workingStartAtRef = useRef<number | null>(null);
   const wasWorkingRef = useRef(false);
@@ -111,17 +108,6 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
             {events.length}
           </span>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`ml-auto size-7 shrink-0 ${markdownMode ? "bg-accent text-accent-foreground" : ""}`}
-          title={markdownMode ? "Show raw text" : "Render markdown"}
-          aria-label={markdownMode ? "Show raw text" : "Render markdown"}
-          aria-pressed={markdownMode}
-          onClick={() => setMarkdownMode((m) => !m)}
-        >
-          <MdCode className="size-4" />
-        </Button>
       </div>
       <div className="relative min-h-0 flex-1">
         <div
@@ -143,7 +129,7 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
             ) : (
               <div className="flex flex-col gap-2 p-2 pb-10">
                 {events.map((event, i) => (
-                  <EventRow key={i} event={event} markdownMode={markdownMode} />
+                  <EventRow key={i} event={event} />
                 ))}
                 {isWorking && <WorkingIndicator startAt={workingStartAt} />}
               </div>
