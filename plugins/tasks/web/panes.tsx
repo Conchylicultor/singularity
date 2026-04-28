@@ -12,6 +12,7 @@ import { Tasks as TasksSlots } from "./slots";
 import { TasksList } from "./components/tasks-list";
 import { TaskDetail } from "./components/task-detail";
 import { TaskFilePeek } from "./components/task-file-peek";
+import { computeDagClosure, TaskDag } from "./components/task-dag";
 
 // Panes are declared first so their types are known before the component
 // bodies reference them. Component identifiers below are function
@@ -85,9 +86,13 @@ function TasksRoot(): ReactElement {
 function TaskDetailBody(): ReactElement {
   const { taskId } = taskDetailPane.useParams();
   const { data } = useResource(tasksResource);
-  const task = data?.find((t) => t.id === taskId) ?? null;
+  const allTasks = data ?? [];
+  const task = allTasks.find((t) => t.id === taskId) ?? null;
   const views = TasksSlots.View.useContributions();
   const [filePeekPath, setFilePeekPath] = useState<string | null>(null);
+
+  const closure = computeDagClosure(taskId, allTasks);
+  const showDag = closure.length > 1;
 
   const match = usePaneMatch();
   const hasConv = match?.chain.some(
@@ -95,20 +100,27 @@ function TaskDetailBody(): ReactElement {
   );
 
   const body = (
-    <div className="h-full overflow-auto">
-      <TaskDetail key={taskId} taskId={taskId} onFileOpen={setFilePeekPath} />
-      {views.length > 0 && (
-        <div className="flex flex-col gap-4 px-6 pb-6">
-          {views.map((v) => (
-            <section key={v.id} className="bg-card rounded-lg border p-4">
-              {v.title ? (
-                <h2 className="mb-4 text-sm font-medium">{v.title}</h2>
-              ) : null}
-              <v.component taskId={taskId} />
-            </section>
-          ))}
+    <div className="flex h-full flex-col overflow-hidden">
+      {showDag && (
+        <div className="bg-muted/30 h-60 shrink-0 border-b">
+          <TaskDag closure={closure} selectedId={taskId} />
         </div>
       )}
+      <div className="min-h-0 flex-1 overflow-auto">
+        <TaskDetail key={taskId} taskId={taskId} onFileOpen={setFilePeekPath} />
+        {views.length > 0 && (
+          <div className="flex flex-col gap-4 px-6 pb-6">
+            {views.map((v) => (
+              <section key={v.id} className="bg-card rounded-lg border p-4">
+                {v.title ? (
+                  <h2 className="mb-4 text-sm font-medium">{v.title}</h2>
+                ) : null}
+                <v.component taskId={taskId} />
+              </section>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 
