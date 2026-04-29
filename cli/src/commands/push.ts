@@ -204,7 +204,24 @@ export function registerPush(program: Command) {
 
       // 6. Fast-forward merge into main
       console.log(`Merging ${branch} into main...`);
-      await exec(["git", "merge", "--ff-only", branch], mainWorktree);
+      const { exitCode: mergeExit } = await run(
+        ["git", "merge", "--ff-only", branch],
+        mainWorktree,
+      );
+      if (mergeExit !== 0) {
+        console.error(
+          [
+            `Fast-forward of main onto ${branch} failed.`,
+            ``,
+            `Most likely cause: another push landed on main between the rebase (step 3)`,
+            `and this merge (step 6), causing main to diverge again.`,
+            ``,
+            `Fix: re-run ./singularity push`,
+            `The rebase will pick up the new main commits and the merge will succeed.`,
+          ].join("\n"),
+        );
+        process.exit(1);
+      }
 
       // 7. Push main
       console.log("Pushing main...");
