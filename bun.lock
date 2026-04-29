@@ -393,6 +393,10 @@
       "name": "@singularity/plugin-primitives-pane",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/relative-time": {
+      "name": "@singularity/plugin-primitives-relative-time",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/syntax-highlight": {
       "name": "@singularity/plugin-primitives-syntax-highlight",
       "version": "0.0.1",
@@ -1211,6 +1215,8 @@
     "@singularity/plugin-primitives-networking": ["@singularity/plugin-primitives-networking@workspace:plugins/primitives/plugins/networking"],
 
     "@singularity/plugin-primitives-pane": ["@singularity/plugin-primitives-pane@workspace:plugins/primitives/plugins/pane"],
+
+    "@singularity/plugin-primitives-relative-time": ["@singularity/plugin-primitives-relative-time@workspace:plugins/primitives/plugins/relative-time"],
 
     "@singularity/plugin-primitives-syntax-highlight": ["@singularity/plugin-primitives-syntax-highlight@workspace:plugins/primitives/plugins/syntax-highlight"],
 

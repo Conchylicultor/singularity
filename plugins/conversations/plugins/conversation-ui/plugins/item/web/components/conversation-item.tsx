@@ -2,7 +2,10 @@ import type {
   ConversationKind,
   ConversationStatus,
 } from "@plugins/conversations/shared";
+import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { cn } from "@/lib/utils";
+
+export { formatRelativeTime };
 
 export const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
   starting: "bg-muted-foreground/60",
@@ -10,17 +13,6 @@ export const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
   waiting: "bg-amber-500",
   gone: "bg-muted-foreground/40",
 };
-
-export function formatRelativeTime(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 // Structural prop type — accepts both the full `Conversation` and the
 // narrower `ConversationSummary` carried by `attemptsResource`. Anything

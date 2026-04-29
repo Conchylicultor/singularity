@@ -64,6 +64,7 @@ import liveStatePlugin from "@plugins/primitives/plugins/live-state/web";
 import networkingPlugin from "@plugins/primitives/plugins/networking/web";
 import editableFieldPlugin from "@plugins/primitives/plugins/editable-field/web";
 import autoScrollPlugin from "@plugins/primitives/plugins/auto-scroll/web";
+import relativeTimePlugin from "@plugins/primitives/plugins/relative-time/web";
 import healthPlugin from "@plugins/health/web";
 import crashesPlugin from "@plugins/crashes/web";
 import statsPlugin from "@plugins/stats/web";
@@ -107,6 +108,7 @@ export const plugins: PluginDefinition[] = [
   networkingPlugin,
   editableFieldPlugin,
   autoScrollPlugin,
+  relativeTimePlugin,
   terminalPlugin,
   worktreeSwitcherPlugin,
   buildPlugin,
