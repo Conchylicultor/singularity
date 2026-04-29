@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, useCallback, type ReactNode } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -7,6 +7,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -135,7 +136,23 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const allConversations = useMemo(
+    () => [...active, ...system, ...recentGone, ...paginatedItems],
+    [active, system, recentGone, paginatedItems],
+  );
+  const activeConv = useMemo(
+    () => (activeConvId ? allConversations.find((c) => c.id === activeConvId) : null),
+    [activeConvId, allConversations],
+  );
+
+  const onDragStart = useCallback((event: DragStartEvent) => {
+    const convId = (event.active.data.current as { convId?: string } | null)?.convId;
+    setActiveConvId(convId ?? null);
+  }, []);
+
   const onDragEnd = async (event: DragEndEvent) => {
+    setActiveConvId(null);
     const { active: activeDrag, over } = event;
     if (!over) return;
     const draggedId = (activeDrag.data.current as { convId?: string } | null)?.convId;
@@ -249,7 +266,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
   };
 
   return (
-    <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={onDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveConvId(null)}>
       <div className="flex flex-col gap-1.5">
         {groups.map((g) => {
           const ags = groupedAttemptGroups.get(g.id) ?? [];
@@ -323,10 +340,11 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
         </SidebarMenu>
       </div>
       <DragOverlay dropAnimation={null}>
-        {/* Empty overlay — the source row is dimmed via `isDragging` instead.
-          A floating clone of the entire row (with its actions and forks)
-          would be visually noisy in a narrow sidebar. */}
-        {null}
+        {activeConv ? (
+          <div className="bg-background/90 border-accent flex items-center rounded border px-2 py-1.5 text-sm shadow-md">
+            <ConversationItem conv={activeConv} />
+          </div>
+        ) : null}
       </DragOverlay>
     </DndContext>
   );
