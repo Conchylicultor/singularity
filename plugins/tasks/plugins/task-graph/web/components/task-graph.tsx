@@ -118,15 +118,6 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
   const isTerminal = task.status === "done" || task.status === "dropped";
   return (
     <div
-      role="button"
-      tabIndex={0}
-      onClick={() => taskDetailPane.open({ taskId: task.id })}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          taskDetailPane.open({ taskId: task.id });
-        }
-      }}
       title={`${task.title} — ${meta.label}`}
       className={cn(
         "bg-card text-foreground flex h-9 cursor-pointer items-center gap-2 rounded-md border px-2 text-xs shadow-sm transition-colors",
@@ -187,9 +178,10 @@ export function TaskGraph({ taskId }: { taskId: string }) {
         edgesFocusable={false}
         elementsSelectable={false}
         panOnDrag
-        zoomOnScroll={false}
+        zoomOnScroll
         zoomOnPinch
         zoomOnDoubleClick={false}
+        onNodeClick={(_, node) => taskDetailPane.open({ taskId: node.id })}
         proOptions={{ hideAttribution: true }}
         connectionLineType={ConnectionLineType.SmoothStep}
         minZoom={0.5}
