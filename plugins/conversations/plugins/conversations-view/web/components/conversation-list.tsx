@@ -1,23 +1,13 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { MdClose, MdVisibility, MdVisibilityOff } from "react-icons/md";
+import { MdVisibility, MdVisibilityOff } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, GonePageSchema } from "@plugins/conversations/web";
-import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
+import { GroupedConversationList } from "@plugins/conversations/plugins/conversation-groups/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { cn } from "@/lib/utils";
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuAction,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
-} from "@/components/ui/sidebar";
 
 const SHOW_SYSTEM_KEY = "conversations-view:show-system";
-type ConversationEntry = ReturnType<typeof useConversations>["active"][number];
 
 const PAGE_SIZE = 20;
 
@@ -105,25 +95,6 @@ export function ConversationList() {
     [paginatedData, liveIds],
   );
 
-  // Group active conversations by attempt. Server sends newest-first, so the
-  // first conversation encountered per attempt is the most recently started —
-  // preserving that order for group priority. Within each group, sort
-  // oldest-first so the original conversation is at the top with forks below.
-  // System conversations share their parent attempt's id (see summary plugin),
-  // so they group naturally as forks under the parent when showSystem is on.
-  const attemptGroups = useMemo(() => {
-    const merged = showSystem ? [...active, ...system] : active;
-    const map = new Map<string, ConversationEntry[]>();
-    for (const c of merged) {
-      const group = map.get(c.attemptId) ?? [];
-      group.push(c);
-      map.set(c.attemptId, group);
-    }
-    return Array.from(map.values()).map((group) =>
-      [...group].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
-    );
-  }, [active, system, showSystem]);
-
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = sentinelRef.current;
@@ -146,27 +117,6 @@ export function ConversationList() {
     openConversation(id);
     setActiveId(id);
   };
-
-  const rowTint = (conv: ConversationEntry) =>
-    conv.kind === "system" ? "bg-muted/30" : undefined;
-
-  const renderItem = (conv: ConversationEntry) => (
-    <SidebarMenuItem key={conv.id}>
-      <SidebarMenuButton
-        className={cn("h-auto py-1.5", rowTint(conv))}
-        isActive={conv.id === activeId}
-        onClick={() => navigate(conv.id)}
-      >
-        <ConversationItem conv={conv} />
-      </SidebarMenuButton>
-      <SidebarMenuAction
-        onClick={(e: React.MouseEvent) => closeConversation(conv.id, e)}
-        className="opacity-0 group-hover/menu-item:opacity-100"
-      >
-        <MdClose className="size-3.5" />
-      </SidebarMenuAction>
-    </SidebarMenuItem>
-  );
 
   const isEmpty = active.length === 0 && recentGone.length === 0;
 
@@ -191,60 +141,25 @@ export function ConversationList() {
           )}
         </button>
       </div>
-      <SidebarMenu>
-        {attemptGroups.map((group) => {
-          const [root, ...forks] = group;
-          if (!root) return null;
-          if (forks.length === 0) return renderItem(root);
-          return (
-            <SidebarMenuItem key={root.attemptId}>
-              <SidebarMenuButton
-                className={cn("h-auto py-1.5", rowTint(root))}
-                isActive={root.id === activeId}
-                onClick={() => navigate(root.id)}
-              >
-                <ConversationItem conv={root} />
-              </SidebarMenuButton>
-              <SidebarMenuAction
-                onClick={(e: React.MouseEvent) => closeConversation(root.id, e)}
-                className="opacity-0 group-hover/menu-item:opacity-100"
-              >
-                <MdClose className="size-3.5" />
-              </SidebarMenuAction>
-              <SidebarMenuSub>
-                {forks.map((fork) => (
-                  <SidebarMenuSubItem key={fork.id} className="relative group/menu-item">
-                    <SidebarMenuSubButton
-                      className={cn("h-auto py-1", rowTint(fork))}
-                      isActive={fork.id === activeId}
-                      onClick={() => navigate(fork.id)}
-                    >
-                      <ConversationItem conv={fork} />
-                    </SidebarMenuSubButton>
-                    <SidebarMenuAction
-                      onClick={(e: React.MouseEvent) => closeConversation(fork.id, e)}
-                      className="opacity-0 group-hover/menu-item:opacity-100"
-                    >
-                      <MdClose className="size-3.5" />
-                    </SidebarMenuAction>
-                  </SidebarMenuSubItem>
-                ))}
-              </SidebarMenuSub>
-            </SidebarMenuItem>
-          );
-        })}
-        {recentGone.map(renderItem)}
-        {paginatedItems.map(renderItem)}
-        {isFetchingNextPage && (
-          <div className="px-4 py-2 text-xs text-muted-foreground">Loading...</div>
-        )}
-        {hasMoreGone && <div ref={sentinelRef} className="h-1" />}
-        {isEmpty && !isLoading && (
-          <div className="px-4 py-2 text-xs text-muted-foreground">
-            No conversations
-          </div>
-        )}
-      </SidebarMenu>
+      <GroupedConversationList
+        active={active}
+        system={system}
+        showSystem={showSystem}
+        recentGone={recentGone}
+        paginatedItems={paginatedItems}
+        activeId={activeId}
+        onNavigate={navigate}
+        onCloseConversation={closeConversation}
+      />
+      {isFetchingNextPage && (
+        <div className="px-4 py-2 text-xs text-muted-foreground">Loading...</div>
+      )}
+      {hasMoreGone && <div ref={sentinelRef} className="h-1" />}
+      {isEmpty && !isLoading && (
+        <div className="px-4 py-2 text-xs text-muted-foreground">
+          No conversations
+        </div>
+      )}
     </div>
   );
 }

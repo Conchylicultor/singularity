@@ -172,6 +172,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Imported by: `agents`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `worktree-cleanup`
   - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `hold-and-exit`, `launch`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
   - Plugins:
+    - **`conversation-groups`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
+      - Defines:
+        - DB schema: `plugins/conversations/plugins/conversation-groups/server/internal/tables.ts`
+      - Exports (web):
+        - Types: `GroupedConversationListProps`
+        - Values: `GroupedConversationList`
+      - Exports (server):
+        - Values: `_conversationGroupMembers`, `_conversationGroups`, `conversationGroupsResource`
+      - Exports (shared):
+        - Types: `ConversationGroup`, `ConversationGroupMember`, `ConversationGroupsPayload`
+        - Values: `ConversationGroupMemberSchema`, `ConversationGroupSchema`, `ConversationGroupsPayloadSchema`, `conversationGroupsResource`
+      - Server:
+        - `POST /api/conversation-groups`
+        - `PATCH /api/conversation-groups/:id`
+        - `DELETE /api/conversation-groups/:id`
+        - `POST /api/conversation-groups/:id/members`
+        - `DELETE /api/conversation-groups/members/:conversationId`
     - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
       - Plugins:
         - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
