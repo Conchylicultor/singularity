@@ -2,33 +2,38 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
+import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
 import {
   convFilePeekPane,
   FileOpenProvider,
   FilePaneView,
 } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { convDocsPane, isDocFile } from "../panes";
+import { usePushedDocFiles } from "../use-pushed-doc-files";
 import { DocRow } from "./doc-row";
+
+type DocFile = EditedFile & { worktree: string };
 
 export function DocsPane() {
   const { conversation } = conversationPane.useData();
   const { files } = useEditedFiles(conversation.id);
-  const onFileOpen = useCallback(
-    (fp: string) =>
-      convFilePeekPane.open({
-        convId: conversation.id,
-        worktree: conversation.attemptId,
-        filePath: fp,
-      }),
-    [conversation.id, conversation.attemptId],
-  );
+  const pushedDocs = usePushedDocFiles(conversation.attemptId);
 
-  const docs = useMemo(() => {
-    if (!files) return null;
-    return [...files]
-      .filter((f) => isDocFile(f.path))
-      .sort((a, b) => a.path.localeCompare(b.path));
-  }, [files]);
+  const docs = useMemo<DocFile[] | null>(() => {
+    if (files === null && pushedDocs === null) return null;
+    const byPath = new Map<string, DocFile>();
+    // Pushed docs first (lower priority)
+    for (const f of pushedDocs ?? []) {
+      byPath.set(f.path, { ...f, worktree: "main" });
+    }
+    // Working tree docs override pushed (current state takes precedence)
+    for (const f of files ?? []) {
+      if (isDocFile(f.path)) {
+        byPath.set(f.path, { ...f, worktree: conversation.attemptId });
+      }
+    }
+    return [...byPath.values()].sort((a, b) => a.path.localeCompare(b.path));
+  }, [files, pushedDocs, conversation.attemptId]);
 
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
@@ -41,6 +46,18 @@ export function DocsPane() {
   }, [docs, selectedPath]);
 
   const selected = docs?.find((f) => f.path === selectedPath) ?? null;
+
+  const onFileOpen = useCallback(
+    (fp: string) => {
+      const docWorktree = docs?.find((d) => d.path === fp)?.worktree ?? conversation.attemptId;
+      convFilePeekPane.open({
+        convId: conversation.id,
+        worktree: docWorktree,
+        filePath: fp,
+      });
+    },
+    [conversation.id, conversation.attemptId, docs],
+  );
 
   const title = (
     <span className="flex items-center gap-2">
@@ -81,7 +98,7 @@ export function DocsPane() {
           {selected ? (
             <FileOpenProvider value={onFileOpen}>
               <FilePaneView
-                worktree={conversation.attemptId}
+                worktree={selected.worktree}
                 path={selected.path}
                 status={selected.status}
               />

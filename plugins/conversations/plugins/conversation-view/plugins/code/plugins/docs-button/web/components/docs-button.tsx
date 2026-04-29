@@ -1,19 +1,29 @@
+import { useMemo } from "react";
 import { MdArticle } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { convDocsPane, isDocFile } from "../panes";
+import { usePushedDocFiles } from "../use-pushed-doc-files";
 
 export function DocsButton({ conversation }: { conversation: ConversationRecord }) {
   const { files } = useEditedFiles(conversation.id);
+  const pushedDocs = usePushedDocFiles(conversation.attemptId);
   const match = usePaneMatch();
   const isOpen =
     match?.chain.some((e) => e.pane === convDocsPane._internal) ?? false;
 
-  const docs = files?.filter((f) => isDocFile(f.path)) ?? null;
-  const count = docs?.length ?? 0;
-  const disabled = docs != null && count === 0;
+  const workingDocs = useMemo(() => files?.filter((f) => isDocFile(f.path)) ?? null, [files]);
+
+  const count = useMemo(() => {
+    if (workingDocs === null && pushedDocs === null) return null;
+    const workingPaths = new Set((workingDocs ?? []).map((f) => f.path));
+    const pushedOnlyCount = (pushedDocs ?? []).filter((f) => !workingPaths.has(f.path)).length;
+    return (workingDocs?.length ?? 0) + pushedOnlyCount;
+  }, [workingDocs, pushedDocs]);
+
+  const disabled = count !== null && count === 0;
 
   return (
     <Button
@@ -31,7 +41,7 @@ export function DocsButton({ conversation }: { conversation: ConversationRecord 
       className="gap-1.5"
     >
       <MdArticle className="size-4" />
-      {docs !== null && <span className="tabular-nums text-xs">{count}</span>}
+      {count !== null && <span className="tabular-nums text-xs">{count}</span>}
     </Button>
   );
 }

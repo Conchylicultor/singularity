@@ -1,0 +1,55 @@
+import { useEffect, useMemo, useState } from "react";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { pushesResource } from "@plugins/tasks/shared";
+import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
+import { isDocFile } from "./panes";
+
+/** Returns all .md/.mdx files changed in any push for the given attempt, deduped by path. Null while loading. */
+export function usePushedDocFiles(attemptId: string): EditedFile[] | null {
+  const pushesQ = useResource(pushesResource);
+  const [result, setResult] = useState<{ key: string; files: EditedFile[] } | null>(null);
+
+  const pushIdsKey = useMemo(() => {
+    if (!pushesQ.data) return null;
+    const ids = new Set<string>();
+    for (const r of pushesQ.data) {
+      if (r.attemptId === attemptId) ids.add(r.pushId);
+    }
+    return [...ids].sort().join(",");
+  }, [pushesQ.data, attemptId]);
+
+  useEffect(() => {
+    if (pushIdsKey === null) return;
+    const ids = pushIdsKey ? pushIdsKey.split(",") : [];
+    if (ids.length === 0) {
+      setResult({ key: "", files: [] });
+      return;
+    }
+
+    let cancelled = false;
+    Promise.all(
+      ids.map((pushId) =>
+        fetch(`/api/code/main/push?pushId=${encodeURIComponent(pushId)}`)
+          .then((r) => (r.ok ? (r.json() as Promise<{ files: EditedFile[] }>) : Promise.resolve({ files: [] })))
+          .then((data) => data.files.filter((f) => isDocFile(f.path)))
+          .catch(() => [] as EditedFile[]),
+      ),
+    ).then((allFiles) => {
+      if (cancelled) return;
+      const byPath = new Map<string, EditedFile>();
+      for (const files of allFiles) {
+        for (const f of files) byPath.set(f.path, f);
+      }
+      setResult({ key: pushIdsKey, files: [...byPath.values()] });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pushIdsKey]);
+
+  if (pushIdsKey === null) return null;
+  if (pushIdsKey === "") return [];
+  if (result?.key !== pushIdsKey) return null;
+  return result.files;
+}
