@@ -16,6 +16,7 @@
 - Slot contributors: `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `hold-and-exit`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
 - Sub-plugins:
   - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
+  - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
   - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
   - **`exit`** — Toolbar button that closes the conversation without changing any task state.
   - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.

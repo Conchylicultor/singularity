@@ -111,6 +111,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
                 - **`markdown`** — Rendered markdown preview for .md and .mdx files.
                 - **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
             - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file. Toolbar button and full-screen view to review all worktree changes file-by-file.
+        - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
         - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
         - **`exit`** — Toolbar button that closes the conversation without changing any task state.
         - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
@@ -247,7 +248,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
         - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `side-conversation`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`, `yak-shaving`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `side-conversation`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`, `yak-shaving`
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
     - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
 
@@ -299,7 +300,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `agents`, `build`, `code`, `code-explorer`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `worktree-cleanup`, `yak-shaving`
+  - Imported by: `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `worktree-cleanup`, `yak-shaving`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
 

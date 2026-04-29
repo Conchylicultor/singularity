@@ -158,6 +158,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-code-review",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/commits-graph": {
+      "name": "@singularity/plugin-conversations-conversation-view-commits-graph",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/drop-and-exit": {
       "name": "@singularity/plugin-conversations-conversation-view-drop-and-exit",
       "version": "0.0.1",
@@ -1093,6 +1097,8 @@
     "@singularity/plugin-conversations-conversation-view-code-file-pane-raw": ["@singularity/plugin-conversations-conversation-view-code-file-pane-raw@workspace:plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/raw"],
 
     "@singularity/plugin-conversations-conversation-view-code-review": ["@singularity/plugin-conversations-conversation-view-code-review@workspace:plugins/conversations/plugins/conversation-view/plugins/code/plugins/review"],
+
+    "@singularity/plugin-conversations-conversation-view-commits-graph": ["@singularity/plugin-conversations-conversation-view-commits-graph@workspace:plugins/conversations/plugins/conversation-view/plugins/commits-graph"],
 
     "@singularity/plugin-conversations-conversation-view-drop-and-exit": ["@singularity/plugin-conversations-conversation-view-drop-and-exit@workspace:plugins/conversations/plugins/conversation-view/plugins/drop-and-exit"],
 
