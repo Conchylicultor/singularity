@@ -36,7 +36,6 @@ import jobsPlugin from "@plugins/infra/plugins/jobs/server";
 import eventsPlugin from "@plugins/infra/plugins/events/server";
 import eventsTestPlugin from "@plugins/events-test/server";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
-import yakShavingPlugin from "@plugins/yak-shaving/server";
 // Auth lives on the central runtime — these stubs only register the OAuth
 // client config schemas (clientId/clientSecret) so config's per-worktree
 // Settings UI can render the credentials sections. The OAuth runtime,
@@ -92,7 +91,6 @@ export const plugins: ServerPluginDefinition[] = [
   eventsPlugin,
   eventsTestPlugin,
   conversationsRecoverPlugin,
-  yakShavingPlugin,
   conversationSummaryPlugin,
   authGooglePlugin,
   authNotionPlugin,

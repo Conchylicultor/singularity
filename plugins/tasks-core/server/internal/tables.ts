@@ -102,8 +102,8 @@ type ConversationModel = "opus" | "sonnet";
 type ConversationStatus = "starting" | "working" | "waiting" | "gone";
 // "user"   = manually created via the UI / default path
 // "agent"  = launched via the agents plugin (saved prompt + button click)
-// "system" = code-spawned by a job/trigger (yak classifier, etc.) — hidden
-//            from user-facing list/recovery/attempt surfaces.
+// "system" = code-spawned by a job/trigger — hidden from user-facing
+//            list/recovery/attempt surfaces.
 type ConversationKind = "user" | "agent" | "system";
 
 export const _conversations = pgTable("conversations", {

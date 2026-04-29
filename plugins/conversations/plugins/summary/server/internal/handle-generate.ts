@@ -6,9 +6,7 @@ import {
 import { getConversation } from "@plugins/tasks-core/server";
 import { buildSummarizePayload } from "./prompt";
 
-// Cap how long the summarising conversation may live before we reap it,
-// matching yak-shaving's pattern. The poller will mark the row gone after
-// deleteConversation runs.
+// Cap how long the summarising conversation may live before we reap it.
 const CLEANUP_AFTER_MS = 5 * 60 * 1000;
 
 export async function handleGenerate(

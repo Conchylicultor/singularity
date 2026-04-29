@@ -169,7 +169,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/conversations/:id/stop`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
-  - Imported by: `agents`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `worktree-cleanup`, `yak-shaving`
+  - Imported by: `agents`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `worktree-cleanup`
   - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `hold-and-exit`, `launch`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
   - Plugins:
     - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
@@ -622,7 +622,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
         - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `side-conversation`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`, `yak-shaving`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `side-conversation`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
       - Exports (web):
         - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
@@ -662,7 +662,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `Shell`, `ShellCommands`
   - Contributes:
     - `Core.Root` → `ShellLayout`
-  - Slot contributors: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `debug`, `draw-on-app`, `improve`, `screenshot`, `stats`, `task-detail`, `theme`, `worktree-switcher`, `yak-shaving`
+  - Slot contributors: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `debug`, `draw-on-app`, `improve`, `screenshot`, `stats`, `task-detail`, `theme`, `worktree-switcher`
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Defines:
@@ -780,7 +780,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `worktree-cleanup`, `yak-shaving`
+  - Imported by: `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `worktree-cleanup`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):
@@ -802,24 +802,5 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`worktree-switcher`** — Toolbar dropdown to switch the active worktree namespace.
   - Contributes:
     - `Shell.Toolbar` (group `namespace`) → `WorktreeDropdown`
-
-- **`yak-shaving`** — Persisted tree of conversations annotated with one-line context, status, and next-action. Curated by a Sonnet model. Persisted tree of conversations annotated with one-line context, status, and next-action. Curated by a Sonnet model.
-  - Defines:
-    - DB schema: `plugins/yak-shaving/server/internal/schema.ts`
-    - DB schema: `plugins/yak-shaving/server/internal/tables.ts`
-  - Exports (web):
-    - Values: `yakShavingConversationPane`, `yakShavingPane`
-  - Exports (server):
-    - Types: `YakShavingCategory`, `YakShavingNode`
-    - Values: `_yakShavingCategories`, `_yakShavingNodes`, `YAK_META_TASK_ID`, `yakShavingCategoriesResource`, `YakShavingCategorySchema`, `YakShavingNodeSchema`, `yakShavingNodesResource`
-  - Contributes:
-    - `Pane.Register` `yak-shaving` (path `/yak`)
-    - `Pane.Register` `yak-shaving-conversation` (path `c/:convId`)
-    - `Shell.Sidebar` "Yak" (group `System`)
-    - `yakShavingPane.open`
-  - Server:
-    - Uses: `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `tasks-core.Conversation`, `tasks-core.Task`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.listActiveConversations`
-    - Resources: `yak-shaving-categories` (push), `yak-shaving-nodes` (push)
-    - `POST /api/yak/rebuild`
 
 <!-- AUTOGENERATED:END -->

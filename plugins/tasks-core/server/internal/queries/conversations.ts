@@ -6,10 +6,10 @@ import type { Conversation } from "../schema";
 
 export const RECENT_GONE_LIMIT = 30;
 
-// System conversations (yak classifiers, future automation) live in the same
-// table but never surface in the sidebar, recovery pane, or attempt-view —
-// they're machine plumbing. Only `listConversationsForInfra` opts out of this
-// filter; every other entry point excludes them.
+// System conversations (machine-spawned automation) live in the same table but
+// never surface in the sidebar, recovery pane, or attempt-view — they're
+// plumbing. Only `listConversationsForInfra` opts out of this filter; every
+// other entry point excludes them.
 const notSystem = ne(conversations.kind, "system");
 
 type Filters = {
@@ -60,14 +60,14 @@ export function listConversationsForDisplay(): Promise<Conversation[]> {
   return queryConversations({}, { col: conversations.createdAt, dir: "desc" });
 }
 
-// User-visible + active=true. Yak rebuild + recentConversationsResource.
+// User-visible + active=true. Used by recentConversationsResource.
 export function listActiveConversations(): Promise<Conversation[]> {
   return queryConversations({ active: true }, { col: conversations.createdAt, dir: "desc" });
 }
 
 // Active system-kind conversations only. Used to surface running plumbing
-// (yak-shaving rebuild, future automation) in the sidebar behind a debug
-// toggle. UI lists must NOT mix these into the regular active list.
+// in the sidebar behind a debug toggle. UI lists must NOT mix these into
+// the regular active list.
 export function listActiveSystemConversations(): Promise<Conversation[]> {
   return queryConversations(
     { onlySystem: true, active: true },

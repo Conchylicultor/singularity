@@ -88,7 +88,6 @@ import configPlugin from "@plugins/config/web";
 import eventsTestPlugin from "@plugins/events-test/web";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/web";
 import attemptViewPlugin from "@plugins/attempt-view/web";
-import yakShavingPlugin from "@plugins/yak-shaving/web";
 import authPlugin from "@plugins/auth/web";
 import authGooglePlugin from "@plugins/auth/plugins/google/web";
 import authNotionPlugin from "@plugins/auth/plugins/notion/web";
@@ -183,7 +182,6 @@ export const plugins: PluginDefinition[] = [
   eventsTestPlugin,
   conversationsRecoverPlugin,
   attemptViewPlugin,
-  yakShavingPlugin,
   authPlugin,
   authGooglePlugin,
   authNotionPlugin,
