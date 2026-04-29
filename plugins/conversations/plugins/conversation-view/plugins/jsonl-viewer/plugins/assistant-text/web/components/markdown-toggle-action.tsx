@@ -1,7 +1,9 @@
 import { MdCode } from "react-icons/md";
-import type { JsonlEvent } from "../../../../shared";
-import { useRowMarkdown } from "../../../../web/components/row-markdown-context";
-import { RowActionButton } from "../../../../web/components/row-action-button";
+import type { JsonlEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/shared";
+import {
+  RowActionButton,
+  useRowMarkdown,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
 export function MarkdownToggleAction({ event }: { event: JsonlEvent }) {
   if (event.kind !== "assistant-text") return null;
