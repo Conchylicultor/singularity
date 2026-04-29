@@ -29,6 +29,8 @@ export function ScreenshotButton() {
           // modern-screenshot relies on never fires in a hidden tab).
           const blob = await domToBlob(document.documentElement, {
             scale: window.devicePixelRatio || 1,
+            // Preserve scroll positions of overflow containers (e.g. conversation pane).
+            features: { restoreScrollPosition: true },
           });
           if (!blob) {
             ShellCommands.Toast({ description: "Screenshot failed", variant: "error" });
