@@ -7,6 +7,32 @@ import {
   type ReactNode,
 } from "react";
 
+const STORAGE_KEY = "singularity:prompt-drafts-v1";
+
+function readDraftsFromStorage(): Map<string, PromptDraft> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return new Map();
+    const parsed = JSON.parse(raw) as Record<string, string>;
+    return new Map(Object.entries(parsed).map(([k, text]) => [k, { text, images: [] }]));
+  } catch {
+    return new Map();
+  }
+}
+
+function writeDraftsToStorage(drafts: Map<string, PromptDraft>) {
+  try {
+    const obj: Record<string, string> = {};
+    for (const [k, v] of drafts) {
+      if (v.text.trim()) obj[k] = v.text;
+    }
+    if (Object.keys(obj).length === 0) localStorage.removeItem(STORAGE_KEY);
+    else localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+  } catch {
+    // Quota exceeded — silently ignore
+  }
+}
+
 export type PromptImageDraft = {
   id: string;
   mime: string;
@@ -37,15 +63,14 @@ type DraftStore = {
 const PromptDraftContext = createContext<DraftStore | null>(null);
 
 export function PromptDraftProvider({ children }: { children: ReactNode }) {
-  const [drafts, setDrafts] = useState<Map<string, PromptDraft>>(
-    () => new Map(),
-  );
+  const [drafts, setDrafts] = useState<Map<string, PromptDraft>>(readDraftsFromStorage);
 
   const setDraft = useCallback((convId: string, value: PromptDraft) => {
     setDrafts((prev) => {
       const next = new Map(prev);
       if (isDraftEmpty(value)) next.delete(convId);
       else next.set(convId, value);
+      writeDraftsToStorage(next);
       return next;
     });
   }, []);
@@ -55,6 +80,7 @@ export function PromptDraftProvider({ children }: { children: ReactNode }) {
       if (!prev.has(convId)) return prev;
       const next = new Map(prev);
       next.delete(convId);
+      writeDraftsToStorage(next);
       return next;
     });
   }, []);
