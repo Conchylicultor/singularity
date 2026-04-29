@@ -79,6 +79,8 @@ import taskEventsPlugin from "@plugins/tasks/plugins/task-events/web";
 import taskListPlugin from "@plugins/tasks/plugins/task-list/web";
 import agentsPlugin from "@plugins/agents/web";
 import screenshotPlugin from "@plugins/screenshot/web";
+import drawCanvasPlugin from "@plugins/screenshot/plugins/draw-canvas/web";
+import drawOnAppPlugin from "@plugins/screenshot/plugins/draw-on-app/web";
 import attachmentsPlugin from "@plugins/infra/plugins/attachments/web";
 import improvePlugin from "@plugins/improve/web";
 import configPlugin from "@plugins/config/web";
@@ -171,6 +173,8 @@ export const plugins: PluginDefinition[] = [
   taskListPlugin,
   agentsPlugin,
   screenshotPlugin,
+  drawCanvasPlugin,
+  drawOnAppPlugin,
   attachmentsPlugin,
   improvePlugin,
   configPlugin,

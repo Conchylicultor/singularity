@@ -7,7 +7,7 @@ export interface Stroke {
   points: { x: number; y: number }[];
 }
 
-interface Props {
+export interface DrawCanvasProps {
   displayed: DOMRect;
   natural: { w: number; h: number };
   strokes: Stroke[];
@@ -17,7 +17,7 @@ interface Props {
   readOnly?: boolean;
 }
 
-export function DrawOverlay({
+export function DrawCanvas({
   displayed,
   natural,
   strokes,
@@ -25,7 +25,7 @@ export function DrawOverlay({
   color,
   width,
   readOnly = false,
-}: Props) {
+}: DrawCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [drawing, setDrawing] = useState(false);
 

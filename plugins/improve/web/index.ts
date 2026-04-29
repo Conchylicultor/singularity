@@ -2,6 +2,9 @@ import type { PluginDefinition } from "@core";
 import { Shell } from "@plugins/shell/web";
 import { ImproveButton } from "./components/improve-button";
 
+export { Improve as ImproveCommands } from "./commands";
+export type { OpenWithAttachmentsArgs } from "./commands";
+
 export default {
   id: "improve",
   name: "Improve",

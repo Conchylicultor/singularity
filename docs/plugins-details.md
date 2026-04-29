@@ -499,7 +499,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`improve`**
   - Defines:
+    - Commands: `Improve.OpenWithAttachments`
     - DB schema: `plugins/improve/server/internal/tables.ts`
+  - Exports (web):
+    - Types: `OpenWithAttachmentsArgs`
+    - Values: `ImproveCommands`
   - Exports (server):
     - Values: `_improve_config`, `IMPROVEMENTS_META_TASK_ID`
   - Contributes:
@@ -629,6 +633,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/screenshots/:id`
     - `GET /api/screenshots/:id`
     - `POST /api/screenshots/:id/file`
+  - Plugins:
+    - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.
+      - Exports (web):
+        - Types: `DrawCanvasProps`, `Stroke`
+        - Values: `applyStrokes`, `DrawCanvas`
+    - **`draw-on-app`** — Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.
+      - Contributes:
+        - `Shell.Toolbar` (group `actions`) → `DrawOnAppButton`
 
 - **`shell`** — Foundational app layout; defines the slots and commands most other plugins extend.
   - Defines:
@@ -639,7 +651,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `Shell`, `ShellCommands`
   - Contributes:
     - `Core.Root` → `ShellLayout`
-  - Slot contributors: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `debug`, `improve`, `screenshot`, `stats`, `task-detail`, `theme`, `worktree-switcher`, `yak-shaving`
+  - Slot contributors: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `debug`, `draw-on-app`, `improve`, `screenshot`, `stats`, `task-detail`, `theme`, `worktree-switcher`, `yak-shaving`
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Defines:

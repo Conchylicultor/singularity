@@ -252,6 +252,9 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
+  - Plugins:
+    - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.
+    - **`draw-on-app`** — Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.
 
 - **`shell`** [load-bearing] — Foundational app layout; defines the slots and commands most other plugins extend.
   - Defines:
@@ -262,7 +265,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - Values: `Shell`, `ShellCommands`
   - Contributes:
     - `Core.Root` → `ShellLayout`
-  - Slot contributors: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `debug`, `improve`, `screenshot`, `stats`, `task-detail`, `theme`, `worktree-switcher`, `yak-shaving`
+  - Slot contributors: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `debug`, `draw-on-app`, `improve`, `screenshot`, `stats`, `task-detail`, `theme`, `worktree-switcher`, `yak-shaving`
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Plugins:

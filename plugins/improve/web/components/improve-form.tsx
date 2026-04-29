@@ -1,8 +1,13 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { MdAdd } from "react-icons/md";
+import { MdAdd, MdImage } from "react-icons/md";
 
 type Submitting = false | "create" | "sonnet" | "opus";
+
+export interface PrefilledAttachment {
+  id: string;
+  filename: string;
+}
 
 export interface ImproveFormProps {
   value: string;
@@ -11,6 +16,7 @@ export interface ImproveFormProps {
   onToggleUrl: (next: boolean) => void;
   includeScreenshot: boolean;
   onToggleScreenshot: (next: boolean) => void;
+  prefilledAttachments?: PrefilledAttachment[];
   submitting: Submitting;
   onSubmit: (launch: "sonnet" | "opus" | null) => void;
   onCancel: () => void;
@@ -23,6 +29,7 @@ export function ImproveForm({
   onToggleUrl,
   includeScreenshot,
   onToggleScreenshot,
+  prefilledAttachments,
   submitting,
   onSubmit,
   onCancel,
@@ -34,12 +41,27 @@ export function ImproveForm({
   }, []);
 
   const disabled = !value.trim() || submitting !== false;
+  const attachments = prefilledAttachments ?? [];
 
   return (
     <div className="flex w-80 flex-col gap-2">
       <div className="text-muted-foreground text-xs font-medium">
         Improve this app
       </div>
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {attachments.map((a) => (
+            <span
+              key={a.id}
+              className="inline-flex items-center gap-1 rounded border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
+              title={a.filename}
+            >
+              <MdImage className="size-3" />
+              {a.filename}
+            </span>
+          ))}
+        </div>
+      )}
       <textarea
         ref={textareaRef}
         value={value}

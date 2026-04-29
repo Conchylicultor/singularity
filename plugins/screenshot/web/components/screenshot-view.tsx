@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  DrawCanvas,
+  applyStrokes,
+  type Stroke,
+} from "@plugins/screenshot/plugins/draw-canvas/web";
 import { ToolsPane, type Tool, type DrawSettings } from "./tools-pane";
 import { CropOverlay, type CropRect } from "./crop-overlay";
-import { DrawOverlay, type Stroke } from "./draw-overlay";
 import { PromptForm } from "./prompt-form";
 
 export function ScreenshotView({ id }: { id: string }) {
@@ -221,7 +225,7 @@ function ImageStage({
         />
       )}
       {(tool === "draw" || strokes.length > 0) && naturalSize && displayedRect && (
-        <DrawOverlay
+        <DrawCanvas
           displayed={displayedRect}
           natural={naturalSize}
           strokes={strokes}
@@ -235,63 +239,25 @@ function ImageStage({
   );
 }
 
-async function loadImageElement(blob: Blob): Promise<HTMLImageElement> {
+async function applyCrop(blob: Blob, crop: CropRect): Promise<Blob> {
   const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.src = url;
   try {
-    const img = new Image();
-    img.src = url;
     await img.decode();
-    return img;
   } finally {
-    // Caller is responsible for calling URL.revokeObjectURL — but we keep the
-    // image alive here, so revoke after decode (the decoded pixels remain).
     URL.revokeObjectURL(url);
   }
-}
-
-async function canvasToPng(canvas: HTMLCanvasElement): Promise<Blob> {
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/png");
-  });
-}
-
-async function applyCrop(blob: Blob, crop: CropRect): Promise<Blob> {
-  const img = await loadImageElement(blob);
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(crop.w));
   canvas.height = Math.max(1, Math.round(crop.h));
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("no 2d context");
   ctx.drawImage(img, crop.x, crop.y, crop.w, crop.h, 0, 0, canvas.width, canvas.height);
-  return canvasToPng(canvas);
-}
-
-async function applyStrokes(blob: Blob, strokes: Stroke[]): Promise<Blob> {
-  const img = await loadImageElement(blob);
-  const canvas = document.createElement("canvas");
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("no 2d context");
-  ctx.drawImage(img, 0, 0);
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  for (const stroke of strokes) {
-    if (stroke.points.length === 0) continue;
-    ctx.strokeStyle = stroke.color;
-    ctx.lineWidth = stroke.width;
-    ctx.beginPath();
-    const first = stroke.points[0]!;
-    ctx.moveTo(first.x, first.y);
-    for (let i = 1; i < stroke.points.length; i++) {
-      const p = stroke.points[i]!;
-      ctx.lineTo(p.x, p.y);
-    }
-    if (stroke.points.length === 1) {
-      // single dot
-      ctx.lineTo(first.x + 0.01, first.y + 0.01);
-    }
-    ctx.stroke();
-  }
-  return canvasToPng(canvas);
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),
+      "image/png",
+    );
+  });
 }

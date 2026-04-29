@@ -400,6 +400,17 @@
         "modern-screenshot": "^4.6.0",
       },
     },
+    "plugins/screenshot/plugins/draw-canvas": {
+      "name": "@singularity/plugin-screenshot-draw-canvas",
+      "version": "0.0.1",
+    },
+    "plugins/screenshot/plugins/draw-on-app": {
+      "name": "@singularity/plugin-screenshot-draw-on-app",
+      "version": "0.0.1",
+      "dependencies": {
+        "modern-screenshot": "^4.6.0",
+      },
+    },
     "plugins/shell": {
       "name": "@singularity/plugin-shell",
       "version": "0.0.1",
@@ -1198,6 +1209,10 @@
     "@singularity/plugin-primitives-tree": ["@singularity/plugin-primitives-tree@workspace:plugins/primitives/plugins/tree"],
 
     "@singularity/plugin-screenshot": ["@singularity/plugin-screenshot@workspace:plugins/screenshot"],
+
+    "@singularity/plugin-screenshot-draw-canvas": ["@singularity/plugin-screenshot-draw-canvas@workspace:plugins/screenshot/plugins/draw-canvas"],
+
+    "@singularity/plugin-screenshot-draw-on-app": ["@singularity/plugin-screenshot-draw-on-app@workspace:plugins/screenshot/plugins/draw-on-app"],
 
     "@singularity/plugin-shell": ["@singularity/plugin-shell@workspace:plugins/shell"],
 

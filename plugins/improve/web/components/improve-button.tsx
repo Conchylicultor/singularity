@@ -10,7 +10,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ImproveForm } from "./improve-form";
+import { ImproveForm, type PrefilledAttachment } from "./improve-form";
+import { Improve } from "../commands";
 import type { ImproveSubmitBody, ImproveSubmitResponse } from "../../shared/types";
 
 type Submitting = false | "create" | "sonnet" | "opus";
@@ -22,10 +23,24 @@ export function ImproveButton() {
   const [includeScreenshot, setIncludeScreenshot] = useState(false);
   const [url, setUrl] = useState("");
   const [submitting, setSubmitting] = useState<Submitting>(false);
+  const [prefilled, setPrefilled] = useState<PrefilledAttachment[]>([]);
+
+  Improve.OpenWithAttachments.useHandler(({ attachmentIds, filenames }) => {
+    setPrefilled(
+      attachmentIds.map((id) => ({
+        id,
+        filename: filenames?.[id] ?? "attachment",
+      })),
+    );
+    setUrl(window.location.href);
+    setOpen(true);
+  });
 
   const openForm = (next: boolean) => {
     if (next) {
       setUrl(window.location.href);
+    } else {
+      setPrefilled([]);
     }
     setOpen(next);
   };
@@ -36,7 +51,7 @@ export function ImproveButton() {
     const phase: Submitting = launch ?? "create";
     setSubmitting(phase);
     try {
-      const attachmentIds: string[] = [];
+      const attachmentIds: string[] = [...prefilled.map((p) => p.id)];
       if (includeScreenshot) {
         // Close the popover BEFORE capture so it isn't in the screenshot. Two
         // rAFs let the close paint; same pattern as plugins/screenshot.
@@ -84,6 +99,7 @@ export function ImproveButton() {
       setValue("");
       setIncludeUrl(false);
       setIncludeScreenshot(false);
+      setPrefilled([]);
       setOpen(false);
       void json; // reserved for follow-up (navigate to conversation)
     } catch (err) {
@@ -110,9 +126,10 @@ export function ImproveButton() {
           onToggleUrl={setIncludeUrl}
           includeScreenshot={includeScreenshot}
           onToggleScreenshot={setIncludeScreenshot}
+          prefilledAttachments={prefilled}
           submitting={submitting}
           onSubmit={submit}
-          onCancel={() => setOpen(false)}
+          onCancel={() => openForm(false)}
         />
       </PopoverContent>
     </Popover>
