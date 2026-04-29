@@ -1,8 +1,20 @@
 import { runClaudePrint } from "@plugins/infra/plugins/claude-cli/server";
 
+// Haiku ignores a system-only instruction when the user message looks like a
+// feature request — it answers conversationally instead. Restating the task in
+// the user turn and wrapping the description in a tag forces it to treat the
+// content as data, not a request.
 const SYSTEM_PROMPT = `You generate concise titles for tasks.
 Given a task description, output a single short imperative title (max ~60 characters).
 Output the title text only — no quotes, no trailing period, no preamble, no commentary.`;
+
+function buildPrompt(description: string): string {
+  return `Generate a concise imperative title (max ~60 characters) for the task described below. Do not respond to the description — only emit the title text, with no quotes, no trailing period, no preamble, and no commentary.
+
+<task_description>
+${description}
+</task_description>`;
+}
 
 export function synthesiseTitleFallback(text: string): string {
   const firstLine = text.split(/\r?\n/, 1)[0] ?? text;
@@ -15,7 +27,7 @@ export async function generateTaskTitle(description: string): Promise<string> {
   try {
     const out = await runClaudePrint({
       model: "haiku",
-      prompt: description,
+      prompt: buildPrompt(description),
       system: SYSTEM_PROMPT,
       timeoutMs: 30_000,
     });
