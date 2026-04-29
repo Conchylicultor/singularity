@@ -418,6 +418,42 @@
       "name": "@singularity/plugin-tasks-core",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/task-attachments": {
+      "name": "@singularity/plugin-tasks-task-attachments",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/task-dependencies": {
+      "name": "@singularity/plugin-tasks-task-dependencies",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/task-description": {
+      "name": "@singularity/plugin-tasks-task-description",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/task-detail": {
+      "name": "@singularity/plugin-tasks-task-detail",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/task-events": {
+      "name": "@singularity/plugin-tasks-task-events",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/task-file-peek": {
+      "name": "@singularity/plugin-tasks-task-file-peek",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/task-graph": {
+      "name": "@singularity/plugin-tasks-task-graph",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/task-header": {
+      "name": "@singularity/plugin-tasks-task-header",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/task-list": {
+      "name": "@singularity/plugin-tasks-task-list",
+      "version": "0.0.1",
+    },
     "plugins/terminal": {
       "name": "@singularity/plugin-terminal",
       "version": "0.0.1",
@@ -1156,6 +1192,24 @@
     "@singularity/plugin-tasks": ["@singularity/plugin-tasks@workspace:plugins/tasks"],
 
     "@singularity/plugin-tasks-core": ["@singularity/plugin-tasks-core@workspace:plugins/tasks-core"],
+
+    "@singularity/plugin-tasks-task-attachments": ["@singularity/plugin-tasks-task-attachments@workspace:plugins/tasks/plugins/task-attachments"],
+
+    "@singularity/plugin-tasks-task-dependencies": ["@singularity/plugin-tasks-task-dependencies@workspace:plugins/tasks/plugins/task-dependencies"],
+
+    "@singularity/plugin-tasks-task-description": ["@singularity/plugin-tasks-task-description@workspace:plugins/tasks/plugins/task-description"],
+
+    "@singularity/plugin-tasks-task-detail": ["@singularity/plugin-tasks-task-detail@workspace:plugins/tasks/plugins/task-detail"],
+
+    "@singularity/plugin-tasks-task-events": ["@singularity/plugin-tasks-task-events@workspace:plugins/tasks/plugins/task-events"],
+
+    "@singularity/plugin-tasks-task-file-peek": ["@singularity/plugin-tasks-task-file-peek@workspace:plugins/tasks/plugins/task-file-peek"],
+
+    "@singularity/plugin-tasks-task-graph": ["@singularity/plugin-tasks-task-graph@workspace:plugins/tasks/plugins/task-graph"],
+
+    "@singularity/plugin-tasks-task-header": ["@singularity/plugin-tasks-task-header@workspace:plugins/tasks/plugins/task-header"],
+
+    "@singularity/plugin-tasks-task-list": ["@singularity/plugin-tasks-task-list@workspace:plugins/tasks/plugins/task-list"],
 
     "@singularity/plugin-terminal": ["@singularity/plugin-terminal@workspace:plugins/terminal"],
 

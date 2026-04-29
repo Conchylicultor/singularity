@@ -65,7 +65,15 @@ import crashesPlugin from "@plugins/crashes/web";
 import statsPlugin from "@plugins/stats/web";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/web";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/web";
-import tasksPlugin from "@plugins/tasks/web";
+import taskDetailPlugin from "@plugins/tasks/plugins/task-detail/web";
+import taskFilePeekPlugin from "@plugins/tasks/plugins/task-file-peek/web";
+import taskGraphPlugin from "@plugins/tasks/plugins/task-graph/web";
+import taskHeaderPlugin from "@plugins/tasks/plugins/task-header/web";
+import taskDescriptionPlugin from "@plugins/tasks/plugins/task-description/web";
+import taskAttachmentsPlugin from "@plugins/tasks/plugins/task-attachments/web";
+import taskDependenciesPlugin from "@plugins/tasks/plugins/task-dependencies/web";
+import taskEventsPlugin from "@plugins/tasks/plugins/task-events/web";
+import taskListPlugin from "@plugins/tasks/plugins/task-list/web";
 import agentsPlugin from "@plugins/agents/web";
 import screenshotPlugin from "@plugins/screenshot/web";
 import attachmentsPlugin from "@plugins/infra/plugins/attachments/web";
@@ -146,7 +154,15 @@ export const plugins: PluginDefinition[] = [
   statsPlugin,
   statsTasksPlugin,
   statsCommitsPlugin,
-  tasksPlugin,
+  taskDetailPlugin,
+  taskFilePeekPlugin,
+  taskGraphPlugin,
+  taskHeaderPlugin,
+  taskDescriptionPlugin,
+  taskAttachmentsPlugin,
+  taskDependenciesPlugin,
+  taskEventsPlugin,
+  taskListPlugin,
   agentsPlugin,
   screenshotPlugin,
   attachmentsPlugin,

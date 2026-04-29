@@ -2,8 +2,8 @@ import { useCallback, useMemo } from "react";
 import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@/components/ui/button";
-import { tasksResource, type Task } from "../../shared/resources";
-import { taskDetailPane } from "../panes";
+import { tasksResource, type Task } from "@plugins/tasks/shared";
+import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 
 const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 

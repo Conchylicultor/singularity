@@ -7,19 +7,22 @@ import {
   taskDetailPane,
   taskConversationPane,
 } from "./panes";
-import { Tasks as TasksSlots } from "./slots";
-import { LaunchAgentAction } from "./components/launch-agent-action";
-import { DeleteTaskAction } from "./components/delete-task-action";
-import { ExpandCollapseAllAction } from "./components/expand-collapse-all-action";
-export { Tasks } from "./slots";
-export { TasksList } from "./components/tasks-list";
+
+export { TaskDetail as TaskDetailSlots } from "./slots";
+export {
+  TaskDetailFilePeekProvider,
+  useTaskDetailFilePeek,
+  useFlushAll,
+  useRegisterFlush,
+} from "./context";
 export { TaskDetail } from "./components/task-detail";
 export { tasksRootPane, taskDetailPane, taskConversationPane } from "./panes";
 
 export default {
-  id: "tasks",
-  name: "Tasks",
-  description: "Nested tasks with attempts; meta-plugin hosting sub-pane contributions.",
+  id: "task-detail",
+  name: "Task Detail",
+  description:
+    "Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section,SidePanel} slots and the file-peek + flush-registry context that section sub-plugins share.",
   contributions: [
     Pane.Register({ pane: tasksRootPane }),
     Pane.Register({ pane: taskDetailPane }),
@@ -30,11 +33,5 @@ export default {
       group: "System",
       onClick: () => tasksRootPane.open({}),
     }),
-    TasksSlots.TaskActions({
-      id: "expand-collapse-all",
-      component: ExpandCollapseAllAction,
-    }),
-    TasksSlots.TaskActions({ id: "delete", component: DeleteTaskAction }),
-    TasksSlots.TaskActions({ id: "launch-agent", component: LaunchAgentAction }),
   ],
 } satisfies PluginDefinition;

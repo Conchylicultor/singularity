@@ -8,9 +8,8 @@ import {
 } from "@plugins/primitives/plugins/tree/web";
 import type { TreeNode } from "@plugins/primitives/plugins/tree/shared";
 import type { TaskStatus } from "@plugins/tasks-core/shared";
-import { tasksResource } from "../../shared/resources";
+import { tasksResource } from "@plugins/tasks/shared";
 import { Tasks as TasksSlots } from "../slots";
-import { taskDetailPane } from "../panes";
 import { StatusIcon } from "./task-status";
 import { cn } from "@/lib/utils";
 
@@ -119,7 +118,7 @@ export function TasksList({
 }: {
   selectedId?: string;
   rootTaskId?: string;
-  onSelect?: (id: string) => void;
+  onSelect: (id: string) => void;
 }) {
   const { data } = useResource(tasksResource);
   const rows = data ?? [];
@@ -129,9 +128,7 @@ export function TasksList({
       rows={rows}
       rootId={rootTaskId}
       selectedId={selectedId}
-      onSelect={(id) =>
-        onSelect ? onSelect(id) : taskDetailPane.open({ taskId: id })
-      }
+      onSelect={onSelect}
       onToggleExpanded={(id, next) => patchTask(id, { expanded: next })}
       onMove={(id, dest) => patchTask(id, dest)}
       onCreate={createTaskRow}
@@ -147,4 +144,3 @@ export function TasksList({
     />
   );
 }
-

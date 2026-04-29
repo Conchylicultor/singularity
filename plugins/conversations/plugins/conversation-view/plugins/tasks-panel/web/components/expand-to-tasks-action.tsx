@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import { MdOpenInNew } from "react-icons/md";
 import { PaneIconAction } from "@plugins/primitives/plugins/pane/web";
-import { taskDetailPane } from "@plugins/tasks/web";
+import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { TasksPaneContext } from "./tasks-pane-context";
 
 export function ExpandToTasksAction() {

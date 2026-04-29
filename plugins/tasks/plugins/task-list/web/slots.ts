@@ -6,11 +6,6 @@ export const Tasks = {
     id: string;
     component: ComponentType;
   }>("tasks.list"),
-  View: defineSlot<{
-    id: string;
-    title?: string;
-    component: ComponentType<{ taskId: string }>;
-  }>("tasks.view"),
   TaskActions: defineSlot<{
     id: string;
     component: ComponentType<{ taskId: string; hasChildren: boolean }>;

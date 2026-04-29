@@ -1,6 +1,6 @@
 import { MdUnfoldLess, MdUnfoldMore } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { tasksResource } from "../../shared/resources";
+import { tasksResource } from "@plugins/tasks/shared";
 import { cn } from "@/lib/utils";
 
 type TaskRow = { id: string; parentId: string | null; expanded: boolean };

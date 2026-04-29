@@ -12,9 +12,10 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import type { Task } from "@plugins/tasks-core/shared";
-import { taskDetailPane } from "../panes";
-import { STATUS_META } from "./task-status";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { tasksResource, type Task } from "@plugins/tasks/shared";
+import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
+import { STATUS_META } from "@plugins/tasks/plugins/task-list/web";
 import { cn } from "@/lib/utils";
 
 const NODE_WIDTH = 200;
@@ -28,7 +29,7 @@ type TaskNodeData = {
 
 type TaskFlowNode = Node<TaskNodeData, typeof NODE_TYPE>;
 
-export function computeDagClosure(rootId: string, allTasks: readonly Task[]): Task[] {
+function computeDagClosure(rootId: string, allTasks: readonly Task[]): Task[] {
   const byId = new Map(allTasks.map((t) => [t.id, t]));
   const reverseDeps = new Map<string, string[]>();
   for (const t of allTasks) {
@@ -162,39 +163,40 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
 
 const NODE_TYPES = { [NODE_TYPE]: TaskNode };
 
-export function TaskDag({
-  closure,
-  selectedId,
-}: {
-  closure: readonly Task[];
-  selectedId: string;
-}) {
+export function TaskGraph({ taskId }: { taskId: string }) {
+  const { data } = useResource(tasksResource);
+  const allTasks = data ?? [];
+  const closure = useMemo(() => computeDagClosure(taskId, allTasks), [taskId, allTasks]);
   const { nodes, edges } = useMemo(
-    () => layoutDag(closure, selectedId),
-    [closure, selectedId],
+    () => layoutDag(closure, taskId),
+    [closure, taskId],
   );
 
+  if (closure.length <= 1) return null;
+
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={NODE_TYPES}
-      fitView
-      fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
-      nodesDraggable={false}
-      nodesConnectable={false}
-      edgesFocusable={false}
-      elementsSelectable={false}
-      panOnDrag
-      zoomOnScroll={false}
-      zoomOnPinch
-      zoomOnDoubleClick={false}
-      proOptions={{ hideAttribution: true }}
-      connectionLineType={ConnectionLineType.SmoothStep}
-      minZoom={0.5}
-      maxZoom={1.5}
-    >
-      <Background gap={16} size={1} />
-    </ReactFlow>
+    <div className="bg-muted/30 h-60 shrink-0 border-b">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={NODE_TYPES}
+        fitView
+        fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        edgesFocusable={false}
+        elementsSelectable={false}
+        panOnDrag
+        zoomOnScroll={false}
+        zoomOnPinch
+        zoomOnDoubleClick={false}
+        proOptions={{ hideAttribution: true }}
+        connectionLineType={ConnectionLineType.SmoothStep}
+        minZoom={0.5}
+        maxZoom={1.5}
+      >
+        <Background gap={16} size={1} />
+      </ReactFlow>
+    </div>
   );
 }

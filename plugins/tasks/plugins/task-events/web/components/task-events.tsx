@@ -7,9 +7,9 @@ import {
   attemptsResource,
   pushesResource,
   type Attempt,
-} from "../../shared/resources";
+} from "@plugins/tasks/shared";
+import { taskConversationPane } from "@plugins/tasks/plugins/task-detail/web";
 import { cn } from "@/lib/utils";
-import { taskConversationPane } from "../panes";
 
 type RepoInfo = { githubBase: string | null };
 
@@ -59,7 +59,6 @@ const ATTEMPT_STATUS_LABELS: Record<Attempt["status"], string> = {
   completed: "Completed",
   abandoned: "Abandoned",
 };
-
 
 export function TaskEvents({ taskId }: { taskId: string }) {
   const attemptsQ = useResource(attemptsResource);
@@ -178,38 +177,38 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                       {convs.map((c) => {
                         const isActive = activeConvId === c.id;
                         return (
-                        <li key={c.id}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (activeConvId === c.id) {
-                                taskConversationPane.close();
-                              } else {
-                                taskConversationPane.open({
-                                  taskId,
-                                  convId: c.id,
-                                });
-                              }
-                            }}
-                            className={cn(
-                              "hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm",
-                              isActive && "bg-accent",
-                            )}
-                          >
-                            <span
+                          <li key={c.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (activeConvId === c.id) {
+                                  taskConversationPane.close();
+                                } else {
+                                  taskConversationPane.open({
+                                    taskId,
+                                    convId: c.id,
+                                  });
+                                }
+                              }}
                               className={cn(
-                                "size-1.5 shrink-0 rounded-full",
-                                CONV_STATUS_DOT[c.status],
+                                "hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm",
+                                isActive && "bg-accent",
                               )}
-                            />
-                            <span className="flex-1 truncate">
-                              {c.title ?? "Starting…"}
-                            </span>
-                            <span className="text-muted-foreground shrink-0 text-xs">
-                              {c.status}
-                            </span>
-                          </button>
-                        </li>
+                            >
+                              <span
+                                className={cn(
+                                  "size-1.5 shrink-0 rounded-full",
+                                  CONV_STATUS_DOT[c.status],
+                                )}
+                              />
+                              <span className="flex-1 truncate">
+                                {c.title ?? "Starting…"}
+                              </span>
+                              <span className="text-muted-foreground shrink-0 text-xs">
+                                {c.status}
+                              </span>
+                            </button>
+                          </li>
                         );
                       })}
                     </ul>
