@@ -212,10 +212,34 @@ export const tmuxRuntime: ConversationRuntime = {
       stdout: "pipe",
       stderr: "pipe",
     }).exited;
-    await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "-l", text], {
+    // Send the text via load-buffer + paste-buffer -p so tmux wraps it in
+    // bracketed paste markers (\x1b[200~ … \x1b[201~). Without that, Claude
+    // CLI falls back to a timing/burst heuristic to detect pastes — large
+    // multi-line prompts get split into several "[Pasted text #N]" chips and
+    // the trailing Enter we send below gets absorbed into the last paste,
+    // leaving the prompt unsubmitted. -b uses a named buffer (not the
+    // anonymous default the user cycles through with prefix+]) and -d
+    // deletes it after paste. tmux buffers are isolated from the system
+    // clipboard.
+    const bufferName = `singularity-send-${conversationId}`;
+    const load = Bun.spawn([TMUX, "load-buffer", "-b", bufferName, "-"], {
+      stdin: "pipe",
       stdout: "pipe",
       stderr: "pipe",
-    }).exited;
+    });
+    load.stdin.write(text);
+    await load.stdin.end();
+    const loadExit = await load.exited;
+    if (loadExit !== 0) {
+      const stderr = await new Response(load.stderr).text();
+      throw new Error(
+        `tmux load-buffer for ${conversationId} failed (exit ${loadExit}): ${stderr.trim() || "<no stderr>"}`,
+      );
+    }
+    await Bun.spawn(
+      [TMUX, "paste-buffer", "-d", "-p", "-b", bufferName, "-t", conversationId],
+      { stdout: "pipe", stderr: "pipe" },
+    ).exited;
     await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Enter"], {
       stdout: "pipe",
       stderr: "pipe",
