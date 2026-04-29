@@ -171,7 +171,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - `POST /api/attachments`
         - `GET /api/attachments/:id`
         - `DELETE /api/attachments/:id`
-      - Endpoint callers: `improve`, `tasks`
+      - Endpoint callers: `improve`, `task-attachments`
     - **`events`** [load-bearing] — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
       - Defines:
         - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`
@@ -243,7 +243,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
         - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `side-conversation`, `stats`, `summary`, `tasks`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`, `yak-shaving`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `side-conversation`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`, `yak-shaving`
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
     - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
 
@@ -258,14 +258,24 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - Values: `Shell`, `ShellCommands`
   - Contributes:
     - `Core.Root` → `ShellLayout`
-  - Slot contributors: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `debug`, `improve`, `screenshot`, `stats`, `tasks`, `theme`, `worktree-switcher`, `yak-shaving`
+  - Slot contributors: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `debug`, `improve`, `screenshot`, `stats`, `task-detail`, `theme`, `worktree-switcher`, `yak-shaving`
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Plugins:
     - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
     - **`tasks`** — Task-based stats: active (open) tasks over time.
 
-- **`tasks`** — Nested tasks with attempts; meta-plugin hosting sub-pane contributions. Nested tasks with attempts linking to conversations.
+- **`tasks`** — Nested tasks with attempts linking to conversations.
+  - Plugins:
+    - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
+    - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the parent task when applicable.
+    - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.
+    - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section,SidePanel} slots and the file-peek + flush-registry context that section sub-plugins share.
+    - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens taskConversationPane.
+    - **`task-file-peek`** — Right-panel preview for files referenced from a task description. Reads filePath from the task-detail file-peek context.
+    - **`task-graph`** — Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.
+    - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
+    - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions slots and ships the row actions (delete, expand-all, launch-agent).
 
 - **`tasks-core`** [load-bearing] — Schema + repository layer for the tasks/attempts/conversations FK cluster.
   - Defines:

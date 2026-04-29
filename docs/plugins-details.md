@@ -511,7 +511,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `POST /api/attachments`
         - `GET /api/attachments/:id`
         - `DELETE /api/attachments/:id`
-      - Endpoint callers: `improve`, `tasks`
+      - Endpoint callers: `improve`, `task-attachments`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
       - Defines:
         - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`
@@ -595,7 +595,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
         - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `side-conversation`, `stats`, `summary`, `tasks`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`, `yak-shaving`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `side-conversation`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`, `yak-shaving`
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
       - Exports (web):
         - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
@@ -627,7 +627,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `Shell`, `ShellCommands`
   - Contributes:
     - `Core.Root` → `ShellLayout`
-  - Slot contributors: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `debug`, `improve`, `screenshot`, `stats`, `tasks`, `theme`, `worktree-switcher`, `yak-shaving`
+  - Slot contributors: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `debug`, `improve`, `screenshot`, `stats`, `task-detail`, `theme`, `worktree-switcher`, `yak-shaving`
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Defines:
@@ -666,26 +666,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.listTasks`
         - `GET /api/stats/tasks/cumulative`
 
-- **`tasks`** — Nested tasks with attempts; meta-plugin hosting sub-pane contributions. Nested tasks with attempts linking to conversations.
-  - Defines:
-    - Slots: `Tasks.List`, `Tasks.View`, `Tasks.TaskActions`
-  - Exports (web):
-    - Values: `taskConversationPane`, `TaskDetail`, `taskDetailPane`, `Tasks`, `TasksList`, `tasksRootPane`
+- **`tasks`** — Nested tasks with attempts linking to conversations.
   - Exports (server):
     - Types: `Attempt`, `AttemptStatus`, `Push`, `Task`, `TaskStatus`
     - Values: `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `CONVERSATIONS_META_TASK_ID`, `nextRankUnder`, `pushesResource`, `PushSchema`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`
   - Exports (shared):
     - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
     - Values: `attemptsResource`, `pushesResource`, `tasksResource`
-  - Contributes:
-    - `Pane.Register` `tasks-root` (path `/tasks`)
-    - `Pane.Register` `task-detail` (path `:taskId`)
-    - `Pane.Register` `task-conversation` (path `c/:convId`)
-    - `Shell.Sidebar` "Tasks" (group `System`)
-    - `tasksRootPane.open`
-    - `Tasks.TaskActions` → `ExpandCollapseAllAction`
-    - `Tasks.TaskActions` → `DeleteTaskAction`
-    - `Tasks.TaskActions` → `LaunchAgentAction`
   - Server:
     - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.setTaskAutoStart`, `tasks-core.taskStatusChanged`, `tasks-core.updateTask`
     - `GET /api/tasks`
@@ -699,7 +686,49 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/tasks/:id/dependencies`
     - `DELETE /api/tasks/:id/dependencies/:depId`
     - `GET /api/repo-info`
-  - Endpoint callers: `new-child-task`
+  - Endpoint callers: `new-child-task`, `task-dependencies`, `task-description`, `task-events`, `task-header`, `task-list`
+  - Plugins:
+    - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
+      - Contributes:
+        - `TaskDetailSlots.Section` → `TaskAttachments`
+    - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the parent task when applicable.
+      - Contributes:
+        - `TaskDetailSlots.Section` → `TaskDependencies`
+    - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.
+      - Contributes:
+        - `TaskDetailSlots.Section` → `TaskDescription`
+    - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section,SidePanel} slots and the file-peek + flush-registry context that section sub-plugins share.
+      - Defines:
+        - Slots: `TaskDetail.Above`, `TaskDetail.Section`, `TaskDetail.SidePanel`
+      - Exports (web):
+        - Values: `taskConversationPane`, `TaskDetail`, `TaskDetailFilePeekProvider`, `taskDetailPane`, `TaskDetailSlots`, `tasksRootPane`, `useFlushAll`, `useRegisterFlush`, `useTaskDetailFilePeek`
+      - Contributes:
+        - `Pane.Register` `tasks-root` (path `/tasks`)
+        - `Pane.Register` `task-detail` (path `:taskId`)
+        - `Pane.Register` `task-conversation` (path `c/:convId`)
+        - `Shell.Sidebar` "Tasks" (group `System`)
+        - `tasksRootPane.open`
+    - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens taskConversationPane.
+      - Contributes:
+        - `TaskDetailSlots.Section` → `TaskEvents`
+    - **`task-file-peek`** — Right-panel preview for files referenced from a task description. Reads filePath from the task-detail file-peek context.
+      - Contributes:
+        - `TaskDetailSlots.SidePanel` → `TaskFilePeek`
+    - **`task-graph`** — Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.
+      - Contributes:
+        - `TaskDetailSlots.Above` → `TaskGraph`
+    - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
+      - Contributes:
+        - `TaskDetailSlots.Section` → `TaskHeader`
+    - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions slots and ships the row actions (delete, expand-all, launch-agent).
+      - Defines:
+        - Slots: `Tasks.List`, `Tasks.TaskActions`
+      - Exports (web):
+        - Values: `STATUS_META`, `StatusIcon`, `Tasks`, `TasksList`
+      - Contributes:
+        - `Tasks.TaskActions` → `ExpandCollapseAllAction`
+        - `Tasks.TaskActions` → `DeleteTaskAction`
+        - `Tasks.TaskActions` → `LaunchAgentAction`
 
 - **`tasks-core`** — Schema + repository layer for the tasks/attempts/conversations FK cluster.
   - Defines:
