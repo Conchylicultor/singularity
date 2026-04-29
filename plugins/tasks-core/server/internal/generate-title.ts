@@ -1,4 +1,5 @@
 import { runClaudePrint } from "@plugins/infra/plugins/claude-cli/server";
+import { updateTaskTitle } from "./mutations/tasks";
 
 // Haiku ignores a system-only instruction when the user message looks like a
 // feature request — it answers conversationally instead. Restating the task in
@@ -43,4 +44,25 @@ export async function generateTaskTitle(description: string): Promise<string> {
     console.warn("[tasks-core] generateTaskTitle fell back:", err);
     return fallback;
   }
+}
+
+// Fire-and-forget Haiku title generation. Callers create the task with
+// `synthesiseTitleFallback(description)` so launching is instant; this then
+// upgrades the title in the background. The `onlyIfTitleIn` guard ensures we
+// never clobber a user edit that landed before Haiku returned.
+export function scheduleTaskTitleUpdate(
+  taskId: string,
+  description: string,
+  fallbackTitle: string,
+): void {
+  if (!description.trim()) return;
+  void (async () => {
+    try {
+      const generated = await generateTaskTitle(description);
+      if (generated === fallbackTitle) return;
+      await updateTaskTitle(taskId, generated, [fallbackTitle]);
+    } catch (err) {
+      console.warn("[tasks-core] scheduleTaskTitleUpdate failed:", err);
+    }
+  })();
 }

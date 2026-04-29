@@ -1,8 +1,9 @@
 import {
   addTaskDependency,
   createTask,
-  generateTaskTitle,
   getTask,
+  scheduleTaskTitleUpdate,
+  synthesiseTitleFallback,
 } from "@plugins/tasks-core/server";
 import { armTaskAutoStart } from "./arm-auto-start";
 
@@ -24,14 +25,10 @@ export async function handleCreate(req: Request): Promise<Response> {
   const body = (await req.json().catch(() => ({}))) as CreateBody;
   const description = body.description?.trim() || null;
   const explicitTitle = body.title?.trim();
-  // When a caller supplies only a description, ask Haiku for a short title.
-  // The helper returns first-line-80-chars on any failure, so task creation
-  // never blocks on Claude CLI being available.
-  const title = explicitTitle
-    ? explicitTitle
-    : description
-      ? await generateTaskTitle(description)
-      : "Untitled";
+  // Use the synthesised fallback as the initial title so creation is instant;
+  // Haiku then upgrades it asynchronously via scheduleTaskTitleUpdate.
+  const fallbackTitle = description ? synthesiseTitleFallback(description) : null;
+  const title = explicitTitle ?? fallbackTitle ?? "Untitled";
   const row = await createTask({
     parentId: body.parentId ?? null,
     title,
@@ -39,6 +36,10 @@ export async function handleCreate(req: Request): Promise<Response> {
     author: body.author ?? "user",
     rank: body.rank,
   });
+
+  if (!explicitTitle && description && fallbackTitle) {
+    scheduleTaskTitleUpdate(row.id, description, fallbackTitle);
+  }
 
   const dependencies = Array.isArray(body.dependencies)
     ? Array.from(

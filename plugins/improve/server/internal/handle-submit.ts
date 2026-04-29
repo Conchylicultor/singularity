@@ -1,6 +1,7 @@
 import {
   createTask,
-  generateTaskTitle,
+  scheduleTaskTitleUpdate,
+  synthesiseTitleFallback,
   _taskAttachments,
 } from "@plugins/tasks-core/server";
 import { getAttachment } from "@plugins/infra/plugins/attachments/server";
@@ -33,12 +34,16 @@ export async function handleSubmit(req: Request): Promise<Response> {
   }
 
   const description = renderTaskDescription({ text, url, attachments });
+  // Synthesised fallback first so submit is instant; Haiku upgrades the
+  // title asynchronously.
+  const fallbackTitle = synthesiseTitleFallback(text);
   const task = await createTask({
     parentId: IMPROVEMENTS_META_TASK_ID,
-    title: await generateTaskTitle(text),
+    title: fallbackTitle,
     description,
     author: "improve-plugin",
   });
+  scheduleTaskTitleUpdate(task.id, text, fallbackTitle);
 
   if (attachments.length > 0) {
     await db
