@@ -1,6 +1,6 @@
 import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { rankText } from "@server/db/types";
-import { _conversations } from "@plugins/tasks-core/server/internal/tables";
+import { _conversations } from "@plugins/tasks-core/server";
 
 // User-defined groupings shown in the conversation sidebar list. Each
 // conversation can be a member of at most one group (PK on conversation_id).
