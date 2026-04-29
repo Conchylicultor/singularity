@@ -10,6 +10,8 @@ import worktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/web";
 import queuePlugin from "@plugins/debug/plugins/queue/web";
 import conversationsPlugin from "@plugins/conversations/plugins/conversations-view/web";
 import conversationPlugin from "@plugins/conversations/plugins/conversation-view/web";
+import conversationUiPlugin from "@plugins/conversations/plugins/conversation-ui/web";
+import conversationUiItemPlugin from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import conversationVscodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/vscode/web";
 import conversationOpenAppPlugin from "@plugins/conversations/plugins/conversation-view/plugins/open-app/web";
 import conversationStatusPlugin from "@plugins/conversations/plugins/conversation-view/plugins/status/web";
@@ -113,6 +115,8 @@ export const plugins: PluginDefinition[] = [
   worktreeCleanupPlugin,
   queuePlugin,
   conversationPlugin,
+  conversationUiPlugin,
+  conversationUiItemPlugin,
   conversationVscodePlugin,
   conversationOpenAppPlugin,
   conversationPushCounterPlugin,

@@ -3,6 +3,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { MdClose, MdVisibility, MdVisibilityOff } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, GonePageSchema } from "@plugins/conversations/web";
+import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { cn } from "@/lib/utils";
 import {
@@ -20,17 +21,6 @@ type ConversationEntry = ReturnType<typeof useConversations>["active"][number];
 
 const PAGE_SIZE = 20;
 
-function formatRelativeTime(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 function openConversation(name: string) {
   conversationPane.open({ convId: name });
 }
@@ -38,50 +28,6 @@ function openConversation(name: string) {
 function activeIdFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/c\/([^/]+)/);
   return m ? decodeURIComponent(m[1]!) : null;
-}
-
-function statusDotClass(conv: ConversationEntry) {
-  return cn(
-    "mt-1.5 size-1.5 shrink-0 rounded-full",
-    conv.status === "working"
-      ? "bg-[oklch(0.58_0.1_240)]"
-      : conv.status === "waiting"
-        ? "bg-amber-500"
-        : conv.status === "gone"
-          ? "bg-muted-foreground/40"
-          : "bg-muted-foreground/60",
-  );
-}
-
-function ConversationContent({ conv }: { conv: ConversationEntry }) {
-  const isSystem = conv.kind === "system";
-  return (
-    <div className="flex items-start gap-2 overflow-hidden">
-      <span className={statusDotClass(conv)} />
-      <div className="flex flex-col gap-0.5 overflow-hidden">
-        <div className="flex items-center gap-1.5 overflow-hidden">
-          <span
-            className={cn(
-              "truncate text-xs",
-              conv.active ? "font-medium" : "text-muted-foreground",
-            )}
-          >
-            {conv.title ?? "Starting..."}
-          </span>
-          {isSystem && (
-            <span className="shrink-0 rounded-sm bg-muted px-1 text-[9px] uppercase tracking-wide text-muted-foreground/80">
-              sys
-            </span>
-          )}
-        </div>
-        <span className="truncate text-[10px] tabular-nums text-muted-foreground">
-          {isSystem && conv.spawnedBy
-            ? `${conv.spawnedBy} · ${formatRelativeTime(conv.createdAt)}`
-            : formatRelativeTime(conv.createdAt)}
-        </span>
-      </div>
-    </div>
-  );
 }
 
 export function ConversationList() {
@@ -211,7 +157,7 @@ export function ConversationList() {
         isActive={conv.id === activeId}
         onClick={() => navigate(conv.id)}
       >
-        <ConversationContent conv={conv} />
+        <ConversationItem conv={conv} />
       </SidebarMenuButton>
       <SidebarMenuAction
         onClick={(e: React.MouseEvent) => closeConversation(conv.id, e)}
@@ -257,7 +203,7 @@ export function ConversationList() {
                 isActive={root.id === activeId}
                 onClick={() => navigate(root.id)}
               >
-                <ConversationContent conv={root} />
+                <ConversationItem conv={root} />
               </SidebarMenuButton>
               <SidebarMenuAction
                 onClick={(e: React.MouseEvent) => closeConversation(root.id, e)}
@@ -273,7 +219,7 @@ export function ConversationList() {
                       isActive={fork.id === activeId}
                       onClick={() => navigate(fork.id)}
                     >
-                      <ConversationContent conv={fork} />
+                      <ConversationItem conv={fork} />
                     </SidebarMenuSubButton>
                     <SidebarMenuAction
                       onClick={(e: React.MouseEvent) => closeConversation(fork.id, e)}

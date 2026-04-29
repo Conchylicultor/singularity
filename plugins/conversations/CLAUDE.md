@@ -11,7 +11,7 @@
   - DB schema: `plugins/conversations/server/internal/tables-turn-completed-event.ts`
   - DB schema: `plugins/conversations/server/schema.ts`
 - Exports (web):
-  - Values: `CONV_STATUS_DOT`, `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
+  - Values: `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
 - Exports (server):
   - Types: `Conversation`, `ConversationCreatedPayload`, `ConversationKind`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`
   - Values: `conversationCreated`, `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `databaseExists`, `deleteConversation`, `dropDatabase`, `findTranscriptPath`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`
@@ -32,6 +32,7 @@
 - Imported by: `agents`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `worktree-cleanup`, `yak-shaving`
 - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `hold-and-exit`, `launch`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
 - Sub-plugins:
+  - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
   - **`conversation-view`** — Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
   - **`conversations-view`** — Sidebar list of all conversations.
   - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).

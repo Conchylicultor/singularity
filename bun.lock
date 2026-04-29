@@ -114,6 +114,14 @@
       "name": "@singularity/plugin-conversations-recover",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-ui": {
+      "name": "@singularity/plugin-conversations-conversation-ui",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-ui/plugins/item": {
+      "name": "@singularity/plugin-conversations-conversation-ui-item",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view": {
       "name": "@singularity/plugin-conversations-conversation-view",
       "version": "0.0.1",
@@ -1052,6 +1060,10 @@
     "@singularity/plugin-config": ["@singularity/plugin-config@workspace:plugins/config"],
 
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
+
+    "@singularity/plugin-conversations-conversation-ui": ["@singularity/plugin-conversations-conversation-ui@workspace:plugins/conversations/plugins/conversation-ui"],
+
+    "@singularity/plugin-conversations-conversation-ui-item": ["@singularity/plugin-conversations-conversation-ui-item@workspace:plugins/conversations/plugins/conversation-ui/plugins/item"],
 
     "@singularity/plugin-conversations-conversation-view": ["@singularity/plugin-conversations-conversation-view@workspace:plugins/conversations/plugins/conversation-view"],
 

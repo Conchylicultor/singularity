@@ -64,7 +64,14 @@ export const attemptsResource = defineResource({
     ]);
     const byAttempt = new Map<string, ConversationSummary[]>();
     for (const c of convRows) {
-      const summary: ConversationSummary = { id: c.id, title: c.title, status: c.status };
+      const summary: ConversationSummary = {
+        id: c.id,
+        title: c.title,
+        status: c.status,
+        kind: c.kind,
+        createdAt: c.createdAt,
+        spawnedBy: c.spawnedBy,
+      };
       const list = byAttempt.get(c.attemptId);
       if (list) list.push(summary);
       else byAttempt.set(c.attemptId, [summary]);

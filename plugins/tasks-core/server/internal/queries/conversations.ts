@@ -98,7 +98,10 @@ export function listGoneConversations(opts: {
 // Narrow projection used by attemptsResource. Sorted oldest-first so the
 // client renders them in attempt-order without further sorting.
 export async function listConversationSummariesByAttempt(): Promise<
-  Pick<Conversation, "id" | "attemptId" | "title" | "status">[]
+  Pick<
+    Conversation,
+    "id" | "attemptId" | "title" | "status" | "kind" | "createdAt" | "spawnedBy"
+  >[]
 > {
   return db
     .select({
@@ -106,6 +109,9 @@ export async function listConversationSummariesByAttempt(): Promise<
       attemptId: conversations.attemptId,
       title: conversations.title,
       status: conversations.status,
+      kind: conversations.kind,
+      createdAt: conversations.createdAt,
+      spawnedBy: conversations.spawnedBy,
     })
     .from(conversations)
     .where(notSystem)

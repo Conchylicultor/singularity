@@ -151,7 +151,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/conversations/server/internal/tables-turn-completed-event.ts`
     - DB schema: `plugins/conversations/server/schema.ts`
   - Exports (web):
-    - Values: `CONV_STATUS_DOT`, `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
+    - Values: `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
   - Exports (server):
     - Types: `Conversation`, `ConversationCreatedPayload`, `ConversationKind`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`
     - Values: `conversationCreated`, `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `databaseExists`, `deleteConversation`, `dropDatabase`, `findTranscriptPath`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`
@@ -172,6 +172,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Imported by: `agents`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `worktree-cleanup`, `yak-shaving`
   - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `hold-and-exit`, `launch`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
   - Plugins:
+    - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
+      - Plugins:
+        - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
+          - Exports (web):
+            - Types: `ConversationItemConv`, `ConversationItemProps`
+            - Values: `CONV_STATUS_DOT`, `ConversationItem`, `ConvRelativeTime`, `ConvStatusDot`, `ConvSysBadge`, `ConvTitle`, `formatRelativeTime`
     - **`conversation-view`** — Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
       - Defines:
         - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`

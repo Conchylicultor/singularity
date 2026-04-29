@@ -24,8 +24,12 @@ export type {
 
 // The attemptsResource payload embeds a narrow summary of each attempt's
 // conversations so that the tasks plugin doesn't have to subscribe to the
-// bounded recentConversationsResource just to render attempt rows.
-export type ConversationSummary = Pick<Conversation, "id" | "title" | "status">;
+// bounded recentConversationsResource just to render attempt rows. Carries
+// the columns the conversation-ui/item visual primitive needs.
+export type ConversationSummary = Pick<
+  Conversation,
+  "id" | "title" | "status" | "kind" | "createdAt" | "spawnedBy"
+>;
 export type AttemptWithConversations = Attempt & {
   conversations: ConversationSummary[];
 };

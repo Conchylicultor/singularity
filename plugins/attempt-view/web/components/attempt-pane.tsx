@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Outlet, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
-import { CONV_STATUS_DOT } from "@plugins/conversations/web";
+import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { attemptsResource } from "@plugins/tasks/shared";
 import {
   ResizableHandle,

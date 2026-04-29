@@ -1,4 +1,5 @@
-import { CONV_STATUS_DOT, useConversation } from "@plugins/conversations/web";
+import { useConversation } from "@plugins/conversations/web";
+import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import type { TreeNode } from "@plugins/primitives/plugins/tree/shared";
 import { cn } from "@/lib/utils";
 import type {

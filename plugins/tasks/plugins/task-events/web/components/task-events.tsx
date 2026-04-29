@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MdOpenInNew } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
-import { CONV_STATUS_DOT } from "@plugins/conversations/web";
+import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import {
   attemptsResource,
   pushesResource,
@@ -191,22 +191,11 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                                 }
                               }}
                               className={cn(
-                                "hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm",
+                                "hover:bg-accent flex w-full items-start rounded px-2 py-1 text-left",
                                 isActive && "bg-accent",
                               )}
                             >
-                              <span
-                                className={cn(
-                                  "size-1.5 shrink-0 rounded-full",
-                                  CONV_STATUS_DOT[c.status],
-                                )}
-                              />
-                              <span className="flex-1 truncate">
-                                {c.title ?? "Starting…"}
-                              </span>
-                              <span className="text-muted-foreground shrink-0 text-xs">
-                                {c.status}
-                              </span>
+                              <ConversationItem conv={c} />
                             </button>
                           </li>
                         );
