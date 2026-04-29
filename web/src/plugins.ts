@@ -60,7 +60,6 @@ import fileLinksPlugin from "@plugins/primitives/plugins/file-links/web";
 import primitivesPlugin from "@plugins/primitives/web";
 import activeDataPlugin from "@plugins/active-data/web";
 import activeDataConvPlugin from "@plugins/active-data/plugins/conv/web";
-import activeDataTokensPlugin from "@plugins/active-data/plugins/tokens/web";
 import liveStatePlugin from "@plugins/primitives/plugins/live-state/web";
 import networkingPlugin from "@plugins/primitives/plugins/networking/web";
 import editableFieldPlugin from "@plugins/primitives/plugins/editable-field/web";
@@ -104,7 +103,6 @@ export const plugins: PluginDefinition[] = [
   primitivesPlugin,
   activeDataPlugin,
   activeDataConvPlugin,
-  activeDataTokensPlugin,
   liveStatePlugin,
   networkingPlugin,
   editableFieldPlugin,

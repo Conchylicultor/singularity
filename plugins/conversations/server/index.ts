@@ -40,6 +40,7 @@ export {
 export type { RuntimeInfo, ConversationRuntime } from "./internal/runtime";
 export { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 export type { ConversationTurnCompletedPayload } from "./internal/tables-turn-completed-event";
+export { afterTurn } from "./internal/after-turn";
 export { conversationCreated } from "./internal/tables-created-event";
 export type { ConversationCreatedPayload } from "./internal/tables-created-event";
 export { SYSTEM_META_TASK_ID } from "./internal/meta-system";

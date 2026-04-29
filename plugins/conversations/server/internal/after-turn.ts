@@ -1,0 +1,22 @@
+import type { JobCtx } from "@plugins/infra/plugins/jobs/server";
+import {
+  conversationTurnCompleted,
+  type ConversationTurnCompletedPayload,
+} from "./tables-turn-completed-event";
+
+// Suspend the calling job until the next assistant `end_turn` for this
+// conversation, or `timeoutMs` elapses. Returns the payload, or null on
+// timeout. Thin convention layer over `ctx.waitFor(conversationTurnCompleted)`
+// so consumers don't re-derive the where-shape and so the "wait for the
+// model to finish talking" intent is named.
+export async function afterTurn(
+  ctx: JobCtx,
+  conversationId: string,
+  opts?: { timeoutMs?: number; name?: string },
+): Promise<ConversationTurnCompletedPayload | null> {
+  return ctx.waitFor<ConversationTurnCompletedPayload>(conversationTurnCompleted, {
+    where: { conversationId },
+    timeoutMs: opts?.timeoutMs,
+    name: opts?.name,
+  });
+}

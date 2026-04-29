@@ -14,7 +14,7 @@
   - Values: `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
 - Exports (server):
   - Types: `Conversation`, `ConversationCreatedPayload`, `ConversationKind`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`
-  - Values: `conversationCreated`, `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `databaseExists`, `deleteConversation`, `dropDatabase`, `findTranscriptPath`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`
+  - Values: `afterTurn`, `conversationCreated`, `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `databaseExists`, `deleteConversation`, `dropDatabase`, `findTranscriptPath`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`
 - Exports (shared):
   - Types: `Conversation`, `ConversationEntry`, `ConversationKind`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
   - Values: `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`

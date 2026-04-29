@@ -10,15 +10,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Types: `ActiveDataTagContribution`
     - Values: `ActiveData`, `useActiveDataComponents`, `useActiveDataLinkify`
-  - Slot contributors: `conv`, `tokens`
+  - Slot contributors: `conv`
   - Plugins:
     - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.
       - Contributes:
         - `ActiveData.Tag` `CONV_ID_RE` → `ConvChip`
-    - **`tokens`** — Renders EXIT_CLEAN and FLAG_RAISE tokens as visual chips in assistant text.
-      - Contributes:
-        - `ActiveData.Tag` `EXIT_CLEAN_RE` → `TokenChip`
-        - `ActiveData.Tag` `FLAG_RAISE_RE` → `TokenChip`
 
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
   - Defines:
@@ -154,7 +150,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
   - Exports (server):
     - Types: `Conversation`, `ConversationCreatedPayload`, `ConversationKind`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`
-    - Values: `conversationCreated`, `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `databaseExists`, `deleteConversation`, `dropDatabase`, `findTranscriptPath`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`
+    - Values: `afterTurn`, `conversationCreated`, `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `databaseExists`, `deleteConversation`, `dropDatabase`, `findTranscriptPath`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`
   - Exports (shared):
     - Types: `Conversation`, `ConversationEntry`, `ConversationKind`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
@@ -348,7 +344,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Conversation.PromptBar` → `PushAndExitButton`
           - Server:
-            - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.recentConversationsResource`, `conversations.sendTurn`
+            - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.recentConversationsResource`, `conversations.sendTurn`
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
             - `DELETE /api/conversations/:id/push-and-exit`

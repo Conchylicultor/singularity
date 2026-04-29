@@ -1,8 +1,14 @@
 import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
 import type { ServerPluginDefinition } from "@server/types";
-import { pushAndExitJob, pushAndExitResource } from "./internal/push-and-exit-job";
+import { pushAndExitJob } from "./internal/push-and-exit-job";
+import { pushAndExitResource } from "./internal/state";
 import { _pushAndExitJobs } from "./internal/tables";
+// Side-effect imports: register the finalize job and the exit_clean /
+// flag_raise MCP tools at module load so they're in their respective
+// registries before the first toolbar click or model tool call.
+import "./internal/exit-clean-finalize-job";
+import "./internal/mcp-tools";
 
 export default {
   id: "push-and-exit",
