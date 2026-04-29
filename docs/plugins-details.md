@@ -35,6 +35,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Pane.Register` `agents-root` (path `/agents`)
     - `Pane.Register` `agent-detail` (path `:id`)
     - `Pane.Register` `agent-conversation` (path `c/:convId`)
+    - `Pane.Register` `agent-system-detail` (path `system/:systemId`)
     - `Shell.Sidebar` "Agents" (group `System`)
     - `agentsRootPane.open`
   - Server:

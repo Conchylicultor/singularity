@@ -6,6 +6,7 @@ import {
   agentsRootPane,
   agentDetailPane,
   agentConversationPane,
+  systemAgentDetailPane,
 } from "./panes";
 
 export {
@@ -26,6 +27,7 @@ export default {
     Pane.Register({ pane: agentsRootPane }),
     Pane.Register({ pane: agentDetailPane }),
     Pane.Register({ pane: agentConversationPane }),
+    Pane.Register({ pane: systemAgentDetailPane }),
     Shell.Sidebar({
       title: "Agents",
       icon: MdPrecisionManufacturing,
