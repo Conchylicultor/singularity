@@ -1,12 +1,15 @@
-import { useContext, type ReactNode } from "react";
+import { useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   MdChevronLeft,
   MdChevronRight,
   MdClose,
+  MdMoreHoriz,
   MdOpenInFull,
 } from "react-icons/md";
 import { PluginErrorBoundary } from "@core";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PaneMatchContext, type PaneObject } from "../pane";
 
 interface PaneChromeProps {
@@ -50,9 +53,7 @@ export function PaneChrome({ pane, title, actions, children }: PaneChromeProps) 
           <span className="truncate text-sm font-medium">{resolvedTitle}</span>
         )}
         <PaneActionsSlot pane={pane} position="left" />
-        <div className="flex-1" />
-        <PaneActionsSlot pane={pane} position="right" />
-        {actions}
+        <OverflowActionsBar pane={pane} extraActions={actions} />
         {chrome.expand && (
           <Button
             variant="ghost"
@@ -131,5 +132,154 @@ export function PaneActionsSlot({
         </PluginErrorBoundary>
       ))}
     </div>
+  );
+}
+
+const MORE_BTN_W = 32; // size-icon button (w-8)
+const GAP = 4; // gap-1 = 4px
+
+/**
+ * Right-side action bar with overflow detection. Fills available space (flex-1)
+ * between left content and the fixed expand/close buttons. When contributions
+ * don't all fit, the rightmost ones collapse behind a "⋯" popover.
+ */
+function OverflowActionsBar({
+  pane,
+  extraActions,
+}: {
+  pane: PaneObject<any, any>;
+  extraActions?: ReactNode;
+}) {
+  const slotActions = pane.Actions.useContributions().filter(
+    (a) => (a.position ?? "right") === "right",
+  );
+  const hasExtra = extraActions != null;
+  const totalCount = slotActions.length + (hasExtra ? 1 : 0);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  // Start fully expanded; useLayoutEffect corrects before first paint.
+  const [visibleCount, setVisibleCount] = useState(totalCount);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    const measure = measureRef.current;
+    if (!container || !measure) return;
+
+    const recompute = () => {
+      const available = container.offsetWidth;
+      const items = Array.from(measure.children) as HTMLElement[];
+
+      if (items.length === 0) {
+        setVisibleCount(0);
+        return;
+      }
+
+      // Check if everything fits without a "more" button.
+      const totalW = items.reduce(
+        (acc, el, i) => acc + el.offsetWidth + (i > 0 ? GAP : 0),
+        0,
+      );
+      if (totalW <= available) {
+        setVisibleCount(items.length);
+        return;
+      }
+
+      // Find the largest prefix that fits with the "more" button.
+      let used = 0;
+      let count = 0;
+      for (const [i, item] of items.entries()) {
+        const w = item.offsetWidth;
+        const gapBefore = i > 0 ? GAP : 0;
+        const cumulative = used + gapBefore + w;
+        if (cumulative + GAP + MORE_BTN_W <= available) {
+          used = cumulative;
+          count = i + 1;
+        } else {
+          break;
+        }
+      }
+      setVisibleCount(count);
+    };
+
+    const ro = new ResizeObserver(recompute);
+    ro.observe(container);
+    recompute();
+    return () => ro.disconnect();
+  }, [totalCount]);
+
+  const visibleSlot = slotActions.slice(0, Math.min(visibleCount, slotActions.length));
+  const overflowSlot = slotActions.slice(Math.min(visibleCount, slotActions.length));
+  const extraVisible = hasExtra && visibleCount > slotActions.length;
+  const extraOverflow = hasExtra && !extraVisible;
+  const hasOverflow = overflowSlot.length > 0 || extraOverflow;
+
+  return (
+    <>
+      {/* Off-screen measurement layer — renders all items to obtain their natural widths. */}
+      {totalCount > 0 &&
+        createPortal(
+          <div
+            ref={measureRef}
+            style={{
+              position: "fixed",
+              top: -9999,
+              left: -9999,
+              display: "flex",
+              gap: GAP,
+              opacity: 0,
+              pointerEvents: "none",
+            }}
+            aria-hidden="true"
+          >
+            {slotActions.map((a, i) => (
+              <a.component key={i} />
+            ))}
+            {hasExtra && <div>{extraActions}</div>}
+          </div>,
+          document.body,
+        )}
+
+      {/* Container takes all remaining space; items are right-aligned. */}
+      <div
+        ref={containerRef}
+        className="flex min-w-0 flex-1 items-center justify-end gap-1 overflow-hidden"
+      >
+        {visibleSlot.map((a, i) => (
+          <PluginErrorBoundary key={i} slot={pane.Actions.id}>
+            <a.component />
+          </PluginErrorBoundary>
+        ))}
+        {extraVisible && extraActions}
+
+        {hasOverflow && (
+          <Popover>
+            <PopoverTrigger
+              className="inline-flex size-8 items-center justify-center rounded-md text-sm hover:bg-accent hover:text-accent-foreground"
+              aria-label="More actions"
+            >
+              <MdMoreHoriz className="size-4" />
+            </PopoverTrigger>
+            <PopoverContent
+              side="bottom"
+              align="end"
+              className="w-auto min-w-0 p-1"
+            >
+              <div className="flex flex-col">
+                {overflowSlot.map((a, i) => (
+                  <PluginErrorBoundary
+                    key={visibleSlot.length + i}
+                    slot={pane.Actions.id}
+                  >
+                    <a.component />
+                  </PluginErrorBoundary>
+                ))}
+                {extraOverflow && extraActions}
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
+      </div>
+    </>
   );
 }
