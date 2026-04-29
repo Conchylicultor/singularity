@@ -105,6 +105,9 @@ function buildMdComponents(
       if (isBlock) {
         return <HighlightedCode code={text} lang={lang} />;
       }
+      // Active-data patterns (e.g. conv-ids) override the code wrapper entirely
+      const linked = activeDataLinkify(text);
+      if (linked !== text) return <>{linked}</>;
       const segments = parseFileLinks(text);
       if (segments.length === 1 && segments[0]?.type === "path") {
         return (
