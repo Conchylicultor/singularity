@@ -6,7 +6,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
 
 - **`active-data`** — Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins claim a tag name and ship its rendered component; hosts merge useActiveDataComponents() into their react-markdown components map (paired with rehype-raw).
   - Plugins:
-    - **`conv`** — Renders <conv>conv-xxx</conv> as a clickable chip that opens the referenced conversation in a side pane.
+    - **`conv`** — Renders <conv>conv-xxx</conv> as a clickable chip that opens the referenced conversation in the right side pane alongside the host conversation.
 
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
 
@@ -129,6 +129,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - **`push-counter`** — Displays the number of pushes for the conversation's attempt in the toolbar.
         - **`quick-prompts`** — Named prompt chips in the conversation floating bar. Click to send a preset message to the active conversation. Named prompts that appear as chips in the conversation toolbar. Click to send a preset message.
         - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
+        - **`side-conversation`** — Right side pane that shows a second conversation alongside the host (read-only viewer; expand to pop out).
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
         - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
         - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
@@ -242,7 +243,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
         - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `stats`, `summary`, `tasks`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`, `yak-shaving`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `side-conversation`, `stats`, `summary`, `tasks`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`, `yak-shaving`
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
     - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
 

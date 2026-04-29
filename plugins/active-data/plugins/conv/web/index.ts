@@ -6,6 +6,6 @@ export default {
   id: "active-data-conv",
   name: "Active Data: <conv> chip",
   description:
-    "Renders <conv>conv-xxx</conv> as a clickable chip that opens the referenced conversation in a side pane.",
+    "Renders <conv>conv-xxx</conv> as a clickable chip that opens the referenced conversation in the right side pane alongside the host conversation.",
   contributions: [ActiveData.Tag({ tag: "conv", component: ConvChip })],
 } satisfies PluginDefinition;

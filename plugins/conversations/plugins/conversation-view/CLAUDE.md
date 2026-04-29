@@ -30,6 +30,7 @@
   - **`push-counter`** — Displays the number of pushes for the conversation's attempt in the toolbar.
   - **`quick-prompts`** — Named prompt chips in the conversation floating bar. Click to send a preset message to the active conversation. Named prompts that appear as chips in the conversation toolbar. Click to send a preset message.
   - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
+  - **`side-conversation`** — Right side pane that shows a second conversation alongside the host (read-only viewer; expand to pop out).
   - **`status`** — Displays the conversation status as a colored badge in the toolbar.
   - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
   - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.

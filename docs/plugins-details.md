@@ -12,7 +12,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ActiveData`, `useActiveDataComponents`
   - Slot contributors: `conv`
   - Plugins:
-    - **`conv`** — Renders <conv>conv-xxx</conv> as a clickable chip that opens the referenced conversation in a side pane.
+    - **`conv`** — Renders <conv>conv-xxx</conv> as a clickable chip that opens the referenced conversation in the right side pane alongside the host conversation.
       - Contributes:
         - `ActiveData.Tag` → `ConvChip`
 
@@ -330,6 +330,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `conversations.recentConversationsResource`, `conversations.resumeConversation`
             - `POST /api/conversations/:id/resume`
+        - **`side-conversation`** — Right side pane that shows a second conversation alongside the host (read-only viewer; expand to pop out).
+          - Exports (web):
+            - Values: `convSidePane`
+          - Contributes:
+            - `Pane.Register` `conv-side` (path `c/:sideConvId`)
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Contributes:
             - `conversationPane.Actions` → `StatusBadge`
@@ -588,7 +593,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
         - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `stats`, `summary`, `tasks`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`, `yak-shaving`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `side-conversation`, `stats`, `summary`, `tasks`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`, `yak-shaving`
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
       - Exports (web):
         - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
