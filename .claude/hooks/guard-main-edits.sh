@@ -32,4 +32,4 @@ case "$f" in
     ;;
 esac
 
-deny "Refusing to edit $f — this path is not in the allowlist (worktree $PWD, ~/.claude/projects/*/memory/, /tmp). Edit files inside your worktree. If — and only if — the user has EXPLICITLY instructed you in this conversation to edit outside these locations, create $PWD/.allow-main to bypass (gitignored, worktree-local). Do not create that file on your own initiative."
+deny "Refusing to edit $f — this path is not in the allowlist (worktree $PWD, ~/.claude/projects/*/memory/, /tmp). Edit files inside your worktree (including the project .claude/ !). If — and only if — the user has EXPLICITLY instructed you in this conversation to edit outside these locations, create $PWD/.allow-main to bypass (gitignored, worktree-local). Do NOT create that file on your own initiative. Do NOT assume you have permission just based on the user task. Permission has to be EXPLICIT."
