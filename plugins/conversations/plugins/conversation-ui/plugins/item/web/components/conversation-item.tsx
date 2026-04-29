@@ -11,8 +11,9 @@ export const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
   gone: "bg-muted-foreground/40",
 };
 
-export function formatRelativeTime(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+export function formatRelativeTime(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
   if (seconds < 60) return "just now";
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) return `${minutes}m ago`;
@@ -23,13 +24,14 @@ export function formatRelativeTime(date: Date): string {
 }
 
 // Structural prop type — accepts both the full `Conversation` and the
-// narrower `ConversationSummary` carried by `attemptsResource`. Anything
-// with these fields renders.
+// narrower `ConversationSummary` carried by `attemptsResource`. `createdAt`
+// is `Date | string` because attemptsResource ships raw JSON (ISO string)
+// while useConversations parses through ConversationSchema (real Date).
 export type ConversationItemConv = {
   title: string | null;
   status: ConversationStatus;
   kind: ConversationKind;
-  createdAt: Date;
+  createdAt: Date | string;
   spawnedBy?: string | null;
 };
 
