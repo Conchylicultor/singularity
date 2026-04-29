@@ -1,5 +1,5 @@
 import { defineResource } from "@server/resources";
-import { getAttempt, pushesResource } from "@plugins/tasks-core/server";
+import { getAttempt, listPushesForAttempt, pushesResource } from "@plugins/tasks-core/server";
 import type { Push } from "@plugins/tasks-core/shared";
 import {
   CommitDeltaSchema,
@@ -18,7 +18,7 @@ const EMPTY_DELTA: CommitDelta = {
   branch: null,
 };
 
-const EMPTY_GRAPH: CommitsGraph = { ...EMPTY_DELTA, commits: [] };
+const EMPTY_GRAPH: CommitsGraph = { ...EMPTY_DELTA, commits: [], landedCommits: [], behindCommits: [] };
 
 async function worktreeFor(attemptId: string): Promise<string | null> {
   const row = await getAttempt(attemptId);
@@ -55,6 +55,8 @@ export const commitsGraphResource = defineResource({
   loader: async ({ attemptId }: Params): Promise<CommitsGraph> => {
     const wt = await worktreeFor(attemptId);
     if (!wt) return EMPTY_GRAPH;
-    return computeGraph(wt);
+    const pushes = await listPushesForAttempt(attemptId);
+    const pushedShas = pushes.map((p) => p.sha);
+    return computeGraph(wt, pushedShas);
   },
 });

@@ -6,6 +6,7 @@ import { CommitRail, MergeBaseMarker, COMMIT_ROW_HEIGHT } from "./commit-rail";
 
 const BRANCH_COLOR = "var(--primary)";
 const MAIN_COLOR = "var(--muted-foreground)";
+const BEHIND_COLOR = "color-mix(in srgb, var(--muted-foreground) 50%, transparent)";
 
 function formatRelative(iso: string): string {
   const t = new Date(iso).getTime();
@@ -48,8 +49,19 @@ export function CommitsGraphBody() {
     );
   }
 
-  const { commits, ahead, behind, branch, mergeBase } = data;
+  const {
+    commits,
+    landedCommits: landed,
+    behindCommits: behind_,
+    ahead,
+    behind,
+    branch,
+    mergeBase,
+  } = data;
+  const landedCommits = landed ?? [];
+  const behindCommits = behind_ ?? [];
   const branchLabel = branch ?? "HEAD";
+  const hasAgentWork = commits.length > 0 || landedCommits.length > 0;
 
   return (
     <div className="flex h-full flex-col overflow-hidden text-sm">
@@ -63,28 +75,69 @@ export function CommitsGraphBody() {
           <span className="ml-auto">vs main</span>
         </div>
       </header>
-      {commits.length === 0 ? (
-        <div className="p-4 text-sm text-muted-foreground">
-          Up to date with <span className="font-mono">main</span>.
-        </div>
-      ) : (
-        <ol className="flex-1 overflow-auto">
-          {commits.map((commit, idx) => (
-            <CommitRowItem
-              key={commit.sha}
-              commit={commit}
-              isFirst={idx === 0}
-              isLast={idx === commits.length - 1}
-            />
-          ))}
+      <ol className="flex-1 overflow-auto">
+        {commits.map((commit, idx) => (
+          <CommitRowItem
+            key={commit.sha}
+            commit={commit}
+            isFirst={idx === 0}
+            isLast={idx === commits.length - 1}
+            color={BRANCH_COLOR}
+          />
+        ))}
+        {hasAgentWork && (
           <MergeBaseMarker
             color={BRANCH_COLOR}
             mainColor={MAIN_COLOR}
             shortSha={mergeBase ? mergeBase.slice(0, 7) : null}
+            hasPending={commits.length > 0}
           />
-        </ol>
-      )}
+        )}
+        {landedCommits.map((commit, idx) => (
+          <CommitRowItem
+            key={commit.sha}
+            commit={commit}
+            isFirst={false}
+            isLast={idx === landedCommits.length - 1}
+            color={MAIN_COLOR}
+          />
+        ))}
+        {behindCommits.length > 0 && (
+          <>
+            <BehindSeparator count={behind} hasAgentWork={hasAgentWork} />
+            {behindCommits.map((commit, idx) => (
+              <CommitRowItem
+                key={commit.sha}
+                commit={commit}
+                isFirst={false}
+                isLast={idx === behindCommits.length - 1}
+                color={BEHIND_COLOR}
+              />
+            ))}
+          </>
+        )}
+      </ol>
     </div>
+  );
+}
+
+function BehindSeparator({
+  count,
+  hasAgentWork,
+}: {
+  count: number;
+  hasAgentWork: boolean;
+}) {
+  return (
+    <li className="flex items-center gap-2 border-b border-border/50 px-3 py-1.5">
+      <div className="h-px flex-1 bg-border/60" />
+      <span className="shrink-0 text-xs text-muted-foreground/60">
+        {hasAgentWork
+          ? `↓${count} on main`
+          : `${count} commits on main`}
+      </span>
+      <div className="h-px flex-1 bg-border/60" />
+    </li>
   );
 }
 
@@ -92,17 +145,19 @@ function CommitRowItem({
   commit,
   isFirst,
   isLast,
+  color,
 }: {
   commit: CommitRow;
   isFirst: boolean;
   isLast: boolean;
+  color: string;
 }) {
   return (
     <li
       className="flex items-center gap-2 border-b border-border/50 pl-2 pr-3 hover:bg-accent/50"
       style={{ height: COMMIT_ROW_HEIGHT }}
     >
-      <CommitRail isFirst={isFirst} isLast={isLast} color={BRANCH_COLOR} />
+      <CommitRail isFirst={isFirst} isLast={isLast} color={color} />
       <span
         className="font-mono text-xs text-muted-foreground"
         title={commit.sha}

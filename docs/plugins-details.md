@@ -260,7 +260,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Pane.Register` `conv-commits-graph` (path `commits`)
             - `conversationPane.Actions` → `CommitsChip`
           - Server:
-            - Uses: `tasks-core.getAttempt`, `tasks-core.pushesResource`
+            - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesForAttempt`, `tasks-core.pushesResource`
             - Resources: `commits-graph.delta` (push), `commits-graph.graph` (push)
         - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
           - Contributes:

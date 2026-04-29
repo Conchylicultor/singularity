@@ -87,18 +87,39 @@ function parseCommits(out: string): CommitRow[] {
   return rows;
 }
 
-export async function computeGraph(worktreePath: string): Promise<CommitsGraph> {
-  const delta = await computeDelta(worktreePath);
-  if (delta.mergeBase === null) {
-    return { ...delta, commits: [] };
-  }
-  const range = `${delta.mergeBase}..HEAD`;
+async function computeCommitsFromShas(
+  shas: string[],
+  worktreePath: string,
+): Promise<CommitRow[]> {
+  if (shas.length === 0) return [];
   const out = await runGit(
-    ["log", `--max-count=${MAX_COMMITS}`, `--format=${LOG_FORMAT}`, range],
+    ["log", "--no-walk", `--format=${LOG_FORMAT}`, ...shas],
     worktreePath,
   );
-  if (out === null) {
-    return { ...delta, commits: [] };
+  if (out === null) return [];
+  return parseCommits(out);
+}
+
+const MAX_BEHIND = 50;
+
+export async function computeGraph(
+  worktreePath: string,
+  pushedShas: string[] = [],
+): Promise<CommitsGraph> {
+  const delta = await computeDelta(worktreePath);
+  if (delta.mergeBase === null) {
+    return { ...delta, commits: [], landedCommits: [], behindCommits: [] };
   }
-  return { ...delta, commits: parseCommits(out) };
+  const pendingRange = `${delta.mergeBase}..HEAD`;
+  const behindRange = `HEAD..${MAIN}`;
+  const [pendingOut, behindOut, landedAll] = await Promise.all([
+    runGit(["log", `--max-count=${MAX_COMMITS}`, `--format=${LOG_FORMAT}`, pendingRange], worktreePath),
+    runGit(["log", `--max-count=${MAX_BEHIND}`, `--format=${LOG_FORMAT}`, behindRange], worktreePath),
+    computeCommitsFromShas(pushedShas, worktreePath),
+  ]);
+  const pendingCommits = pendingOut === null ? [] : parseCommits(pendingOut);
+  const behindCommits = behindOut === null ? [] : parseCommits(behindOut);
+  const pendingShas = new Set(pendingCommits.map((c) => c.sha));
+  const landedCommits = landedAll.filter((c) => !pendingShas.has(c.sha));
+  return { ...delta, commits: pendingCommits, landedCommits, behindCommits };
 }

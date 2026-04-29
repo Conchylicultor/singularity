@@ -25,5 +25,9 @@ export const CommitsGraphSchema = z.object({
   mergeBase: z.string().nullable(),
   branch: z.string().nullable(),
   commits: z.array(CommitRowSchema),
+  /** Commits already merged into main via `./singularity push`, newest-first. */
+  landedCommits: z.array(CommitRowSchema),
+  /** Commits on main that this branch doesn't have yet (capped at 50), newest-first. */
+  behindCommits: z.array(CommitRowSchema),
 });
 export type CommitsGraph = z.infer<typeof CommitsGraphSchema>;

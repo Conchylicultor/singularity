@@ -46,10 +46,12 @@ export function MergeBaseMarker({
   color,
   mainColor,
   shortSha,
+  hasPending,
 }: {
   color: string;
   mainColor: string;
   shortSha: string | null;
+  hasPending: boolean;
 }) {
   const ROW = ROW_HEIGHT;
   return (
@@ -61,14 +63,16 @@ export function MergeBaseMarker({
         aria-hidden="true"
         className="shrink-0"
       >
-        <line
-          x1={RAIL_X}
-          y1={0}
-          x2={RAIL_X}
-          y2={ROW / 2}
-          stroke={color}
-          strokeWidth={2}
-        />
+        {hasPending && (
+          <line
+            x1={RAIL_X}
+            y1={0}
+            x2={RAIL_X}
+            y2={ROW / 2}
+            stroke={color}
+            strokeWidth={2}
+          />
+        )}
         <line
           x1={RAIL_X}
           y1={ROW / 2}
