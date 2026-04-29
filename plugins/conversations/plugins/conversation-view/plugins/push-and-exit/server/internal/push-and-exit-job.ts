@@ -65,8 +65,8 @@ async function setStatus(
 
 // Returns true iff the assistant end_turn with `endTurnMessageId` appears
 // in the JSONL transcript AFTER our PUSH_AND_EXIT_PROMPT user message.
-// The prompt is the only user message that contains both PUSH_EXIT_CLEAN
-// and PUSH_EXIT_FLAG (those tokens are mentioned nowhere else by the user
+// The prompt is the only user message that contains both EXIT_CLEAN
+// and FLAG_RAISE (those tokens are mentioned nowhere else by the user
 // or by Claude in normal flow), so it's a reliable anchor for "the prompt
 // landed in the transcript". Used to filter out a racing end_turn that
 // belongs to whatever Claude was doing when push-and-exit was clicked.

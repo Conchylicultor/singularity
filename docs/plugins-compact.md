@@ -7,6 +7,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
 - **`active-data`** — Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins claim a tag name and ship its rendered component; hosts merge useActiveDataComponents() into their react-markdown components map (paired with rehype-raw).
   - Plugins:
     - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.
+    - **`tokens`** — Renders EXIT_CLEAN and FLAG_RAISE tokens as visual chips in assistant text.
 
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
 
