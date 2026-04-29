@@ -13,7 +13,7 @@
 - Contributes:
   - `Pane.Register` `conversation` (path `/c/:convId`)
   - `conversationPane.Actions` → `ExpandConversationButton`
-- Slot contributors: `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `hold-and-exit`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
+- Slot contributors: `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
 - Sub-plugins:
   - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
   - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.

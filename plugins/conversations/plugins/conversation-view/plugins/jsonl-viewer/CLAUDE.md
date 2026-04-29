@@ -9,7 +9,7 @@
   - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.RowAction`
 - Exports (web):
   - Types: `EventRendererContribution`, `RowActionContribution`
-  - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useRowMarkdown`
+  - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`
 - Exports (shared):
   - Types: `JsonlEvent`, `JsonlEventsResponse`, `TokenUsage`
   - Values: `jsonlEventsResource`
@@ -18,7 +18,7 @@
 - Server:
   - Uses: `conversations.findTranscriptPath`, `tasks-core.getConversationClaudeSessionId`
   - Resources: `jsonl-events` (push)
-- Slot contributors: `assistant-text`, `assistant-tool-use`, `summary`, `system`, `user-image`, `user-text`, `user-tool-result`
+- Slot contributors: `assistant-text`, `assistant-tool-use`, `fork-session`, `summary`, `system`, `user-image`, `user-text`, `user-tool-result`
 - Sub-plugins:
   - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
   - **`assistant-tool-use`** — Renders assistant tool-use events in the JSONL viewer.

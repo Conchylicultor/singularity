@@ -6,6 +6,7 @@ export { JsonlViewer } from "./slots";
 export type { EventRendererContribution, RowActionContribution } from "./slots";
 export { JsonlPane } from "./components/jsonl-pane";
 export { useRowMarkdown } from "./components/row-markdown-context";
+export { useLastAssistantEvent } from "./components/last-assistant-context";
 export { RowActionButton } from "./components/row-action-button";
 export { TokenBadge } from "./components/token-badge";
 export { CopyTextAction } from "./components/copy-button";

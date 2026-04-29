@@ -9,6 +9,7 @@ import type { Conversation } from "@plugins/conversations/shared";
 import { jsonlEventsResource, type JsonlEvent } from "../../shared";
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
+import { LastAssistantProvider } from "./last-assistant-context";
 
 interface UsageTotals {
   output: number;
@@ -77,6 +78,13 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
   });
   const events = data ?? null;
   const totals = useMemo(() => aggregateUsage(events), [events]);
+  const lastAssistantEvent = useMemo(() => {
+    if (!events) return null;
+    for (let i = events.length - 1; i >= 0; i--) {
+      if (events[i]?.kind === "assistant-text") return events[i] ?? null;
+    }
+    return null;
+  }, [events]);
   // Derive when "working" started: last event's timestamp, or now if none
   const workingStartAtRef = useRef<number | null>(null);
   const wasWorkingRef = useRef(false);
@@ -127,12 +135,14 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
                 {isWorking && <WorkingIndicator startAt={workingStartAt} />}
               </div>
             ) : (
-              <div className="flex flex-col gap-2 p-2 pb-10">
-                {events.map((event, i) => (
-                  <EventRow key={i} event={event} />
-                ))}
-                {isWorking && <WorkingIndicator startAt={workingStartAt} />}
-              </div>
+              <LastAssistantProvider event={lastAssistantEvent}>
+                <div className="flex flex-col gap-2 p-2 pb-10">
+                  {events.map((event, i) => (
+                    <EventRow key={i} event={event} />
+                  ))}
+                  {isWorking && <WorkingIndicator startAt={workingStartAt} />}
+                </div>
+              </LastAssistantProvider>
             )}
           </div>
         </div>

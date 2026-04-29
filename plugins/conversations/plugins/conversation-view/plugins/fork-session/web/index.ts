@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
-import { ForkSessionButtons } from "./components/fork-session-buttons";
+import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { ForkSessionAction } from "./components/fork-session-action";
 
 export default {
   id: "conversation-fork-session",
@@ -8,10 +8,6 @@ export default {
   description:
     "Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.",
   contributions: [
-    Conversation.PromptBar({
-      component: ForkSessionButtons,
-      section: "Fork",
-      sectionOrder: 2,
-    }),
+    JsonlViewer.RowAction({ id: "fork-session", component: ForkSessionAction }),
   ],
 } satisfies PluginDefinition;
