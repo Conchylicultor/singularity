@@ -10,15 +10,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Types: `ActiveDataTagContribution`
     - Values: `ActiveData`, `useActiveDataComponents`, `useActiveDataLinkify`
-  - Slot contributors: `conv`, `tokens`
+  - Slot contributors: `conv`
   - Plugins:
     - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.
       - Contributes:
         - `ActiveData.Tag` `CONV_ID_RE` → `ConvChip`
-    - **`tokens`** — Renders EXIT_CLEAN and FLAG_RAISE tokens as visual chips in assistant text.
-      - Contributes:
-        - `ActiveData.Tag` `EXIT_CLEAN_RE` → `TokenChip`
-        - `ActiveData.Tag` `FLAG_RAISE_RE` → `TokenChip`
 
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
   - Defines:
@@ -119,7 +115,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/code/:worktree/diff`
     - `GET /api/code/:worktree/image`
     - `GET /api/code/:worktree/push`
-  - Endpoint callers: `assistant-text`, `diff`, `file-pane`, `image`, `review`
+  - Endpoint callers: `assistant-text`, `diff`, `docs-button`, `file-pane`, `image`, `review`
 
 - **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
   - Defines:
@@ -154,7 +150,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
   - Exports (server):
     - Types: `Conversation`, `ConversationCreatedPayload`, `ConversationKind`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`
-    - Values: `conversationCreated`, `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `databaseExists`, `deleteConversation`, `dropDatabase`, `findTranscriptPath`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`
+    - Values: `afterTurn`, `conversationCreated`, `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `databaseExists`, `deleteConversation`, `dropDatabase`, `findTranscriptPath`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`
   - Exports (shared):
     - Types: `Conversation`, `ConversationEntry`, `ConversationKind`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
@@ -169,7 +165,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/conversations/:id/stop`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
-  - Imported by: `agents`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `worktree-cleanup`
+  - Imported by: `agents`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `worktree-cleanup`
   - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `hold-and-exit`, `launch`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
   - Plugins:
     - **`conversation-groups`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
@@ -348,7 +344,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Conversation.PromptBar` → `PushAndExitButton`
           - Server:
-            - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.recentConversationsResource`, `conversations.sendTurn`
+            - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.recentConversationsResource`, `conversations.sendTurn`
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
             - `DELETE /api/conversations/:id/push-and-exit`
@@ -566,8 +562,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`
         - DB schema: `plugins/infra/plugins/events/server/internal/tables.ts`
       - Exports (server):
-        - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerByNameSpec`, `TriggerSpec`
-        - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `trigger`, `triggerByName`, `triggerTableRegistry`
+        - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`, `UnsafeTriggerByNameSpec`
+        - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
       - Server:
         - `GET /api/events/emissions`
         - `GET /api/events/triggers`
@@ -731,7 +727,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
     - Values: `attemptsResource`, `pushesResource`, `tasksResource`
   - Server:
-    - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.generateTaskTitle`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.setTaskAutoStart`, `tasks-core.taskStatusChanged`, `tasks-core.updateTask`
+    - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.generateTaskTitle`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.setTaskAutoStart`, `tasks-core.taskStatusChanged`, `tasks-core.updateTask`
     - `GET /api/tasks`
     - `POST /api/tasks`
     - `GET /api/tasks/:id`
