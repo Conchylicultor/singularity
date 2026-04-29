@@ -3,6 +3,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { CodeToolbarSlot } from "./components/toolbar-slot";
 
 export { Code } from "./slots";
+export { useEditedFiles } from "./use-edited-files";
 
 export default {
   id: "conversation-code",

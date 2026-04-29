@@ -4,7 +4,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { pushesResource, type Push } from "@plugins/tasks/shared";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
 import { Button } from "@/components/ui/button";
-import { useEditedFiles } from "../../../../web/use-edited-files";
+import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { usePushFiles } from "../use-push-files";
 import { ReviewFileRow } from "./review-file-row";
 

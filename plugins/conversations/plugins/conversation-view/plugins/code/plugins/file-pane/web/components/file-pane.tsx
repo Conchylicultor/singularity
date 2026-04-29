@@ -1,4 +1,4 @@
-import type { EditedFileStatus } from "../../../../shared/protocol";
+import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
 import { FileContent } from "./file-content";
 import { FilePathLabel } from "./file-path-label";
 import { FileTabs } from "./file-tabs";

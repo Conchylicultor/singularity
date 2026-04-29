@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
-import { basename, join, relative, sep } from "path";
+import { basename, dirname, join, relative, resolve, sep } from "path";
 import type { Check, CheckResult } from "./types";
 
 const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
@@ -108,6 +108,26 @@ export const pluginBoundaries: Check = {
           message: `direct workspace import \`${wsPath}\` bypasses the boundary system`,
           fix: `replace with the path-alias form \`@plugins/<path-to-plugin>/<runtime>\` (R4/R5/R6 only see those)`,
         });
+      }
+
+      // R8: forbid relative imports that escape the source plugin into a
+      // different plugin's tree. Same motivation as R7 — relative paths
+      // resolve outside the `@plugins/...` alias system, so R4/R5/R6 can't
+      // see them, and a sub-plugin reaching `../../../../web/components/foo`
+      // into its parent's internals silently bypasses every barrier.
+      if (sourcePlugin) {
+        for (const relImp of extractRelativeImports(src)) {
+          const resolvedAbs = resolve(dirname(absFile), relImp);
+          const resolvedRel = relative(root, resolvedAbs).split(sep).join("/");
+          const targetPlugin = pluginForPath(resolvedRel, pluginSet);
+          if (!targetPlugin || targetPlugin === sourcePlugin) continue;
+          violations.push({
+            rule: "relative-cross-plugin",
+            file: relFile,
+            message: `relative import \`${relImp}\` reaches into a different plugin (\`${targetPlugin}\`)`,
+            fix: `cross-plugin imports must go through the barrel — replace with \`@plugins/${targetPlugin}/<runtime>\` and re-export the symbol from that plugin's \`index.ts\` if it isn't already public`,
+          });
+        }
       }
 
       const imports = extractPluginImports(src);
@@ -672,6 +692,23 @@ function extractWorkspaceImports(rawSrc: string): string[] {
   const withFromRe =
     /^[ \t]*(?:import|export)\s+[\s\S]*?\s+from\s+["'](@singularity\/plugin-[^"']+)["']/gm;
   const bareRe = /^[ \t]*import\s+["'](@singularity\/plugin-[^"']+)["']/gm;
+  let m: RegExpExecArray | null;
+  while ((m = withFromRe.exec(src))) results.push(m[1]!);
+  while ((m = bareRe.exec(src))) results.push(m[1]!);
+  return results;
+}
+
+/**
+ * Extract every relative module specifier (`./...` or `../...`) from static
+ * import/export statements. Used by R8 to flag relative imports that escape
+ * the source plugin's tree. Skips dynamic `import()` and `require()`.
+ */
+function extractRelativeImports(rawSrc: string): string[] {
+  const src = stripComments(rawSrc);
+  const results: string[] = [];
+  const withFromRe =
+    /^[ \t]*(?:import|export)\s+[\s\S]*?\s+from\s+["'](\.\.?\/[^"']*)["']/gm;
+  const bareRe = /^[ \t]*import\s+["'](\.\.?\/[^"']*)["']/gm;
   let m: RegExpExecArray | null;
   while ((m = withFromRe.exec(src))) results.push(m[1]!);
   while ((m = bareRe.exec(src))) results.push(m[1]!);

@@ -1,6 +1,6 @@
 import { defineSlot } from "@core";
 import type { ComponentType } from "react";
-import type { EditedFileStatus } from "../../../shared/protocol";
+import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
 
 export type RendererMatch = "native" | "contextual" | "fallback" | false;
 

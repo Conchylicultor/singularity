@@ -1,4 +1,4 @@
-import type { JsonlEvent } from "../../../../shared";
+import type { JsonlEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/shared";
 
 type SummaryEvent = Extract<JsonlEvent, { kind: "summary" }>;
 

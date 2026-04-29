@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { ActiveData } from "../../../web/slots";
+import { ActiveData } from "@plugins/active-data/web";
 import { ConvChip } from "./components/conv-chip";
 
 export default {

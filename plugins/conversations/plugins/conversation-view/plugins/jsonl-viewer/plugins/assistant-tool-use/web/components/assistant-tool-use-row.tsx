@@ -1,6 +1,5 @@
-import type { JsonlEvent } from "../../../../shared";
-import { TokenBadge } from "../../../../web/components/token-badge";
-import { formatTime } from "../../../../web/utils";
+import type { JsonlEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/shared";
+import { TokenBadge, formatTime } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
 type AssistantToolUseEvent = Extract<JsonlEvent, { kind: "assistant-tool-use" }>;
 

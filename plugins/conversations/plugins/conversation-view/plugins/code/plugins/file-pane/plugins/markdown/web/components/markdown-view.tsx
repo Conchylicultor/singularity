@@ -3,8 +3,7 @@ import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { linkifyChildren } from "@plugins/primitives/plugins/file-links/web";
-import { useFileContent } from "../../../../web/use-file-content";
-import { useFileOpen } from "../../../../web/file-open-context";
+import { useFileContent, useFileOpen } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 
 const REMARK_PLUGINS = [remarkGfm];
 

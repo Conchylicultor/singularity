@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { JsonlEvent } from "../../../../shared";
-import { formatTime } from "../../../../web/utils";
+import type { JsonlEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/shared";
+import { formatTime } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
 type UserImageEvent = Extract<JsonlEvent, { kind: "user-image" }>;
 

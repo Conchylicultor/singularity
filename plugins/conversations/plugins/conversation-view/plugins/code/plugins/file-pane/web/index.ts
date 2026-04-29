@@ -17,7 +17,8 @@ export type {
   RendererMatch,
 } from "./slots";
 export { convFilePeekPane } from "./file-peek-pane";
-export { FileOpenProvider } from "./file-open-context";
+export { FileOpenProvider, useFileOpen } from "./file-open-context";
+export { useFileContent, type FileContentState } from "./use-file-content";
 
 export default {
   id: "conversation-code-file-pane",

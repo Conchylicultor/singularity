@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { JsonlViewer } from "../../../web/slots";
+import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { UserImageRow } from "./components/user-image-row";
 
 export default {

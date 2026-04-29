@@ -12,7 +12,7 @@
   - `Debug.Item` "Worktree Cleanup"
   - `worktreeCleanupPane.open`
 - Server:
-  - Uses: `tasks-core.getAttempt`, `tasks-core.listAttempts`, `tasks-core.listTasks`
+  - Uses: `conversations.databaseExists`, `conversations.dropDatabase`, `tasks-core.getAttempt`, `tasks-core.listAttempts`, `tasks-core.listTasks`
   - `GET /api/debug/worktrees`
   - `POST /api/debug/worktrees/bulk-delete`
   - `DELETE /api/debug/worktrees/:id`

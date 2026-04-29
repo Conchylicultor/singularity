@@ -1,6 +1,6 @@
 import { stat } from "node:fs/promises";
 import { getAttempt } from "@plugins/tasks-core/server";
-import { dropDatabase } from "../../../../../conversations/server/internal/db-fork";
+import { dropDatabase } from "@plugins/conversations/server";
 import { removeWorktree } from "@server/worktree";
 
 export async function handleDelete(

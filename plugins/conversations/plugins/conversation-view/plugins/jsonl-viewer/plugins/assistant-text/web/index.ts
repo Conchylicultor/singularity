@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { JsonlViewer } from "../../../web/slots";
+import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { AssistantTextRow } from "./components/assistant-text-row";
 import { CopyAssistantTextAction } from "./components/copy-text-action";
 import { MarkdownToggleAction } from "./components/markdown-toggle-action";

@@ -8,7 +8,7 @@
 - Defines:
   - Slots: `Code.ToolbarButton`
 - Exports (web):
-  - Values: `Code`
+  - Values: `Code`, `useEditedFiles`
 - Exports (shared):
   - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`, `ResourceDescriptor`
   - Values: `editedFilesResource`

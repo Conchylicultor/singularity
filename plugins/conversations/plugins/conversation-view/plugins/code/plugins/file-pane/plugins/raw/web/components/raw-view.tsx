@@ -6,7 +6,7 @@ import {
   themeForMode,
   useDarkMode,
 } from "@plugins/primitives/plugins/syntax-highlight/web";
-import { useFileContent } from "../../../../web/use-file-content";
+import { useFileContent } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 
 export function RawView({
   worktree,

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useEditedFiles } from "../../../../web/use-edited-files";
+import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import {
   convFilePeekPane,
   FileOpenProvider,

@@ -6,7 +6,7 @@ import { useConfigValues } from "@plugins/config/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pushesResource } from "@plugins/tasks/shared";
 import { Button } from "@/components/ui/button";
-import { useEditedFiles } from "../../../../web/use-edited-files";
+import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { convReviewPane } from "../panes";
 import { getFileWarningLevel, type FileWarningLevel } from "../core-files";
 import { reviewConfig } from "../../shared/config";

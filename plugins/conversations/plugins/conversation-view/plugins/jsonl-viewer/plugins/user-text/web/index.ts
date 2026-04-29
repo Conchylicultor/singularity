@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { JsonlViewer } from "../../../web/slots";
+import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { UserTextRow } from "./components/user-text-row";
 
 export default {

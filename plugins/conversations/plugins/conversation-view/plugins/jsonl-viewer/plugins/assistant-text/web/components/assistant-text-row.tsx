@@ -11,10 +11,12 @@ import {
 import { useActiveDataComponents } from "@plugins/active-data/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
-import type { JsonlEvent } from "../../../../shared";
-import { useRowMarkdown } from "../../../../web/components/row-markdown-context";
-import { TokenBadge } from "../../../../web/components/token-badge";
-import { formatTime } from "../../../../web/utils";
+import type { JsonlEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/shared";
+import {
+  TokenBadge,
+  formatTime,
+  useRowMarkdown,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
 type AssistantTextEvent = Extract<JsonlEvent, { kind: "assistant-text" }>;
 

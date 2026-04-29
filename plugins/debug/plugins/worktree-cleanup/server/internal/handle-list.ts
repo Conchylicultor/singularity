@@ -1,6 +1,6 @@
 import { stat } from "node:fs/promises";
 import { listAttempts, listTasks } from "@plugins/tasks-core/server";
-import { databaseExists } from "../../../../../conversations/server/internal/db-fork";
+import { databaseExists } from "@plugins/conversations/server";
 import { ensureMainWorktreeRoot } from "@server/worktree";
 
 const GIT = "/usr/bin/git";

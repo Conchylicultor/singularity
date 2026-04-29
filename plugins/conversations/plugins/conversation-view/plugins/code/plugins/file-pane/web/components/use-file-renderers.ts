@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { EditedFileStatus } from "../../../../shared/protocol";
+import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
 import {
   FilePane,
   resolveRenderers,

@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { MdChevronRight, MdWarning, MdContentCopy, MdCheck } from "react-icons/md";
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
 import { useConfigValues } from "@plugins/config/web";
-import { DiffView } from "../../../file-pane/plugins/diff/web/components/diff-view";
+import { DiffView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import { getFileWarningLevel } from "../core-files";
 import { reviewConfig } from "../../shared/config";
 

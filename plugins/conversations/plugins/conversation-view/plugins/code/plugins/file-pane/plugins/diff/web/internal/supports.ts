@@ -1,4 +1,4 @@
-import type { FileRendererTarget } from "../../../../web/slots";
+import type { FileRendererTarget } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 
 export function supportsDiff(file: FileRendererTarget): "contextual" | false {
   if (

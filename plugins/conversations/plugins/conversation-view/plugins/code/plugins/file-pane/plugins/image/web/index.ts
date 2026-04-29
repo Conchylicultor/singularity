@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { FilePane } from "../../../web/slots";
+import { FilePane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { ImageView } from "./components/image-view";
 import { supportsImage } from "./internal/supports";
 
