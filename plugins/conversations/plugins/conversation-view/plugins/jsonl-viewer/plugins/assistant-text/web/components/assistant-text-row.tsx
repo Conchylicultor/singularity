@@ -208,9 +208,7 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
           </ReactMarkdown>
         </div>
       ) : (
-        <div className="whitespace-pre-wrap break-words text-sm">
-          {linkifyChildren(activeDataLinkify(e.text), onFileOpen)}
-        </div>
+        <div className="whitespace-pre-wrap break-words text-sm">{e.text}</div>
       )}
     </div>
   );
