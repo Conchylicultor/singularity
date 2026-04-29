@@ -16,6 +16,9 @@ import {
   type ConversationGroupMember,
 } from "../../shared";
 import type { Conversation } from "@plugins/tasks-core/shared";
+import { tasksResource } from "@plugins/tasks/shared";
+import { useTaskAutoGroups } from "./use-task-auto-groups";
+import { AutoGroupBox } from "./auto-group-box";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -132,6 +135,12 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     [attemptGroupsInOrder, groupIdByConvId],
   );
 
+  const { data: tasksData } = useResource(tasksResource);
+  const { autoGroups, trulyUngrouped } = useTaskAutoGroups(
+    ungroupedAttemptGroups,
+    tasksData ?? [],
+  );
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
@@ -159,6 +168,18 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     const target = over.data.current as DropTarget | undefined;
     if (!draggedId || !target) return;
     if (target.kind === "conv" && target.convId === draggedId) return;
+
+    if (target.kind === "auto-group") {
+      // Promote the auto-group to a persistent user-defined group, adding the dragged conv.
+      const convIds = [...target.rootConvIds];
+      if (!convIds.includes(draggedId)) convIds.push(draggedId);
+      await fetch(`/api/conversation-groups`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: target.title, conversationIds: convIds }),
+      });
+      return;
+    }
 
     if (target.kind === "group") {
       const currentGroupId = groupIdByConvId.get(draggedId);
@@ -301,8 +322,27 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
             </GroupBox>
           );
         })}
+        {autoGroups.map((ag) => (
+          <AutoGroupBox
+            key={ag.clusterKey}
+            clusterKey={ag.clusterKey}
+            title={ag.title}
+            rootConvIds={ag.rootConvIds}
+            onRename={async (next) => {
+              await fetch(`/api/conversation-groups`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title: next, conversationIds: ag.rootConvIds }),
+              });
+            }}
+          >
+            <SidebarMenu>
+              {ag.attemptGroups.map((attemptGroup) => renderAttemptGroup(attemptGroup))}
+            </SidebarMenu>
+          </AutoGroupBox>
+        ))}
         <SidebarMenu>
-          {ungroupedAttemptGroups.map((ag) => renderAttemptGroup(ag))}
+          {trulyUngrouped.map((ag) => renderAttemptGroup(ag))}
           {recentGone.map((conv) => (
             <SidebarMenuItem key={conv.id}>
               <SidebarMenuButton

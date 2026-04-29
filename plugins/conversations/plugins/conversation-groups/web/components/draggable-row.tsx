@@ -4,7 +4,8 @@ import { cn } from "@/lib/utils";
 
 export type DropTarget =
   | { kind: "conv"; convId: string }
-  | { kind: "group"; groupId: string };
+  | { kind: "group"; groupId: string }
+  | { kind: "auto-group"; rootConvIds: string[]; title: string };
 
 // Wraps a sidebar conversation row to make it draggable AND a drop target.
 // The drag id is the conversation id; the drop id is namespaced so it never
