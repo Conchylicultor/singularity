@@ -166,7 +166,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
   - Imported by: `agents`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `worktree-cleanup`
-  - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `hold-and-exit`, `launch`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
+  - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `hold-and-exit`, `launch`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
   - Plugins:
     - **`conversation-groups`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
       - Defines:
@@ -201,7 +201,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` `conversation` (path `/c/:convId`)
         - `conversationPane.Actions` → `ExpandConversationButton`
-      - Slot contributors: `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `hold-and-exit`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
+      - Slot contributors: `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
       - Plugins:
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Defines:
@@ -279,7 +279,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Conversation.PromptBar` → `ForkConversationButtons`
         - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
           - Contributes:
-            - `Conversation.PromptBar` → `ForkSessionButtons`
+            - `JsonlViewer.RowAction` → `ForkSessionAction`
         - **`hold-and-exit`** — Toolbar button that marks the task as held and closes the conversation.
           - Contributes:
             - `Conversation.PromptBar` → `HoldAndExitButton`
@@ -291,7 +291,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.RowAction`
           - Exports (web):
             - Types: `EventRendererContribution`, `RowActionContribution`
-            - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useRowMarkdown`
+            - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`
           - Exports (shared):
             - Types: `JsonlEvent`, `JsonlEventsResponse`, `TokenUsage`
             - Values: `jsonlEventsResource`
@@ -300,7 +300,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `conversations.findTranscriptPath`, `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
-          - Slot contributors: `assistant-text`, `assistant-tool-use`, `summary`, `system`, `user-image`, `user-text`, `user-tool-result`
+          - Slot contributors: `assistant-text`, `assistant-tool-use`, `fork-session`, `summary`, `system`, `user-image`, `user-text`, `user-tool-result`
           - Plugins:
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Contributes:
