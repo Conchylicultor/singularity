@@ -114,7 +114,7 @@ function buildMdComponents(
               e.stopPropagation();
               onFileOpen(segments[0]!.value);
             }}
-            className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-primary hover:underline"
+            className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground cursor-pointer hover:underline"
           >
             {segments[0]!.value}
           </button>
