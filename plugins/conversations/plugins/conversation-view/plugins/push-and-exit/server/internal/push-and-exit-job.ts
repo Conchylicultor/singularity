@@ -11,7 +11,7 @@ import {
   readConversationTurns,
   type ConversationTurnCompletedPayload,
 } from "@plugins/conversations/server";
-import type { JobState } from "../../shared/resources";
+import { JobStateSchema, type JobState } from "../../shared/resources";
 import { CLEAN_TOKEN, FLAG_TOKEN, PUSH_AND_EXIT_PROMPT } from "./prompt";
 import { _pushAndExitJobs } from "./tables";
 
@@ -45,6 +45,7 @@ function rowToState(row: typeof _pushAndExitJobs.$inferSelect): JobState {
 export const pushAndExitResource = defineResource({
   key: "push-and-exit",
   mode: "push",
+  schema: z.record(JobStateSchema),
   loader: async (): Promise<Record<string, JobState>> => {
     const rows = await db.select().from(_pushAndExitJobs);
     return Object.fromEntries(rows.map((r) => [r.conversationId, rowToState(r)]));

@@ -29,8 +29,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `SystemAgentDescriptor`
     - Values: `agentConversationPane`, `agentDetailPane`, `Agents`, `agentsRootPane`, `defineSystemAgent`, `systemAgentDetailPane`
   - Exports (server):
-    - Types: `Agent`, `AgentLaunch`
-    - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
+    - Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`
+    - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
   - Contributes:
     - `Pane.Register` `agents-root` (path `/agents`)
     - `Pane.Register` `agent-detail` (path `:id`)
@@ -195,7 +195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (web):
             - Values: `Code`, `useEditedFiles`
           - Exports (shared):
-            - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`, `ResourceDescriptor`
+            - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`
             - Values: `editedFilesResource`
           - Contributes:
             - `conversationPane.Actions` → `CodeToolbarSlot`
@@ -401,6 +401,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`crashes`** — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
   - Defines:
+    - DB schema: `plugins/crashes/server/internal/schema.ts`
     - DB schema: `plugins/crashes/server/internal/tables.ts`
   - Exports (web):
     - Values: `report`
@@ -765,8 +766,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskStatus`, `TaskStatusChangedPayload`, `UpdateConversationPatch`, `UpdateTaskPatch`
     - Values: `_pushLandedTriggers`, `_taskAttachments`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `emitStatusChangeIfChanged`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listAttempts`, `listAttemptsForTask`, `listConversationsForDisplay`, `listConversationsForInfra`, `listGoneConversations`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `setTaskAutoStart`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `updateConversation`, `updateTask`, `updateTaskTitle`
   - Exports (shared):
-    - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
-    - Values: `AttemptSchema`, `AttemptStatusSchema`, `ConversationKindSchema`, `ConversationSchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
+    - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
+    - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
   - Imported by: `agents`, `build`, `code`, `code-explorer`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `worktree-cleanup`, `yak-shaving`

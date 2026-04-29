@@ -1,54 +1,71 @@
-export interface TokenUsage {
-  input: number;
-  output: number;
-  cacheRead: number;
-  cacheCreation: number;
-}
+import { z } from "zod";
+import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/shared";
 
-export type JsonlEvent =
-  | { kind: "user-text"; at: string; text: string }
-  | {
-      kind: "user-image";
-      at: string;
-      mime: string;
-      data: string; // base64-encoded
-    }
-  | {
-      kind: "user-tool-result";
-      at: string;
-      toolUseId: string;
-      content: string;
-      isError?: boolean;
-    }
-  | {
-      kind: "assistant-text";
-      at: string;
-      messageId?: string;
-      text: string;
-      stopReason?: string;
-      usage?: TokenUsage;
-    }
-  | {
-      kind: "assistant-tool-use";
-      at: string;
-      messageId?: string;
-      toolUseId: string;
-      name: string;
-      input: unknown;
-      usage?: TokenUsage;
-    }
-  | { kind: "system"; at: string; subtype?: string; text: string }
-  | { kind: "summary"; at: string; text: string };
+export const TokenUsageSchema = z.object({
+  input: z.number().int(),
+  output: z.number().int(),
+  cacheRead: z.number().int(),
+  cacheCreation: z.number().int(),
+});
+export type TokenUsage = z.infer<typeof TokenUsageSchema>;
+
+export const JsonlEventSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("user-text"),
+    at: z.string(),
+    text: z.string(),
+  }),
+  z.object({
+    kind: z.literal("user-image"),
+    at: z.string(),
+    mime: z.string(),
+    data: z.string(),
+  }),
+  z.object({
+    kind: z.literal("user-tool-result"),
+    at: z.string(),
+    toolUseId: z.string(),
+    content: z.string(),
+    isError: z.boolean().optional(),
+  }),
+  z.object({
+    kind: z.literal("assistant-text"),
+    at: z.string(),
+    messageId: z.string().optional(),
+    text: z.string(),
+    stopReason: z.string().optional(),
+    usage: TokenUsageSchema.optional(),
+  }),
+  z.object({
+    kind: z.literal("assistant-tool-use"),
+    at: z.string(),
+    messageId: z.string().optional(),
+    toolUseId: z.string(),
+    name: z.string(),
+    input: z.unknown(),
+    usage: TokenUsageSchema.optional(),
+  }),
+  z.object({
+    kind: z.literal("system"),
+    at: z.string(),
+    subtype: z.string().optional(),
+    text: z.string(),
+  }),
+  z.object({
+    kind: z.literal("summary"),
+    at: z.string(),
+    text: z.string(),
+  }),
+]);
+export type JsonlEvent = z.infer<typeof JsonlEventSchema>;
+
+export const JsonlEventsPayloadSchema = z.array(JsonlEventSchema);
 
 export interface JsonlEventsResponse {
   events: JsonlEvent[];
 }
 
-export interface ResourceDescriptor<T, P extends Record<string, string>> {
-  readonly key: string;
-  readonly __types?: { value: T; params: P };
-}
-
-export const jsonlEventsResource: ResourceDescriptor<JsonlEvent[], { id: string }> = {
-  key: "jsonl-events",
-};
+export const jsonlEventsResource = resourceDescriptor<JsonlEvent[], { id: string }>(
+  "jsonl-events",
+  JsonlEventsPayloadSchema,
+);

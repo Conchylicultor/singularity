@@ -31,4 +31,4 @@ export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;
 // from the per-conversation toolbar button.
 export const conversationSummariesResource = resourceDescriptor<
   Record<string, ConversationSummary[]>
->("conversation-summaries");
+>("conversation-summaries", z.record(z.array(ConversationSummarySchema)));

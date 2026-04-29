@@ -1,4 +1,5 @@
 import type { ServerWebSocket } from "bun";
+import type { ZodType } from "zod";
 import type { WsData, WsHandler } from "./types";
 
 // Live-state primitive — central-side. Mirror of server/src/resources.ts; the
@@ -27,6 +28,14 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
   key: string;
   mode?: ResourceMode;
   loader: (params: P) => Promise<T> | T;
+  /**
+   * Zod schema for the payload. The descriptor exposed to clients carries
+   * this schema so the browser parses every payload before it lands in the
+   * TanStack cache. Currently optional during the staged migration; will
+   * become required once every resource declares one. See
+   * research/2026-04-29-global-resource-schema-validation.md.
+   */
+  schema?: ZodType<T>;
   dependsOn?: ReadonlyArray<DependsOnEntry<P>>;
   onFirstSubscribe?: (params: P) => void | Promise<void>;
   onLastUnsubscribe?: (params: P) => void;
@@ -35,6 +44,7 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
 export interface Resource<T, P extends ResourceParams = ResourceParams> {
   key: string;
   mode: ResourceMode;
+  schema?: ZodType<T>;
   load(params: P): Promise<T>;
   notify(params?: P): void;
 }
@@ -119,6 +129,7 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
   return {
     key: def.key,
     mode,
+    schema: def.schema,
     async load(params: P): Promise<T> {
       return (await def.loader(params)) as T;
     },

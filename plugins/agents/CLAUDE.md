@@ -13,8 +13,8 @@
   - Types: `SystemAgentDescriptor`
   - Values: `agentConversationPane`, `agentDetailPane`, `Agents`, `agentsRootPane`, `defineSystemAgent`, `systemAgentDetailPane`
 - Exports (server):
-  - Types: `Agent`, `AgentLaunch`
-  - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
+  - Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`
+  - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
 - Contributes:
   - `Pane.Register` `agents-root` (path `/agents`)
   - `Pane.Register` `agent-detail` (path `:id`)

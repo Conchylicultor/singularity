@@ -6,6 +6,7 @@
 
 - Description: Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
 - Defines:
+  - DB schema: `plugins/crashes/server/internal/schema.ts`
   - DB schema: `plugins/crashes/server/internal/tables.ts`
 - Exports (web):
   - Values: `report`

@@ -1,4 +1,5 @@
 import { defineResource } from "@server/resources";
+import { z } from "zod";
 import type { SecretMetadata } from "@plugins/infra/plugins/secrets/shared";
 import {
   getSecretMetadata,
@@ -8,6 +9,11 @@ import { fullKey } from "@plugins/config/shared";
 import { getRegistry } from "./registry";
 
 export const CONFIG_SECRETS_NAMESPACE = "config-fields";
+
+const SecretMetadataSchema = z.object({
+  set: z.boolean(),
+  updatedAt: z.number().optional(),
+}) satisfies z.ZodType<SecretMetadata>;
 
 /**
  * Pushes the "is this secret field set?" bit for every registered config
@@ -24,6 +30,7 @@ export const configSecretsResource = defineResource<
 >({
   key: "config-secrets",
   mode: "push",
+  schema: z.record(SecretMetadataSchema),
   async loader() {
     const out: Record<string, SecretMetadata> = {};
     for (const plugin of getRegistry()) {

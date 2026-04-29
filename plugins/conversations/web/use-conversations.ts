@@ -1,17 +1,8 @@
-import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { z } from "zod";
 import { ConversationSchema } from "../shared";
 import { recentConversationsResource, type ConversationEntry } from "../shared/resources";
-
-const PayloadSchema = z.object({
-  active: z.array(ConversationSchema),
-  recentGone: z.array(ConversationSchema),
-  hasMoreGone: z.boolean(),
-  totalGoneCount: z.number(),
-  system: z.array(ConversationSchema),
-});
 
 export const GonePageSchema = z.object({
   items: z.array(ConversationSchema),
@@ -27,27 +18,19 @@ export function useConversations(): {
   isLoading: boolean;
 } {
   const q = useResource(recentConversationsResource);
-  return useMemo(() => {
-    if (!q.data)
-      return {
-        active: [],
-        recentGone: [],
-        hasMoreGone: false,
-        totalGoneCount: 0,
-        system: [],
-        isLoading: q.isLoading,
-      };
-    const payload = PayloadSchema.parse(q.data);
-    return { ...payload, isLoading: q.isLoading };
-  }, [q.data, q.isLoading]);
+  return {
+    active: q.data?.active ?? [],
+    recentGone: q.data?.recentGone ?? [],
+    hasMoreGone: q.data?.hasMoreGone ?? false,
+    totalGoneCount: q.data?.totalGoneCount ?? 0,
+    system: q.data?.system ?? [],
+    isLoading: q.isLoading,
+  };
 }
 
 export function useConversation(id: string): ConversationEntry | null {
   const { active, recentGone, system } = useConversations();
-  return useMemo(
-    () => [...active, ...recentGone, ...system].find((c) => c.id === id) ?? null,
-    [active, recentGone, system, id],
-  );
+  return [...active, ...recentGone, ...system].find((c) => c.id === id) ?? null;
 }
 
 // Point lookup by id. Hits `GET /api/conversations/:id` on demand and caches

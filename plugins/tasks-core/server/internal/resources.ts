@@ -3,11 +3,13 @@ import { db } from "@server/db/client";
 import { defineResource } from "@server/resources";
 import { pushes } from "./tables";
 import { attempts, tasks } from "./schema";
-import type { Conversation, Push, Task } from "./schema";
-import type {
-  AttemptWithConversations,
-  ConversationSummary,
+import { TaskSchema, PushSchema } from "./schema";
+import type { ConversationSummary } from "../../shared";
+import {
+  AttemptWithConversationsSchema,
+  ConversationListPayloadSchema,
 } from "../../shared";
+import type { AttemptWithConversations, ConversationListPayload } from "../../shared";
 import {
   countGoneConversations,
   listActiveConversations,
@@ -16,18 +18,12 @@ import {
   listGoneConversations,
   RECENT_GONE_LIMIT,
 } from "./queries/conversations";
-
-type ConversationListPayload = {
-  active: Conversation[];
-  recentGone: Conversation[];
-  hasMoreGone: boolean;
-  totalGoneCount: number;
-  system: Conversation[];
-};
+import { z } from "zod";
 
 export const recentConversationsResource = defineResource({
   key: "conversations",
   mode: "push",
+  schema: ConversationListPayloadSchema,
   loader: async (): Promise<ConversationListPayload> => {
     const [active, goneRows, totalGoneCount, system] = await Promise.all([
       listActiveConversations(),
@@ -49,13 +45,15 @@ export const recentConversationsResource = defineResource({
 export const pushesResource = defineResource({
   key: "pushes",
   mode: "push",
-  loader: async (): Promise<Push[]> =>
+  schema: z.array(PushSchema),
+  loader: async () =>
     db.select().from(pushes).orderBy(desc(pushes.createdAt)),
 });
 
 export const attemptsResource = defineResource({
   key: "attempts",
   mode: "push",
+  schema: z.array(AttemptWithConversationsSchema),
   dependsOn: [{ resource: recentConversationsResource }, { resource: pushesResource }],
   loader: async (): Promise<AttemptWithConversations[]> => {
     const [attemptRows, convRows] = await Promise.all([
@@ -86,7 +84,8 @@ export const attemptsResource = defineResource({
 export const tasksResource = defineResource({
   key: "tasks",
   mode: "push",
+  schema: z.array(TaskSchema),
   dependsOn: [{ resource: attemptsResource }],
-  loader: async (): Promise<Task[]> =>
+  loader: async () =>
     db.select().from(tasks).orderBy(asc(tasks.rank), asc(tasks.createdAt)),
 });

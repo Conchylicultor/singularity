@@ -1,17 +1,12 @@
-import { createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
-import { _yakShavingCategories, _yakShavingNodes } from "./tables";
-
 // Zod schemas + types. Tables live in `./tables.ts`.
+// Pure Zod schemas are defined in `../../shared/schemas.ts` so they can be
+// consumed by shared/ and web/ without pulling drizzle into the bundle.
 
-export const YakShavingNodeSchema = createSelectSchema(_yakShavingNodes, {
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-});
-export type YakShavingNode = z.infer<typeof YakShavingNodeSchema>;
-
-export const YakShavingCategorySchema = createSelectSchema(_yakShavingCategories, {
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-});
-export type YakShavingCategory = z.infer<typeof YakShavingCategorySchema>;
+export {
+  YakShavingNodeSchema,
+  YakShavingCategorySchema,
+} from "../../shared/schemas";
+export type {
+  YakShavingNode,
+  YakShavingCategory,
+} from "../../shared/schemas";

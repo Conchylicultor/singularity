@@ -1,15 +1,16 @@
-export interface QuickPrompt {
-  id: string;
-  title: string;
-  prompt: string;
-  rank: string;
-}
+import { z } from "zod";
+import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/shared";
 
-function descriptor<T>(key: string) {
-  return { key } as {
-    readonly key: string;
-    readonly __types?: { value: T; params: Record<string, never> };
-  };
-}
+export const QuickPromptSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  prompt: z.string(),
+  rank: z.string(),
+});
 
-export const quickPromptsResource = descriptor<QuickPrompt[]>("quick-prompts");
+export type QuickPrompt = z.infer<typeof QuickPromptSchema>;
+
+export const quickPromptsResource = resourceDescriptor<QuickPrompt[]>(
+  "quick-prompts",
+  z.array(QuickPromptSchema),
+);

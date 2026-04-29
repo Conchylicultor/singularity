@@ -1,5 +1,6 @@
 import { defineResource } from "@server/resources";
 import { getConversation } from "@plugins/tasks-core/server";
+import { EditedFilesPayloadSchema } from "../../shared/protocol";
 import { getEditedFiles } from "./get-edited-files";
 import { watchEditedFiles } from "./watch-edited-files";
 
@@ -15,6 +16,7 @@ async function worktreeFor(conversationId: string): Promise<string | null> {
 export const editedFilesResource = defineResource({
   key: "edited-files",
   mode: "invalidate",
+  schema: EditedFilesPayloadSchema,
   loader: async ({ id }: Params) => {
     const wt = await worktreeFor(id);
     if (!wt) return [];

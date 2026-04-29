@@ -1,6 +1,7 @@
 import { defineResource } from "@server/resources";
 import { findTranscriptPath } from "@plugins/conversations/server";
 import { getConversationClaudeSessionId } from "@plugins/tasks-core/server";
+import { JsonlEventsPayloadSchema } from "../../shared/protocol";
 import { readJsonlEvents } from "./parse-jsonl";
 import { watchJsonl } from "./watch-jsonl";
 
@@ -11,6 +12,7 @@ const unsubscribes = new Map<string, () => void>();
 export const jsonlEventsResource = defineResource({
   key: "jsonl-events",
   mode: "push",
+  schema: JsonlEventsPayloadSchema,
   loader: async ({ id }: Params) => {
     const claudeSessionId = await getConversationClaudeSessionId(id);
     if (!claudeSessionId) return [];

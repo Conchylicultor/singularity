@@ -6,7 +6,13 @@ import type {
   Push,
   Task,
 } from "@plugins/tasks-core/shared";
+import {
+  TaskSchema,
+  AttemptWithConversationsSchema,
+  PushSchema,
+} from "@plugins/tasks-core/shared";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/shared";
+import { z } from "zod";
 
 export type {
   Attempt,
@@ -16,6 +22,6 @@ export type {
   Task,
 } from "@plugins/tasks-core/shared";
 
-export const tasksResource = resourceDescriptor<Task[]>("tasks");
-export const attemptsResource = resourceDescriptor<AttemptWithConversations[]>("attempts");
-export const pushesResource = resourceDescriptor<Push[]>("pushes");
+export const tasksResource = resourceDescriptor<Task[]>("tasks", z.array(TaskSchema));
+export const attemptsResource = resourceDescriptor<AttemptWithConversations[]>("attempts", z.array(AttemptWithConversationsSchema));
+export const pushesResource = resourceDescriptor<Push[]>("pushes", z.array(PushSchema));

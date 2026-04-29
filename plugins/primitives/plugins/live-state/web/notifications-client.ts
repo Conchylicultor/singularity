@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { ZodType } from "zod";
 import { SharedWebSocket } from "@plugins/primitives/plugins/networking/web";
 import type { ResourceOrigin } from "../shared/resource";
 
@@ -69,6 +70,13 @@ interface SocketChannel {
 export class NotificationsClient {
   private channels: Record<SocketKind, SocketChannel>;
   private nextMsgId = 1;
+  /**
+   * key → Zod schema. Registered on every observe() call from useResource.
+   * Used in applyUpdate to parse WS payloads before they hit the cache.
+   * Last-write-wins is fine: the same key always pairs to the same schema
+   * (resources are singletons defined at module scope).
+   */
+  private schemas = new Map<string, ZodType<unknown>>();
 
   constructor(private queryClient: QueryClient) {
     this.channels = {
@@ -78,7 +86,13 @@ export class NotificationsClient {
   }
 
   /** Observer count increased for (key, params). Sub on 0→1. */
-  observe(key: string, params: ResourceParams = {}, origin?: ResourceOrigin): void {
+  observe(
+    key: string,
+    params: ResourceParams = {},
+    origin?: ResourceOrigin,
+    schema?: ZodType<unknown>,
+  ): void {
+    if (schema) this.schemas.set(key, schema);
     const kind = socketKindFor(origin);
     const channel = this.channels[kind];
     const id = `${key}\0${paramsKey(params)}`;
@@ -172,7 +186,15 @@ export class NotificationsClient {
       if (version <= entry.version) return;
       entry.version = version;
     }
-    this.queryClient.setQueryData(queryKeyFor(key, params), value);
+    const schema = this.schemas.get(key);
+    if (!schema) {
+      throw new Error(
+        `[notifications] no schema registered for key="${key}". ` +
+          `useResource must observe the descriptor (which carries the schema) ` +
+          `before any update can be applied.`,
+      );
+    }
+    this.queryClient.setQueryData(queryKeyFor(key, params), schema.parse(value));
   }
 
   private applyInvalidate(

@@ -1,15 +1,16 @@
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { db } from "@server/db/client";
 import { defineResource } from "@server/resources";
 import { excludedPathState } from "./tables";
 
-export interface PathStateMap {
-  [path: string]: boolean;
-}
+export type PathStateMap = z.infer<typeof PathStateMapSchema>;
+export const PathStateMapSchema = z.record(z.boolean());
 
 export const excludedPathStateResource = defineResource<PathStateMap>({
   key: "stats-commits.excluded-path-state",
   mode: "push",
+  schema: PathStateMapSchema,
   async loader() {
     const rows = await db.select().from(excludedPathState);
     const out: PathStateMap = {};

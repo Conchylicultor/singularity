@@ -1,11 +1,13 @@
 import { defineResource } from "@server/resources";
 import type { ForkError } from "../../shared/fork-errors";
+import { ForkErrorSchema } from "../../shared/fork-errors";
 
 let latest: ForkError | null = null;
 
 export const forkErrorsResource = defineResource<ForkError | null>({
   key: "conversations.fork-errors",
   mode: "push",
+  schema: ForkErrorSchema.nullable(),
   loader: () => latest,
 });
 

@@ -10,7 +10,7 @@
 - Exports (web):
   - Values: `Code`, `useEditedFiles`
 - Exports (shared):
-  - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`, `ResourceDescriptor`
+  - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`
   - Values: `editedFilesResource`
 - Contributes:
   - `conversationPane.Actions` → `CodeToolbarSlot`

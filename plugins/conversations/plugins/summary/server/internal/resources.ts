@@ -1,11 +1,13 @@
+import { z } from "zod";
 import { asc, desc } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { defineResource } from "@server/resources";
 import { _conversationSummaries } from "./tables";
-import type {
-  ConversationSummary,
-  Phase,
+import {
+  ConversationSummarySchema,
 } from "../../shared/resources";
+import type { Phase } from "../../shared/resources";
+import type { ConversationSummary } from "../../shared/resources";
 
 function rowToSummary(
   row: typeof _conversationSummaries.$inferSelect,
@@ -27,6 +29,7 @@ function rowToSummary(
 export const conversationSummariesResource = defineResource({
   key: "conversation-summaries",
   mode: "push",
+  schema: z.record(z.array(ConversationSummarySchema)),
   loader: async (): Promise<Record<string, ConversationSummary[]>> => {
     const rows = await db
       .select()

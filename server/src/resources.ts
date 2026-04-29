@@ -1,4 +1,5 @@
 import type { ServerWebSocket } from "bun";
+import type { ZodType } from "zod";
 import type { WsData, WsHandler } from "./types";
 
 // Live-state primitive. See
@@ -31,6 +32,14 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
   mode?: ResourceMode;
   loader: (params: P) => Promise<T> | T;
   /**
+   * Zod schema for the payload. The descriptor exposed to clients carries
+   * this schema so the browser parses every payload before it lands in the
+   * TanStack cache. Currently optional during the staged migration; will
+   * become required once every resource declares one. See
+   * research/2026-04-29-global-resource-schema-validation.md.
+   */
+  schema?: ZodType<T>;
+  /**
    * Upstream resources. When any listed resource notifies, this resource is
    * scheduled to notify within the same microtask flush, with per-key /
    * per-params coalescing. Cycles are detected at boot (warn-only in phase 1).
@@ -48,6 +57,7 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
 export interface Resource<T, P extends ResourceParams = ResourceParams> {
   key: string;
   mode: ResourceMode;
+  schema?: ZodType<T>;
   load(params: P): Promise<T>;
   /** Signal that state has changed. No-arg = parameterless resource. */
   notify(params?: P): void;
@@ -141,6 +151,7 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
   return {
     key: def.key,
     mode,
+    schema: def.schema,
     async load(params: P): Promise<T> {
       return (await def.loader(params)) as T;
     },

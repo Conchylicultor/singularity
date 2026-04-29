@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { resourceDescriptor, useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useConfigValues } from "@plugins/config/web";
 import { cn } from "@/lib/utils";
@@ -7,6 +8,7 @@ type PathStateMap = Record<string, boolean>;
 
 export const excludedPathStateResource = resourceDescriptor<PathStateMap>(
   "stats-commits.excluded-path-state",
+  z.record(z.boolean()),
 );
 
 async function setPathEnabled(path: string, enabled: boolean): Promise<void> {

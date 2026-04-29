@@ -1,10 +1,21 @@
 import { getTableColumns, sql } from "drizzle-orm";
 import { pgView } from "drizzle-orm/pg-core";
-import { createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
-import { _agent_launches, _agents } from "./tables";
+import { _agents } from "./tables";
 
 // Derived view + Zod schemas + types. Tables live in `./tables.ts`.
+// Pure Zod schemas are defined in `../../shared/schemas.ts` so they can be
+// consumed by shared/ and web/ without pulling drizzle into the bundle.
+
+export {
+  AgentSchema,
+  AgentLaunchSchema,
+  AgentLaunchWithStatusSchema,
+} from "../../shared/schemas";
+export type {
+  Agent,
+  AgentLaunch,
+  AgentLaunchWithStatus,
+} from "../../shared/schemas";
 
 export const agents = pgView("agents_v").as((qb) =>
   qb
@@ -14,17 +25,3 @@ export const agents = pgView("agents_v").as((qb) =>
     })
     .from(_agents),
 );
-
-export const AgentSchema = createSelectSchema(_agents, {
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-  rank: z.string(),
-}).extend({
-  isFolder: z.boolean(),
-});
-export type Agent = z.infer<typeof AgentSchema>;
-
-export const AgentLaunchSchema = createSelectSchema(_agent_launches, {
-  createdAt: z.coerce.date(),
-});
-export type AgentLaunch = z.infer<typeof AgentLaunchSchema>;

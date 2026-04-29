@@ -70,13 +70,15 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
   const origin = resource.origin;
   const p = (params ?? ({} as P)) as ResourceParams;
 
+  const schema = resource.schema;
+
   // Refcount sub/unsub on mount/unmount.
   useEffect(() => {
-    notifications.observe(key, p, origin);
+    notifications.observe(key, p, origin, schema);
     return () => notifications.unobserve(key, p, origin);
     // Stringify params for stable dependency; callers are expected to pass
     // stable shapes (small flat objects of strings).
-  }, [notifications, key, origin, JSON.stringify(p)]);
+  }, [notifications, key, origin, schema, JSON.stringify(p)]);
 
   return useQuery<T>({
     queryKey: queryKeyFor(key, p),
@@ -86,8 +88,8 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
       const url = `${base}/${encodeURIComponent(key)}${qs ? `?${qs}` : ""}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Resource ${key} fetch failed: ${res.status}`);
-      const body = (await res.json()) as { value: T; version: number };
-      return body.value;
+      const body = (await res.json()) as { value: unknown; version: number };
+      return (schema ? schema.parse(body.value) : (body.value as T));
     },
     // sub-ack writes setQueryData, so normally queryFn never runs.
     // It's the fallback when the WS is down.

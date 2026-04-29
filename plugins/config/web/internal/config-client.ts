@@ -1,16 +1,28 @@
+import { z } from "zod";
 import { useResource, resourceDescriptor } from "@plugins/primitives/plugins/live-state/web";
 import type { ConfigDescriptor, Schema, Values } from "@plugins/config/shared";
 import { getDefault } from "@plugins/config/shared";
 
-export const configResource = resourceDescriptor<Record<string, unknown>>("config");
+export const configResource = resourceDescriptor<Record<string, unknown>>(
+  "config",
+  z.record(z.unknown()),
+);
 
 export interface SecretFieldState {
   set: boolean;
   updatedAt?: number;
 }
 
+const SecretFieldStateSchema = z.object({
+  set: z.boolean(),
+  updatedAt: z.number().optional(),
+});
+
 export const configSecretsResource =
-  resourceDescriptor<Record<string, SecretFieldState>>("config-secrets");
+  resourceDescriptor<Record<string, SecretFieldState>>(
+    "config-secrets",
+    z.record(SecretFieldStateSchema),
+  );
 
 /**
  * Read-only typed view of a plugin's config values. Plugins pass their own
