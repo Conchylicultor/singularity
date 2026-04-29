@@ -33,9 +33,17 @@ Only call this in response to the push-and-exit prompt. If anything went wrong o
       );
     }
     await setStatus(conversationId, "clean", null);
+    // Namespaced jobKey: `pushAndExitJob` already uses `jobKey: conversationId`,
+    // so a bare conversationId here would give both jobs the same
+    // `workflowRunId`. When the shared `end_turn` event resolves both waits,
+    // each `jobs.resume` re-enqueues its target with `jobKey: workflowRunId`,
+    // and graphile's replace-on-unlocked-key semantics drop one of them on
+    // the floor — typically `exitCleanFinalizeJob`, leaving the conversation
+    // stuck open. The 60s timeout fallback dies too: `jobs.resume` already
+    // marked the wait row resolved before its `addJob` was clobbered.
     await exitCleanFinalizeJob.enqueue(
       { conversationId },
-      { jobKey: conversationId },
+      { jobKey: `exit-clean:${conversationId}` },
     );
     return {
       content: [
