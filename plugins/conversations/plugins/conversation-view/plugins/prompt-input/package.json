@@ -1,10 +1,5 @@
 {
   "name": "@singularity/plugin-conversations-conversation-view-prompt-input",
   "private": true,
-  "version": "0.0.1",
-  "dependencies": {
-    "lexical": "^0.44.0",
-    "@lexical/react": "^0.44.0",
-    "@lexical/utils": "^0.44.0"
-  }
+  "version": "0.0.1"
 }

@@ -8,6 +8,7 @@
 - Defines:
   - Slots: `Agents.List`, `Agents.View`, `Agents.AgentActions`, `Agents.SystemAgent`
   - DB schema: `plugins/agents/server/internal/schema.ts`
+  - DB schema: `plugins/agents/server/internal/tables-attachments.ts`
   - DB schema: `plugins/agents/server/internal/tables.ts`
 - Exports (web):
   - Types: `SystemAgentDescriptor`
@@ -23,7 +24,7 @@
   - `Shell.Sidebar` "Agents" (group `System`)
   - `agentsRootPane.open`
 - Server:
-  - Uses: `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
+  - Uses: `conversations.createConversation`, `conversations.resolveAttachmentRefs`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
   - Resources: `agent-launches` (push), `agents` (push)
   - `GET /api/agents`
   - `POST /api/agents`

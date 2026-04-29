@@ -6,15 +6,40 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { ATTACHMENT_MARKDOWN_RE } from "@plugins/primitives/plugins/paste-images/web";
 
-const STORAGE_KEY = "singularity:prompt-drafts-v1";
+const STORAGE_KEY = "singularity:prompt-drafts-v2";
+
+// Drafts are markdown strings. Pasted images are stored inline as
+// `![](/api/attachments/<id>)` refs — uploaded immediately, so a refresh
+// re-hydrates the same image via /api/attachments/:id (the attachment row
+// survives until the orphan sweep TTL or until the conversation links it).
+export type PromptDraft = {
+  markdown: string;
+};
+
+export const EMPTY_DRAFT: PromptDraft = { markdown: "" };
+
+export function isDraftEmpty(draft: PromptDraft): boolean {
+  return draft.markdown.trim().length === 0;
+}
+
+// Strip attachment image refs from the markdown — useful when seeding a
+// title or a preview that shouldn't include the inline image markdown.
+export function draftToPlainText(draft: PromptDraft): string {
+  return draft.markdown
+    .replace(new RegExp(ATTACHMENT_MARKDOWN_RE.source, "g"), "")
+    .trim();
+}
 
 function readDraftsFromStorage(): Map<string, PromptDraft> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return new Map();
     const parsed = JSON.parse(raw) as Record<string, string>;
-    return new Map(Object.entries(parsed).map(([k, text]) => [k, { text, images: [] }]));
+    return new Map(
+      Object.entries(parsed).map(([k, markdown]) => [k, { markdown }]),
+    );
   } catch {
     return new Map();
   }
@@ -24,34 +49,13 @@ function writeDraftsToStorage(drafts: Map<string, PromptDraft>) {
   try {
     const obj: Record<string, string> = {};
     for (const [k, v] of drafts) {
-      if (v.text.trim()) obj[k] = v.text;
+      if (v.markdown.trim()) obj[k] = v.markdown;
     }
     if (Object.keys(obj).length === 0) localStorage.removeItem(STORAGE_KEY);
     else localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
   } catch {
     // Quota exceeded — silently ignore
   }
-}
-
-export type PromptImageDraft = {
-  id: string;
-  mime: string;
-  dataUrl: string;
-};
-
-export type PromptDraft = {
-  text: string;
-  images: PromptImageDraft[];
-};
-
-export const EMPTY_DRAFT: PromptDraft = { text: "", images: [] };
-
-export function isDraftEmpty(draft: PromptDraft): boolean {
-  return draft.text.trim().length === 0 && draft.images.length === 0;
-}
-
-export function draftToPlainText(draft: PromptDraft): string {
-  return draft.text.replace(/<<<image:\d+>>>/g, "").trim();
 }
 
 type DraftStore = {

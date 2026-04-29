@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { MdPlayArrow } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
+import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
 import { Button } from "@/components/ui/button";
 import { agentsResource } from "../../shared/resources";
 import { agentConversationPane } from "../panes";
@@ -106,15 +107,21 @@ export function AgentDetail({ agentId }: { agentId: string }) {
           className="placeholder:text-muted-foreground flex-1 bg-transparent text-xl font-semibold outline-none focus:ring-0"
         />
       </div>
-      <textarea
-        value={descField.value}
-        onChange={(e) => descField.onChange(e.target.value)}
+      <div
         onFocus={descField.onFocus}
-        onBlur={descField.onBlur}
-        placeholder="Describe what this agent does…"
-        rows={2}
-        className="placeholder:text-muted-foreground focus:ring-ring w-full resize-y rounded border bg-transparent p-2 text-sm outline-none focus:ring-1"
-      />
+        onBlur={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+          descField.onBlur();
+        }}
+      >
+        <PromptEditor
+          value={descField.value}
+          onChange={descField.onChange}
+          placeholder="Describe what this agent does…"
+          minRows={2}
+          namespace={`agent-description-${agentId}`}
+        />
+      </div>
       <div className="flex flex-col gap-1">
         <label className="text-muted-foreground text-xs uppercase tracking-wide">
           Model
@@ -132,18 +139,24 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         </select>
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-muted-foreground text-xs uppercase tracking-wide">
+        <label className="text-muted-foreground text-xs tracking-wide uppercase">
           Prompt
         </label>
-        <textarea
-          value={promptField.value}
-          onChange={(e) => promptField.onChange(e.target.value)}
+        <div
           onFocus={promptField.onFocus}
-          onBlur={promptField.onBlur}
-          placeholder="Instructions the agent runs with…"
-          rows={12}
-          className="placeholder:text-muted-foreground focus:ring-ring min-h-56 w-full resize-y rounded border bg-transparent p-3 font-mono text-sm outline-none focus:ring-1"
-        />
+          onBlur={(e) => {
+            if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+            promptField.onBlur();
+          }}
+        >
+          <PromptEditor
+            value={promptField.value}
+            onChange={promptField.onChange}
+            placeholder="Instructions the agent runs with…"
+            minRows={12}
+            namespace={`agent-prompt-${agentId}`}
+          />
+        </div>
       </div>
       <div className="flex justify-end">
         <Button

@@ -3,9 +3,7 @@ import { ImageNode } from "./image-node";
 
 export const PROMPT_EDITOR_THEME = {
   paragraph: "m-0",
-  text: {
-    base: "",
-  },
+  text: { base: "" },
 } as const;
 
 export function buildInitialConfig(opts: {

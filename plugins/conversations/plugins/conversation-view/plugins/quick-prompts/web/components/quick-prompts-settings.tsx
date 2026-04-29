@@ -1,5 +1,6 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { quickPromptsResource } from "../../shared/resources";
@@ -37,7 +38,7 @@ export function QuickPromptsSettings() {
   const deletingRef = useRef(new Set<string>());
 
   if (!prompts) {
-    return <p className="text-xs text-muted-foreground">Loading…</p>;
+    return <p className="text-muted-foreground text-xs">Loading…</p>;
   }
 
   const visible = prompts.filter((p) => !deletingRef.current.has(p.id));
@@ -50,44 +51,18 @@ export function QuickPromptsSettings() {
   return (
     <div className="flex flex-col gap-3">
       {visible.length === 0 && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           No prompts yet. Add one below.
         </p>
       )}
       {visible.map((p) => (
-        <div key={p.id} className="flex items-start gap-2">
-          <div className="flex flex-1 flex-col gap-1.5">
-            <Input
-              defaultValue={p.title}
-              placeholder="Title"
-              className="h-7 text-xs"
-              onBlur={(e) =>
-                updatePrompt(p.id, { title: e.currentTarget.value }).catch(
-                  console.error,
-                )
-              }
-            />
-            <textarea
-              defaultValue={p.prompt}
-              placeholder="Prompt text…"
-              className="w-full resize-y rounded-md border border-input bg-background px-3 py-1.5 text-xs min-h-16 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              onBlur={(e) =>
-                updatePrompt(p.id, { prompt: e.currentTarget.value }).catch(
-                  console.error,
-                )
-              }
-            />
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="mt-0.5 h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-            onClick={() => handleDelete(p.id)}
-            aria-label="Delete prompt"
-          >
-            ×
-          </Button>
-        </div>
+        <PromptRow
+          key={p.id}
+          id={p.id}
+          title={p.title}
+          prompt={p.prompt}
+          onDelete={() => handleDelete(p.id)}
+        />
       ))}
       <Button
         variant="outline"
@@ -96,6 +71,65 @@ export function QuickPromptsSettings() {
         onClick={() => createPrompt().catch(console.error)}
       >
         Add prompt
+      </Button>
+    </div>
+  );
+}
+
+function PromptRow({
+  id,
+  title,
+  prompt,
+  onDelete,
+}: {
+  id: string;
+  title: string;
+  prompt: string;
+  onDelete: () => void;
+}) {
+  // Mirror the prompt body locally so paste-image uploads update the UI
+  // immediately; the value is flushed to the server on blur.
+  const [body, setBody] = useState(prompt);
+  const lastSavedRef = useRef(prompt);
+
+  return (
+    <div className="flex items-start gap-2">
+      <div className="flex flex-1 flex-col gap-1.5">
+        <Input
+          defaultValue={title}
+          placeholder="Title"
+          className="h-7 text-xs"
+          onBlur={(e) =>
+            updatePrompt(id, { title: e.currentTarget.value }).catch(
+              console.error,
+            )
+          }
+        />
+        <div
+          onBlur={(e) => {
+            if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+            if (body === lastSavedRef.current) return;
+            lastSavedRef.current = body;
+            updatePrompt(id, { prompt: body }).catch(console.error);
+          }}
+        >
+          <PromptEditor
+            value={body}
+            onChange={setBody}
+            placeholder="Prompt text…"
+            minRows={3}
+            namespace={`quick-prompt-${id}`}
+          />
+        </div>
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="text-muted-foreground hover:text-destructive mt-0.5 h-7 w-7 shrink-0"
+        onClick={onDelete}
+        aria-label="Delete prompt"
+      >
+        ×
       </Button>
     </div>
   );

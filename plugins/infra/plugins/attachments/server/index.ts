@@ -8,6 +8,7 @@ import { ensureAttachmentsRoot } from "./internal/paths";
 export { _attachments } from "./internal/tables";
 export { deleteAttachment, getAttachment } from "./internal/operations";
 export { Attachments } from "./internal/attachments";
+export { syncOwnerAttachments } from "./internal/sync-owner-attachments";
 
 export default {
   id: "attachments",

@@ -6,9 +6,12 @@ import {
   recentConversationsResource,
 } from "./internal/resources";
 
-// Task ↔ attachment link table (FK cascade on task deletion). In its own
-// file so it doesn't leak server-only imports into tasks-core/shared.
-export { _taskAttachments } from "./internal/schema-attachments";
+// Per-domain attachment link tables (FK cascade on owner deletion). In their
+// own file so they don't leak server-only imports into tasks-core/shared.
+export {
+  _conversationAttachments,
+  _taskAttachments,
+} from "./internal/schema-attachments";
 export { _conversations } from "./internal/tables";
 
 // Zod schemas and TS types

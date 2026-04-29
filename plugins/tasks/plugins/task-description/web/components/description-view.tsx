@@ -1,8 +1,19 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useState } from "react";
 import { MdEdit } from "react-icons/md";
-import { Button } from "@/components/ui/button";
+import {
+  AttachmentThumbnail,
+  ATTACHMENT_MARKDOWN_RE,
+  isAttachmentUrl,
+  PromptEditor,
+} from "@plugins/primitives/plugins/paste-images/web";
 import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
+import { Button } from "@/components/ui/button";
 
+// Two-mode description editor:
+//   - Display: markdown rendered as plain text (with FileLinkText routing inline
+//     file paths to file-peek) and image refs rendered as inline thumbnails.
+//   - Edit: Lexical-based PromptEditor with paste-image support.
+// Click anywhere on the display to edit; blur returns to display.
 export function DescriptionView({
   value,
   onChange,
@@ -17,31 +28,28 @@ export function DescriptionView({
   onFileOpen?: (path: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useLayoutEffect(() => {
-    if (!editing) return;
-    const ta = textareaRef.current;
-    if (!ta) return;
-    ta.style.height = "auto";
-    ta.style.height = `${ta.scrollHeight}px`;
-  }, [editing, value]);
 
   if (editing) {
     return (
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+      <div
         onFocus={onFocus}
-        onBlur={() => {
+        onBlur={(e) => {
+          // Only collapse back to display when focus leaves the whole editor —
+          // not when moving between Lexical's internal nodes.
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
           setEditing(false);
           onBlur?.();
         }}
-        autoFocus
-        placeholder="Add a description…"
-        className="placeholder:text-muted-foreground min-h-48 w-full resize-none overflow-hidden rounded border bg-transparent p-3 text-sm outline-none focus:ring-1 focus:ring-ring"
-      />
+      >
+        <PromptEditor
+          value={value}
+          onChange={onChange}
+          placeholder="Add a description…"
+          autoFocus
+          minRows={8}
+          namespace="task-description"
+        />
+      </div>
     );
   }
 
@@ -49,23 +57,74 @@ export function DescriptionView({
     <div
       className="group relative min-h-48 w-full cursor-text rounded border p-3 text-sm"
       onClick={() => setEditing(true)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") setEditing(true);
+      }}
     >
       {value ? (
-        <p className="whitespace-pre-wrap break-words">
-          <FileLinkText text={value} onFileOpen={onFileOpen} />
-        </p>
+        <DescriptionDisplay text={value} onFileOpen={onFileOpen} />
       ) : (
         <span className="text-muted-foreground">Add a description…</span>
       )}
       <Button
         variant="ghost"
         size="icon"
-        className="absolute right-1 top-1 size-6 opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute top-1 right-1 size-6 opacity-0 transition-opacity group-hover:opacity-100"
         title="Edit description"
         onClick={() => setEditing(true)}
       >
         <MdEdit className="size-3.5" />
       </Button>
     </div>
+  );
+}
+
+// Render the markdown body as plain text + file-links, with attachment image
+// refs replaced by inline thumbnails. We don't run a full markdown renderer
+// here — task descriptions today are plain text with the occasional pasted
+// image, so this lighter pass keeps the display fast and predictable.
+function DescriptionDisplay({
+  text,
+  onFileOpen,
+}: {
+  text: string;
+  onFileOpen?: (path: string) => void;
+}) {
+  const segments: Array<
+    { kind: "text"; value: string } | { kind: "image"; id: string; alt: string }
+  > = [];
+  let lastIdx = 0;
+  const re = new RegExp(ATTACHMENT_MARKDOWN_RE.source, "g");
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    const id = isAttachmentUrl(m[2]!);
+    if (!id) continue;
+    if (m.index > lastIdx) {
+      segments.push({ kind: "text", value: text.slice(lastIdx, m.index) });
+    }
+    segments.push({ kind: "image", id, alt: m[1] ?? "" });
+    lastIdx = m.index + m[0].length;
+  }
+  if (lastIdx < text.length) {
+    segments.push({ kind: "text", value: text.slice(lastIdx) });
+  }
+  if (segments.length === 0) {
+    segments.push({ kind: "text", value: text });
+  }
+
+  return (
+    <p className="break-words whitespace-pre-wrap">
+      {segments.map((seg, i) =>
+        seg.kind === "text" ? (
+          <FileLinkText key={i} text={seg.value} onFileOpen={onFileOpen} />
+        ) : (
+          <Fragment key={i}>
+            <AttachmentThumbnail attachmentId={seg.id} alt={seg.alt} />
+          </Fragment>
+        ),
+      )}
+    </p>
   );
 }

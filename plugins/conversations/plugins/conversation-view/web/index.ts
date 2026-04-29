@@ -14,10 +14,7 @@ export {
   isDraftEmpty,
   EMPTY_DRAFT,
 } from "./prompt-draft-context";
-export type {
-  PromptDraft,
-  PromptImageDraft,
-} from "./prompt-draft-context";
+export type { PromptDraft } from "./prompt-draft-context";
 
 export default {
   id: "conversation",

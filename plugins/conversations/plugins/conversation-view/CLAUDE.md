@@ -8,7 +8,7 @@
 - Defines:
   - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`
 - Exports (web):
-  - Types: `ConversationRecord`, `PromptDraft`, `PromptImageDraft`
+  - Types: `ConversationRecord`, `PromptDraft`
   - Values: `Conversation`, `conversationPane`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `isMainPaneId`, `markMainPane`, `PromptDraftProvider`, `usePromptDraft`
 - Contributes:
   - `Pane.Register` `conversation` (path `/c/:convId`)

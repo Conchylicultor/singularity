@@ -4,6 +4,7 @@ import { domToBlob } from "modern-screenshot";
 import { MdAdd } from "react-icons/md";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
+import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/web";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Popover,
@@ -94,7 +95,13 @@ export function ImproveButton() {
 
     setSubmitting(true);
     try {
-      const attachmentIds: string[] = [...prefilled.map((p) => p.id)];
+      // Union: prefilled (from external openers) + pasted-image refs across
+      // every card's markdown body. The set is deduped before submission.
+      const idSet = new Set<string>(prefilled.map((p) => p.id));
+      for (const c of trimmed) {
+        for (const id of extractAttachmentIds(c.text)) idSet.add(id);
+      }
+      const attachmentIds: string[] = Array.from(idSet);
       if (includeScreenshot) {
         // Close the popover BEFORE capture so it isn't in the screenshot. Two
         // rAFs let the close paint; same pattern as plugins/screenshot.

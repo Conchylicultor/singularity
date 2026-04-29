@@ -1,6 +1,9 @@
 import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
+import { syncOwnerAttachments } from "@plugins/infra/plugins/attachments/server";
+import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/shared";
 import { _agents } from "./tables";
+import { _agentAttachments } from "./tables-attachments";
 import { agents } from "./schema";
 import { agentsResource } from "./resources";
 
@@ -57,6 +60,27 @@ export async function handleUpdate(
       .set({ expanded: true, updatedAt: new Date() })
       .where(eq(_agents.id, body.parentId));
   }
+
+  // Reconcile attachment links from whichever text fields just changed.
+  // Description + prompt are both authored as markdown; we union their refs
+  // so removing an image from one doesn't unlink a copy still in the other.
+  const descChanged =
+    body.description === null || typeof body.description === "string";
+  const promptChanged =
+    body.prompt === null || typeof body.prompt === "string";
+  if (descChanged || promptChanged) {
+    const [{ description, prompt } = { description: null, prompt: null }] = await db
+      .select({ description: _agents.description, prompt: _agents.prompt })
+      .from(_agents)
+      .where(eq(_agents.id, id))
+      .limit(1);
+    const ids = new Set<string>([
+      ...extractAttachmentIds(description ?? ""),
+      ...extractAttachmentIds(prompt ?? ""),
+    ]);
+    await syncOwnerAttachments(_agentAttachments, id, Array.from(ids));
+  }
+
   const [row] = await db.select().from(agents).where(eq(agents.id, id)).limit(1);
   agentsResource.notify();
   return Response.json(row);

@@ -1,7 +1,8 @@
-import { useEffect, useRef, type CSSProperties } from "react";
+import { type CSSProperties } from "react";
 import { MdClose, MdDragIndicator } from "react-icons/md";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
 import { cn } from "@/lib/utils";
 import { ModelChip, type ChainModel } from "./model-chip";
 
@@ -32,7 +33,6 @@ export function ImproveCard({
   onRemove,
   onSubmitChord,
 }: ImproveCardProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const {
     attributes,
     listeners,
@@ -41,10 +41,6 @@ export function ImproveCard({
     transition,
     isDragging,
   } = useSortable({ id: cardId });
-
-  useEffect(() => {
-    if (autoFocus) textareaRef.current?.focus();
-  }, [autoFocus]);
 
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -71,21 +67,20 @@ export function ImproveCard({
       >
         <MdDragIndicator className="size-4" />
       </button>
-      <textarea
-        ref={textareaRef}
-        value={text}
-        onChange={(e) => onTextChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-            e.preventDefault();
-            onSubmitChord();
-          }
-        }}
-        placeholder={index === 0 ? "What should be improved?" : "Next task…"}
-        rows={3}
-        disabled={disabled}
-        className="placeholder:text-muted-foreground min-h-16 flex-1 resize-y rounded bg-transparent p-1 text-sm outline-none focus:ring-1 focus:ring-ring"
-      />
+      <div className="min-w-0 flex-1">
+        <PromptEditor
+          value={text}
+          onChange={onTextChange}
+          onSubmit={onSubmitChord}
+          submitMode="cmd-enter"
+          placeholder={index === 0 ? "What should be improved?" : "Next task…"}
+          disabled={disabled}
+          autoFocus={autoFocus}
+          minRows={3}
+          maxHeight="14rem"
+          namespace={`improve-card-${cardId}`}
+        />
+      </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
         <ModelChip value={model} onChange={onModelChange} disabled={disabled} />
         {removable && (

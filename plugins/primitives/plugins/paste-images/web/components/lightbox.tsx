@@ -1,0 +1,56 @@
+import { useEffect } from "react";
+import { createPortal } from "react-dom";
+import { MdClose } from "react-icons/md";
+import { attachmentUrl } from "../../shared";
+
+// Full-screen image preview shown when a thumbnail is clicked. Backdrop is a
+// fixed overlay covering the whole viewport; clicking the backdrop or pressing
+// Escape closes it. Escape and click-through are handled here so callers don't
+// have to wire them up.
+export function Lightbox({
+  attachmentId,
+  alt,
+  onClose,
+}: {
+  attachmentId: string;
+  alt?: string;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return createPortal(
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        aria-label="Close"
+        className="absolute top-3 right-3 flex size-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+      >
+        <MdClose className="size-5" />
+      </button>
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
+      <img
+        src={attachmentUrl(attachmentId)}
+        alt={alt ?? "image"}
+        onClick={(e) => e.stopPropagation()}
+        className="max-h-full max-w-full rounded shadow-2xl"
+      />
+    </div>,
+    document.body,
+  );
+}

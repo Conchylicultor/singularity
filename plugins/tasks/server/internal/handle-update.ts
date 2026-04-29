@@ -1,4 +1,6 @@
-import { updateTask } from "@plugins/tasks-core/server";
+import { _taskAttachments, updateTask } from "@plugins/tasks-core/server";
+import { syncOwnerAttachments } from "@plugins/infra/plugins/attachments/server";
+import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/shared";
 
 export async function handleUpdate(
   req: Request,
@@ -24,5 +26,14 @@ export async function handleUpdate(
     });
   }
   if (!row) return new Response("Not found", { status: 404 });
+
+  // Description is the only text column that can carry attachment refs today.
+  // Reconcile the task's link rows against the ids referenced in the new
+  // description; the orphan sweep collects any attachment that loses its last
+  // link.
+  if (typeof body.description === "string" || body.description === null) {
+    const ids = body.description ? extractAttachmentIds(body.description) : [];
+    await syncOwnerAttachments(_taskAttachments, id, ids);
+  }
   return Response.json(row);
 }

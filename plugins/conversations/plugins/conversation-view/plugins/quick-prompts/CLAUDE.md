@@ -6,6 +6,7 @@
 
 - Description: Named prompt chips in the conversation floating bar. Click to send a preset message to the active conversation. Named prompts that appear as chips in the conversation toolbar. Click to send a preset message.
 - Defines:
+  - DB schema: `plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server/internal/tables-attachments.ts`
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server/internal/tables.ts`
 - Contributes:
   - `Conversation.PromptBar` → `QuickPromptChips`

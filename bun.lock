@@ -229,11 +229,6 @@
     "plugins/conversations/plugins/conversation-view/plugins/prompt-input": {
       "name": "@singularity/plugin-conversations-conversation-view-prompt-input",
       "version": "0.0.1",
-      "dependencies": {
-        "@lexical/react": "^0.44.0",
-        "@lexical/utils": "^0.44.0",
-        "lexical": "^0.44.0",
-      },
     },
     "plugins/conversations/plugins/conversation-view/plugins/push-and-exit": {
       "name": "@singularity/plugin-conversations-conversation-view-push-and-exit",
@@ -392,6 +387,14 @@
     "plugins/primitives/plugins/pane": {
       "name": "@singularity/plugin-primitives-pane",
       "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/paste-images": {
+      "name": "@singularity/plugin-primitives-paste-images",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
     },
     "plugins/primitives/plugins/relative-time": {
       "name": "@singularity/plugin-primitives-relative-time",
@@ -1215,6 +1218,8 @@
     "@singularity/plugin-primitives-networking": ["@singularity/plugin-primitives-networking@workspace:plugins/primitives/plugins/networking"],
 
     "@singularity/plugin-primitives-pane": ["@singularity/plugin-primitives-pane@workspace:plugins/primitives/plugins/pane"],
+
+    "@singularity/plugin-primitives-paste-images": ["@singularity/plugin-primitives-paste-images@workspace:plugins/primitives/plugins/paste-images"],
 
     "@singularity/plugin-primitives-relative-time": ["@singularity/plugin-primitives-relative-time@workspace:plugins/primitives/plugins/relative-time"],
 

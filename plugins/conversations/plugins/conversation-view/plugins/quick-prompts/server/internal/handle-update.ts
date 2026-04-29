@@ -1,6 +1,9 @@
 import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
+import { syncOwnerAttachments } from "@plugins/infra/plugins/attachments/server";
+import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/shared";
 import { quickPromptsTable } from "./tables";
+import { _quickPromptAttachments } from "./tables-attachments";
 import { quickPromptsServerResource } from "./resources";
 
 export async function handleUpdate(
@@ -28,6 +31,14 @@ export async function handleUpdate(
     .returning({ id: quickPromptsTable.id });
 
   if (!updated) return new Response("Not found", { status: 404 });
+
+  if (typeof body.prompt === "string") {
+    await syncOwnerAttachments(
+      _quickPromptAttachments,
+      id,
+      extractAttachmentIds(body.prompt),
+    );
+  }
 
   quickPromptsServerResource.notify();
   return Response.json({ ok: true });
