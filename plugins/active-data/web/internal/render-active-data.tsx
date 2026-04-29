@@ -1,78 +1,52 @@
 import {
-  Children,
-  cloneElement,
-  Fragment,
   isValidElement,
-  useCallback,
   useMemo,
-  type ReactElement,
+  type ComponentType,
   type ReactNode,
 } from "react";
+import type { Components } from "react-markdown";
 import { ActiveData, type ActiveDataTagContribution } from "../slots";
-import { parseActiveData } from "./parse";
 
-const SKIP_TYPES = new Set(["code", "pre", "a"]);
-
-function renderString(
-  text: string,
-  byTag: Map<string, ActiveDataTagContribution>,
-): ReactNode {
-  const segments = parseActiveData(text);
-  if (segments.length === 1 && segments[0]?.type === "text") return text;
-  return (
-    <>
-      {segments.map((seg, i) => {
-        if (seg.type === "text") return <Fragment key={i}>{seg.value}</Fragment>;
-        const contribution = byTag.get(seg.tag);
-        if (!contribution) {
-          // Unknown tag: render literal source so nothing silently disappears.
-          return (
-            <Fragment key={i}>
-              {`<${seg.tag}>${seg.children}</${seg.tag}>`}
-            </Fragment>
-          );
-        }
-        const Component = contribution.component;
-        return (
-          <Component key={i} attrs={seg.attrs} children={seg.children} />
-        );
-      })}
-    </>
-  );
-}
-
-function walk(
-  node: ReactNode,
-  byTag: Map<string, ActiveDataTagContribution>,
-): ReactNode {
-  if (node == null || typeof node === "boolean") return node;
-  if (typeof node === "string") return renderString(node, byTag);
-  if (typeof node === "number") return node;
-  if (Array.isArray(node)) {
-    return Children.map(node, (child, i) => (
-      <Fragment key={i}>{walk(child, byTag)}</Fragment>
-    ));
-  }
+function nodeToText(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(nodeToText).join("");
   if (isValidElement(node)) {
-    const el = node as ReactElement<{ children?: ReactNode }>;
-    if (typeof el.type === "string" && SKIP_TYPES.has(el.type)) return el;
-    const inner = el.props?.children;
-    if (inner === undefined) return el;
-    return cloneElement(el, undefined, walk(inner, byTag));
+    const props = node.props as { children?: ReactNode };
+    return nodeToText(props.children);
   }
-  return node;
+  return "";
 }
 
-// Hook returning a tree-walker that replaces inline <tag>…</tag> patterns in
-// any string children with the matching contribution's component. Drop-in
-// alongside `linkifyChildren` from the file-links primitive — call once at
-// the top of a renderer, then use the returned function inside react-markdown
-// component overrides.
-export function useActiveDataRenderer(): (children: ReactNode) => ReactNode {
+function makeAdapter(
+  contribution: ActiveDataTagContribution,
+): ComponentType<Record<string, unknown>> {
+  const Component = contribution.component;
+  return function ActiveDataAdapter(props) {
+    const { children, node: _node, ...rest } = props as {
+      children?: ReactNode;
+      node?: unknown;
+      [k: string]: unknown;
+    };
+    const attrs: Record<string, string> = {};
+    for (const [key, value] of Object.entries(rest)) {
+      if (typeof value === "string") attrs[key] = value;
+    }
+    return <Component attrs={attrs}>{nodeToText(children)}</Component>;
+  };
+}
+
+// Returns a `components` map for react-markdown, keyed by each registered
+// active-data tag. Pair with `rehype-raw` so raw HTML in markdown source
+// (`<conv>conv-xxx</conv>`) reaches the components map instead of being
+// stripped during the mdast→hast pass.
+export function useActiveDataComponents(): Components {
   const contributions = ActiveData.Tag.useContributions();
-  const byTag = useMemo(
-    () => new Map(contributions.map((c) => [c.tag, c])),
-    [contributions],
-  );
-  return useCallback((children) => walk(children, byTag), [byTag]);
+  return useMemo(() => {
+    const out: Record<string, ComponentType<Record<string, unknown>>> = {};
+    for (const c of contributions) {
+      out[c.tag] = makeAdapter(c);
+    }
+    return out as Components;
+  }, [contributions]);
 }

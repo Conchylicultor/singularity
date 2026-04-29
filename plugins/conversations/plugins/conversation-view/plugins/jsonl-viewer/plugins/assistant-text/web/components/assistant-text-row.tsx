@@ -1,13 +1,14 @@
 import { isValidElement, type ReactNode } from "react";
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import {
   FileLinkText,
   linkifyChildren,
 } from "@plugins/primitives/plugins/file-links/web";
-import { useActiveDataRenderer } from "@plugins/active-data/web";
+import { useActiveDataComponents } from "@plugins/active-data/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent } from "../../../../shared";
@@ -18,6 +19,7 @@ import { formatTime } from "../../../../web/utils";
 type AssistantTextEvent = Extract<JsonlEvent, { kind: "assistant-text" }>;
 
 const REMARK_PLUGINS = [remarkGfm];
+const REHYPE_PLUGINS = [rehypeRaw];
 
 function nodeToText(node: ReactNode): string {
   if (node == null || typeof node === "boolean") return "";
@@ -48,10 +50,9 @@ function isExternalUrl(src: string): boolean {
 function buildMdComponents(
   worktree: string,
   onFileOpen: (path: string) => void,
-  renderActiveData: (children: ReactNode) => ReactNode,
 ): Components {
   const transform = (children: ReactNode) =>
-    renderActiveData(linkifyChildren(children, onFileOpen));
+    linkifyChildren(children, onFileOpen);
   return {
     h1: ({ children, ...p }) => (
       <h1 className="mt-4 mb-2 text-2xl font-semibold" {...p}>{transform(children)}</h1>
@@ -150,18 +151,17 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
   const e = event as AssistantTextEvent;
   const { markdownMode } = useRowMarkdown();
   const { conversation } = conversationPane.useData();
-  const renderActiveData = useActiveDataRenderer();
+  const activeDataComponents = useActiveDataComponents();
   const onFileOpen = (path: string) =>
     convFilePeekPane.open({
       convId: conversation.id,
       worktree: conversation.attemptId,
       filePath: path,
     });
-  const mdComponents = buildMdComponents(
-    conversation.attemptId,
-    onFileOpen,
-    renderActiveData,
-  );
+  const mdComponents: Components = {
+    ...buildMdComponents(conversation.attemptId, onFileOpen),
+    ...activeDataComponents,
+  };
 
   return (
     <div className="rounded-md border border-border/60 bg-background px-3 py-2">
@@ -177,7 +177,11 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
       </div>
       {markdownMode ? (
         <div className="text-sm leading-6">
-          <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={mdComponents}>
+          <ReactMarkdown
+            remarkPlugins={REMARK_PLUGINS}
+            rehypePlugins={REHYPE_PLUGINS}
+            components={mdComponents}
+          >
             {e.text}
           </ReactMarkdown>
         </div>
