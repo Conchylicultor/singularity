@@ -1,11 +1,7 @@
 import type { PluginDefinition } from "@core";
 import { ActiveData } from "@plugins/active-data/web";
 import { ConvChip } from "./components/conv-chip";
-
-// Conversation IDs are formatted as `conv-<unix-seconds>-<4 base36 chars>` —
-// see `plugins/conversations/server/internal/lifecycle.ts`. Word boundaries
-// keep the pattern from biting into longer identifiers (e.g. `conv-xxx-extra`).
-const CONV_ID_RE = /\bconv-\d+-[a-z0-9]{4}\b/g;
+import { CONV_ID_RE } from "./internal/pattern";
 
 export default {
   id: "active-data-conv",
