@@ -75,15 +75,36 @@ function buildMdComponents(
     p: ({ children, ...p }) => (
       <p className="my-2" {...p}>{transform(children)}</p>
     ),
-    a: ({ href, ...p }) => (
-      <a
-        className="text-primary underline"
-        href={href}
-        target={href?.startsWith("http") ? "_blank" : undefined}
-        rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
-        {...p}
-      />
-    ),
+    a: ({ href, children, ...p }) => {
+      if (href && !href.startsWith("http") && !href.startsWith("#")) {
+        const segments = parseFileLinks(href);
+        if (segments.length === 1 && segments[0]?.type === "path") {
+          return (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onFileOpen(href);
+              }}
+              className="text-primary underline cursor-pointer"
+            >
+              {children}
+            </button>
+          );
+        }
+      }
+      return (
+        <a
+          className="text-primary underline"
+          href={href}
+          target={href?.startsWith("http") ? "_blank" : undefined}
+          rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
+          {...p}
+        >
+          {children}
+        </a>
+      );
+    },
     ul: (p) => <ul className="my-2 list-disc pl-6" {...p} />,
     ol: (p) => <ol className="my-2 list-decimal pl-6" {...p} />,
     li: ({ children, ...p }) => (
