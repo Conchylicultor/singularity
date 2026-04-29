@@ -12,12 +12,10 @@ const SKIP_TYPES = new Set(["code", "pre", "a"]);
 
 // Recursively walks a ReactNode tree and replaces plain string nodes with
 // linkified versions. Skips `code`, `pre`, and `a` so file paths inside code
-// blocks or existing links aren't double-handled. Use this in ReactMarkdown
-// component overrides:
-//
-//   p: ({ children, ...p }) => (
-//     <p {...p}>{linkifyChildren(children, onFileOpen)}</p>
-//   )
+// blocks or existing links aren't double-handled. Custom components (non-HTML
+// element types) are also left opaque — they manage their own children and
+// rewriting them can corrupt the props the component depends on (e.g. the
+// active-data ConvChip relies on its children being the raw conv-id string).
 export function linkifyChildren(
   children: ReactNode,
   onFileOpen?: (path: string) => void,
@@ -34,7 +32,8 @@ export function linkifyChildren(
   }
   if (isValidElement(children)) {
     const el = children as ReactElement<{ children?: ReactNode }>;
-    if (typeof el.type === "string" && SKIP_TYPES.has(el.type)) return el;
+    if (typeof el.type !== "string") return el;
+    if (SKIP_TYPES.has(el.type)) return el;
     const inner = el.props?.children;
     if (inner === undefined) return el;
     return cloneElement(el, undefined, linkifyChildren(inner, onFileOpen));
