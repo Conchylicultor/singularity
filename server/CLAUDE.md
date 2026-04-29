@@ -6,7 +6,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`plu
 
 ## How It Works
 
-1. `src/index.ts` starts `Bun.serve()` on port 9001
+1. `src/index.ts` starts `Bun.serve({ unix: process.env.SOCKET_PATH })` on the per-worktree Unix socket the gateway hands it (e.g. `~/.singularity/sockets/<name>.sock`). The backend errors out if `SOCKET_PATH` is missing — there is no standalone dev mode.
 2. Each plugin declares its routes via a `ServerPluginDefinition` (defined in `src/types.ts`)
 3. `src/plugins.ts` is a flat list of plugin imports — structurally identical to `web/src/plugins.ts`
 4. At startup, the entry point flattens all plugin routes into two lookup tables:
@@ -137,14 +137,9 @@ The `include` field covers `../plugins/*/server` and `../plugins/*/shared` so pl
 
 Server-side plugin dependencies (like `bun-pty`) are declared in the plugin's own `package.json` and resolved via bun workspaces. No path aliases are needed for third-party packages.
 
-## Dev Proxy
+## How requests reach the backend
 
-The Vite dev server (`web/vite.config.ts`) proxies to the backend:
-
-- `/ws/*` → `ws://localhost:9001` (WebSocket)
-- `/api/*` → `http://localhost:9001` (HTTP)
-
-In production, a reverse proxy or the backend itself serves the static frontend.
+`/api/*` and `/ws/*` are proxied by the gateway over the per-worktree Unix socket — Vite has no proxy block, and the backend has no TCP listener at all. Static assets are served by the gateway from `web/dist`. See [`gateway/CLAUDE.md`](../gateway/CLAUDE.md) for the full request-routing rules.
 
 ## Database
 
@@ -206,7 +201,7 @@ Do **not** manually edit `__singularity_migrations` to "fix" drift — re-fork i
 
 ## Commands
 
-The server is spawned and supervised by the gateway (`bun src/index.ts` with `PORT=<allocated>`); never start it manually. Always go through `./singularity build` from the repo root to deploy changes.
+The server is spawned and supervised by the gateway (`bun src/index.ts` with `SOCKET_PATH=<allocated>`); never start it manually. Always go through `./singularity build` from the repo root to deploy changes.
 
 ## Key Design Decisions
 

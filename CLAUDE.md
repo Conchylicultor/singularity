@@ -134,8 +134,8 @@ This will:
 
 ## Ports
 
-- Port range: **9000–10000** (Those are handled automatically by the gateway. Make sure to run the `build` CLI command)
-- The main namespace (agent manager app, served from `main`) is always deployed at **port 9000** as `singularity.localhost:9000`
+- The gateway listens on **port 9000** for all browser traffic, routed by subdomain (`<name>.localhost:9000`). The main namespace (agent manager app, served from `main`) is always at `singularity.localhost:9000`.
+- Backends do **not** listen on TCP. The gateway hands each backend a per-worktree Unix domain socket at `~/.singularity/sockets/<name>.sock` and dials it directly. There is no backend port range to allocate.
 
 ## Screenshots
 

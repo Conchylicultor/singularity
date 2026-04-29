@@ -13,11 +13,16 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
 )
+
+// macOS sun_path is 104 bytes; Linux is 108. We pick the tighter limit so
+// developer machines and CI agree.
+const maxSocketPath = 104
 
 // State is the lifecycle state of a worktree's backend process.
 type State int
@@ -58,7 +63,7 @@ type Spec struct {
 type WorktreeStatus struct {
 	Name         string    `json:"name"`
 	State        string    `json:"state"`
-	Port         int       `json:"port"`
+	SocketPath   string    `json:"socketPath"`
 	LastActivity time.Time `json:"lastActivity"`
 	ActiveConns  int       `json:"activeConns"`
 	Server       string    `json:"server"`
@@ -75,8 +80,12 @@ var (
 type Worktree struct {
 	Name string
 
-	pool *PortPool
-	cfg  *Config
+	cfg *Config
+
+	// socketPath is derived deterministically from Name + cfg.SocketsDir at
+	// construction. Stable across the worktree's lifetime; safe to capture
+	// by value in proxy closures.
+	socketPath string
 
 	// spec is replaced atomically on file change. Lock-free reads.
 	spec atomic.Pointer[Spec]
@@ -84,7 +93,6 @@ type Worktree struct {
 	// All other fields below are guarded by mu.
 	mu           sync.Mutex
 	state        State
-	port         int
 	cmd          *exec.Cmd
 	exitCh       chan struct{} // closed when cmd.Wait returns
 	proxy        *httputil.ReverseProxy
@@ -100,15 +108,19 @@ type Worktree struct {
 	logBuf *logRing
 }
 
-func NewWorktree(name string, spec *Spec, pool *PortPool, cfg *Config) *Worktree {
+func NewWorktree(name string, spec *Spec, cfg *Config) (*Worktree, error) {
+	socketPath := filepath.Join(cfg.SocketsDir, name+".sock")
+	if len(socketPath) > maxSocketPath {
+		return nil, fmt.Errorf("socket path %q is %d bytes; exceeds %d-byte limit (rename worktree)", socketPath, len(socketPath), maxSocketPath)
+	}
 	w := &Worktree{
-		Name:   name,
-		pool:   pool,
-		cfg:    cfg,
-		logBuf: newLogRing(cfg.LogBufferLines),
+		Name:       name,
+		cfg:        cfg,
+		socketPath: socketPath,
+		logBuf:     newLogRing(cfg.LogBufferLines),
 	}
 	w.spec.Store(spec)
-	return w
+	return w, nil
 }
 
 // Spec returns the current spec snapshot. Lock-free.
@@ -160,13 +172,7 @@ func (w *Worktree) Ensure(ctx context.Context) (*httputil.ReverseProxy, error) {
 	}
 
 	// Idle or cooled-down Broken: begin spawn
-	port, err := w.pool.Acquire()
-	if err != nil {
-		w.mu.Unlock()
-		return nil, err
-	}
 	w.state = StateStarting
-	w.port = port
 	w.readyCh = make(chan struct{})
 	w.lastSpawnErr = nil
 	readyCh := w.readyCh
@@ -174,14 +180,14 @@ func (w *Worktree) Ensure(ctx context.Context) (*httputil.ReverseProxy, error) {
 	w.mu.Unlock()
 
 	// Run the spawn outside the lock so concurrent callers see Starting and wait.
-	cmd, exitCh, spawnErr := w.startBackend(spec, port)
+	cmd, exitCh, spawnErr := w.startBackend(spec)
 	if spawnErr == nil {
 		// Make cmd visible so Stop can find it before readiness completes.
 		w.mu.Lock()
 		w.cmd = cmd
 		w.exitCh = exitCh
 		w.mu.Unlock()
-		spawnErr = waitReady(port, w.cfg.ReadyTimeout, exitCh)
+		spawnErr = waitReady(w.socketPath, w.cfg.ReadyTimeout, exitCh)
 	}
 
 	if spawnErr != nil {
@@ -191,9 +197,8 @@ func (w *Worktree) Ensure(ctx context.Context) (*httputil.ReverseProxy, error) {
 			killGroup(cmd, syscall.SIGKILL)
 			<-exitCh
 		}
+		_ = os.Remove(w.socketPath)
 		w.mu.Lock()
-		w.pool.Release(port)
-		w.port = 0
 		w.cmd = nil
 		w.exitCh = nil
 		w.state = StateBroken
@@ -207,12 +212,12 @@ func (w *Worktree) Ensure(ctx context.Context) (*httputil.ReverseProxy, error) {
 
 	w.mu.Lock()
 	w.state = StateRunning
-	w.proxy = newReverseProxy(port)
+	w.proxy = newReverseProxy(w.socketPath)
 	w.lastActivity = time.Now()
 	p := w.proxy
 	w.mu.Unlock()
 	close(readyCh)
-	slog.Info("backend ready", "worktree", w.Name, "port", port)
+	slog.Info("backend ready", "worktree", w.Name, "socket", w.socketPath)
 	return p, nil
 }
 
@@ -250,7 +255,6 @@ func (w *Worktree) Stop(ctx context.Context) error {
 	w.state = StateStopping
 	cmd := w.cmd
 	exitCh := w.exitCh
-	port := w.port
 	w.mu.Unlock()
 
 	if cmd != nil && cmd.Process != nil {
@@ -263,16 +267,15 @@ func (w *Worktree) Stop(ctx context.Context) error {
 		}
 	}
 
+	_ = os.Remove(w.socketPath)
 	w.mu.Lock()
-	w.pool.Release(port)
 	w.cmd = nil
 	w.exitCh = nil
 	w.proxy = nil
-	w.port = 0
 	w.state = StateIdle
 	w.activeConns = 0
 	w.mu.Unlock()
-	slog.Info("backend stopped", "worktree", w.Name, "port", port)
+	slog.Info("backend stopped", "worktree", w.Name, "socket", w.socketPath)
 	return nil
 }
 
@@ -305,7 +308,6 @@ func (w *Worktree) DecConns() {
 func (w *Worktree) Snapshot() WorktreeStatus {
 	w.mu.Lock()
 	state := w.state
-	port := w.port
 	last := w.lastActivity
 	conns := w.activeConns
 	w.mu.Unlock()
@@ -313,7 +315,7 @@ func (w *Worktree) Snapshot() WorktreeStatus {
 	return WorktreeStatus{
 		Name:         w.Name,
 		State:        state.String(),
-		Port:         port,
+		SocketPath:   w.socketPath,
 		LastActivity: last,
 		ActiveConns:  conns,
 		Server:       spec.Server,
@@ -339,11 +341,19 @@ func (w *Worktree) ShouldSweep(idleTimeout time.Duration) bool {
 
 // startBackend builds and starts the backend process. On success, returns the
 // running cmd and an exitCh that closes when cmd.Wait returns.
-func (w *Worktree) startBackend(spec *Spec, port int) (*exec.Cmd, chan struct{}, error) {
+//
+// Removes any stale socket file at w.socketPath before spawning, since Bun
+// will EADDRINUSE if the path exists. This handles crashes that left a file
+// behind even though no process holds it.
+func (w *Worktree) startBackend(spec *Spec) (*exec.Cmd, chan struct{}, error) {
+	if err := os.Remove(w.socketPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, nil, fmt.Errorf("unlink stale socket: %w", err)
+	}
+
 	cmd := exec.Command("bun", "src/index.ts")
 	cmd.Dir = spec.Server
 	cmd.Env = append(os.Environ(),
-		fmt.Sprintf("PORT=%d", port),
+		fmt.Sprintf("SOCKET_PATH=%s", w.socketPath),
 		fmt.Sprintf("SINGULARITY_WORKTREE=%s", w.Name),
 	)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -361,7 +371,7 @@ func (w *Worktree) startBackend(spec *Spec, port int) (*exec.Cmd, chan struct{},
 	}
 
 	exitCh := make(chan struct{})
-	log := slog.With("worktree", w.Name, "pid", cmd.Process.Pid, "port", port)
+	log := slog.With("worktree", w.Name, "pid", cmd.Process.Pid, "socket", w.socketPath)
 	go pumpLog(stdout, log, "stdout", w.logBuf)
 	go pumpLog(stderr, log, "stderr", w.logBuf)
 	go func() {
@@ -378,28 +388,32 @@ func (w *Worktree) startBackend(spec *Spec, port int) (*exec.Cmd, chan struct{},
 // respective callers, which ensure cleanup themselves.
 func (w *Worktree) onProcExit(err error) {
 	w.mu.Lock()
+	state := w.state
+	w.mu.Unlock()
+	if state != StateRunning {
+		return
+	}
+	slog.Warn("backend exited unexpectedly", "worktree", w.Name, "err", err)
+	_ = os.Remove(w.socketPath)
+	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.state != StateRunning {
 		return
 	}
-	slog.Warn("backend exited unexpectedly", "worktree", w.Name, "err", err)
-	w.pool.Release(w.port)
 	w.cmd = nil
 	w.exitCh = nil
 	w.proxy = nil
-	w.port = 0
 	w.state = StateIdle
 	w.activeConns = 0
 }
 
-// waitReady polls the backend port with TCP dials until it accepts a
+// waitReady polls the backend's Unix socket with dials until it accepts a
 // connection or the deadline expires. If the process exits before becoming
 // ready, returns immediately.
-func waitReady(port int, timeout time.Duration, exitCh <-chan struct{}) error {
+func waitReady(socketPath string, timeout time.Duration, exitCh <-chan struct{}) error {
 	deadline := time.Now().Add(timeout)
-	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	for time.Now().Before(deadline) {
-		conn, err := net.DialTimeout("tcp", addr, 200*time.Millisecond)
+		conn, err := net.DialTimeout("unix", socketPath, 200*time.Millisecond)
 		if err == nil {
 			_ = conn.Close()
 			return nil
@@ -422,9 +436,19 @@ func killGroup(cmd *exec.Cmd, sig syscall.Signal) error {
 	return syscall.Kill(-cmd.Process.Pid, sig)
 }
 
-func newReverseProxy(port int) *httputil.ReverseProxy {
-	target := &url.URL{Scheme: "http", Host: fmt.Sprintf("127.0.0.1:%d", port)}
+// newReverseProxy builds a reverse proxy that dials the backend's Unix socket.
+// The URL Host is a placeholder — the custom Transport ignores Dial address
+// args and always dials socketPath. socketPath is captured by value so the
+// closure stays bound to the path at construction time.
+func newReverseProxy(socketPath string) *httputil.ReverseProxy {
+	target := &url.URL{Scheme: "http", Host: "backend"}
 	rp := httputil.NewSingleHostReverseProxy(target)
+	rp.Transport = &http.Transport{
+		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+			var d net.Dialer
+			return d.DialContext(ctx, "unix", socketPath)
+		},
+	}
 	origDirector := rp.Director
 	rp.Director = func(r *http.Request) {
 		origDirector(r)

@@ -125,13 +125,11 @@ for (const plugin of plugins) {
 wsRoutes["/ws/notifications"] = notificationsWsHandler;
 registerHttpRoute("GET /api/resources/:key", handleResourceHttp);
 
-const server = Bun.serve<WsData>({
-  port: (() => {
-    const p = Bun.env.PORT;
-    if (!p) throw new Error("PORT env var is required");
-    return parseInt(p, 10);
-  })(),
-  idleTimeout: 255,
+const socketPath = Bun.env.SOCKET_PATH;
+if (!socketPath) throw new Error("SOCKET_PATH env var is required");
+
+Bun.serve<WsData>({
+  unix: socketPath,
   fetch(req, server) {
     const url = new URL(req.url);
 
@@ -170,4 +168,4 @@ const server = Bun.serve<WsData>({
   },
 });
 
-console.log(`Server listening on :${server.port}`);
+console.log(`Server listening on ${socketPath}`);

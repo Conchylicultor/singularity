@@ -9,7 +9,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 - Listens on `:9000`, routes `<name>.localhost:9000` → that worktree's backend
 - Serves each worktree's `web/dist` as static files directly (no backend spawn needed for page loads)
 - Lazy-spawns the backend on the first `/api/*` or `/ws/*` request; tears it down after 10 minutes idle
-- Allocates backend ports dynamically from a pool (9001–10000); backends read `PORT` from env
+- Hands each backend a Unix domain socket at `~/.singularity/sockets/<name>.sock`; backends read `SOCKET_PATH` from env. Gateway dials the socket directly — no TCP between gateway and backend.
 - Discovers worktrees from `~/.singularity/worktrees/<name>.json`
 - Exposes `/gateway/*` on every host as an API for apps to query gateway state
 
@@ -17,7 +17,8 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 
 - **Subdomain routing, not path-prefix** — each instance thinks it's at `/`, so no base-path rewriting. `*.localhost` resolves natively in Chrome and Firefox
 - **Gateway serves statics, backend serves API/WS** — separating the cheap thing (files) from the expensive thing (process) means page loads are instant and backends only exist when needed
-- **Gateway owns backend lifecycles** — backends are spawned, supervised, and killed by the gateway. They never know the gateway exists. The convention is `bun src/index.ts` in the `server` directory with `PORT=<allocated>` in env
+- **Gateway owns backend lifecycles** — backends are spawned, supervised, and killed by the gateway. They never know the gateway exists. The convention is `bun src/index.ts` in the `server` directory with `SOCKET_PATH=<path>` in env
+- **Unix domain sockets, not TCP loopback** — eliminates the IPv4/IPv6 bind-shape asymmetry that allowed unrelated processes to silently steal traffic on macOS (an IPv4-loopback squatter could coexist with a dual-stack listener on the same port). UDS scopes the gateway↔backend channel by filesystem path, removes the port allocator entirely, and removes any LAN-exposure surface.
 - **`/gateway/*` is a reserved path** on every host — the gateway intercepts it before proxying. Apps call `GET /gateway/worktrees` to list instances. This is an official API, not internal plumbing
 
 ## Routing Rules
@@ -42,19 +43,18 @@ Location: `~/.singularity/worktrees/<name>.json`. Filename = worktree identifier
 }
 ```
 
-Two fields, both required, both absolute paths. The gateway hardcodes the launch convention (`bun src/index.ts`, `PORT` env var, 15s readiness timeout). No per-worktree overrides in v1.
+Two fields, both required, both absolute paths. The gateway hardcodes the launch convention (`bun src/index.ts`, `SOCKET_PATH` env var, 15s readiness timeout). No per-worktree overrides in v1.
 
 ## File Structure
 
-Flat single-package layout, ~950 lines total:
+Flat single-package layout:
 
 ```
 gateway/
-├── main.go        # Flags, wiring, signal handling
+├── main.go        # Flags, wiring, signal handling, sockets-dir setup
 ├── worktree.go    # Worktree state machine (Idle→Starting→Running→Stopping), spawn, lifecycle
-├── registry.go    # Map of worktrees, fsnotify file watcher, idle sweeper
-├── proxy.go       # http.Handler: routing, static serving, HTTP/WS proxy, /gateway API
-└── ports.go       # Port pool (Acquire/Release with net.Listen probe)
+├── registry.go    # Map of worktrees, fsnotify file watcher, idle sweeper, stale-socket sweep
+└── proxy.go       # http.Handler: routing, static serving, HTTP/WS proxy, /gateway API
 ```
 
 Logic belongs with the data it operates on: spawn/stop/readiness are methods on `Worktree`, discovery/sweeping are methods on `Registry`, all request handling is in `Proxy.ServeHTTP`.
@@ -71,12 +71,27 @@ go build -o gateway .
 
 The gateway expects backends to:
 
-1. Read their port from the `PORT` env var (default `9001` when running standalone)
-2. Accept TCP connections on that port when ready (gateway polls with TCP dial)
+1. Read their socket path from the `SOCKET_PATH` env var (required; backends should error out if missing)
+2. Bind that Unix socket and accept HTTP/1.1 + WebSocket connections on it (gateway polls readiness with `net.Dial("unix", path)`)
 3. Use relative redirects (gateway does not rewrite `Location` headers)
 4. Handle `/api/*` and `/ws/*` routes
 
-The current `server/src/index.ts` hardcodes `port: 9001` — it must be changed to `parseInt(Bun.env.PORT ?? "9001", 10)` for the gateway to work.
+In Bun: `Bun.serve({ unix: process.env.SOCKET_PATH, fetch, websocket })`. There is no standalone dev mode — the backend is always spawned by the gateway.
+
+## Stale-socket cleanup
+
+Two layers, both gateway-side:
+
+1. **Per-spawn unlink-before-bind** — `os.Remove(socketPath)` immediately before each spawn. Handles the case where a previous process crashed and left a socket file behind.
+2. **Boot sweep** — at gateway startup, any `*.sock` file under `~/.singularity/sockets/` whose stem isn't a registered worktree gets removed. Cosmetic; prevents accumulation when worktrees are deleted while their socket lingers.
+
+## Path-length limit
+
+macOS `sun_path` is 104 bytes. With the standard prefix (`/Users/<user>/.singularity/sockets/`) and `.sock` suffix, worktree names up to ~67 chars fit. If a worktree's name produces an overlong path, `NewWorktree` returns an error and the worktree is rejected at registration. Rename or shorten the worktree to recover.
+
+## File permissions
+
+`Bun.serve({ unix })` creates the socket with umask-derived default permissions (typically world-readable). On a single-user dev machine this is acceptable. If multi-user use becomes a requirement, this is the right place to revisit (Bun does not currently expose a `mode` option; see also `chmod`-after-bind, which is racy).
 
 ## Concurrency Model
 

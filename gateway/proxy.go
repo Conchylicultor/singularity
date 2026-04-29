@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -118,14 +119,16 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Work
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
-	port := wt.Snapshot().Port
-	if port == 0 {
-		http.Error(w, "backend port unavailable", http.StatusBadGateway)
+	socketPath := wt.Snapshot().SocketPath
+	if socketPath == "" {
+		http.Error(w, "backend socket unavailable", http.StatusBadGateway)
 		return
 	}
-	backendAddr := fmt.Sprintf("127.0.0.1:%d", port)
 
-	backendConn, err := net.DialTimeout("tcp", backendAddr, 3*time.Second)
+	dialCtx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+	var d net.Dialer
+	backendConn, err := d.DialContext(dialCtx, "unix", socketPath)
 	if err != nil {
 		http.Error(w, "backend dial: "+err.Error(), http.StatusBadGateway)
 		return
@@ -143,8 +146,9 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Work
 	}
 	defer clientConn.Close()
 
-	// Forward the original request line + headers to the backend.
-	r.Host = backendAddr
+	// Forward the original request line + headers to the backend over UDS.
+	// Bun doesn't validate Host against the listener type; leaving the
+	// incoming Host intact is fine and matches what backends saw under TCP.
 	if err := r.Write(backendConn); err != nil {
 		return
 	}

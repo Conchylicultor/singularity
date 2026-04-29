@@ -21,19 +21,26 @@ var nameRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
 // Registry is the in-memory collection of worktrees, populated from JSON
 // files in cfg.RegistryDir and kept in sync via fsnotify.
 type Registry struct {
-	cfg  *Config
-	pool *PortPool
+	cfg *Config
 
 	mu     sync.RWMutex
 	byName map[string]*Worktree
 }
 
-func NewRegistry(cfg *Config, pool *PortPool) *Registry {
+func NewRegistry(cfg *Config) *Registry {
 	return &Registry{
 		cfg:    cfg,
-		pool:   pool,
 		byName: make(map[string]*Worktree),
 	}
+}
+
+// HasName reports whether a worktree with the given name is registered.
+// Used by sweepStaleSockets to identify orphan socket files.
+func (r *Registry) HasName(name string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	_, ok := r.byName[name]
+	return ok
 }
 
 // Get returns the worktree with the given name, or nil if absent.
@@ -178,10 +185,15 @@ func (r *Registry) upsert(name string, spec *Spec) {
 	r.mu.Lock()
 	wt, exists := r.byName[name]
 	if !exists {
-		wt = NewWorktree(name, spec, r.pool, r.cfg)
-		r.byName[name] = wt
+		newWt, err := NewWorktree(name, spec, r.cfg)
+		if err != nil {
+			r.mu.Unlock()
+			slog.Warn("worktree rejected", "name", name, "err", err)
+			return
+		}
+		r.byName[name] = newWt
 		r.mu.Unlock()
-		slog.Info("worktree registered", "name", name, "server", spec.Server, "web", spec.Web)
+		slog.Info("worktree registered", "name", name, "server", spec.Server, "web", spec.Web, "socket", newWt.socketPath)
 		return
 	}
 	r.mu.Unlock()
@@ -226,4 +238,35 @@ func loadSpec(path string) (*Spec, error) {
 
 func nameFromPath(p string) string {
 	return strings.TrimSuffix(filepath.Base(p), ".json")
+}
+
+// sweepStaleSockets removes any *.sock file in dir whose stem is not a
+// registered worktree. Cosmetic — per-spawn unlink-before-bind already
+// covers the normal case. This catches orphans left after a worktree's
+// JSON manifest was removed while its socket file lingered.
+func sweepStaleSockets(dir string, reg *Registry) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		slog.Warn("sockets dir scan failed", "dir", dir, "err", err)
+		return
+	}
+	removed := 0
+	for _, e := range entries {
+		name := e.Name()
+		if !strings.HasSuffix(name, ".sock") {
+			continue
+		}
+		stem := strings.TrimSuffix(name, ".sock")
+		if reg.HasName(stem) {
+			continue
+		}
+		path := filepath.Join(dir, name)
+		if err := os.Remove(path); err != nil {
+			slog.Warn("orphan socket remove failed", "path", path, "err", err)
+			continue
+		}
+		removed++
+		slog.Info("orphan socket removed", "path", path)
+	}
+	slog.Info("socket sweep complete", "removed", removed, "dir", dir)
 }

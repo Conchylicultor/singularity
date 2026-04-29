@@ -18,14 +18,13 @@ type Config struct {
 	IdleTimeout       time.Duration
 	ShutdownGrace     time.Duration
 	ReadyTimeout      time.Duration
-	PortMin           int
-	PortMax           int
 	SweepInterval     time.Duration
 	BrokenCooldown    time.Duration
 	LogLevel          string
 	LogFormat         string
 	LogBufferLines    int
 	RegistryDir       string
+	SocketsDir        string
 	CentralRoutesFile string
 }
 
@@ -35,8 +34,6 @@ func parseFlags() Config {
 	flag.DurationVar(&cfg.IdleTimeout, "idle-timeout", 10*time.Minute, "backend idle timeout")
 	flag.DurationVar(&cfg.ShutdownGrace, "shutdown-grace", 5*time.Second, "grace period before SIGKILL")
 	flag.DurationVar(&cfg.ReadyTimeout, "ready-timeout", 15*time.Second, "max wait for backend readiness")
-	flag.IntVar(&cfg.PortMin, "port-min", 9001, "lowest backend port")
-	flag.IntVar(&cfg.PortMax, "port-max", 10000, "highest backend port")
 	flag.DurationVar(&cfg.SweepInterval, "sweep-interval", 30*time.Second, "idle sweeper tick")
 	flag.DurationVar(&cfg.BrokenCooldown, "broken-cooldown", 10*time.Second, "wait before retrying a failed spawn")
 	flag.StringVar(&cfg.LogLevel, "log-level", "info", "log level: debug|info|warn|error")
@@ -46,6 +43,8 @@ func parseFlags() Config {
 	home, _ := os.UserHomeDir()
 	defaultRegistry := filepath.Join(home, ".singularity", "worktrees")
 	flag.StringVar(&cfg.RegistryDir, "registry-dir", defaultRegistry, "directory of worktree JSON files")
+	defaultSockets := filepath.Join(home, ".singularity", "sockets")
+	flag.StringVar(&cfg.SocketsDir, "sockets-dir", defaultSockets, "directory for per-worktree Unix sockets")
 	defaultCentralRoutes := filepath.Join(home, ".singularity", "central-routes.json")
 	flag.StringVar(&cfg.CentralRoutesFile, "central-routes-file", defaultCentralRoutes, "path to the central routing manifest")
 
@@ -79,12 +78,16 @@ func main() {
 	cfg := parseFlags()
 	setupLogging(cfg)
 
-	pool := NewPortPool(cfg.PortMin, cfg.PortMax)
-	reg := NewRegistry(&cfg, pool)
+	if err := os.MkdirAll(cfg.SocketsDir, 0o755); err != nil {
+		slog.Error("create sockets dir failed", "err", err, "dir", cfg.SocketsDir)
+		os.Exit(1)
+	}
+	reg := NewRegistry(&cfg)
 	if err := reg.LoadAll(); err != nil {
 		slog.Error("registry load failed", "err", err)
 		os.Exit(1)
 	}
+	sweepStaleSockets(cfg.SocketsDir, reg)
 
 	routes := NewCentralRoutesStore(cfg.CentralRoutesFile)
 
@@ -120,7 +123,7 @@ func main() {
 		_ = reg.StopAll(shutCtx)
 	}()
 
-	slog.Info("gateway listening", "addr", cfg.Listen, "registry-dir", cfg.RegistryDir)
+	slog.Info("gateway listening", "addr", cfg.Listen, "registry-dir", cfg.RegistryDir, "sockets-dir", cfg.SocketsDir)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		slog.Error("server error", "err", err)
 		os.Exit(1)
