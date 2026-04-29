@@ -19,6 +19,8 @@ import {
 } from "./internal/meta-conversations";
 import "./internal/mcp-tools";
 
+export { armTaskAutoStart } from "./internal/arm-auto-start";
+
 // Re-export public surface (Zod schemas, types, resources, helpers).
 // pgTable objects are NOT re-exported — they live only in tasks-core/internal.
 export {

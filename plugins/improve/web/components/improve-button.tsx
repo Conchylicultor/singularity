@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { domToBlob } from "modern-screenshot";
 import { MdAdd } from "react-icons/md";
@@ -10,19 +10,37 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ImproveForm, type PrefilledAttachment } from "./improve-form";
+import {
+  ImproveForm,
+  type CardDraft,
+  type PrefilledAttachment,
+} from "./improve-form";
+import type { ChainModel } from "./model-chip";
 import { Improve } from "../commands";
-import type { ImproveSubmitBody, ImproveSubmitResponse } from "../../shared/types";
+import type {
+  ImproveSubmitBody,
+  ImproveSubmitCard,
+  ImproveSubmitResponse,
+} from "../../shared/types";
 
-type Submitting = false | "create" | "sonnet" | "opus";
+const HEAD_DEFAULT_MODEL: ChainModel = "sonnet";
+
+function makeCard(model: ChainModel): CardDraft {
+  return { localId: crypto.randomUUID(), text: "", model };
+}
+
+function freshCards(): CardDraft[] {
+  return [makeCard(HEAD_DEFAULT_MODEL)];
+}
 
 export function ImproveButton() {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState("");
+  const [cards, setCards] = useState<CardDraft[]>(freshCards);
+  const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
   const [includeUrl, setIncludeUrl] = useState(false);
   const [includeScreenshot, setIncludeScreenshot] = useState(false);
   const [url, setUrl] = useState("");
-  const [submitting, setSubmitting] = useState<Submitting>(false);
+  const [submitting, setSubmitting] = useState(false);
   const [prefilled, setPrefilled] = useState<PrefilledAttachment[]>([]);
 
   Improve.OpenWithAttachments.useHandler(({ attachmentIds, filenames }) => {
@@ -36,20 +54,45 @@ export function ImproveButton() {
     setOpen(true);
   });
 
+  // When cards length grows, focus the freshly-added card. We identify it as
+  // the first card whose localId we hadn't seen before. Pure inserts at any
+  // position are covered; reorders don't add new ids so they don't trigger.
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const seen = seenIdsRef.current;
+    let newest: string | null = null;
+    for (const c of cards) {
+      if (!seen.has(c.localId)) newest = c.localId;
+    }
+    seenIdsRef.current = new Set(cards.map((c) => c.localId));
+    if (newest) setAutoFocusId(newest);
+  }, [cards]);
+
   const openForm = (next: boolean) => {
     if (next) {
       setUrl(window.location.href);
+      // Re-seed seen ids so the head card receives initial focus on open.
+      seenIdsRef.current = new Set();
     } else {
       setPrefilled([]);
     }
     setOpen(next);
   };
 
-  const submit = async (launch: "sonnet" | "opus" | null) => {
-    const text = value.trim();
-    if (!text || submitting) return;
-    const phase: Submitting = launch ?? "create";
-    setSubmitting(phase);
+  const resetForm = () => {
+    setCards(freshCards());
+    setIncludeUrl(false);
+    setIncludeScreenshot(false);
+    setPrefilled([]);
+    seenIdsRef.current = new Set();
+  };
+
+  const submit = async () => {
+    if (submitting) return;
+    const trimmed = cards.map((c) => ({ ...c, text: c.text.trim() }));
+    if (trimmed.some((c) => !c.text)) return;
+
+    setSubmitting(true);
     try {
       const attachmentIds: string[] = [...prefilled.map((p) => p.id)];
       if (includeScreenshot) {
@@ -71,10 +114,12 @@ export function ImproveButton() {
       }
 
       const body: ImproveSubmitBody = {
-        text,
+        cards: trimmed.map<ImproveSubmitCard>((c) => ({
+          text: c.text,
+          launch: c.model === "queue" ? null : c.model,
+        })),
         url: includeUrl ? url : "",
         attachmentIds,
-        launch,
       };
       const res = await fetch("/api/improve/submit", {
         method: "POST",
@@ -90,18 +135,19 @@ export function ImproveButton() {
         return;
       }
       const json = (await res.json()) as ImproveSubmitResponse;
-      Shell.Toast({
-        description: launch
-          ? `Launched with ${launch === "sonnet" ? "Sonnet" : "Opus"}`
-          : "Queued",
-        variant: "success",
-      });
-      setValue("");
-      setIncludeUrl(false);
-      setIncludeScreenshot(false);
-      setPrefilled([]);
+      const launchedCount = trimmed.filter((c) => c.model !== "queue").length;
+      const description =
+        trimmed.length === 1
+          ? launchedCount === 1
+            ? `Launched with ${trimmed[0]!.model === "sonnet" ? "Sonnet" : "Opus"}`
+            : "Queued"
+          : launchedCount === 0
+            ? `Queued ${trimmed.length} tasks`
+            : `Chained ${trimmed.length} tasks (${launchedCount} armed)`;
+      Shell.Toast({ description, variant: "success" });
+      void json;
+      resetForm();
       setOpen(false);
-      void json; // reserved for follow-up (navigate to conversation)
     } catch (err) {
       Shell.Toast({
         description: `Submit failed: ${(err as Error).message}`,
@@ -120,8 +166,10 @@ export function ImproveButton() {
       </PopoverTrigger>
       <PopoverContent>
         <ImproveForm
-          value={value}
-          onChange={setValue}
+          cards={cards}
+          onCardsChange={setCards}
+          autoFocusId={autoFocusId}
+          onAutoFocusHandled={() => setAutoFocusId(null)}
           includeUrl={includeUrl}
           onToggleUrl={setIncludeUrl}
           includeScreenshot={includeScreenshot}
