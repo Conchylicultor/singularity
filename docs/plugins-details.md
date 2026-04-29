@@ -22,11 +22,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
   - Defines:
-    - Slots: `Agents.List`, `Agents.View`, `Agents.AgentActions`
+    - Slots: `Agents.List`, `Agents.View`, `Agents.AgentActions`, `Agents.SystemAgent`
     - DB schema: `plugins/agents/server/internal/schema.ts`
     - DB schema: `plugins/agents/server/internal/tables.ts`
   - Exports (web):
-    - Values: `agentConversationPane`, `agentDetailPane`, `agentsRootPane`
+    - Types: `SystemAgentDescriptor`
+    - Values: `agentConversationPane`, `agentDetailPane`, `Agents`, `agentsRootPane`, `defineSystemAgent`, `systemAgentDetailPane`
   - Exports (server):
     - Types: `Agent`, `AgentLaunch`
     - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`

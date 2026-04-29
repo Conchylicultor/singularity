@@ -11,6 +11,7 @@ import { agentsResource, type Agent } from "../shared/resources";
 import { Agents as AgentsSlots } from "./slots";
 import { AgentsList } from "./components/agents-list";
 import { AgentDetail } from "./components/agent-detail";
+import { SystemAgentDetail } from "./components/system-agent-detail";
 
 export const agentsRootPane = Pane.define({
   id: "agents-root",
@@ -37,20 +38,34 @@ export const agentConversationPane = Pane.define({
   chrome: false,
 });
 
+export const systemAgentDetailPane = Pane.define({
+  id: "agent-system-detail",
+  parent: agentsRootPane,
+  path: "system/:systemId",
+  component: SystemAgentDetailBody,
+});
+
 function AgentsRoot(): ReactElement {
   const lists = AgentsSlots.List.useContributions();
   const match = usePaneMatch();
-  const selectedId = match?.chain.find(
+  const selectedUserId = match?.chain.find(
     (e) => e.pane === agentDetailPane._internal,
   )?.params.id;
-  const hasAgentSelected = selectedId !== undefined;
+  const selectedSystemId = match?.chain.find(
+    (e) => e.pane === systemAgentDetailPane._internal,
+  )?.params.systemId;
+  const hasAgentSelected =
+    selectedUserId !== undefined || selectedSystemId !== undefined;
 
   return (
     <div className="h-[calc(100svh-3rem)] min-h-0 overflow-hidden">
       <ResizablePanelGroup orientation="horizontal" className="h-full">
         <ResizablePanel defaultSize={25} minSize={15}>
           <div className="h-full overflow-auto p-4">
-            <AgentsList selectedId={selectedId} />
+            <AgentsList
+              selectedId={selectedUserId}
+              selectedSystemId={selectedSystemId}
+            />
             {lists.length > 0 && (
               <div className="mt-6 flex flex-col gap-4">
                 {lists.map((l) => (
@@ -78,7 +93,7 @@ function AgentsRoot(): ReactElement {
 function AgentDetailBody(): ReactElement {
   const { id } = agentDetailPane.useParams();
   const { data } = useResource(agentsResource);
-  const agent = data?.find((a) => a.id === id) ?? null;
+  const agent = data?.find((a: Agent) => a.id === id) ?? null;
   const views = AgentsSlots.View.useContributions();
 
   const match = usePaneMatch();
@@ -135,4 +150,29 @@ function AgentDetailBody(): ReactElement {
 function AgentConversationBody(): ReactElement {
   const { convId } = agentConversationPane.useParams();
   return <ConversationView key={convId} sessionId={convId} />;
+}
+
+function SystemAgentDetailBody(): ReactElement {
+  const { systemId } = systemAgentDetailPane.useParams();
+  const descriptors = AgentsSlots.SystemAgent.useContributions();
+  const descriptor = descriptors.find((d) => d.id === systemId);
+
+  if (!descriptor) {
+    return (
+      <PaneChrome pane={systemAgentDetailPane} title="Unknown system agent">
+        <div className="text-muted-foreground p-6 text-sm">
+          No system agent registered with id <code>{systemId}</code>.
+        </div>
+      </PaneChrome>
+    );
+  }
+
+  const Component = descriptor.component ?? SystemAgentDetail;
+  return (
+    <PaneChrome pane={systemAgentDetailPane} title={descriptor.name}>
+      <div className="h-full overflow-auto">
+        <Component descriptor={descriptor} />
+      </div>
+    </PaneChrome>
+  );
 }

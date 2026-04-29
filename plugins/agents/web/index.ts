@@ -12,7 +12,11 @@ export {
   agentsRootPane,
   agentDetailPane,
   agentConversationPane,
+  systemAgentDetailPane,
 } from "./panes";
+export { Agents } from "./slots";
+export { defineSystemAgent } from "./system-agents";
+export type { SystemAgentDescriptor } from "./system-agents";
 
 export default {
   id: "agents",

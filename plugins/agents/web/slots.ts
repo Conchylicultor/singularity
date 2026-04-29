@@ -1,5 +1,6 @@
 import { defineSlot } from "@core";
 import type { ComponentType } from "react";
+import type { SystemAgentDescriptor } from "./system-agents";
 
 export const Agents = {
   List: defineSlot<{
@@ -15,4 +16,5 @@ export const Agents = {
     id: string;
     component: ComponentType<{ agentId: string }>;
   }>("agents.agent-actions"),
+  SystemAgent: defineSlot<SystemAgentDescriptor>("agents.system-agent"),
 };

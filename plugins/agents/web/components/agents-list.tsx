@@ -10,6 +10,7 @@ import { agentsResource } from "../../shared/resources";
 import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";
 import { AgentStatus } from "./agent-status";
+import { SystemFolder } from "./system-folder";
 
 type Agent = TreeItem & {
   name: string;
@@ -67,27 +68,32 @@ function AgentRow({ node, depth }: { node: TreeNode<Agent>; depth: number }) {
 
 export function AgentsList({
   selectedId,
+  selectedSystemId,
   onSelect,
 }: {
   selectedId?: string;
+  selectedSystemId?: string;
   onSelect?: (id: string) => void;
 }) {
   const { data } = useResource(agentsResource);
   const rows = data ?? [];
 
   return (
-    <TreeList<Agent>
-      rows={rows}
-      selectedId={selectedId}
-      onSelect={(id) =>
-        onSelect ? onSelect(id) : agentDetailPane.open({ id })
-      }
-      onToggleExpanded={(id, next) => patchAgent(id, { expanded: next })}
-      onMove={(id, dest) => patchAgent(id, dest)}
-      onCreate={createAgentRow}
-      Row={AgentRow}
-      dragOverlay={(a) => a.name || "Untitled"}
-      addLabel="Agent"
-    />
+    <div className="flex flex-col gap-1">
+      <SystemFolder selectedSystemId={selectedSystemId} />
+      <TreeList<Agent>
+        rows={rows}
+        selectedId={selectedId}
+        onSelect={(id) =>
+          onSelect ? onSelect(id) : agentDetailPane.open({ id })
+        }
+        onToggleExpanded={(id, next) => patchAgent(id, { expanded: next })}
+        onMove={(id, dest) => patchAgent(id, dest)}
+        onCreate={createAgentRow}
+        Row={AgentRow}
+        dragOverlay={(a) => a.name || "Untitled"}
+        addLabel="Agent"
+      />
+    </div>
   );
 }
