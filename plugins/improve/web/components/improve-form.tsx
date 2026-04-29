@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { MdAdd, MdImage } from "react-icons/md";
+import { MdAdd } from "react-icons/md";
 
 type Submitting = false | "create" | "sonnet" | "opus";
 
@@ -49,16 +49,14 @@ export function ImproveForm({
         Improve this app
       </div>
       {attachments.length > 0 && (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-2">
           {attachments.map((a) => (
-            <span
+            <img
               key={a.id}
-              className="inline-flex items-center gap-1 rounded border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground"
-              title={a.filename}
-            >
-              <MdImage className="size-3" />
-              {a.filename}
-            </span>
+              src={`/api/attachments/${a.id}`}
+              alt={a.filename}
+              className="max-h-32 w-full rounded border object-contain"
+            />
           ))}
         </div>
       )}
