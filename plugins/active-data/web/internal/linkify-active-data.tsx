@@ -9,7 +9,10 @@ import {
 } from "react";
 import { ActiveData, type ActiveDataTagContribution } from "../slots";
 
-const SKIP_TYPES = new Set(["code", "pre", "a"]);
+// Always skip these element types (don't linkify inside anchors)
+const ALWAYS_SKIP = new Set(["a"]);
+// Skip code blocks only when inside a <pre> (fenced code); inline `code` is linkified
+const SKIP_IN_PRE = new Set(["pre", "code"]);
 
 type PatternContrib = {
   pattern: RegExp;
@@ -57,13 +60,13 @@ function applyPatterns(text: string, contribs: PatternContrib[]): ReactNode {
   return <>{out}</>;
 }
 
-function walk(node: ReactNode, contribs: PatternContrib[]): ReactNode {
+function walk(node: ReactNode, contribs: PatternContrib[], inPre = false): ReactNode {
   if (node == null || typeof node === "boolean") return node;
-  if (typeof node === "string") return applyPatterns(node, contribs);
+  if (typeof node === "string") return inPre ? node : applyPatterns(node, contribs);
   if (typeof node === "number") return node;
   if (Array.isArray(node)) {
     return Children.map(node, (child, i) => (
-      <Fragment key={i}>{walk(child, contribs)}</Fragment>
+      <Fragment key={i}>{walk(child, contribs, inPre)}</Fragment>
     ));
   }
   if (isValidElement(node)) {
@@ -71,13 +74,15 @@ function walk(node: ReactNode, contribs: PatternContrib[]): ReactNode {
     // Fragments are transparent wrappers — recurse so a chained linkify
     // (e.g. file-links wrapping output in <Fragment>) doesn't hide text.
     if (el.type === Fragment) {
-      return <Fragment>{walk(el.props?.children, contribs)}</Fragment>;
+      return <Fragment>{walk(el.props?.children, contribs, inPre)}</Fragment>;
     }
     if (typeof el.type !== "string") return el;
-    if (SKIP_TYPES.has(el.type)) return el;
+    if (ALWAYS_SKIP.has(el.type)) return el;
+    // <pre> and <code>-inside-<pre> are skipped; standalone inline <code> is linkified
+    if (SKIP_IN_PRE.has(el.type) && (inPre || el.type === "pre")) return el;
     const inner = el.props?.children;
     if (inner === undefined) return el;
-    return cloneElement(el, undefined, walk(inner, contribs));
+    return cloneElement(el, undefined, walk(inner, contribs, el.type === "pre"));
   }
   return node;
 }
