@@ -6,6 +6,7 @@ import {
   listAttemptsForTask,
   setTaskAutoStart,
 } from "@plugins/tasks-core/server";
+import { buildTaskPrompt } from "@plugins/tasks-core/shared";
 import { createConversation } from "./lifecycle";
 
 // Job that launches a queued task once all its dependencies are non-blocking.
@@ -34,6 +35,7 @@ export const maybeLaunchTaskJob = defineJob({
       await createConversation({
         taskId,
         model,
+        prompt: buildTaskPrompt(t),
         spawnedBy: Bun.env.SINGULARITY_WORKTREE ?? "auto-start",
       });
     } finally {

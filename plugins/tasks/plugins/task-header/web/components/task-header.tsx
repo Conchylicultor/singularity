@@ -3,6 +3,7 @@ import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { tasksResource, type Task } from "@plugins/tasks/shared";
+import { buildTaskPrompt } from "@plugins/tasks-core/shared";
 import { useFlushAll, useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { Button } from "@/components/ui/button";
 import {
@@ -93,11 +94,8 @@ export function TaskHeader({ taskId }: { taskId: string }) {
     const fresh = await fetch(`/api/tasks/${taskId}`).then((r) =>
       r.ok ? (r.json() as Promise<Task>) : null,
     );
-    const title = (fresh?.title ?? task?.title ?? "").trim() || "Untitled";
-    const desc = fresh?.description ?? task?.description ?? "";
-    const prompt = desc.trim() ? `${title}\n\n${desc}` : title;
-    return { taskId, prompt };
-  }, [taskId, task?.title, task?.description, flushAll]);
+    return { taskId, prompt: buildTaskPrompt(fresh ?? task ?? {}) };
+  }, [taskId, task, flushAll]);
 
   if (!task) return null;
 
