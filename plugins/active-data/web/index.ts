@@ -3,6 +3,7 @@ import type { PluginDefinition } from "@core";
 export { ActiveData } from "./slots";
 export type { ActiveDataTagContribution } from "./slots";
 export { useActiveDataComponents } from "./internal/render-active-data";
+export { useActiveDataLinkify } from "./internal/linkify-active-data";
 
 export default {
   id: "active-data",

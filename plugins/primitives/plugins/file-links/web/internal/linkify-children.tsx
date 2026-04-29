@@ -32,6 +32,12 @@ export function linkifyChildren(
   }
   if (isValidElement(children)) {
     const el = children as ReactElement<{ children?: ReactNode }>;
+    // Fragments are transparent — recurse so upstream walkers (e.g. the
+    // active-data linkify) can wrap text in fragments and we still see the
+    // strings inside.
+    if (el.type === Fragment) {
+      return <Fragment>{linkifyChildren(el.props?.children, onFileOpen)}</Fragment>;
+    }
     if (typeof el.type !== "string") return el;
     if (SKIP_TYPES.has(el.type)) return el;
     const inner = el.props?.children;

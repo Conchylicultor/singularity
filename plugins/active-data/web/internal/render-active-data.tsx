@@ -45,6 +45,7 @@ export function useActiveDataComponents(): Components {
   return useMemo(() => {
     const out: Record<string, ComponentType<Record<string, unknown>>> = {};
     for (const c of contributions) {
+      if (!c.tag) continue;
       out[c.tag] = makeAdapter(c);
     }
     return out as Components;

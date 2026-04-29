@@ -9,12 +9,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots: `ActiveData.Tag`
   - Exports (web):
     - Types: `ActiveDataTagContribution`
-    - Values: `ActiveData`, `useActiveDataComponents`
+    - Values: `ActiveData`, `useActiveDataComponents`, `useActiveDataLinkify`
   - Slot contributors: `conv`
   - Plugins:
-    - **`conv`** — Renders <conv>conv-xxx</conv> as a clickable chip that opens the referenced conversation in the right side pane alongside the host conversation.
+    - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.
       - Contributes:
-        - `ActiveData.Tag` → `ConvChip`
+        - `ActiveData.Tag` `CONV_ID_RE` → `ConvChip`
 
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
   - Defines:

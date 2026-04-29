@@ -4,11 +4,11 @@ import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
+import { linkifyChildren } from "@plugins/primitives/plugins/file-links/web";
 import {
-  FileLinkText,
-  linkifyChildren,
-} from "@plugins/primitives/plugins/file-links/web";
-import { useActiveDataComponents } from "@plugins/active-data/web";
+  useActiveDataComponents,
+  useActiveDataLinkify,
+} from "@plugins/active-data/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/shared";
@@ -52,9 +52,10 @@ function isExternalUrl(src: string): boolean {
 function buildMdComponents(
   worktree: string,
   onFileOpen: (path: string) => void,
+  activeDataLinkify: (children: ReactNode) => ReactNode,
 ): Components {
   const transform = (children: ReactNode) =>
-    linkifyChildren(children, onFileOpen);
+    linkifyChildren(activeDataLinkify(children), onFileOpen);
   return {
     h1: ({ children, ...p }) => (
       <h1 className="mt-4 mb-2 text-2xl font-semibold" {...p}>{transform(children)}</h1>
@@ -154,6 +155,7 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
   const { markdownMode } = useRowMarkdown();
   const { conversation } = conversationPane.useData();
   const activeDataComponents = useActiveDataComponents();
+  const activeDataLinkify = useActiveDataLinkify();
   const onFileOpen = (path: string) =>
     convFilePeekPane.open({
       convId: conversation.id,
@@ -161,7 +163,7 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
       filePath: path,
     });
   const mdComponents: Components = {
-    ...buildMdComponents(conversation.attemptId, onFileOpen),
+    ...buildMdComponents(conversation.attemptId, onFileOpen, activeDataLinkify),
     ...activeDataComponents,
   };
 
@@ -189,7 +191,7 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
         </div>
       ) : (
         <div className="whitespace-pre-wrap break-words text-sm">
-          <FileLinkText text={e.text} onFileOpen={onFileOpen} />
+          {linkifyChildren(activeDataLinkify(e.text), onFileOpen)}
         </div>
       )}
     </div>
