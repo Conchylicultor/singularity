@@ -1,4 +1,5 @@
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
+import { parseDiffNameStatusZ, parseDiffNumstatZ } from "./parse-diff-z";
 
 const GIT = "/usr/bin/git";
 
@@ -6,6 +7,7 @@ interface FileEntry {
   status: EditedFileStatus;
   additions: number;
   deletions: number;
+  from?: string;
 }
 
 async function run(args: string[], cwd: string): Promise<string | null> {
@@ -19,12 +21,6 @@ async function run(args: string[], cwd: string): Promise<string | null> {
   ]);
   if (code !== 0) return null;
   return out;
-}
-
-function mapDiffStatus(code: string): EditedFileStatus {
-  if (code.startsWith("A")) return "added";
-  if (code.startsWith("D")) return "deleted";
-  return "modified";
 }
 
 export async function resolveParentSha(
@@ -45,35 +41,30 @@ export async function getRangeFiles(
   const byPath = new Map<string, FileEntry>();
 
   const nameStatus = await run(
-    ["diff", "--no-renames", "--name-status", baseSha, headSha],
+    ["diff", "-M", "-C", "-z", "--name-status", baseSha, headSha],
     worktreePath,
   );
   if (nameStatus === null) return null;
 
-  for (const line of nameStatus.split("\n")) {
-    if (!line) continue;
-    const parts = line.split("\t");
-    if (parts.length < 2) continue;
-    const code = parts[0];
-    const path = parts[parts.length - 1];
-    if (!code || !path) continue;
-    byPath.set(path, { status: mapDiffStatus(code), additions: 0, deletions: 0 });
+  for (const rec of parseDiffNameStatusZ(nameStatus)) {
+    byPath.set(rec.path, {
+      status: rec.status,
+      additions: 0,
+      deletions: 0,
+      ...(rec.from ? { from: rec.from } : {}),
+    });
   }
 
   const numstat = await run(
-    ["diff", "--no-renames", "--numstat", baseSha, headSha],
+    ["diff", "-M", "-C", "-z", "--numstat", baseSha, headSha],
     worktreePath,
   );
   if (numstat) {
-    for (const line of numstat.split("\n")) {
-      if (!line) continue;
-      const parts = line.split("\t");
-      if (parts.length < 3) continue;
-      const [addStr, delStr, path] = parts;
-      const entry = byPath.get(path);
+    for (const rec of parseDiffNumstatZ(numstat)) {
+      const entry = byPath.get(rec.path);
       if (!entry) continue;
-      entry.additions = addStr === "-" ? 0 : Number.parseInt(addStr, 10) || 0;
-      entry.deletions = delStr === "-" ? 0 : Number.parseInt(delStr, 10) || 0;
+      entry.additions = rec.additions;
+      entry.deletions = rec.deletions;
     }
   }
 
@@ -83,6 +74,7 @@ export async function getRangeFiles(
       status: entry.status,
       additions: entry.additions,
       deletions: entry.deletions,
+      ...(entry.from ? { from: entry.from } : {}),
     }))
     .sort((a, b) => a.path.localeCompare(b.path));
 }

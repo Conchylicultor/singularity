@@ -7,6 +7,8 @@ const STATUS_DOT: Record<EditedFileStatus, string> = {
   added: "bg-emerald-500",
   untracked: "bg-amber-500",
   deleted: "bg-muted-foreground/40",
+  renamed: "bg-violet-500",
+  copied: "bg-amber-500",
   clean: "bg-muted-foreground/20",
 };
 

@@ -35,9 +35,13 @@ export async function getFileDiff(
   relPath: string,
   base: string = "HEAD",
   head?: string,
+  fromPath?: string,
 ): Promise<FileDiffResult> {
   if (!relPath || relPath.includes("\0")) {
     return { kind: "error", status: 400, message: "Invalid path" };
+  }
+  if (fromPath !== undefined && (fromPath === "" || fromPath.includes("\0"))) {
+    return { kind: "error", status: 400, message: "Invalid from" };
   }
   if (!isAllowedRef(base)) {
     return { kind: "error", status: 400, message: "Invalid base" };
@@ -51,6 +55,12 @@ export async function getFileDiff(
   if (!isPathInside(absRoot, absTarget)) {
     return { kind: "error", status: 400, message: "Invalid path" };
   }
+  if (fromPath !== undefined) {
+    const absFrom = resolve(absRoot, fromPath);
+    if (!isPathInside(absRoot, absFrom)) {
+      return { kind: "error", status: 400, message: "Invalid from" };
+    }
+  }
 
   const resolvedBase =
     base === "main"
@@ -58,10 +68,13 @@ export async function getFileDiff(
       : base;
 
   // Range diff (commit-to-commit). Untracked / working-tree handling does not
-  // apply — both sides are real refs.
+  // apply — both sides are real refs. -M / -C let git emit a unified rename
+  // diff when both old and new paths are passed.
   if (head !== undefined) {
+    const pathArgs =
+      fromPath !== undefined ? ["--", fromPath, relPath] : ["--", relPath];
     const diff = await runGit(
-      ["diff", "--no-color", "--no-renames", resolvedBase, head, "--", relPath],
+      ["diff", "--no-color", "-M", "-C", resolvedBase, head, ...pathArgs],
       absRoot,
     );
     if (diff === null) {
@@ -99,7 +112,15 @@ export async function getFileDiff(
         true,
       )
     : await runGit(
-        ["diff", "--no-color", "--no-renames", resolvedBase, "--", relPath],
+        [
+          "diff",
+          "--no-color",
+          "-M",
+          "-C",
+          resolvedBase,
+          "--",
+          ...(fromPath !== undefined ? [fromPath, relPath] : [relPath]),
+        ],
         absRoot,
       );
 

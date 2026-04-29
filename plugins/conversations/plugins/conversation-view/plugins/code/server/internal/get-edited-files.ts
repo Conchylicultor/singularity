@@ -1,5 +1,6 @@
 import { resolve, sep } from "node:path";
 import type { EditedFile, EditedFileStatus } from "../../shared/protocol";
+import { parseDiffNameStatusZ, parseDiffNumstatZ } from "./parse-diff-z";
 
 const GIT = "/usr/bin/git";
 const UNTRACKED_MAX_BYTES = 2 * 1024 * 1024;
@@ -8,6 +9,7 @@ interface FileEntry {
   status: EditedFileStatus;
   additions: number;
   deletions: number;
+  from?: string;
 }
 
 async function run(args: string[], cwd: string): Promise<string | null> {
@@ -21,12 +23,6 @@ async function run(args: string[], cwd: string): Promise<string | null> {
   ]);
   if (code !== 0) return null;
   return out;
-}
-
-function mapDiffStatus(code: string): EditedFileStatus {
-  if (code.startsWith("A")) return "added";
-  if (code.startsWith("D")) return "deleted";
-  return "modified";
 }
 
 function isPathInside(root: string, target: string): boolean {
@@ -76,22 +72,25 @@ export async function getEditedFiles(worktreePath: string): Promise<EditedFile[]
   const mergeBase =
     (await run(["merge-base", "main", "HEAD"], worktreePath))?.trim() ?? "main";
 
+  // -M / -C enable rename/copy detection; -z disambiguates the from/to pair.
   const diff = await run(
-    ["diff", "--no-renames", "--name-status", mergeBase],
+    ["diff", "-M", "-C", "-z", "--name-status", mergeBase],
     worktreePath,
   );
   if (diff) {
-    for (const line of diff.split("\n")) {
-      if (!line) continue;
-      const parts = line.split("\t");
-      if (parts.length < 2) continue;
-      const code = parts[0];
-      const path = parts[parts.length - 1];
-      ensureEntry(byPath, path, mapDiffStatus(code));
+    for (const rec of parseDiffNameStatusZ(diff)) {
+      const entry = ensureEntry(byPath, rec.path, rec.status);
+      if (rec.from) entry.from = rec.from;
     }
   }
 
-  const status = await run(["status", "--porcelain", "--untracked-files=all"], worktreePath);
+  // Working-tree changes are layered on top of the branch diff. We pass
+  // --no-renames here because porcelain-v1 rename output is awkward to parse
+  // and uncommitted renames are rare; they degrade to add+delete.
+  const status = await run(
+    ["status", "--porcelain", "--no-renames", "--untracked-files=all"],
+    worktreePath,
+  );
   if (status) {
     for (const line of status.split("\n")) {
       if (!line) continue;
@@ -113,19 +112,15 @@ export async function getEditedFiles(worktreePath: string): Promise<EditedFile[]
   // Per-file +/- counts: tracked files via numstat against the merge-base (covers
   // both committed branch changes and uncommitted working-tree edits).
   const numstat = await run(
-    ["diff", "--no-renames", "--numstat", mergeBase],
+    ["diff", "-M", "-C", "-z", "--numstat", mergeBase],
     worktreePath,
   );
   if (numstat) {
-    for (const line of numstat.split("\n")) {
-      if (!line) continue;
-      const parts = line.split("\t");
-      if (parts.length < 3) continue;
-      const [addStr, delStr, path] = parts;
-      const entry = byPath.get(path);
+    for (const rec of parseDiffNumstatZ(numstat)) {
+      const entry = byPath.get(rec.path);
       if (!entry) continue;
-      entry.additions = addStr === "-" ? 0 : Number.parseInt(addStr, 10) || 0;
-      entry.deletions = delStr === "-" ? 0 : Number.parseInt(delStr, 10) || 0;
+      entry.additions = rec.additions;
+      entry.deletions = rec.deletions;
     }
   }
 
@@ -143,6 +138,7 @@ export async function getEditedFiles(worktreePath: string): Promise<EditedFile[]
       status: entry.status,
       additions: entry.additions,
       deletions: entry.deletions,
+      ...(entry.from ? { from: entry.from } : {}),
     }))
     .sort((a, b) => a.path.localeCompare(b.path));
 }

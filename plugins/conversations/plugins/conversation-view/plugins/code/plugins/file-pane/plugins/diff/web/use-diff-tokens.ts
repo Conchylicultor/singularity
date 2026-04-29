@@ -102,6 +102,7 @@ export function useDiffTokens(
   worktree: string,
   base?: string,
   head?: string,
+  from?: string,
 ): DiffTokens | null {
   const [tokens, setTokens] = useState<DiffTokens | null>(null);
 
@@ -119,9 +120,10 @@ export function useDiffTokens(
     let cancelled = false;
     const theme = themeForMode(dark);
     const oldRef = base ?? "HEAD";
+    const oldPath = from ?? path;
 
     Promise.all([
-      fetchFileContent(worktree, path, oldRef),
+      fetchFileContent(worktree, oldPath, oldRef),
       fetchFileContent(worktree, path, head),
       getHighlighter(lang),
     ]).then(([oldContent, newContent, hl]) => {
@@ -146,7 +148,7 @@ export function useDiffTokens(
     return () => {
       cancelled = true;
     };
-  }, [hunks, path, dark, worktree, base, head]);
+  }, [hunks, path, dark, worktree, base, head, from]);
 
   return tokens;
 }

@@ -10,6 +10,7 @@ export function useFileDiff(
   path: string,
   base?: string,
   head?: string,
+  from?: string,
 ): FileDiffState {
   const [state, setState] = useState<FileDiffState>({ kind: "loading" });
 
@@ -18,7 +19,8 @@ export function useFileDiff(
     setState({ kind: "loading" });
     const baseQuery = base ? `&base=${encodeURIComponent(base)}` : "";
     const headQuery = head ? `&head=${encodeURIComponent(head)}` : "";
-    const url = `/api/code/${encodeURIComponent(worktree)}/diff?path=${encodeURIComponent(path)}${baseQuery}${headQuery}`;
+    const fromQuery = from ? `&from=${encodeURIComponent(from)}` : "";
+    const url = `/api/code/${encodeURIComponent(worktree)}/diff?path=${encodeURIComponent(path)}${baseQuery}${headQuery}${fromQuery}`;
     fetch(url)
       .then(async (res) => {
         if (cancelled) return;
@@ -41,7 +43,7 @@ export function useFileDiff(
     return () => {
       cancelled = true;
     };
-  }, [worktree, path, base, head]);
+  }, [worktree, path, base, head, from]);
 
   return state;
 }

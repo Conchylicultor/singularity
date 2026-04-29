@@ -3,6 +3,8 @@ export type EditedFileStatus =
   | "added"
   | "deleted"
   | "untracked"
+  | "renamed"
+  | "copied"
   | "clean";
 
 export interface EditedFile {
@@ -10,6 +12,7 @@ export interface EditedFile {
   status: EditedFileStatus;
   additions: number;
   deletions: number;
+  from?: string;
 }
 
 export interface EditedFilesResponse {

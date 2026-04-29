@@ -13,11 +13,12 @@ export async function handleFileDiff(
   if (!path) return new Response("Missing path", { status: 400 });
   const base = url.searchParams.get("base") ?? "HEAD";
   const head = url.searchParams.get("head") ?? undefined;
+  const from = url.searchParams.get("from") ?? undefined;
 
   const wtPath = await resolveWorktreePath(worktree);
   if (!wtPath) return new Response("Not found", { status: 404 });
 
-  const result = await getFileDiff(wtPath, path, base, head);
+  const result = await getFileDiff(wtPath, path, base, head, from);
   if (result.kind === "ok") {
     return Response.json({ diff: result.diff });
   }

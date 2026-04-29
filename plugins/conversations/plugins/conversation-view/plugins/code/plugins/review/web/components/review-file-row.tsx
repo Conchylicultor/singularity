@@ -11,6 +11,8 @@ const STATUS_LABEL: Record<EditedFileStatus, string> = {
   added: "new",
   untracked: "new",
   deleted: "deleted",
+  renamed: "moved",
+  copied: "branched",
   clean: "clean",
 };
 
@@ -19,6 +21,8 @@ const STATUS_BADGE: Record<EditedFileStatus, string> = {
   added: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
   untracked: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
   deleted: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30",
+  renamed: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
+  copied: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
   clean: "bg-muted text-muted-foreground border-border",
 };
 
@@ -56,6 +60,7 @@ export function ReviewFileRow({
   const slash = file.path.lastIndexOf("/");
   const dir = slash >= 0 ? file.path.slice(0, slash + 1) : "";
   const basename = slash >= 0 ? file.path.slice(slash + 1) : file.path;
+  const from = file.from && file.from !== file.path ? file.from : null;
   const { safePaths, carefulPaths } = useConfigValues(reviewConfig, "conversation-code-review");
   const level = getFileWarningLevel(file.path, safePaths, carefulPaths);
   const [copied, setCopied] = useState(false);
@@ -87,6 +92,12 @@ export function ReviewFileRow({
           {STATUS_LABEL[file.status]}
         </span>
         <span className="group/path min-w-0 flex-1 truncate">
+          {from && (
+            <>
+              <span className="text-muted-foreground line-through">{from}</span>
+              <span className="mx-1.5 text-muted-foreground">→</span>
+            </>
+          )}
           <span className="text-muted-foreground">{dir}</span>
           <span className="font-medium">{basename}</span>
           <button
@@ -117,6 +128,7 @@ export function ReviewFileRow({
             path={file.path}
             base={base ?? "main"}
             head={head}
+            from={file.from}
           />
         </div>
       )}
