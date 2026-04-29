@@ -149,7 +149,12 @@ export const tmuxRuntime: ConversationRuntime = {
       cmdParts.push(`--resume ${opts.resumeSessionId}`);
       if (opts.forkSession) cmdParts.push("--fork-session");
     }
-    if (hasPrompt) cmdParts.push(`"$SINGULARITY_PROMPT"`);
+    // `--` end-of-options: prompts often start with `- ` (markdown bullets,
+    // especially from improve-plugin-authored tasks). Without this, claude
+    // parses the prompt as an unknown flag, prints "error: unknown option …",
+    // and exits 1 — the tmux pane dies in <1s, runtime.create has already
+    // returned success, so the row sits in "starting" until the 30s sweep.
+    if (hasPrompt) cmdParts.push(`-- "$SINGULARITY_PROMPT"`);
     const claudeCmd = cmdParts.join(" ");
     const proc = Bun.spawn(
       [
