@@ -16,6 +16,7 @@
   - Types: `ConversationGroup`, `ConversationGroupMember`, `ConversationGroupsPayload`
   - Values: `ConversationGroupMemberSchema`, `ConversationGroupSchema`, `ConversationGroupsPayloadSchema`, `conversationGroupsResource`
 - Server:
+  - Uses: `tasks-core._conversations`
   - `POST /api/conversation-groups`
   - `PATCH /api/conversation-groups/:id`
   - `DELETE /api/conversation-groups/:id`
