@@ -4,7 +4,10 @@ import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
-import { linkifyChildren } from "@plugins/primitives/plugins/file-links/web";
+import {
+  linkifyChildren,
+  parseFileLinks,
+} from "@plugins/primitives/plugins/file-links/web";
 import {
   useActiveDataComponents,
   useActiveDataLinkify,
@@ -101,6 +104,21 @@ function buildMdComponents(
       const isBlock = lang !== null || text.includes("\n");
       if (isBlock) {
         return <HighlightedCode code={text} lang={lang} />;
+      }
+      const segments = parseFileLinks(text);
+      if (segments.length === 1 && segments[0]?.type === "path") {
+        return (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onFileOpen(segments[0]!.value);
+            }}
+            className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-primary hover:underline"
+          >
+            {segments[0]!.value}
+          </button>
+        );
       }
       return <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs" {...rest}>{children}</code>;
     },
