@@ -291,9 +291,23 @@
     },
     {
       "version": "7",
+      "when": 1777241120000,
+      "tag": "20260426_220520_3f979a4a__yak_shaving_nodes",
+      "hash": "3f979a4a",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
       "when": 1777244790000,
       "tag": "20260426_230630_52210bfc__conversation_kind",
       "hash": "52210bfc",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777319119000,
+      "tag": "20260427_194519_46a1a533__yak_shaving_categories",
+      "hash": "46a1a533",
       "breakpoints": true
     },
     {
@@ -308,6 +322,13 @@
       "when": 1777401145000,
       "tag": "20260428_183225_8256aca7__add_task_auto_start_and_status_event",
       "hash": "8256aca7",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777490496000,
+      "tag": "20260429_192136_1a8a9094__remove_yak_shaving",
+      "hash": "1a8a9094",
       "breakpoints": true
     }
   ]
