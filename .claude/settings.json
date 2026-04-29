@@ -27,6 +27,15 @@
             "command": "bash .claude/hooks/guard-migrations.sh"
           }
         ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/guard-agent-model.sh"
+          }
+        ]
       }
     ]
   }
