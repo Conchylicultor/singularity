@@ -17,8 +17,10 @@ const FINALIZE_TIMEOUT_MS = 60_000;
 export const exitCleanFinalizeJob = defineJob({
   name: "push_and_exit.exit_clean_finalize",
   input: z.object({ conversationId: z.string() }),
+  // Direct-enqueue only (spawned by the exit_clean MCP tool).
+  event: z.never(),
   maxAttempts: 3,
-  run: async ({ conversationId }, ctx) => {
+  run: async ({ input: { conversationId }, ctx }) => {
     await afterTurn(ctx, conversationId, { timeoutMs: FINALIZE_TIMEOUT_MS });
     await ctx.step("delete-conversation", async () => {
       await deleteConversation(conversationId);
