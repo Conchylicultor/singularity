@@ -24,24 +24,21 @@ export function resetLog(): void {
   seenRuns.clear();
 }
 
-// Single input schema that holds both the trigger's static `with` fields
-// (label) and the event payload (userId, message). Via the events dispatcher,
-// jobWith and eventPayload are merged before this schema parses them;
-// `logPing.enqueue({...})` bypasses the event path entirely.
+// `input` carries the subscriber's `with` fields (label); `event` carries
+// the pinged event payload (userId, message). Direct `.enqueue()` bypasses
+// the event path entirely and passes `event: undefined` — the handler
+// defaults the event-derived fields so direct invocations still log.
 export const logPing = defineJob({
   name: "events_test.log",
-  input: z.object({
-    label: z.string(),
-    userId: z.string(),
-    message: z.string(),
-  }),
-  run: ({ label, userId, message }, ctx) => {
+  input: z.object({ label: z.string() }),
+  event: z.object({ userId: z.string(), message: z.string() }),
+  run: ({ input: { label }, event, ctx }) => {
     if (seenRuns.has(ctx.jobId)) return;
     seenRuns.add(ctx.jobId);
     logEntries.push({
       label,
-      userId,
-      message,
+      userId: event?.userId ?? "direct",
+      message: event?.message ?? "direct-enqueued",
       jobId: ctx.jobId,
       firedAt: new Date().toISOString(),
     });

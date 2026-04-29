@@ -12,7 +12,7 @@
   - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
   - Values: `attemptsResource`, `pushesResource`, `tasksResource`
 - Server:
-  - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.setTaskAutoStart`, `tasks-core.taskStatusChanged`, `tasks-core.updateTask`
+  - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.setTaskAutoStart`, `tasks-core.taskStatusChanged`, `tasks-core.updateTask`
   - `GET /api/tasks`
   - `POST /api/tasks`
   - `GET /api/tasks/:id`

@@ -11,19 +11,16 @@ import { RESUME_KEYS } from "./step-ctx";
 import { _jobWaits } from "./tables";
 import { getWorkerUtils } from "./worker";
 
-// Reserved-keys schema: every `__resume_*` field must survive `.parse`, and
-// any other keys (the event payload) pass through as extra properties. We
-// consume passthrough via `.passthrough()` so the events dispatcher can hand
-// us `jobWith ∪ eventPayload` without schema drift.
-const ResumeInputSchema = z
-  .object({
-    [RESUME_KEYS.workflowRunId]: z.string(),
-    [RESUME_KEYS.waitName]: z.string(),
-    [RESUME_KEYS.jobName]: z.string(),
-    [RESUME_KEYS.input]: z.unknown(),
-    [RESUME_KEYS.timeout]: z.boolean().optional(),
-  })
-  .passthrough();
+// Resume control-fields. The events plugin's bridge bakes these into the
+// trigger row's `with` (see install-jobs-hooks.ts). Direct timeout enqueues
+// (scheduleResume in the worker) also go through this same shape.
+const ResumeInputSchema = z.object({
+  [RESUME_KEYS.workflowRunId]: z.string(),
+  [RESUME_KEYS.waitName]: z.string(),
+  [RESUME_KEYS.jobName]: z.string(),
+  [RESUME_KEYS.input]: z.unknown(),
+  [RESUME_KEYS.timeout]: z.boolean().optional(),
+});
 
 // Builtin — registered once at jobs plugin boot. Targeted by every
 // `ctx.waitFor(...)` trigger row and every `ctx.sleep(...)` / timeout
@@ -33,21 +30,25 @@ const ResumeInputSchema = z
 export const jobsResumeJob = defineJob({
   name: "jobs.resume",
   input: ResumeInputSchema,
+  // Event payload is whatever event the waiter subscribed to — accept any
+  // object so the payload is captured verbatim and stored in
+  // `_jobWaits.payloadJson` for the awaiting workflow to read on resume.
+  event: z.record(z.unknown()),
   // Bumped — resolving a wait involves two DB writes and a target enqueue;
   // each is idempotent, so safe to retry on transient failure.
   maxAttempts: 5,
-  run: async (p) => {
-    const workflowRunId = p[RESUME_KEYS.workflowRunId] as string;
-    const waitName = p[RESUME_KEYS.waitName] as string;
-    const targetJobName = p[RESUME_KEYS.jobName] as string;
-    const originalInput = p[RESUME_KEYS.input];
-    const isTimeout = (p[RESUME_KEYS.timeout] as boolean | undefined) === true;
+  run: async ({ input, event }) => {
+    const workflowRunId = input[RESUME_KEYS.workflowRunId] as string;
+    const waitName = input[RESUME_KEYS.waitName] as string;
+    const targetJobName = input[RESUME_KEYS.jobName] as string;
+    const originalInput = input[RESUME_KEYS.input];
+    const isTimeout =
+      (input[RESUME_KEYS.timeout] as boolean | undefined) === true;
 
-    // Drop the reserved keys; everything left came from the event payload
-    // (the events dispatcher merges `jobWith ∪ eventPayload`, with event
-    // fields winning on collision).
-    const payloadRecord = { ...(p as Record<string, unknown>) };
-    for (const k of Object.values(RESUME_KEYS)) delete payloadRecord[k];
+    // The event payload (when present) is what gets stored for the awaiting
+    // workflow. Direct timeout enqueues pass `event: undefined`; for
+    // event-path resumes the dispatcher delivers the source event verbatim.
+    const payloadRecord = (event ?? {}) as Record<string, unknown>;
 
     const existing = await db
       .select()

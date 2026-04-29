@@ -28,9 +28,12 @@ export {
   deleteTrigger,
   deleteTriggersFor,
   trigger,
-  triggerByName,
+  UNSAFE_triggerByName,
 } from "./internal/trigger";
-export type { TriggerByNameSpec, TriggerSpec } from "./internal/trigger";
+export type {
+  TriggerSpec,
+  UnsafeTriggerByNameSpec,
+} from "./internal/trigger";
 
 export default {
   id: "events",

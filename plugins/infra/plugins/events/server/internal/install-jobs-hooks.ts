@@ -4,7 +4,7 @@
 // jobs, so the reverse edge would close the cycle.
 import { UNSAFE_installDurableHooks } from "@plugins/infra/plugins/jobs/server";
 import type { EventSource } from "./event";
-import { triggerByName } from "./trigger";
+import { UNSAFE_triggerByName } from "./trigger";
 
 UNSAFE_installDurableHooks({
   registerTrigger: async (spec) => {
@@ -22,7 +22,7 @@ UNSAFE_installDurableHooks({
     // boot. We bind the trigger by name so this module doesn't have to
     // import the factory back from jobs (which would still be safe, but
     // keeps the events→jobs edge minimal).
-    await triggerByName({
+    await UNSAFE_triggerByName({
       on: source,
       jobName: "jobs.resume",
       with: spec.with,

@@ -8,13 +8,14 @@ import { triggerTableRegistry } from "./registry";
 
 export interface TriggerSpec<P, I> {
   on: EventSource<P>;
-  do: JobFactory<string, z.ZodType<I>>;
+  do: JobFactory<string, z.ZodType<I>, z.ZodType>;
   /**
-   * Static fields baked into the trigger row that the event payload does not
-   * supply. Merged with `eventPayload` at dispatch time (event payload wins
-   * on key overlap) to form the target job's input.
+   * The target job's full `input` value. Stored verbatim in the trigger row
+   * and passed as `input` to the job's run handler at dispatch time. The
+   * event payload reaches the job through a separate `event` argument, so
+   * key collisions between `with` and event fields are impossible.
    */
-  with?: Partial<I>;
+  with: I;
   oneShot?: boolean;
 }
 
@@ -24,16 +25,16 @@ export async function trigger<P, I>(spec: TriggerSpec<P, I>): Promise<string> {
   return insertTriggerRow({
     on: spec.on,
     jobName: spec.do.name,
-    with: spec.with as Record<string, unknown> | undefined,
+    with: spec.with as Record<string, unknown>,
     oneShot: spec.oneShot,
   });
 }
 
-export interface TriggerByNameSpec<P> {
+export interface UnsafeTriggerByNameSpec<P> {
   on: EventSource<P>;
   /**
    * Target job, identified by registered name. Used by infrastructure code
-   * (e.g. the @plugins/jobs durable-hook bridge) that can't hold a typed
+   * (the @plugins/jobs durable-hook bridge) that can't hold a typed
    * `JobFactory` reference back to its own builtin without closing the
    * plugin DAG. Plugin authors should prefer `trigger()` — passing the
    * typed factory keeps `with` linked to the target's input schema.
@@ -43,10 +44,13 @@ export interface TriggerByNameSpec<P> {
   oneShot?: boolean;
 }
 
-// Same row-insert as `trigger()`, but typed for callers that only carry a
-// job name. Skips the JobFactory typing — `with` is therefore unconstrained.
-export async function triggerByName<P>(
-  spec: TriggerByNameSpec<P>,
+// Same row-insert as `trigger()`, but typed for infra callers that only
+// carry a job name. The `UNSAFE_` prefix is the contract: `with` is
+// unconstrained and the dispatcher will error at runtime if it doesn't
+// satisfy the target job's `input` schema. Reserved for cycle-breaking
+// uses (e.g. `install-jobs-hooks.ts`); feature plugins use `trigger()`.
+export async function UNSAFE_triggerByName<P>(
+  spec: UnsafeTriggerByNameSpec<P>,
 ): Promise<string> {
   return insertTriggerRow(spec);
 }

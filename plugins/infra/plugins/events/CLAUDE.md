@@ -10,8 +10,8 @@
   - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`
   - DB schema: `plugins/infra/plugins/events/server/internal/tables.ts`
 - Exports (server):
-  - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerByNameSpec`, `TriggerSpec`
-  - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `trigger`, `triggerByName`, `triggerTableRegistry`
+  - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`, `UnsafeTriggerByNameSpec`
+  - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
 - Server:
   - `GET /api/events/emissions`
   - `GET /api/events/triggers`

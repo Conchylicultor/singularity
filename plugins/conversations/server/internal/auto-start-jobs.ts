@@ -14,13 +14,29 @@ import { createConversation } from "./lifecycle";
 // or 'dropped') installed at queue time in plugins/tasks/server/internal/
 // handle-create.ts. Idempotent: every guard short-circuits and clears the
 // auto-start marker on success/failure so a duplicate emit no-ops.
+//
+// Early-returns log on the bug-signal paths (task gone or marker already
+// cleared) since the trigger row was just deleted by the events dispatcher
+// — silent skips on these paths historically masked orphaned auto_start_at
+// rows that had no live trigger to ever fire them.
 export const maybeLaunchTaskJob = defineJob({
   name: "tasks.maybe-launch",
-  input: z.object({ taskId: z.string() }).passthrough(),
-  run: async ({ taskId }) => {
+  input: z.object({ taskId: z.string() }),
+  event: z.never(),
+  run: async ({ input: { taskId } }) => {
     const t = await getTask(taskId);
-    // Already launched, cancelled, or task gone — nothing to do.
-    if (!t || !t.autoStartAt) return;
+    if (!t) {
+      console.warn(
+        `[tasks.maybe-launch] task ${taskId} not found; trigger fired but no launch`,
+      );
+      return;
+    }
+    if (!t.autoStartAt) {
+      console.warn(
+        `[tasks.maybe-launch] task ${taskId} has no auto_start_at; trigger fired but no launch (already launched, cancelled, or never armed)`,
+      );
+      return;
+    }
     // Some other dep is still blocking; another trigger will fire later.
     if (await hasBlockingDep(taskId)) return;
     const attempts = await listAttemptsForTask(taskId);

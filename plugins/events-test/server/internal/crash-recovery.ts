@@ -21,10 +21,7 @@ export async function handleCrashRecovery(): Promise<Response> {
   const label = `crash-recovery-${randomUUID()}`;
 
   const farFuture = new Date(Date.now() + 60 * 60 * 1000);
-  await logPing.enqueue(
-    { label, userId: "crash-test", message: "should-rerun" },
-    { runAt: farFuture },
-  );
+  await logPing.enqueue({ label }, { runAt: farFuture });
 
   // Find the row by payload — addJob doesn't return the private-table id.
   const result = await db.execute<{ id: string }>(drizzleSql`

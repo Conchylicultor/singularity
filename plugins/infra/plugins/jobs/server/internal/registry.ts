@@ -70,7 +70,19 @@ export interface JobCtx {
 export interface RegisteredJob {
   name: string;
   inputSchema: z.ZodType;
-  run: (input: unknown, ctx: JobCtx) => Promise<void> | void;
+  /**
+   * Schema for the event payload delivered alongside `input` when the job
+   * is invoked via the events dispatcher. `z.never()` declares that the
+   * job ignores events — the dispatcher skips event parsing and passes
+   * `event: undefined`. Direct enqueues always pass `event: undefined`
+   * regardless of the schema (Layer-1 has no event source).
+   */
+  eventSchema: z.ZodType;
+  run: (args: {
+    input: unknown;
+    event: unknown;
+    ctx: JobCtx;
+  }) => Promise<void> | void;
   maxAttempts: number;
   /**
    * Enqueue by the registered job's public factory. Exposed here so the
@@ -97,16 +109,30 @@ export interface EnqueueOpts {
   tx?: EnqueueTx;
 }
 
-export interface DefineJobSpec<N extends string, S extends z.ZodType> {
+export interface DefineJobSpec<
+  N extends string,
+  S extends z.ZodType,
+  E extends z.ZodType,
+> {
   name: N;
+  /**
+   * Schema for `input` — the value passed to direct `.enqueue()` calls and
+   * baked into a trigger row's `with` for event-driven invocations. Parsed
+   * exactly ONCE per workflow at the original `enqueue()` call; the
+   * post-transform value is stored, replayed on retries, and reused on
+   * resume. Zod `.transform()` is therefore safe (non-idempotent
+   * transforms don't re-run).
+   */
   input: S;
   /**
-   * Handler body. The `input` schema is parsed exactly ONCE per workflow,
-   * at the original `enqueue()` call. The post-transform value is what's
-   * stored in the queue payload, what the handler receives, and what the
-   * resume path re-uses verbatim — Zod transforms do NOT re-run on retries
-   * or resumes. This means input schemas with non-idempotent transforms
-   * (e.g. `z.string().transform(s => s + "!")`) are safe.
+   * Schema for `event` — the event payload delivered when invoked through
+   * the events dispatcher. Use `z.never()` to declare that this job
+   * ignores events; the run handler then sees `event: undefined`. Direct
+   * `.enqueue()` always passes `event: undefined` regardless of schema.
+   */
+  event: E;
+  /**
+   * Handler body. Receives `{ input, event, ctx }` as a single object.
    *
    * DO NOT wrap `ctx.step` / `ctx.waitFor` / `ctx.sleep` in user-level
    * `try/catch`. Suspension is signalled by an internal sentinel error
@@ -114,13 +140,22 @@ export interface DefineJobSpec<N extends string, S extends z.ZodType> {
    * indefinitely hung. If you must catch around `ctx.*`, gate the catch
    * with `isSuspendSignal(err)` and re-throw.
    */
-  run: (input: z.infer<S>, ctx: JobCtx) => Promise<void> | void;
+  run: (args: {
+    input: z.infer<S>;
+    event: z.infer<E> | undefined;
+    ctx: JobCtx;
+  }) => Promise<void> | void;
   maxAttempts?: number;
 }
 
-export interface JobFactory<N extends string, S extends z.ZodType> {
+export interface JobFactory<
+  N extends string,
+  S extends z.ZodType,
+  E extends z.ZodType = z.ZodType,
+> {
   readonly name: N;
   readonly inputSchema: S;
+  readonly eventSchema: E;
   enqueue(
     input: z.input<S>,
     opts?: EnqueueOpts,
@@ -139,9 +174,11 @@ export interface JobTaskPayload {
   input: unknown;
 }
 
-export function defineJob<N extends string, S extends z.ZodType>(
-  spec: DefineJobSpec<N, S>,
-): JobFactory<N, S> {
+export function defineJob<
+  N extends string,
+  S extends z.ZodType,
+  E extends z.ZodType,
+>(spec: DefineJobSpec<N, S, E>): JobFactory<N, S, E> {
   if (jobRegistry.has(spec.name)) {
     throw new Error(`[jobs] duplicate job name: ${spec.name}`);
   }
@@ -204,15 +241,17 @@ export function defineJob<N extends string, S extends z.ZodType>(
   jobRegistry.set(spec.name, {
     name: spec.name,
     inputSchema: spec.input,
-    run: spec.run as (input: unknown, ctx: JobCtx) => Promise<void> | void,
+    eventSchema: spec.event,
+    run: spec.run as RegisteredJob["run"],
     maxAttempts: spec.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
     enqueue,
   });
 
-  const factory: JobFactory<N, S> = {
+  const factory: JobFactory<N, S, E> = {
     name: spec.name,
     inputSchema: spec.input,
-    enqueue: enqueue as JobFactory<N, S>["enqueue"],
+    eventSchema: spec.event,
+    enqueue: enqueue as JobFactory<N, S, E>["enqueue"],
   };
   return factory;
 }

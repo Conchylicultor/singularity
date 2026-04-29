@@ -54,8 +54,10 @@ async function endTurnIsAfterPushPrompt(
 export const pushAndExitJob = defineJob({
   name: "push_and_exit.run",
   input: z.object({ conversationId: z.string() }),
+  // Direct-enqueue only; never event-triggered.
+  event: z.never(),
   maxAttempts: 3,
-  run: async ({ conversationId }, ctx) => {
+  run: async ({ input: { conversationId }, ctx }) => {
     await ctx.step("send-prompt", async () => {
       await sendTurn(conversationId, PUSH_AND_EXIT_PROMPT);
     });

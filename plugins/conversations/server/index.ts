@@ -17,6 +17,8 @@ import { ensureSystemMeta } from "./internal/meta-system";
 // trigger row tries to dispatch them.
 import "./internal/auto-start-jobs";
 
+export { maybeLaunchTaskJob } from "./internal/auto-start-jobs";
+
 export { ConversationModelSchema } from "./schema";
 export type { ConversationModel } from "./schema";
 export { ConversationStatusSchema, isActiveStatus } from "./status";

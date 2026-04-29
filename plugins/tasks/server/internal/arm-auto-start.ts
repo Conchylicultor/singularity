@@ -3,10 +3,8 @@ import {
   setTaskAutoStart,
   taskStatusChanged,
 } from "@plugins/tasks-core/server";
-import { triggerByName } from "@plugins/infra/plugins/events/server";
-import { UNSAFE_getRegisteredJob } from "@plugins/infra/plugins/jobs/server";
-
-const MAYBE_LAUNCH_JOB = "tasks.maybe-launch";
+import { trigger } from "@plugins/infra/plugins/events/server";
+import { maybeLaunchTaskJob } from "@plugins/conversations/server";
 
 // Mark a task as queued and either install per-dep unblock triggers (if it
 // has any blocking deps) or enqueue tasks.maybe-launch immediately. Shared
@@ -28,15 +26,15 @@ export async function armTaskAutoStart(args: {
     // maybe-launch, the job re-checks hasBlockingDep, and only the last
     // unblocking transition actually launches.
     for (const depId of dependencies) {
-      await triggerByName({
+      await trigger({
         on: taskStatusChanged.where({ taskId: depId, status: "done" }),
-        jobName: MAYBE_LAUNCH_JOB,
+        do: maybeLaunchTaskJob,
         with: { taskId },
         oneShot: true,
       });
-      await triggerByName({
+      await trigger({
         on: taskStatusChanged.where({ taskId: depId, status: "dropped" }),
-        jobName: MAYBE_LAUNCH_JOB,
+        do: maybeLaunchTaskJob,
         with: { taskId },
         oneShot: true,
       });
@@ -45,7 +43,6 @@ export async function armTaskAutoStart(args: {
     // No blocking deps — either no deps at all, or every dep was already
     // done/dropped at queue time. Enqueue immediately rather than arm
     // triggers that would never fire.
-    const job = UNSAFE_getRegisteredJob(MAYBE_LAUNCH_JOB);
-    if (job) await job.enqueue({ taskId });
+    await maybeLaunchTaskJob.enqueue({ taskId });
   }
 }

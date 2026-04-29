@@ -44,23 +44,18 @@ export async function handleEmit(req: Request): Promise<Response> {
 
 interface DirectEnqueueBody {
   label: string;
-  userId?: string;
-  message?: string;
 }
 
 // Exercises the Layer-1 `.enqueue()` path: no trigger row is involved, the
-// job runs straight from graphile_worker.jobs. Load-bearing for the
-// push-and-exit migration that will land after this split.
+// job runs straight from graphile_worker.jobs. The handler logs `label` from
+// input and defaults the event-only fields (userId/message) to
+// "direct"/"direct-enqueued", since direct enqueue has no event source.
 export async function handleDirectEnqueue(req: Request): Promise<Response> {
   const body = (await req.json()) as DirectEnqueueBody;
   if (typeof body.label !== "string") {
     return Response.json({ error: "label (string) required" }, { status: 400 });
   }
-  const { jobId } = await logPing.enqueue({
-    label: body.label,
-    userId: body.userId ?? "direct",
-    message: body.message ?? "direct-enqueued",
-  });
+  const { jobId } = await logPing.enqueue({ label: body.label });
   return Response.json({ jobId });
 }
 
