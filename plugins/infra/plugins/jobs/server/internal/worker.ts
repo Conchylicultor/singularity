@@ -115,10 +115,27 @@ async function dispatch(
           "[jobs] jobs.resume not registered — jobs/server/index.ts must side-effect import resume-job.ts",
         );
       }
-      await resumeJob.enqueue(resumePayload, {
-        jobKey: opts.jobKey,
-        runAt: opts.runAt,
-      });
+      // Bypass `defineJob.enqueue`'s per-job-name namespacing: the timeout
+      // `jobKey` is a fully-formed identity owned by this scheduler, and
+      // the cancel-DELETE in `resume-job.ts` matches on the bare form.
+      // Going through `resumeJob.enqueue` would prefix it with
+      // `jobs.resume:` and the DELETE would miss. The worker re-parses
+      // `input` against `inputSchema` on dispatch, so we don't lose
+      // schema-drift detection by skipping the public parse.
+      const utils = await getWorkerUtils();
+      await utils.addJob(
+        JOB_TASK,
+        {
+          jobName: "jobs.resume",
+          workflowRunId: opts.jobKey,
+          input: resumePayload,
+        } satisfies JobTaskPayload,
+        {
+          jobKey: opts.jobKey,
+          runAt: opts.runAt,
+          maxAttempts: resumeJob.maxAttempts,
+        },
+      );
     },
   });
 

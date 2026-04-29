@@ -28,7 +28,9 @@ export interface JobCtx {
   attempt: number;
   /**
    * Stable identity for this workflow run across suspends and resumes.
-   * Equals `jobKey` if one was passed to `enqueue`, else a generated uuid.
+   * When `jobKey` was passed to `enqueue`, this is `${jobName}:${jobKey}`
+   * (namespaced so two different jobs picking the same natural id don't
+   * collide on `_jobWaits` / `_jobSteps`); otherwise a generated uuid.
    * Used as the key for the step and wait logs.
    */
   workflowRunId: string;
@@ -96,6 +98,14 @@ export interface RegisteredJob {
 }
 
 export interface EnqueueOpts {
+  /**
+   * Caller-supplied workflow identity, scoped to *this* `defineJob`. Two
+   * enqueues of the same job with the same `jobKey` collapse into one
+   * graphile-worker row (replace mode) and share `workflowRunId`, so
+   * step/wait memoization carries across retries. Different jobs that
+   * pass the same `jobKey` do NOT collide — `enqueue` namespaces the
+   * underlying graphile key and `workflowRunId` by job name.
+   */
   jobKey?: string;
   maxAttempts?: number;
   runAt?: Date;
@@ -190,7 +200,17 @@ export function defineJob<
     // Parse once at enqueue time so the serialized payload is already in
     // the post-transform shape; the worker re-parses as a safety check.
     const parsed = spec.input.parse(input);
-    const workflowRunId = opts?.jobKey ?? randomUUID();
+    // Namespace the user's `jobKey` by job name to derive both the
+    // `workflowRunId` and the graphile-level dedup key. Two `defineJob`s
+    // that pick the same natural identifier (e.g. `conversationId`) used
+    // to share a `workflowRunId` here, which collided in `_jobWaits` /
+    // `_jobSteps` and made `jobs.resume`'s `addJob` clobber the other
+    // workflow's resume row. Per-job namespacing makes the collision
+    // structurally impossible — each `defineJob` gets its own keyspace.
+    const workflowRunId = opts?.jobKey
+      ? `${spec.name}:${opts.jobKey}`
+      : randomUUID();
+    const graphileJobKey = opts?.jobKey ? workflowRunId : null;
     const maxAttempts =
       opts?.maxAttempts ?? spec.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
     const payload: JobTaskPayload = {
@@ -221,7 +241,7 @@ export function defineJob<
           JSON.stringify(payload),
           opts.runAt ?? null,
           maxAttempts,
-          opts.jobKey ?? null,
+          graphileJobKey,
         ],
       );
       const id = result.rows[0]?.id;
@@ -231,7 +251,7 @@ export function defineJob<
 
     const utils = await getWorkerUtils();
     const job = await utils.addJob(JOB_TASK, payload, {
-      jobKey: opts?.jobKey,
+      jobKey: graphileJobKey ?? undefined,
       maxAttempts,
       runAt: opts?.runAt,
     });
