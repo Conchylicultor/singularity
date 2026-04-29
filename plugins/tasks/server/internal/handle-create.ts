@@ -1,6 +1,7 @@
 import {
   addTaskDependency,
   createTask,
+  generateTaskTitle,
   getTask,
 } from "@plugins/tasks-core/server";
 import { armTaskAutoStart } from "./arm-auto-start";
@@ -12,6 +13,7 @@ interface AutoStartInput {
 interface CreateBody {
   parentId?: string | null;
   title?: string;
+  description?: string;
   author?: string;
   rank?: string;
   dependencies?: string[];
@@ -20,9 +22,20 @@ interface CreateBody {
 
 export async function handleCreate(req: Request): Promise<Response> {
   const body = (await req.json().catch(() => ({}))) as CreateBody;
+  const description = body.description?.trim() || null;
+  const explicitTitle = body.title?.trim();
+  // When a caller supplies only a description, ask Haiku for a short title.
+  // The helper returns first-line-80-chars on any failure, so task creation
+  // never blocks on Claude CLI being available.
+  const title = explicitTitle
+    ? explicitTitle
+    : description
+      ? await generateTaskTitle(description)
+      : "Untitled";
   const row = await createTask({
     parentId: body.parentId ?? null,
-    title: body.title ?? "Untitled",
+    title,
+    description,
     author: body.author ?? "user",
     rank: body.rank,
   });

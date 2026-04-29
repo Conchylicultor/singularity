@@ -8,6 +8,7 @@ import {
   getConversation,
   getConversationRuntime,
   updateConversation,
+  synthesiseTitleFallback,
 } from "@plugins/tasks-core/server";
 import { Runtime } from "./runtime";
 import type { ConversationModel } from "../schema";
@@ -34,8 +35,7 @@ const newId = (prefix: string) => {
 function synthesiseTitle(prompt: string | undefined): string {
   const trimmed = (prompt ?? "").trim();
   if (!trimmed) return "Untitled";
-  const firstLine = trimmed.split(/\r?\n/, 1)[0] ?? trimmed;
-  return firstLine.length > 80 ? `${firstLine.slice(0, 77)}…` : firstLine;
+  return synthesiseTitleFallback(trimmed);
 }
 
 const UNINFORMATIVE_TITLES = ["Untitled", "Untitled conversation"];

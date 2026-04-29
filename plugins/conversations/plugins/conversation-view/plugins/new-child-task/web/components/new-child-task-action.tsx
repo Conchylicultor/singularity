@@ -24,13 +24,15 @@ export function NewChildTaskAction() {
   const cancelledRef = useRef(false);
 
   const submit = async (mode: SubmitMode) => {
-    const title = value.trim();
-    if (!title || submitting) return;
+    const description = value.trim();
+    if (!description || submitting) return;
     setSubmitting(mode);
     try {
+      // Send the prompt as the task description; the server asks Haiku for a
+      // short title (with first-line-80-chars fallback if the CLI is offline).
       const body: Record<string, unknown> = {
         parentId: conversation.taskId,
-        title,
+        description,
       };
       if (mode.kind === "queue") {
         body.autoStart = { model: mode.model };

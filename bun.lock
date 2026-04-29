@@ -332,6 +332,10 @@
       "name": "@singularity/plugin-infra-attachments",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/claude-cli": {
+      "name": "@singularity/plugin-infra-claude-cli",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/events": {
       "name": "@singularity/plugin-infra-events",
       "version": "0.0.1",
@@ -1181,6 +1185,8 @@
     "@singularity/plugin-infra": ["@singularity/plugin-infra@workspace:plugins/infra"],
 
     "@singularity/plugin-infra-attachments": ["@singularity/plugin-infra-attachments@workspace:plugins/infra/plugins/attachments"],
+
+    "@singularity/plugin-infra-claude-cli": ["@singularity/plugin-infra-claude-cli@workspace:plugins/infra/plugins/claude-cli"],
 
     "@singularity/plugin-infra-events": ["@singularity/plugin-infra-events@workspace:plugins/infra/plugins/events"],
 

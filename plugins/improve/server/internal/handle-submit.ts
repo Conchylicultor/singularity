@@ -1,4 +1,8 @@
-import { createTask, _taskAttachments } from "@plugins/tasks-core/server";
+import {
+  createTask,
+  generateTaskTitle,
+  _taskAttachments,
+} from "@plugins/tasks-core/server";
 import { getAttachment } from "@plugins/infra/plugins/attachments/server";
 import { createConversation } from "@plugins/conversations/server";
 import { db } from "@server/db/client";
@@ -28,10 +32,11 @@ export async function handleSubmit(req: Request): Promise<Response> {
     attachments.push(row);
   }
 
+  const description = renderTaskDescription({ text, url, attachments });
   const task = await createTask({
     parentId: IMPROVEMENTS_META_TASK_ID,
-    title: synthesiseTitle(text),
-    description: renderTaskDescription({ text, url, attachments }),
+    title: await generateTaskTitle(text),
+    description,
     author: "improve-plugin",
   });
 
@@ -59,11 +64,6 @@ export async function handleSubmit(req: Request): Promise<Response> {
 
   const res: ImproveSubmitResponse = { taskId: task.id, conversationId };
   return Response.json(res);
-}
-
-function synthesiseTitle(text: string): string {
-  const firstLine = text.split(/\r?\n/, 1)[0] ?? text;
-  return firstLine.length > 80 ? `${firstLine.slice(0, 77)}…` : firstLine;
 }
 
 function renderTaskDescription(opts: {

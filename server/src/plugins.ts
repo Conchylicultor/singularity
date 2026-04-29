@@ -21,6 +21,7 @@ import jsonlViewerPlugin from "@plugins/conversations/plugins/conversation-view/
 import conversationCodeReviewPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/server";
 import healthPlugin from "@plugins/health/server";
 import mcpPlugin from "@plugins/infra/plugins/mcp/server";
+import claudeCliPlugin from "@plugins/infra/plugins/claude-cli/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/server";
 import tasksPlugin from "@plugins/tasks/server";
@@ -72,6 +73,7 @@ export const plugins: ServerPluginDefinition[] = [
   conversationCodeReviewPlugin,
   healthPlugin,
   mcpPlugin,
+  claudeCliPlugin,
   configPlugin,
   statsCommitsPlugin,
   statsTasksPlugin,
