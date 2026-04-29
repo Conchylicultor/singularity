@@ -91,11 +91,18 @@ export async function generateMigration(opts: {
   if (!migrationName) {
     removeGeneratedFiles(migrationsDir, added);
     console.error(
-      "\nError: plugin schema changed and would generate a new migration, " +
-        "but --migration-name was not provided.\n" +
+      "\nError: DB schema change detected — a new migration is required, but --migration-name was not provided.\n" +
+        "\n" +
         "Re-run with:\n" +
         "  ./singularity build --migration-name <short_slug>\n" +
-        "e.g. --migration-name add_todo_status\n",
+        "\n" +
+        "Examples:\n" +
+        "  --migration-name add_task_priority      (added a column/table)\n" +
+        "  --migration-name remove_yak_shaving     (removed a plugin's tables)\n" +
+        "\n" +
+        "If you removed a plugin or table: this is expected — drizzle generates a DROP TABLE\n" +
+        "migration automatically. Do NOT delete migration files or snapshots by hand;\n" +
+        "that breaks the snapshot chain for every other agent.\n",
     );
     process.exit(1);
   }

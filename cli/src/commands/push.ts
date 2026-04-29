@@ -57,7 +57,6 @@ export function registerPush(program: Command) {
     .command("push")
     .description("Commit (if -m provided), merge into main, and push")
     .option("-m, --message <msg>", "Commit message — stages and commits all changes before pushing")
-    .option("--skip-checks", "Skip pre-push validation checks (unsafe)")
     .option(
       "--from-main",
       "DANGER: commit and push directly from main, bypassing the worktree-merge flow. " +
@@ -67,11 +66,11 @@ export function registerPush(program: Command) {
     )
     .action(async (opts: {
       message?: string;
-      skipChecks?: boolean;
       fromMain?: boolean;
     }) => {
       const branch = await getCurrentBranch();
       const onMain = branch === "main";
+
       // One push id per invocation; every commit that lands on main as part of
       // this push gets stamped with it (via `git commit --trailer` for the
       // --from-main path, and via `git rebase --exec` for the worktree path).
@@ -127,16 +126,14 @@ export function registerPush(program: Command) {
           "--exec",
           `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
         ]);
-        if (!opts.skipChecks) {
-          console.log("Running checks...");
-          const ok = await runChecks();
-          if (!ok) {
-            console.error(
-              "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
-                "(your commit is still on HEAD; use `git reset --soft HEAD~1` to unstage it if needed).",
-            );
-            process.exit(1);
-          }
+        console.log("Running checks...");
+        const ok = await runChecks();
+        if (!ok) {
+          console.error(
+            "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
+              "(your commit is still on HEAD; use `git reset --soft HEAD~1` to unstage it if needed).",
+          );
+          process.exit(1);
         }
         console.log("Pushing main...");
         await exec(["git", "push"]);
@@ -185,17 +182,15 @@ export function registerPush(program: Command) {
       }
 
       // 4. Run checks on the rebased tree — this is exactly what will land on main.
-      if (!opts.skipChecks) {
-        console.log("Running checks...");
-        const ok = await runChecks();
-        if (!ok) {
-          console.error(
-            `Checks failed after rebasing ${branch} onto main. ` +
-              `Fix the issue and re-run ./singularity push ` +
-              `(your commits are on ${branch}; use \`git reset --soft HEAD~1\` to unstage the last one if needed).`,
-          );
-          process.exit(1);
-        }
+      console.log("Running checks...");
+      const ok = await runChecks();
+      if (!ok) {
+        console.error(
+          `Checks failed after rebasing ${branch} onto main. ` +
+            `Fix the issue and re-run ./singularity push ` +
+            `(your commits are on ${branch}; use \`git reset --soft HEAD~1\` to unstage the last one if needed).`,
+        );
+        process.exit(1);
       }
 
       // 5. Push the branch (force since rebase rewrites history — safe for single-owner worktree branches)

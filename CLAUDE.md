@@ -117,7 +117,7 @@ Once changes are committed and reviewed, merge back to main:
 ```
 
 This will:
-1. Run validation checks (skip with `--skip-checks`)
+1. Run validation checks
 2. Check for uncommitted changes (fails if dirty)
 3. Push the worktree branch to remote
 4. Pull main (`--ff-only`) to ensure it's up to date

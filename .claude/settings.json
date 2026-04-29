@@ -21,6 +21,10 @@
           {
             "type": "command",
             "command": "bash .claude/hooks/guard-find.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/guard-migrations.sh"
           }
         ]
       }
