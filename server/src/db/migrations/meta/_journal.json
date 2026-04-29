@@ -344,6 +344,13 @@
       "tag": "20260429_231129_5a5215da__unified_paste_images",
       "hash": "5a5215da",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777504648000,
+      "tag": "20260429_231728_3b5aa79b__conversation_category",
+      "hash": "3b5aa79b",
+      "breakpoints": true
     }
   ]
 }

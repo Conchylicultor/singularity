@@ -4,8 +4,22 @@ import type {
 } from "@plugins/conversations/shared";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { cn } from "@/lib/utils";
+import { Item } from "../slots";
 
 export { formatRelativeTime };
+
+function ChipsSlot({ conv }: { conv: ConversationItemConv }) {
+  const items = Item.Chips.useContributions();
+  if (items.length === 0) return null;
+  return (
+    <>
+      {items.map((item, i) => {
+        const Component = item.component;
+        return <Component key={i} conv={conv} />;
+      })}
+    </>
+  );
+}
 
 export const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
   starting: "bg-muted-foreground/60",
@@ -18,6 +32,7 @@ export const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
 // narrower `ConversationSummary` carried by `attemptsResource`. Anything
 // with these fields renders.
 export type ConversationItemConv = {
+  id: string;
   title: string | null;
   status: ConversationStatus;
   kind: ConversationKind;
@@ -84,6 +99,7 @@ export function ConversationItem({
         <ConvStatusDot conv={conv} />
         <ConvTitle conv={conv} />
         <ConvSysBadge conv={conv} />
+        <ChipsSlot conv={conv} />
       </span>
     );
   }
@@ -96,6 +112,7 @@ export function ConversationItem({
         <div className="flex items-center gap-1.5 overflow-hidden">
           <ConvTitle conv={conv} />
           <ConvSysBadge conv={conv} />
+          <ChipsSlot conv={conv} />
         </div>
         <ConvRelativeTime conv={conv} />
       </div>

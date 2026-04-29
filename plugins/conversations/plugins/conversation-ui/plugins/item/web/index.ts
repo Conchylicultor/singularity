@@ -11,6 +11,7 @@ export {
   type ConversationItemConv,
   type ConversationItemProps,
 } from "./components/conversation-item";
+export { Item } from "./slots";
 
 export default {
   id: "conversation-ui-item",

@@ -110,6 +110,10 @@
       "name": "@singularity/plugin-conversations-recover",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-category": {
+      "name": "@singularity/plugin-conversations-conversation-category",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-groups": {
       "name": "@singularity/plugin-conversations-conversation-groups",
       "version": "0.0.1",
@@ -1080,6 +1084,8 @@
     "@singularity/plugin-config": ["@singularity/plugin-config@workspace:plugins/config"],
 
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
+
+    "@singularity/plugin-conversations-conversation-category": ["@singularity/plugin-conversations-conversation-category@workspace:plugins/conversations/plugins/conversation-category"],
 
     "@singularity/plugin-conversations-conversation-groups": ["@singularity/plugin-conversations-conversation-groups@workspace:plugins/conversations/plugins/conversation-groups"],
 
