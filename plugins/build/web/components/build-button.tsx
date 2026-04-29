@@ -23,6 +23,7 @@ async function getBuildStatus(): Promise<BuildStatus | null> {
 
 export function BuildButton() {
   const [building, setBuilding] = useState(false);
+  const [autoBuilding, setAutoBuilding] = useState(false);
   const [mainAheadCount, setMainAheadCount] = useState(0);
   const [staleTab, setStaleTab] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -42,6 +43,11 @@ export function BuildButton() {
     } else if (status.autoBuildAt && status.autoBuildAt !== lastAutoBuildAtRef.current) {
       lastAutoBuildAtRef.current = status.autoBuildAt;
       Shell.Toast({ description: "Auto-build triggered by new push", variant: "info" });
+      setAutoBuilding(true);
+      getHealth().then((before) => {
+        if (!before) { setAutoBuilding(false); return; }
+        waitForRestart(before.startedAt).then(() => setAutoBuilding(false));
+      });
     }
   }
 
@@ -91,7 +97,7 @@ export function BuildButton() {
         }
       }}
     >
-      <MdRefresh className={`size-4 ${building ? "animate-spin" : ""}`} />
+      <MdRefresh className={`size-4 ${building || autoBuilding ? "animate-spin" : ""}`} />
       Build
       {mainAheadCount > 0 ? (
         <Tooltip>
