@@ -25,18 +25,12 @@ export const markProgressPushedJob = defineJob({
       .values({
         conversationId,
         phase: "pushed",
-        messageId: null,
         source: "push",
         updatedAt: new Date(),
       })
       .onConflictDoUpdate({
         target: _conversationProgress.conversationId,
-        set: {
-          phase: "pushed",
-          messageId: null,
-          source: "push",
-          updatedAt: new Date(),
-        },
+        set: { phase: "pushed", source: "push", updatedAt: new Date() },
       });
 
     conversationProgressResource.notify();

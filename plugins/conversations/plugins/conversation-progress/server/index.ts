@@ -5,20 +5,20 @@ import {
 } from "@plugins/infra/plugins/events/server";
 import { conversationTurnCompleted } from "@plugins/conversations/server";
 import { pushLanded } from "@plugins/tasks-core/server";
-import { classifyProgressJob } from "./internal/haiku-job";
+import { classifyProgressJob } from "./internal/heuristic-job";
 import { markProgressPushedJob } from "./internal/push-job";
 import { conversationProgressResource } from "./internal/resource";
 
 export { _conversationProgress } from "./internal/tables";
 export { conversationProgressResource } from "./internal/resource";
-export { classifyProgressJob } from "./internal/haiku-job";
+export { classifyProgressJob } from "./internal/heuristic-job";
 export { markProgressPushedJob } from "./internal/push-job";
 
 export default {
   id: "conversation-progress",
   name: "Conversation: Progress",
   description:
-    "Classifies each conversation into one of four sequential phases (research → plan → implementation → pushed) using Haiku after each turn, and immediately sets pushed when a push event lands.",
+    "Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.",
   resources: [conversationProgressResource],
   onReady: async () => {
     await deleteTriggersFor(classifyProgressJob);

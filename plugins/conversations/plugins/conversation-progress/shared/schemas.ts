@@ -3,7 +3,7 @@ import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/share
 
 export const PHASE_ORDER = [
   "research",
-  "plan",
+  "design",
   "implementation",
   "pushed",
 ] as const;
@@ -11,7 +11,7 @@ export type ConversationPhase = (typeof PHASE_ORDER)[number];
 
 export const PHASE_LABELS: Record<ConversationPhase, string> = {
   research: "Research",
-  plan: "Plan",
+  design: "Design",
   implementation: "Implementation",
   pushed: "Pushed",
 };
@@ -19,7 +19,7 @@ export const PHASE_LABELS: Record<ConversationPhase, string> = {
 export const ConversationProgressSchema = z.object({
   conversationId: z.string(),
   phase: z.enum(PHASE_ORDER),
-  source: z.enum(["haiku", "push"]),
+  source: z.enum(["heuristic", "push"]),
   updatedAt: z.coerce.date(),
 });
 export type ConversationProgress = z.infer<typeof ConversationProgressSchema>;

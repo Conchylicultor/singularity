@@ -386,6 +386,13 @@
       "tag": "20260430_221505_9681b3c2__add_conversation_progress",
       "hash": "9681b3c2",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777590670000,
+      "tag": "20260430_231110_6596f940__refactor_progress_heuristic",
+      "hash": "6596f940",
+      "breakpoints": true
     }
   ]
 }
