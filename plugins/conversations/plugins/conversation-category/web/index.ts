@@ -5,6 +5,7 @@ import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/ite
 import { conversationCategoryConfig } from "../shared";
 import { CategoryChipRow } from "./components/category-chip-row";
 import { CategoryChipToolbar } from "./components/category-chip-toolbar";
+import { CategoryColorSettings } from "./components/category-color-settings";
 
 export default {
   id: "conversation-category",
@@ -18,5 +19,12 @@ export default {
     }),
     Item.Chips({ component: CategoryChipRow }),
     Config.Spec(conversationCategoryConfig),
+    Config.Section({
+      id: "category-colors",
+      title: "Category colors",
+      description:
+        "Pick a color for each category. Click the active swatch to reset to auto.",
+      component: CategoryColorSettings,
+    }),
   ],
 } satisfies PluginDefinition;

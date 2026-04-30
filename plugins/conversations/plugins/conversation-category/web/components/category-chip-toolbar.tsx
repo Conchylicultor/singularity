@@ -10,12 +10,14 @@ import {
 } from "@/components/ui/popover";
 import { conversationCategoryConfig } from "../../shared";
 import { useCategoryFor } from "../internal/use-category";
+import { useCategoryColors } from "../internal/use-category-colors";
 import { colorClassFor } from "../internal/colors";
 import { reclassify, setCategory } from "../internal/api";
 
 export function CategoryChipToolbar() {
   const { conversation } = conversationPane.useData();
   const category = useCategoryFor(conversation.id);
+  const colors = useCategoryColors();
   const { categories } = useConfigValues(
     conversationCategoryConfig,
     "conversation-category",
@@ -58,7 +60,7 @@ export function CategoryChipToolbar() {
 
   const label = category ?? "Uncategorized";
   const colorClass = category
-    ? colorClassFor(category)
+    ? colorClassFor(category, colors)
     : "bg-muted text-muted-foreground";
 
   return (
@@ -93,7 +95,7 @@ export function CategoryChipToolbar() {
                     <MdCheck className="size-3" />
                   </span>
                   <span
-                    className={`inline-flex items-center rounded px-1.5 py-px text-[10px] font-medium ${colorClassFor(c)}`}
+                    className={`inline-flex items-center rounded px-1.5 py-px text-[10px] font-medium ${colorClassFor(c, colors)}`}
                   >
                     {c}
                   </span>

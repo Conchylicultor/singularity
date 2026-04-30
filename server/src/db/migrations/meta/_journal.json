@@ -351,6 +351,13 @@
       "tag": "20260430_000308_3b5aa79b__conversation_category",
       "hash": "3b5aa79b",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777544612000,
+      "tag": "20260430_102332_753b0a82__add_category_colors",
+      "hash": "753b0a82",
+      "breakpoints": true
     }
   ]
 }

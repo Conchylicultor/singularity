@@ -67,7 +67,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
   - Imported by: `build`, `commits`, `conversation-category`
-  - Slot contributors: `commits`, `quick-prompts`
+  - Slot contributors: `commits`, `conversation-category`, `quick-prompts`
 
 - **`conversations`** [load-bearing] — Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:

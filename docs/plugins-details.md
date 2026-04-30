@@ -148,7 +148,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
   - Imported by: `build`, `commits`, `conversation-category`
-  - Slot contributors: `commits`, `quick-prompts`
+  - Slot contributors: `commits`, `conversation-category`, `quick-prompts`
 
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:
@@ -179,20 +179,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
       - Defines:
+        - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables-colors.ts`
         - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
       - Exports (server):
-        - Values: `_conversationCategories`, `classifyConversationJob`, `conversationCategoriesResource`
+        - Values: `_conversationCategories`, `_conversationCategoryColors`, `categoryColorsResource`, `classifyConversationJob`, `conversationCategoriesResource`
       - Exports (shared):
         - Types: `ConversationCategoriesPayload`, `ConversationCategory`
         - Values: `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`
       - Contributes:
         - `conversationPane.Actions` → `CategoryChipToolbar`
         - `Item.Chips` → `CategoryChipRow`
+        - `Config.Section` "Category colors" → `CategoryColorSettings`
       - Server:
         - Uses: `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `tasks-core._conversations`, `tasks-core.getConversation`
         - `POST /api/conversation-category/:conversationId/classify`
         - `POST /api/conversation-category/:conversationId`
         - `DELETE /api/conversation-category/:conversationId`
+        - `GET /api/conversation-category/colors`
+        - `POST /api/conversation-category/colors`
+        - `DELETE /api/conversation-category/colors/:category`
     - **`conversation-groups`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
       - Defines:
         - DB schema: `plugins/conversations/plugins/conversation-groups/server/internal/tables.ts`
