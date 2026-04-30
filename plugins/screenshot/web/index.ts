@@ -5,6 +5,7 @@ import { ScreenshotButton } from "./components/screenshot-button";
 import { screenshotPane } from "./panes";
 
 export { screenshotPane } from "./panes";
+export { captureApp } from "./capture";
 
 export default {
   id: "screenshot",

@@ -6,7 +6,7 @@
 
 - Description: Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
 - Exports (web):
-  - Values: `screenshotPane`
+  - Values: `captureApp`, `screenshotPane`
 - Contributes:
   - `Pane.Register` `screenshot` (path `/screenshot/:id`)
   - `Shell.Toolbar` (group `actions`) → `ScreenshotButton`

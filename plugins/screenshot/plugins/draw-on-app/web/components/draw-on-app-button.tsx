@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { flushSync } from "react-dom";
-import { domToBlob } from "modern-screenshot";
 import { MdGesture } from "react-icons/md";
+import { captureApp } from "@plugins/screenshot/web";
 import { Button } from "@/components/ui/button";
 import { ShellCommands } from "@plugins/shell/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
@@ -37,11 +37,10 @@ export function DrawOnAppButton() {
       await new Promise<void>((r) =>
         requestAnimationFrame(() => requestAnimationFrame(() => r())),
       );
-      const blob = await domToBlob(document.documentElement, {
-        scale: window.devicePixelRatio || 1,
-        filter: (node: Node) =>
+      const blob = await captureApp(
+        (node: Node) =>
           !(node instanceof HTMLElement && node.dataset.drawChrome === "true"),
-      });
+      );
       if (!blob) {
         ShellCommands.Toast({ description: "Capture failed", variant: "error" });
         setChromeVisible(true);

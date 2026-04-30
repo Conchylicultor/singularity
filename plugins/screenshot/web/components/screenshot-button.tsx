@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { flushSync } from "react-dom";
 import { MdPhotoCamera } from "react-icons/md";
-import { domToBlob } from "modern-screenshot";
 import { Button } from "@/components/ui/button";
 import { ShellCommands } from "@plugins/shell/web";
+import { captureApp } from "../capture";
 
 export function ScreenshotButton() {
   const [busy, setBusy] = useState(false);
@@ -27,11 +27,7 @@ export function ScreenshotButton() {
           // new tab first would background this tab, which causes Chrome to
           // pause SVG rasterization (the <img> load event that
           // modern-screenshot relies on never fires in a hidden tab).
-          const blob = await domToBlob(document.documentElement, {
-            scale: window.devicePixelRatio || 1,
-            // Preserve scroll positions of overflow containers (e.g. conversation pane).
-            features: { restoreScrollPosition: true },
-          });
+          const blob = await captureApp();
           if (!blob) {
             ShellCommands.Toast({ description: "Screenshot failed", variant: "error" });
             return;
