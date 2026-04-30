@@ -60,22 +60,25 @@ function isNonBlocking(task: Task): boolean {
 }
 
 function layoutDag(closure: readonly Task[], selectedId: string) {
-  const ids = new Set(closure.map((t) => t.id));
+  // Sort by id for a stable node-insertion order regardless of which task is
+  // selected as root (dagre's crossing-minimization is order-sensitive).
+  const sorted = [...closure].sort((a, b) => a.id.localeCompare(b.id));
+  const ids = new Set(sorted.map((t) => t.id));
   const g = new dagre.graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
   g.setGraph({ rankdir: "LR", nodesep: 24, ranksep: 60, marginx: 12, marginy: 12 });
 
-  for (const t of closure) {
+  for (const t of sorted) {
     g.setNode(t.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
   }
-  for (const t of closure) {
+  for (const t of sorted) {
     for (const dep of t.dependencies) {
       if (ids.has(dep)) g.setEdge(dep, t.id);
     }
   }
   dagre.layout(g);
 
-  const nodes: TaskFlowNode[] = closure.map((task) => {
+  const nodes: TaskFlowNode[] = sorted.map((task) => {
     const pos = g.node(task.id);
     return {
       id: task.id,
@@ -87,9 +90,9 @@ function layoutDag(closure: readonly Task[], selectedId: string) {
     };
   });
 
-  const byId = new Map(closure.map((t) => [t.id, t]));
+  const byId = new Map(sorted.map((t) => [t.id, t]));
   const edges: Edge[] = [];
-  for (const t of closure) {
+  for (const t of sorted) {
     for (const dep of t.dependencies) {
       if (!ids.has(dep)) continue;
       const depTask = byId.get(dep)!;
