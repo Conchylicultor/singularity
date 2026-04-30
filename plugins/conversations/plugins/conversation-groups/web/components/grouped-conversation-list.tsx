@@ -42,6 +42,14 @@ type AttemptGroup = ConversationEntry[]; // [root, ...forks]
 const UNGROUPED_EXPANDED_KEY = "conv-groups:ungrouped:expanded";
 const GONE_EXPANDED_KEY = "conv-groups:gone:expanded";
 
+// Read the conv id from the draggable id, not event.active.data.current —
+// dnd-kit's data ref can clear mid-drag if the row re-renders (live-state
+// updates), but the id is captured at drag start and stays stable.
+function parseConvDragId(id: string | number): string | null {
+  if (typeof id !== "string" || !id.startsWith("conv-")) return null;
+  return id.slice("conv-".length);
+}
+
 export interface GroupedConversationListProps {
   active: ConversationEntry[];
   system: ConversationEntry[];
@@ -198,15 +206,14 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
   );
 
   const onDragStart = useCallback((event: DragStartEvent) => {
-    const convId = (event.active.data.current as { convId?: string } | null)?.convId;
-    setActiveConvId(convId ?? null);
+    setActiveConvId(parseConvDragId(event.active.id));
   }, []);
 
   const onDragEnd = async (event: DragEndEvent) => {
     setActiveConvId(null);
     const { active: activeDrag, over } = event;
     if (!over) return;
-    const draggedId = (activeDrag.data.current as { convId?: string } | null)?.convId;
+    const draggedId = parseConvDragId(activeDrag.id);
     const target = over.data.current as DropTarget | undefined;
     if (!draggedId || !target) return;
     if (target.kind === "conv" && target.convId === draggedId) return;
