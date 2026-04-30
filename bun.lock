@@ -122,6 +122,10 @@
       "name": "@singularity/plugin-conversations-conversation-groups",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-progress": {
+      "name": "@singularity/plugin-conversations-conversation-progress",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-ui": {
       "name": "@singularity/plugin-conversations-conversation-ui",
       "version": "0.0.1",
@@ -1106,6 +1110,8 @@
     "@singularity/plugin-conversations-conversation-category": ["@singularity/plugin-conversations-conversation-category@workspace:plugins/conversations/plugins/conversation-category"],
 
     "@singularity/plugin-conversations-conversation-groups": ["@singularity/plugin-conversations-conversation-groups@workspace:plugins/conversations/plugins/conversation-groups"],
+
+    "@singularity/plugin-conversations-conversation-progress": ["@singularity/plugin-conversations-conversation-progress@workspace:plugins/conversations/plugins/conversation-progress"],
 
     "@singularity/plugin-conversations-conversation-ui": ["@singularity/plugin-conversations-conversation-ui@workspace:plugins/conversations/plugins/conversation-ui"],
 

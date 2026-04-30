@@ -379,6 +379,13 @@
       "tag": "20260430_212139_bdc3e46b__claude_cli_calls",
       "hash": "bdc3e46b",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777586752000,
+      "tag": "20260430_220552_0fcc84f8__add_conversation_progress",
+      "hash": "0fcc84f8",
+      "breakpoints": true
     }
   ]
 }
