@@ -1,15 +1,11 @@
 import { MdAdd, MdArrowDownward } from "react-icons/md";
 
 export interface ChainConnectorProps {
-  // The "blocks" label only appears between cards (not above the first).
   showBlocksLabel: boolean;
   disabled?: boolean;
   onInsert: () => void;
 }
 
-// Slim row between cards. Hovering the row reveals an inline "+" that inserts
-// a new card at this position. Between-card variants also show a faint
-// "↓ blocks" label so the chain direction is unambiguous.
 export function ChainConnector({
   showBlocksLabel,
   disabled,
@@ -23,7 +19,6 @@ export function ChainConnector({
           <span>blocks</span>
         </div>
       ) : (
-        // First-position connector: invisible spacer until hovered.
         <div className="h-px w-full" />
       )}
       <button

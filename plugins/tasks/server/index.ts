@@ -1,6 +1,7 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { handleList } from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";
+import { handleCreateChain } from "./internal/handle-create-chain";
 import { handleClearAutoStart } from "./internal/handle-clear-auto-start";
 import { handleSetAutoStart } from "./internal/handle-set-auto-start";
 import { handleGet } from "./internal/handle-get";
@@ -50,6 +51,7 @@ export default {
   httpRoutes: {
     "GET /api/tasks": handleList,
     "POST /api/tasks": handleCreate,
+    "POST /api/tasks/chain": handleCreateChain,
     "GET /api/tasks/:id": handleGet,
     "PATCH /api/tasks/:id": handleUpdate,
     "DELETE /api/tasks/:id": handleDelete,

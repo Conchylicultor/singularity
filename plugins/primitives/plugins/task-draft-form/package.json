@@ -1,0 +1,8 @@
+{
+  "name": "@singularity/plugin-primitives-task-draft-form",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "modern-screenshot": "^4.6.0"
+  }
+}

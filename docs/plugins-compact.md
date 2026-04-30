@@ -182,7 +182,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - `POST /api/attachments`
         - `GET /api/attachments/:id`
         - `DELETE /api/attachments/:id`
-      - Endpoint callers: `agents`, `conversation-view`, `conversations`, `improve`, `paste-images`, `quick-prompts`, `screenshot`, `task-attachments`, `tasks-core`
+      - Endpoint callers: `agents`, `conversation-view`, `conversations`, `paste-images`, `quick-prompts`, `screenshot`, `task-attachments`, `task-draft-form`, `tasks-core`
     - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
     - **`events`** [load-bearing] — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
       - Defines:
@@ -259,6 +259,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
+    - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
     - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.

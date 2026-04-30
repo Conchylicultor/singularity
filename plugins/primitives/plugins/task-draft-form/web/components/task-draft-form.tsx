@@ -13,21 +13,10 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import {
-  conversationGroupsResource,
-  type ConversationGroup,
-} from "@plugins/conversations/plugins/conversation-groups/shared";
-import { ImproveCard } from "./improve-card";
+import { TaskDraftCard, type ParentTaskPreview } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";
 import type { ChainModel } from "./model-chip";
+import type { TaskChainRelateMode } from "../../shared/types";
 
 export interface CardDraft {
   localId: string;
@@ -35,6 +24,7 @@ export interface CardDraft {
   model: ChainModel;
   includeUrl: boolean;
   includeScreenshot: boolean;
+  includeParentTask: boolean;
 }
 
 export interface PrefilledAttachment {
@@ -42,17 +32,23 @@ export interface PrefilledAttachment {
   filename: string;
 }
 
-export interface ImproveFormProps {
+export type CaptureKind = "url" | "screenshot" | "parentTask";
+
+export interface TaskDraftFormProps {
   cards: CardDraft[];
   onCardsChange: (next: CardDraft[]) => void;
   autoFocusId: string | null;
   onAutoFocusHandled: () => void;
   prefilledAttachments?: PrefilledAttachment[];
-  groupId: string | null;
-  onGroupChange: (id: string | null) => void;
   submitting: boolean;
   onSubmit: () => void;
   onCancel: () => void;
+  captures: CaptureKind[];
+  parentTaskPreview?: ParentTaskPreview | null;
+  // Head-card relate toggle (only rendered when both are supplied).
+  relateMode?: TaskChainRelateMode;
+  onRelateModeChange?: (next: TaskChainRelateMode) => void;
+  heading?: string;
 }
 
 const NEW_CARD_DEFAULT_MODEL: ChainModel = "sonnet";
@@ -64,27 +60,29 @@ export function makeCard(model: ChainModel): CardDraft {
     model,
     includeUrl: false,
     includeScreenshot: false,
+    includeParentTask: false,
   };
 }
 
-export function ImproveForm({
+export function TaskDraftForm({
   cards,
   onCardsChange,
   autoFocusId,
   onAutoFocusHandled,
   prefilledAttachments,
-  groupId,
-  onGroupChange,
   submitting,
   onSubmit,
   onCancel,
-}: ImproveFormProps) {
+  captures,
+  parentTaskPreview,
+  relateMode,
+  onRelateModeChange,
+  heading,
+}: TaskDraftFormProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
-  const { data: groupsData } = useResource(conversationGroupsResource);
-  const groups = groupsData?.groups ?? [];
 
   useEffect(() => {
     if (autoFocusId) {
@@ -97,6 +95,9 @@ export function ImproveForm({
   const hasEmpty = cards.some((c) => !c.text.trim());
   const disabled = hasEmpty || submitting;
   const attachments = prefilledAttachments ?? [];
+  const supportsUrl = captures.includes("url");
+  const supportsScreenshot = captures.includes("screenshot");
+  const supportsParentTask = captures.includes("parentTask");
 
   const updateCard = (idx: number, patch: Partial<CardDraft>) => {
     const next = cards.slice();
@@ -138,29 +139,8 @@ export function ImproveForm({
 
   return (
     <div className="flex w-[480px] flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <div className="text-muted-foreground text-xs font-medium">
-          Improve this app
-        </div>
-        {groups.length > 0 && (
-          <Select
-            value={groupId ?? "none"}
-            onValueChange={(v: string | null) => onGroupChange(!v || v === "none" ? null : v)}
-            disabled={submitting}
-          >
-            <SelectTrigger className="h-6 w-auto max-w-[180px] gap-1 border-0 px-2 text-xs shadow-none">
-              <SelectValue placeholder="No group" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No group</SelectItem>
-              {groups.map((g: ConversationGroup) => (
-                <SelectItem key={g.id} value={g.id}>
-                  {g.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+      <div className="text-muted-foreground text-xs font-medium">
+        {heading ?? "Draft tasks"}
       </div>
 
       {attachments.length > 0 && (
@@ -187,35 +167,61 @@ export function ImproveForm({
           strategy={verticalListSortingStrategy}
         >
           <div className="flex flex-col">
-            {cards.map((card, idx) => (
-              <Fragment key={card.localId}>
-                {idx > 0 && (
-                  <ChainConnector
-                    showBlocksLabel={true}
-                    disabled={submitting || !!draggingId}
-                    onInsert={() => insertAt(idx)}
+            {cards.map((card, idx) => {
+              const isHead = idx === 0;
+              return (
+                <Fragment key={card.localId}>
+                  {idx > 0 && (
+                    <ChainConnector
+                      showBlocksLabel={true}
+                      disabled={submitting || !!draggingId}
+                      onInsert={() => insertAt(idx)}
+                    />
+                  )}
+                  <TaskDraftCard
+                    isHead={isHead}
+                    cardId={card.localId}
+                    index={idx}
+                    text={card.text}
+                    model={card.model}
+                    autoFocus={autoFocusId === card.localId}
+                    removable={cards.length > 1}
+                    disabled={submitting}
+                    onTextChange={(t) => updateCard(idx, { text: t })}
+                    onModelChange={(m) => updateCard(idx, { model: m })}
+                    onRemove={() => removeAt(idx)}
+                    onSubmitChord={() => {
+                      if (!disabled) onSubmit();
+                    }}
+                    includeUrl={supportsUrl ? card.includeUrl : undefined}
+                    onToggleUrl={
+                      supportsUrl
+                        ? (v) => updateCard(idx, { includeUrl: v })
+                        : undefined
+                    }
+                    includeScreenshot={
+                      supportsScreenshot ? card.includeScreenshot : undefined
+                    }
+                    onToggleScreenshot={
+                      supportsScreenshot
+                        ? (v) => updateCard(idx, { includeScreenshot: v })
+                        : undefined
+                    }
+                    includeParentTask={
+                      supportsParentTask && isHead ? card.includeParentTask : undefined
+                    }
+                    onToggleParentTask={
+                      supportsParentTask && isHead
+                        ? (v) => updateCard(idx, { includeParentTask: v })
+                        : undefined
+                    }
+                    parentTaskPreview={isHead ? parentTaskPreview : null}
+                    relateMode={isHead ? relateMode : undefined}
+                    onRelateModeChange={isHead ? onRelateModeChange : undefined}
                   />
-                )}
-                <ImproveCard
-                  isHead={idx === 0}
-                  cardId={card.localId}
-                  index={idx}
-                  text={card.text}
-                  model={card.model}
-                  autoFocus={autoFocusId === card.localId}
-                  removable={cards.length > 1}
-                  disabled={submitting}
-                  includeUrl={card.includeUrl}
-                  onToggleUrl={(v) => updateCard(idx, { includeUrl: v })}
-                  includeScreenshot={card.includeScreenshot}
-                  onToggleScreenshot={(v) => updateCard(idx, { includeScreenshot: v })}
-                  onTextChange={(t) => updateCard(idx, { text: t })}
-                  onModelChange={(m) => updateCard(idx, { model: m })}
-                  onRemove={() => removeAt(idx)}
-                  onSubmitChord={() => { if (!disabled) onSubmit(); }}
-                />
-              </Fragment>
-            ))}
+                </Fragment>
+              );
+            })}
           </div>
         </SortableContext>
       </DndContext>

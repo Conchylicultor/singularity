@@ -12,9 +12,10 @@
   - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
   - Values: `attemptsResource`, `pushesResource`, `tasksResource`
 - Server:
-  - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.scheduleTaskTitleUpdate`, `tasks-core.setTaskAutoStart`, `tasks-core.synthesiseTitleFallback`, `tasks-core.taskStatusChanged`, `tasks-core.updateTask`
+  - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.scheduleTaskTitleUpdate`, `tasks-core.setTaskAutoStart`, `tasks-core.synthesiseTitleFallback`, `tasks-core.taskStatusChanged`, `tasks-core.updateTask`
   - `GET /api/tasks`
   - `POST /api/tasks`
+  - `POST /api/tasks/chain`
   - `GET /api/tasks/:id`
   - `PATCH /api/tasks/:id`
   - `DELETE /api/tasks/:id`
@@ -24,7 +25,7 @@
   - `POST /api/tasks/:id/dependencies`
   - `DELETE /api/tasks/:id/dependencies/:depId`
   - `GET /api/repo-info`
-- Endpoint callers: `new-child-task`, `task`, `task-dependencies`, `task-description`, `task-events`, `task-header`, `task-list`
+- Endpoint callers: `task`, `task-dependencies`, `task-description`, `task-draft-form`, `task-events`, `task-header`, `task-list`
 - Sub-plugins:
   - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
   - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the parent task when applicable.

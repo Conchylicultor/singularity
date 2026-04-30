@@ -339,9 +339,6 @@
     "plugins/improve": {
       "name": "@singularity/plugin-improve",
       "version": "0.0.1",
-      "dependencies": {
-        "modern-screenshot": "^4.6.0",
-      },
     },
     "plugins/infra": {
       "name": "@singularity/plugin-infra",
@@ -427,6 +424,13 @@
     "plugins/primitives/plugins/syntax-highlight": {
       "name": "@singularity/plugin-primitives-syntax-highlight",
       "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/task-draft-form": {
+      "name": "@singularity/plugin-primitives-task-draft-form",
+      "version": "0.0.1",
+      "dependencies": {
+        "modern-screenshot": "^4.6.0",
+      },
     },
     "plugins/primitives/plugins/tree": {
       "name": "@singularity/plugin-primitives-tree",
@@ -1260,6 +1264,8 @@
     "@singularity/plugin-primitives-relative-time": ["@singularity/plugin-primitives-relative-time@workspace:plugins/primitives/plugins/relative-time"],
 
     "@singularity/plugin-primitives-syntax-highlight": ["@singularity/plugin-primitives-syntax-highlight@workspace:plugins/primitives/plugins/syntax-highlight"],
+
+    "@singularity/plugin-primitives-task-draft-form": ["@singularity/plugin-primitives-task-draft-form@workspace:plugins/primitives/plugins/task-draft-form"],
 
     "@singularity/plugin-primitives-tree": ["@singularity/plugin-primitives-tree@workspace:plugins/primitives/plugins/tree"],
 
