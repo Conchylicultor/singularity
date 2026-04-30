@@ -3,6 +3,8 @@ import { ActiveData } from "@plugins/active-data/web";
 import { ConvChip } from "./components/conv-chip";
 import { CONV_ID_RE } from "./internal/pattern";
 
+export { ConvChip };
+
 export default {
   id: "active-data-conv",
   name: "Active Data: conv chip",

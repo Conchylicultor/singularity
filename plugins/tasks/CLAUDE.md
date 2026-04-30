@@ -24,7 +24,7 @@
   - `POST /api/tasks/:id/dependencies`
   - `DELETE /api/tasks/:id/dependencies/:depId`
   - `GET /api/repo-info`
-- Endpoint callers: `new-child-task`, `task-dependencies`, `task-description`, `task-events`, `task-header`, `task-list`
+- Endpoint callers: `new-child-task`, `task`, `task-dependencies`, `task-description`, `task-events`, `task-header`, `task-list`
 - Sub-plugins:
   - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
   - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the parent task when applicable.

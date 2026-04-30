@@ -21,6 +21,7 @@ import conversationNewChildTaskPlugin from "@plugins/conversations/plugins/conve
 import conversationTasksPanelPlugin from "@plugins/conversations/plugins/conversation-view/plugins/tasks-panel/web";
 import conversationTerminalPanePlugin from "@plugins/conversations/plugins/conversation-view/plugins/terminal-pane/web";
 import conversationSideConversationPlugin from "@plugins/conversations/plugins/conversation-view/plugins/side-conversation/web";
+import conversationSideTaskPlugin from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
 import conversationJsonlViewerPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import conversationJsonlViewerUserTextPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-text/web";
 import conversationJsonlViewerAssistantTextPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text/web";
@@ -61,6 +62,7 @@ import fileLinksPlugin from "@plugins/primitives/plugins/file-links/web";
 import primitivesPlugin from "@plugins/primitives/web";
 import activeDataPlugin from "@plugins/active-data/web";
 import activeDataConvPlugin from "@plugins/active-data/plugins/conv/web";
+import activeDataTaskPlugin from "@plugins/active-data/plugins/task/web";
 import liveStatePlugin from "@plugins/primitives/plugins/live-state/web";
 import networkingPlugin from "@plugins/primitives/plugins/networking/web";
 import editableFieldPlugin from "@plugins/primitives/plugins/editable-field/web";
@@ -106,6 +108,7 @@ export const plugins: PluginDefinition[] = [
   primitivesPlugin,
   activeDataPlugin,
   activeDataConvPlugin,
+  activeDataTaskPlugin,
   liveStatePlugin,
   networkingPlugin,
   editableFieldPlugin,
@@ -133,6 +136,7 @@ export const plugins: PluginDefinition[] = [
   conversationTasksPanelPlugin,
   conversationTerminalPanePlugin,
   conversationSideConversationPlugin,
+  conversationSideTaskPlugin,
   conversationJsonlViewerPlugin,
   conversationJsonlViewerUserTextPlugin,
   conversationJsonlViewerAssistantTextPlugin,

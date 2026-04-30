@@ -10,11 +10,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Types: `ActiveDataTagContribution`
     - Values: `ActiveData`, `useActiveDataComponents`, `useActiveDataLinkify`
-  - Slot contributors: `conv`
+  - Slot contributors: `conv`, `task`
   - Plugins:
     - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.
+      - Exports (web):
+        - Values: `ConvChip`
       - Contributes:
         - `ActiveData.Tag` `CONV_ID_RE` → `ConvChip`
+    - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
+      - Contributes:
+        - `ActiveData.Tag` → `TaskCard`
 
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
   - Defines:
@@ -394,6 +399,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `convSidePane`
           - Contributes:
             - `Pane.Register` `conv-side` (path `c/:sideConvId`)
+        - **`side-task`** — Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).
+          - Exports (web):
+            - Values: `taskSidePane`
+          - Contributes:
+            - `Pane.Register` `task-side` (path `task/:taskId`)
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Contributes:
             - `conversationPane.Actions` → `StatusBadge`
@@ -661,7 +671,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
         - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `side-conversation`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
       - Exports (web):
         - Types: `ImageNodePayload`
@@ -770,7 +780,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/tasks/:id/dependencies`
     - `DELETE /api/tasks/:id/dependencies/:depId`
     - `GET /api/repo-info`
-  - Endpoint callers: `new-child-task`, `task-dependencies`, `task-description`, `task-events`, `task-header`, `task-list`
+  - Endpoint callers: `new-child-task`, `task`, `task-dependencies`, `task-description`, `task-events`, `task-header`, `task-list`
   - Plugins:
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
       - Contributes:
