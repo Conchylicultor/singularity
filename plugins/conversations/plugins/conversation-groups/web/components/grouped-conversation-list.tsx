@@ -29,7 +29,7 @@ import {
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { MdClose, MdRemoveCircleOutline } from "react-icons/md";
+import { MdChevronRight, MdClose, MdRemoveCircleOutline } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { DraggableRow, type DropTarget } from "./draggable-row";
 import { GroupBox } from "./group-box";
@@ -40,6 +40,7 @@ type ConversationEntry = Conversation;
 type AttemptGroup = ConversationEntry[]; // [root, ...forks]
 
 const UNGROUPED_EXPANDED_KEY = "conv-groups:ungrouped:expanded";
+const GONE_EXPANDED_KEY = "conv-groups:gone:expanded";
 
 export interface GroupedConversationListProps {
   active: ConversationEntry[];
@@ -165,6 +166,23 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
       const next = !prev;
       try {
         localStorage.setItem(UNGROUPED_EXPANDED_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const [goneExpanded, setGoneExpanded] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(GONE_EXPANDED_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const toggleGoneExpanded = useCallback(() => {
+    setGoneExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(GONE_EXPANDED_KEY, next ? "1" : "0");
       } catch {}
       return next;
     });
@@ -424,42 +442,68 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
             </div>
           )}
         </GroupContainer>
-        <SidebarMenu>
-          {recentGone.map((conv) => (
-            <SidebarMenuItem key={conv.id}>
-              <SidebarMenuButton
-                className={cn("h-auto py-1.5", rowTint(conv))}
-                isActive={conv.id === activeId}
-                onClick={() => onNavigate(conv.id)}
+        {(recentGone.length > 0 || paginatedItems.length > 0) && (
+          <div className="rounded-md transition-colors hover:bg-muted/30">
+            <div className="flex items-center gap-0.5 rounded-md px-1 py-1">
+              <button
+                type="button"
+                onClick={toggleGoneExpanded}
+                aria-label={goneExpanded ? "Collapse closed" : "Expand closed"}
+                className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent"
               >
-                <ConversationItem conv={conv} />
-              </SidebarMenuButton>
-              <SidebarMenuAction
-                onClick={(e: React.MouseEvent) => onCloseConversation(conv.id, e)}
-                className="opacity-0 group-hover/menu-item:opacity-100"
-              >
-                <MdClose className="size-3.5" />
-              </SidebarMenuAction>
-            </SidebarMenuItem>
-          ))}
-          {paginatedItems.map((conv) => (
-            <SidebarMenuItem key={conv.id}>
-              <SidebarMenuButton
-                className={cn("h-auto py-1.5", rowTint(conv))}
-                isActive={conv.id === activeId}
-                onClick={() => onNavigate(conv.id)}
-              >
-                <ConversationItem conv={conv} />
-              </SidebarMenuButton>
-              <SidebarMenuAction
-                onClick={(e: React.MouseEvent) => onCloseConversation(conv.id, e)}
-                className="opacity-0 group-hover/menu-item:opacity-100"
-              >
-                <MdClose className="size-3.5" />
-              </SidebarMenuAction>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
+                <MdChevronRight
+                  className={cn(
+                    "size-4 transition-transform",
+                    !dragInProgress && goneExpanded && "rotate-90",
+                  )}
+                />
+              </button>
+              <div className="min-w-0 flex-1 truncate px-1 py-0.5 text-xs font-semibold text-muted-foreground">
+                Closed
+              </div>
+            </div>
+            {!dragInProgress && goneExpanded && (
+              <div className="mt-0.5 pl-1">
+                <SidebarMenu>
+                  {recentGone.map((conv) => (
+                    <SidebarMenuItem key={conv.id}>
+                      <SidebarMenuButton
+                        className={cn("h-auto py-1.5", rowTint(conv))}
+                        isActive={conv.id === activeId}
+                        onClick={() => onNavigate(conv.id)}
+                      >
+                        <ConversationItem conv={conv} />
+                      </SidebarMenuButton>
+                      <SidebarMenuAction
+                        onClick={(e: React.MouseEvent) => onCloseConversation(conv.id, e)}
+                        className="opacity-0 group-hover/menu-item:opacity-100"
+                      >
+                        <MdClose className="size-3.5" />
+                      </SidebarMenuAction>
+                    </SidebarMenuItem>
+                  ))}
+                  {paginatedItems.map((conv) => (
+                    <SidebarMenuItem key={conv.id}>
+                      <SidebarMenuButton
+                        className={cn("h-auto py-1.5", rowTint(conv))}
+                        isActive={conv.id === activeId}
+                        onClick={() => onNavigate(conv.id)}
+                      >
+                        <ConversationItem conv={conv} />
+                      </SidebarMenuButton>
+                      <SidebarMenuAction
+                        onClick={(e: React.MouseEvent) => onCloseConversation(conv.id, e)}
+                        className="opacity-0 group-hover/menu-item:opacity-100"
+                      >
+                        <MdClose className="size-3.5" />
+                      </SidebarMenuAction>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       <DragOverlay dropAnimation={null}>
         {activeConv ? (
