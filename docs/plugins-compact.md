@@ -93,7 +93,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - `POST /api/conversations/:id/stop`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
-  - Imported by: `agents`, `conversation-category`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `worktree-cleanup`
+  - Imported by: `agents`, `conversation-category`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
   - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `hold-and-exit`, `launch`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
@@ -141,6 +141,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
         - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
         - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
+        - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
         - **`vscode`** — Opens the conversation's worktree in VSCode.
     - **`conversations-view`** — Sidebar list of all conversations.
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
@@ -306,7 +307,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-groups`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `worktree-cleanup`
+  - Imported by: `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-groups`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
 

@@ -273,6 +273,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-terminal-pane",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/turn-summary": {
+      "name": "@singularity/plugin-conversations-conversation-view-turn-summary",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/vscode": {
       "name": "@singularity/plugin-conversations-conversation-view-vscode",
       "version": "0.0.1",
@@ -1174,6 +1178,8 @@
     "@singularity/plugin-conversations-conversation-view-tasks-panel": ["@singularity/plugin-conversations-conversation-view-tasks-panel@workspace:plugins/conversations/plugins/conversation-view/plugins/tasks-panel"],
 
     "@singularity/plugin-conversations-conversation-view-terminal-pane": ["@singularity/plugin-conversations-conversation-view-terminal-pane@workspace:plugins/conversations/plugins/conversation-view/plugins/terminal-pane"],
+
+    "@singularity/plugin-conversations-conversation-view-turn-summary": ["@singularity/plugin-conversations-conversation-view-turn-summary@workspace:plugins/conversations/plugins/conversation-view/plugins/turn-summary"],
 
     "@singularity/plugin-conversations-conversation-view-vscode": ["@singularity/plugin-conversations-conversation-view-vscode@workspace:plugins/conversations/plugins/conversation-view/plugins/vscode"],
 

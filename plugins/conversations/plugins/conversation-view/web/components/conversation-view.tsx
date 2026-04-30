@@ -48,6 +48,7 @@ function PromptBar({
 export function ConversationView({ sessionId }: { sessionId: string }) {
   const promptBarItems = Conversation.PromptBar.useContributions();
   const promptInputItems = Conversation.PromptInput.useContributions();
+  const abovePromptInputItems = Conversation.AbovePromptInput.useContributions();
   const PromptInputComponent = promptInputItems[0]?.component ?? null;
   // useConversation subscribes to the live WebSocket resource (recentConversationsResource),
   // so status updates (starting → working → done) are reflected in real time.
@@ -69,7 +70,10 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
   const isMain = hasSubPane && !!leafPane && isMainPaneId(leafPane.id);
 
   const showBottomBar =
-    !!conversation && (!!PromptInputComponent || promptBarItems.length > 0);
+    !!conversation &&
+    (!!PromptInputComponent ||
+      promptBarItems.length > 0 ||
+      abovePromptInputItems.length > 0);
 
   const mainBlock = conversation && (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">
@@ -78,6 +82,10 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
       </div>
       {showBottomBar && (
         <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-1.5 pb-2">
+          {abovePromptInputItems.map((item, i) => {
+            const Cmp = item.component;
+            return <Cmp key={i} conversation={conversation} />;
+          })}
           {PromptInputComponent && (
             <PromptInputComponent conversation={conversation} />
           )}

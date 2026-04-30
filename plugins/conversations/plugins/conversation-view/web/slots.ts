@@ -13,4 +13,7 @@ export const Conversation = {
   PromptInput: defineSlot<{
     component: ComponentType<{ conversation: ConversationRecord }>;
   }>("conversation.prompt-input"),
+  AbovePromptInput: defineSlot<{
+    component: ComponentType<{ conversation: ConversationRecord }>;
+  }>("conversation.above-prompt-input"),
 };

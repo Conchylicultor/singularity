@@ -174,7 +174,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/conversations/:id/stop`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
-  - Imported by: `agents`, `conversation-category`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `worktree-cleanup`
+  - Imported by: `agents`, `conversation-category`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
   - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `hold-and-exit`, `launch`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
@@ -227,14 +227,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Slot contributors: `agents`, `conversation-category`
     - **`conversation-view`** — Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
       - Defines:
-        - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`
+        - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`, `Conversation.AbovePromptInput`
       - Exports (web):
         - Types: `ConversationRecord`, `PromptDraft`
         - Values: `Conversation`, `conversationPane`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `isMainPaneId`, `markMainPane`, `PromptDraftProvider`, `usePromptDraft`
       - Contributes:
         - `Pane.Register` `conversation` (path `/c/:convId`)
         - `conversationPane.Actions` → `ExpandConversationButton`
-      - Slot contributors: `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
+      - Slot contributors: `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `turn-summary`
       - Plugins:
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Defines:
@@ -425,6 +425,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Pane.Register` `conv-terminal` (path `terminal`)
             - `conversationPane.Actions` → `TerminalButton`
+        - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
+          - Defines:
+            - DB schema: `plugins/conversations/plugins/conversation-view/plugins/turn-summary/server/internal/tables.ts`
+          - Exports (server):
+            - Values: `_turnSummaries`, `generateTurnSummaryJob`, `turnSummariesResource`
+          - Exports (shared):
+            - Types: `TurnSummariesPayload`, `TurnSummary`
+            - Values: `TurnSummariesPayloadSchema`, `turnSummariesResource`, `TurnSummarySchema`
+          - Contributes:
+            - `Conversation.AbovePromptInput` → `TurnSummaryCard`
+          - Server:
+            - Uses: `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `tasks-core._conversations`, `tasks-core.getConversation`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:
             - `conversationPane.Actions` → `VscodeButton`
@@ -847,7 +859,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-groups`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `worktree-cleanup`
+  - Imported by: `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-groups`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):
