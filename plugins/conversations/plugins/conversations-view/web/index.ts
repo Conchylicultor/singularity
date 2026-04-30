@@ -16,6 +16,7 @@ export default {
       icon: MdForum,
       component: ConversationList,
       labelExtra: ConvCountLabel,
+      scroll: true,
     }),
     Core.Root({ component: ForkErrorWatcher }),
   ],

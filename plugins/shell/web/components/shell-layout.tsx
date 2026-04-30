@@ -57,7 +57,8 @@ const DEFAULT_COLLAPSED = new Set(["Debug"]);
 
 export function ShellLayout() {
   const sidebars = Shell.Sidebar.useContributions();
-  const sidebarPanes = sidebars.filter((s) => s.component);
+  const pinnedPanes = sidebars.filter((s) => s.component && !s.scroll);
+  const scrollPanes = sidebars.filter((s) => s.component && s.scroll);
   const sidebarButtons = sidebars.filter((s) => s.onClick && !s.component);
   const buttonGroups = new Map<string, typeof sidebarButtons>();
   for (const btn of sidebarButtons) {
@@ -118,7 +119,8 @@ export function ShellLayout() {
               <span className="text-base font-semibold tracking-tight">Singularity</span>
             </a>
           </SidebarHeader>
-          <SidebarContent>
+          {/* Pinned section: button groups + pinned pane components + scroll pane labels */}
+          <div className="flex shrink-0 flex-col">
             {Array.from(buttonGroups.entries()).map(([groupName, btns], gi) => (
               <Fragment key={`btn-group-${groupName}`}>
                 {gi > 0 && <Separator className="mx-2 w-auto bg-sidebar-border" />}
@@ -162,7 +164,8 @@ export function ShellLayout() {
                 </SidebarGroup>
               </Fragment>
             ))}
-            {sidebarPanes.map((pane, i) => (
+
+            {pinnedPanes.map((pane, i) => (
               <Fragment key={pane.title}>
                 {(i > 0 || buttonGroups.size > 0) && (
                   <Separator className="mx-2 w-auto bg-sidebar-border" />
@@ -189,7 +192,41 @@ export function ShellLayout() {
                 </PluginErrorBoundary>
               </Fragment>
             ))}
-          </SidebarContent>
+
+            {scrollPanes.map((pane, i) => (
+              <Fragment key={pane.title}>
+                {(i > 0 || buttonGroups.size > 0 || pinnedPanes.length > 0) && (
+                  <Separator className="mx-2 w-auto bg-sidebar-border" />
+                )}
+                <PluginErrorBoundary slot="shell.sidebar" label={pane.title}>
+                  <SidebarGroup className="pb-0">
+                    <SidebarGroupLabel
+                      className="group/label cursor-pointer select-none hover:text-sidebar-foreground"
+                      onClick={() => toggleSection(pane.title)}
+                    >
+                      <pane.icon className="size-4 mr-2" />
+                      {pane.title}
+                      {pane.labelExtra && <pane.labelExtra />}
+                      <MdChevronRight
+                        className={`ml-auto size-4 transition-transform duration-200 ${collapsed.has(pane.title) ? "" : "rotate-90"}`}
+                      />
+                    </SidebarGroupLabel>
+                  </SidebarGroup>
+                </PluginErrorBoundary>
+              </Fragment>
+            ))}
+          </div>
+
+          {/* Independent scroll region: scroll pane content only */}
+          {scrollPanes.some((p) => !collapsed.has(p.title) && p.component) && (
+            <SidebarContent className="pt-0">
+              {scrollPanes.map((pane) =>
+                !collapsed.has(pane.title) && pane.component ? (
+                  <pane.component key={pane.title} />
+                ) : null,
+              )}
+            </SidebarContent>
+          )}
         </Sidebar>
 
         <SidebarInset className="min-w-0">

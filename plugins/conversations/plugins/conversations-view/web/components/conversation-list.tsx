@@ -122,7 +122,7 @@ export function ConversationList() {
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-1 px-2">
+      <div className="sticky top-0 z-10 flex items-center gap-1 bg-sidebar px-2 pb-1 pt-0">
         <LaunchButtons variant="outline" size="sm" className="flex-1" />
         <button
           type="button"

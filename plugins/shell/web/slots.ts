@@ -9,6 +9,8 @@ export const Shell = {
     component?: ComponentType;
     group?: string;
     labelExtra?: ComponentType;
+    /** When true, only the section label is pinned; the component renders in an independent scroll region. */
+    scroll?: boolean;
   }>("shell.sidebar"),
 
   Toolbar: defineSlot<{
