@@ -7,6 +7,7 @@ import {
 } from "@plugins/tasks-core/server";
 import { armTaskAutoStart } from "@plugins/tasks/server";
 import { getAttachment } from "@plugins/infra/plugins/attachments/server";
+import { attachmentMarkdown } from "@plugins/primitives/plugins/paste-images/shared";
 import { db } from "@server/db/client";
 import { IMPROVEMENTS_META_TASK_ID } from "./meta-improvements";
 import type {
@@ -111,7 +112,7 @@ function renderTaskDescription(opts: {
   if (opts.attachments.length > 0) {
     lines.push("**Attachments:**");
     for (const att of opts.attachments) {
-      lines.push(`- [${att.filename}](/api/attachments/${att.id})`);
+      lines.push(`- ${attachmentMarkdown(att.id, att.filename)}`);
     }
   }
   return lines.join("\n");
