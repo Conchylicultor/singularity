@@ -42,18 +42,16 @@ export function useStickyScroll(
   const [hasUnread, setHasUnread] = useState(false);
   const isPinnedRef = useRef(true);
 
-  useLayoutEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    // Without this, browsers anchor to upper content as content grows below,
-    // fighting the bottom-pinning behavior.
-    el.style.overflowAnchor = "none";
-  }, []);
+  // overflowAnchor is managed dynamically in the scroll handler below:
+  // "none" when pinned (so ResizeObserver can force-scroll to bottom unimpeded),
+  // "auto" when unpinned (so the browser anchors the user's visual position when
+  // content above them grows — e.g. a ConvChip loads and expands).
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
+    el.style.overflowAnchor = "none";
     setIsPinned(true);
     setHasUnread(false);
     isPinnedRef.current = true;
@@ -78,6 +76,9 @@ export function useStickyScroll(
       const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
       const pinned = distance < threshold;
       isPinnedRef.current = pinned;
+      // When pinned: disable browser anchor so ResizeObserver can force-scroll to bottom.
+      // When unpinned: enable browser anchor so content expanding above doesn't jump the view up.
+      el.style.overflowAnchor = pinned ? "none" : "auto";
       setIsPinned(pinned);
       if (pinned) setHasUnread(false);
     };
