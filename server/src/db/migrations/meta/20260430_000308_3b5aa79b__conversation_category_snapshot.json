@@ -1,6 +1,6 @@
 {
-  "id": "e7e6e7e4-fae8-4583-b24c-c88d0020d05f",
-  "prevId": "5fdb6427-a538-44e4-9f5b-bb3a3ef3c5e2",
+  "id": "d555a7c0-065a-4dc5-bf0c-882e0db3c866",
+  "prevId": "88aa32ce-4f7b-453b-bc33-7b0113097aeb",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1639,6 +1639,140 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.agents_attachments": {
+      "name": "agents_attachments",
+      "schema": "",
+      "columns": {
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attachment_id": {
+          "name": "attachment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "agents_attachments_owner_id_agents_id_fk": {
+          "name": "agents_attachments_owner_id_agents_id_fk",
+          "tableFrom": "agents_attachments",
+          "tableTo": "agents",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "agents_attachments_attachment_id_attachments_id_fk": {
+          "name": "agents_attachments_attachment_id_attachments_id_fk",
+          "tableFrom": "agents_attachments",
+          "tableTo": "attachments",
+          "columnsFrom": [
+            "attachment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "agents_attachments_owner_id_attachment_id_pk": {
+          "name": "agents_attachments_owner_id_attachment_id_pk",
+          "columns": [
+            "owner_id",
+            "attachment_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.quick_prompts_attachments": {
+      "name": "quick_prompts_attachments",
+      "schema": "",
+      "columns": {
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attachment_id": {
+          "name": "attachment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "quick_prompts_attachments_owner_id_quick_prompts_id_fk": {
+          "name": "quick_prompts_attachments_owner_id_quick_prompts_id_fk",
+          "tableFrom": "quick_prompts_attachments",
+          "tableTo": "quick_prompts",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "quick_prompts_attachments_attachment_id_attachments_id_fk": {
+          "name": "quick_prompts_attachments_attachment_id_attachments_id_fk",
+          "tableFrom": "quick_prompts_attachments",
+          "tableTo": "attachments",
+          "columnsFrom": [
+            "attachment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "quick_prompts_attachments_owner_id_attachment_id_pk": {
+          "name": "quick_prompts_attachments_owner_id_attachment_id_pk",
+          "columns": [
+            "owner_id",
+            "attachment_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.conversation_created_triggers": {
       "name": "conversation_created_triggers",
       "schema": "",
@@ -1937,6 +2071,73 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.conversations_attachments": {
+      "name": "conversations_attachments",
+      "schema": "",
+      "columns": {
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attachment_id": {
+          "name": "attachment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "conversations_attachments_owner_id_conversations_id_fk": {
+          "name": "conversations_attachments_owner_id_conversations_id_fk",
+          "tableFrom": "conversations_attachments",
+          "tableTo": "conversations",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "conversations_attachments_attachment_id_attachments_id_fk": {
+          "name": "conversations_attachments_attachment_id_attachments_id_fk",
+          "tableFrom": "conversations_attachments",
+          "tableTo": "attachments",
+          "columnsFrom": [
+            "attachment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "conversations_attachments_owner_id_attachment_id_pk": {
+          "name": "conversations_attachments_owner_id_attachment_id_pk",
+          "columns": [
+            "owner_id",
+            "attachment_id"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
