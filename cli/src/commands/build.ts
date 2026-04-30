@@ -276,12 +276,16 @@ export function registerBuild(program: Command) {
       "--migration-name <slug>",
       "Name for a new migration (required if any plugin schema has changed)",
     )
+    .option(
+      "--reset-migration",
+      "Drop branch-local migration files (those absent from origin/main) before generating. Recovers from snapshot-chain Y-forks after rebasing onto main.",
+    )
     .option("--no-restart", "Skip asking the gateway to restart the backend")
     .option(
       "--allow-main",
       "DANGER: allow running build from the main branch. Agents MUST NOT pass this flag without explicit user approval in the current conversation.",
     )
-    .action(async (opts: { migrationName?: string; restart: boolean; allowMain?: boolean }) => {
+    .action(async (opts: { migrationName?: string; resetMigration?: boolean; restart: boolean; allowMain?: boolean }) => {
       await ensureHooksPath();
 
       const branch = await getCurrentBranch();
@@ -328,6 +332,7 @@ export function registerBuild(program: Command) {
         serverDir: resolve(root, "server"),
         worktreeName: name,
         migrationName: opts.migrationName,
+        resetMigration: opts.resetMigration,
       });
 
       // 3. Regenerate plugins/CLAUDE.md

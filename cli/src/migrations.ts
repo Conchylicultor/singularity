@@ -24,8 +24,9 @@ export async function generateMigration(opts: {
   serverDir: string;
   worktreeName: string;
   migrationName?: string;
+  resetMigration?: boolean;
 }): Promise<void> {
-  const { serverDir, worktreeName, migrationName } = opts;
+  const { serverDir, worktreeName, migrationName, resetMigration } = opts;
 
   if (migrationName && !MIGRATION_NAME_REGEX.test(migrationName)) {
     console.error(
@@ -35,6 +36,11 @@ export async function generateMigration(opts: {
   }
 
   const migrationsDir = resolve(serverDir, "src/db/migrations");
+
+  if (resetMigration) {
+    await resetBranchLocalMigrations(serverDir, migrationsDir);
+  }
+
   const before = new Set(readdirSync(migrationsDir));
 
   const cmd = ["bunx", "drizzle-kit", "generate"];
@@ -70,7 +76,9 @@ export async function generateMigration(opts: {
   if (/\b(error|collision|conflict)\b/i.test(stderrBuf)) {
     console.error(
       "\nError: drizzle-kit printed a diagnostic but exited 0. Treating as failure.\n" +
-        "If this is a snapshot-chain collision, rebase onto origin/main and re-run ./singularity build.",
+        "If this is a snapshot-chain collision, rebase onto origin/main, then re-run\n" +
+        "  ./singularity build --reset-migration --migration-name <slug>\n" +
+        "to drop this branch's migration and regenerate it against the new tip.",
     );
     process.exit(1);
   }
@@ -111,6 +119,99 @@ export async function generateMigration(opts: {
   for (const r of result.renamed) {
     console.log(`  ${r.from} → ${r.to}`);
   }
+}
+
+/**
+ * Delete migration files that exist in the working tree but not at
+ * `origin/main` (or local `main` as fallback). Used by `--reset-migration`
+ * to recover from a snapshot-chain Y-fork after rebasing onto main: the
+ * branch-local migration is dropped so drizzle-kit can re-emit a fresh one
+ * against the rebased tip.
+ *
+ * Only ever touches files absent from the chosen ref, so a shared migration
+ * cannot be removed by accident. After deletion, regenerates the journal so
+ * drizzle-kit's "latest snapshot" lookup matches what's left on disk.
+ */
+async function resetBranchLocalMigrations(
+  serverDir: string,
+  migrationsDir: string,
+): Promise<void> {
+  const ref = await resolveRef(serverDir);
+  if (!ref) {
+    console.error(
+      "--reset-migration needs `origin/main` or `main` to compare against; run `git fetch origin main` first.",
+    );
+    process.exit(1);
+  }
+
+  const tracked = await listTrackedMigrationBasenames(serverDir, ref);
+  const metaDir = join(migrationsDir, "meta");
+
+  const removed: string[] = [];
+  for (const f of readdirSync(migrationsDir)) {
+    if (!f.endsWith(".sql")) continue;
+    if (tracked.has(f)) continue;
+    rmSync(join(migrationsDir, f), { force: true });
+    removed.push(f);
+  }
+  for (const f of readdirSync(metaDir)) {
+    if (!f.endsWith("_snapshot.json")) continue;
+    if (tracked.has(f)) continue;
+    rmSync(join(metaDir, f), { force: true });
+    removed.push(`meta/${f}`);
+  }
+
+  if (removed.length === 0) {
+    console.log(
+      "(--reset-migration: no branch-local migrations found, nothing to reset)",
+    );
+    return;
+  }
+
+  for (const f of removed) console.log(`  removed ${f}`);
+  // Rewrite _journal.json so it matches the (now reduced) set of .sql files
+  // on disk. Drizzle reads journal entries to pick the "latest snapshot"
+  // when generating; a stale entry pointing at a just-deleted file would
+  // make it skip our reset.
+  regenerateJournal(migrationsDir);
+}
+
+async function resolveRef(serverDir: string): Promise<string | null> {
+  for (const ref of ["origin/main", "main"]) {
+    const proc = Bun.spawn(["git", "rev-parse", "--verify", ref], {
+      cwd: serverDir,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    if ((await proc.exited) === 0) return ref;
+  }
+  return null;
+}
+
+async function listTrackedMigrationBasenames(
+  serverDir: string,
+  ref: string,
+): Promise<Set<string>> {
+  const proc = Bun.spawn(
+    [
+      "git",
+      "ls-tree",
+      "-r",
+      "--name-only",
+      ref,
+      "--",
+      "src/db/migrations",
+    ],
+    { cwd: serverDir, stdout: "pipe", stderr: "pipe" },
+  );
+  const out = await new Response(proc.stdout).text();
+  if ((await proc.exited) !== 0) return new Set();
+  return new Set(
+    out
+      .split("\n")
+      .filter(Boolean)
+      .map((p) => p.split("/").pop() ?? p),
+  );
 }
 
 export interface RenameResult {

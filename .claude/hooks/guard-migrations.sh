@@ -36,8 +36,8 @@ To remove a table or plugin that has a DB migration:
   2. Run: ./singularity build --migration-name remove_<plugin_name>
      Drizzle will generate a DROP TABLE migration automatically and keep the snapshot chain intact.
 
-Deleting migration files manually breaks the snapshot chain for every downstream agent and leaves the DB schema in an inconsistent state (as happened with the yak-shaving removal).
+If you hit a snapshot-chain Y-fork after rebasing onto main, run:
+  ./singularity build --reset-migration --migration-name <slug>
+That drops this branch's migration files (anything absent from origin/main) and regenerates them against the new tip — no manual deletion needed.
 
-If you believe this is a legitimate exception: STOP immediately, report the blocked command and your reasoning to the user, and wait for instructions. NEVER attempt to bypass this guard on your own — not by restructuring the command, not by using alternative tools, not by any other means.
-
-If the user has EXPLICITLY instructed you in this conversation to delete migration files directly, create \$PWD/.allow-migrations to bypass (gitignored, worktree-local). Do NOT create that file on your own initiative."
+Deleting migration files manually breaks the snapshot chain for every downstream agent and leaves the DB schema in an inconsistent state (as happened with the yak-shaving removal). If you believe this is a legitimate exception: STOP immediately, report the blocked command and your reasoning to the user, and wait for instructions. NEVER attempt to bypass this guard on your own — not by restructuring the command, not by using alternative tools, not by any other means."

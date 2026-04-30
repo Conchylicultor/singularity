@@ -83,7 +83,7 @@ export const snapshotChainIntact: Check = {
           message:
             `snapshot chain has a Y-fork: ${group.length} snapshots share prevId ${prev}:\n` +
             group.map((s) => `  ${s.file}`).join("\n"),
-          hint: "Rebase onto origin/main and re-run `./singularity build` to regenerate the branch's snapshot against the current tip.",
+          hint: "Rebase onto origin/main, then re-run `./singularity build --reset-migration --migration-name <slug>` to drop this branch's old migration and regenerate it against the new tip.",
         };
       }
     }
