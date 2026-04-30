@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/popover";
 import {
   ImproveForm,
+  makeCard,
   type CardDraft,
   type PrefilledAttachment,
 } from "./improve-form";
@@ -26,10 +27,6 @@ import type {
 
 const HEAD_DEFAULT_MODEL: ChainModel = "sonnet";
 
-function makeCard(model: ChainModel): CardDraft {
-  return { localId: crypto.randomUUID(), text: "", model };
-}
-
 function freshCards(): CardDraft[] {
   return [makeCard(HEAD_DEFAULT_MODEL)];
 }
@@ -38,8 +35,6 @@ export function ImproveButton() {
   const [open, setOpen] = useState(false);
   const [cards, setCards] = useState<CardDraft[]>(freshCards);
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
-  const [includeUrl, setIncludeUrl] = useState(false);
-  const [includeScreenshot, setIncludeScreenshot] = useState(false);
   const [url, setUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [prefilled, setPrefilled] = useState<PrefilledAttachment[]>([]);
@@ -55,9 +50,6 @@ export function ImproveButton() {
     setOpen(true);
   });
 
-  // When cards length grows, focus the freshly-added card. We identify it as
-  // the first card whose localId we hadn't seen before. Pure inserts at any
-  // position are covered; reorders don't add new ids so they don't trigger.
   const seenIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     const seen = seenIdsRef.current;
@@ -72,7 +64,6 @@ export function ImproveButton() {
   const openForm = (next: boolean) => {
     if (next) {
       setUrl(window.location.href);
-      // Re-seed seen ids so the head card receives initial focus on open.
       seenIdsRef.current = new Set();
     } else {
       setPrefilled([]);
@@ -82,8 +73,6 @@ export function ImproveButton() {
 
   const resetForm = () => {
     setCards(freshCards());
-    setIncludeUrl(false);
-    setIncludeScreenshot(false);
     setPrefilled([]);
     seenIdsRef.current = new Set();
   };
@@ -95,16 +84,10 @@ export function ImproveButton() {
 
     setSubmitting(true);
     try {
-      // Union: prefilled (from external openers) + pasted-image refs across
-      // every card's markdown body. The set is deduped before submission.
-      const idSet = new Set<string>(prefilled.map((p) => p.id));
-      for (const c of trimmed) {
-        for (const id of extractAttachmentIds(c.text)) idSet.add(id);
-      }
-      const attachmentIds: string[] = Array.from(idSet);
-      if (includeScreenshot) {
-        // Close the popover BEFORE capture so it isn't in the screenshot. Two
-        // rAFs let the close paint; same pattern as plugins/screenshot.
+      // Capture screenshot once if any card needs it, share the attachment id.
+      const needsScreenshot = trimmed.some((c) => c.includeScreenshot);
+      let screenshotAttachmentId: string | null = null;
+      if (needsScreenshot) {
         flushSync(() => setOpen(false));
         await new Promise<void>((r) =>
           requestAnimationFrame(() => requestAnimationFrame(() => r())),
@@ -117,17 +100,28 @@ export function ImproveButton() {
           return;
         }
         const uploaded = await uploadAttachment(blob, "page.png", "image/png");
-        attachmentIds.push(uploaded.id);
+        screenshotAttachmentId = uploaded.id;
       }
 
       const body: ImproveSubmitBody = {
-        cards: trimmed.map<ImproveSubmitCard>((c) => ({
-          text: c.text,
-          launch: c.model === "queue" ? null : c.model,
-        })),
-        url: includeUrl ? url : "",
-        attachmentIds,
+        cards: trimmed.map<ImproveSubmitCard>((c, i) => {
+          const idSet = new Set<string>();
+          // Prefilled attachments (from external openers) apply to the head only.
+          if (i === 0) prefilled.forEach((p) => idSet.add(p.id));
+          for (const id of extractAttachmentIds(c.text)) idSet.add(id);
+          if (c.includeScreenshot && screenshotAttachmentId) {
+            idSet.add(screenshotAttachmentId);
+          }
+          const attachmentIds = Array.from(idSet);
+          return {
+            text: c.text,
+            launch: c.model === "queue" ? null : c.model,
+            url: c.includeUrl ? url : undefined,
+            attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined,
+          };
+        }),
       };
+
       const res = await fetch("/api/improve/submit", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -177,10 +171,6 @@ export function ImproveButton() {
           onCardsChange={setCards}
           autoFocusId={autoFocusId}
           onAutoFocusHandled={() => setAutoFocusId(null)}
-          includeUrl={includeUrl}
-          onToggleUrl={setIncludeUrl}
-          includeScreenshot={includeScreenshot}
-          onToggleScreenshot={setIncludeScreenshot}
           prefilledAttachments={prefilled}
           submitting={submitting}
           onSubmit={submit}

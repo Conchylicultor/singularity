@@ -18,13 +18,21 @@ import type {
 export async function handleSubmit(req: Request): Promise<Response> {
   const body = (await req.json().catch(() => null)) as ImproveSubmitBody | null;
   if (!body || !Array.isArray(body.cards) || body.cards.length === 0) {
-    return new Response(
-      "body must be { cards: [{ text, launch }...], url, attachmentIds }",
-      { status: 400 },
-    );
+    return new Response("body must be { cards: [{ text, launch, url?, attachmentIds? }...] }", {
+      status: 400,
+    });
   }
 
-  const cards: { text: string; launch: "sonnet" | "opus" | null }[] = [];
+  type ParsedCard = {
+    text: string;
+    launch: "sonnet" | "opus" | null;
+    url: string;
+    attachments: { id: string; filename: string }[];
+  };
+
+  // Validate all cards and attachments upfront — partial failure mid-chain
+  // would leave orphan tasks with dangling references.
+  const cards: ParsedCard[] = [];
   for (let i = 0; i < body.cards.length; i++) {
     const c = body.cards[i] as ImproveSubmitCard | undefined;
     const text = typeof c?.text === "string" ? c.text.trim() : "";
@@ -33,32 +41,29 @@ export async function handleSubmit(req: Request): Promise<Response> {
     }
     const launch =
       c?.launch === "sonnet" || c?.launch === "opus" ? c.launch : null;
-    cards.push({ text, launch });
-  }
+    const url = typeof c?.url === "string" ? c.url : "";
+    const attachmentIds = Array.isArray(c?.attachmentIds)
+      ? c.attachmentIds.filter((id): id is string => typeof id === "string")
+      : [];
 
-  const url = typeof body.url === "string" ? body.url : "";
-  const attachmentIds = Array.isArray(body.attachmentIds)
-    ? body.attachmentIds.filter((id): id is string => typeof id === "string")
-    : [];
+    const attachments = [];
+    for (const id of attachmentIds) {
+      const row = await getAttachment(id);
+      if (!row) return new Response(`card ${i}: attachment ${id} not found`, { status: 400 });
+      attachments.push(row);
+    }
 
-  // Validate every attachment exists before creating any task. Partial
-  // failure mid-chain would leave orphan tasks with dangling references.
-  const attachments = [];
-  for (const id of attachmentIds) {
-    const row = await getAttachment(id);
-    if (!row) return new Response(`attachment ${id} not found`, { status: 400 });
-    attachments.push(row);
+    cards.push({ text, launch, url, attachments });
   }
 
   const taskIds: string[] = [];
   for (let i = 0; i < cards.length; i++) {
     const card = cards[i]!;
-    const isHead = i === 0;
-    // URL + attachments only attach to the head — they capture "the context
-    // that prompted the chain", not per-card metadata.
-    const description = isHead
-      ? renderTaskDescription({ text: card.text, url, attachments })
-      : card.text;
+    const description = renderTaskDescription({
+      text: card.text,
+      url: card.url,
+      attachments: card.attachments,
+    });
 
     const fallbackTitle = synthesiseTitleFallback(card.text);
     const task = await createTask({
@@ -70,10 +75,10 @@ export async function handleSubmit(req: Request): Promise<Response> {
     scheduleTaskTitleUpdate(task.id, card.text, fallbackTitle);
     taskIds.push(task.id);
 
-    if (isHead && attachments.length > 0) {
+    if (card.attachments.length > 0) {
       await db
         .insert(_taskAttachments)
-        .values(attachments.map((a) => ({ ownerId: task.id, attachmentId: a.id })))
+        .values(card.attachments.map((a) => ({ ownerId: task.id, attachmentId: a.id })))
         .onConflictDoNothing();
     }
 
@@ -81,12 +86,6 @@ export async function handleSubmit(req: Request): Promise<Response> {
     if (blockerId) await addTaskDependency(task.id, blockerId);
 
     if (card.launch) {
-      // Every card armed via the same path: head fires immediately
-      // (no blockers), tail cards wait for the per-dep maybe-launch trigger
-      // to fire when the previous card lands. The job builds the prompt
-      // from the task's title + description (buildTaskPrompt), so URL and
-      // attachment links rendered into the head's description flow through
-      // to the agent automatically.
       await armTaskAutoStart({
         taskId: task.id,
         model: card.launch,

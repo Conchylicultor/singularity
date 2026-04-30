@@ -14,10 +14,54 @@ export interface ImproveCardProps {
   autoFocus: boolean;
   removable: boolean;
   disabled: boolean;
+  includeUrl: boolean;
+  onToggleUrl: (v: boolean) => void;
+  includeScreenshot: boolean;
+  onToggleScreenshot: (v: boolean) => void;
   onTextChange: (next: string) => void;
   onModelChange: (next: ChainModel) => void;
   onRemove: () => void;
   onSubmitChord: () => void;
+  isHead?: boolean;
+}
+
+function ContextRow({
+  includeUrl,
+  onToggleUrl,
+  includeScreenshot,
+  onToggleScreenshot,
+  disabled,
+}: {
+  includeUrl: boolean;
+  onToggleUrl: (v: boolean) => void;
+  includeScreenshot: boolean;
+  onToggleScreenshot: (v: boolean) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3 pt-1.5">
+      <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+        <input
+          type="checkbox"
+          className="h-3 w-3 cursor-pointer"
+          checked={includeUrl}
+          disabled={disabled}
+          onChange={(e) => onToggleUrl(e.target.checked)}
+        />
+        URL
+      </label>
+      <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+        <input
+          type="checkbox"
+          className="h-3 w-3 cursor-pointer"
+          checked={includeScreenshot}
+          disabled={disabled}
+          onChange={(e) => onToggleScreenshot(e.target.checked)}
+        />
+        Screenshot
+      </label>
+    </div>
+  );
 }
 
 export function ImproveCard({
@@ -28,10 +72,15 @@ export function ImproveCard({
   autoFocus,
   removable,
   disabled,
+  includeUrl,
+  onToggleUrl,
+  includeScreenshot,
+  onToggleScreenshot,
   onTextChange,
   onModelChange,
   onRemove,
   onSubmitChord,
+  isHead = false,
 }: ImproveCardProps) {
   const {
     attributes,
@@ -52,41 +101,36 @@ export function ImproveCard({
       ref={setNodeRef}
       style={style}
       data-card-index={index}
+      {...attributes}
+      {...listeners}
       className={cn(
-        "border-border bg-background flex items-start gap-1.5 rounded-md border p-1.5",
-        isDragging && "opacity-60 shadow-lg",
+        "border-border bg-background group relative flex flex-col rounded-md border p-2 cursor-grab active:cursor-grabbing select-none",
+        isDragging && "opacity-50 shadow-lg",
       )}
     >
-      <button
-        type="button"
-        aria-label="Drag to reorder"
-        title="Drag to reorder"
-        {...attributes}
-        {...listeners}
-        className="text-muted-foreground hover:text-foreground mt-1 flex size-5 shrink-0 cursor-grab items-center justify-center rounded active:cursor-grabbing"
-      >
-        <MdDragIndicator className="size-4" />
-      </button>
-      <div className="min-w-0 flex-1">
-        <PromptEditor
-          value={text}
-          onChange={onTextChange}
-          onSubmit={onSubmitChord}
-          submitMode="cmd-enter"
-          placeholder={index === 0 ? "What should be improved?" : "Next task…"}
-          disabled={disabled}
-          autoFocus={autoFocus}
-          minRows={3}
-          maxHeight="14rem"
-          namespace={`improve-card-${cardId}`}
-        />
-      </div>
-      <div className="flex shrink-0 flex-col items-end gap-1">
+      <MdDragIndicator className="pointer-events-none absolute right-1.5 top-1.5 size-3 text-muted-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
+      <PromptEditor
+        value={text}
+        onChange={onTextChange}
+        onSubmit={onSubmitChord}
+        submitMode="cmd-enter"
+        placeholder={isHead ? "What should be improved?" : "Next task…"}
+        disabled={disabled}
+        autoFocus={autoFocus}
+        minRows={isHead ? 5 : 2}
+        maxHeight={isHead ? "20rem" : "8rem"}
+        namespace={`improve-card-${cardId}`}
+      />
+      <div className="flex items-center justify-between pt-1.5">
         <ModelChip value={model} onChange={onModelChange} disabled={disabled} />
         {removable && (
           <button
             type="button"
-            onClick={onRemove}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
             disabled={disabled}
             aria-label="Remove task"
             title="Remove task"
@@ -96,6 +140,13 @@ export function ImproveCard({
           </button>
         )}
       </div>
+      <ContextRow
+        includeUrl={includeUrl}
+        onToggleUrl={onToggleUrl}
+        includeScreenshot={includeScreenshot}
+        onToggleScreenshot={onToggleScreenshot}
+        disabled={disabled}
+      />
     </div>
   );
 }

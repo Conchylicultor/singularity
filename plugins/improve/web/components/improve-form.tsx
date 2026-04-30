@@ -21,6 +21,8 @@ export interface CardDraft {
   localId: string;
   text: string;
   model: ChainModel;
+  includeUrl: boolean;
+  includeScreenshot: boolean;
 }
 
 export interface PrefilledAttachment {
@@ -31,17 +33,8 @@ export interface PrefilledAttachment {
 export interface ImproveFormProps {
   cards: CardDraft[];
   onCardsChange: (next: CardDraft[]) => void;
-  // Local id of the card that should grab focus on next render (e.g. after
-  // insert/append). Cleared by the form via `onAutoFocusHandled` once used.
   autoFocusId: string | null;
   onAutoFocusHandled: () => void;
-  includeUrl: boolean;
-  onToggleUrl: (next: boolean) => void;
-  includeScreenshot: boolean;
-  onToggleScreenshot: (next: boolean) => void;
-  // Attachments prefilled by external openers (e.g. screenshot edit). Rendered
-  // as thumbnails above the cards; submitted with the chain alongside any
-  // freshly-captured screenshot.
   prefilledAttachments?: PrefilledAttachment[];
   submitting: boolean;
   onSubmit: () => void;
@@ -50,11 +43,13 @@ export interface ImproveFormProps {
 
 const NEW_CARD_DEFAULT_MODEL: ChainModel = "sonnet";
 
-function makeCard(model: ChainModel): CardDraft {
+export function makeCard(model: ChainModel): CardDraft {
   return {
     localId: crypto.randomUUID(),
     text: "",
     model,
+    includeUrl: false,
+    includeScreenshot: false,
   };
 }
 
@@ -63,10 +58,6 @@ export function ImproveForm({
   onCardsChange,
   autoFocusId,
   onAutoFocusHandled,
-  includeUrl,
-  onToggleUrl,
-  includeScreenshot,
-  onToggleScreenshot,
   prefilledAttachments,
   submitting,
   onSubmit,
@@ -77,8 +68,6 @@ export function ImproveForm({
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
-  // Once a card has been focused, clear the focus token so re-renders don't
-  // keep stealing focus away from whatever the user is currently editing.
   useEffect(() => {
     if (autoFocusId) {
       const t = window.setTimeout(onAutoFocusHandled, 0);
@@ -99,14 +88,18 @@ export function ImproveForm({
 
   const insertAt = (idx: number) => {
     if (submitting) return;
-    // Inherit model from the card we're inserting before (if any), else the
-    // previous card, else the default. Keeps the per-card chip stable across
-    // common edits.
     const inheritFrom = cards[idx] ?? cards[idx - 1];
     const model = inheritFrom?.model ?? NEW_CARD_DEFAULT_MODEL;
     const card = makeCard(model);
     const next = [...cards.slice(0, idx), card, ...cards.slice(idx)];
     onCardsChange(next);
+  };
+
+  const appendChainCard = () => {
+    if (submitting) return;
+    const inheritFrom = cards[cards.length - 1];
+    const model = inheritFrom?.model ?? NEW_CARD_DEFAULT_MODEL;
+    onCardsChange([...cards, makeCard(model)]);
   };
 
   const removeAt = (idx: number) => {
@@ -126,7 +119,7 @@ export function ImproveForm({
   };
 
   return (
-    <div className="flex w-[440px] flex-col gap-2">
+    <div className="flex w-[480px] flex-col gap-2">
       <div className="text-muted-foreground text-xs font-medium">
         Improve this app
       </div>
@@ -155,33 +148,35 @@ export function ImproveForm({
           strategy={verticalListSortingStrategy}
         >
           <div className="flex flex-col">
-            {cards.map((card, idx) => {
-              const showLabel = idx > 0;
-              return (
-                <Fragment key={card.localId}>
+            {cards.map((card, idx) => (
+              <Fragment key={card.localId}>
+                {idx > 0 && (
                   <ChainConnector
-                    showBlocksLabel={showLabel}
+                    showBlocksLabel={true}
                     disabled={submitting || !!draggingId}
                     onInsert={() => insertAt(idx)}
                   />
-                  <ImproveCard
-                    cardId={card.localId}
-                    index={idx}
-                    text={card.text}
-                    model={card.model}
-                    autoFocus={autoFocusId === card.localId}
-                    removable={isMulti}
-                    disabled={submitting}
-                    onTextChange={(t) => updateCard(idx, { text: t })}
-                    onModelChange={(m) => updateCard(idx, { model: m })}
-                    onRemove={() => removeAt(idx)}
-                    onSubmitChord={() => {
-                      if (!disabled) onSubmit();
-                    }}
-                  />
-                </Fragment>
-              );
-            })}
+                )}
+                <ImproveCard
+                  isHead={idx === 0}
+                  cardId={card.localId}
+                  index={idx}
+                  text={card.text}
+                  model={card.model}
+                  autoFocus={autoFocusId === card.localId}
+                  removable={cards.length > 1}
+                  disabled={submitting}
+                  includeUrl={card.includeUrl}
+                  onToggleUrl={(v) => updateCard(idx, { includeUrl: v })}
+                  includeScreenshot={card.includeScreenshot}
+                  onToggleScreenshot={(v) => updateCard(idx, { includeScreenshot: v })}
+                  onTextChange={(t) => updateCard(idx, { text: t })}
+                  onModelChange={(m) => updateCard(idx, { model: m })}
+                  onRemove={() => removeAt(idx)}
+                  onSubmitChord={() => { if (!disabled) onSubmit(); }}
+                />
+              </Fragment>
+            ))}
           </div>
         </SortableContext>
       </DndContext>
@@ -189,38 +184,13 @@ export function ImproveForm({
       <Button
         size="sm"
         variant="ghost"
-        onClick={() => insertAt(cards.length)}
+        onClick={appendChainCard}
         disabled={submitting}
         className="text-muted-foreground self-start"
       >
         <MdAdd className="size-3.5" />
-        Add task
+        + task
       </Button>
-
-      <div className="flex flex-col gap-1 pt-1">
-        <div className="text-muted-foreground text-xs font-medium">
-          Context{" "}
-          {isMulti ? <span className="opacity-70">(applies to head)</span> : null}
-        </div>
-        <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-          <input
-            type="checkbox"
-            className="h-3.5 w-3.5 cursor-pointer"
-            checked={includeUrl}
-            onChange={(e) => onToggleUrl(e.target.checked)}
-          />
-          URL
-        </label>
-        <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-          <input
-            type="checkbox"
-            className="h-3.5 w-3.5 cursor-pointer"
-            checked={includeScreenshot}
-            onChange={(e) => onToggleScreenshot(e.target.checked)}
-          />
-          Screenshot
-        </label>
-      </div>
 
       <div className="border-border flex items-center justify-end gap-2 border-t pt-2">
         <Button size="sm" variant="ghost" onClick={onCancel} disabled={submitting}>
