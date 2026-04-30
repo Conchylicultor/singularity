@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import dagre from "dagre";
 import {
   Background,
@@ -7,6 +7,8 @@ import {
   MarkerType,
   Position,
   ReactFlow,
+  ReactFlowProvider,
+  useReactFlow,
   type Edge,
   type Node,
   type NodeProps,
@@ -157,25 +159,45 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
 
 const NODE_TYPES = { [NODE_TYPE]: TaskNode };
 
-export function TaskGraph({ taskId }: { taskId: string }) {
-  const { data } = useResource(tasksResource);
-  const allTasks = data ?? [];
-  const closure = useMemo(() => computeDagClosure(taskId, allTasks), [taskId, allTasks]);
-  const { nodes, edges } = useMemo(
-    () => layoutDag(closure, taskId),
-    [closure, taskId],
-  );
+function TaskGraphInner({
+  taskId,
+  nodes,
+  edges,
+}: {
+  taskId: string;
+  nodes: TaskFlowNode[];
+  edges: Edge[];
+}) {
+  const { fitView } = useReactFlow();
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  if (closure.length <= 1) return null;
+  // Re-fit on container resize (initial layout settle, sidebar/pane toggles,
+  // window resize) and whenever the node set changes (task switch).
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let frame: number | null = null;
+    const refit = () => {
+      if (frame !== null) cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        fitView({ padding: 0.15, maxZoom: 1 });
+      });
+    };
+    refit();
+    const ro = new ResizeObserver(refit);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, [taskId, nodes, fitView]);
 
   return (
-    <div className="bg-muted/30 h-60 shrink-0 border-b">
+    <div ref={containerRef} className="bg-muted/30 h-60 shrink-0 border-b">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         nodeTypes={NODE_TYPES}
-        fitView
-        fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
         nodesDraggable={false}
         nodesConnectable={false}
         edgesFocusable={false}
@@ -193,5 +215,23 @@ export function TaskGraph({ taskId }: { taskId: string }) {
         <Background gap={16} size={1} />
       </ReactFlow>
     </div>
+  );
+}
+
+export function TaskGraph({ taskId }: { taskId: string }) {
+  const { data } = useResource(tasksResource);
+  const allTasks = data ?? [];
+  const closure = useMemo(() => computeDagClosure(taskId, allTasks), [taskId, allTasks]);
+  const { nodes, edges } = useMemo(
+    () => layoutDag(closure, taskId),
+    [closure, taskId],
+  );
+
+  if (closure.length <= 1) return null;
+
+  return (
+    <ReactFlowProvider>
+      <TaskGraphInner taskId={taskId} nodes={nodes} edges={edges} />
+    </ReactFlowProvider>
   );
 }
