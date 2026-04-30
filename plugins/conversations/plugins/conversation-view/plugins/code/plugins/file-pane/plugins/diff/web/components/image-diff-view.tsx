@@ -6,9 +6,14 @@ function useImageStatus(src: string): ImgStatus {
   const [status, setStatus] = useState<ImgStatus>("loading");
   useEffect(() => {
     setStatus("loading");
-    fetch(src, { method: "HEAD" })
-      .then((r) => setStatus(r.ok ? "ok" : "missing"))
-      .catch(() => setStatus("missing"));
+    const img = new Image();
+    img.onload = () => setStatus("ok");
+    img.onerror = () => setStatus("missing");
+    img.src = src;
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
   }, [src]);
   return status;
 }

@@ -12,6 +12,12 @@ function isImagePath(path: string): boolean {
   return IMAGE_EXTS.has(base.slice(dot + 1));
 }
 
-export function DiffOrImageView(props: { worktree: string; path: string }) {
+export function DiffOrImageView(props: {
+  worktree: string;
+  path: string;
+  base?: string;
+  head?: string;
+  from?: string;
+}) {
   return isImagePath(props.path) ? ImageDiffView(props) : DiffView(props);
 }

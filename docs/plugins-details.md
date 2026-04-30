@@ -267,7 +267,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Plugins:
                 - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
                   - Exports (web):
-                    - Values: `DiffView`
+                    - Values: `DiffOrImageView`, `DiffView`
                   - Contributes:
                     - `FilePane.Renderer` "Diff" → `DiffOrImageView`
                 - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.

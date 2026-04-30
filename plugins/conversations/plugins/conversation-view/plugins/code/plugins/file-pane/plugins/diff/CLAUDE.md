@@ -6,7 +6,7 @@
 
 - Description: Side-by-side diff of the file vs HEAD in the conversation's worktree.
 - Exports (web):
-  - Values: `DiffView`
+  - Values: `DiffOrImageView`, `DiffView`
 - Contributes:
   - `FilePane.Renderer` "Diff" → `DiffOrImageView`
 

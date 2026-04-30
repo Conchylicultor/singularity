@@ -4,6 +4,7 @@ import { supportsDiff } from "./internal/supports";
 import { DiffOrImageView } from "./internal/diff-or-image-view";
 
 export { DiffView } from "./components/diff-view";
+export { DiffOrImageView } from "./internal/diff-or-image-view";
 
 export default {
   id: "conversation-code-file-pane-diff",
