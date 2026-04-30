@@ -8,6 +8,7 @@ import dbBackupPlugin from "@plugins/debug/plugins/db-backup/web";
 import logsPlugin from "@plugins/debug/plugins/logs/web";
 import worktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/web";
 import queuePlugin from "@plugins/debug/plugins/queue/web";
+import claudeCliCallsPlugin from "@plugins/debug/plugins/claude-cli-calls/web";
 import conversationsPlugin from "@plugins/conversations/plugins/conversations-view/web";
 import conversationGroupsPlugin from "@plugins/conversations/plugins/conversation-groups/web";
 import conversationPlugin from "@plugins/conversations/plugins/conversation-view/web";
@@ -124,6 +125,7 @@ export const plugins: PluginDefinition[] = [
   dbBackupPlugin,
   worktreeCleanupPlugin,
   queuePlugin,
+  claudeCliCallsPlugin,
   conversationPlugin,
   conversationUiPlugin,
   conversationUiItemPlugin,

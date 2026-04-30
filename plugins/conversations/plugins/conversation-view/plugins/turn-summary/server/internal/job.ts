@@ -97,6 +97,10 @@ export const generateTurnSummaryJob = defineJob({
         system: SYSTEM_PROMPT,
         prompt: buildPrompt(userText, assistantText),
         timeoutMs: HAIKU_TIMEOUT_MS,
+        source: {
+          name: "turn-summary",
+          context: { conversationId, messageId },
+        },
       });
     } catch (err) {
       if (err instanceof ClaudeCliError) {

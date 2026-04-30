@@ -22,7 +22,10 @@ export function synthesiseTitleFallback(text: string): string {
   return firstLine.length > 80 ? `${firstLine.slice(0, 77)}…` : firstLine;
 }
 
-export async function generateTaskTitle(description: string): Promise<string> {
+export async function generateTaskTitle(
+  description: string,
+  taskId?: string,
+): Promise<string> {
   const fallback = synthesiseTitleFallback(description);
   if (!description.trim()) return fallback;
   try {
@@ -31,6 +34,10 @@ export async function generateTaskTitle(description: string): Promise<string> {
       prompt: buildPrompt(description),
       system: SYSTEM_PROMPT,
       timeoutMs: 30_000,
+      source: {
+        name: "task-title",
+        context: taskId ? { taskId } : undefined,
+      },
     });
     const cleaned = out
       .trim()
@@ -58,7 +65,7 @@ export function scheduleTaskTitleUpdate(
   if (!description.trim()) return;
   void (async () => {
     try {
-      const generated = await generateTaskTitle(description);
+      const generated = await generateTaskTitle(description, taskId);
       if (generated === fallbackTitle) return;
       await updateTaskTitle(taskId, generated, [fallbackTitle]);
     } catch (err) {

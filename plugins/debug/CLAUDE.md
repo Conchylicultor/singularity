@@ -11,8 +11,9 @@
   - Values: `Debug`
 - Contributes:
   - `Shell.Sidebar` "Debug" → `DebugSidebar`
-- Slot contributors: `conversations-recover`, `db-backup`, `events-test`, `logs`, `queue`, `worktree-cleanup`
+- Slot contributors: `claude-cli-calls`, `conversations-recover`, `db-backup`, `events-test`, `logs`, `queue`, `worktree-cleanup`
 - Sub-plugins:
+  - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
   - **`db-backup`** — Backup non-worktree Postgres databases to ~/.backups/singularity/. Backup non-worktree Postgres databases to ~/.backups/singularity/.
   - **`logs`** — System logs pane, opened from the Debug sidebar.
   - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.

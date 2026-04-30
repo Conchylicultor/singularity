@@ -305,6 +305,10 @@
       "name": "@singularity/plugin-debug",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/claude-cli-calls": {
+      "name": "@singularity/plugin-debug-claude-cli-calls",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/db-backup": {
       "name": "@singularity/plugin-debug-db-backup",
       "version": "0.0.1",
@@ -1198,6 +1202,8 @@
     "@singularity/plugin-crashes": ["@singularity/plugin-crashes@workspace:plugins/crashes"],
 
     "@singularity/plugin-debug": ["@singularity/plugin-debug@workspace:plugins/debug"],
+
+    "@singularity/plugin-debug-claude-cli-calls": ["@singularity/plugin-debug-claude-cli-calls@workspace:plugins/debug/plugins/claude-cli-calls"],
 
     "@singularity/plugin-debug-db-backup": ["@singularity/plugin-debug-db-backup@workspace:plugins/debug/plugins/db-backup"],
 

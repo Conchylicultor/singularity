@@ -372,6 +372,13 @@
       "tag": "20260430_205630_939b541c__add_improve_pending_groups",
       "hash": "939b541c",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777584099000,
+      "tag": "20260430_212139_bdc3e46b__claude_cli_calls",
+      "hash": "bdc3e46b",
+      "breakpoints": true
     }
   ]
 }

@@ -108,6 +108,10 @@ export const classifyConversationJob = defineJob({
         system: buildSystemPrompt(categories),
         prompt: buildTranscriptDigest(turns),
         timeoutMs: HAIKU_TIMEOUT_MS,
+        source: {
+          name: "conversation-category",
+          context: { conversationId },
+        },
       });
     } catch (err) {
       if (err instanceof ClaudeCliError) {

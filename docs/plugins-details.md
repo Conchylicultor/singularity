@@ -497,8 +497,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `Debug`
   - Contributes:
     - `Shell.Sidebar` "Debug" → `DebugSidebar`
-  - Slot contributors: `conversations-recover`, `db-backup`, `events-test`, `logs`, `queue`, `worktree-cleanup`
+  - Slot contributors: `claude-cli-calls`, `conversations-recover`, `db-backup`, `events-test`, `logs`, `queue`, `worktree-cleanup`
   - Plugins:
+    - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
+      - Exports (web):
+        - Values: `claudeCliCallsPane`
+      - Contributes:
+        - `Pane.Register` `claude-cli-calls` (path `/debug/claude-cli-calls`)
+        - `Debug.Item` "Claude CLI Calls"
+        - `claudeCliCallsPane.open`
     - **`db-backup`** — Backup non-worktree Postgres databases to ~/.backups/singularity/. Backup non-worktree Postgres databases to ~/.backups/singularity/.
       - Exports (web):
         - Values: `dbBackupPane`
@@ -605,9 +612,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `DELETE /api/attachments/:id`
       - Endpoint callers: `agents`, `conversation-view`, `conversations`, `improve`, `paste-images`, `quick-prompts`, `screenshot`, `task-attachments`, `tasks-core`
     - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
+      - Defines:
+        - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
       - Exports (server):
         - Types: `ClaudePrintModel`, `RunClaudePrintInput`
-        - Values: `ClaudeCliError`, `runClaudePrint`
+        - Values: `_claudeCliCalls`, `claudeCliCallsResource`, `ClaudeCliError`, `runClaudePrint`
+      - Exports (shared):
+        - Types: `ClaudeCliCall`
+        - Values: `ClaudeCliCallSchema`, `claudeCliCallsResource`
+      - Server:
+        - Resources: `claude-cli-calls` (push)
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
       - Defines:
         - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`
@@ -691,7 +705,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
         - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `queue`, `review`, `screenshot`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
       - Exports (web):
         - Types: `ImageNodePayload`

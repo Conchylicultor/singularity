@@ -1,3 +1,5 @@
+import { recordClaudeCliCall } from "./record-call";
+
 const CLAUDE_BIN = process.env.SINGULARITY_CLAUDE_BIN ?? "/Users/admin/.local/bin/claude";
 
 const MODEL_IDS: Record<ClaudePrintModel, string> = {
@@ -13,6 +15,12 @@ export interface RunClaudePrintInput {
   prompt: string;
   system?: string;
   timeoutMs?: number;
+  // Identifies the caller for the debug call log. Required so every entry in
+  // the pane has a meaningful "what launched this" label.
+  source: {
+    name: string;
+    context?: Record<string, unknown>;
+  };
 }
 
 export class ClaudeCliError extends Error {
@@ -39,32 +47,53 @@ export async function runClaudePrint(input: RunClaudePrintInput): Promise<string
   ];
   if (input.system) args.push("--system-prompt", input.system);
 
-  // Run outside the worktree so claude doesn't auto-discover project CLAUDE.md
-  // files even with --system-prompt set (defensive — the system prompt
-  // replacement should already cover this).
-  const proc = Bun.spawn([CLAUDE_BIN, ...args], {
-    cwd: "/tmp",
-    stdin: "pipe",
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  proc.stdin.write(input.prompt);
-  await proc.stdin.end();
-
-  const timer = setTimeout(() => proc.kill(), timeoutMs);
+  const startedAt = performance.now();
+  let output: string | undefined;
+  let caughtError: Error | undefined;
   try {
-    const [stdout, stderr, exit] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]);
-    if (exit !== 0) {
-      throw new ClaudeCliError(
-        `claude --print exited ${exit}: ${stderr.trim() || "<no stderr>"}`,
-      );
+    // Run outside the worktree so claude doesn't auto-discover project CLAUDE.md
+    // files even with --system-prompt set (defensive — the system prompt
+    // replacement should already cover this).
+    const proc = Bun.spawn([CLAUDE_BIN, ...args], {
+      cwd: "/tmp",
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    proc.stdin.write(input.prompt);
+    await proc.stdin.end();
+
+    const timer = setTimeout(() => proc.kill(), timeoutMs);
+    try {
+      const [stdout, stderr, exit] = await Promise.all([
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+        proc.exited,
+      ]);
+      if (exit !== 0) {
+        throw new ClaudeCliError(
+          `claude --print exited ${exit}: ${stderr.trim() || "<no stderr>"}`,
+        );
+      }
+      output = stdout;
+      return stdout;
+    } finally {
+      clearTimeout(timer);
     }
-    return stdout;
+  } catch (err) {
+    caughtError = err instanceof Error ? err : new Error(String(err));
+    throw err;
   } finally {
-    clearTimeout(timer);
+    const durationMs = Math.round(performance.now() - startedAt);
+    void recordClaudeCliCall({
+      model: input.model,
+      sourceName: input.source.name,
+      sourceContext: input.source.context ?? null,
+      prompt: input.prompt,
+      system: input.system ?? null,
+      output: output ?? null,
+      error: caughtError ? caughtError.message : null,
+      durationMs,
+    });
   }
 }
