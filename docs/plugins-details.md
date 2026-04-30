@@ -216,7 +216,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `DELETE /api/conversation-groups/:id`
         - `POST /api/conversation-groups/:id/members`
         - `DELETE /api/conversation-groups/members/:conversationId`
-    - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Classifies each conversation into one of four sequential phases (research → plan → implementation → pushed) using Haiku after each turn, and immediately sets pushed when a push event lands.
+    - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
       - Defines:
         - DB schema: `plugins/conversations/plugins/conversation-progress/server/internal/tables.ts`
       - Exports (server):
@@ -225,7 +225,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `conversationPane.Actions` → `ProgressBarToolbar`
         - `Item.Chips` → `ProgressBarRow`
       - Server:
-        - Uses: `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.pushLanded`
+        - Uses: `conversations.conversationTurnCompleted`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.pushLanded`
     - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
       - Plugins:
         - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
