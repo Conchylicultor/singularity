@@ -1,5 +1,69 @@
 import type { JsonlEvent, TokenUsage } from "../../shared";
 
+// Matches `@/absolute/path.ext` patterns for common image formats.
+const AT_IMAGE_RE = /@(\/\S+\.(?:png|jpg|jpeg|gif|webp|svg|bmp|tiff))/gi;
+
+const IMAGE_MIME: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  svg: "image/svg+xml",
+  bmp: "image/bmp",
+  tiff: "image/tiff",
+};
+
+type Segment = { kind: "text"; value: string } | { kind: "image"; mime: string; data: string };
+
+async function pushTextWithImages(text: string, at: string, out: JsonlEvent[]): Promise<void> {
+  AT_IMAGE_RE.lastIndex = 0;
+
+  const segments: Segment[] = [];
+  let last = 0;
+  let hasImages = false;
+  let m: RegExpExecArray | null;
+
+  while ((m = AT_IMAGE_RE.exec(text)) !== null) {
+    const before = text.slice(last, m.index);
+    if (before) segments.push({ kind: "text", value: before });
+
+    const path = m[1];
+    const ext = path.slice(path.lastIndexOf(".") + 1).toLowerCase();
+    try {
+      const f = Bun.file(path);
+      if (await f.exists()) {
+        const data = Buffer.from(await f.arrayBuffer()).toString("base64");
+        segments.push({ kind: "image", mime: IMAGE_MIME[ext] ?? "image/png", data });
+        hasImages = true;
+      } else {
+        segments.push({ kind: "text", value: m[0] });
+      }
+    } catch {
+      segments.push({ kind: "text", value: m[0] });
+    }
+
+    last = m.index + m[0].length;
+  }
+
+  const after = text.slice(last);
+  if (after) segments.push({ kind: "text", value: after });
+
+  if (segments.length === 0) return;
+
+  if (!hasImages) {
+    if (text.trim()) out.push({ kind: "user-text", at, text });
+    return;
+  }
+
+  const plainText = segments
+    .filter((s): s is { kind: "text"; value: string } => s.kind === "text")
+    .map((s) => s.value)
+    .join("");
+
+  out.push({ kind: "user-text", at, text: plainText, segments });
+}
+
 interface RawBlock {
   type?: string;
   text?: string;
@@ -91,7 +155,7 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
       const content = msg.content;
       if (typeof content === "string") {
         if (content.length > 0) {
-          events.push({ kind: "user-text", at: ts, text: content });
+          await pushTextWithImages(content, ts, events);
         }
       } else if (Array.isArray(content)) {
         for (const block of content as RawBlock[]) {
@@ -105,8 +169,7 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
               isError: block.is_error === true ? true : undefined,
             });
           } else if (block?.type === "text" && typeof block.text === "string") {
-            // Rare, but the user turn can have a plain text block inside an array.
-            events.push({ kind: "user-text", at: ts, text: block.text });
+            await pushTextWithImages(block.text, ts, events);
           } else if (
             block?.type === "image" &&
             block.source?.type === "base64" &&

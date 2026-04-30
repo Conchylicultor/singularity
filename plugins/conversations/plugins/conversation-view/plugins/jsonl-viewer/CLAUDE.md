@@ -11,7 +11,7 @@
   - Types: `EventRendererContribution`, `RowActionContribution`
   - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`
 - Exports (shared):
-  - Types: `JsonlEvent`, `JsonlEventsResponse`, `TokenUsage`
+  - Types: `JsonlEvent`, `JsonlEventsResponse`, `TokenUsage`, `UserTextSegment`
   - Values: `jsonlEventsResource`
 - Contributes:
   - `JsonlViewer.RowAction` → `RawJsonAction`

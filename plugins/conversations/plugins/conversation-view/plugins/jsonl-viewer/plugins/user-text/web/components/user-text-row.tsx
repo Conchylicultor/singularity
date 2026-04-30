@@ -3,7 +3,7 @@ import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
-import type { JsonlEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/shared";
+import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/shared";
 import { formatTime } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
 type UserTextEvent = Extract<JsonlEvent, { kind: "user-text" }>;
@@ -21,6 +21,52 @@ function isLong(text: string): boolean {
 }
 
 const FADE_MASK = "linear-gradient(to bottom, black 65%, transparent 100%)";
+
+function InlineImage({ mime, data }: { mime: string; data: string }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => setExpanded((v) => !v)}
+      className="block max-w-full"
+      aria-label={expanded ? "Collapse image" : "Expand image"}
+    >
+      <img
+        src={`data:${mime};base64,${data}`}
+        alt="Attached image"
+        className={
+          expanded
+            ? "max-h-[80vh] max-w-full rounded border border-border object-contain"
+            : "max-h-40 max-w-xs rounded border border-border object-cover"
+        }
+      />
+    </button>
+  );
+}
+
+function SegmentedContent({
+  segments,
+  onFileOpen,
+}: {
+  segments: UserTextSegment[];
+  onFileOpen: (path: string) => void;
+}) {
+  return (
+    <>
+      {segments.map((seg, i) =>
+        seg.kind === "text" ? (
+          <div key={i} className="whitespace-pre-wrap break-words text-sm">
+            <FileLinkText text={seg.value} onFileOpen={onFileOpen} />
+          </div>
+        ) : (
+          <div key={i} className="mt-1.5">
+            <InlineImage mime={seg.mime} data={seg.data} />
+          </div>
+        ),
+      )}
+    </>
+  );
+}
 
 export function UserTextRow({ event }: { event: JsonlEvent }) {
   const e = event as UserTextEvent;
@@ -43,16 +89,16 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
         <span className="tabular-nums">{formatTime(e.at)}</span>
       </div>
       <div
-        className={`whitespace-pre-wrap break-words text-sm ${
-          showCollapsed ? "max-h-48 overflow-hidden" : ""
-        }`}
-        style={
-          showCollapsed
-            ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK }
-            : undefined
-        }
+        className={showCollapsed ? "max-h-48 overflow-hidden" : ""}
+        style={showCollapsed ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}
       >
-        <FileLinkText text={e.text} onFileOpen={onFileOpen} />
+        {e.segments ? (
+          <SegmentedContent segments={e.segments} onFileOpen={onFileOpen} />
+        ) : (
+          <div className="whitespace-pre-wrap break-words text-sm">
+            <FileLinkText text={e.text} onFileOpen={onFileOpen} />
+          </div>
+        )}
       </div>
       {collapsible ? (
         <button

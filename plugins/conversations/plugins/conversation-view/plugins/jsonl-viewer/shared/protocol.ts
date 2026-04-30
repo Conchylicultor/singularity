@@ -9,11 +9,18 @@ export const TokenUsageSchema = z.object({
 });
 export type TokenUsage = z.infer<typeof TokenUsageSchema>;
 
+const UserTextSegmentSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("text"), value: z.string() }),
+  z.object({ kind: z.literal("image"), mime: z.string(), data: z.string() }),
+]);
+export type UserTextSegment = z.infer<typeof UserTextSegmentSchema>;
+
 export const JsonlEventSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("user-text"),
     at: z.string(),
     text: z.string(),
+    segments: z.array(UserTextSegmentSchema).optional(),
   }),
   z.object({
     kind: z.literal("user-image"),
