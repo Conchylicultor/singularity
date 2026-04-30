@@ -365,6 +365,13 @@
       "tag": "20260430_124931_3f19f567__add_turn_summaries",
       "hash": "3f19f567",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777582590000,
+      "tag": "20260430_205630_939b541c__add_improve_pending_groups",
+      "hash": "939b541c",
+      "breakpoints": true
     }
   ]
 }

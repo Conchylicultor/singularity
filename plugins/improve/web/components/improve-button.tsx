@@ -38,6 +38,7 @@ export function ImproveButton() {
   const [url, setUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [prefilled, setPrefilled] = useState<PrefilledAttachment[]>([]);
+  const [groupId, setGroupId] = useState<string | null>(null);
 
   Improve.OpenWithAttachments.useHandler(({ attachmentIds, filenames }) => {
     setPrefilled(
@@ -74,6 +75,7 @@ export function ImproveButton() {
   const resetForm = () => {
     setCards(freshCards());
     setPrefilled([]);
+    setGroupId(null);
     seenIdsRef.current = new Set();
   };
 
@@ -104,6 +106,7 @@ export function ImproveButton() {
       }
 
       const body: ImproveSubmitBody = {
+        ...(groupId ? { groupId } : {}),
         cards: trimmed.map<ImproveSubmitCard>((c, i) => {
           const idSet = new Set<string>();
           // Prefilled attachments (from external openers) apply to the head only.
@@ -172,6 +175,8 @@ export function ImproveButton() {
           autoFocusId={autoFocusId}
           onAutoFocusHandled={() => setAutoFocusId(null)}
           prefilledAttachments={prefilled}
+          groupId={groupId}
+          onGroupChange={setGroupId}
           submitting={submitting}
           onSubmit={submit}
           onCancel={() => openForm(false)}

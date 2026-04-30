@@ -10,6 +10,7 @@ import {
 
 export { _conversationGroups, _conversationGroupMembers } from "./internal/tables";
 export { conversationGroupsResource } from "./internal/resource";
+export { addMemberToGroup } from "./internal/repo";
 
 export default {
   id: "conversation-groups",

@@ -11,7 +11,7 @@
   - Types: `GroupedConversationListProps`
   - Values: `GroupedConversationList`
 - Exports (server):
-  - Values: `_conversationGroupMembers`, `_conversationGroups`, `conversationGroupsResource`
+  - Values: `_conversationGroupMembers`, `_conversationGroups`, `addMemberToGroup`, `conversationGroupsResource`
 - Exports (shared):
   - Types: `ConversationGroup`, `ConversationGroupMember`, `ConversationGroupsPayload`
   - Values: `ConversationGroupMemberSchema`, `ConversationGroupSchema`, `ConversationGroupsPayloadSchema`, `conversationGroupsResource`

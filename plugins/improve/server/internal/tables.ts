@@ -10,3 +10,12 @@ export const _improve_config = pgTable("improve_config", {
   promptTemplate: text("prompt_template").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+// Tracks which conversation group a submitted task should be added to once its
+// conversation is created. Written at submit time; cleared by applyGroupJob
+// when the conversationCreated event fires for the task.
+export const _improvePendingGroups = pgTable("improve_pending_groups", {
+  taskId: text("task_id").primaryKey(),
+  groupId: text("group_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});

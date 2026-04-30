@@ -13,6 +13,18 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  conversationGroupsResource,
+  type ConversationGroup,
+} from "@plugins/conversations/plugins/conversation-groups/shared";
 import { ImproveCard } from "./improve-card";
 import { ChainConnector } from "./chain-connector";
 import type { ChainModel } from "./model-chip";
@@ -36,6 +48,8 @@ export interface ImproveFormProps {
   autoFocusId: string | null;
   onAutoFocusHandled: () => void;
   prefilledAttachments?: PrefilledAttachment[];
+  groupId: string | null;
+  onGroupChange: (id: string | null) => void;
   submitting: boolean;
   onSubmit: () => void;
   onCancel: () => void;
@@ -59,6 +73,8 @@ export function ImproveForm({
   autoFocusId,
   onAutoFocusHandled,
   prefilledAttachments,
+  groupId,
+  onGroupChange,
   submitting,
   onSubmit,
   onCancel,
@@ -67,6 +83,8 @@ export function ImproveForm({
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
+  const { data: groupsData } = useResource(conversationGroupsResource);
+  const groups = groupsData?.groups ?? [];
 
   useEffect(() => {
     if (autoFocusId) {
@@ -120,8 +138,29 @@ export function ImproveForm({
 
   return (
     <div className="flex w-[480px] flex-col gap-2">
-      <div className="text-muted-foreground text-xs font-medium">
-        Improve this app
+      <div className="flex items-center justify-between">
+        <div className="text-muted-foreground text-xs font-medium">
+          Improve this app
+        </div>
+        {groups.length > 0 && (
+          <Select
+            value={groupId ?? "none"}
+            onValueChange={(v: string | null) => onGroupChange(!v || v === "none" ? null : v)}
+            disabled={submitting}
+          >
+            <SelectTrigger className="h-6 w-auto max-w-[180px] gap-1 border-0 px-2 text-xs shadow-none">
+              <SelectValue placeholder="No group" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No group</SelectItem>
+              {groups.map((g: ConversationGroup) => (
+                <SelectItem key={g.id} value={g.id}>
+                  {g.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {attachments.length > 0 && (

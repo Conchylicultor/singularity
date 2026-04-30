@@ -10,6 +10,7 @@ import { getAttachment } from "@plugins/infra/plugins/attachments/server";
 import { attachmentMarkdown } from "@plugins/primitives/plugins/paste-images/shared";
 import { db } from "@server/db/client";
 import { IMPROVEMENTS_META_TASK_ID } from "./meta-improvements";
+import { _improvePendingGroups } from "./tables";
 import type {
   ImproveSubmitBody,
   ImproveSubmitCard,
@@ -23,6 +24,7 @@ export async function handleSubmit(req: Request): Promise<Response> {
       status: 400,
     });
   }
+  const groupId = typeof body.groupId === "string" && body.groupId ? body.groupId : null;
 
   type ParsedCard = {
     text: string;
@@ -92,6 +94,16 @@ export async function handleSubmit(req: Request): Promise<Response> {
         model: card.launch,
         dependencies: blockerId ? [blockerId] : [],
       });
+    }
+
+    if (groupId) {
+      await db
+        .insert(_improvePendingGroups)
+        .values({ taskId: task.id, groupId })
+        .onConflictDoUpdate({
+          target: _improvePendingGroups.taskId,
+          set: { groupId },
+        });
     }
   }
 

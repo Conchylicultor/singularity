@@ -174,7 +174,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/conversations/:id/stop`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
-  - Imported by: `agents`, `conversation-category`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
+  - Imported by: `agents`, `conversation-category`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
   - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `hold-and-exit`, `launch`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
@@ -205,7 +205,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `GroupedConversationListProps`
         - Values: `GroupedConversationList`
       - Exports (server):
-        - Values: `_conversationGroupMembers`, `_conversationGroups`, `conversationGroupsResource`
+        - Values: `_conversationGroupMembers`, `_conversationGroups`, `addMemberToGroup`, `conversationGroupsResource`
       - Exports (shared):
         - Types: `ConversationGroup`, `ConversationGroupMember`, `ConversationGroupsPayload`
         - Values: `ConversationGroupMemberSchema`, `ConversationGroupSchema`, `ConversationGroupsPayloadSchema`, `conversationGroupsResource`
@@ -581,11 +581,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `OpenWithAttachmentsArgs`
     - Values: `ImproveCommands`
   - Exports (server):
-    - Values: `_improve_config`, `IMPROVEMENTS_META_TASK_ID`
+    - Values: `_improve_config`, `_improvePendingGroups`, `IMPROVEMENTS_META_TASK_ID`
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `ImproveButton`
   - Server:
-    - Uses: `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.scheduleTaskTitleUpdate`, `tasks-core.synthesiseTitleFallback`, `tasks.armTaskAutoStart`
+    - Uses: `conversations.conversationCreated`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.scheduleTaskTitleUpdate`, `tasks-core.synthesiseTitleFallback`, `tasks.armTaskAutoStart`
     - `POST /api/improve/submit`
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
