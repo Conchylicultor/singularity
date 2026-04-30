@@ -3,8 +3,8 @@ import type { ConversationStatus } from "@plugins/conversations/shared";
 
 const STATUS_CLASSES: Record<ConversationStatus, string> = {
   starting: "bg-muted text-muted-foreground",
-  working: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
-  waiting: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  working: "bg-muted text-muted-foreground",
+  waiting: "bg-muted text-muted-foreground",
   gone: "bg-muted text-muted-foreground/60 italic",
 };
 

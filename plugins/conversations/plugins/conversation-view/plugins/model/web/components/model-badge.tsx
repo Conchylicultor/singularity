@@ -2,8 +2,8 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import type { ConversationModel } from "@plugins/conversations/shared";
 
 const MODEL_CLASSES: Record<ConversationModel, string> = {
-  opus: "bg-purple-500/15 text-purple-700 dark:text-purple-300",
-  sonnet: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+  opus: "bg-muted text-muted-foreground",
+  sonnet: "bg-muted text-muted-foreground",
 };
 
 export function ModelBadge() {
