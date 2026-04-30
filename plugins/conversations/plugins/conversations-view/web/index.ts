@@ -3,6 +3,7 @@ import { Core } from "@core";
 import { Shell } from "@plugins/shell/web";
 import { MdForum } from "react-icons/md";
 import { ConversationList } from "./components/conversation-list";
+import { ConvCountLabel } from "./components/conv-count-label";
 import { ForkErrorWatcher } from "./components/fork-error-watcher";
 
 export default {
@@ -14,6 +15,7 @@ export default {
       title: "Conversations",
       icon: MdForum,
       component: ConversationList,
+      labelExtra: ConvCountLabel,
     }),
     Core.Root({ component: ForkErrorWatcher }),
   ],

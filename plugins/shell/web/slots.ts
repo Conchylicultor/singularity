@@ -8,6 +8,7 @@ export const Shell = {
     onClick?: () => void;
     component?: ComponentType;
     group?: string;
+    labelExtra?: ComponentType;
   }>("shell.sidebar"),
 
   Toolbar: defineSlot<{

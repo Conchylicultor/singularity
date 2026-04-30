@@ -170,11 +170,12 @@ export function ShellLayout() {
                 <PluginErrorBoundary slot="shell.sidebar" label={pane.title}>
                   <SidebarGroup>
                     <SidebarGroupLabel
-                      className="cursor-pointer select-none hover:text-sidebar-foreground"
+                      className="group/label cursor-pointer select-none hover:text-sidebar-foreground"
                       onClick={() => toggleSection(pane.title)}
                     >
                       <pane.icon className="size-4 mr-2" />
                       {pane.title}
+                      {pane.labelExtra && <pane.labelExtra />}
                       <MdChevronRight
                         className={`ml-auto size-4 transition-transform duration-200 ${collapsed.has(pane.title) ? "" : "rotate-90"}`}
                       />
