@@ -24,7 +24,7 @@
   - `Shell.Sidebar` "Agents" (group `System`)
   - `agentsRootPane.open`
 - Server:
-  - Uses: `conversations.createConversation`, `conversations.resolveAttachmentRefs`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
+  - Uses: `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
   - Resources: `agent-launches` (push), `agents` (push)
   - `GET /api/agents`
   - `POST /api/agents`

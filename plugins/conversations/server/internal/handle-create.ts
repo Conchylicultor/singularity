@@ -2,7 +2,6 @@ import { recentConversationsResource } from "@plugins/tasks-core/server";
 import { recordCrash } from "@plugins/crashes/server";
 import { ConversationModelSchema } from "../schema";
 import { createConversation } from "./lifecycle";
-import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
 
 export async function handleCreate(req: Request): Promise<Response> {
   const body = (await req.json().catch(() => ({}))) as {
@@ -17,18 +16,12 @@ export async function handleCreate(req: Request): Promise<Response> {
   const model =
     body.model !== undefined ? ConversationModelSchema.parse(body.model) : undefined;
 
-  // Rewrite `![](/api/attachments/<id>)` refs in the prompt into `@<disk-path>`
-  // so the agent reads the file directly. Missing refs are stripped.
-  const resolvedPrompt = body.prompt
-    ? (await resolveAttachmentRefs(body.prompt)).text
-    : undefined;
-
   let session;
   try {
     session = await createConversation({
       taskId: body.taskId,
       attemptId: body.attemptId,
-      prompt: resolvedPrompt,
+      prompt: body.prompt,
       runtimeId: body.runtime,
       model,
       forkFromConversationId: body.forkFromConversationId,

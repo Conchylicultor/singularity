@@ -2,7 +2,6 @@ import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { createTask } from "@plugins/tasks-core/server";
 import { createConversation } from "@plugins/conversations/server";
-import { resolveAttachmentRefs } from "@plugins/conversations/server";
 import {
   ConversationModelSchema,
   type ConversationModel,
@@ -47,12 +46,9 @@ export async function handleLaunch(
     author: "agents-plugin",
   });
 
-  // Resolve `![](/api/attachments/<id>)` refs in the prompt to `@<disk-path>`
-  // so the agent reads attached images straight from disk.
-  const { text: resolvedPrompt } = await resolveAttachmentRefs(agent.prompt);
   const conversation = await createConversation({
     taskId: task.id,
-    prompt: resolvedPrompt,
+    prompt: agent.prompt,
     model,
     spawnedBy: "agents-plugin",
     kind: "agent",

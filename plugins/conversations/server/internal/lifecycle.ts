@@ -18,6 +18,7 @@ import { reportForkError } from "./fork-errors";
 import { setupWorktree, worktreePathFor } from "@server/worktree";
 import { conversationCreated } from "./tables-created-event";
 import { SYSTEM_META_TASK_ID } from "./meta-system";
+import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
 
 const DEFAULT_RUNTIME = "tmux";
 const DEFAULT_MODEL: ConversationModel = "opus";
@@ -122,6 +123,12 @@ export async function createConversation(
     throw new Error("createConversation requires spawnedBy (or SINGULARITY_WORKTREE)");
   }
 
+  // Single chokepoint for `![](/api/attachments/<id>)` → `@<disk-path>` rewriting
+  // so every entry point (HTTP create, agent launch, auto-start) gets it.
+  const resolvedPrompt = opts.prompt
+    ? (await resolveAttachmentRefs(opts.prompt)).text
+    : undefined;
+
   await insertConversation({
     id: conversationId,
     attemptId,
@@ -133,7 +140,7 @@ export async function createConversation(
 
   try {
     await runtime.create(conversationId, worktreePath, {
-      prompt: opts.prompt,
+      prompt: resolvedPrompt,
       model,
       resumeSessionId,
       forkSession: !!opts.forkFromConversationId,
