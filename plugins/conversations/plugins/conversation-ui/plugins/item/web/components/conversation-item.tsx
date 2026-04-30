@@ -112,9 +112,11 @@ export function ConversationItem({
         <div className="flex items-center gap-1.5 overflow-hidden">
           <ConvTitle conv={conv} />
           <ConvSysBadge conv={conv} />
+        </div>
+        <div className="flex items-center gap-1.5 overflow-hidden">
+          <ConvRelativeTime conv={conv} />
           <ChipsSlot conv={conv} />
         </div>
-        <ConvRelativeTime conv={conv} />
       </div>
     </div>
   );
