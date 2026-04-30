@@ -33,9 +33,13 @@ import { MdClose, MdRemoveCircleOutline } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { DraggableRow, type DropTarget } from "./draggable-row";
 import { GroupBox } from "./group-box";
+import { GroupContainer } from "./group-container";
+import { NewGroupDropZone } from "./new-group-drop-zone";
 
 type ConversationEntry = Conversation;
 type AttemptGroup = ConversationEntry[]; // [root, ...forks]
+
+const UNGROUPED_EXPANDED_KEY = "conv-groups:ungrouped:expanded";
 
 export interface GroupedConversationListProps {
   active: ConversationEntry[];
@@ -146,6 +150,26 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
   );
 
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [pendingFocusGroupId, setPendingFocusGroupId] = useState<string | null>(
+    null,
+  );
+  const [ungroupedExpanded, setUngroupedExpanded] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(UNGROUPED_EXPANDED_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const toggleUngroupedExpanded = useCallback(() => {
+    setUngroupedExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(UNGROUPED_EXPANDED_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  }, []);
+  const dragInProgress = activeConvId !== null;
   const allConversations = useMemo(
     () => [...active, ...system, ...recentGone, ...paginatedItems],
     [active, system, recentGone, paginatedItems],
@@ -168,6 +192,29 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     const target = over.data.current as DropTarget | undefined;
     if (!draggedId || !target) return;
     if (target.kind === "conv" && target.convId === draggedId) return;
+
+    if (target.kind === "new-group") {
+      const res = await fetch(`/api/conversation-groups`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conversationIds: [draggedId] }),
+      });
+      if (res.ok) {
+        const created = (await res.json()) as { id?: string };
+        if (created.id) setPendingFocusGroupId(created.id);
+      }
+      return;
+    }
+
+    if (target.kind === "ungroup") {
+      // Only meaningful if the conv is currently in a user group.
+      if (groupIdByConvId.has(draggedId)) {
+        await fetch(`/api/conversation-groups/members/${draggedId}`, {
+          method: "DELETE",
+        });
+      }
+      return;
+    }
 
     if (target.kind === "auto-group") {
       // Promote the auto-group to a persistent user-defined group, adding the dragged conv.
@@ -225,59 +272,68 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     forks: ConversationEntry[],
     enclosingGroupId?: string,
   ): ReactNode => (
-    <DraggableRow key={conv.id} convId={conv.id} groupId={enclosingGroupId}>
-      <SidebarMenuButton
-        className={cn("h-auto py-1.5", rowTint(conv))}
-        isActive={conv.id === activeId}
-        onClick={() => onNavigate(conv.id)}
-      >
-        <ConversationItem conv={conv} />
-      </SidebarMenuButton>
-      {enclosingGroupId !== undefined && (
-        <SidebarMenuAction
-          onClick={(e: React.MouseEvent) => {
-            e.stopPropagation();
-            void fetch(`/api/conversation-groups/members/${conv.id}`, {
-              method: "DELETE",
-            });
-          }}
-          className="right-7 opacity-0 group-hover/menu-item:opacity-100"
-          aria-label="Remove from group"
-          title="Remove from group"
-        >
-          <MdRemoveCircleOutline className="size-3.5" />
-        </SidebarMenuAction>
-      )}
-      <SidebarMenuAction
-        onClick={(e: React.MouseEvent) => onCloseConversation(conv.id, e)}
-        className="opacity-0 group-hover/menu-item:opacity-100"
-        aria-label="Close conversation"
-      >
-        <MdClose className="size-3.5" />
-      </SidebarMenuAction>
-      {forks.length > 0 && (
-        <SidebarMenuSub>
-          {forks.map((fork) => (
-            <SidebarMenuSubItem key={fork.id} className="relative group/menu-item">
-              <SidebarMenuSubButton
-                className={cn("h-auto py-1", rowTint(fork))}
-                isActive={fork.id === activeId}
-                onClick={() => onNavigate(fork.id)}
-              >
-                <ConversationItem conv={fork} />
-              </SidebarMenuSubButton>
-              <SidebarMenuAction
-                onClick={(e: React.MouseEvent) => onCloseConversation(fork.id, e)}
-                className="opacity-0 group-hover/menu-item:opacity-100"
-                aria-label="Close conversation"
-              >
-                <MdClose className="size-3.5" />
-              </SidebarMenuAction>
-            </SidebarMenuSubItem>
-          ))}
-        </SidebarMenuSub>
-      )}
-    </DraggableRow>
+    <DraggableRow
+      key={conv.id}
+      convId={conv.id}
+      groupId={enclosingGroupId}
+      row={
+        <>
+          <SidebarMenuButton
+            className={cn("h-auto py-1.5", rowTint(conv))}
+            isActive={conv.id === activeId}
+            onClick={() => onNavigate(conv.id)}
+          >
+            <ConversationItem conv={conv} />
+          </SidebarMenuButton>
+          {enclosingGroupId !== undefined && (
+            <SidebarMenuAction
+              onClick={(e: React.MouseEvent) => {
+                e.stopPropagation();
+                void fetch(`/api/conversation-groups/members/${conv.id}`, {
+                  method: "DELETE",
+                });
+              }}
+              className="right-7 opacity-0 group-hover/menu-item:opacity-100"
+              aria-label="Remove from group"
+              title="Remove from group"
+            >
+              <MdRemoveCircleOutline className="size-3.5" />
+            </SidebarMenuAction>
+          )}
+          <SidebarMenuAction
+            onClick={(e: React.MouseEvent) => onCloseConversation(conv.id, e)}
+            className="opacity-0 group-hover/menu-item:opacity-100"
+            aria-label="Close conversation"
+          >
+            <MdClose className="size-3.5" />
+          </SidebarMenuAction>
+        </>
+      }
+      forks={
+        forks.length > 0 ? (
+          <SidebarMenuSub>
+            {forks.map((fork) => (
+              <SidebarMenuSubItem key={fork.id} className="relative group/menu-item">
+                <SidebarMenuSubButton
+                  className={cn("h-auto py-1", rowTint(fork))}
+                  isActive={fork.id === activeId}
+                  onClick={() => onNavigate(fork.id)}
+                >
+                  <ConversationItem conv={fork} />
+                </SidebarMenuSubButton>
+                <SidebarMenuAction
+                  onClick={(e: React.MouseEvent) => onCloseConversation(fork.id, e)}
+                  className="opacity-0 group-hover/menu-item:opacity-100"
+                  aria-label="Close conversation"
+                >
+                  <MdClose className="size-3.5" />
+                </SidebarMenuAction>
+              </SidebarMenuSubItem>
+            ))}
+          </SidebarMenuSub>
+        ) : null
+      }
+    />
   );
 
   const renderAttemptGroup = (ag: AttemptGroup, enclosingGroupId?: string) => {
@@ -289,6 +345,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
   return (
     <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveConvId(null)}>
       <div className="flex flex-col gap-1.5">
+        <NewGroupDropZone visible={dragInProgress} />
         {groups.map((g) => {
           const ags = groupedAttemptGroups.get(g.id) ?? [];
           return (
@@ -296,6 +353,9 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
               key={g.id}
               group={g}
               isEmpty={ags.length === 0}
+              dragInProgress={dragInProgress}
+              autoFocusRename={pendingFocusGroupId === g.id}
+              onRenameFocused={() => setPendingFocusGroupId(null)}
               onRename={async (next) => {
                 await fetch(`/api/conversation-groups/${g.id}`, {
                   method: "PATCH",
@@ -328,6 +388,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
             clusterKey={ag.clusterKey}
             title={ag.title}
             rootConvIds={ag.rootConvIds}
+            dragInProgress={dragInProgress}
             onRename={async (next) => {
               await fetch(`/api/conversation-groups`, {
                 method: "POST",
@@ -341,8 +402,29 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
             </SidebarMenu>
           </AutoGroupBox>
         ))}
+        <GroupContainer
+          droppableId="drop-ungrouped"
+          dropData={{ kind: "ungroup" }}
+          expanded={ungroupedExpanded}
+          onToggleExpanded={toggleUngroupedExpanded}
+          dragInProgress={dragInProgress}
+          title={
+            <div className="min-w-0 flex-1 truncate px-1 py-0.5 text-xs font-semibold text-muted-foreground">
+              Ungrouped
+            </div>
+          }
+        >
+          {trulyUngrouped.length > 0 ? (
+            <SidebarMenu>
+              {trulyUngrouped.map((ag) => renderAttemptGroup(ag))}
+            </SidebarMenu>
+          ) : (
+            <div className="px-2 py-1 text-[11px] text-muted-foreground italic">
+              No ungrouped conversations
+            </div>
+          )}
+        </GroupContainer>
         <SidebarMenu>
-          {trulyUngrouped.map((ag) => renderAttemptGroup(ag))}
           {recentGone.map((conv) => (
             <SidebarMenuItem key={conv.id}>
               <SidebarMenuButton

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { cn } from "@/lib/utils";
 
@@ -5,11 +6,16 @@ export function GroupRename({
   value,
   onSave,
   className,
+  autoFocus,
+  onFocused,
 }: {
   value: string;
   onSave: (next: string) => void | Promise<void>;
   className?: string;
+  autoFocus?: boolean;
+  onFocused?: () => void;
 }) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const field = useEditableField<string>({
     value,
     onSave: async (next) => {
@@ -18,10 +24,22 @@ export function GroupRename({
       await onSave(trimmed);
     },
   });
+
+  useEffect(() => {
+    if (autoFocus && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+      onFocused?.();
+    }
+    // We intentionally only fire when autoFocus flips to true.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFocus]);
+
   return (
     <input
+      ref={inputRef}
       className={cn(
-        "min-w-0 flex-1 truncate rounded bg-transparent px-1 py-0.5 text-xs font-medium",
+        "min-w-0 flex-1 truncate rounded bg-transparent px-1 py-0.5 text-xs font-semibold",
         "outline-none focus:bg-background/60 focus:ring-1 focus:ring-border",
         className,
       )}

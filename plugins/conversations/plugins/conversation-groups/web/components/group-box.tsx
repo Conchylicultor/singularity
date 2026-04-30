@@ -1,8 +1,7 @@
-import { useDroppable } from "@dnd-kit/core";
-import { MdChevronRight, MdDeleteOutline } from "react-icons/md";
+import { MdDeleteOutline } from "react-icons/md";
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
 import type { ConversationGroup } from "../../shared";
+import { GroupContainer } from "./group-container";
 import { GroupRename } from "./group-rename";
 
 export function GroupBox({
@@ -11,6 +10,9 @@ export function GroupBox({
   onRename,
   onToggleExpanded,
   onDelete,
+  dragInProgress,
+  autoFocusRename,
+  onRenameFocused,
   children,
 }: {
   group: ConversationGroup;
@@ -18,33 +20,27 @@ export function GroupBox({
   onRename: (next: string) => void | Promise<void>;
   onToggleExpanded: (next: boolean) => void | Promise<void>;
   onDelete: () => void | Promise<void>;
+  dragInProgress: boolean;
+  autoFocusRename?: boolean;
+  onRenameFocused?: () => void;
   children: ReactNode;
 }) {
-  const droppable = useDroppable({
-    id: `drop-group-${group.id}`,
-    data: { kind: "group", groupId: group.id } as const,
-  });
-
   return (
-    <div
-      ref={droppable.setNodeRef}
-      className={cn(
-        "rounded-md border border-border/60 bg-muted/20 px-1 py-1 transition-colors",
-        droppable.isOver && "border-primary/60 bg-accent/40",
-      )}
-    >
-      <div className="group/header flex items-center gap-0.5">
-        <button
-          type="button"
-          onClick={() => void onToggleExpanded(!group.expanded)}
-          aria-label={group.expanded ? "Collapse group" : "Expand group"}
-          className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent"
-        >
-          <MdChevronRight
-            className={cn("size-4 transition-transform", group.expanded && "rotate-90")}
-          />
-        </button>
-        <GroupRename value={group.title} onSave={onRename} />
+    <GroupContainer
+      droppableId={`drop-group-${group.id}`}
+      dropData={{ kind: "group", groupId: group.id }}
+      expanded={group.expanded}
+      onToggleExpanded={() => onToggleExpanded(!group.expanded)}
+      dragInProgress={dragInProgress}
+      title={
+        <GroupRename
+          value={group.title}
+          onSave={onRename}
+          autoFocus={autoFocusRename}
+          onFocused={onRenameFocused}
+        />
+      }
+      trailingAction={
         <button
           type="button"
           onClick={(e) => {
@@ -61,18 +57,15 @@ export function GroupBox({
         >
           <MdDeleteOutline className="size-3.5" />
         </button>
-      </div>
-      {group.expanded && (
-        <div className="mt-0.5 pl-1">
-          {isEmpty ? (
-            <div className="px-2 py-1 text-[11px] text-muted-foreground italic">
-              Empty — drop a conversation here
-            </div>
-          ) : (
-            children
-          )}
+      }
+    >
+      {isEmpty ? (
+        <div className="px-2 py-1 text-[11px] text-muted-foreground italic">
+          Empty — drop a conversation here
         </div>
+      ) : (
+        children
       )}
-    </div>
+    </GroupContainer>
   );
 }

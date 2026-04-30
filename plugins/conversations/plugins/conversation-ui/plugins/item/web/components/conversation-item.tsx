@@ -71,7 +71,7 @@ export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
     <span
       className={cn(
         "truncate text-xs",
-        muted ? "text-muted-foreground" : "font-medium",
+        muted && "text-muted-foreground",
       )}
     >
       {conv.title ?? "Starting…"}
