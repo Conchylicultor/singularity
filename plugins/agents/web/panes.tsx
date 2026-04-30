@@ -1,7 +1,8 @@
 import type { ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Outlet, Pane, PaneChrome, type, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
-import { ConversationView } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane, ConversationView } from "@plugins/conversations/plugins/conversation-view/web";
+import { AgentSideBody } from "./components/agent-side-body";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -43,6 +44,17 @@ export const systemAgentDetailPane = Pane.define({
   parent: agentsRootPane,
   path: "system/:systemId",
   component: SystemAgentDetailBody,
+});
+
+export const agentSidePane = Pane.define({
+  id: "agent-side",
+  parent: conversationPane,
+  path: "agent/:agentId",
+  component: AgentSideBody,
+  chrome: {
+    history: false,
+    expand: ({ agentId }) => `/agents/${agentId}`,
+  },
 });
 
 function AgentsRoot(): ReactElement {

@@ -9,6 +9,7 @@ import {
   agentDetailPane,
   agentConversationPane,
   systemAgentDetailPane,
+  agentSidePane,
 } from "./panes";
 import { AgentChipRow } from "./components/agent-chip-row";
 import { AgentChipToolbar } from "./components/agent-chip-toolbar";
@@ -18,6 +19,7 @@ export {
   agentDetailPane,
   agentConversationPane,
   systemAgentDetailPane,
+  agentSidePane,
 } from "./panes";
 export { Agents } from "./slots";
 export { defineSystemAgent } from "./system-agents";
@@ -32,6 +34,7 @@ export default {
     Pane.Register({ pane: agentDetailPane }),
     Pane.Register({ pane: agentConversationPane }),
     Pane.Register({ pane: systemAgentDetailPane }),
+    Pane.Register({ pane: agentSidePane }),
     Shell.Sidebar({
       title: "Agents",
       icon: MdPrecisionManufacturing,

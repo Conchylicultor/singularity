@@ -12,7 +12,7 @@
   - DB schema: `plugins/agents/server/internal/tables.ts`
 - Exports (web):
   - Types: `SystemAgentDescriptor`
-  - Values: `agentConversationPane`, `agentDetailPane`, `Agents`, `agentsRootPane`, `defineSystemAgent`, `systemAgentDetailPane`
+  - Values: `agentConversationPane`, `agentDetailPane`, `Agents`, `agentSidePane`, `agentsRootPane`, `defineSystemAgent`, `systemAgentDetailPane`
 - Exports (server):
   - Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`
   - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
@@ -21,6 +21,7 @@
   - `Pane.Register` `agent-detail` (path `:id`)
   - `Pane.Register` `agent-conversation` (path `c/:convId`)
   - `Pane.Register` `agent-system-detail` (path `system/:systemId`)
+  - `Pane.Register` `agent-side` (path `agent/:agentId`)
   - `Shell.Sidebar` "Agents" (group `System`)
   - `agentsRootPane.open`
   - `Item.Chips` → `AgentChipRow`
