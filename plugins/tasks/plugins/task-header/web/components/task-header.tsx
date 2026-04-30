@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
+import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { tasksResource, type Task } from "@plugins/tasks/shared";
 import { buildTaskPrompt } from "@plugins/tasks-core/shared";
 import { useFlushAll, useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
@@ -144,6 +145,24 @@ export function TaskHeader({ taskId }: { taskId: string }) {
         </span>
         <AuthorDisplay author={task.author ?? "user"} />
       </div>
+      <div className="flex items-center gap-3">
+        <span className="text-muted-foreground text-xs uppercase tracking-wide">
+          Created
+        </span>
+        <span className="text-xs">
+          <RelativeTime date={new Date(task.createdAt)} />
+        </span>
+      </div>
+      {task.finishedAt != null && (
+        <div className="flex items-center gap-3">
+          <span className="text-muted-foreground text-xs uppercase tracking-wide">
+            Closed
+          </span>
+          <span className="text-xs">
+            <RelativeTime date={new Date(task.finishedAt)} />
+          </span>
+        </div>
+      )}
       <div className="flex items-center gap-3">
         <span className="text-muted-foreground text-xs uppercase tracking-wide">
           Auto-start
