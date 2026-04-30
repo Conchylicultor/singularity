@@ -7,6 +7,7 @@ import { colorClassFor } from "../internal/colors";
 // conversation has been classified, so unclassified rows look unchanged.
 export function CategoryChipRow({ conv }: { conv: ConversationItemConv }) {
   const category = useCategoryFor(conv.id);
+  if (conv.kind === "agent") return null;
   if (!category) return null;
   return (
     <span

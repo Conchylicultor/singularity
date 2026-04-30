@@ -22,6 +22,7 @@ export function CategoryChipToolbar() {
   );
   const [busy, setBusy] = useState<"classify" | "set" | null>(null);
   const [open, setOpen] = useState(false);
+  if (conversation.kind === "agent") return null;
 
   const onPick = async (next: string) => {
     if (busy) return;

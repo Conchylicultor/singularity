@@ -40,6 +40,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Pane.Register` `agent-system-detail` (path `system/:systemId`)
     - `Shell.Sidebar` "Agents" (group `System`)
     - `agentsRootPane.open`
+    - `Item.Chips` → `AgentChipRow`
+    - `conversationPane.Actions` → `AgentChipToolbar`
   - Server:
     - Uses: `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
     - Resources: `agent-launches` (push), `agents` (push)
@@ -216,7 +218,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (web):
             - Types: `ConversationItemConv`, `ConversationItemProps`
             - Values: `CONV_STATUS_DOT`, `ConversationItem`, `ConvRelativeTime`, `ConvStatusDot`, `ConvSysBadge`, `ConvTitle`, `formatRelativeTime`, `Item`
-          - Slot contributors: `conversation-category`
+          - Slot contributors: `agents`, `conversation-category`
     - **`conversation-view`** — Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
       - Defines:
         - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`

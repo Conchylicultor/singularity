@@ -23,6 +23,8 @@
   - `Pane.Register` `agent-system-detail` (path `system/:systemId`)
   - `Shell.Sidebar` "Agents" (group `System`)
   - `agentsRootPane.open`
+  - `Item.Chips` → `AgentChipRow`
+  - `conversationPane.Actions` → `AgentChipToolbar`
 - Server:
   - Uses: `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
   - Resources: `agent-launches` (push), `agents` (push)
