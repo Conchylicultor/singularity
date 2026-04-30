@@ -181,6 +181,7 @@ When working on this project, follow these instructions thoughtfully:
 - **Prefer the clean, modern, best-practice design over the hacky one, even when it's more work.** This applies to *both* bug fixes *and* new feature design. Every concrete task — a bug, a missing behavior, a requested feature — is a toy case for a larger structural question. Ask: "what general primitive, plugin, slot, or abstraction would make this *and* future similar cases trivial?" — then build that, rather than patching the symptom or bolting the feature onto existing code. This might include refactoring or creating new plugins.
 - **Group related plugins under an umbrella.** For 2+ related plugins, prefer an umbrella parent (`plugins/<umbrella>/plugins/<child>/`) over flat top-level entries. This keeps `plugins/` readable as semantic categories rather than an unbounded flat list. The umbrella doesn't need to re-export children's APIs — each sub-plugin owns its barrel.
 - **Subagents default to Sonnet.** When spawning any `Agent` call, always pass `model: "sonnet"` explicitly. Never omit the model and let it default to Opus. Only use Opus for load-bearing, complex implementation tasks — research, lookup, synthesis, and reporting are all Sonnet work.
+- **On breakage, rebase to HEAD first.** When the build fails to start or something is broken in an unexpected way, rebase the worktree branch onto `main` (`git fetch origin main && git rebase origin/main`) — the issue may already be fixed upstream.
 ------------------------------------
 
 @docs/plugins-compact.md
