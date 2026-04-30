@@ -53,6 +53,34 @@ function ToolbarItem(item: {
   return null;
 }
 
+function PaneSectionLabel({
+  pane,
+  isCollapsed,
+  onToggle,
+}: {
+  pane: {
+    title: string;
+    icon: ComponentType<{ className?: string }>;
+    labelExtra?: ComponentType;
+  };
+  isCollapsed: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <SidebarGroupLabel
+      className="group/label cursor-pointer select-none hover:text-sidebar-foreground"
+      onClick={onToggle}
+    >
+      <pane.icon className="size-4 mr-2" />
+      {pane.title}
+      {pane.labelExtra && <pane.labelExtra />}
+      <MdChevronRight
+        className={`ml-auto size-4 transition-transform duration-200 ${isCollapsed ? "" : "rotate-90"}`}
+      />
+    </SidebarGroupLabel>
+  );
+}
+
 const DEFAULT_COLLAPSED = new Set(["Debug"]);
 
 export function ShellLayout() {
@@ -77,6 +105,9 @@ export function ShellLayout() {
       return next;
     });
   const toolbarItems = Shell.Toolbar.useContributions();
+  const visibleScrollPanes = scrollPanes.filter(
+    (p) => !collapsed.has(p.title) && p.component,
+  );
 
   ShellCommands.Toast.useHandler(({ title, description, variant }) => {
     const opts = { description: title ? description : undefined };
@@ -85,9 +116,8 @@ export function ShellLayout() {
     fn(message, opts);
   });
 
-  // Surface async errors (unhandled promise rejections) as toasts. Without
-  // this, errors thrown inside async click handlers vanish into the devtools
-  // console and the UI silently stalls.
+  // Unhandled promise rejections are surfaced as toasts; without this they
+  // vanish into the devtools console and the UI silently stalls.
   useEffect(() => {
     const onRejection = (e: PromiseRejectionEvent) => {
       const reason = e.reason;
@@ -119,7 +149,6 @@ export function ShellLayout() {
               <span className="text-base font-semibold tracking-tight">Singularity</span>
             </a>
           </SidebarHeader>
-          {/* Pinned section: button groups + pinned pane components + scroll pane labels */}
           <div className="flex shrink-0 flex-col">
             {Array.from(buttonGroups.entries()).map(([groupName, btns], gi) => (
               <Fragment key={`btn-group-${groupName}`}>
@@ -172,17 +201,11 @@ export function ShellLayout() {
                 )}
                 <PluginErrorBoundary slot="shell.sidebar" label={pane.title}>
                   <SidebarGroup>
-                    <SidebarGroupLabel
-                      className="group/label cursor-pointer select-none hover:text-sidebar-foreground"
-                      onClick={() => toggleSection(pane.title)}
-                    >
-                      <pane.icon className="size-4 mr-2" />
-                      {pane.title}
-                      {pane.labelExtra && <pane.labelExtra />}
-                      <MdChevronRight
-                        className={`ml-auto size-4 transition-transform duration-200 ${collapsed.has(pane.title) ? "" : "rotate-90"}`}
-                      />
-                    </SidebarGroupLabel>
+                    <PaneSectionLabel
+                      pane={pane}
+                      isCollapsed={collapsed.has(pane.title)}
+                      onToggle={() => toggleSection(pane.title)}
+                    />
                     {!collapsed.has(pane.title) && pane.component && (
                       <SidebarGroupContent>
                         <pane.component />
@@ -200,31 +223,23 @@ export function ShellLayout() {
                 )}
                 <PluginErrorBoundary slot="shell.sidebar" label={pane.title}>
                   <SidebarGroup className="pb-0">
-                    <SidebarGroupLabel
-                      className="group/label cursor-pointer select-none hover:text-sidebar-foreground"
-                      onClick={() => toggleSection(pane.title)}
-                    >
-                      <pane.icon className="size-4 mr-2" />
-                      {pane.title}
-                      {pane.labelExtra && <pane.labelExtra />}
-                      <MdChevronRight
-                        className={`ml-auto size-4 transition-transform duration-200 ${collapsed.has(pane.title) ? "" : "rotate-90"}`}
-                      />
-                    </SidebarGroupLabel>
+                    <PaneSectionLabel
+                      pane={pane}
+                      isCollapsed={collapsed.has(pane.title)}
+                      onToggle={() => toggleSection(pane.title)}
+                    />
                   </SidebarGroup>
                 </PluginErrorBoundary>
               </Fragment>
             ))}
           </div>
 
-          {/* Independent scroll region: scroll pane content only */}
-          {scrollPanes.some((p) => !collapsed.has(p.title) && p.component) && (
+          {visibleScrollPanes.length > 0 && (
             <SidebarContent className="pt-0">
-              {scrollPanes.map((pane) =>
-                !collapsed.has(pane.title) && pane.component ? (
-                  <pane.component key={pane.title} />
-                ) : null,
-              )}
+              {visibleScrollPanes.map((pane) => {
+                const Comp = pane.component!;
+                return <Comp key={pane.title} />;
+              })}
             </SidebarContent>
           )}
         </Sidebar>
