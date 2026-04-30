@@ -147,7 +147,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/config/specs`
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
-  - Imported by: `build`, `commits`, `conversation-category`
+  - Imported by: `build`, `commits`, `conversation-category`, `turn-summary`
   - Slot contributors: `commits`, `conversation-category`, `quick-prompts`
 
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
@@ -432,11 +432,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `_turnSummaries`, `generateTurnSummaryJob`, `turnSummariesResource`
           - Exports (shared):
             - Types: `TurnSummariesPayload`, `TurnSummary`
-            - Values: `TurnSummariesPayloadSchema`, `turnSummariesResource`, `TurnSummarySchema`
+            - Values: `TurnSummariesPayloadSchema`, `turnSummariesResource`, `turnSummaryConfig`, `TurnSummarySchema`
           - Contributes:
             - `Conversation.AbovePromptInput` → `TurnSummaryCard`
           - Server:
-            - Uses: `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `tasks-core._conversations`, `tasks-core.getConversation`
+            - Uses: `config.readConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `tasks-core._conversations`, `tasks-core.getConversation`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:
             - `conversationPane.Actions` → `VscodeButton`

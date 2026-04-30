@@ -97,7 +97,8 @@ export const classifyConversationJob = defineJob({
       return;
     }
 
-    const { categories } = await readConfig(conversationCategoryConfig);
+    const { autoClassify, categories } = await readConfig(conversationCategoryConfig);
+    if (!autoClassify) return;
     if (categories.length === 0) return;
 
     let raw: string;

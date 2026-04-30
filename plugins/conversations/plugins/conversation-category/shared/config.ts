@@ -1,6 +1,12 @@
 import { defineConfig } from "@plugins/config/shared";
 
 export const conversationCategoryConfig = defineConfig({
+  autoClassify: {
+    default: true,
+    label: "Auto-classify with Haiku",
+    description:
+      "Automatically classify conversations into categories after each assistant turn. Manual re-classify is always available from the toolbar chip.",
+  },
   categories: {
     default: [
       "General question",

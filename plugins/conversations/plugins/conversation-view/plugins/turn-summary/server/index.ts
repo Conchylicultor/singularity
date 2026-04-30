@@ -4,6 +4,7 @@ import {
   trigger,
 } from "@plugins/infra/plugins/events/server";
 import { conversationTurnCompleted } from "@plugins/conversations/server";
+import { turnSummaryConfig } from "../shared/config";
 import { generateTurnSummaryJob } from "./internal/job";
 import { turnSummariesResource } from "./internal/resource";
 
@@ -16,6 +17,7 @@ export default {
   name: "Conversation View: Turn Summary",
   description:
     "After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.",
+  config: turnSummaryConfig,
   resources: [turnSummariesResource],
   onReady: async () => {
     // Idempotent re-subscribe: drop any stale conversationTurnCompleted →

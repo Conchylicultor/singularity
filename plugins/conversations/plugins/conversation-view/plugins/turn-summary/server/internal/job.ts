@@ -2,12 +2,14 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { readConfig } from "@plugins/config/server";
 import { readConversationTurns } from "@plugins/conversations/server";
 import { getConversation } from "@plugins/tasks-core/server";
 import {
   ClaudeCliError,
   runClaudePrint,
 } from "@plugins/infra/plugins/claude-cli/server";
+import { turnSummaryConfig } from "../../shared/config";
 import { _turnSummaries } from "./tables";
 import { turnSummariesResource } from "./resource";
 import { parseMarkdownSections } from "./parse";
@@ -57,6 +59,9 @@ export const generateTurnSummaryJob = defineJob({
     .passthrough(),
   maxAttempts: 2,
   run: async ({ event }) => {
+    const { enabled } = await readConfig(turnSummaryConfig);
+    if (!enabled) return;
+
     const conversationId = event?.conversationId;
     if (!conversationId) return;
     const assistantText = event?.text ?? "";
