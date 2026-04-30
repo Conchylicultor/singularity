@@ -104,37 +104,35 @@ export function ImproveCard({
       {...attributes}
       {...listeners}
       className={cn(
-        "border-border bg-background group relative flex flex-col rounded-md border p-2 cursor-grab active:cursor-grabbing select-none",
+        "border-border bg-background group relative flex flex-col rounded-md border p-2 cursor-grab active:cursor-grabbing",
         isDragging && "opacity-50 shadow-lg",
       )}
     >
       <MdDragIndicator className="pointer-events-none absolute right-1.5 top-1.5 size-3 text-muted-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
-      <PromptEditor
-        value={text}
-        onChange={onTextChange}
-        onSubmit={onSubmitChord}
-        submitMode="cmd-enter"
-        placeholder={isHead ? "What should be improved?" : "Next task…"}
-        disabled={disabled}
-        autoFocus={autoFocus}
-        minRows={isHead ? 5 : 2}
-        maxHeight={isHead ? "20rem" : "8rem"}
-        namespace={`improve-card-${cardId}`}
-      />
+      <div onPointerDown={(e) => e.stopPropagation()} className="cursor-auto">
+        <PromptEditor
+          value={text}
+          onChange={onTextChange}
+          onSubmit={onSubmitChord}
+          submitMode="cmd-enter"
+          placeholder={isHead ? "What should be improved?" : "Next task…"}
+          disabled={disabled}
+          autoFocus={autoFocus}
+          minRows={isHead ? 5 : 2}
+          maxHeight={isHead ? "20rem" : "8rem"}
+          namespace={`improve-card-${cardId}`}
+        />
+      </div>
       <div className="flex items-center justify-between pt-1.5">
         <ModelChip value={model} onChange={onModelChange} disabled={disabled} />
         {removable && (
           <button
             type="button"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
+            onClick={onRemove}
             disabled={disabled}
             aria-label="Remove task"
             title="Remove task"
-            className="text-muted-foreground hover:text-foreground hover:bg-muted flex size-5 items-center justify-center rounded"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted flex size-5 items-center justify-center rounded cursor-pointer"
           >
             <MdClose className="size-3.5" />
           </button>
