@@ -639,12 +639,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `OpenWithTextArgs`
     - Values: `ImproveCommands`
   - Exports (server):
-    - Values: `_improve_config`, `_improvePendingGroups`, `IMPROVEMENTS_META_TASK_ID`
+    - Values: `_improve_config`, `_improvePendingGroups`, `_improvePendingQueueTop`, `IMPROVEMENTS_META_TASK_ID`
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `ImproveButton`
   - Server:
-    - Uses: `conversations.conversationCreated`, `tasks-core.ensureMetaTask`
-    - Register: `applyGroupJob`
+    - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `tasks-core._conversations`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`
+    - Register: `applyGroupJob`, `applyQueueTopJob`
+    - `POST /api/improve/queue-top`
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:

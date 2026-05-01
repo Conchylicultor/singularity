@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { MdAdd } from "react-icons/md";
 import {
   DndContext,
@@ -43,6 +43,7 @@ export interface TaskDraftFormProps {
   relateMode?: TaskChainRelateMode;
   onRelateModeChange?: (next: TaskChainRelateMode) => void;
   heading?: string;
+  footerStart?: ReactNode;
 }
 
 const NEW_CARD_DEFAULT_MODEL: ChainModel = "sonnet";
@@ -71,6 +72,7 @@ export function TaskDraftForm({
   relateMode,
   onRelateModeChange,
   heading,
+  footerStart,
 }: TaskDraftFormProps) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const sensors = useSensors(
@@ -216,7 +218,9 @@ export function TaskDraftForm({
         + task
       </Button>
 
-      <div className="border-border flex items-center justify-end gap-2 border-t pt-2">
+      <div className="border-border flex items-center gap-2 border-t pt-2">
+        {footerStart}
+        <div className="flex-1" />
         <Button size="sm" variant="ghost" onClick={onCancel} disabled={submitting}>
           Cancel
         </Button>

@@ -43,6 +43,8 @@ export interface TaskDraftPopoverProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   heading?: string;
+  footerStart?: ReactNode;
+  onSuccess?: (taskIds: string[]) => void;
 }
 
 export function TaskDraftPopover({
@@ -56,6 +58,8 @@ export function TaskDraftPopover({
   open: controlledOpen,
   onOpenChange,
   heading,
+  footerStart,
+  onSuccess,
 }: TaskDraftPopoverProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -137,6 +141,7 @@ export function TaskDraftPopover({
         return;
       }
       Shell.Toast({ description: describeOutcome(outcome, cards), variant: "success" });
+      onSuccess?.(outcome.taskIds ?? []);
       resetForm();
       setOpen(false);
     } catch (err) {
@@ -170,6 +175,7 @@ export function TaskDraftPopover({
           relateMode={relate ? relateMode : undefined}
           onRelateModeChange={relate ? setRelateMode : undefined}
           heading={heading}
+          footerStart={footerStart}
         />
       </PopoverContent>
     </Popover>
