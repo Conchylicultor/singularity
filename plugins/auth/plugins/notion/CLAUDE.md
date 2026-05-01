@@ -10,6 +10,7 @@
 - Contributes:
   - `Auth.Provider`
 - Central:
+  - Register: `notionAuthRegistration`
   - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
   - Register: `notionAuthRegistration`
 

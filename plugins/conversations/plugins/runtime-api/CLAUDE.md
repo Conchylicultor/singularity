@@ -6,6 +6,7 @@
 
 - Description: Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
 - Server:
+  - Register: `Runtime.define(apiRuntime)`
   - Uses: `conversations.Runtime`
   - Register: `Runtime.define(apiRuntime)`
 

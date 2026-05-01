@@ -8,6 +8,7 @@
 - Contributes:
   - `Shell.Toolbar` (group `actions`) → `BuildButton`
 - Server:
+  - Register: `buildRunJob`
   - Uses: `config.readConfig`, `tasks-core.pushLanded`
   - Register: `buildRunJob`
   - `POST /api/build`

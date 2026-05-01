@@ -36,6 +36,7 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
 - Contributes:
   - `Conversation.AbovePromptInput` → `TurnSummaryCard`
 - Server:
+  - Register: `generateTurnSummaryJob`
   - Uses: `config.readConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `tasks-core._conversations`, `tasks-core.getConversation`
   - Register: `generateTurnSummaryJob`
 

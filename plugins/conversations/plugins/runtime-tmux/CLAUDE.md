@@ -6,6 +6,7 @@
 
 - Description: Runs Claude CLI sessions inside tmux panes.
 - Server:
+  - Register: `Runtime.define(tmuxRuntime)`
   - Uses: `conversations.Runtime`
   - Register: `Runtime.define(tmuxRuntime)`
 

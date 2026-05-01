@@ -12,6 +12,7 @@
 - Contributes:
   - `Pane.Register` `conv-summary` (path `summary`)
 - Server:
+  - Register: `submitConversationSummaryTool`
   - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `tasks-core.getConversation`, `tasks-core.getTask`
   - Resources: `conversation-summaries` (push)
   - Register: `submitConversationSummaryTool`

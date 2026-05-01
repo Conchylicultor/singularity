@@ -10,6 +10,7 @@
 - Contributes:
   - `Auth.Provider`
 - Central:
+  - Register: `googleAuthRegistration`
   - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
   - Register: `googleAuthRegistration`
 

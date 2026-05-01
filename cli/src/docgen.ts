@@ -735,6 +735,9 @@ function renderPluginBody(
   const serverEntries = [...p.httpRoutes, ...p.wsRoutes.map((r) => `WS ${r}`)];
   if (serverEntries.length > 0 || p.apiUses.length > 0 || p.resources.length > 0 || p.register.length > 0) {
     lines.push(`${bodyIndent}- Server:`);
+    if (p.register.length > 0) {
+      lines.push(`${subIndent}- Register: ${p.register.map((r) => `\`${r}\``).join(", ")}`);
+    }
     if (p.apiUses.length > 0) {
       lines.push(`${subIndent}- Uses: ${p.apiUses.map((n) => `\`${n}\``).join(", ")}`);
     }
@@ -742,9 +745,6 @@ function renderPluginBody(
       lines.push(
         `${subIndent}- Resources: ${p.resources.map((r) => `\`${r.key}\` (${r.mode})`).join(", ")}`,
       );
-    }
-    if (p.register.length > 0) {
-      lines.push(`${subIndent}- Register: ${p.register.map((r) => `\`${r}\``).join(", ")}`);
     }
     for (const r of serverEntries) lines.push(`${subIndent}- \`${r}\``);
   }
@@ -757,6 +757,9 @@ function renderPluginBody(
     p.centralRegister.length > 0
   ) {
     lines.push(`${bodyIndent}- Central:`);
+    if (p.centralRegister.length > 0) {
+      lines.push(`${subIndent}- Register: ${p.centralRegister.map((t) => `\`${t}\``).join(", ")}`);
+    }
     if (p.centralApiUses.length > 0) {
       lines.push(`${subIndent}- Uses: ${p.centralApiUses.map((n) => `\`${n}\``).join(", ")}`);
     }

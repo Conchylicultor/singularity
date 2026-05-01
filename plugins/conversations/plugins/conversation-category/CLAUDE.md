@@ -50,6 +50,7 @@ unless the user clicks "Re-classify with Haiku".
   - `Item.Chips` → `CategoryChipRow`
   - `Config.Section` "Category colors" → `CategoryColorSettings`
 - Server:
+  - Register: `classifyConversationJob`
   - Uses: `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `tasks-core._conversations`, `tasks-core.getConversation`
   - Register: `classifyConversationJob`
   - `POST /api/conversation-category/:conversationId/classify`

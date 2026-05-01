@@ -13,6 +13,7 @@
   - `conversationPane.Actions` → `ProgressBarToolbar`
   - `Item.Chips` → `ProgressBarRow`
 - Server:
+  - Register: `classifyProgressJob`, `markProgressPushedJob`
   - Uses: `conversations.conversationTurnCompleted`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.pushLanded`
   - Register: `classifyProgressJob`, `markProgressPushedJob`
 
