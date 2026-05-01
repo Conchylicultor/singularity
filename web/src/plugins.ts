@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@core";
 import shellPlugin from "@plugins/shell/web";
 import panePlugin from "@plugins/primitives/plugins/pane/web";
 import terminalPlugin from "@plugins/terminal/web";
+import buildPlugin from "@plugins/build/web";
 import debugPlugin from "@plugins/debug/web";
 import dbBackupPlugin from "@plugins/debug/plugins/db-backup/web";
 import logsPlugin from "@plugins/debug/plugins/logs/web";
@@ -126,6 +127,7 @@ export const plugins: PluginDefinition[] = [
   taskDraftFormPlugin,
   terminalPlugin,
   worktreeSwitcherPlugin,
+  buildPlugin,
   debugPlugin,
   logsPlugin,
   dbBackupPlugin,

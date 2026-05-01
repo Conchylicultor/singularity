@@ -106,6 +106,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
         - Register: `notionAuthRegistration`
 
+- **`build`** — Trigger `./singularity build` from the toolbar.
+  - Contributes:
+    - `Shell.Toolbar` (group `actions`) → `BuildButton`
+  - Server:
+    - Register: `buildRunJob`
+    - Uses: `config.readConfig`, `tasks-core.pushLanded`
+    - `POST /api/build`
+    - `GET /api/build/status`
+
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Contributes:
     - `Pane.Register` `global-file-tree` (path `/code/:worktree`)
@@ -143,7 +152,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/config/specs`
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
-  - Imported by: `commits`, `conversation-category`, `turn-summary`
+  - Imported by: `build`, `commits`, `conversation-category`, `turn-summary`
   - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `quick-prompts`
 
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
@@ -822,7 +831,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `Shell`, `ShellCommands`
   - Contributes:
     - `Core.Root` → `ShellLayout`
-  - Slot contributors: `agents`, `auth`, `code-explorer`, `config`, `conversations-view`, `debug`, `draw-on-app`, `improve`, `screenshot`, `stats`, `task-detail`, `theme`, `worktree-switcher`
+  - Slot contributors: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `debug`, `draw-on-app`, `improve`, `screenshot`, `stats`, `task-detail`, `theme`, `worktree-switcher`
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Defines:
@@ -943,7 +952,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Register: `pushLanded`, `taskStatusChanged`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `agents`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
+  - Imported by: `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):

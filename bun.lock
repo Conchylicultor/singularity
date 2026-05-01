@@ -94,6 +94,10 @@
       "name": "@singularity/plugin-auth-notion",
       "version": "0.0.1",
     },
+    "plugins/build": {
+      "name": "@singularity/plugin-build",
+      "version": "0.0.1",
+    },
     "plugins/code-explorer": {
       "name": "@singularity/plugin-code-explorer",
       "version": "0.0.1",
@@ -1117,6 +1121,8 @@
     "@singularity/plugin-auth-google": ["@singularity/plugin-auth-google@workspace:plugins/auth/plugins/google"],
 
     "@singularity/plugin-auth-notion": ["@singularity/plugin-auth-notion@workspace:plugins/auth/plugins/notion"],
+
+    "@singularity/plugin-build": ["@singularity/plugin-build@workspace:plugins/build"],
 
     "@singularity/plugin-code-explorer": ["@singularity/plugin-code-explorer@workspace:plugins/code-explorer"],
 

@@ -41,6 +41,8 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
     - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
 
+- **`build`** — Trigger `./singularity build` from the toolbar.
+
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
 
 - **`config`** [load-bearing] — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
@@ -64,7 +66,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - `GET /api/config/specs`
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
-  - Imported by: `commits`, `conversation-category`, `turn-summary`
+  - Imported by: `build`, `commits`, `conversation-category`, `turn-summary`
   - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `quick-prompts`
 
 - **`conversations`** [load-bearing] — Conversation domain: shared server code and types; view plugins live under `plugins/`.
@@ -283,7 +285,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - Values: `Shell`, `ShellCommands`
   - Contributes:
     - `Core.Root` → `ShellLayout`
-  - Slot contributors: `agents`, `auth`, `code-explorer`, `config`, `conversations-view`, `debug`, `draw-on-app`, `improve`, `screenshot`, `stats`, `task-detail`, `theme`, `worktree-switcher`
+  - Slot contributors: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `debug`, `draw-on-app`, `improve`, `screenshot`, `stats`, `task-detail`, `theme`, `worktree-switcher`
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Plugins:
@@ -318,7 +320,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
   - Server:
     - Register: `pushLanded`, `taskStatusChanged`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `agents`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
+  - Imported by: `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
 
