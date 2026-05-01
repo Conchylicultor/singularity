@@ -7,5 +7,5 @@ export default {
   name: "Active Data: task card",
   description:
     "Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.",
-  contributions: [ActiveData.Tag({ tag: "task", component: TaskCard })],
+  contributions: [ActiveData.Tag({ display: "block", tag: "task", component: TaskCard })],
 } satisfies PluginDefinition;

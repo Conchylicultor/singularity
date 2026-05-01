@@ -8,12 +8,12 @@ import { TaskSchema, type Task } from "@plugins/tasks-core/shared";
 import { Button } from "@/components/ui/button";
 
 export function TaskCard({
-  children,
+  content,
 }: {
   attrs: Record<string, string>;
-  children: string;
+  content: string;
 }) {
-  const initial = children.trim();
+  const initial = content.trim();
   const editorNs = useId();
   const { conversation } = conversationPane.useData();
   const hostTaskId = conversation.taskId;
@@ -27,7 +27,7 @@ export function TaskCard({
   if (!initial) return null;
 
   if (launchedConvId) {
-    return <ConvChip attrs={{}}>{launchedConvId}</ConvChip>;
+    return <ConvChip content={launchedConvId} attrs={{}} />;
   }
 
   if (createdTask) {

@@ -7,8 +7,8 @@ import {
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 
-export function ConvChip({ children }: { children: string; attrs: Record<string, string> }) {
-  const sideConvId = children.trim();
+export function ConvChip({ content }: { content: string; attrs: Record<string, string> }) {
+  const sideConvId = content.trim();
   const conv = useConversationById(sideConvId || null);
   const match = usePaneMatch();
   const parentEntry = match?.chain.find(

@@ -1,7 +1,6 @@
 import { isValidElement, type ReactNode } from "react";
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
-import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import {
@@ -9,7 +8,7 @@ import {
   parseFileLinks,
 } from "@plugins/primitives/plugins/file-links/web";
 import {
-  useActiveDataComponents,
+  useActiveDataSegments,
   useActiveDataLinkify,
 } from "@plugins/active-data/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -24,7 +23,6 @@ import {
 type AssistantTextEvent = Extract<JsonlEvent, { kind: "assistant-text" }>;
 
 const REMARK_PLUGINS = [remarkGfm];
-const REHYPE_PLUGINS = [rehypeRaw];
 
 function nodeToText(node: ReactNode): string {
   if (node == null || typeof node === "boolean") return "";
@@ -196,7 +194,7 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
   const e = event as AssistantTextEvent;
   const { markdownMode } = useRowMarkdown();
   const { conversation } = conversationPane.useData();
-  const activeDataComponents = useActiveDataComponents();
+  const segments = useActiveDataSegments(e.text);
   const activeDataLinkify = useActiveDataLinkify();
   const onFileOpen = (path: string) =>
     convFilePeekPane.open({
@@ -204,10 +202,11 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
       worktree: conversation.attemptId,
       filePath: path,
     });
-  const mdComponents: Components = {
-    ...buildMdComponents(conversation.attemptId, onFileOpen, activeDataLinkify),
-    ...activeDataComponents,
-  };
+  const mdComponents: Components = buildMdComponents(
+    conversation.attemptId,
+    onFileOpen,
+    activeDataLinkify,
+  );
 
   return (
     <div className="rounded-md border border-border/60 bg-background px-3 py-2">
@@ -223,13 +222,15 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
       </div>
       {markdownMode ? (
         <div className="text-sm leading-6">
-          <ReactMarkdown
-            remarkPlugins={REMARK_PLUGINS}
-            rehypePlugins={REHYPE_PLUGINS}
-            components={mdComponents}
-          >
-            {e.text}
-          </ReactMarkdown>
+          {segments.map((seg, i) =>
+            seg.type === "block" ? (
+              <seg.component key={i} content={seg.content} attrs={seg.attrs} />
+            ) : (
+              <ReactMarkdown key={i} remarkPlugins={REMARK_PLUGINS} components={mdComponents}>
+                {seg.text}
+              </ReactMarkdown>
+            ),
+          )}
         </div>
       ) : (
         <div className="whitespace-pre-wrap break-words text-sm">{e.text}</div>

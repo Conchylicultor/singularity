@@ -7,7 +7,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { ActiveData, type ActiveDataTagContribution } from "../slots";
+import { ActiveData, type ActiveDataInlineContribution } from "../slots";
 
 // Always skip these element types (don't linkify inside anchors)
 const ALWAYS_SKIP = new Set(["a"]);
@@ -16,7 +16,7 @@ const SKIP_IN_PRE = new Set(["pre", "code"]);
 
 type PatternContrib = {
   pattern: RegExp;
-  Component: ActiveDataTagContribution["component"];
+  Component: ActiveDataInlineContribution["component"];
 };
 
 function applyPatterns(text: string, contribs: PatternContrib[]): ReactNode {
@@ -48,11 +48,7 @@ function applyPatterns(text: string, contribs: PatternContrib[]): ReactNode {
       out.push(<Fragment key={`t-${i}`}>{text.slice(cursor, m.start)}</Fragment>);
     }
     const C = m.Component;
-    out.push(
-      <C key={`m-${i}`} attrs={{}}>
-        {m.text}
-      </C>,
-    );
+    out.push(<C key={`m-${i}`} content={m.text} attrs={{}} />);
     cursor = m.end;
     i++;
   }
@@ -98,7 +94,7 @@ export function useActiveDataLinkify(): (children: ReactNode) => ReactNode {
   const contribs = useMemo<PatternContrib[]>(
     () =>
       contributions
-        .filter((c): c is ActiveDataTagContribution & { pattern: RegExp } => !!c.pattern)
+        .filter((c): c is ActiveDataInlineContribution => c.display === "inline")
         .map((c) => ({ pattern: c.pattern, Component: c.component })),
     [contributions],
   );

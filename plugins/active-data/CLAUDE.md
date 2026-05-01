@@ -2,28 +2,28 @@
 
 Meta plugin for inline interactive widgets rendered inside assistant text.
 Sub-plugins under `plugins/active-data/plugins/<name>/` ship the component
-that renders one widget kind. The default mode is **pattern** — agents emit a
-recognizable raw substring (e.g. `conv-1777406728-mb12`) and the host
-replaces it with the component, so the model never has to know that
-active-data exists. A legacy **tag** mode (`<tag>…</tag>`) is also supported
-for widgets that genuinely need attrs.
+that renders one widget kind.
 
-Each contribution sets either `pattern: RegExp` or `tag: string` (or both)
-plus a `component`. For pattern matches `attrs` is empty and `children` is
-the matched substring.
+Each contribution declares a `display` mode:
 
-Hosts (currently `assistant-text` in the JSONL viewer) wire two helpers:
+- **`display: 'inline'`** — agent emits a recognizable raw substring (e.g.
+  `conv-1777406728-mb12`) and the host replaces it with the component at
+  render time. Requires `pattern: RegExp` (with `g` flag). The component
+  receives `content` (the matched substring) and `attrs` (always `{}`).
+- **`display: 'block'`** — agent wraps content in `<tag>…</tag>`. The host
+  pre-extracts these before markdown parsing, so blank lines inside the tag
+  body are handled correctly. Requires `tag: string`. The component receives
+  `content` (trimmed inner text) and `attrs` (parsed tag attributes).
 
-- `useActiveDataLinkify()` returns a function that walks any ReactNode tree
-  and replaces raw-text matches with the contributed component. Hosts call it
-  from inside their react-markdown `transform` helper (alongside
-  `linkifyChildren`) and on plain non-markdown text. It skips `code`/`pre`/`a`
-  and custom components so already-rendered widgets aren't re-walked, which
-  also means tags inside fenced code blocks render literally.
-- `useActiveDataComponents()` returns a react-markdown `components` map
-  keyed by each tag-mode contribution; pair with `rehype-raw` so raw HTML in
-  the markdown source reaches the map instead of being stripped during the
-  mdast→hast pass.
+Hosts wire two helpers:
+
+- `useActiveDataSegments(rawText)` — splits the raw string into `markdown`
+  segments (passed to `<ReactMarkdown>`) and `block` segments (rendered
+  directly as the contributed component, outside the markdown pipeline).
+- `useActiveDataLinkify()` — returns a function that walks a rendered
+  ReactNode tree and splices in inline-pattern components. Call it from inside
+  the host's react-markdown `transform` helper. Skips `code`/`pre`/`a` and
+  custom components.
 
 Renderers needing the host conversation read it via
 `conversationPane.useData()` directly; the slot does not pipe it.
@@ -32,12 +32,12 @@ Renderers needing the host conversation read it via
 
 ## Plugin reference
 
-- Description: Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins claim a tag name and ship its rendered component; hosts merge useActiveDataComponents() into their react-markdown components map (paired with rehype-raw).
+- Description: Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify().
 - Defines:
   - Slots: `ActiveData.Tag`
 - Exports (web):
-  - Types: `ActiveDataTagContribution`
-  - Values: `ActiveData`, `useActiveDataComponents`, `useActiveDataLinkify`
+  - Types: `ActiveDataBlockContribution`, `ActiveDataContribution`, `ActiveDataInlineContribution`
+  - Values: `ActiveData`, `useActiveDataLinkify`, `useActiveDataSegments`
 - Slot contributors: `conv`, `task`
 - Sub-plugins:
   - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.
