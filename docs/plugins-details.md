@@ -60,7 +60,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Pane.Register` `attempt` (path `/a/:attemptId`)
     - `Pane.Register` `attempt-conversation` (path `c/:convId`)
-    - `Conversation.ActionBar` → `AttemptSwitchButton`
+    - `conversationPane.Actions` → `AttemptSwitchButton`
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Defines:
@@ -175,7 +175,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
   - Imported by: `agents`, `conversation-category`, `conversation-progress`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
-  - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `grouped`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
+  - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
       - Defines:
@@ -198,6 +198,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `GET /api/conversation-category/colors`
         - `POST /api/conversation-category/colors`
         - `DELETE /api/conversation-category/colors/:category`
+    - **`conversation-groups`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
+      - Defines:
+        - DB schema: `plugins/conversations/plugins/conversation-groups/server/internal/tables.ts`
+      - Exports (web):
+        - Types: `GroupedConversationListProps`
+        - Values: `GroupedConversationList`
+      - Exports (server):
+        - Values: `_conversationGroupMembers`, `_conversationGroups`, `addMemberToGroup`, `conversationGroupsResource`
+      - Exports (shared):
+        - Types: `ConversationGroup`, `ConversationGroupMember`, `ConversationGroupsPayload`
+        - Values: `ConversationGroupMemberSchema`, `ConversationGroupSchema`, `ConversationGroupsPayloadSchema`, `conversationGroupsResource`
+      - Server:
+        - Uses: `tasks-core._conversations`
+        - `POST /api/conversation-groups`
+        - `PATCH /api/conversation-groups/:id`
+        - `DELETE /api/conversation-groups/:id`
+        - `POST /api/conversation-groups/:id/members`
+        - `DELETE /api/conversation-groups/members/:conversationId`
     - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
       - Defines:
         - DB schema: `plugins/conversations/plugins/conversation-progress/server/internal/tables.ts`
@@ -225,14 +243,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `Conversation`, `conversationPane`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `isMainPaneId`, `markMainPane`, `PromptDraftProvider`, `usePromptDraft`
       - Contributes:
         - `Pane.Register` `conversation` (path `/c/:convId`)
-        - `Conversation.ActionBar` → `ExpandConversationButton`
-      - Slot contributors: `attempt-view`, `code`, `commits-graph`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `push-counter`, `quick-prompts`, `resume`, `summary`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+        - `conversationPane.Actions` → `ExpandConversationButton`
+      - Slot contributors: `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `turn-summary`
       - Plugins:
-        - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
-          - Defines:
-            - Slots: `Conversation.ActionBar`
-          - Exports (web):
-            - Values: `ActionBarView`, `Conversation`
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Defines:
             - Slots: `Code.ToolbarButton`
@@ -242,7 +255,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`
             - Values: `editedFilesResource`
           - Contributes:
-            - `Conversation.ActionBar` → `CodeToolbarSlot`
+            - `conversationPane.Actions` → `CodeToolbarSlot`
           - Server:
             - Uses: `tasks-core.getConversation`
             - Resources: `edited-files` (invalidate)
@@ -288,7 +301,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `commitDeltaResource`, `CommitDeltaSchema`, `CommitRowSchema`, `commitsGraphResource`, `CommitsGraphSchema`
           - Contributes:
             - `Pane.Register` `conv-commits-graph` (path `commits`)
-            - `Conversation.ActionBar` → `CommitsChip`
+            - `conversationPane.Actions` → `CommitsChip`
           - Server:
             - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesForAttempt`, `tasks-core.pushesResource`
             - Resources: `commits-graph.delta` (push), `commits-graph.graph` (push)
@@ -373,10 +386,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `conversationPane.Actions` → `ModelBadge`
         - **`new-child-task`** — Toolbar button that opens a popover to create a child task under the conversation's parent task.
           - Contributes:
-            - `Conversation.ActionBar` → `NewChildTaskAction`
+            - `conversationPane.Actions` → `NewChildTaskAction`
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
           - Contributes:
-            - `Conversation.ActionBar` → `OpenAppButton`
+            - `conversationPane.Actions` → `OpenAppButton`
         - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
           - Contributes:
             - `Conversation.PromptInput` → `PromptInput`
@@ -392,7 +405,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `DELETE /api/conversations/:id/push-and-exit`
         - **`push-counter`** — Displays the number of pushes for the conversation's attempt in the toolbar.
           - Contributes:
-            - `Conversation.ActionBar` → `PushCounterButton`
+            - `conversationPane.Actions` → `PushCounterButton`
         - **`quick-prompts`** — Named prompt chips in the conversation floating bar. Click to send a preset message to the active conversation. Named prompts that appear as chips in the conversation toolbar. Click to send a preset message.
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server/internal/tables-attachments.ts`
@@ -427,13 +440,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
           - Contributes:
             - `Pane.Register` `conv-tasks` (path `tasks`)
-            - `Conversation.ActionBar` → `TasksButton`
+            - `conversationPane.Actions` → `TasksButton`
             - `convTasksPane.Actions` → `GoToParentAction`
             - `convTasksPane.Actions` → `ExpandToTasksAction`
         - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
           - Contributes:
             - `Pane.Register` `conv-terminal` (path `terminal`)
-            - `Conversation.ActionBar` → `TerminalButton`
+            - `conversationPane.Actions` → `TerminalButton`
         - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/turn-summary/server/internal/tables.ts`
@@ -448,35 +461,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `config.readConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `tasks-core._conversations`, `tasks-core.getConversation`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:
-            - `Conversation.ActionBar` → `VscodeButton`
+            - `conversationPane.Actions` → `VscodeButton`
     - **`conversations-view`** — Sidebar list of all conversations.
-      - Defines:
-        - Slots: `ConversationsView.View`
-      - Exports (web):
-        - Types: `ViewContribution`, `ViewProps`
-        - Values: `ConversationsView`
       - Contributes:
         - `Shell.Sidebar` "Conversations" → `ConversationList`
         - `Core.Root` → `ForkErrorWatcher`
-      - Slot contributors: `grouped`
-      - Plugins:
-        - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
-          - Defines:
-            - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
-          - Exports (server):
-            - Values: `_conversationGroupMembers`, `_conversationGroups`, `addMemberToGroup`, `conversationGroupsResource`
-          - Exports (shared):
-            - Types: `ConversationGroup`, `ConversationGroupMember`, `ConversationGroupsPayload`
-            - Values: `ConversationGroupMemberSchema`, `ConversationGroupSchema`, `ConversationGroupsPayloadSchema`, `conversationGroupsResource`
-          - Contributes:
-            - `ConversationsView.View` "Grouped" → `GroupedView`
-          - Server:
-            - Uses: `tasks-core._conversations`
-            - `POST /api/conversation-groups`
-            - `PATCH /api/conversation-groups/:id`
-            - `DELETE /api/conversation-groups/:id`
-            - `POST /api/conversation-groups/:id/members`
-            - `DELETE /api/conversation-groups/members/:conversationId`
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
       - Server:
         - Uses: `conversations.Runtime`
@@ -490,7 +479,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `_conversationSummaries`, `conversationSummariesResource`
       - Contributes:
         - `Pane.Register` `conv-summary` (path `summary`)
-        - `Conversation.ActionBar` → `SummarizeButton`
       - Server:
         - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `tasks-core.getConversation`, `tasks-core.getTask`
         - Resources: `conversation-summaries` (push)
@@ -912,7 +900,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
+  - Imported by: `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-groups`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):

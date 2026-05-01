@@ -11,7 +11,6 @@
   - Values: `_conversationSummaries`, `conversationSummariesResource`
 - Contributes:
   - `Pane.Register` `conv-summary` (path `summary`)
-  - `Conversation.ActionBar` → `SummarizeButton`
 - Server:
   - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `tasks-core.getConversation`, `tasks-core.getTask`
   - Resources: `conversation-summaries` (push)
