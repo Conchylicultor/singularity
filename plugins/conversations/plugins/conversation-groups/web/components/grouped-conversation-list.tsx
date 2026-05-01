@@ -154,6 +154,9 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     tasksData ?? [],
   );
 
+  const hasActiveInGroup = (ags: AttemptGroup[]) =>
+    !!activeId && ags.some((ag) => ag.some((conv) => conv.id === activeId));
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
@@ -379,6 +382,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
               group={g}
               isEmpty={ags.length === 0}
               dragInProgress={dragInProgress}
+              hasActiveChild={hasActiveInGroup(ags)}
               autoFocusRename={pendingFocusGroupId === g.id}
               onRenameFocused={() => setPendingFocusGroupId(null)}
               onRename={async (next) => {
@@ -414,6 +418,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
             title={ag.title}
             rootConvIds={ag.rootConvIds}
             dragInProgress={dragInProgress}
+            hasActiveChild={hasActiveInGroup(ag.attemptGroups)}
             onRename={async (next) => {
               await fetch(`/api/conversation-groups`, {
                 method: "POST",
@@ -433,6 +438,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
           expanded={ungroupedExpanded}
           onToggleExpanded={toggleUngroupedExpanded}
           dragInProgress={dragInProgress}
+          hasActiveChild={hasActiveInGroup(trulyUngrouped)}
           title={
             <div className="min-w-0 flex-1 truncate px-1 py-0.5 text-xs font-semibold text-muted-foreground">
               Ungrouped

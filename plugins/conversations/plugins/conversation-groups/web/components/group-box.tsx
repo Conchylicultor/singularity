@@ -11,6 +11,7 @@ export function GroupBox({
   onToggleExpanded,
   onDelete,
   dragInProgress,
+  hasActiveChild,
   autoFocusRename,
   onRenameFocused,
   children,
@@ -21,6 +22,7 @@ export function GroupBox({
   onToggleExpanded: (next: boolean) => void | Promise<void>;
   onDelete: () => void | Promise<void>;
   dragInProgress: boolean;
+  hasActiveChild?: boolean;
   autoFocusRename?: boolean;
   onRenameFocused?: () => void;
   children: ReactNode;
@@ -32,6 +34,7 @@ export function GroupBox({
       expanded={group.expanded}
       onToggleExpanded={() => onToggleExpanded(!group.expanded)}
       dragInProgress={dragInProgress}
+      hasActiveChild={hasActiveChild}
       title={
         <GroupRename
           value={group.title}

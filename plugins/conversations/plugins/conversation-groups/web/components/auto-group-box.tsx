@@ -9,6 +9,7 @@ export function AutoGroupBox({
   rootConvIds,
   onRename,
   dragInProgress,
+  hasActiveChild,
   children,
 }: {
   clusterKey: string;
@@ -16,6 +17,7 @@ export function AutoGroupBox({
   rootConvIds: string[];
   onRename: (next: string) => void | Promise<void>;
   dragInProgress: boolean;
+  hasActiveChild?: boolean;
   children: ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -31,6 +33,7 @@ export function AutoGroupBox({
       droppableId={`drop-auto-group-${clusterKey}`}
       dropData={{ kind: "auto-group", rootConvIds, title }}
       dragInProgress={dragInProgress}
+      hasActiveChild={hasActiveChild}
       expanded={!collapsed}
       onToggleExpanded={() => {
         setCollapsed((prev) => {

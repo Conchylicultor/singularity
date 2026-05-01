@@ -9,6 +9,7 @@ export function GroupContainer({
   expanded,
   onToggleExpanded,
   dragInProgress,
+  hasActiveChild,
   leadingIcon,
   title,
   trailingAction,
@@ -22,6 +23,8 @@ export function GroupContainer({
   // so headers remain reachable without scrolling. We do NOT auto-expand on
   // hover — the user must drop on the header itself to join a group.
   dragInProgress: boolean;
+  // True when a child conversation is the active one and the group is collapsed.
+  hasActiveChild?: boolean;
   leadingIcon?: ReactNode;
   title: ReactNode;
   trailingAction?: ReactNode;
@@ -43,6 +46,7 @@ export function GroupContainer({
       <div
         className={cn(
           "group/header flex items-center gap-0.5 rounded-md px-1 py-1",
+          !effectiveExpanded && hasActiveChild && "bg-sidebar-accent/50",
         )}
       >
         <button
