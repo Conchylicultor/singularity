@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
+import { generateKeyBetween } from "fractional-indexing";
 import { db } from "@server/db/client";
 import { _attempts, _conversations } from "../tables";
 import { conversations } from "../schema";
@@ -21,7 +22,44 @@ export interface UpdateConversationPatch {
   title?: string | null;
   claudeSessionId?: string | null;
   endedAt?: Date | null;
+  rank?: string;
   updatedAt?: Date;
+}
+
+// Anki-style priority queue rank helpers. The queue is a single global ordered
+// list of `waiting` conversations; rank is assigned at insert time (end of
+// deck) and reassigned on every transition into waiting from a non-waiting
+// state to "position 2" (one slot below the current top), so the top stays
+// stable while items cycle through working.
+
+// End of deck: greater than every currently-waiting rank.
+async function endRank(): Promise<string> {
+  const [last] = await db
+    .select({ rank: _conversations.rank })
+    .from(_conversations)
+    .where(
+      and(eq(_conversations.status, "waiting"), isNotNull(_conversations.rank)),
+    )
+    .orderBy(desc(_conversations.rank))
+    .limit(1);
+  return generateKeyBetween(last?.rank ?? null, null);
+}
+
+// Position 2 of the deck: between the current top and second-place ranks.
+// 0 waiting → returns any rank (becomes the only item).
+// 1 waiting → returns a rank after that single item.
+async function positionTwoRank(): Promise<string> {
+  const top2 = await db
+    .select({ rank: _conversations.rank })
+    .from(_conversations)
+    .where(
+      and(eq(_conversations.status, "waiting"), isNotNull(_conversations.rank)),
+    )
+    .orderBy(asc(_conversations.rank))
+    .limit(2);
+  const top = top2[0]?.rank ?? null;
+  const second = top2[1]?.rank ?? null;
+  return generateKeyBetween(top, second);
 }
 
 // Resolve the task id of the attempt that owns this conversation. Returns
@@ -49,6 +87,7 @@ async function taskIdForAttempt(attemptId: string): Promise<string | null> {
 export async function insertConversation(input: InsertConversationInput) {
   const taskId = await taskIdForAttempt(input.attemptId);
   const before = taskId ? await readTaskStatus(taskId) : null;
+  const rank = await endRank();
   await db.insert(_conversations).values({
     id: input.id,
     attemptId: input.attemptId,
@@ -58,6 +97,7 @@ export async function insertConversation(input: InsertConversationInput) {
     kind: input.kind ?? "user",
     status: input.status ?? "starting",
     title: input.title ?? null,
+    rank,
   });
   const [row] = await db
     .select()
@@ -73,6 +113,7 @@ export async function insertConversationOnConflictDoNothing(
 ) {
   const taskId = await taskIdForAttempt(input.attemptId);
   const before = taskId ? await readTaskStatus(taskId) : null;
+  const rank = await endRank();
   const [row] = await db
     .insert(_conversations)
     .values({
@@ -84,6 +125,7 @@ export async function insertConversationOnConflictDoNothing(
       kind: input.kind ?? "user",
       status: input.status,
       title: input.title ?? null,
+      rank,
     })
     .onConflictDoNothing()
     .returning();
@@ -102,6 +144,26 @@ export async function updateConversation(
   if (patch.title !== undefined) dbPatch.title = patch.title;
   if (patch.claudeSessionId !== undefined) dbPatch.claudeSessionId = patch.claudeSessionId;
   if (patch.endedAt !== undefined) dbPatch.endedAt = patch.endedAt;
+  if (patch.rank !== undefined) dbPatch.rank = patch.rank;
+
+  // Anki-style cycling rule: every transition into `waiting` from a
+  // non-waiting state reassigns the rank to "position 2" (between the current
+  // top and second-place waiting ranks). Drag-set ranks are intentionally not
+  // honoured across cycles — the user's expectation is that the top of the
+  // deck stays stable while items they just finished slot in beneath it.
+  // Manual reorder (the queue plugin's reorder route) sets `patch.rank`
+  // explicitly, which short-circuits this branch.
+  if (patch.status === "waiting" && patch.rank === undefined) {
+    const [prev] = await db
+      .select({ status: _conversations.status })
+      .from(_conversations)
+      .where(eq(_conversations.id, id))
+      .limit(1);
+    if (prev && prev.status !== "waiting") {
+      dbPatch.rank = await positionTwoRank();
+    }
+  }
+
   await db.update(_conversations).set(dbPatch).where(eq(_conversations.id, id));
   if (taskId) await emitStatusChangeIfChanged(taskId, before);
 }

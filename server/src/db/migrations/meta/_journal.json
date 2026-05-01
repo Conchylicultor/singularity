@@ -400,6 +400,13 @@
       "tag": "20260501_074153_33c240b2__add_launch_prompts",
       "hash": "33c240b2",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777653955000,
+      "tag": "20260501_164555_f92ab6d7__add_conversation_rank",
+      "hash": "f92ab6d7",
+      "breakpoints": true
     }
   ]
 }

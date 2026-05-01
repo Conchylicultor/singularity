@@ -297,6 +297,10 @@
       "name": "@singularity/plugin-conversations-conversations-view-grouped",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversations-view/plugins/queue": {
+      "name": "@singularity/plugin-conversations-conversations-view-queue",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/runtime-api": {
       "name": "@singularity/plugin-conversations-runtime-api",
       "version": "0.0.1",
@@ -1210,6 +1214,8 @@
     "@singularity/plugin-conversations-conversations-view": ["@singularity/plugin-conversations-conversations-view@workspace:plugins/conversations/plugins/conversations-view"],
 
     "@singularity/plugin-conversations-conversations-view-grouped": ["@singularity/plugin-conversations-conversations-view-grouped@workspace:plugins/conversations/plugins/conversations-view/plugins/grouped"],
+
+    "@singularity/plugin-conversations-conversations-view-queue": ["@singularity/plugin-conversations-conversations-view-queue@workspace:plugins/conversations/plugins/conversations-view/plugins/queue"],
 
     "@singularity/plugin-conversations-recover": ["@singularity/plugin-conversations-recover@workspace:plugins/conversations-recover"],
 

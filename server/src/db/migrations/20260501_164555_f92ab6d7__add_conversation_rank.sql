@@ -1,0 +1,4 @@
+DROP VIEW "public"."conversations_v";--> statement-breakpoint
+ALTER TABLE "conversations" ADD COLUMN "rank" "rank_text";--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "conversations_status_rank_idx" ON "conversations" USING btree ("status","rank");--> statement-breakpoint
+CREATE VIEW "public"."conversations_v" AS (select "conversations"."id", "conversations"."attempt_id", "conversations"."title", "conversations"."status", "conversations"."runtime", "conversations"."model", "conversations"."kind", "conversations"."claude_session_id", "conversations"."spawned_by", "conversations"."rank", "conversations"."created_at", "conversations"."updated_at", "conversations"."ended_at", "attempts"."worktree_path", "attempts"."task_id", ("conversations"."status" <> 'gone') as "active" from "conversations" inner join "attempts" on "attempts"."id" = "conversations"."attempt_id");
