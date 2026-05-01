@@ -11,8 +11,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { generateKeyBetween } from "fractional-indexing";
-import { MdChevronRight, MdClose } from "react-icons/md";
+import { MdChevronRight, MdClose, MdVerticalAlignBottom, MdVerticalAlignTop } from "react-icons/md";
 import { useConversations } from "@plugins/conversations/web";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
@@ -24,14 +23,19 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
-type DropData = {
-  zone: "before" | "after";
-  targetId: string;
-};
+type DropData = { zone: "before" | "after"; targetId: string };
 
 function parseDragId(id: string | number): string | null {
   if (typeof id !== "string" || !id.startsWith("queue-conv-")) return null;
   return id.slice("queue-conv-".length);
+}
+
+async function queuePost(path: string, body: Record<string, string>) {
+  await fetch(`/api/conversations-queue/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 const WORKING_EXPANDED_KEY = "queue-view:working:expanded";
@@ -90,12 +94,17 @@ export function QueueView({
     [active],
   );
 
+  // Anki-style deck: a single global ordered list of waiting conversations,
+  // sorted by rank ascending. Top of the list is "what to do next". The rank
+  // column is guaranteed populated server-side (assigned on insert + on every
+  // transition into waiting); the null-guard here is a defensive belt.
+  // Uses code-point order (not localeCompare) to match Postgres COLLATE "C".
   const deck = useMemo(() => {
     const waiting = active.filter(
       (c): c is Conversation & { rank: string } =>
         c.status === "waiting" && c.rank !== null,
     );
-    return [...waiting].sort((a, b) => a.rank.localeCompare(b.rank));
+    return [...waiting].sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0));
   }, [active]);
 
   const [workingExpanded, setWorkingExpanded] = useState<boolean>(() => {
@@ -146,54 +155,14 @@ export function QueueView({
     setDraggingId(parseDragId(event.active.id));
   }, []);
 
-  const onDragEnd = useCallback(
-    async (event: DragEndEvent) => {
-      setDraggingId(null);
-      const draggedId = parseDragId(event.active.id);
-      const drop = event.over?.data.current as DropData | undefined;
-      if (!draggedId || !drop) return;
-      if (drop.targetId === draggedId) return;
-
-      const targetIdx = deck.findIndex((c) => c.id === drop.targetId);
-      if (targetIdx < 0) return;
-      const target = deck[targetIdx]!;
-
-      let newRank: string;
-      try {
-        if (drop.zone === "before") {
-          let prev: (typeof deck)[number] | undefined;
-          for (let i = targetIdx - 1; i >= 0; i--) {
-            if (deck[i]!.id !== draggedId) {
-              prev = deck[i];
-              break;
-            }
-          }
-          newRank = generateKeyBetween(prev?.rank ?? null, target.rank);
-        } else {
-          let next: (typeof deck)[number] | undefined;
-          for (let i = targetIdx + 1; i < deck.length; i++) {
-            if (deck[i]!.id !== draggedId) {
-              next = deck[i];
-              break;
-            }
-          }
-          newRank = generateKeyBetween(target.rank, next?.rank ?? null);
-        }
-      } catch {
-        return;
-      }
-
-      const dragged = deck.find((c) => c.id === draggedId);
-      if (!dragged || newRank === dragged.rank) return;
-
-      await fetch(`/api/conversations-queue/reorder`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId: draggedId, rank: newRank }),
-      });
-    },
-    [deck],
-  );
+  // Server computes the new rank from targetId + zone — no stale deck reads here.
+  const onDragEnd = useCallback(async (event: DragEndEvent) => {
+    setDraggingId(null);
+    const conversationId = parseDragId(event.active.id);
+    const drop = event.over?.data.current as DropData | undefined;
+    if (!conversationId || !drop || drop.targetId === conversationId) return;
+    await queuePost("reorder", { conversationId, targetId: drop.targetId, zone: drop.zone });
+  }, []);
 
   if (!isLoading && deck.length === 0 && working.length === 0) {
     return (
@@ -231,10 +200,13 @@ export function QueueView({
                   key={conv.id}
                   conv={conv}
                   isTop={idx === 0}
+                  isBottom={idx === deck.length - 1}
                   isActive={conv.id === activeId}
                   dragInProgress={dragInProgress}
                   onNavigate={onNavigate}
                   onClose={onCloseConversation}
+                  onPromoteToTop={(id) => queuePost("promote", { conversationId: id })}
+                  onSendToBottom={(id) => queuePost("demote", { conversationId: id })}
                 />
               ))}
             </SidebarMenu>
@@ -290,17 +262,23 @@ export function QueueView({
 function QueueRow({
   conv,
   isTop,
+  isBottom,
   isActive,
   dragInProgress,
   onNavigate,
   onClose,
+  onPromoteToTop,
+  onSendToBottom,
 }: {
   conv: Conversation;
   isTop: boolean;
+  isBottom: boolean;
   isActive: boolean;
   dragInProgress: boolean;
   onNavigate: (id: string) => void;
   onClose: (id: string, e: React.MouseEvent) => void | Promise<void>;
+  onPromoteToTop: (id: string) => Promise<void>;
+  onSendToBottom: (id: string) => Promise<void>;
 }): ReactNode {
   const draggable = useDraggable({
     id: `queue-conv-${conv.id}`,
@@ -340,13 +318,33 @@ function QueueRow({
         >
           <ConversationItem conv={conv} />
         </SidebarMenuButton>
-        <SidebarMenuAction
-          onClick={(e: React.MouseEvent) => void onClose(conv.id, e)}
-          className="opacity-0 group-hover/menu-item:opacity-100"
-          aria-label="Close conversation"
-        >
-          <MdClose className="size-3.5" />
-        </SidebarMenuAction>
+        <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 group-hover/menu-item:opacity-100">
+          {!isTop && (
+            <button
+              onClick={(e) => { e.stopPropagation(); void onPromoteToTop(conv.id); }}
+              className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+              aria-label="Move to top"
+            >
+              <MdVerticalAlignTop className="size-3.5" />
+            </button>
+          )}
+          {!isBottom && (
+            <button
+              onClick={(e) => { e.stopPropagation(); void onSendToBottom(conv.id); }}
+              className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+              aria-label="Move to bottom"
+            >
+              <MdVerticalAlignBottom className="size-3.5" />
+            </button>
+          )}
+          <button
+            onClick={(e: React.MouseEvent) => void onClose(conv.id, e)}
+            className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+            aria-label="Close conversation"
+          >
+            <MdClose className="size-3.5" />
+          </button>
+        </div>
       </div>
       <div
         ref={afterDrop.setNodeRef}

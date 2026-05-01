@@ -494,6 +494,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`
             - `POST /api/conversations-queue/reorder`
+            - `POST /api/conversations-queue/promote`
+            - `POST /api/conversations-queue/demote`
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
       - Server:
         - Register: `Runtime.define(apiRuntime)`

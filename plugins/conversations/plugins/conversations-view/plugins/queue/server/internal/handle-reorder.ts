@@ -4,16 +4,20 @@ import {
   updateConversation,
   getConversation,
 } from "@plugins/tasks-core/server";
+import { rankAdjacentTo } from "./queue-ranks";
 
 const Body = z.object({
   conversationId: z.string().min(1),
-  rank: z.string().min(1).max(256),
+  targetId: z.string().min(1),
+  zone: z.enum(["before", "after"]),
 });
 
 export async function handleReorder(req: Request): Promise<Response> {
-  const { conversationId, rank } = Body.parse(await req.json());
+  const { conversationId, targetId, zone } = Body.parse(await req.json());
+  if (conversationId === targetId) return Response.json({ ok: true });
   const conv = await getConversation(conversationId);
   if (!conv) return new Response("Not found", { status: 404 });
+  const rank = await rankAdjacentTo(targetId, zone);
   await updateConversation(conversationId, { rank });
   recentConversationsResource.notify();
   return Response.json({ ok: true });
