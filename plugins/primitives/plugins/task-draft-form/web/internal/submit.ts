@@ -1,7 +1,7 @@
 import { flushSync } from "react-dom";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/web";
-import type { CardDraft, PrefilledAttachment } from "../components/task-draft-form";
+import type { CardDraft } from "../components/task-draft-form";
 import type {
   TaskChainRelate,
   TaskChainSubmitBody,
@@ -14,7 +14,6 @@ export interface SubmitArgs {
   target: TaskChainTarget;
   relate: TaskChainRelate | undefined;
   url: string;
-  prefilledAttachments: PrefilledAttachment[];
   // Optional hook so the popover can close before screenshot capture.
   beforeScreenshot?: () => void;
 }
@@ -62,7 +61,6 @@ export async function submitChain(args: SubmitArgs): Promise<SubmitOutcome> {
     relate: args.relate,
     cards: trimmed.map((c, i) => {
       const idSet = new Set<string>();
-      if (i === 0) args.prefilledAttachments.forEach((p) => idSet.add(p.id));
       for (const id of extractAttachmentIds(c.text)) idSet.add(id);
       if (c.includeScreenshot && screenshotAttachmentId) {
         idSet.add(screenshotAttachmentId);

@@ -633,10 +633,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`improve`**
   - Defines:
-    - Commands: `Improve.OpenWithAttachments`
+    - Commands: `Improve.OpenWithText`
     - DB schema: `plugins/improve/server/internal/tables.ts`
   - Exports (web):
-    - Types: `OpenWithAttachmentsArgs`
+    - Types: `OpenWithTextArgs`
     - Values: `ImproveCommands`
   - Exports (server):
     - Values: `_improve_config`, `_improvePendingGroups`, `IMPROVEMENTS_META_TASK_ID`
@@ -661,7 +661,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `POST /api/attachments`
         - `GET /api/attachments/:id`
         - `DELETE /api/attachments/:id`
-      - Endpoint callers: `agents`, `conversation-view`, `conversations`, `paste-images`, `quick-prompts`, `screenshot`, `task-attachments`, `task-draft-form`, `tasks-core`
+      - Endpoint callers: `agents`, `conversation-view`, `conversations`, `paste-images`, `quick-prompts`, `screenshot`, `task-attachments`, `tasks-core`
     - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
       - Defines:
         - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
@@ -773,7 +773,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Exports (web):
-        - Types: `CaptureKind`, `CardDraft`, `ChainModel`, `PrefilledAttachment`, `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelateMode`, `TaskChainRelateSpec`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`, `TaskDraftPopoverProps`, `TaskDraftRelate`
+        - Types: `CaptureKind`, `CardDraft`, `ChainModel`, `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelateMode`, `TaskChainRelateSpec`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`, `TaskDraftPopoverProps`, `TaskDraftRelate`
         - Values: `TaskDraftPopover`
       - Exports (shared):
         - Types: `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelate`, `TaskChainRelateMode`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`

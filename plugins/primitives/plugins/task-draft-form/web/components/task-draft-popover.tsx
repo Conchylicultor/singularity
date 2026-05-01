@@ -12,7 +12,6 @@ import {
   makeCard,
   type CardDraft,
   type CaptureKind,
-  type PrefilledAttachment,
 } from "./task-draft-form";
 import type { ChainModel } from "./model-chip";
 import { describeOutcome, submitChain } from "../internal/submit";
@@ -39,7 +38,8 @@ export interface TaskDraftPopoverProps {
   target: TaskChainTarget;
   captures?: CaptureKind[];
   relate?: TaskDraftRelate;
-  prefilledAttachments?: PrefilledAttachment[];
+  /** Initial markdown text for the head card. Images inline as attachment refs. */
+  initialText?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   heading?: string;
@@ -52,7 +52,7 @@ export function TaskDraftPopover({
   target,
   captures = ["url"],
   relate,
-  prefilledAttachments,
+  initialText,
   open: controlledOpen,
   onOpenChange,
   heading,
@@ -87,6 +87,15 @@ export function TaskDraftPopover({
     if (newest) setAutoFocusId(newest);
   }, [cards]);
 
+  // When initialText arrives (draw-on-app screenshot), seed the head card so
+  // the image appears inline in the editor via the paste-images machinery.
+  useEffect(() => {
+    if (!initialText) return;
+    setUrl(window.location.href);
+    setCards((prev) => [{ ...prev[0]!, text: initialText }, ...prev.slice(1)]);
+    seenIdsRef.current = new Set();
+  }, [initialText]);
+
   const setOpen = (next: boolean) => {
     if (next) {
       setUrl(window.location.href);
@@ -118,7 +127,6 @@ export function TaskDraftPopover({
             ? { taskId: relate.taskId, mode: relateMode }
             : undefined,
         url,
-        prefilledAttachments: prefilledAttachments ?? [],
         beforeScreenshot: () => setOpen(false),
       });
       if (!outcome.ok) {
@@ -152,7 +160,6 @@ export function TaskDraftPopover({
           onCardsChange={setCards}
           autoFocusId={autoFocusId}
           onAutoFocusHandled={() => setAutoFocusId(null)}
-          prefilledAttachments={prefilledAttachments}
           submitting={submitting}
           onSubmit={submit}
           onCancel={() => setOpen(false)}

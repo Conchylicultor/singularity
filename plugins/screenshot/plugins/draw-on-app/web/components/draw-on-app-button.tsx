@@ -6,6 +6,7 @@ import { captureApp } from "@plugins/screenshot/web";
 import { Button } from "@/components/ui/button";
 import { ShellCommands } from "@plugins/shell/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
+import { attachmentMarkdown } from "@plugins/primitives/plugins/paste-images/web";
 import { ImproveCommands } from "@plugins/improve/web";
 import type { Stroke } from "@plugins/screenshot/plugins/draw-canvas/web";
 import { LiveDrawOverlay } from "./live-draw-overlay";
@@ -48,9 +49,8 @@ export function DrawOnAppButton() {
       }
       const uploaded = await uploadAttachment(blob, "drawing.png", "image/png");
       teardown();
-      ImproveCommands.OpenWithAttachments({
-        attachmentIds: [uploaded.id],
-        filenames: { [uploaded.id]: "drawing.png" },
+      ImproveCommands.OpenWithText({
+        text: attachmentMarkdown(uploaded.id, "drawing.png"),
       });
     } catch (err) {
       ShellCommands.Toast({

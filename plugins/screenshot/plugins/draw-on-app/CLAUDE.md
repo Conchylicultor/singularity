@@ -1,6 +1,6 @@
 # draw-on-app
 
-Toolbar button (`MdGesture`) that mounts a fullscreen draw overlay on the live app. The user draws with the standard `DrawCanvas` primitive; on Done, the page (with strokes baked into the in-DOM canvas) is captured via `modern-screenshot`'s `domToBlob`, uploaded as an attachment, and handed off to the `+improve` popover via the `Improve.OpenWithAttachments` command.
+Toolbar button (`MdGesture`) that mounts a fullscreen draw overlay on the live app. The user draws with the standard `DrawCanvas` primitive; on Done, the page (with strokes baked into the in-DOM canvas) is captured via `modern-screenshot`'s `domToBlob`, uploaded as an attachment, and handed off to the `+improve` popover via the `Improve.OpenWithText` command. The attachment markdown is embedded directly in the head card's text so the image appears inline in the Lexical editor (same path as paste-images).
 
 The floating tools chrome (color swatches, width slider, Undo/Clear, Cancel/Done) carries `data-draw-chrome="true"` and is hidden + filtered out before capture so it doesn't appear in the screenshot.
 

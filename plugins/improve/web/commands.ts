@@ -1,13 +1,10 @@
 import { defineCommand } from "@core";
 
-export interface OpenWithAttachmentsArgs {
-  attachmentIds: string[];
-  /** Optional filenames keyed by attachment id, used to render chips. */
-  filenames?: Record<string, string>;
+export interface OpenWithTextArgs {
+  /** Initial markdown text for the head card (may include inline image refs). */
+  text: string;
 }
 
 export const Improve = {
-  OpenWithAttachments: defineCommand<OpenWithAttachmentsArgs, void>(
-    "improve.openWithAttachments",
-  ),
+  OpenWithText: defineCommand<OpenWithTextArgs, void>("improve.openWithText"),
 };

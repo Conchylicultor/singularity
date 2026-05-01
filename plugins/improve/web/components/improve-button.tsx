@@ -1,24 +1,16 @@
 import { useState } from "react";
 import { MdAdd } from "react-icons/md";
-import {
-  TaskDraftPopover,
-  type PrefilledAttachment,
-} from "@plugins/primitives/plugins/task-draft-form/web";
+import { TaskDraftPopover } from "@plugins/primitives/plugins/task-draft-form/web";
 import { buttonVariants } from "@/components/ui/button";
 import { Improve } from "../commands";
 import { IMPROVEMENTS_META_TASK_ID } from "../../shared/constants";
 
 export function ImproveButton() {
   const [open, setOpen] = useState(false);
-  const [prefilled, setPrefilled] = useState<PrefilledAttachment[]>([]);
+  const [initialText, setInitialText] = useState("");
 
-  Improve.OpenWithAttachments.useHandler(({ attachmentIds, filenames }) => {
-    setPrefilled(
-      attachmentIds.map((id) => ({
-        id,
-        filename: filenames?.[id] ?? "attachment",
-      })),
-    );
+  Improve.OpenWithText.useHandler(({ text }) => {
+    setInitialText(text);
     setOpen(true);
   });
 
@@ -27,7 +19,7 @@ export function ImproveButton() {
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) setPrefilled([]);
+        if (!next) setInitialText("");
       }}
       trigger={
         <>
@@ -38,7 +30,7 @@ export function ImproveButton() {
       triggerClassName={buttonVariants({ variant: "outline", size: "sm" })}
       target={{ kind: "metaTask", metaTaskId: IMPROVEMENTS_META_TASK_ID }}
       captures={["url", "screenshot"]}
-      prefilledAttachments={prefilled}
+      initialText={initialText}
       heading="Improve this app"
     />
   );

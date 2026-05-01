@@ -8,7 +8,6 @@ export type {
 export type {
   CardDraft,
   CaptureKind,
-  PrefilledAttachment,
 } from "./components/task-draft-form";
 export type { ChainModel } from "./components/model-chip";
 

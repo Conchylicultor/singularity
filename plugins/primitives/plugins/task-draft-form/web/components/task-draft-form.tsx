@@ -27,11 +27,6 @@ export interface CardDraft {
   includeParentTask: boolean;
 }
 
-export interface PrefilledAttachment {
-  id: string;
-  filename: string;
-}
-
 export type CaptureKind = "url" | "screenshot" | "parentTask";
 
 export interface TaskDraftFormProps {
@@ -39,7 +34,6 @@ export interface TaskDraftFormProps {
   onCardsChange: (next: CardDraft[]) => void;
   autoFocusId: string | null;
   onAutoFocusHandled: () => void;
-  prefilledAttachments?: PrefilledAttachment[];
   submitting: boolean;
   onSubmit: () => void;
   onCancel: () => void;
@@ -69,7 +63,6 @@ export function TaskDraftForm({
   onCardsChange,
   autoFocusId,
   onAutoFocusHandled,
-  prefilledAttachments,
   submitting,
   onSubmit,
   onCancel,
@@ -94,7 +87,6 @@ export function TaskDraftForm({
   const isMulti = cards.length > 1;
   const hasEmpty = cards.some((c) => !c.text.trim());
   const disabled = hasEmpty || submitting;
-  const attachments = prefilledAttachments ?? [];
   const supportsUrl = captures.includes("url");
   const supportsScreenshot = captures.includes("screenshot");
   const supportsParentTask = captures.includes("parentTask");
@@ -142,19 +134,6 @@ export function TaskDraftForm({
       <div className="text-muted-foreground text-xs font-medium">
         {heading ?? "Draft tasks"}
       </div>
-
-      {attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {attachments.map((a) => (
-            <img
-              key={a.id}
-              src={`/api/attachments/${a.id}`}
-              alt={a.filename}
-              className="max-h-32 w-full rounded border object-contain"
-            />
-          ))}
-        </div>
-      )}
 
       <DndContext
         sensors={sensors}

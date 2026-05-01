@@ -5,10 +5,10 @@
 ## Plugin reference
 
 - Defines:
-  - Commands: `Improve.OpenWithAttachments`
+  - Commands: `Improve.OpenWithText`
   - DB schema: `plugins/improve/server/internal/tables.ts`
 - Exports (web):
-  - Types: `OpenWithAttachmentsArgs`
+  - Types: `OpenWithTextArgs`
   - Values: `ImproveCommands`
 - Exports (server):
   - Values: `_improve_config`, `_improvePendingGroups`, `IMPROVEMENTS_META_TASK_ID`
