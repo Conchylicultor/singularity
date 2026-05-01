@@ -13,7 +13,7 @@ function newSummaryId(): string {
   return `summary-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-Mcp.registerTool({
+export const submitConversationSummaryTool = Mcp.tool({
   name: "submit_conversation_summary",
   description: `Submit a structured progress summary of the target conversation.
 Call EXACTLY ONCE per summarization run, then exit.

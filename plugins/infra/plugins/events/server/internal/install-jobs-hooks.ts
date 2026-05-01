@@ -1,12 +1,12 @@
-// Side-effect module: installs the events-side implementation of the
-// durable hooks that @plugins/jobs exposes. We keep this here (and not in
-// the jobs plugin) to preserve the plugin DAG — events already imports
-// jobs, so the reverse edge would close the cycle.
+// Installs the events-side implementation of the durable hooks that
+// @plugins/jobs exposes. Lives here (not in the jobs plugin) to preserve
+// the plugin DAG — events already imports jobs, so the reverse edge would
+// close the cycle.
 import { UNSAFE_installDurableHooks } from "@plugins/infra/plugins/jobs/server";
 import type { EventSource } from "./event";
 import { UNSAFE_triggerByName } from "./trigger";
 
-UNSAFE_installDurableHooks({
+export const jobsHooksRegistration = UNSAFE_installDurableHooks({
   registerTrigger: async (spec) => {
     // The jobs plugin types `spec.event` loosely (a duck-typed
     // `EventSourceLike` brand). At runtime it IS a real `EventSource` —
@@ -18,10 +18,10 @@ UNSAFE_installDurableHooks({
       def: event.def,
       filter: spec.where,
     };
-    // `jobs.resume` is registered as a builtin in `@plugins/infra/plugins/jobs/server` at
-    // boot. We bind the trigger by name so this module doesn't have to
-    // import the factory back from jobs (which would still be safe, but
-    // keeps the events→jobs edge minimal).
+    // `jobs.resume` is registered as a builtin in
+    // `@plugins/infra/plugins/jobs/server`. Bind by name so this module
+    // doesn't import the factory back from jobs (which would still be
+    // safe, but keeps the events→jobs edge minimal).
     await UNSAFE_triggerByName({
       on: source,
       jobName: "jobs.resume",

@@ -1,5 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@server/db/client";
+import type { Registration } from "@server/types";
 import { _jobSteps, _jobWaits } from "./tables";
 
 // Globally-shared brand. `Symbol.for` returns the same Symbol across module
@@ -83,8 +84,17 @@ export interface DurableHooks {
 
 const hooks: Partial<DurableHooks> = {};
 
-export function UNSAFE_installDurableHooks(impl: DurableHooks): void {
-  Object.assign(hooks, impl);
+/**
+ * Returns a {@link Registration} token. The actual `Object.assign(hooks, impl)`
+ * fires when the framework invokes `.register()` during the plugin register
+ * phase. Plugins list the result in their `register` array.
+ */
+export function UNSAFE_installDurableHooks(impl: DurableHooks): Registration {
+  return {
+    register() {
+      Object.assign(hooks, impl);
+    },
+  };
 }
 
 // Internal identity passed to `makeDurableCtx` by the worker. Encapsulates

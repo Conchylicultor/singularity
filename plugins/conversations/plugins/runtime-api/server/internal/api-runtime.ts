@@ -1,10 +1,9 @@
-import {
-  Runtime,
-  type ConversationRuntime,
-  type RuntimeInfo,
+import type {
+  ConversationRuntime,
+  RuntimeInfo,
 } from "@plugins/conversations/server";
 
-const apiRuntime: ConversationRuntime = {
+export const apiRuntime: ConversationRuntime = {
   id: "api",
   async list(): Promise<Map<string, RuntimeInfo>> {
     return new Map();
@@ -26,5 +25,3 @@ const apiRuntime: ConversationRuntime = {
     throw new Error("api runtime: interrupt() not implemented");
   },
 };
-
-Runtime.register(apiRuntime);

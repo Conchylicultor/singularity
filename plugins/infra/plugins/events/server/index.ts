@@ -1,12 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
-// Side-effect import: registers the `events.dispatch` job at module load so
-// it's in `jobRegistry` before any `emit()` call happens post-boot.
-import "./internal/dispatch-job";
-// Side-effect import: installs the events-side implementation of the durable
-// hooks (`ctx.waitFor` / `ctx.sleep` trigger registration) on the jobs
-// plugin. Keeping the hook installer here avoids jobs → events edges that
-// would close the plugin DAG (events already imports jobs).
-import "./internal/install-jobs-hooks";
+import { eventsDispatchJob } from "./internal/dispatch-job";
+import { jobsHooksRegistration } from "./internal/install-jobs-hooks";
 import {
   handleListEmissions,
   handleListTriggers,
@@ -47,4 +41,5 @@ export default {
     "DELETE /api/events/triggers/:id": handleDeleteTrigger,
     "PATCH /api/events/triggers/:id": handlePatchTrigger,
   },
+  register: [eventsDispatchJob, jobsHooksRegistration],
 } satisfies ServerPluginDefinition;

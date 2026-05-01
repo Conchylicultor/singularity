@@ -1,4 +1,4 @@
 import { registerAuthProvider } from "@plugins/auth/central";
 import { notionDescriptor } from "./descriptor";
 
-registerAuthProvider(notionDescriptor);
+export const notionAuthRegistration = registerAuthProvider(notionDescriptor);

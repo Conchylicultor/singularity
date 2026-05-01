@@ -49,11 +49,10 @@ import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
 import authGooglePlugin from "@plugins/auth/plugins/google/server";
 import authNotionPlugin from "@plugins/auth/plugins/notion/server";
 
-// Runtime plugins must load before `conversationsPlugin` so they register
-// with the `Runtime` registry before the poller starts ticking on its import.
-// `mcpPlugin` must load before any plugin that registers an MCP tool (e.g.
-// `tasksPlugin`) so the tool registry is importable at that plugin's module
-// load time.
+// Order is no longer load-bearing: registry writes are lazy `Registration[]`
+// tokens that the bootstrap applies in topo-sorted order during phase 1,
+// before any `onReady` runs. Phase ordering replaces array ordering for the
+// runtime/MCP/jobs/events registries.
 export const plugins: ServerPluginDefinition[] = [
   logsPlugin,
   crashesPlugin,
@@ -90,13 +89,7 @@ export const plugins: ServerPluginDefinition[] = [
   dbBackupPlugin,
   worktreeCleanupPlugin,
   infraPlugin,
-  // Jobs plugin owns the graphile-worker lifecycle; must load before the
-  // events plugin (which enqueues a dispatcher job at module load) and any
-  // plugin that calls `defineJob`.
   jobsPlugin,
-  // Events plugin layers event→job bindings on top of jobs. Must load before
-  // any plugin that defines events, so the `defineTriggerEvent` factory is
-  // ready when their tables.ts files execute.
   eventsPlugin,
   eventsTestPlugin,
   conversationsRecoverPlugin,

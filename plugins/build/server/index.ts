@@ -16,6 +16,7 @@ export default {
     "POST /api/build": handleBuild,
     "GET /api/build/status": handleBuildStatus,
   },
+  register: [buildRunJob],
   onReady: async () => {
     // Idempotent re-subscribe: remove any stale pushes.landed → buildRunJob
     // trigger rows (from a prior server incarnation), then insert a single

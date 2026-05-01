@@ -40,6 +40,7 @@ export default {
     "POST /api/conversation-category/colors": handleSetColor,
     "DELETE /api/conversation-category/colors/:category": handleDeleteColor,
   },
+  register: [classifyConversationJob],
   onReady: async () => {
     await deleteTriggersFor(classifyConversationJob);
     await trigger({

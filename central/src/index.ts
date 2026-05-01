@@ -1,9 +1,25 @@
 import type { WsData, HttpHandler, WsHandler } from "./types";
 import { plugins } from "./plugins";
 import { notificationsWsHandler, handleResourceHttp } from "./resources";
+import { topoSortPlugins } from "./topo";
+
+// Phase 1 — register: sequential, topo-sorted. Each plugin's `register`
+// array holds Registration tokens; the framework calls `.register()` on
+// each in order. See server/src/index.ts for the same pattern.
+const ordered = topoSortPlugins(plugins);
+for (const p of ordered) {
+  for (const r of p.register ?? []) {
+    try {
+      await r.register();
+    } catch (err) {
+      console.error(`[plugin.${p.id}] register failed`, err);
+      throw err;
+    }
+  }
+}
 
 await Promise.all(
-  plugins.map((p) =>
+  ordered.map((p) =>
     Promise.resolve()
       .then(() => p.onReady?.())
       .catch((err) => console.error(`[plugin.${p.id}] onReady failed`, err)),
@@ -16,7 +32,7 @@ async function shutdown(signal: string): Promise<void> {
   shuttingDown = true;
   console.log(`[central] ${signal} received; shutting down`);
   await Promise.all(
-    plugins.map((p) =>
+    ordered.map((p) =>
       Promise.resolve()
         .then(() => p.onShutdown?.())
         .catch((err) =>
@@ -94,7 +110,7 @@ function matchSegments<H>(
   return null;
 }
 
-for (const plugin of plugins) {
+for (const plugin of ordered) {
   if (plugin.httpRoutes) {
     for (const [key, handler] of Object.entries(plugin.httpRoutes)) {
       registerHttpRoute(key, handler);

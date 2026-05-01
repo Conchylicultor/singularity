@@ -3,15 +3,34 @@ import { plugins } from "./plugins";
 import { runMigrations } from "./db/migrate";
 import { ensureMainWorktreeRoot } from "./worktree";
 import { notificationsWsHandler, handleResourceHttp } from "./resources";
+import { topoSortPlugins } from "./topo";
+
+// Phase 1 — register: sequential, topo-sorted. Each plugin's `register`
+// array holds Registration tokens returned by helpers like `Mcp.tool`,
+// `Runtime.define`, `defineJob`, `defineTriggerEvent`, and
+// `UNSAFE_installDurableHooks`. This is the only place plugins write to
+// global registries. A failure here is fatal: a half-initialized registry
+// would let `onReady` run against an inconsistent world.
+const ordered = topoSortPlugins(plugins);
+for (const p of ordered) {
+  for (const r of p.register ?? []) {
+    try {
+      await r.register();
+    } catch (err) {
+      console.error(`[plugin.${p.id}] register failed`, err);
+      throw err;
+    }
+  }
+}
 
 await runMigrations();
 await ensureMainWorktreeRoot();
 
-// Plugins can declare post-migration startup work via `onReady`. Running
-// this from a plugin's module body would race the migration runner (the
-// first `await` inside runMigrations drains the microtask queue).
+// Phase 2 — onReady: parallel. Background work that needs the DB / a fully
+// populated registry. Running this from a plugin's module body would race
+// both phases above.
 await Promise.all(
-  plugins.map((p) =>
+  ordered.map((p) =>
     Promise.resolve()
       .then(() => p.onReady?.())
       .catch((err) => console.error(`[plugin.${p.id}] onReady failed`, err)),
@@ -27,7 +46,7 @@ async function shutdown(signal: string): Promise<void> {
   shuttingDown = true;
   console.log(`[server] ${signal} received; shutting down`);
   await Promise.all(
-    plugins.map((p) =>
+    ordered.map((p) =>
       Promise.resolve()
         .then(() => p.onShutdown?.())
         .catch((err) =>
@@ -109,7 +128,7 @@ function matchSegments<H>(
   return null;
 }
 
-for (const plugin of plugins) {
+for (const plugin of ordered) {
   if (plugin.httpRoutes) {
     for (const [key, handler] of Object.entries(plugin.httpRoutes)) {
       registerHttpRoute(key, handler);

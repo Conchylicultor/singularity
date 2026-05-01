@@ -17,6 +17,14 @@ export type HttpHandler = (
 
 export type ResourceLike = { key: string };
 
+/**
+ * A lazy registry write. Same semantics as `ServerPluginDefinition`'s
+ * `Registration`. See `server/src/types.ts` for the full contract.
+ */
+export interface Registration {
+  register(): void | Promise<void>;
+}
+
 export interface CentralPluginDefinition {
   id: string;
   name: string;
@@ -29,6 +37,16 @@ export interface CentralPluginDefinition {
   httpRoutes?: Record<string, HttpHandler>;
   wsRoutes?: Record<string, WsHandler>;
   resources?: ResourceLike[];
+  /**
+   * Plugins this plugin's `register` array must run after. Same semantics as
+   * `ServerPluginDefinition.dependsOn`.
+   */
+  dependsOn?: CentralPluginDefinition[];
+  /**
+   * Lazy registry-write tokens applied at boot before `onReady()`. Sequential,
+   * topo-sorted. Use for registry writes only; no I/O.
+   */
+  register?: Registration[];
   onReady?: () => void | Promise<void>;
   onShutdown?: () => void | Promise<void>;
 }

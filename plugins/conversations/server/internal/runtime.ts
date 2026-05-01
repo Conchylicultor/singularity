@@ -1,3 +1,4 @@
+import type { Registration } from "@server/types";
 import {
   getConversationRuntime,
   getConversationClaudeSessionId,
@@ -40,11 +41,21 @@ export interface ConversationRuntime {
 const registry = new Map<string, ConversationRuntime>();
 
 export const Runtime = {
-  register(runtime: ConversationRuntime): void {
-    if (registry.has(runtime.id)) {
-      throw new Error(`Runtime "${runtime.id}" already registered`);
-    }
-    registry.set(runtime.id, runtime);
+  /**
+   * Returns a {@link Registration} token. The actual `registry.set` (and the
+   * duplicate-id guard) fire when the framework invokes `.register()` during
+   * the plugin register phase. Plugins list the result in their `register`
+   * array on `ServerPluginDefinition`.
+   */
+  define(runtime: ConversationRuntime): Registration {
+    return {
+      register() {
+        if (registry.has(runtime.id)) {
+          throw new Error(`Runtime "${runtime.id}" already registered`);
+        }
+        registry.set(runtime.id, runtime);
+      },
+    };
   },
   get(id: string): ConversationRuntime {
     const runtime = registry.get(id);

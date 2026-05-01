@@ -468,7 +468,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Core.Root` → `ForkErrorWatcher`
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
       - Server:
-        - Uses: `conversations.ConversationRuntime`, `conversations.Runtime`, `conversations.RuntimeInfo`
+        - Uses: `conversations.Runtime`
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
       - Server:
         - Uses: `conversations.Runtime`
@@ -667,7 +667,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `POST /api/jobs/:id/retry`
         - `DELETE /api/jobs/:id`
       - Endpoint callers: `queue`
-    - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.registerTool.
+    - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Exports (server):
         - Types: `McpTool`, `McpToolContext`, `McpToolResult`
         - Values: `Mcp`

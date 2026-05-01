@@ -12,10 +12,9 @@ import { startPoller } from "./internal/poller";
 import { startTurnEmitter } from "./internal/turn-emitter";
 import { forkErrorsResource } from "./internal/fork-errors";
 import { ensureSystemMeta } from "./internal/meta-system";
-// Side-effect import: registers the queued-children launch/cancel jobs at
-// module load so they're in the registry before any taskStatusChanged
-// trigger row tries to dispatch them.
-import "./internal/auto-start-jobs";
+import { maybeLaunchTaskJob } from "./internal/auto-start-jobs";
+import { conversationCreated } from "./internal/tables-created-event";
+import { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 
 export { maybeLaunchTaskJob } from "./internal/auto-start-jobs";
 
@@ -68,6 +67,7 @@ export default {
   },
   // recentConversationsResource is now mounted on tasks-core; only fork-errors stays here.
   resources: [forkErrorsResource],
+  register: [maybeLaunchTaskJob, conversationCreated, conversationTurnCompleted],
   onReady: async () => {
     await ensureSystemMeta();
     startPoller();

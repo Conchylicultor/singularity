@@ -7,7 +7,7 @@ import {
 } from "@plugins/tasks-core/server";
 import { armTaskAutoStart } from "./arm-auto-start";
 
-Mcp.registerTool({
+export const addTaskTool = Mcp.tool({
   name: "add_task",
   description: `Add a task to the Singularity task tree.
 

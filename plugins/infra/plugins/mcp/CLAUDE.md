@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.registerTool.
+- Description: HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
 - Load-bearing: yes
 - Exports (server):
   - Types: `McpTool`, `McpToolContext`, `McpToolResult`

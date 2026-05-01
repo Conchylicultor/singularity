@@ -20,6 +20,7 @@ export default {
   description:
     "Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.",
   resources: [conversationProgressResource],
+  register: [classifyProgressJob, markProgressPushedJob],
   onReady: async () => {
     await deleteTriggersFor(classifyProgressJob);
     await trigger({

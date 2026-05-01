@@ -19,7 +19,7 @@ import { readStatus, setStatus } from "./state";
 // being prompted, and we don't want a stray call to delete a conversation
 // the user didn't ask to close.
 
-Mcp.registerTool({
+export const exitCleanTool = Mcp.tool({
   name: "exit_clean",
   description: `Signal that the push-and-exit flow finished cleanly: the branch landed and there's nothing the user needs to know about. The conversation will close automatically after this turn ends.
 
@@ -48,7 +48,7 @@ Only call this in response to the push-and-exit prompt. If anything went wrong o
   },
 });
 
-Mcp.registerTool({
+export const flagRaiseTool = Mcp.tool({
   name: "flag_raise",
   description: `Signal that the push-and-exit flow finished but something needs the user's attention — caveats, partial outcomes, follow-ups, skipped work, or the push didn't land. \`reason\` should be a short bullet list of what the user should know. The conversation stays open for the user to review.
 

@@ -15,6 +15,7 @@ export default {
   name: "Improve",
   description:
     'Toolbar button and meta-task for app-improvement feedback. Files tasks under "Improvements" via the shared task-draft-form primitive.',
+  register: [applyGroupJob],
   onReady: async () => {
     await ensureImprovementsMetaTask();
     await deleteTriggersFor(applyGroupJob);

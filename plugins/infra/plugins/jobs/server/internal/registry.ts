@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PoolClient } from "pg";
 import type { z } from "zod";
+import type { Registration } from "@server/types";
 import { DEFAULT_MAX_ATTEMPTS, JOB_TASK } from "./constants";
 import { getWorkerUtils } from "./worker";
 
@@ -162,7 +163,7 @@ export interface JobFactory<
   N extends string,
   S extends z.ZodType,
   E extends z.ZodType = z.ZodType,
-> {
+> extends Registration {
   readonly name: N;
   readonly inputSchema: S;
   readonly eventSchema: E;
@@ -189,9 +190,10 @@ export function defineJob<
   S extends z.ZodType,
   E extends z.ZodType,
 >(spec: DefineJobSpec<N, S, E>): JobFactory<N, S, E> {
-  if (jobRegistry.has(spec.name)) {
-    throw new Error(`[jobs] duplicate job name: ${spec.name}`);
-  }
+  // Registry write moved into `register()` (the framework calls it during
+  // the plugin register phase). `enqueue` doesn't read `jobRegistry` —
+  // graphile-worker resolves the handler at job-pickup time, which only
+  // starts in `onReady`. So enqueueing pre-register is safe.
 
   async function enqueue(
     input: unknown,
@@ -258,20 +260,24 @@ export function defineJob<
     return { jobId: String(job.id) };
   }
 
-  jobRegistry.set(spec.name, {
-    name: spec.name,
-    inputSchema: spec.input,
-    eventSchema: spec.event,
-    run: spec.run as RegisteredJob["run"],
-    maxAttempts: spec.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
-    enqueue,
-  });
-
   const factory: JobFactory<N, S, E> = {
     name: spec.name,
     inputSchema: spec.input,
     eventSchema: spec.event,
     enqueue: enqueue as JobFactory<N, S, E>["enqueue"],
+    register() {
+      if (jobRegistry.has(spec.name)) {
+        throw new Error(`[jobs] duplicate job name: ${spec.name}`);
+      }
+      jobRegistry.set(spec.name, {
+        name: spec.name,
+        inputSchema: spec.input,
+        eventSchema: spec.event,
+        run: spec.run as RegisteredJob["run"],
+        maxAttempts: spec.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
+        enqueue,
+      });
+    },
   };
   return factory;
 }

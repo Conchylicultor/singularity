@@ -209,7 +209,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - `POST /api/jobs/:id/retry`
         - `DELETE /api/jobs/:id`
       - Endpoint callers: `queue`
-    - **`mcp`** [load-bearing] — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.registerTool.
+    - **`mcp`** [load-bearing] — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Exports (server):
         - Types: `McpTool`, `McpToolContext`, `McpToolResult`
         - Values: `Mcp`

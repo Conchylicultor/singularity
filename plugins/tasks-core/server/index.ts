@@ -5,6 +5,7 @@ import {
   pushesResource,
   recentConversationsResource,
 } from "./internal/resources";
+import { pushLanded, taskStatusChanged } from "./internal/tables-events";
 
 // Per-domain attachment link tables (FK cascade on owner deletion). In their
 // own file so they don't leak server-only imports into tasks-core/shared.
@@ -158,4 +159,5 @@ export default {
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,
   resources: [tasksResource, attemptsResource, pushesResource, recentConversationsResource],
+  register: [pushLanded, taskStatusChanged],
 } satisfies ServerPluginDefinition;

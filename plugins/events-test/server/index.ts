@@ -11,6 +11,8 @@ import {
   handleSubscribe,
   handleWaitIdle,
 } from "./internal/handle";
+import { logPing } from "./internal/log-job";
+import { pinged } from "./internal/tables";
 
 export default {
   id: "events-test",
@@ -28,4 +30,5 @@ export default {
     "GET /api/events-test/wait-idle": handleWaitIdle,
     "POST /api/events-test/crash-recovery": handleCrashRecovery,
   },
+  register: [logPing, pinged],
 } satisfies ServerPluginDefinition;

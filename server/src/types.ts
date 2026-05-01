@@ -25,6 +25,21 @@ export type ResourceLike = { key: string };
 // biome-ignore lint/suspicious/noExplicitAny: descriptor is type-erased here.
 export type ConfigDescriptorLike = { schema: Record<string, any> };
 
+/**
+ * A lazy registry write. Returned by helpers like `Mcp.tool`, `Runtime.define`,
+ * `defineJob`, `defineTriggerEvent`, and `UNSAFE_installDurableHooks`. The
+ * framework walks `plugin.register: Registration[]` during the register phase
+ * and invokes `.register()` on each token in topo-sorted order.
+ *
+ * Dual-purpose factories (`defineJob`, `defineTriggerEvent`'s `event` field)
+ * implement Registration alongside their public API on the same object —
+ * `const dispatchJob = defineJob({...})` exposes `.enqueue` (factory role)
+ * and `.register()` (framework hook).
+ */
+export interface Registration {
+  register(): void | Promise<void>;
+}
+
 export interface ServerPluginDefinition {
   id: string;
   name: string;
@@ -40,6 +55,24 @@ export interface ServerPluginDefinition {
   resources?: ResourceLike[];
   /** Config descriptor declared via `defineConfig` (plugins/config/shared). */
   config?: ConfigDescriptorLike;
+  /**
+   * Plugins this plugin's `register` array must run after. Most plugins need
+   * this empty: phase ordering (all `register` writes before any `onReady`)
+   * handles the registry-host case automatically. Use only when this
+   * plugin's `register` tokens read state another plugin's `register` tokens
+   * produced.
+   */
+  dependsOn?: ServerPluginDefinition[];
+  /**
+   * Lazy registry-write tokens applied at boot before `runMigrations()` and
+   * `onReady()`. The only place a plugin writes to global registries
+   * (`Mcp.tool`, `Runtime.define`, `defineJob`, `defineTriggerEvent`,
+   * `UNSAFE_installDurableHooks`). Each token's `.register()` is called
+   * sequentially in topo-sorted order, so registries are fully populated
+   * before `onReady()` fires. No I/O, no DB queries — those belong in
+   * `onReady`.
+   */
+  register?: Registration[];
   /**
    * Called once after `runMigrations()` completes. Use this for background
    * work (pollers, watchers) that issues DB queries — scheduling it from the

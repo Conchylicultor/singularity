@@ -4,9 +4,7 @@ import {
   handleListJobs,
   handleRetryJob,
 } from "./internal/handle";
-// Side-effect import: registers the `jobs.resume` builtin so it's in
-// `jobRegistry` before any `ctx.waitFor` / `ctx.sleep` call schedules one.
-import "./internal/resume-job";
+import { jobsResumeJob } from "./internal/resume-job";
 import {
   startStuckLockSweeper,
   stopStuckLockSweeper,
@@ -40,6 +38,7 @@ export default {
     "POST /api/jobs/:id/retry": handleRetryJob,
     "DELETE /api/jobs/:id": handleCancelJob,
   },
+  register: [jobsResumeJob],
   onReady: async () => {
     await startWorker();
     startStuckLockSweeper();

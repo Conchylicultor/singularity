@@ -1,4 +1,5 @@
 import { createContext, useMemo, type ReactNode } from "react";
+import { topoSortPlugins } from "./topo";
 import type { Contribution, PluginDefinition } from "./types";
 
 export interface PluginRuntime {
@@ -9,6 +10,35 @@ export interface PluginRuntime {
 
 export const PluginRuntimeContext = createContext<PluginRuntime | null>(null);
 
+// Tracks plugins whose `register` array has been applied so a remount of
+// PluginProvider (or a useMemo recompute) doesn't double-invoke registry
+// writes.
+const registered = new WeakSet<PluginDefinition>();
+
+function runRegisterPhase(plugins: PluginDefinition[]): PluginDefinition[] {
+  const ordered = topoSortPlugins(plugins);
+  for (const p of ordered) {
+    if (registered.has(p)) continue;
+    registered.add(p);
+    for (const r of p.register ?? []) {
+      try {
+        const result = r.register();
+        // Web register is contractually sync; if a Promise sneaks through
+        // (mistyped helper), surface the rejection rather than letting it
+        // dangle silently.
+        if (result instanceof Promise) {
+          result.catch((err) =>
+            console.error(`[plugin.${p.id}] register failed`, err),
+          );
+        }
+      } catch (err) {
+        console.error(`[plugin.${p.id}] register failed`, err);
+      }
+    }
+  }
+  return ordered;
+}
+
 export function PluginProvider({
   plugins,
   children,
@@ -17,7 +47,8 @@ export function PluginProvider({
   children: ReactNode;
 }) {
   const runtime = useMemo(() => {
-    const contributions = plugins.flatMap((p) =>
+    const ordered = runRegisterPhase(plugins);
+    const contributions = ordered.flatMap((p) =>
       (p.contributions ?? []).map((c) => ({
         ...c,
         _pluginId: p.id,

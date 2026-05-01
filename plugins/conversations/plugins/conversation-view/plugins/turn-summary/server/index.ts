@@ -19,6 +19,7 @@ export default {
     "After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.",
   config: turnSummaryConfig,
   resources: [turnSummariesResource],
+  register: [generateTurnSummaryJob],
   onReady: async () => {
     // Idempotent re-subscribe: drop any stale conversationTurnCompleted →
     // generateTurnSummaryJob trigger rows from a prior incarnation, then

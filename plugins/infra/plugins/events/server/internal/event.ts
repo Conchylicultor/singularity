@@ -12,6 +12,7 @@ import {
   UNSAFE_getRegisteredJob,
 } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@server/db/client";
+import type { Registration } from "@server/types";
 import { eventTriggerColumns } from "./base-columns";
 import { eventsDispatchJob } from "./dispatch-job";
 import { triggerTableRegistry } from "./registry";
@@ -57,19 +58,23 @@ export interface EventSource<T = unknown> {
 }
 
 // The event handle returned from `defineTriggerEvent`. It IS a match-any
-// Source and additionally exposes `.emit` (owner-only) and `.where` (subscriber).
-export type EventHandle<T, F extends Record<string, unknown>> = EventSource<T> & {
-  readonly name: string;
-  /**
-   * Announce a fact. Pass `{ tx }` when emitting from inside a Drizzle
-   * transaction — the trigger SELECT, the emission audit, and the job
-   * INSERT all run on the same connection, so a rollback drops all three
-   * atomically. Without `tx`, dispatch goes through Graphile's own pool
-   * (correct for post-commit emit).
-   */
-  emit(payload: T, opts?: { tx?: EmitTx }): Promise<void>;
-  where(filter: Partial<{ [K in keyof F & keyof T]: T[K] }>): EventSource<T>;
-};
+// Source and additionally exposes `.emit` (owner-only), `.where` (subscriber),
+// and the `Registration` interface (`.register()` writes the table into
+// `triggerTableRegistry`; the framework calls it during the plugin register
+// phase).
+export type EventHandle<T, F extends Record<string, unknown>> = EventSource<T> &
+  Registration & {
+    readonly name: string;
+    /**
+     * Announce a fact. Pass `{ tx }` when emitting from inside a Drizzle
+     * transaction — the trigger SELECT, the emission audit, and the job
+     * INSERT all run on the same connection, so a rollback drops all three
+     * atomically. Without `tx`, dispatch goes through Graphile's own pool
+     * (correct for post-commit emit).
+     */
+    emit(payload: T, opts?: { tx?: EmitTx }): Promise<void>;
+    where(filter: Partial<{ [K in keyof F & keyof T]: T[K] }>): EventSource<T>;
+  };
 
 function isObjectSlot<T>(
   v: FilterSlot<T>,
@@ -141,11 +146,10 @@ export function defineTriggerEvent<
     matchFn: spec.matchFn,
   };
 
-  if (triggerTableRegistry.has(spec.name)) {
-    throw new Error(`[events] duplicate event name: ${spec.name}`);
-  }
-  triggerTableRegistry.set(spec.name, table);
-
+  // Registry write moved into `event.register()` (called by the framework
+  // during the plugin register phase). The Drizzle `table` itself is built
+  // here at construction time so it can be exported as a schema (drizzle-kit
+  // discovers it via glob) and so the closure captures a stable reference.
   const event: EventHandle<T, F> = Object.assign(
     {
       __kind: "event" as const,
@@ -162,6 +166,12 @@ export function defineTriggerEvent<
         def,
         filter: filter as Record<string, unknown>,
       }),
+      register() {
+        if (triggerTableRegistry.has(spec.name)) {
+          throw new Error(`[events] duplicate event name: ${spec.name}`);
+        }
+        triggerTableRegistry.set(spec.name, table);
+      },
     },
   );
 

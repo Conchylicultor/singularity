@@ -18,7 +18,7 @@ import {
   backfillConversationsMetaParent,
   ensureConversationsMetaTask,
 } from "./internal/meta-conversations";
-import "./internal/mcp-tools";
+import { addTaskTool } from "./internal/mcp-tools";
 
 export { armTaskAutoStart } from "./internal/arm-auto-start";
 
@@ -64,6 +64,7 @@ export default {
   },
   // Resources are now mounted on tasks-core; tasks plugin owns no resources.
   resources: [],
+  register: [addTaskTool],
   onReady: async () => {
     const created = await ensureConversationsMetaTask();
     if (created) {
