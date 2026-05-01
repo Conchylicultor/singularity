@@ -1,7 +1,7 @@
 import { resolve, sep } from "node:path";
 import { isAllowedRef } from "./resolve-ref";
 
-const GIT = "/usr/bin/git";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 const MAX_BYTES = 2 * 1024 * 1024;
 
 export type FileDiffResult =

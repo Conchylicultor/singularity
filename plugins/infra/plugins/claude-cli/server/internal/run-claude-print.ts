@@ -1,17 +1,5 @@
+import { CLAUDE as CLAUDE_BIN } from "@plugins/infra/plugins/paths/server";
 import { recordClaudeCliCall } from "./record-call";
-
-const CLAUDE_BIN =
-  process.env.SINGULARITY_CLAUDE_BIN ??
-  (() => {
-    const { existsSync } = require("node:fs") as typeof import("node:fs");
-    const { homedir } = require("node:os") as typeof import("node:os");
-    const fromPath = Bun.which("claude");
-    if (fromPath) return fromPath;
-    for (const p of [`${homedir()}/.local/bin/claude`, "/opt/homebrew/bin/claude", "/usr/local/bin/claude"]) {
-      if (existsSync(p)) return p;
-    }
-    return "claude";
-  })();
 
 const MODEL_IDS: Record<ClaudePrintModel, string> = {
   haiku: "claude-haiku-4-5",

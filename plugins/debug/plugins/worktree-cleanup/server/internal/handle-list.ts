@@ -3,7 +3,7 @@ import { listAttempts, listTasks } from "@plugins/tasks-core/server";
 import { databaseExists } from "@plugins/conversations/server";
 import { ensureMainWorktreeRoot } from "@server/worktree";
 
-const GIT = "/usr/bin/git";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 const CONCURRENCY = 50;
 
 // Allowlist of task statuses known to have no live agent session.

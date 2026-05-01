@@ -1,4 +1,5 @@
 import { mkdir } from "node:fs/promises";
+import { homedir } from "node:os";
 import { adminPool } from "@server/db/client";
 
 export async function handleBackup(): Promise<Response> {
@@ -11,7 +12,7 @@ export async function handleBackup(): Promise<Response> {
     .replace(/T/, "_")
     .replace(/:/g, "-")
     .slice(0, 19);
-  const outDir = `${process.env.HOME}/.backups/singularity/${timestamp}`;
+  const outDir = `${homedir()}/.backups/singularity/${timestamp}`;
   await mkdir(outDir, { recursive: true });
 
   const result = await adminPool.query<{ datname: string }>(

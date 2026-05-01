@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
-import { homedir } from "node:os";
+import { CLAUDE_SESSIONS_DIR, PGREP } from "@plugins/infra/plugins/paths/server";
 
-const SESSIONS_DIR = `${homedir()}/.claude/sessions`;
+const SESSIONS_DIR = CLAUDE_SESSIONS_DIR;
 
 // Positive-only cache. A null result (sessions file not yet on disk)
 // must be re-checked on the next poller tick — otherwise an early race
@@ -20,7 +20,7 @@ async function readSessionId(pid: number): Promise<string | null> {
 }
 
 async function pgrepChildren(pid: number): Promise<number[]> {
-  const proc = Bun.spawn(["/usr/bin/pgrep", "-P", String(pid)], {
+  const proc = Bun.spawn([PGREP, "-P", String(pid)], {
     stdout: "pipe",
     stderr: "pipe",
   });

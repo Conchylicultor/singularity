@@ -1,6 +1,6 @@
 import { resolveWorktreePath } from "./resolve-worktree-path";
 
-const GIT = "/usr/bin/git";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 
 export async function handleTree(
   _req: Request,

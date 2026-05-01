@@ -7,7 +7,7 @@ import { PHASE_ORDER, type ConversationPhase } from "../../shared/schemas";
 import { _conversationProgress } from "./tables";
 import { conversationProgressResource } from "./resource";
 
-const GIT = "/usr/bin/git";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 
 async function gitRun(args: string[], cwd: string): Promise<string | null> {
   const proc = Bun.spawn([GIT, "-C", cwd, ...args], {

@@ -1,6 +1,4 @@
-import { homedir } from "node:os";
-
-const PROJECTS_DIR = `${homedir()}/.claude/projects`;
+import { CLAUDE_PROJECTS_DIR as PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 
 export type TurnRole = "user" | "assistant";
 

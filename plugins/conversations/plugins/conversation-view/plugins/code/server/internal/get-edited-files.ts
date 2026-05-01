@@ -2,7 +2,7 @@ import { resolve, sep } from "node:path";
 import type { EditedFile, EditedFileStatus } from "../../shared/protocol";
 import { parseDiffNameStatusZ, parseDiffNumstatZ } from "./parse-diff-z";
 
-const GIT = "/usr/bin/git";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 const UNTRACKED_MAX_BYTES = 2 * 1024 * 1024;
 
 interface FileEntry {

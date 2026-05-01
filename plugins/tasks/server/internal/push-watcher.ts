@@ -6,7 +6,7 @@ import {
 } from "@plugins/tasks-core/server";
 import { ensureMainWorktreeRoot } from "@server/worktree";
 
-const GIT = "/usr/bin/git";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 const TICK_MS = 1000;
 // Periodic self-heal scan: a bounded recent window reconciled against
 // the DB. Catches commits the delta path missed, e.g. a process restart

@@ -1,7 +1,7 @@
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
 import { parseDiffNameStatusZ, parseDiffNumstatZ } from "./parse-diff-z";
 
-const GIT = "/usr/bin/git";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 
 interface FileEntry {
   status: EditedFileStatus;

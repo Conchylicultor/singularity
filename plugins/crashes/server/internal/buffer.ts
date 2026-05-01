@@ -1,6 +1,6 @@
 import { appendFileSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
+import { CRASHES_DIR } from "@plugins/infra/plugins/paths/server";
 import type { CrashReport, CrashSource } from "../../shared/types";
 
 // Server crashes during `uncaughtException` can't write to Postgres (the
@@ -8,7 +8,7 @@ import type { CrashReport, CrashSource } from "../../shared/types";
 // under the user's home so re-forks / branch switches don't wipe it, then
 // flush on the next boot via `flushBufferedCrashes`.
 
-const dir = join(homedir(), ".singularity", "crashes");
+const dir = CRASHES_DIR;
 
 function bufferFile(): string {
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";

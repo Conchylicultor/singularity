@@ -1,6 +1,6 @@
 import { ensureMainWorktreeRoot } from "@server/worktree";
 
-const GIT = "/usr/bin/git";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 const TTL_MS = 30_000;
 
 export interface CommitInfo {

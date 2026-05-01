@@ -382,6 +382,9 @@
         "@modelcontextprotocol/sdk": "^1.20.0",
       },
     },
+    "plugins/infra/plugins/paths": {
+      "name": "@singularity/plugin-infra-paths",
+    },
     "plugins/infra/plugins/secrets": {
       "name": "@singularity/plugin-infra-secrets",
       "version": "0.0.1",
@@ -1258,6 +1261,8 @@
     "@singularity/plugin-infra-jobs": ["@singularity/plugin-infra-jobs@workspace:plugins/infra/plugins/jobs"],
 
     "@singularity/plugin-infra-mcp": ["@singularity/plugin-infra-mcp@workspace:plugins/infra/plugins/mcp"],
+
+    "@singularity/plugin-infra-paths": ["@singularity/plugin-infra-paths@workspace:plugins/infra/plugins/paths"],
 
     "@singularity/plugin-infra-secrets": ["@singularity/plugin-infra-secrets@workspace:plugins/infra/plugins/secrets"],
 

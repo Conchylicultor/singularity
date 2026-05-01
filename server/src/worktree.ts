@@ -1,4 +1,4 @@
-const GIT = "/usr/bin/git";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 
 let cachedRepoRoot: string | null = null;
 

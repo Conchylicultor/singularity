@@ -1,6 +1,6 @@
 import { ensureMainWorktreeRoot } from "@server/worktree";
 
-const GIT = "/usr/bin/git";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 
 let cached: { githubBase: string | null } | null = null;
 

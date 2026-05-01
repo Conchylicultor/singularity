@@ -221,6 +221,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - Values: `Mcp`
       - Server:
         - `POST /api/mcp/:conversationId`
+    - **`paths`**
     - **`secrets`** [load-bearing] — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
       - Exports (server):
         - Types: `SecretMetadata`, `SecretRef`

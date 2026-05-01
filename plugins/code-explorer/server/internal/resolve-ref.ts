@@ -1,4 +1,4 @@
-const GIT = "/usr/bin/git";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 
 const NAMED_REFS = new Set(["HEAD", "main"]);
 const SHA_RE = /^[0-9a-f]{7,40}$/;

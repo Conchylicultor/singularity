@@ -1,11 +1,10 @@
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { rename, writeFile, chmod, unlink } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { homedir } from "node:os";
 import path from "node:path";
 import { decrypt, encrypt } from "./crypto";
 import { getEncryptionKey } from "./key-store";
-import { STORE_PATH } from "./paths";
+import { SINGULARITY_DIR, STORE_PATH } from "./paths";
 import type { SecretMetadata } from "@plugins/infra/plugins/secrets/shared";
 
 interface Entry {
@@ -41,9 +40,8 @@ export async function initStore(): Promise<void> {
     mkdirSync(dir, { mode: 0o700, recursive: true });
   }
   // Ensure the base ~/.singularity directory exists (it should, but be safe).
-  const baseDir = path.join(homedir(), ".singularity");
-  if (!existsSync(baseDir)) {
-    mkdirSync(baseDir, { mode: 0o700, recursive: true });
+  if (!existsSync(SINGULARITY_DIR)) {
+    mkdirSync(SINGULARITY_DIR, { mode: 0o700, recursive: true });
   }
   await getEncryptionKey();
   cached = await loadFromDisk();

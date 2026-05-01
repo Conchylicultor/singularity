@@ -1,9 +1,8 @@
 import { homedir } from "node:os";
 import { resolve, sep } from "node:path";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 import { ALLOWED_REFS, resolveRef } from "./resolve-ref";
 import { resolveWorktreePath } from "./resolve-worktree-path";
-
-const GIT = "/usr/bin/git";
 const MAX_BYTES = 20 * 1024 * 1024;
 
 const EXT_TO_MIME: Record<string, string> = {
