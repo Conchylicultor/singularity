@@ -36,14 +36,18 @@ export function PushAndExitButton({
 
   const { files } = useEditedFiles(conversation.id);
   const { data: pushes } = useResource(pushesResource);
-  const { active } = useConversations();
+  const { active, isLoading: conversationsLoading } = useConversations();
 
   const mode: Mode = useMemo(() => {
-    const hasEditedFiles = files !== null && files.length > 0;
-    if (hasEditedFiles) return "push-and-exit";
-    const hasPush = (pushes ?? []).some(
-      (p) => p.attemptId === conversation.attemptId,
-    );
+    // Until every input has loaded, default to "push-and-exit" — the safe
+    // assumption (treat the conversation as if it has unpushed work) and
+    // prevents the label from flickering through "Drop & Exit" / "Exit"
+    // while resources stream in.
+    if (files === null || pushes === undefined || conversationsLoading) {
+      return "push-and-exit";
+    }
+    if (files.length > 0) return "push-and-exit";
+    const hasPush = pushes.some((p) => p.attemptId === conversation.attemptId);
     if (hasPush) return "exit";
     const hasOtherActiveInWorktree = active.some(
       (c) =>
@@ -52,7 +56,7 @@ export function PushAndExitButton({
         isActiveStatus(c.status),
     );
     return hasOtherActiveInWorktree ? "exit" : "drop-and-exit";
-  }, [files, pushes, active, conversation.attemptId, conversation.id, conversation.worktreePath]);
+  }, [files, pushes, active, conversationsLoading, conversation.attemptId, conversation.id, conversation.worktreePath]);
 
   useEffect(() => {
     if (job?.status !== "clean") return;
