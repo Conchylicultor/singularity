@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { MdDeleteForever, MdRocketLaunch } from "react-icons/md";
-import { LogOut } from "lucide-react";
+import { LogOut, Play } from "lucide-react";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, useConversation } from "@plugins/conversations/web";
 import { isActiveStatus } from "@plugins/conversations/shared";
@@ -22,7 +22,7 @@ import {
   type JobState,
 } from "../../shared/resources";
 
-type Mode = "push-and-exit" | "exit" | "drop-and-exit";
+type Mode = "push-and-exit" | "exit" | "drop-and-exit" | "go";
 
 export function PushAndExitButton({
   conversation,
@@ -46,7 +46,10 @@ export function PushAndExitButton({
     if (files === null || pushes === undefined || conversationsLoading) {
       return "push-and-exit";
     }
-    if (files.length > 0) return "push-and-exit";
+    if (files.length > 0) {
+      if (files.every((f) => f.path.startsWith("research/"))) return "go";
+      return "push-and-exit";
+    }
     const hasPush = pushes.some((p) => p.attemptId === conversation.attemptId);
     if (hasPush) return "exit";
     const hasOtherActiveInWorktree = active.some(
@@ -84,7 +87,24 @@ export function PushAndExitButton({
 
   async function onClick() {
     if (disabled) return;
-    if (mode === "push-and-exit") {
+    if (mode === "go") {
+      try {
+        const res = await fetch(
+          `/api/conversations/${encodeURIComponent(conversation.id)}/turn`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ text: "Go" }),
+          },
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      } catch (err) {
+        Shell.Toast({
+          description: `Go failed: ${err instanceof Error ? err.message : String(err)}`,
+          variant: "error",
+        });
+      }
+    } else if (mode === "push-and-exit") {
       try {
         const res = await fetch(
           `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
@@ -166,23 +186,29 @@ export function PushAndExitButton({
       : undefined;
 
   const label =
-    mode === "push-and-exit"
-      ? busy
-        ? "Pushing…"
-        : "Push & Exit"
-      : mode === "exit"
-        ? "Exit"
-        : "Drop & Exit";
+    mode === "go"
+      ? "Go"
+      : mode === "push-and-exit"
+        ? busy
+          ? "Pushing…"
+          : "Push & Exit"
+        : mode === "exit"
+          ? "Exit"
+          : "Drop & Exit";
 
   const Icon =
-    mode === "push-and-exit"
-      ? MdRocketLaunch
-      : mode === "exit"
-        ? LogOut
-        : MdDeleteForever;
+    mode === "go"
+      ? Play
+      : mode === "push-and-exit"
+        ? MdRocketLaunch
+        : mode === "exit"
+          ? LogOut
+          : MdDeleteForever;
 
   const buttonClass =
-    "gap-1.5 bg-[oklch(0.44_0.09_240)] hover:bg-[oklch(0.5_0.09_240)] text-white";
+    mode === "go"
+      ? "gap-1.5 bg-[oklch(0.44_0.13_145)] hover:bg-[oklch(0.50_0.13_145)] text-white"
+      : "gap-1.5 bg-[oklch(0.44_0.09_240)] hover:bg-[oklch(0.5_0.09_240)] text-white";
   const buttonVariant = "default" as const;
 
   return (
