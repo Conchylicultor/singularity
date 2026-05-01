@@ -81,6 +81,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - Types: `Conversation`, `ConversationEntry`, `ConversationKind`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
   - Server:
+    - Register: `maybeLaunchTaskJob`, `conversationCreated`, `conversationTurnCompleted`
     - Uses: `crashes.recordCrash`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core._conversationAttachments`, `tasks-core.adoptOrphanConversation`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.recentConversationsResource`, `tasks-core.scheduleTaskTitleUpdate`, `tasks-core.setTaskAutoStart`, `tasks-core.synthesiseTitleFallback`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/gone`
@@ -146,6 +147,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - **`conversations-view`** — Sidebar list of all conversations.
       - Plugins:
         - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
+        - **`queue`** — Anki-style global priority queue of conversations awaiting user input. Top of the deck is what to do next; finishing a turn returns the conversation to position 2 so the top stays stable. Server side of the global Anki-style conversations queue: reorder route + onReady backfill of ranks for legacy rows.
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
@@ -183,7 +185,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - `POST /api/attachments`
         - `GET /api/attachments/:id`
         - `DELETE /api/attachments/:id`
-      - Endpoint callers: `agents`, `conversation-view`, `conversations`, `paste-images`, `quick-prompts`, `screenshot`, `task-attachments`, `task-draft-form`, `tasks-core`
+      - Endpoint callers: `agents`, `conversation-view`, `conversations`, `paste-images`, `quick-prompts`, `screenshot`, `task-attachments`, `tasks-core`
     - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
     - **`events`** [load-bearing] — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
       - Defines:
@@ -193,6 +195,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`, `UnsafeTriggerByNameSpec`
         - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
       - Server:
+        - Register: `eventsDispatchJob`, `jobsHooksRegistration`
         - `GET /api/events/emissions`
         - `GET /api/events/triggers`
         - `DELETE /api/events/triggers/:id`
@@ -205,6 +208,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`
         - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `isSuspendSignal`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
       - Server:
+        - Register: `jobsResumeJob`
         - `GET /api/jobs`
         - `POST /api/jobs/:id/retry`
         - `DELETE /api/jobs/:id`
@@ -215,6 +219,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - Values: `Mcp`
       - Server:
         - `POST /api/mcp/:conversationId`
+    - **`paths`**
     - **`secrets`** [load-bearing] — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
       - Exports (server):
         - Types: `SecretMetadata`, `SecretRef`
@@ -311,8 +316,9 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
+    - Register: `pushLanded`, `taskStatusChanged`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `agents`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
+  - Imported by: `agents`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
 

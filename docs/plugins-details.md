@@ -93,14 +93,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Auth.Provider`
       - Central:
+        - Register: `googleAuthRegistration`
         - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
+        - Register: `googleAuthRegistration`
     - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
       - Exports (shared):
         - Values: `notionAuthConfig`
       - Contributes:
         - `Auth.Provider`
       - Central:
+        - Register: `notionAuthRegistration`
         - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
+        - Register: `notionAuthRegistration`
 
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Contributes:
@@ -156,6 +160,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `Conversation`, `ConversationEntry`, `ConversationKind`, `ConversationListPayload`, `ConversationModel`, `ConversationStatus`, `ForkError`
     - Values: `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
   - Server:
+    - Register: `maybeLaunchTaskJob`, `conversationCreated`, `conversationTurnCompleted`
     - Uses: `crashes.recordCrash`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core._conversationAttachments`, `tasks-core.adoptOrphanConversation`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.recentConversationsResource`, `tasks-core.scheduleTaskTitleUpdate`, `tasks-core.setTaskAutoStart`, `tasks-core.synthesiseTitleFallback`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/gone`
@@ -183,6 +188,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Item.Chips` → `CategoryChipRow`
         - `Config.Section` "Category colors" → `CategoryColorSettings`
       - Server:
+        - Register: `classifyConversationJob`
         - Uses: `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `tasks-core._conversations`, `tasks-core.getConversation`
         - `POST /api/conversation-category/:conversationId/classify`
         - `POST /api/conversation-category/:conversationId`
@@ -199,6 +205,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `conversationPane.Actions` → `ProgressBarToolbar`
         - `Item.Chips` → `ProgressBarRow`
       - Server:
+        - Register: `classifyProgressJob`, `markProgressPushedJob`
         - Uses: `conversations.conversationTurnCompleted`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.pushLanded`
     - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
       - Plugins:
@@ -218,7 +225,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` `conversation` (path `/c/:convId`)
         - `Conversation.ActionBar` → `ExpandConversationButton`
-      - Slot contributors: `attempt-view`, `code`, `commits-graph`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `push-counter`, `quick-prompts`, `resume`, `summary`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+      - Slot contributors: `attempt-view`, `code`, `commits-graph`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `push-counter`, `quick-prompts`, `resume`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Defines:
@@ -378,6 +385,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Conversation.PromptBar` → `PushAndExitButton`
           - Server:
+            - Register: `pushAndExitJob`, `exitCleanFinalizeJob`, `exitCleanTool`, `flagRaiseTool`
             - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.recentConversationsResource`, `conversations.sendTurn`
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
@@ -390,7 +398,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server/internal/tables-attachments.ts`
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server/internal/tables.ts`
           - Contributes:
-            - `Conversation.PromptBar` → `QuickPromptChips`
+            - `Conversation.AbovePromptInput` → `QuickPromptChips`
             - `Config.Section` "Quick Prompts" → `QuickPromptsSettings`
           - Server:
             - `GET /api/quick-prompts`
@@ -437,6 +445,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Conversation.AbovePromptInput` → `TurnSummaryCard`
           - Server:
+            - Register: `generateTurnSummaryJob`
             - Uses: `config.readConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `tasks-core._conversations`, `tasks-core.getConversation`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:
@@ -450,7 +459,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Shell.Sidebar` "Conversations" → `ConversationList`
         - `Core.Root` → `ForkErrorWatcher`
-      - Slot contributors: `grouped`
+        - `Core.Root` → `AutoLaunchWatcher`
+      - Slot contributors: `grouped`, `queue`
       - Plugins:
         - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
           - Defines:
@@ -469,11 +479,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `DELETE /api/conversation-groups/:id`
             - `POST /api/conversation-groups/:id/members`
             - `DELETE /api/conversation-groups/members/:conversationId`
+        - **`queue`** — Anki-style global priority queue of conversations awaiting user input. Top of the deck is what to do next; finishing a turn returns the conversation to position 2 so the top stays stable. Server side of the global Anki-style conversations queue: reorder route + onReady backfill of ranks for legacy rows.
+          - Contributes:
+            - `ConversationsView.View` "Queue" → `QueueView`
+          - Server:
+            - Uses: `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`
+            - `POST /api/conversations-queue/reorder`
+            - `POST /api/conversations-queue/promote`
+            - `POST /api/conversations-queue/demote`
+            - `POST /api/conversations-queue/step-down`
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
       - Server:
+        - Register: `Runtime.define(apiRuntime)`
         - Uses: `conversations.Runtime`
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
       - Server:
+        - Register: `Runtime.define(tmuxRuntime)`
         - Uses: `conversations.Runtime`
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
       - Defines:
@@ -482,8 +503,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `_conversationSummaries`, `conversationSummariesResource`
       - Contributes:
         - `Pane.Register` `conv-summary` (path `summary`)
-        - `Conversation.ActionBar` → `SummarizeButton`
       - Server:
+        - Register: `submitConversationSummaryTool`
         - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `tasks-core.getConversation`, `tasks-core.getTask`
         - Resources: `conversation-summaries` (push)
         - `POST /api/conversation-summary/:conversationId/generate`
@@ -586,6 +607,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Debug.Item` "Events Test"
     - `eventsTestPane.open`
   - Server:
+    - Register: `logPing`, `pinged`
     - `POST /api/events-test/subscribe`
     - `POST /api/events-test/emit`
     - `POST /api/events-test/direct-enqueue`
@@ -607,17 +629,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`improve`**
   - Defines:
-    - Commands: `Improve.OpenWithAttachments`
+    - Commands: `Improve.OpenWithText`
     - DB schema: `plugins/improve/server/internal/tables.ts`
   - Exports (web):
-    - Types: `OpenWithAttachmentsArgs`
+    - Types: `OpenWithTextArgs`
     - Values: `ImproveCommands`
   - Exports (server):
-    - Values: `_improve_config`, `_improvePendingGroups`, `IMPROVEMENTS_META_TASK_ID`
+    - Values: `_improve_config`, `_improvePendingGroups`, `_improvePendingQueueTop`, `IMPROVEMENTS_META_TASK_ID`
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `ImproveButton`
   - Server:
-    - Uses: `conversations.conversationCreated`, `tasks-core.ensureMetaTask`
+    - Register: `applyGroupJob`, `applyQueueTopJob`
+    - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `tasks-core._conversations`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`
+    - `POST /api/improve/queue-top`
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:
@@ -634,7 +658,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `POST /api/attachments`
         - `GET /api/attachments/:id`
         - `DELETE /api/attachments/:id`
-      - Endpoint callers: `agents`, `conversation-view`, `conversations`, `paste-images`, `quick-prompts`, `screenshot`, `task-attachments`, `task-draft-form`, `tasks-core`
+      - Endpoint callers: `agents`, `conversation-view`, `conversations`, `paste-images`, `quick-prompts`, `screenshot`, `task-attachments`, `tasks-core`
     - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
       - Defines:
         - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
@@ -654,6 +678,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`, `UnsafeTriggerByNameSpec`
         - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
       - Server:
+        - Register: `eventsDispatchJob`, `jobsHooksRegistration`
         - `GET /api/events/emissions`
         - `GET /api/events/triggers`
         - `DELETE /api/events/triggers/:id`
@@ -666,6 +691,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`
         - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `isSuspendSignal`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
       - Server:
+        - Register: `jobsResumeJob`
         - `GET /api/jobs`
         - `POST /api/jobs/:id/retry`
         - `DELETE /api/jobs/:id`
@@ -676,6 +702,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `Mcp`
       - Server:
         - `POST /api/mcp/:conversationId`
+    - **`paths`**
+      - Exports (server):
+        - Values: `ATTACHMENTS_DIR`, `CLAUDE`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `CRASHES_DIR`, `GIT`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `PGREP`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`
     - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
       - Exports (server):
         - Types: `SecretMetadata`, `SecretRef`
@@ -752,7 +781,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Exports (web):
-        - Types: `CaptureKind`, `CardDraft`, `ChainModel`, `PrefilledAttachment`, `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelateMode`, `TaskChainRelateSpec`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`, `TaskDraftPopoverProps`, `TaskDraftRelate`
+        - Types: `CaptureKind`, `CardDraft`, `ChainModel`, `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelateMode`, `TaskChainRelateSpec`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`, `TaskDraftPopoverProps`, `TaskDraftRelate`
         - Values: `TaskDraftPopover`
       - Exports (shared):
         - Types: `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelate`, `TaskChainRelateMode`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`
@@ -840,6 +869,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
     - Values: `attemptsResource`, `pushesResource`, `tasksResource`
   - Server:
+    - Register: `addTaskTool`
     - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.scheduleTaskTitleUpdate`, `tasks-core.setTaskAutoStart`, `tasks-core.synthesiseTitleFallback`, `tasks-core.taskStatusChanged`, `tasks-core.updateTask`
     - `GET /api/tasks`
     - `POST /api/tasks`
@@ -911,8 +941,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
+    - Register: `pushLanded`, `taskStatusChanged`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `agents`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
+  - Imported by: `agents`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):
