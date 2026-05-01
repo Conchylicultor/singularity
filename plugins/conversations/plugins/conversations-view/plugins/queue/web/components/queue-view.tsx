@@ -12,7 +12,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { generateKeyBetween } from "fractional-indexing";
-import { MdClose } from "react-icons/md";
+import { MdChevronRight, MdClose } from "react-icons/md";
 import { useConversations } from "@plugins/conversations/web";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
@@ -34,6 +34,49 @@ function parseDragId(id: string | number): string | null {
   return id.slice("queue-conv-".length);
 }
 
+const WORKING_EXPANDED_KEY = "queue-view:working:expanded";
+const QUEUE_EXPANDED_KEY = "queue-view:queue:expanded";
+
+function SectionBox({
+  title,
+  count,
+  expanded,
+  onToggleExpanded,
+  children,
+}: {
+  title: string;
+  count: number;
+  expanded: boolean;
+  onToggleExpanded: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="group/box rounded-md transition-colors hover:bg-muted/30">
+      <div className="group/header flex items-center gap-0.5 rounded-md px-1 py-1">
+        <button
+          type="button"
+          onClick={onToggleExpanded}
+          aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
+          className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent"
+        >
+          <MdChevronRight
+            className={cn("size-4 transition-transform", expanded && "rotate-90")}
+          />
+        </button>
+        <div className="min-w-0 flex-1 truncate px-1 py-0.5 text-xs font-semibold text-muted-foreground">
+          {title}
+        </div>
+        {count > 0 && (
+          <span className="shrink-0 rounded px-1 py-0.5 text-[10px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover/header:opacity-100">
+            {count}
+          </span>
+        )}
+      </div>
+      {expanded && <div className="mt-0.5 pl-1">{children}</div>}
+    </div>
+  );
+}
+
 export function QueueView({
   activeId,
   onNavigate,
@@ -41,10 +84,12 @@ export function QueueView({
 }: ViewProps) {
   const { active, isLoading } = useConversations();
 
-  // Anki-style deck: a single global ordered list of waiting conversations,
-  // sorted by rank ascending. Top of the list is "what to do next". The rank
-  // column is guaranteed populated server-side (assigned on insert + on every
-  // transition into waiting); the null-guard here is a defensive belt.
+  const working = useMemo(
+    () =>
+      active.filter((c) => c.status === "working" || c.status === "starting"),
+    [active],
+  );
+
   const deck = useMemo(() => {
     const waiting = active.filter(
       (c): c is Conversation & { rank: string } =>
@@ -52,6 +97,40 @@ export function QueueView({
     );
     return [...waiting].sort((a, b) => a.rank.localeCompare(b.rank));
   }, [active]);
+
+  const [workingExpanded, setWorkingExpanded] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(WORKING_EXPANDED_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const toggleWorkingExpanded = useCallback(() => {
+    setWorkingExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(WORKING_EXPANDED_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const [queueExpanded, setQueueExpanded] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(QUEUE_EXPANDED_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const toggleQueueExpanded = useCallback(() => {
+    setQueueExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(QUEUE_EXPANDED_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -116,7 +195,7 @@ export function QueueView({
     [deck],
   );
 
-  if (!isLoading && deck.length === 0) {
+  if (!isLoading && deck.length === 0 && working.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-xs text-muted-foreground">
         All clear — no conversations are waiting on you.
@@ -127,34 +206,84 @@ export function QueueView({
   const dragInProgress = draggingId !== null;
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={pointerWithin}
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      onDragCancel={() => setDraggingId(null)}
-    >
-      <SidebarMenu>
-        {deck.map((conv, idx) => (
-          <QueueRow
-            key={conv.id}
-            conv={conv}
-            isTop={idx === 0}
-            isActive={conv.id === activeId}
-            dragInProgress={dragInProgress}
-            onNavigate={onNavigate}
-            onClose={onCloseConversation}
-          />
-        ))}
-      </SidebarMenu>
-      <DragOverlay dropAnimation={null}>
-        {draggingConv ? (
-          <div className="flex items-center rounded border border-accent bg-background/90 px-2 py-1.5 text-sm shadow-md">
-            <ConversationItem conv={draggingConv} />
+    <div className="flex flex-col gap-1.5">
+      <SectionBox
+        title="Queue"
+        count={deck.length}
+        expanded={queueExpanded}
+        onToggleExpanded={toggleQueueExpanded}
+      >
+        {deck.length === 0 ? (
+          <div className="px-2 py-1 text-[11px] italic text-muted-foreground">
+            No conversations waiting
           </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={pointerWithin}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onDragCancel={() => setDraggingId(null)}
+          >
+            <SidebarMenu>
+              {deck.map((conv, idx) => (
+                <QueueRow
+                  key={conv.id}
+                  conv={conv}
+                  isTop={idx === 0}
+                  isActive={conv.id === activeId}
+                  dragInProgress={dragInProgress}
+                  onNavigate={onNavigate}
+                  onClose={onCloseConversation}
+                />
+              ))}
+            </SidebarMenu>
+            <DragOverlay dropAnimation={null}>
+              {draggingConv ? (
+                <div className="flex items-center rounded border border-accent bg-background/90 px-2 py-1.5 text-sm shadow-md">
+                  <ConversationItem conv={draggingConv} />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
+      </SectionBox>
+      <SectionBox
+        title="Working"
+        count={working.length}
+        expanded={workingExpanded}
+        onToggleExpanded={toggleWorkingExpanded}
+      >
+        {working.length === 0 ? (
+          <div className="px-2 py-1 text-[11px] italic text-muted-foreground">
+            No agents working
+          </div>
+        ) : (
+          <SidebarMenu>
+            {working.map((conv) => (
+              <li key={conv.id} className="group/menu-item relative list-none">
+                <SidebarMenuButton
+                  className="h-auto py-1.5"
+                  isActive={conv.id === activeId}
+                  onClick={() => onNavigate(conv.id)}
+                >
+                  <ConversationItem conv={conv} />
+                </SidebarMenuButton>
+                <SidebarMenuAction
+                  onClick={(e: React.MouseEvent) =>
+                    void onCloseConversation(conv.id, e)
+                  }
+                  className="opacity-0 group-hover/menu-item:opacity-100"
+                  aria-label="Close conversation"
+                >
+                  <MdClose className="size-3.5" />
+                </SidebarMenuAction>
+              </li>
+            ))}
+          </SidebarMenu>
+        )}
+      </SectionBox>
+    </div>
   );
 }
 
