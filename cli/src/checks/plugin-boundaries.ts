@@ -162,9 +162,13 @@ export const pluginBoundaries: Check = {
         }
 
         // R6: track DAG edge (deduped), tagged with source file's runtime.
+        // Files in tooling folders (lint/, check/) return null runtime — those
+        // imports are skipped entirely rather than collapsed to "shared".
         if (sourcePlugin && sourcePlugin !== resolved.pluginPath) {
-          const runtime = runtimeForPath(relFile, pluginSet) ?? "shared";
-          edges.add(`${sourcePlugin}\0${resolved.pluginPath}\0${runtime}`);
+          const runtime = runtimeForPath(relFile, pluginSet);
+          if (runtime !== null) {
+            edges.add(`${sourcePlugin}\0${resolved.pluginPath}\0${runtime}`);
+          }
         }
       }
     }

@@ -5,6 +5,7 @@ import { basename, join, resolve } from "path";
 import { homedir } from "os";
 import { generateMigration } from "../migrations";
 import { generatePluginDocs, collectAllPlugins } from "../docgen";
+import { runChecks } from "../checks";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const SINGULARITY_DIR = join(homedir(), ".singularity");
@@ -282,10 +283,14 @@ export function registerBuild(program: Command) {
     )
     .option("--no-restart", "Skip asking the gateway to restart the backend")
     .option(
+      "--skip-checks",
+      "Skip the post-build runChecks() pass (faster dev iteration; checks still gate `push`).",
+    )
+    .option(
       "--allow-main",
       "DANGER: allow running build from the main branch. Agents MUST NOT pass this flag without explicit user approval in the current conversation.",
     )
-    .action(async (opts: { migrationName?: string; resetMigration?: boolean; restart: boolean; allowMain?: boolean }) => {
+    .action(async (opts: { migrationName?: string; resetMigration?: boolean; restart: boolean; skipChecks?: boolean; allowMain?: boolean }) => {
       await ensureHooksPath();
 
       const branch = await getCurrentBranch();
@@ -338,6 +343,16 @@ export function registerBuild(program: Command) {
       // 3. Regenerate plugins/CLAUDE.md
       console.log("Generating plugins doc...");
       await generatePluginDocs({ root });
+
+      // 3b. Run repo validation checks (typescript, plugin-boundaries, eslint,
+      // plugin-contributed checks, ...). Fail before the expensive frontend
+      // build kicks off. `--skip-checks` opts out for fast iteration; checks
+      // still gate `push`.
+      if (!opts.skipChecks) {
+        console.log("Running checks...");
+        const ok = await runChecks();
+        if (!ok) process.exit(1);
+      }
 
       // 4. Type-check server. Bun runs the server without static checks, and
       // the web `tsc -b` only covers files reachable from web — so server-only

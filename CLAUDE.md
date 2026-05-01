@@ -52,7 +52,9 @@ Think carefully about the plugin's boundaries, APIs, etc. when designing plugins
 ├── plugins/          # All features, each as a self-contained plugin
 │   └── {name}/
 │       ├── web/      # Frontend code
-│       └── server/   # Backend code (future)
+│       ├── server/   # Backend code (future)
+│       ├── lint/     # ESLint rules contributed by this plugin (optional)
+│       └── check/    # Custom Check[] enforced by ./singularity check (optional)
 ├── web/              # Frontend bootstrap (SPA shell, plugin registry)
 ├── gateway/          # Namespace proxy (Go). See [`gateway/CLAUDE.md`](gateway/CLAUDE.md)
 ├── server/           # Backend (TypeScript/Bun)
@@ -102,11 +104,17 @@ Run repo validation checks (e.g. `schema.ts` matches committed migrations):
 ./singularity check --migrations-in-sync  # run a single check
 ```
 
-Checks also run automatically as the first step of `push`. New checks are added in `cli/src/checks/` and registered in `cli/src/checks/index.ts`.
+Checks also run automatically as the first step of `push`, and (unless `--skip-checks` is passed) at the start of `build` after migration/doc generation. New built-in checks live in `cli/src/checks/` and are registered in `cli/src/checks/index.ts`.
 
-Available checks:
+Plugins can also contribute their own checks (no codegen, no registry edits — discovered at runtime):
+
+- `plugins/<name>/lint/index.ts` — default-export `{ name: "<plugin-id>", rules: { ... } }` of ESLint v9 rule modules. The root `eslint.config.ts` walks every `lint/index.ts` and enables each rule as `error` scoped to that plugin's subtree (`plugins/<name>/**`). The `eslint` built-in check runs the resulting config.
+- `plugins/<name>/check/index.ts` — default-export `Check | Check[]` (the same `Check` interface as built-ins). Discovered automatically when `./singularity check` runs. Convention: id as `<plugin-name>:<check-id>` to avoid collisions with built-ins.
+
+Available built-in checks:
 
 - `migrations-in-sync` — fails if `server/src/db/schema.ts` would generate a new migration not yet committed. Fix by running `./singularity build` and committing the generated file.
+- `eslint` — runs `bunx eslint .` if `eslint.config.ts` exists. Plugin-contributed rules in `plugins/<name>/lint/` are auto-registered.
 
 ### Push
 

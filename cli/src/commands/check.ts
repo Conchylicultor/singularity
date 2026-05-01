@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { CHECKS, runChecks } from "../checks";
+import { CHECKS, listAllChecks, runChecks } from "../checks";
 
 export function registerCheck(program: Command) {
   const cmd = program
@@ -13,7 +13,8 @@ export function registerCheck(program: Command) {
 
   cmd.action(async (opts: Record<string, boolean>) => {
     if (opts.list) {
-      for (const c of CHECKS) console.log(`  ${c.id} — ${c.description}`);
+      const all = await listAllChecks();
+      for (const c of all) console.log(`  ${c.id} — ${c.description}`);
       return;
     }
     const selected = CHECKS.map((c) => c.id).filter((id) => opts[camel(id)]);
