@@ -29,6 +29,27 @@ export async function rankForBottom(excludeId: string): Promise<string> {
   return generateKeyBetween(last?.rank ?? null, null);
 }
 
+// Rank that moves a conversation n positions down in the deck. Falls back to
+// rankForBottom when fewer than n items exist below the current position.
+export async function rankAfterN(conversationId: string, n: number): Promise<string> {
+  const [conv] = await db
+    .select({ rank: _conversations.rank })
+    .from(_conversations)
+    .where(eq(_conversations.id, conversationId))
+    .limit(1);
+  if (!conv?.rank) return rankForBottom(conversationId);
+
+  const rows = await db
+    .select({ rank: _conversations.rank })
+    .from(_conversations)
+    .where(and(waitingWithRank(), ne(_conversations.id, conversationId), gt(_conversations.rank, conv.rank)))
+    .orderBy(asc(_conversations.rank))
+    .limit(n + 1);
+
+  if (rows.length < n) return rankForBottom(conversationId);
+  return generateKeyBetween(rows[n - 1].rank, rows[n]?.rank ?? null);
+}
+
 // Rank that slots a conversation immediately before or after targetId in the
 // ordered deck. Looks up targetId's current rank from the DB, then finds its
 // neighbour in the given direction to compute the midpoint rank.

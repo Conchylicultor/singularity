@@ -11,7 +11,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { MdChevronRight, MdClose, MdVerticalAlignBottom, MdVerticalAlignTop } from "react-icons/md";
+import { MdChevronRight, MdClose, MdKeyboardDoubleArrowDown, MdVerticalAlignBottom, MdVerticalAlignTop } from "react-icons/md";
 import { useConversations } from "@plugins/conversations/web";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
@@ -30,7 +30,7 @@ function parseDragId(id: string | number): string | null {
   return id.slice("queue-conv-".length);
 }
 
-async function queuePost(path: string, body: Record<string, string>) {
+async function queuePost(path: string, body: Record<string, unknown>) {
   await fetch(`/api/conversations-queue/${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -201,12 +201,14 @@ export function QueueView({
                   conv={conv}
                   isTop={idx === 0}
                   isBottom={idx === deck.length - 1}
+                  canStepDown={idx < deck.length - 1}
                   isActive={conv.id === activeId}
                   dragInProgress={dragInProgress}
                   onNavigate={onNavigate}
                   onClose={onCloseConversation}
                   onPromoteToTop={(id) => queuePost("promote", { conversationId: id })}
                   onSendToBottom={(id) => queuePost("demote", { conversationId: id })}
+                  onStepDown={(id) => queuePost("step-down", { conversationId: id, steps: 5 })}
                 />
               ))}
             </SidebarMenu>
@@ -263,22 +265,26 @@ function QueueRow({
   conv,
   isTop,
   isBottom,
+  canStepDown,
   isActive,
   dragInProgress,
   onNavigate,
   onClose,
   onPromoteToTop,
   onSendToBottom,
+  onStepDown,
 }: {
   conv: Conversation;
   isTop: boolean;
   isBottom: boolean;
+  canStepDown: boolean;
   isActive: boolean;
   dragInProgress: boolean;
   onNavigate: (id: string) => void;
   onClose: (id: string, e: React.MouseEvent) => void | Promise<void>;
   onPromoteToTop: (id: string) => Promise<void>;
   onSendToBottom: (id: string) => Promise<void>;
+  onStepDown: (id: string) => Promise<void>;
 }): ReactNode {
   const draggable = useDraggable({
     id: `queue-conv-${conv.id}`,
@@ -326,6 +332,15 @@ function QueueRow({
               aria-label="Move to top"
             >
               <MdVerticalAlignTop className="size-3.5" />
+            </button>
+          )}
+          {canStepDown && (
+            <button
+              onClick={(e) => { e.stopPropagation(); void onStepDown(conv.id); }}
+              className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+              aria-label="Move down 5"
+            >
+              <MdKeyboardDoubleArrowDown className="size-3.5" />
             </button>
           )}
           {!isBottom && (

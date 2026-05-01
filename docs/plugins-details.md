@@ -496,6 +496,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `POST /api/conversations-queue/reorder`
             - `POST /api/conversations-queue/promote`
             - `POST /api/conversations-queue/demote`
+            - `POST /api/conversations-queue/step-down`
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
       - Server:
         - Register: `Runtime.define(apiRuntime)`

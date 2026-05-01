@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@server/types";
 import { handleReorder } from "./internal/handle-reorder";
 import { handlePromote } from "./internal/handle-promote";
 import { handleDemote } from "./internal/handle-demote";
+import { handleStepDown } from "./internal/handle-step-down";
 import { backfillRanks } from "./internal/backfill-ranks";
 
 export default {
@@ -13,6 +14,7 @@ export default {
     "POST /api/conversations-queue/reorder": handleReorder,
     "POST /api/conversations-queue/promote": handlePromote,
     "POST /api/conversations-queue/demote": handleDemote,
+    "POST /api/conversations-queue/step-down": handleStepDown,
   },
   onReady: backfillRanks,
 } satisfies ServerPluginDefinition;
