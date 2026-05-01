@@ -4,7 +4,7 @@ import buildPlugin from "@plugins/build/server";
 import terminalPlugin from "@plugins/terminal/server";
 import tasksCorePlugin from "@plugins/tasks-core/server";
 import conversationsPlugin from "@plugins/conversations/server";
-import conversationGroupsPlugin from "@plugins/conversations/plugins/conversation-groups/server";
+import conversationGroupsPlugin from "@plugins/conversations/plugins/conversations-view/plugins/grouped/server";
 import conversationsRuntimeTmuxPlugin from "@plugins/conversations/plugins/runtime-tmux/server";
 import conversationsRuntimeApiPlugin from "@plugins/conversations/plugins/runtime-api/server";
 import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/server";

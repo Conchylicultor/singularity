@@ -6,15 +6,14 @@
 
 - Description: User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
 - Defines:
-  - DB schema: `plugins/conversations/plugins/conversation-groups/server/internal/tables.ts`
-- Exports (web):
-  - Types: `GroupedConversationListProps`
-  - Values: `GroupedConversationList`
+  - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
 - Exports (server):
   - Values: `_conversationGroupMembers`, `_conversationGroups`, `addMemberToGroup`, `conversationGroupsResource`
 - Exports (shared):
   - Types: `ConversationGroup`, `ConversationGroupMember`, `ConversationGroupsPayload`
   - Values: `ConversationGroupMemberSchema`, `ConversationGroupSchema`, `ConversationGroupsPayloadSchema`, `conversationGroupsResource`
+- Contributes:
+  - `ConversationsView.View` "Grouped" → `GroupedView`
 - Server:
   - Uses: `tasks-core._conversations`
   - `POST /api/conversation-groups`

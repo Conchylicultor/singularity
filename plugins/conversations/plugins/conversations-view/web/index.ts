@@ -6,6 +6,9 @@ import { ConversationList } from "./components/conversation-list";
 import { ConvCountLabel } from "./components/conv-count-label";
 import { ForkErrorWatcher } from "./components/fork-error-watcher";
 
+export { ConversationsView } from "./slots";
+export type { ViewContribution, ViewProps } from "./slots";
+
 export default {
   id: "conversations",
   name: "Conversations",

@@ -118,10 +118,6 @@
       "name": "@singularity/plugin-conversations-conversation-category",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/conversation-groups": {
-      "name": "@singularity/plugin-conversations-conversation-groups",
-      "version": "0.0.1",
-    },
     "plugins/conversations/plugins/conversation-progress": {
       "name": "@singularity/plugin-conversations-conversation-progress",
       "version": "0.0.1",
@@ -291,6 +287,10 @@
     },
     "plugins/conversations/plugins/conversations-view": {
       "name": "@singularity/plugin-conversations-conversations-view",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversations-view/plugins/grouped": {
+      "name": "@singularity/plugin-conversations-conversations-view-grouped",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/runtime-api": {
@@ -1117,8 +1117,6 @@
 
     "@singularity/plugin-conversations-conversation-category": ["@singularity/plugin-conversations-conversation-category@workspace:plugins/conversations/plugins/conversation-category"],
 
-    "@singularity/plugin-conversations-conversation-groups": ["@singularity/plugin-conversations-conversation-groups@workspace:plugins/conversations/plugins/conversation-groups"],
-
     "@singularity/plugin-conversations-conversation-progress": ["@singularity/plugin-conversations-conversation-progress@workspace:plugins/conversations/plugins/conversation-progress"],
 
     "@singularity/plugin-conversations-conversation-ui": ["@singularity/plugin-conversations-conversation-ui@workspace:plugins/conversations/plugins/conversation-ui"],
@@ -1204,6 +1202,8 @@
     "@singularity/plugin-conversations-conversation-view-vscode": ["@singularity/plugin-conversations-conversation-view-vscode@workspace:plugins/conversations/plugins/conversation-view/plugins/vscode"],
 
     "@singularity/plugin-conversations-conversations-view": ["@singularity/plugin-conversations-conversations-view@workspace:plugins/conversations/plugins/conversations-view"],
+
+    "@singularity/plugin-conversations-conversations-view-grouped": ["@singularity/plugin-conversations-conversations-view-grouped@workspace:plugins/conversations/plugins/conversations-view/plugins/grouped"],
 
     "@singularity/plugin-conversations-recover": ["@singularity/plugin-conversations-recover@workspace:plugins/conversations-recover"],
 

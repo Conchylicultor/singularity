@@ -10,7 +10,7 @@ import worktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/web";
 import queuePlugin from "@plugins/debug/plugins/queue/web";
 import claudeCliCallsPlugin from "@plugins/debug/plugins/claude-cli-calls/web";
 import conversationsPlugin from "@plugins/conversations/plugins/conversations-view/web";
-import conversationGroupsPlugin from "@plugins/conversations/plugins/conversation-groups/web";
+import conversationGroupsPlugin from "@plugins/conversations/plugins/conversations-view/plugins/grouped/web";
 import conversationPlugin from "@plugins/conversations/plugins/conversation-view/web";
 import conversationUiPlugin from "@plugins/conversations/plugins/conversation-ui/web";
 import conversationUiItemPlugin from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
