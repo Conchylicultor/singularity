@@ -20,6 +20,7 @@ import holdAndExitPlugin from "@plugins/conversations/plugins/conversation-view/
 import exitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/exit/server";
 import resumePlugin from "@plugins/conversations/plugins/conversation-view/plugins/resume/server";
 import quickPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server";
+import launchPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/launch-prompts/server";
 import jsonlViewerPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/server";
 import conversationCodeReviewPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/server";
 import healthPlugin from "@plugins/health/server";
@@ -72,6 +73,7 @@ export const plugins: ServerPluginDefinition[] = [
   exitPlugin,
   resumePlugin,
   quickPromptsPlugin,
+  launchPromptsPlugin,
   jsonlViewerPlugin,
   conversationCodeReviewPlugin,
   healthPlugin,

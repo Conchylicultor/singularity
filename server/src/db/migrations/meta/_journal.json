@@ -393,6 +393,13 @@
       "tag": "20260430_231110_6596f940__refactor_progress_heuristic",
       "hash": "6596f940",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777621313000,
+      "tag": "20260501_074153_33c240b2__add_launch_prompts",
+      "hash": "33c240b2",
+      "breakpoints": true
     }
   ]
 }

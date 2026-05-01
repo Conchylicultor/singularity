@@ -148,7 +148,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
   - Imported by: `build`, `commits`, `conversation-category`, `turn-summary`
-  - Slot contributors: `commits`, `conversation-category`, `quick-prompts`
+  - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `quick-prompts`
 
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:
@@ -175,7 +175,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
   - Imported by: `agents`, `conversation-category`, `conversation-progress`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
-  - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `hold-and-exit`, `launch`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
+  - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
       - Defines:
@@ -244,7 +244,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` `conversation` (path `/c/:convId`)
         - `conversationPane.Actions` → `ExpandConversationButton`
-      - Slot contributors: `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `turn-summary`
+      - Slot contributors: `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `turn-summary`
       - Plugins:
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Defines:
@@ -369,6 +369,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `UserToolResultRow`
                 - `JsonlViewer.RowAction` → `CopyToolResultAction`
+        - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
+          - Defines:
+            - DB schema: `plugins/conversations/plugins/conversation-view/plugins/launch-prompts/server/internal/tables-attachments.ts`
+            - DB schema: `plugins/conversations/plugins/conversation-view/plugins/launch-prompts/server/internal/tables.ts`
+          - Contributes:
+            - `Conversation.PromptBar` → `LaunchPromptsButton`
+            - `Config.Section` "Launch Prompts" → `LaunchPromptsSettings`
+          - Server:
+            - `GET /api/launch-prompts`
+            - `POST /api/launch-prompts`
+            - `PATCH /api/launch-prompts/:id`
+            - `DELETE /api/launch-prompts/:id`
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Contributes:
             - `conversationPane.Actions` → `ModelBadge`

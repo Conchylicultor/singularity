@@ -13,7 +13,7 @@
 - Contributes:
   - `Pane.Register` `conversation` (path `/c/:convId`)
   - `conversationPane.Actions` → `ExpandConversationButton`
-- Slot contributors: `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `turn-summary`
+- Slot contributors: `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `turn-summary`
 - Sub-plugins:
   - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
   - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
@@ -23,6 +23,7 @@
   - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
   - **`hold-and-exit`** — Toolbar button that marks the task as held and closes the conversation.
   - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
+  - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
   - **`model`** — Displays the conversation model as a colored chip in the toolbar.
   - **`new-child-task`** — Toolbar button that opens a popover to create a child task under the conversation's parent task.
   - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
