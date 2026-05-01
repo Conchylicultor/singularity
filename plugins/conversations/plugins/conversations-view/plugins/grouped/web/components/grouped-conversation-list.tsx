@@ -408,6 +408,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
               key={g.id}
               group={g}
               isEmpty={ags.length === 0}
+              count={ags.length}
               dragInProgress={dragInProgress}
               hasActiveChild={hasActiveInGroup(ags)}
               autoFocusRename={pendingFocusGroupId === g.id}
@@ -466,6 +467,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
           onToggleExpanded={toggleUngroupedExpanded}
           dragInProgress={dragInProgress}
           hasActiveChild={hasActiveInGroup(trulyUngrouped)}
+          count={trulyUngrouped.length}
           title={
             <div className="min-w-0 flex-1 truncate px-1 py-0.5 text-xs font-semibold text-muted-foreground">
               Ungrouped

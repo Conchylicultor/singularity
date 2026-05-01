@@ -7,6 +7,7 @@ import { GroupRename } from "./group-rename";
 export function GroupBox({
   group,
   isEmpty,
+  count,
   onRename,
   onToggleExpanded,
   onDelete,
@@ -18,6 +19,7 @@ export function GroupBox({
 }: {
   group: ConversationGroup;
   isEmpty: boolean;
+  count: number;
   onRename: (next: string) => void | Promise<void>;
   onToggleExpanded: (next: boolean) => void | Promise<void>;
   onDelete: () => void | Promise<void>;
@@ -35,12 +37,14 @@ export function GroupBox({
       onToggleExpanded={() => onToggleExpanded(!group.expanded)}
       dragInProgress={dragInProgress}
       hasActiveChild={hasActiveChild}
+      count={count}
       title={
         <GroupRename
           value={group.title}
           onSave={onRename}
           autoFocus={autoFocusRename}
           onFocused={onRenameFocused}
+          className={isEmpty ? "text-muted-foreground/50" : undefined}
         />
       }
       trailingAction={

@@ -12,6 +12,7 @@ export function GroupContainer({
   hasActiveChild,
   leadingIcon,
   title,
+  count,
   trailingAction,
   children,
 }: {
@@ -27,6 +28,7 @@ export function GroupContainer({
   hasActiveChild?: boolean;
   leadingIcon?: ReactNode;
   title: ReactNode;
+  count?: number;
   trailingAction?: ReactNode;
   children: ReactNode;
 }) {
@@ -64,6 +66,11 @@ export function GroupContainer({
         </button>
         {leadingIcon}
         {title}
+        {count !== undefined && count > 0 && (
+          <span className="shrink-0 rounded px-1 py-0.5 text-[10px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover/header:opacity-100">
+            {count}
+          </span>
+        )}
         {trailingAction}
       </div>
       {effectiveExpanded && <div className="mt-0.5 pl-1">{children}</div>}
