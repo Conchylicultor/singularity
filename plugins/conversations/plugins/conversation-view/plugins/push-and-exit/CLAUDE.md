@@ -12,6 +12,7 @@
 - Server:
   - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.recentConversationsResource`, `conversations.sendTurn`
   - Resources: `push-and-exit` (push)
+  - Register: `pushAndExitJob`, `exitCleanFinalizeJob`, `exitCleanTool`, `flagRaiseTool`
   - `POST /api/conversations/:id/push-and-exit`
   - `DELETE /api/conversations/:id/push-and-exit`
 

@@ -51,10 +51,12 @@ interface PluginInfo {
   sharedExports: BarrelExport[];
   apiUses: string[];
   resources: { key: string; mode: string }[];
+  register: string[];
   centralHttpRoutes: string[];
   centralWsRoutes: string[];
   centralApiUses: string[];
   centralResources: { key: string; mode: string }[];
+  centralRegister: string[];
   /** Plugins (by name) whose code imports from this plugin's barrels. */
   importedBy: string[];
   /** Plugins (by name) that contribute to slots defined by this plugin. */
@@ -462,6 +464,34 @@ function parseResources(serverDir: string): { key: string; mode: string }[] {
   return out.sort((a, b) => a.key.localeCompare(b.key));
 }
 
+function parseRegisterTokens(src: string): string[] {
+  const idx = src.search(/\bregister\s*:\s*\[/);
+  if (idx < 0) return [];
+  const start = src.indexOf("[", idx);
+  const end = matchBracket(src, start, "[", "]");
+  if (end < 0) return [];
+  const body = src.slice(start + 1, end).trim();
+  if (!body) return [];
+  const tokens: string[] = [];
+  let depth = 0;
+  let cur = "";
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i]!;
+    if (c === "(" || c === "[" || c === "{") depth++;
+    else if (c === ")" || c === "]" || c === "}") depth--;
+    else if (c === "," && depth === 0) {
+      const t = cur.trim();
+      if (t) tokens.push(t);
+      cur = "";
+      continue;
+    }
+    cur += c;
+  }
+  const t = cur.trim();
+  if (t) tokens.push(t);
+  return tokens;
+}
+
 function findDbFiles(pluginDir: string): string[] {
   const serverDir = join(pluginDir, "server");
   if (!existsSync(serverDir)) return [];
@@ -574,11 +604,13 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
   const serverDir = join(dir, "server");
   const apiUses = existsSync(serverDir) ? parseServerApiUses(serverDir, basename(dir)) : [];
   const resources = existsSync(serverDir) ? parseResources(serverDir) : [];
+  const register = serverSrc ? parseRegisterTokens(serverSrc) : [];
   const centralDir = join(dir, "central");
   const centralApiUses = existsSync(centralDir)
     ? parseServerApiUses(centralDir, basename(dir), "central")
     : [];
   const centralResources = existsSync(centralDir) ? parseResources(centralDir) : [];
+  const centralRegister = centralSrc ? parseRegisterTokens(centralSrc) : [];
 
   const rel = relative(pluginsRoot, dir);
   const segs = rel.split(/[\\/]+/);
@@ -605,10 +637,12 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
     sharedExports,
     apiUses,
     resources,
+    register,
     centralHttpRoutes,
     centralWsRoutes,
     centralApiUses,
     centralResources,
+    centralRegister,
     importedBy: [],
     slotContributors: [],
     endpointCallers: [],
@@ -699,7 +733,7 @@ function renderPluginBody(
   }
 
   const serverEntries = [...p.httpRoutes, ...p.wsRoutes.map((r) => `WS ${r}`)];
-  if (serverEntries.length > 0 || p.apiUses.length > 0 || p.resources.length > 0) {
+  if (serverEntries.length > 0 || p.apiUses.length > 0 || p.resources.length > 0 || p.register.length > 0) {
     lines.push(`${bodyIndent}- Server:`);
     if (p.apiUses.length > 0) {
       lines.push(`${subIndent}- Uses: ${p.apiUses.map((n) => `\`${n}\``).join(", ")}`);
@@ -709,6 +743,9 @@ function renderPluginBody(
         `${subIndent}- Resources: ${p.resources.map((r) => `\`${r.key}\` (${r.mode})`).join(", ")}`,
       );
     }
+    if (p.register.length > 0) {
+      lines.push(`${subIndent}- Register: ${p.register.map((r) => `\`${r}\``).join(", ")}`);
+    }
     for (const r of serverEntries) lines.push(`${subIndent}- \`${r}\``);
   }
 
@@ -716,7 +753,8 @@ function renderPluginBody(
   if (
     centralEntries.length > 0 ||
     p.centralApiUses.length > 0 ||
-    p.centralResources.length > 0
+    p.centralResources.length > 0 ||
+    p.centralRegister.length > 0
   ) {
     lines.push(`${bodyIndent}- Central:`);
     if (p.centralApiUses.length > 0) {
@@ -726,6 +764,9 @@ function renderPluginBody(
       lines.push(
         `${subIndent}- Resources: ${p.centralResources.map((r) => `\`${r.key}\` (${r.mode})`).join(", ")}`,
       );
+    }
+    if (p.centralRegister.length > 0) {
+      lines.push(`${subIndent}- Register: ${p.centralRegister.map((r) => `\`${r}\``).join(", ")}`);
     }
     for (const r of centralEntries) lines.push(`${subIndent}- \`${r}\``);
   }

@@ -14,6 +14,7 @@
   - `Debug.Item` "Events Test"
   - `eventsTestPane.open`
 - Server:
+  - Register: `logPing`, `pinged`
   - `POST /api/events-test/subscribe`
   - `POST /api/events-test/emit`
   - `POST /api/events-test/direct-enqueue`

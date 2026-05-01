@@ -12,6 +12,7 @@
   - Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`
   - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `isSuspendSignal`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
 - Server:
+  - Register: `jobsResumeJob`
   - `GET /api/jobs`
   - `POST /api/jobs/:id/retry`
   - `DELETE /api/jobs/:id`
