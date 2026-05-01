@@ -13,7 +13,7 @@
 - Contributes:
   - `Pane.Register` `conversation` (path `/c/:convId`)
   - `Conversation.ActionBar` → `ExpandConversationButton`
-- Slot contributors: `attempt-view`, `code`, `commits-graph`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `push-counter`, `quick-prompts`, `resume`, `summary`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+- Slot contributors: `attempt-view`, `code`, `commits-graph`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `push-counter`, `quick-prompts`, `resume`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
 - Sub-plugins:
   - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
   - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
