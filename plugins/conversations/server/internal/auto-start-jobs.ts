@@ -52,7 +52,7 @@ export const maybeLaunchTaskJob = defineJob({
         taskId,
         model,
         prompt: buildTaskPrompt(t),
-        spawnedBy: Bun.env.SINGULARITY_WORKTREE ?? "auto-start",
+        spawnedBy: "auto-start",
       });
     } finally {
       // Clear the marker even if launch fails so we don't loop on retry; a
