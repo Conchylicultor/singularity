@@ -93,9 +93,10 @@ export function ConversationItem({
   conv,
   layout = "block",
 }: ConversationItemProps) {
+  const active = conv.status === "working";
   if (layout === "inline") {
     return (
-      <span className="inline-flex max-w-full items-center gap-1.5">
+      <span className={cn("inline-flex max-w-full items-center gap-1.5", active && "opacity-60")}>
         <ConvStatusDot conv={conv} />
         <ConvTitle conv={conv} />
         <ConvSysBadge conv={conv} />
@@ -104,7 +105,7 @@ export function ConversationItem({
     );
   }
   return (
-    <div className="flex items-start gap-2 overflow-hidden">
+    <div className={cn("flex items-start gap-2 overflow-hidden", active && "opacity-60")}>
       <span className="mt-1.5">
         <ConvStatusDot conv={conv} />
       </span>
