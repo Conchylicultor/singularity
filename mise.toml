@@ -1,0 +1,48 @@
+# External prerequisites (not managed by mise):
+#   - postgres 18+  (installed manually; runs as a system service)
+#   - claude CLI    (already installed at ~/.local/bin/claude)
+#
+# The `setup` task runs automatically after `mise install` to bootstrap the
+# base "singularity" Postgres DB:
+#   1. createdb singularity (if missing)
+#   2. apply server migrations directly (server/src/db/migrate.ts as a script)
+# Both steps are idempotent. Step 2 unblocks the very first
+# `./singularity build --allow-main`, which otherwise deadlocks waiting for
+# __singularity_migrations to be populated.
+
+[settings]
+experimental = true  # required for the [hooks] block below
+
+[tools]
+bun = "latest"
+go = "1.24"  # Go <1.24 omits LC_UUID; macOS 26 dyld then refuses to load the gateway binary
+tmux = "latest"
+
+[tasks.setup]
+description = "Bootstrap the base 'singularity' Postgres DB (idempotent)"
+run = '''
+if ! command -v pg_isready >/dev/null 2>&1; then
+  echo "setup: psql tools not on PATH — skipping (install postgres and re-run 'mise run setup')."
+  exit 0
+fi
+if ! pg_isready -q; then
+  echo "setup: Postgres is not running — skipping (start it and re-run 'mise run setup')."
+  exit 0
+fi
+
+if psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='singularity'" | grep -q 1; then
+  echo "setup: 'singularity' DB already exists."
+else
+  echo "setup: creating base 'singularity' DB..."
+  createdb singularity
+fi
+
+echo "setup: installing bun deps (needed for migrate.ts imports)..."
+bun install --silent
+
+echo "setup: applying migrations to 'singularity' DB..."
+SINGULARITY_WORKTREE=singularity bun server/src/db/migrate.ts
+'''
+
+[hooks]
+postinstall = "mise run setup"
