@@ -27,6 +27,13 @@ interface PaneChromeProps {
    * fit the contribution model.
    */
   actions?: ReactNode;
+  /**
+   * When true, suppresses the right-side `OverflowActionsBar` (slot-based
+   * `position="right"` contributions). A flex-1 spacer is still rendered so
+   * expand/close stay pinned to the far right. Use when the host renders
+   * right-side actions elsewhere (e.g. inside the content area).
+   */
+  hideRightActions?: boolean;
   children: ReactNode;
 }
 
@@ -39,7 +46,7 @@ interface PaneChromeProps {
  * layout can opt out (`chrome: false` in `Pane.define`) and compose the
  * pieces (`<PaneHistoryButtons/>`, `<PaneActionsSlot/>`) themselves.
  */
-export function PaneChrome({ pane, title, actions, children }: PaneChromeProps) {
+export function PaneChrome({ pane, title, actions, hideRightActions, children }: PaneChromeProps) {
   const chrome = pane._internal.chrome;
   const fallbackTitle = useChromeTitle(pane);
   if (!chrome.enabled) return <>{children}</>;
@@ -53,7 +60,11 @@ export function PaneChrome({ pane, title, actions, children }: PaneChromeProps) 
           <span className="truncate text-sm font-medium">{resolvedTitle}</span>
         )}
         <PaneActionsSlot pane={pane} position="left" />
-        <OverflowActionsBar pane={pane} extraActions={actions} />
+        {hideRightActions ? (
+          <div className="flex-1" />
+        ) : (
+          <OverflowActionsBar pane={pane} extraActions={actions} />
+        )}
         {chrome.expand && (
           <Button
             variant="ghost"

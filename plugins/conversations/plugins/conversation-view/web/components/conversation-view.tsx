@@ -1,4 +1,5 @@
 import { Outlet, PaneChrome, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { ActionBarView } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -76,10 +77,10 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
       abovePromptInputItems.length > 0);
 
   const mainBlock = conversation && (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="min-h-0 flex-1 overflow-hidden">
-        <JsonlPane conversation={conversation} />
-      </div>
+    <JsonlPane
+      conversation={conversation}
+      actions={<ActionBarView />}
+    >
       {showBottomBar && (
         <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-1.5 pb-2">
           {abovePromptInputItems.map((item, i) => {
@@ -96,7 +97,7 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
           )}
         </div>
       )}
-    </div>
+    </JsonlPane>
   );
 
   const mainAndSide = (
@@ -149,6 +150,7 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
           <PaneChrome
             pane={conversationPane}
             title={conversation.title ?? conversation.id}
+            hideRightActions
           >
             {body}
           </PaneChrome>

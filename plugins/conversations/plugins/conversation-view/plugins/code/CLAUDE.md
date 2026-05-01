@@ -13,7 +13,7 @@
   - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`
   - Values: `editedFilesResource`
 - Contributes:
-  - `conversationPane.Actions` → `CodeToolbarSlot`
+  - `Conversation.ActionBar` → `CodeToolbarSlot`
 - Server:
   - Uses: `tasks-core.getConversation`
   - Resources: `edited-files` (invalidate)

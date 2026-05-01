@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { CodeToolbarSlot } from "./components/toolbar-slot";
 
 export { Code } from "./slots";
@@ -10,5 +10,5 @@ export default {
   name: "Conversation: Code",
   description:
     "Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.).",
-  contributions: [conversationPane.Actions({ component: CodeToolbarSlot })],
+  contributions: [Conversation.ActionBar({ component: CodeToolbarSlot })],
 } satisfies PluginDefinition;

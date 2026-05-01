@@ -134,6 +134,10 @@
       "name": "@singularity/plugin-conversations-conversation-view",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/action-bar": {
+      "name": "@singularity/plugin-conversations-conversation-view-action-bar",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/code": {
       "name": "@singularity/plugin-conversations-conversation-view-code",
       "version": "0.0.1",
@@ -1124,6 +1128,8 @@
     "@singularity/plugin-conversations-conversation-ui-item": ["@singularity/plugin-conversations-conversation-ui-item@workspace:plugins/conversations/plugins/conversation-ui/plugins/item"],
 
     "@singularity/plugin-conversations-conversation-view": ["@singularity/plugin-conversations-conversation-view@workspace:plugins/conversations/plugins/conversation-view"],
+
+    "@singularity/plugin-conversations-conversation-view-action-bar": ["@singularity/plugin-conversations-conversation-view-action-bar@workspace:plugins/conversations/plugins/conversation-view/plugins/action-bar"],
 
     "@singularity/plugin-conversations-conversation-view-code": ["@singularity/plugin-conversations-conversation-view-code@workspace:plugins/conversations/plugins/conversation-view/plugins/code"],
 

@@ -103,6 +103,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
     - **`conversation-view`** — Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
       - Plugins:
+        - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Plugins:
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.

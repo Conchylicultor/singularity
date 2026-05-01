@@ -45,6 +45,7 @@ import conversationForkPlugin from "@plugins/conversations/plugins/conversation-
 import conversationForkSessionPlugin from "@plugins/conversations/plugins/conversation-view/plugins/fork-session/web";
 import conversationPushCounterPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-counter/web";
 import conversationCommitsGraphPlugin from "@plugins/conversations/plugins/conversation-view/plugins/commits-graph/web";
+import conversationActionBarPlugin from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import conversationPromptInputPlugin from "@plugins/conversations/plugins/conversation-view/plugins/prompt-input/web";
 import conversationTurnSummaryPlugin from "@plugins/conversations/plugins/conversation-view/plugins/turn-summary/web";
 import conversationCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
@@ -137,6 +138,7 @@ export const plugins: PluginDefinition[] = [
   conversationOpenAppPlugin,
   conversationPushCounterPlugin,
   conversationCommitsGraphPlugin,
+  conversationActionBarPlugin,
   conversationStatusPlugin,
   conversationModelPlugin,
   conversationNewChildTaskPlugin,

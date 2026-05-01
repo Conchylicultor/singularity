@@ -14,7 +14,7 @@ Counts are computed server-side via `git rev-list --left-right --count main...HE
   - Values: `commitDeltaResource`, `CommitDeltaSchema`, `CommitRowSchema`, `commitsGraphResource`, `CommitsGraphSchema`
 - Contributes:
   - `Pane.Register` `conv-commits-graph` (path `commits`)
-  - `conversationPane.Actions` → `CommitsChip`
+  - `Conversation.ActionBar` → `CommitsChip`
 - Server:
   - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesForAttempt`, `tasks-core.pushesResource`
   - Resources: `commits-graph.delta` (push), `commits-graph.graph` (push)

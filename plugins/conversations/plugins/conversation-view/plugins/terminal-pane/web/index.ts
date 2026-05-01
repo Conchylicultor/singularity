@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { TerminalButton } from "./components/terminal-button";
 import { convTerminalPane } from "./panes";
 
@@ -11,6 +11,6 @@ export default {
     "Toolbar button that opens a right pane attaching to the conversation's tmux session.",
   contributions: [
     Pane.Register({ pane: convTerminalPane }),
-    conversationPane.Actions({ component: TerminalButton }),
+    Conversation.ActionBar({ component: TerminalButton }),
   ],
 } satisfies PluginDefinition;

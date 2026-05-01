@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { OpenAppButton } from "./components/open-app-button";
 
 export default {
@@ -7,5 +7,5 @@ export default {
   name: "Conversation: Open App",
   description:
     "Opens the conversation's namespace at `http://<id>.localhost:9000/`.",
-  contributions: [conversationPane.Actions({ component: OpenAppButton })],
+  contributions: [Conversation.ActionBar({ component: OpenAppButton })],
 } satisfies PluginDefinition;

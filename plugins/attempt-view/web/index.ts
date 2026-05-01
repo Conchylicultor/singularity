@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { AttemptSwitchButton } from "./components/attempt-switch-button";
 import { attemptPane, attemptConversationPane } from "./panes";
 
@@ -14,6 +14,6 @@ export default {
   contributions: [
     Pane.Register({ pane: attemptPane }),
     Pane.Register({ pane: attemptConversationPane }),
-    conversationPane.Actions({ component: AttemptSwitchButton }),
+    Conversation.ActionBar({ component: AttemptSwitchButton }),
   ],
 } satisfies PluginDefinition;

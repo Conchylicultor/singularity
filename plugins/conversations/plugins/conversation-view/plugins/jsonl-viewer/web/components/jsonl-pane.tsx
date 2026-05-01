@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   JumpToBottomButton,
@@ -70,7 +70,15 @@ function WorkingIndicator({ startAt }: { startAt: number }) {
   );
 }
 
-export function JsonlPane({ conversation }: { conversation: Conversation }) {
+export function JsonlPane({
+  conversation,
+  actions,
+  children,
+}: {
+  conversation: Conversation;
+  actions?: ReactNode;
+  children?: ReactNode;
+}) {
   const isWorking = conversation.status === "working" || conversation.status === "starting";
   const isGone = conversation.status === "gone";
   const { data, error, isLoading } = useResource(jsonlEventsResource, {
@@ -116,6 +124,7 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
             {events.length}
           </span>
         )}
+        {actions && <div className="ml-auto flex items-center gap-1">{actions}</div>}
       </div>
       <div className="relative min-h-0 flex-1">
         <div
@@ -159,6 +168,7 @@ export function JsonlPane({ conversation }: { conversation: Conversation }) {
           className="absolute bottom-12 right-4"
         />
       </div>
+      {children}
     </div>
   );
 }

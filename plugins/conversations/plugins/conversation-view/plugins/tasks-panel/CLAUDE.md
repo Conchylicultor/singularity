@@ -7,7 +7,7 @@
 - Description: Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
 - Contributes:
   - `Pane.Register` `conv-tasks` (path `tasks`)
-  - `conversationPane.Actions` → `TasksButton`
+  - `Conversation.ActionBar` → `TasksButton`
   - `convTasksPane.Actions` → `GoToParentAction`
   - `convTasksPane.Actions` → `ExpandToTasksAction`
 
