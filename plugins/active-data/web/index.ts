@@ -3,6 +3,7 @@ import type { PluginDefinition } from "@core";
 export { ActiveData } from "./slots";
 export type { ActiveDataContribution, ActiveDataBlockContribution, ActiveDataInlineContribution } from "./slots";
 export { useActiveDataSegments } from "./internal/segment-active-data";
+export type { ActiveDataSegment } from "./internal/segment-active-data";
 export { useActiveDataLinkify } from "./internal/linkify-active-data";
 
 export default {

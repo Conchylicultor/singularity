@@ -36,7 +36,7 @@ Renderers needing the host conversation read it via
 - Defines:
   - Slots: `ActiveData.Tag`
 - Exports (web):
-  - Types: `ActiveDataBlockContribution`, `ActiveDataContribution`, `ActiveDataInlineContribution`
+  - Types: `ActiveDataBlockContribution`, `ActiveDataContribution`, `ActiveDataInlineContribution`, `ActiveDataSegment`
   - Values: `ActiveData`, `useActiveDataLinkify`, `useActiveDataSegments`
 - Slot contributors: `conv`, `task`
 - Sub-plugins:

@@ -8,7 +8,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Defines:
     - Slots: `ActiveData.Tag`
   - Exports (web):
-    - Types: `ActiveDataBlockContribution`, `ActiveDataContribution`, `ActiveDataInlineContribution`
+    - Types: `ActiveDataBlockContribution`, `ActiveDataContribution`, `ActiveDataInlineContribution`, `ActiveDataSegment`
     - Values: `ActiveData`, `useActiveDataLinkify`, `useActiveDataSegments`
   - Slot contributors: `conv`, `task`
   - Plugins:
