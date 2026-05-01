@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "./types";
+import rankPlugin from "@plugins/primitives/plugins/rank/server";
 import logsPlugin from "@plugins/debug/plugins/logs/server";
-import buildPlugin from "@plugins/build/server";
 import terminalPlugin from "@plugins/terminal/server";
 import tasksCorePlugin from "@plugins/tasks-core/server";
 import conversationsPlugin from "@plugins/conversations/server";
@@ -55,9 +55,9 @@ import authNotionPlugin from "@plugins/auth/plugins/notion/server";
 // before any `onReady` runs. Phase ordering replaces array ordering for the
 // runtime/MCP/jobs/events registries.
 export const plugins: ServerPluginDefinition[] = [
+  rankPlugin,
   logsPlugin,
   crashesPlugin,
-  buildPlugin,
   terminalPlugin,
   tasksCorePlugin,
   conversationsRuntimeTmuxPlugin,

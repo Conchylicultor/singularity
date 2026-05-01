@@ -1,0 +1,14 @@
+import type { ServerPluginDefinition } from "@server/types";
+
+export { nextRankIn, nextRankUnder } from "./internal/helpers";
+export type { RankExecutor } from "./internal/helpers";
+// Re-exported so agents implementing a ranked table find both the column type
+// and the helpers in one place. Canonical source stays @server/db/types.
+export { rankText } from "@server/db/types";
+
+export default {
+  id: "rank",
+  name: "Rank",
+  description:
+    "Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.",
+} satisfies ServerPluginDefinition;

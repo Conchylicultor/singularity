@@ -1,5 +1,5 @@
-import { asc, desc, eq, isNull, sql } from "drizzle-orm";
-import { generateKeyBetween } from "fractional-indexing";
+import { asc, eq, sql } from "drizzle-orm";
+import { nextRankUnder, type RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@server/db/client";
 import { _taskDependencies, _tasks } from "../tables";
 import { attempts, tasks } from "../schema";
@@ -8,8 +8,6 @@ import type { Task } from "../schema";
 export interface TaskFilters {
   excludeId?: string;
 }
-
-type Executor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
 
 export async function listTasks(filters?: TaskFilters): Promise<Task[]> {
   const rows = await db
@@ -51,17 +49,9 @@ export async function hasBlockingDep(taskId: string): Promise<boolean> {
 
 export async function findNextRankUnder(
   parentId: string | null,
-  executor: Executor = db,
+  executor: RankExecutor = db,
 ): Promise<string> {
-  const [last] = await executor
-    .select({ rank: _tasks.rank })
-    .from(_tasks)
-    .where(
-      parentId === null ? isNull(_tasks.parentId) : eq(_tasks.parentId, parentId),
-    )
-    .orderBy(desc(_tasks.rank))
-    .limit(1);
-  return generateKeyBetween(last?.rank ?? null, null);
+  return nextRankUnder(_tasks, _tasks.parentId, parentId, executor);
 }
 
 // True if candidateId is a descendant of ancestorId in the parent hierarchy.

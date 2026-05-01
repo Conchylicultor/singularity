@@ -1,13 +1,6 @@
-import { desc } from "drizzle-orm";
-import { generateKeyBetween } from "fractional-indexing";
-import { db } from "@server/db/client";
+import { nextRankIn } from "@plugins/primitives/plugins/rank/server";
 import { quickPromptsTable } from "./tables";
 
 export async function nextRank(): Promise<string> {
-  const [last] = await db
-    .select({ rank: quickPromptsTable.rank })
-    .from(quickPromptsTable)
-    .orderBy(desc(quickPromptsTable.rank))
-    .limit(1);
-  return generateKeyBetween(last?.rank ?? null, null);
+  return nextRankIn(quickPromptsTable);
 }

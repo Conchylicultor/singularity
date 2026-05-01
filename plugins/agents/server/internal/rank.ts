@@ -1,18 +1,6 @@
-import { desc, eq, isNull } from "drizzle-orm";
-import { generateKeyBetween } from "fractional-indexing";
-import { db } from "@server/db/client";
+import { nextRankUnder } from "@plugins/primitives/plugins/rank/server";
 import { _agents } from "./tables";
 
-export async function nextAgentRankUnder(
-  parentId: string | null,
-): Promise<string> {
-  const [last] = await db
-    .select({ rank: _agents.rank })
-    .from(_agents)
-    .where(
-      parentId === null ? isNull(_agents.parentId) : eq(_agents.parentId, parentId),
-    )
-    .orderBy(desc(_agents.rank))
-    .limit(1);
-  return generateKeyBetween(last?.rank ?? null, null);
+export async function nextAgentRankUnder(parentId: string | null): Promise<string> {
+  return nextRankUnder(_agents, _agents.parentId, parentId);
 }

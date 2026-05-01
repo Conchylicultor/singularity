@@ -2,7 +2,6 @@ import type { PluginDefinition } from "@core";
 import shellPlugin from "@plugins/shell/web";
 import panePlugin from "@plugins/primitives/plugins/pane/web";
 import terminalPlugin from "@plugins/terminal/web";
-import buildPlugin from "@plugins/build/web";
 import debugPlugin from "@plugins/debug/web";
 import dbBackupPlugin from "@plugins/debug/plugins/db-backup/web";
 import logsPlugin from "@plugins/debug/plugins/logs/web";
@@ -63,6 +62,7 @@ import themePlugin from "@plugins/theme/web";
 import welcomePlugin from "@plugins/welcome/web";
 import launchPlugin from "@plugins/primitives/plugins/launch/web";
 import treePlugin from "@plugins/primitives/plugins/tree/web";
+import rankPlugin from "@plugins/primitives/plugins/rank/web";
 import syntaxHighlightPlugin from "@plugins/primitives/plugins/syntax-highlight/web";
 import fileLinksPlugin from "@plugins/primitives/plugins/file-links/web";
 import primitivesPlugin from "@plugins/primitives/web";
@@ -110,6 +110,7 @@ export const plugins: PluginDefinition[] = [
   welcomePlugin,
   launchPlugin,
   treePlugin,
+  rankPlugin,
   syntaxHighlightPlugin,
   fileLinksPlugin,
   primitivesPlugin,
@@ -125,7 +126,6 @@ export const plugins: PluginDefinition[] = [
   taskDraftFormPlugin,
   terminalPlugin,
   worktreeSwitcherPlugin,
-  buildPlugin,
   debugPlugin,
   logsPlugin,
   dbBackupPlugin,

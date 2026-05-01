@@ -1,33 +1,13 @@
-import { desc, eq, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { generateKeyBetween } from "fractional-indexing";
 import { db } from "@server/db/client";
+import { nextRankIn, nextRankUnder } from "@plugins/primitives/plugins/rank/server";
 import { _conversationGroupMembers, _conversationGroups } from "./tables";
 import { conversationGroupsResource } from "./resource";
 
 const GROUP_PREFIX = "cgrp";
 const newId = () =>
   `${GROUP_PREFIX}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
-
-async function nextGroupRank(tx: Tx): Promise<string> {
-  const [last] = await tx
-    .select({ rank: _conversationGroups.rank })
-    .from(_conversationGroups)
-    .orderBy(desc(_conversationGroups.rank))
-    .limit(1);
-  return generateKeyBetween(last?.rank ?? null, null);
-}
-
-async function nextMemberRank(tx: Tx, groupId: string): Promise<string> {
-  const [last] = await tx
-    .select({ rank: _conversationGroupMembers.rank })
-    .from(_conversationGroupMembers)
-    .where(eq(_conversationGroupMembers.groupId, groupId))
-    .orderBy(desc(_conversationGroupMembers.rank))
-    .limit(1);
-  return generateKeyBetween(last?.rank ?? null, null);
-}
 
 export interface CreateGroupInput {
   title?: string;
@@ -41,7 +21,7 @@ export async function createGroupWithMembers(input: CreateGroupInput) {
   const id = newId();
   const title = input.title?.trim() || "Group";
   await db.transaction(async (tx) => {
-    const rank = await nextGroupRank(tx);
+    const rank = await nextRankIn(_conversationGroups, tx);
     await tx.insert(_conversationGroups).values({ id, title, rank });
     // If any of the incoming conversations are already in another group, the
     // PK on conversation_id will reject re-insert. We delete any existing
@@ -74,7 +54,7 @@ export async function addMembersToGroup(groupId: string, conversationIds: string
       .limit(1);
     if (!group) throw new Error(`Group ${groupId} not found`);
     for (const conversationId of conversationIds) {
-      const rank = await nextMemberRank(tx, groupId);
+      const rank = await nextRankUnder(_conversationGroupMembers, _conversationGroupMembers.groupId, groupId, tx);
       // Upsert by PK so an already-grouped conversation is moved into this
       // group rather than rejected.
       await tx

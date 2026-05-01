@@ -94,10 +94,6 @@
       "name": "@singularity/plugin-auth-notion",
       "version": "0.0.1",
     },
-    "plugins/build": {
-      "name": "@singularity/plugin-build",
-      "version": "0.0.1",
-    },
     "plugins/code-explorer": {
       "name": "@singularity/plugin-code-explorer",
       "version": "0.0.1",
@@ -431,6 +427,10 @@
         "@lexical/react": "^0.44.0",
         "lexical": "^0.44.0",
       },
+    },
+    "plugins/primitives/plugins/rank": {
+      "name": "@singularity/plugin-primitives-rank",
+      "version": "0.0.1",
     },
     "plugins/primitives/plugins/relative-time": {
       "name": "@singularity/plugin-primitives-relative-time",
@@ -1118,8 +1118,6 @@
 
     "@singularity/plugin-auth-notion": ["@singularity/plugin-auth-notion@workspace:plugins/auth/plugins/notion"],
 
-    "@singularity/plugin-build": ["@singularity/plugin-build@workspace:plugins/build"],
-
     "@singularity/plugin-code-explorer": ["@singularity/plugin-code-explorer@workspace:plugins/code-explorer"],
 
     "@singularity/plugin-config": ["@singularity/plugin-config@workspace:plugins/config"],
@@ -1283,6 +1281,8 @@
     "@singularity/plugin-primitives-pane": ["@singularity/plugin-primitives-pane@workspace:plugins/primitives/plugins/pane"],
 
     "@singularity/plugin-primitives-paste-images": ["@singularity/plugin-primitives-paste-images@workspace:plugins/primitives/plugins/paste-images"],
+
+    "@singularity/plugin-primitives-rank": ["@singularity/plugin-primitives-rank@workspace:plugins/primitives/plugins/rank"],
 
     "@singularity/plugin-primitives-relative-time": ["@singularity/plugin-primitives-relative-time@workspace:plugins/primitives/plugins/relative-time"],
 
