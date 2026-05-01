@@ -18,9 +18,8 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { pgTable, text, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
 
-import { GIT } from "@plugins/infra/plugins/paths/server";
-
 const DRY_RUN = !process.argv.includes("--write");
+const GIT = Bun.which("git") ?? "/usr/bin/git";
 
 // ── inline schema (avoid importing server internals) ─────────────────────────
 

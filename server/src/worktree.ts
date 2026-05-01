@@ -1,4 +1,4 @@
-import { GIT } from "@plugins/infra/plugins/paths/server";
+const GIT = Bun.which("git") ?? "/usr/bin/git";
 
 let cachedRepoRoot: string | null = null;
 

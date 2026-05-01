@@ -1,2 +1,15 @@
-export * from "./internal/paths";
-export * from "./internal/bins";
+export {
+  SINGULARITY_DIR,
+  SECRETS_DIR,
+  STORE_PATH,
+  KEY_PATH,
+  LEGACY_AUTH_DIR,
+  LEGACY_AUTH_BLOB,
+  LEGACY_AUTH_KEY,
+  ATTACHMENTS_DIR,
+  CRASHES_DIR,
+  CLAUDE_PROJECTS_DIR,
+  CLAUDE_SESSIONS_DIR,
+} from "./internal/paths";
+
+export { GIT, PGREP, CLAUDE, TMUX } from "./internal/bins";
