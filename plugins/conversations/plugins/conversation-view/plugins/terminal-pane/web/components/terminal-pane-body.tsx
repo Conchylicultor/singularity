@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { terminalPane } from "@plugins/terminal/web";
 
-const TMUX = "/opt/homebrew/bin/tmux";
+const TMUX = "tmux";
 
 export function TerminalPaneBody() {
   const { conversation } = conversationPane.useData();

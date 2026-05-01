@@ -3,10 +3,31 @@ import type {
   RuntimeInfo,
 } from "@plugins/conversations/server";
 import type { ConversationModel } from "@plugins/conversations/server";
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 import { resolveClaudeSessionId } from "./claude-session";
 
-const TMUX = "/opt/homebrew/bin/tmux";
-const CLAUDE = "/Users/admin/.local/bin/claude";
+function resolveBin(name: string, extraCandidates: string[]): string {
+  const fromPath = Bun.which(name);
+  if (fromPath) return fromPath;
+  for (const p of extraCandidates) {
+    if (existsSync(p)) return p;
+  }
+  return name;
+}
+
+const home = homedir();
+const TMUX = resolveBin("tmux", [
+  `${home}/.local/share/mise/shims/tmux`,
+  "/opt/homebrew/bin/tmux",
+  "/usr/local/bin/tmux",
+  "/usr/bin/tmux",
+]);
+const CLAUDE = resolveBin("claude", [
+  `${home}/.local/bin/claude`,
+  "/opt/homebrew/bin/claude",
+  "/usr/local/bin/claude",
+]);
 // Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename
 // legacy prefix kept so zombie sessions still get picked up by the poller.
 const SESSION_NAME_RE = /^(conv|claude)-\d+(-[a-z0-9]+)?$/;
