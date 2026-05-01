@@ -467,7 +467,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Shell.Sidebar` "Conversations" → `ConversationList`
         - `Core.Root` → `ForkErrorWatcher`
         - `Core.Root` → `AutoLaunchWatcher`
-      - Slot contributors: `grouped`
+      - Slot contributors: `grouped`, `queue`
       - Plugins:
         - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
           - Defines:
@@ -486,6 +486,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `DELETE /api/conversation-groups/:id`
             - `POST /api/conversation-groups/:id/members`
             - `DELETE /api/conversation-groups/members/:conversationId`
+        - **`queue`** — Anki-style global priority queue of conversations awaiting user input. Top of the deck is what to do next; finishing a turn returns the conversation to position 2 so the top stays stable. Server side of the global Anki-style conversations queue: reorder route + onReady backfill of ranks for legacy rows.
+          - Contributes:
+            - `ConversationsView.View` "Queue" → `QueueView`
+          - Server:
+            - Uses: `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`
+            - `POST /api/conversations-queue/reorder`
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
       - Server:
         - Uses: `conversations.Runtime`
@@ -929,7 +935,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
     - Register: `pushLanded`, `taskStatusChanged`
-  - Imported by: `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
+  - Imported by: `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):
