@@ -161,7 +161,22 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
+  // Map from rootConvId → all rootConvIds in the same auto-group cluster.
+  // Captured at drag-start so live-state updates mid-drag don't change the set.
+  const convIdToAutoGroupRootConvIds = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const ag of autoGroups) {
+      for (const convId of ag.rootConvIds) {
+        m.set(convId, ag.rootConvIds);
+      }
+    }
+    return m;
+  }, [autoGroups]);
+
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  // All rootConvIds in the same auto-group as the dragged conv (includes the dragged conv itself).
+  // Empty array when the dragged conv is not in any auto-group.
+  const [activeSiblingConvIds, setActiveSiblingConvIds] = useState<string[]>([]);
   const [pendingFocusGroupId, setPendingFocusGroupId] = useState<string | null>(
     null,
   );
@@ -208,12 +223,20 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     [activeConvId, allConversations],
   );
 
-  const onDragStart = useCallback((event: DragStartEvent) => {
-    setActiveConvId(parseConvDragId(event.active.id));
-  }, []);
+  const onDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const convId = parseConvDragId(event.active.id);
+      setActiveConvId(convId);
+      // Capture sibling IDs at drag start — stable across live-state updates during drag.
+      setActiveSiblingConvIds(convId ? (convIdToAutoGroupRootConvIds.get(convId) ?? []) : []);
+    },
+    [convIdToAutoGroupRootConvIds],
+  );
 
   const onDragEnd = async (event: DragEndEvent) => {
+    const capturedSiblings = activeSiblingConvIds;
     setActiveConvId(null);
+    setActiveSiblingConvIds([]);
     const { active: activeDrag, over } = event;
     if (!over) return;
     const draggedId = parseConvDragId(activeDrag.id);
@@ -221,11 +244,15 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     if (!draggedId || !target) return;
     if (target.kind === "conv" && target.convId === draggedId) return;
 
+    // When the dragged conv belongs to an auto-group cluster, all siblings move
+    // together. Fall back to just the dragged conv for manually grouped or solo convs.
+    const idsToMove = capturedSiblings.length > 0 ? capturedSiblings : [draggedId];
+
     if (target.kind === "new-group") {
       const res = await fetch(`/api/conversation-groups`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationIds: [draggedId] }),
+        body: JSON.stringify({ conversationIds: idsToMove }),
       });
       if (res.ok) {
         const created = (await res.json()) as { id?: string };
@@ -235,19 +262,23 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     }
 
     if (target.kind === "ungroup") {
-      // Only meaningful if the conv is currently in a user group.
-      if (groupIdByConvId.has(draggedId)) {
-        await fetch(`/api/conversation-groups/members/${draggedId}`, {
-          method: "DELETE",
-        });
-      }
+      // Remove every sibling that is currently in a user group.
+      await Promise.all(
+        idsToMove
+          .filter((id) => groupIdByConvId.has(id))
+          .map((id) =>
+            fetch(`/api/conversation-groups/members/${id}`, { method: "DELETE" }),
+          ),
+      );
       return;
     }
 
     if (target.kind === "auto-group") {
-      // Promote the auto-group to a persistent user-defined group, adding the dragged conv.
+      // Promote the auto-group to a persistent user-defined group, adding all siblings.
       const convIds = [...target.rootConvIds];
-      if (!convIds.includes(draggedId)) convIds.push(draggedId);
+      for (const id of idsToMove) {
+        if (!convIds.includes(id)) convIds.push(id);
+      }
       await fetch(`/api/conversation-groups`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -257,12 +288,12 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     }
 
     if (target.kind === "group") {
-      const currentGroupId = groupIdByConvId.get(draggedId);
-      if (currentGroupId === target.groupId) return;
+      // If all siblings are already in this group, nothing to do.
+      if (idsToMove.every((id) => groupIdByConvId.get(id) === target.groupId)) return;
       await fetch(`/api/conversation-groups/${target.groupId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId: draggedId }),
+        body: JSON.stringify({ conversationIds: idsToMove }),
       });
       return;
     }
@@ -270,28 +301,24 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     // target.kind === "conv"
     const targetGroupId = groupIdByConvId.get(target.convId);
     if (targetGroupId) {
-      const currentGroupId = groupIdByConvId.get(draggedId);
-      if (currentGroupId === targetGroupId) return;
+      if (idsToMove.every((id) => groupIdByConvId.get(id) === targetGroupId)) return;
       await fetch(`/api/conversation-groups/${targetGroupId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId: draggedId }),
+        body: JSON.stringify({ conversationIds: idsToMove }),
       });
       return;
     }
 
-    // Neither is grouped — create a new group containing both. Default title
-    // pulls from the target conversation (the "anchor") to give the group a
-    // recognizable name immediately.
+    // Neither is in a user group — create a new group containing both the
+    // target and all siblings. Default title pulls from the target conversation.
     const anchor = active.find((c) => c.id === target.convId);
     const title = anchor?.title?.trim() || "Group";
+    const newGroupIds = [target.convId, ...idsToMove.filter((id) => id !== target.convId)];
     await fetch(`/api/conversation-groups`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title,
-        conversationIds: [target.convId, draggedId],
-      }),
+      body: JSON.stringify({ title, conversationIds: newGroupIds }),
     });
   };
 

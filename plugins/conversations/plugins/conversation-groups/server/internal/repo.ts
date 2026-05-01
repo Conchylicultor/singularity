@@ -65,7 +65,7 @@ export async function createGroupWithMembers(input: CreateGroupInput) {
   return { id };
 }
 
-export async function addMemberToGroup(groupId: string, conversationId: string) {
+export async function addMembersToGroup(groupId: string, conversationIds: string[]) {
   await db.transaction(async (tx) => {
     const [group] = await tx
       .select({ id: _conversationGroups.id })
@@ -73,18 +73,24 @@ export async function addMemberToGroup(groupId: string, conversationId: string) 
       .where(eq(_conversationGroups.id, groupId))
       .limit(1);
     if (!group) throw new Error(`Group ${groupId} not found`);
-    const rank = await nextMemberRank(tx, groupId);
-    // Upsert by PK so an already-grouped conversation is moved into this
-    // group rather than rejected.
-    await tx
-      .insert(_conversationGroupMembers)
-      .values({ conversationId, groupId, rank })
-      .onConflictDoUpdate({
-        target: _conversationGroupMembers.conversationId,
-        set: { groupId, rank, createdAt: new Date() },
-      });
+    for (const conversationId of conversationIds) {
+      const rank = await nextMemberRank(tx, groupId);
+      // Upsert by PK so an already-grouped conversation is moved into this
+      // group rather than rejected.
+      await tx
+        .insert(_conversationGroupMembers)
+        .values({ conversationId, groupId, rank })
+        .onConflictDoUpdate({
+          target: _conversationGroupMembers.conversationId,
+          set: { groupId, rank, createdAt: new Date() },
+        });
+    }
   });
   conversationGroupsResource.notify();
+}
+
+export async function addMemberToGroup(groupId: string, conversationId: string) {
+  return addMembersToGroup(groupId, [conversationId]);
 }
 
 export async function removeMember(conversationId: string): Promise<boolean> {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  addMemberToGroup,
+  addMembersToGroup,
   createGroupWithMembers,
   deleteGroup,
   removeMember,
@@ -47,8 +47,8 @@ export async function handleDeleteGroup(
   return Response.json({ ok: true });
 }
 
-const AddMemberBody = z.object({
-  conversationId: z.string().min(1),
+const AddMembersBody = z.object({
+  conversationIds: z.array(z.string().min(1)).min(1),
 });
 
 export async function handleAddMember(
@@ -57,8 +57,8 @@ export async function handleAddMember(
 ): Promise<Response> {
   const id = params.id;
   if (!id) return new Response("Missing id", { status: 400 });
-  const { conversationId } = AddMemberBody.parse(await req.json());
-  await addMemberToGroup(id, conversationId);
+  const { conversationIds } = AddMembersBody.parse(await req.json());
+  await addMembersToGroup(id, conversationIds);
   return Response.json({ ok: true });
 }
 
