@@ -16,11 +16,10 @@ export function QuickPromptChips({
   const [sendingId, setSendingId] = useState<string | null>(null);
 
   if (!prompts || prompts.length === 0) return null;
-
-  const disabled = live.status === "gone" || live.status === "starting";
+  if (live.status !== "waiting") return null;
 
   async function sendPrompt(id: string, text: string) {
-    if (disabled || sendingId !== null) return;
+    if (sendingId !== null) return;
     setSendingId(id);
     try {
       const res = await fetch(
@@ -43,19 +42,19 @@ export function QuickPromptChips({
   }
 
   return (
-    <>
+    <div className="flex flex-wrap gap-1.5">
       {prompts.map((p) => (
         <Button
           key={p.id}
           variant="outline"
           size="sm"
-          disabled={disabled || sendingId !== null}
+          disabled={sendingId !== null}
           className="h-7 rounded-full px-3 text-xs"
           onClick={() => void sendPrompt(p.id, p.prompt)}
         >
           {sendingId === p.id ? "Sending…" : p.title}
         </Button>
       ))}
-    </>
+    </div>
   );
 }
