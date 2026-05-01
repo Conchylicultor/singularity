@@ -1,9 +1,13 @@
-import { useEffect } from "react";
-import { MdRocketLaunch } from "react-icons/md";
+import { useEffect, useMemo } from "react";
+import { MdDeleteForever, MdRocketLaunch } from "react-icons/md";
+import { LogOut } from "lucide-react";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { useConversation } from "@plugins/conversations/web";
+import { useConversations, useConversation } from "@plugins/conversations/web";
+import { isActiveStatus } from "@plugins/conversations/shared";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { pushesResource } from "@plugins/tasks/shared";
+import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -18,6 +22,8 @@ import {
   type JobState,
 } from "../../shared/resources";
 
+type Mode = "push-and-exit" | "exit" | "drop-and-exit";
+
 export function PushAndExitButton({
   conversation,
 }: {
@@ -27,6 +33,26 @@ export function PushAndExitButton({
   const { data: jobs } = useResource(pushAndExitResource);
   const job = jobs?.[conversation.id] as JobState | undefined;
   const busy = job?.status === "running";
+
+  const { files } = useEditedFiles(conversation.id);
+  const { data: pushes } = useResource(pushesResource);
+  const { active } = useConversations();
+
+  const mode: Mode = useMemo(() => {
+    const hasEditedFiles = files !== null && files.length > 0;
+    if (hasEditedFiles) return "push-and-exit";
+    const hasPush = (pushes ?? []).some(
+      (p) => p.attemptId === conversation.attemptId,
+    );
+    if (hasPush) return "exit";
+    const hasOtherActiveInWorktree = active.some(
+      (c) =>
+        c.id !== conversation.id &&
+        c.worktreePath === conversation.worktreePath &&
+        isActiveStatus(c.status),
+    );
+    return hasOtherActiveInWorktree ? "exit" : "drop-and-exit";
+  }, [files, pushes, active, conversation.attemptId, conversation.id, conversation.worktreePath]);
 
   useEffect(() => {
     if (job?.status !== "clean") return;
@@ -54,19 +80,52 @@ export function PushAndExitButton({
 
   async function onClick() {
     if (disabled) return;
-    try {
-      const res = await fetch(
-        `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
-        { method: "POST" },
-      );
-      if (!res.ok && res.status !== 409) {
-        throw new Error(`HTTP ${res.status}`);
+    if (mode === "push-and-exit") {
+      try {
+        const res = await fetch(
+          `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
+          { method: "POST" },
+        );
+        if (!res.ok && res.status !== 409) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+      } catch (err) {
+        Shell.Toast({
+          description: `Push & Exit failed: ${err instanceof Error ? err.message : String(err)}`,
+          variant: "error",
+        });
       }
-    } catch (err) {
-      Shell.Toast({
-        description: `Push & Exit failed: ${err instanceof Error ? err.message : String(err)}`,
-        variant: "error",
-      });
+    } else if (mode === "exit") {
+      try {
+        const res = await fetch(
+          `/api/conversations/${encodeURIComponent(conversation.id)}/exit`,
+          { method: "POST" },
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        Shell.Toast({ description: "Conversation closed", variant: "success" });
+      } catch (err) {
+        Shell.Toast({
+          description: `Exit failed: ${err instanceof Error ? err.message : String(err)}`,
+          variant: "error",
+        });
+      }
+    } else {
+      try {
+        const res = await fetch(
+          `/api/conversations/${encodeURIComponent(conversation.id)}/drop-and-exit`,
+          { method: "POST" },
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        Shell.Toast({
+          description: "Task dropped and conversation closed",
+          variant: "success",
+        });
+      } catch (err) {
+        Shell.Toast({
+          description: `Drop & Exit failed: ${err instanceof Error ? err.message : String(err)}`,
+          variant: "error",
+        });
+      }
     }
   }
 
@@ -102,21 +161,39 @@ export function PushAndExitButton({
       ? (job as Extract<JobState, { status: "flag" }>).text
       : undefined;
 
+  const label =
+    mode === "push-and-exit"
+      ? busy
+        ? "Pushing…"
+        : "Push & Exit"
+      : mode === "exit"
+        ? "Exit"
+        : "Drop & Exit";
+
+  const Icon =
+    mode === "push-and-exit"
+      ? MdRocketLaunch
+      : mode === "exit"
+        ? LogOut
+        : MdDeleteForever;
+
+  const buttonClass =
+    "gap-1.5 bg-[oklch(0.44_0.09_240)] hover:bg-[oklch(0.5_0.09_240)] text-white";
+  const buttonVariant = "default" as const;
+
   return (
     <>
       <Button
-        variant="default"
+        variant={buttonVariant}
         size="sm"
-        title="Push & Exit"
-        aria-label="Push & Exit"
+        title={label}
+        aria-label={label}
         disabled={disabled}
         onClick={onClick}
-        className="gap-1.5 bg-[oklch(0.44_0.09_240)] hover:bg-[oklch(0.5_0.09_240)] text-white"
+        className={buttonClass}
       >
-        <MdRocketLaunch
-          className={`size-3.5 ${busy ? "animate-pulse" : ""}`}
-        />
-        {busy ? "Pushing…" : "Push & Exit"}
+        <Icon className={`size-3.5 ${busy ? "animate-pulse" : ""}`} />
+        {label}
       </Button>
 
       <Sheet
