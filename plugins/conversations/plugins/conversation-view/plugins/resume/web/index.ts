@@ -8,6 +8,6 @@ export default {
   description:
     "Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.",
   contributions: [
-    Conversation.PromptBar({ component: ResumeButton, section: "Exit", sectionOrder: 1 }),
+    Conversation.PromptBar({ id: "resume", component: ResumeButton, section: "Exit", sectionOrder: 1 }),
   ],
 } satisfies PluginDefinition;

@@ -5,8 +5,6 @@
 ## Plugin reference
 
 - Description: Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
-- Defines:
-  - Slots: `Conversation.ActionBar`
 - Exports (web):
   - Values: `ActionBarView`, `Conversation`
 

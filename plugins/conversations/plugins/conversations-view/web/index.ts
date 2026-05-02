@@ -16,6 +16,7 @@ export default {
   description: "Sidebar list of all conversations.",
   contributions: [
     Shell.Sidebar({
+      id: "conversations",
       title: "Conversations",
       icon: MdForum,
       component: ConversationList,

@@ -7,5 +7,5 @@ export default {
   name: "Conversation: Hold & Exit",
   description:
     "Toolbar button that marks the task as held and closes the conversation.",
-  contributions: [Conversation.PromptBar({ component: HoldAndExitButton, section: "Exit", sectionOrder: 2 })],
+  contributions: [Conversation.PromptBar({ id: "hold-and-exit", component: HoldAndExitButton, section: "Exit", sectionOrder: 2 })],
 } satisfies PluginDefinition;

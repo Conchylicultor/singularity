@@ -25,6 +25,7 @@ export default {
   contributions: [
     Pane.Register({ pane: accountsPane }),
     Shell.Sidebar({
+      id: "accounts",
       title: "Accounts",
       icon: MdKey,
       group: "System",

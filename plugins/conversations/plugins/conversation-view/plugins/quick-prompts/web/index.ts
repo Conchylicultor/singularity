@@ -10,7 +10,7 @@ export default {
   description:
     "Named prompt chips in the conversation floating bar. Click to send a preset message to the active conversation.",
   contributions: [
-    Conversation.AbovePromptInput({ component: QuickPromptChips }),
+    Conversation.AbovePromptInput({ id: "quick-prompts", component: QuickPromptChips }),
     Config.Section({
       id: "quick-prompts",
       title: "Quick Prompts",

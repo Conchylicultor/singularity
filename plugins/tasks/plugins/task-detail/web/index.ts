@@ -28,6 +28,7 @@ export default {
     Pane.Register({ pane: taskDetailPane }),
     Pane.Register({ pane: taskConversationPane }),
     Shell.Sidebar({
+      id: "tasks",
       title: "Tasks",
       icon: MdChecklist,
       group: "System",

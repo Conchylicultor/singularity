@@ -7,5 +7,5 @@ export default {
   name: "Conversation: New child task",
   description:
     "Toolbar button that opens a popover to create a child task under the conversation's parent task.",
-  contributions: [Conversation.ActionBar({ component: NewChildTaskAction })],
+  contributions: [Conversation.ActionBar({ id: "new-child-task", component: NewChildTaskAction })],
 } satisfies PluginDefinition;

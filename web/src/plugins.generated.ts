@@ -9,8 +9,6 @@ import type { PluginDefinition } from "@core";
 import activeDataConvPlugin from "@plugins/active-data/plugins/conv/web";
 import activeDataTaskPlugin from "@plugins/active-data/plugins/task/web";
 import activeDataPlugin from "@plugins/active-data/web";
-import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/plugins/toggle/web";
-import agentsAutoLaunchPlugin from "@plugins/agents/plugins/auto-launch/web";
 import agentsPlugin from "@plugins/agents/web";
 import attemptViewPlugin from "@plugins/attempt-view/web";
 import authGooglePlugin from "@plugins/auth/plugins/google/web";
@@ -25,7 +23,6 @@ import conversationsConversationProgressPlugin from "@plugins/conversations/plug
 import conversationsConversationUiItemPlugin from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import conversationsConversationUiPlugin from "@plugins/conversations/plugins/conversation-ui/web";
 import conversationsConversationViewActionBarPlugin from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
-import conversationsConversationViewAllowMonitorPlugin from "@plugins/conversations/plugins/conversation-view/plugins/allow-monitor/web";
 import conversationsConversationViewCodeDocsButtonPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/docs-button/web";
 import conversationsConversationViewCodeFilePaneDiffPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import conversationsConversationViewCodeFilePaneImagePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/image/web";
@@ -41,7 +38,6 @@ import conversationsConversationViewForkConversationPlugin from "@plugins/conver
 import conversationsConversationViewForkSessionPlugin from "@plugins/conversations/plugins/conversation-view/plugins/fork-session/web";
 import conversationsConversationViewHoldAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/hold-and-exit/web";
 import conversationsConversationViewJsonlViewerAssistantTextPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text/web";
-import conversationsConversationViewJsonlViewerAssistantThinkingPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-thinking/web";
 import conversationsConversationViewJsonlViewerAssistantToolUsePlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-tool-use/web";
 import conversationsConversationViewJsonlViewerSummaryPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary/web";
 import conversationsConversationViewJsonlViewerSystemPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/system/web";
@@ -67,11 +63,9 @@ import conversationsConversationViewTurnSummaryPlugin from "@plugins/conversatio
 import conversationsConversationViewVscodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/vscode/web";
 import conversationsConversationViewPlugin from "@plugins/conversations/plugins/conversation-view/web";
 import conversationsConversationsViewGroupedPlugin from "@plugins/conversations/plugins/conversations-view/plugins/grouped/web";
-import conversationsConversationsViewHistoryPlugin from "@plugins/conversations/plugins/conversations-view/plugins/history/web";
 import conversationsConversationsViewQueuePlugin from "@plugins/conversations/plugins/conversations-view/plugins/queue/web";
 import conversationsConversationsViewPlugin from "@plugins/conversations/plugins/conversations-view/web";
 import conversationsSummaryPlugin from "@plugins/conversations/plugins/summary/web";
-import crashesLaunchFixPlugin from "@plugins/crashes/plugins/launch-fix/web";
 import crashesPlugin from "@plugins/crashes/web";
 import debugClaudeCliCallsPlugin from "@plugins/debug/plugins/claude-cli-calls/web";
 import debugDbBackupPlugin from "@plugins/debug/plugins/db-backup/web";
@@ -83,11 +77,8 @@ import eventsTestPlugin from "@plugins/events-test/web";
 import healthPlugin from "@plugins/health/web";
 import improvePlugin from "@plugins/improve/web";
 import infraAttachmentsPlugin from "@plugins/infra/plugins/attachments/web";
-import layoutsMillerPlugin from "@plugins/layouts/plugins/miller/web";
 import primitivesAutoScrollPlugin from "@plugins/primitives/plugins/auto-scroll/web";
-import primitivesAvatarPlugin from "@plugins/primitives/plugins/avatar/web";
 import primitivesEditableFieldPlugin from "@plugins/primitives/plugins/editable-field/web";
-import primitivesErrorBoundaryPlugin from "@plugins/primitives/plugins/error-boundary/web";
 import primitivesFileLinksPlugin from "@plugins/primitives/plugins/file-links/web";
 import primitivesLaunchPlugin from "@plugins/primitives/plugins/launch/web";
 import primitivesLiveStatePlugin from "@plugins/primitives/plugins/live-state/web";
@@ -100,13 +91,13 @@ import primitivesSyntaxHighlightPlugin from "@plugins/primitives/plugins/syntax-
 import primitivesTaskDraftFormPlugin from "@plugins/primitives/plugins/task-draft-form/web";
 import primitivesTreePlugin from "@plugins/primitives/plugins/tree/web";
 import primitivesPlugin from "@plugins/primitives/web";
-import publishPlugin from "@plugins/publish/web";
+import reorderEditModePlugin from "@plugins/reorder/plugins/edit-mode/web";
+import reorderPlugin from "@plugins/reorder/web";
 import screenshotDrawCanvasPlugin from "@plugins/screenshot/plugins/draw-canvas/web";
 import screenshotDrawOnAppPlugin from "@plugins/screenshot/plugins/draw-on-app/web";
 import screenshotPlugin from "@plugins/screenshot/web";
 import shellPlugin from "@plugins/shell/web";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/web";
-import statsCostPlugin from "@plugins/stats/plugins/cost/web";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/web";
 import statsPlugin from "@plugins/stats/web";
 import tasksTaskAttachmentsPlugin from "@plugins/tasks/plugins/task-attachments/web";
@@ -127,8 +118,6 @@ export const plugins: PluginDefinition[] = [
   activeDataConvPlugin,
   activeDataTaskPlugin,
   activeDataPlugin,
-  agentsAutoLaunchTogglePlugin,
-  agentsAutoLaunchPlugin,
   agentsPlugin,
   attemptViewPlugin,
   authGooglePlugin,
@@ -143,7 +132,6 @@ export const plugins: PluginDefinition[] = [
   conversationsConversationUiItemPlugin,
   conversationsConversationUiPlugin,
   conversationsConversationViewActionBarPlugin,
-  conversationsConversationViewAllowMonitorPlugin,
   conversationsConversationViewCodeDocsButtonPlugin,
   conversationsConversationViewCodeFilePaneDiffPlugin,
   conversationsConversationViewCodeFilePaneImagePlugin,
@@ -159,7 +147,6 @@ export const plugins: PluginDefinition[] = [
   conversationsConversationViewForkSessionPlugin,
   conversationsConversationViewHoldAndExitPlugin,
   conversationsConversationViewJsonlViewerAssistantTextPlugin,
-  conversationsConversationViewJsonlViewerAssistantThinkingPlugin,
   conversationsConversationViewJsonlViewerAssistantToolUsePlugin,
   conversationsConversationViewJsonlViewerSummaryPlugin,
   conversationsConversationViewJsonlViewerSystemPlugin,
@@ -185,11 +172,9 @@ export const plugins: PluginDefinition[] = [
   conversationsConversationViewVscodePlugin,
   conversationsConversationViewPlugin,
   conversationsConversationsViewGroupedPlugin,
-  conversationsConversationsViewHistoryPlugin,
   conversationsConversationsViewQueuePlugin,
   conversationsConversationsViewPlugin,
   conversationsSummaryPlugin,
-  crashesLaunchFixPlugin,
   crashesPlugin,
   debugClaudeCliCallsPlugin,
   debugDbBackupPlugin,
@@ -201,11 +186,8 @@ export const plugins: PluginDefinition[] = [
   healthPlugin,
   improvePlugin,
   infraAttachmentsPlugin,
-  layoutsMillerPlugin,
   primitivesAutoScrollPlugin,
-  primitivesAvatarPlugin,
   primitivesEditableFieldPlugin,
-  primitivesErrorBoundaryPlugin,
   primitivesFileLinksPlugin,
   primitivesLaunchPlugin,
   primitivesLiveStatePlugin,
@@ -218,13 +200,13 @@ export const plugins: PluginDefinition[] = [
   primitivesTaskDraftFormPlugin,
   primitivesTreePlugin,
   primitivesPlugin,
-  publishPlugin,
+  reorderEditModePlugin,
+  reorderPlugin,
   screenshotDrawCanvasPlugin,
   screenshotDrawOnAppPlugin,
   screenshotPlugin,
   shellPlugin,
   statsCommitsPlugin,
-  statsCostPlugin,
   statsTasksPlugin,
   statsPlugin,
   tasksTaskAttachmentsPlugin,

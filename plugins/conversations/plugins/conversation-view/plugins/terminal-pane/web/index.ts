@@ -11,6 +11,6 @@ export default {
     "Toolbar button that opens a right pane attaching to the conversation's tmux session.",
   contributions: [
     Pane.Register({ pane: convTerminalPane }),
-    Conversation.ActionBar({ component: TerminalButton }),
+    Conversation.ActionBar({ id: "terminal", component: TerminalButton }),
   ],
 } satisfies PluginDefinition;

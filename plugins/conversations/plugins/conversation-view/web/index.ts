@@ -24,6 +24,6 @@ export default {
   contributions: [
     Pane.Register({ pane: conversationPane }),
     // Pop out of an embedding split (Tasks/Agents) into /c/:convId.
-    ActionBarConversation.ActionBar({ component: ExpandConversationButton }),
+    ActionBarConversation.ActionBar({ id: "expand-conversation", component: ExpandConversationButton }),
   ],
 } satisfies PluginDefinition;

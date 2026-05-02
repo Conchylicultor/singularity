@@ -6,7 +6,11 @@
 
 - Description: Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
 - Defines:
+<<<<<<< .merge_file_3gUmwH
   - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`, `Conversation.AbovePromptInput`, `Conversation.TitlePrefix`
+=======
+  - Slots: `Conversation.PromptInput`
+>>>>>>> .merge_file_3xgOBy
 - Exports (web):
   - Types: `ConversationRecord`, `PromptDraft`
   - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `PromptDraftProvider`, `usePromptDraft`

@@ -37,6 +37,7 @@ export default {
     Pane.Register({ pane: systemAgentDetailPane }),
     Pane.Register({ pane: agentSidePane }),
     Shell.Sidebar({
+      id: "agents",
       title: "Agents",
       icon: MdPrecisionManufacturing,
       group: "System",

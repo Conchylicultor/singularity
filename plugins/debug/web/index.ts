@@ -10,6 +10,7 @@ export default {
   description: "Debug tools sidebar group.",
   contributions: [
     Shell.Sidebar({
+      id: "debug",
       title: "Debug",
       icon: MdBugReport,
       component: DebugSidebar,

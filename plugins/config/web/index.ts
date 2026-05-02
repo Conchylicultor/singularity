@@ -26,6 +26,7 @@ export default {
   contributions: [
     Pane.Register({ pane: settingsPane }),
     Shell.Sidebar({
+      id: "settings",
       title: "Settings",
       icon: MdSettings,
       group: "System",

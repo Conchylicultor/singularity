@@ -13,7 +13,7 @@ export default {
     "Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.",
   contributions: [
     Pane.Register({ pane: convTasksPane }),
-    Conversation.ActionBar({ component: TasksButton }),
+    Conversation.ActionBar({ id: "tasks", component: TasksButton }),
     convTasksPane.Actions({ component: GoToParentAction }),
     convTasksPane.Actions({ component: ExpandToTasksAction }),
   ],

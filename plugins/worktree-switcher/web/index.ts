@@ -8,6 +8,7 @@ export default {
   description: "Toolbar dropdown to switch the active worktree namespace.",
   contributions: [
     Shell.Toolbar({
+      id: "worktree-switcher",
       component: WorktreeDropdown,
       group: "namespace",
     }),

@@ -10,6 +10,7 @@ export default {
   description: "Trigger `./singularity build` from the toolbar.",
   contributions: [
     Shell.Toolbar({
+      id: "build",
       component: BuildButton,
       group: "actions",
     }),

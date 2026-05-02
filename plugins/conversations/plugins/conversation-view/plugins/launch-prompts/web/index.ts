@@ -10,7 +10,7 @@ export default {
   description:
     "Pre-configured prompts that launch a new background conversation in the same worktree.",
   contributions: [
-    Conversation.PromptBar({ component: LaunchPromptsButton, section: "Launch", sectionOrder: 2 }),
+    Conversation.PromptBar({ id: "launch-prompts", component: LaunchPromptsButton, section: "Launch", sectionOrder: 2 }),
     Config.Section({
       id: "launch-prompts",
       title: "Launch Prompts",

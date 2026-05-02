@@ -7,7 +7,7 @@ export default {
   name: "Theme",
   description: "Toolbar toggles for light/dark mode and a distinct theme on non-main worktrees.",
   contributions: [
-    Shell.Toolbar({ component: ExperimentalToggle, group: "actions" }),
-    Shell.Toolbar({ component: ThemeToggle, group: "actions" }),
+    Shell.Toolbar({ id: "theme-experimental", component: ExperimentalToggle, group: "actions" }),
+    Shell.Toolbar({ id: "theme-light-dark", component: ThemeToggle, group: "actions" }),
   ],
 } satisfies PluginDefinition;

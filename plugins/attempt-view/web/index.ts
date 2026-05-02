@@ -14,6 +14,6 @@ export default {
   contributions: [
     Pane.Register({ pane: attemptPane }),
     Pane.Register({ pane: attemptConversationPane }),
-    Conversation.ActionBar({ component: AttemptSwitchButton }),
+    Conversation.ActionBar({ id: "attempt-switch", component: AttemptSwitchButton }),
   ],
 } satisfies PluginDefinition;

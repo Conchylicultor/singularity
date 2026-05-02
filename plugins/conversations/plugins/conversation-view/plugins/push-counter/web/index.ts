@@ -6,5 +6,5 @@ export default {
   id: "conversation-push-counter",
   name: "Conversation: Push Counter",
   description: "Displays the number of pushes for the conversation's attempt in the toolbar.",
-  contributions: [Conversation.ActionBar({ component: PushCounterButton })],
+  contributions: [Conversation.ActionBar({ id: "push-counter", component: PushCounterButton })],
 } satisfies PluginDefinition;

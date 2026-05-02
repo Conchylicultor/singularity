@@ -14,6 +14,7 @@ export default {
   contributions: [
     Pane.Register({ pane: statsPane }),
     Shell.Sidebar({
+      id: "stats",
       title: "Stats",
       icon: MdInsights,
       group: "System",

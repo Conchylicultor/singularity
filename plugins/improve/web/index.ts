@@ -12,6 +12,7 @@ export default {
     'Toolbar button for app-improvement feedback. Files a task under "Improvements" with URL + optional screenshot.',
   contributions: [
     Shell.Toolbar({
+      id: "improve",
       component: ImproveButton,
       group: "actions",
     }),

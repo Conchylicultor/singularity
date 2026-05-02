@@ -7,5 +7,5 @@ export default {
   name: "Conversation: Fork",
   description:
     "Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.",
-  contributions: [Conversation.PromptBar({ component: ForkConversationButtons, section: "New", sectionOrder: 1 })],
+  contributions: [Conversation.PromptBar({ id: "fork-conversation", component: ForkConversationButtons, section: "New", sectionOrder: 1 })],
 } satisfies PluginDefinition;

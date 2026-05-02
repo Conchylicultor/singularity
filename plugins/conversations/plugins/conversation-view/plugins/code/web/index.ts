@@ -10,5 +10,5 @@ export default {
   name: "Conversation: Code",
   description:
     "Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.).",
-  contributions: [Conversation.ActionBar({ component: CodeToolbarSlot })],
+  contributions: [Conversation.ActionBar({ id: "code-toolbar", component: CodeToolbarSlot })],
 } satisfies PluginDefinition;

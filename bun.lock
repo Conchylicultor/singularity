@@ -82,14 +82,6 @@
       "name": "@singularity/plugin-agents",
       "version": "0.0.1",
     },
-    "plugins/agents/plugins/auto-launch": {
-      "name": "@singularity/plugin-agents-auto-launch",
-      "version": "0.0.1",
-    },
-    "plugins/agents/plugins/auto-launch/plugins/toggle": {
-      "name": "@singularity/plugin-agents-auto-launch-toggle",
-      "version": "0.0.1",
-    },
     "plugins/attempt-view": {
       "name": "@singularity/plugin-attempt-view",
       "version": "0.0.1",
@@ -148,10 +140,6 @@
     },
     "plugins/conversations/plugins/conversation-view/plugins/action-bar": {
       "name": "@singularity/plugin-conversations-conversation-view-action-bar",
-      "version": "0.0.1",
-    },
-    "plugins/conversations/plugins/conversation-view/plugins/allow-monitor": {
-      "name": "@singularity/plugin-conversations-conversation-view-allow-monitor",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/code": {
@@ -216,10 +204,6 @@
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-text",
-      "version": "0.0.1",
-    },
-    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-thinking": {
-      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-thinking",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-tool-use": {
@@ -317,10 +301,6 @@
       "name": "@singularity/plugin-conversations-conversations-view-grouped",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/conversations-view/plugins/history": {
-      "name": "@singularity/plugin-conversations-conversations-view-history",
-      "version": "0.0.1",
-    },
     "plugins/conversations/plugins/conversations-view/plugins/queue": {
       "name": "@singularity/plugin-conversations-conversations-view-queue",
       "version": "0.0.1",
@@ -339,10 +319,6 @@
     },
     "plugins/crashes": {
       "name": "@singularity/plugin-crashes",
-      "version": "0.0.1",
-    },
-    "plugins/crashes/plugins/launch-fix": {
-      "name": "@singularity/plugin-crashes-launch-fix",
       "version": "0.0.1",
     },
     "plugins/debug": {
@@ -420,17 +396,6 @@
         "@napi-rs/keyring": "^1.1.6",
       },
     },
-    "plugins/infra/plugins/worktree": {
-      "name": "@singularity/plugin-infra-worktree",
-    },
-    "plugins/layouts": {
-      "name": "@singularity/plugin-layouts",
-      "version": "0.0.1",
-    },
-    "plugins/layouts/plugins/miller": {
-      "name": "@singularity/plugin-layouts-miller",
-      "version": "0.0.1",
-    },
     "plugins/primitives": {
       "name": "@singularity/plugin-primitives",
       "version": "0.0.1",
@@ -439,16 +404,8 @@
       "name": "@singularity/plugin-primitives-auto-scroll",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/avatar": {
-      "name": "@singularity/plugin-primitives-avatar",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/editable-field": {
       "name": "@singularity/plugin-primitives-editable-field",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/error-boundary": {
-      "name": "@singularity/plugin-primitives-error-boundary",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/file-links": {
@@ -502,8 +459,12 @@
       "name": "@singularity/plugin-primitives-tree",
       "version": "0.0.1",
     },
-    "plugins/publish": {
-      "name": "@singularity/plugin-publish",
+    "plugins/reorder": {
+      "name": "@singularity/plugin-reorder",
+      "version": "0.0.1",
+    },
+    "plugins/reorder/plugins/edit-mode": {
+      "name": "@singularity/plugin-reorder-edit-mode",
       "version": "0.0.1",
     },
     "plugins/screenshot": {
@@ -541,13 +502,6 @@
     "plugins/stats/plugins/commits": {
       "name": "@singularity/plugin-stats-commits",
       "version": "0.0.1",
-    },
-    "plugins/stats/plugins/cost": {
-      "name": "@singularity/plugin-stats-cost",
-      "version": "0.0.1",
-      "dependencies": {
-        "ccusage": "^18.0.11",
-      },
     },
     "plugins/stats/plugins/tasks": {
       "name": "@singularity/plugin-stats-tasks",
@@ -1200,10 +1154,6 @@
 
     "@singularity/plugin-agents": ["@singularity/plugin-agents@workspace:plugins/agents"],
 
-    "@singularity/plugin-agents-auto-launch": ["@singularity/plugin-agents-auto-launch@workspace:plugins/agents/plugins/auto-launch"],
-
-    "@singularity/plugin-agents-auto-launch-toggle": ["@singularity/plugin-agents-auto-launch-toggle@workspace:plugins/agents/plugins/auto-launch/plugins/toggle"],
-
     "@singularity/plugin-attempt-view": ["@singularity/plugin-attempt-view@workspace:plugins/attempt-view"],
 
     "@singularity/plugin-auth": ["@singularity/plugin-auth@workspace:plugins/auth"],
@@ -1231,8 +1181,6 @@
     "@singularity/plugin-conversations-conversation-view": ["@singularity/plugin-conversations-conversation-view@workspace:plugins/conversations/plugins/conversation-view"],
 
     "@singularity/plugin-conversations-conversation-view-action-bar": ["@singularity/plugin-conversations-conversation-view-action-bar@workspace:plugins/conversations/plugins/conversation-view/plugins/action-bar"],
-
-    "@singularity/plugin-conversations-conversation-view-allow-monitor": ["@singularity/plugin-conversations-conversation-view-allow-monitor@workspace:plugins/conversations/plugins/conversation-view/plugins/allow-monitor"],
 
     "@singularity/plugin-conversations-conversation-view-code": ["@singularity/plugin-conversations-conversation-view-code@workspace:plugins/conversations/plugins/conversation-view/plugins/code"],
 
@@ -1265,8 +1213,6 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-text": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-text@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text"],
-
-    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-thinking": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-thinking@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-thinking"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-tool-use": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-tool-use@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-tool-use"],
 
@@ -1316,8 +1262,6 @@
 
     "@singularity/plugin-conversations-conversations-view-grouped": ["@singularity/plugin-conversations-conversations-view-grouped@workspace:plugins/conversations/plugins/conversations-view/plugins/grouped"],
 
-    "@singularity/plugin-conversations-conversations-view-history": ["@singularity/plugin-conversations-conversations-view-history@workspace:plugins/conversations/plugins/conversations-view/plugins/history"],
-
     "@singularity/plugin-conversations-conversations-view-queue": ["@singularity/plugin-conversations-conversations-view-queue@workspace:plugins/conversations/plugins/conversations-view/plugins/queue"],
 
     "@singularity/plugin-conversations-recover": ["@singularity/plugin-conversations-recover@workspace:plugins/conversations-recover"],
@@ -1331,8 +1275,6 @@
     "@singularity/plugin-core": ["@singularity/plugin-core@workspace:plugin-core"],
 
     "@singularity/plugin-crashes": ["@singularity/plugin-crashes@workspace:plugins/crashes"],
-
-    "@singularity/plugin-crashes-launch-fix": ["@singularity/plugin-crashes-launch-fix@workspace:plugins/crashes/plugins/launch-fix"],
 
     "@singularity/plugin-debug": ["@singularity/plugin-debug@workspace:plugins/debug"],
 
@@ -1368,21 +1310,11 @@
 
     "@singularity/plugin-infra-secrets": ["@singularity/plugin-infra-secrets@workspace:plugins/infra/plugins/secrets"],
 
-    "@singularity/plugin-infra-worktree": ["@singularity/plugin-infra-worktree@workspace:plugins/infra/plugins/worktree"],
-
-    "@singularity/plugin-layouts": ["@singularity/plugin-layouts@workspace:plugins/layouts"],
-
-    "@singularity/plugin-layouts-miller": ["@singularity/plugin-layouts-miller@workspace:plugins/layouts/plugins/miller"],
-
     "@singularity/plugin-primitives": ["@singularity/plugin-primitives@workspace:plugins/primitives"],
 
     "@singularity/plugin-primitives-auto-scroll": ["@singularity/plugin-primitives-auto-scroll@workspace:plugins/primitives/plugins/auto-scroll"],
 
-    "@singularity/plugin-primitives-avatar": ["@singularity/plugin-primitives-avatar@workspace:plugins/primitives/plugins/avatar"],
-
     "@singularity/plugin-primitives-editable-field": ["@singularity/plugin-primitives-editable-field@workspace:plugins/primitives/plugins/editable-field"],
-
-    "@singularity/plugin-primitives-error-boundary": ["@singularity/plugin-primitives-error-boundary@workspace:plugins/primitives/plugins/error-boundary"],
 
     "@singularity/plugin-primitives-file-links": ["@singularity/plugin-primitives-file-links@workspace:plugins/primitives/plugins/file-links"],
 
@@ -1406,7 +1338,9 @@
 
     "@singularity/plugin-primitives-tree": ["@singularity/plugin-primitives-tree@workspace:plugins/primitives/plugins/tree"],
 
-    "@singularity/plugin-publish": ["@singularity/plugin-publish@workspace:plugins/publish"],
+    "@singularity/plugin-reorder": ["@singularity/plugin-reorder@workspace:plugins/reorder"],
+
+    "@singularity/plugin-reorder-edit-mode": ["@singularity/plugin-reorder-edit-mode@workspace:plugins/reorder/plugins/edit-mode"],
 
     "@singularity/plugin-screenshot": ["@singularity/plugin-screenshot@workspace:plugins/screenshot"],
 
@@ -1419,8 +1353,6 @@
     "@singularity/plugin-stats": ["@singularity/plugin-stats@workspace:plugins/stats"],
 
     "@singularity/plugin-stats-commits": ["@singularity/plugin-stats-commits@workspace:plugins/stats/plugins/commits"],
-
-    "@singularity/plugin-stats-cost": ["@singularity/plugin-stats-cost@workspace:plugins/stats/plugins/cost"],
 
     "@singularity/plugin-stats-tasks": ["@singularity/plugin-stats-tasks@workspace:plugins/stats/plugins/tasks"],
 
@@ -1683,8 +1615,6 @@
     "caniuse-lite": ["caniuse-lite@1.0.30001787", "", {}, "sha512-mNcrMN9KeI68u7muanUpEejSLghOKlVhRqS/Za2IeyGllJ9I9otGpR9g3nsw7n4W378TE/LyIteA0+/FOZm4Kg=="],
 
     "ccount": ["ccount@2.0.1", "", {}, "sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg=="],
-
-    "ccusage": ["ccusage@18.0.11", "", { "bin": { "ccusage": "dist/index.js" } }, "sha512-QIFCY2gh06vjWelND1gDwJxrniAcNkPw0OHUhz985iE7FIEf738YVzxUKQMKhA2fO9CIJCz0dSpnyIufaKdjdA=="],
 
     "chai": ["chai@6.2.2", "", {}, "sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg=="],
 

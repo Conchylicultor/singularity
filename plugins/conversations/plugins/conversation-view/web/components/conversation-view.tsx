@@ -1,41 +1,63 @@
+import { useMemo } from "react";
+import type { ComponentType } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
+import { Reorder, type UseAreaResult } from "@plugins/reorder/web";
 import { ActionBarView } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { Conversation, type ConversationRecord } from "../slots";
 import { conversationPane } from "../panes";
 import { JsonlPane } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
-type PromptBarItem = ReturnType<typeof Conversation.PromptBar.useContributions>[number];
+type PromptBarItem = {
+  id: string;
+  excludeFromReorder?: boolean;
+  section: string;
+  sectionOrder?: number;
+  component: ComponentType<{ conversation: ConversationRecord }>;
+};
 
 function PromptBar({
-  items,
+  area,
   conversation,
 }: {
-  items: PromptBarItem[];
+  area: UseAreaResult<PromptBarItem>;
   conversation: ConversationRecord;
 }) {
-  const sections = items.reduce<Map<string, { order: number; items: PromptBarItem[] }>>(
-    (acc, item) => {
-      const entry = acc.get(item.section) ?? { order: item.sectionOrder ?? 0, items: [] };
+  // Sections inside the PromptBar are externally ordered by `sectionOrder`;
+  // items within a section are reorderable by user via the rank.
+  const sections = useMemo(() => {
+    const map = new Map<string, { order: number; items: typeof area.items }>();
+    for (const item of area.items) {
+      const entry = map.get(item.section) ?? {
+        order: item.sectionOrder ?? 0,
+        items: [],
+      };
       entry.items.push(item);
-      acc.set(item.section, entry);
-      return acc;
-    },
-    new Map(),
-  );
-  const sorted = [...sections.entries()].sort(([, a], [, b]) => a.order - b.order);
+      map.set(item.section, entry);
+    }
+    return [...map.entries()].sort(([, a], [, b]) => a.order - b.order);
+  }, [area.items]);
 
   return (
-    <div className="flex items-center gap-2">
-      {sorted.map(([section, { items: sectionItems }], idx) => (
-        <div key={section} className="flex items-center gap-1.5">
-          {idx > 0 && <div className="h-5 w-px bg-border" />}
-          {sectionItems.map((item, i) => {
-            const Component = item.component;
-            return <Component key={i} conversation={conversation} />;
-          })}
-        </div>
-      ))}
-    </div>
+    <area.DndWrapper>
+      <div className="flex items-center gap-2">
+        {sections.map(([section, { items: sectionItems }], idx) => (
+          <div key={section} className="flex items-center gap-1.5">
+            {idx > 0 && <div className="h-5 w-px bg-border" />}
+            {sectionItems.map((item) => {
+              const Component = item.component;
+              return (
+                <area.ReorderItem key={item.id} item={item}>
+                  <PluginErrorBoundary slot={Conversation.PromptBar.id}>
+                    <Component conversation={conversation} />
+                  </PluginErrorBoundary>
+                </area.ReorderItem>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </area.DndWrapper>
   );
 }
 
@@ -46,16 +68,16 @@ function PromptBar({
  */
 export function ConversationView() {
   const { conversation } = conversationPane.useData();
-  const promptBarItems = Conversation.PromptBar.useContributions();
+  const promptBar = Reorder.useArea(Conversation.PromptBar);
   const promptInputItems = Conversation.PromptInput.useContributions();
-  const abovePromptInputItems = Conversation.AbovePromptInput.useContributions();
+  const abovePromptInput = Reorder.useArea(Conversation.AbovePromptInput);
   const titlePrefixItems = Conversation.TitlePrefix.useContributions();
   const PromptInputComponent = promptInputItems[0]?.component ?? null;
 
   const showBottomBar =
     !!PromptInputComponent ||
-    promptBarItems.length > 0 ||
-    abovePromptInputItems.length > 0;
+    promptBar.items.length > 0 ||
+    abovePromptInput.items.length > 0;
 
   return (
     <PaneChrome
@@ -80,16 +102,24 @@ export function ConversationView() {
           <JsonlPane conversation={conversation} actions={<ActionBarView />}>
             {showBottomBar && (
               <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-1.5 pb-2">
-                {abovePromptInputItems.map((item, i) => {
-                  const Cmp = item.component;
-                  return <Cmp key={i} conversation={conversation} />;
-                })}
+                <abovePromptInput.DndWrapper>
+                  {abovePromptInput.items.map((item) => {
+                    const Cmp = item.component;
+                    return (
+                      <abovePromptInput.ReorderItem key={item.id} item={item}>
+                        <PluginErrorBoundary slot={Conversation.AbovePromptInput.id}>
+                          <Cmp conversation={conversation} />
+                        </PluginErrorBoundary>
+                      </abovePromptInput.ReorderItem>
+                    );
+                  })}
+                </abovePromptInput.DndWrapper>
                 {PromptInputComponent && (
                   <PromptInputComponent conversation={conversation} />
                 )}
-                {promptBarItems.length > 0 && (
+                {promptBar.items.length > 0 && (
                   <div className="flex justify-end">
-                    <PromptBar items={promptBarItems} conversation={conversation} />
+                    <PromptBar area={promptBar} conversation={conversation} />
                   </div>
                 )}
               </div>

@@ -8,6 +8,6 @@ export default {
   description:
     "Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.",
   contributions: [
-    Shell.Toolbar({ component: DrawOnAppButton, group: "actions" }),
+    Shell.Toolbar({ id: "draw-on-app", component: DrawOnAppButton, group: "actions" }),
   ],
 } satisfies PluginDefinition;

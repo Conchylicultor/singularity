@@ -15,6 +15,7 @@ export default {
     Pane.Register({ pane: globalFileTreePane }),
     Pane.Register({ pane: convFileTreePane }),
     Shell.Sidebar({
+      id: "code-explorer",
       title: "Explorer",
       icon: MdFolderOpen,
       group: "System",

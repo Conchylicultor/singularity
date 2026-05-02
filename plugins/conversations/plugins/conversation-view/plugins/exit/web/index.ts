@@ -6,5 +6,5 @@ export default {
   id: "conversation-exit",
   name: "Conversation: Exit",
   description: "Toolbar button that closes the conversation without changing any task state.",
-  contributions: [Conversation.PromptBar({ component: ExitButton, section: "Exit", sectionOrder: 2 })],
+  contributions: [Conversation.PromptBar({ id: "exit", component: ExitButton, section: "Exit", sectionOrder: 2 })],
 } satisfies PluginDefinition;
