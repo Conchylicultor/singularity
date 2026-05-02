@@ -1,5 +1,5 @@
-import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { HOME_DIR } from "../../paths";
 import type { FileInput, Guard } from "../types";
 
 function message(file: string, cwd: string): string {
@@ -17,7 +17,7 @@ export const mainEditsGuard: Guard<FileInput> = {
 
     if (f === ctx.cwd || f.startsWith(`${ctx.cwd}/`)) return ctx.allow();
 
-    const home = homedir();
+    const home = HOME_DIR;
     if (/^\/tmp\//.test(f)) return ctx.allow();
     const memoryPrefix = `${home}/.claude/projects/`;
     if (f.startsWith(memoryPrefix)) {
