@@ -8,7 +8,10 @@ import {
   type Task,
 } from "@plugins/tasks-core/server";
 import { getAttachment } from "@plugins/infra/plugins/attachments/server";
-import { attachmentMarkdown } from "@plugins/primitives/plugins/paste-images/shared";
+import {
+  attachmentMarkdown,
+  extractAttachmentIds,
+} from "@plugins/primitives/plugins/paste-images/shared";
 import {
   TaskChainSubmitBodySchema,
   type TaskChainCard,
@@ -148,15 +151,21 @@ function renderTaskDescription(opts: {
   attachments: { id: string; filename: string }[];
   parentTaskRef: Task | null;
 }): string {
+  // Attachments already referenced inline in the text are intentionally omitted
+  // from the explicit section — they're visible where the user placed them and
+  // a second copy would confuse the agent.
+  const inlineIds = new Set(extractAttachmentIds(opts.text));
+  const extraAttachments = opts.attachments.filter((a) => !inlineIds.has(a.id));
+
   const hasContext =
-    opts.url || opts.attachments.length > 0 || opts.parentTaskRef !== null;
+    opts.url || extraAttachments.length > 0 || opts.parentTaskRef !== null;
   if (!hasContext) return opts.text;
 
   const lines: string[] = [opts.text, "", "---"];
   if (opts.url) lines.push(`**URL:** ${opts.url}`);
-  if (opts.attachments.length > 0) {
+  if (extraAttachments.length > 0) {
     lines.push("**Attachments:**");
-    for (const att of opts.attachments) {
+    for (const att of extraAttachments) {
       lines.push(`- ${attachmentMarkdown(att.id, att.filename)}`);
     }
   }
