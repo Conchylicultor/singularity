@@ -16,7 +16,7 @@ import type { ConversationModel } from "../schema";
 import type { Conversation, ConversationKind } from "../../shared";
 import { forkDatabase } from "./db-fork";
 import { reportForkError } from "./fork-errors";
-import { setupWorktree, worktreePathFor } from "@server/worktree";
+import { setupWorktree, worktreePathFor } from "@plugins/infra/plugins/worktree/server";
 import { conversationCreated } from "./tables-created-event";
 import { SYSTEM_META_TASK_ID } from "./meta-system";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";

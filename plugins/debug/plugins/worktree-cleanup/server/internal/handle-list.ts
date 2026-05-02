@@ -1,7 +1,7 @@
 import { stat } from "node:fs/promises";
 import { listAttempts, listTasks } from "@plugins/tasks-core/server";
 import { databaseExists } from "@plugins/conversations/server";
-import { ensureMainWorktreeRoot } from "@server/worktree";
+import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";
 const CONCURRENCY = 50;

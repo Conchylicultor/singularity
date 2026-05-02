@@ -1,4 +1,4 @@
-import { GIT } from "./paths";
+import { GIT } from "@plugins/infra/plugins/paths/server";
 
 let cachedRepoRoot: string | null = null;
 
@@ -21,15 +21,6 @@ export async function ensureMainWorktreeRoot(): Promise<string> {
 export async function worktreePathFor(id: string): Promise<string> {
   const root = await ensureMainWorktreeRoot();
   return `${root}/.claude/worktrees/${id}`;
-}
-
-// Sync variant — requires `ensureMainWorktreeRoot()` to have resolved earlier
-// (awaited once at server boot). Throws otherwise.
-export function worktreePathForSync(id: string): string {
-  if (!cachedRepoRoot) {
-    throw new Error("worktreePathForSync called before ensureMainWorktreeRoot resolved");
-  }
-  return `${cachedRepoRoot}/.claude/worktrees/${id}`;
 }
 
 export async function setupWorktree(id: string, wtPath: string): Promise<void> {

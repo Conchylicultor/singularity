@@ -1,7 +1,6 @@
 import type { WsData, HttpHandler, WsHandler } from "./types";
 import { plugins } from "./plugins";
 import { runMigrations } from "./db/migrate";
-import { ensureMainWorktreeRoot } from "./worktree";
 import { notificationsWsHandler, handleResourceHttp } from "./resources";
 import { topoSortPlugins } from "./topo";
 
@@ -24,7 +23,6 @@ for (const p of ordered) {
 }
 
 await runMigrations();
-await ensureMainWorktreeRoot();
 
 // Phase 2 — onReady: parallel. Background work that needs the DB / a fully
 // populated registry. Running this from a plugin's module body would race

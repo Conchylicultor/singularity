@@ -249,6 +249,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - `POST /api/secrets/has`
         - `POST /api/secrets/meta`
         - `POST /api/secrets/list`
+    - **`worktree`**
 
 - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
 

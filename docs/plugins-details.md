@@ -766,6 +766,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `POST /api/secrets/has`
         - `POST /api/secrets/meta`
         - `POST /api/secrets/list`
+    - **`worktree`**
+      - Exports (server):
+        - Values: `ensureMainWorktreeRoot`, `removeWorktree`, `setupWorktree`, `worktreePathFor`
 
 - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
   - Exports (web):

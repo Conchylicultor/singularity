@@ -4,7 +4,7 @@ import {
   getConversation,
   listPushShasIn,
 } from "@plugins/tasks-core/server";
-import { ensureMainWorktreeRoot } from "@server/worktree";
+import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";
 const TICK_MS = 1000;

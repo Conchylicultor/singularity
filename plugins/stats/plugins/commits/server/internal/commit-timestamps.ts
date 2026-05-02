@@ -1,4 +1,4 @@
-import { ensureMainWorktreeRoot } from "@server/worktree";
+import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";
 const TTL_MS = 30_000;
