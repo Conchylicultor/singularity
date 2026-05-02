@@ -1,6 +1,10 @@
 import type { DailyUsage } from "ccusage/data-loader";
 import { canonicalModel, loadBundle, parseScope, type PerSession, type Scope } from "./load-usage";
 
+function modelFamily(canonical: string): string {
+  return canonical.split("-")[0] ?? canonical;
+}
+
 function filterDaily(
   rows: DailyUsage[],
   scope: Scope,
@@ -178,6 +182,88 @@ export async function handleSessions(req: Request): Promise<Response> {
     };
   });
   return Response.json({ rows });
+}
+
+// Session count per day per model family (not cost).
+export async function handleDailyByFamily(req: Request): Promise<Response> {
+  const scope = parseScope(req);
+  const { sessions } = await loadBundle();
+  const filtered = filterSessions(sessions, scope);
+  const perDay = new Map<string, Map<string, number>>();
+  const allFamilies = new Set<string>();
+  for (const s of filtered) {
+    const date = s.lastActivity.slice(0, 10);
+    if (!date) continue;
+    let bucket = perDay.get(date);
+    if (!bucket) {
+      bucket = new Map();
+      perDay.set(date, bucket);
+    }
+    const usedFamilies = new Set(s.modelsUsed.map((m) => modelFamily(canonicalModel(m))));
+    for (const family of usedFamilies) {
+      allFamilies.add(family);
+      bucket.set(family, (bucket.get(family) ?? 0) + 1);
+    }
+  }
+  const days = [...perDay.keys()].sort();
+  const families = [...allFamilies].sort();
+  const points = days.map((date) => {
+    const bucket = perDay.get(date)!;
+    const byFamily: Record<string, number> = {};
+    for (const f of families) byFamily[f] = bucket.get(f) ?? 0;
+    return { date, byFamily };
+  });
+  return Response.json({ points, families });
+}
+
+// Dynamic buckets scaled to the actual cost range.
+export async function handleDistribution(req: Request): Promise<Response> {
+  const scope = parseScope(req);
+  const { sessions } = await loadBundle();
+  const filtered = filterSessions(sessions, scope);
+  if (filtered.length === 0) return Response.json({ buckets: [] });
+  const maxCost = filtered.reduce((m, s) => Math.max(m, s.cost), 0);
+  const step = bucketStep(maxCost);
+  const ceiling = Math.ceil(maxCost / step) * step;
+  const N = Math.ceil(ceiling / step);
+  const buckets = Array.from({ length: N }, (_, i) => {
+    const min = i * step;
+    const max = (i + 1) * step;
+    const isLast = i === N - 1;
+    return {
+      label: isLast ? `> ${fmtCost(min)}` : `${fmtCost(min)}–${fmtCost(max)}`,
+      min,
+      max: isLast ? Infinity : max,
+      count: 0,
+    };
+  });
+  for (const s of filtered) {
+    for (const b of buckets) {
+      if (s.cost >= b.min && s.cost < b.max) {
+        b.count++;
+        break;
+      }
+    }
+  }
+  return Response.json({ buckets: buckets.map(({ label, count }) => ({ label, count })) });
+}
+
+function bucketStep(maxCost: number): number {
+  if (maxCost <= 1) return 0.1;
+  if (maxCost <= 5) return 0.5;
+  if (maxCost <= 10) return 1;
+  if (maxCost <= 20) return 2;
+  if (maxCost <= 50) return 5;
+  if (maxCost <= 100) return 10;
+  if (maxCost <= 200) return 20;
+  if (maxCost <= 500) return 50;
+  return 100;
+}
+
+function fmtCost(n: number): string {
+  if (n >= 10) return `$${Math.round(n)}`;
+  if (n >= 1) return `$${n.toFixed(1).replace(/\.0$/, "")}`;
+  return `$${n.toFixed(2)}`;
 }
 
 function roundCents(n: number): number {

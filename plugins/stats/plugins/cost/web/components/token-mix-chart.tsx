@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Bar,
   BarChart,
@@ -42,6 +43,26 @@ export function TokenMixChart() {
     withScope("/api/stats/cost/token-mix", scope),
     scope,
   );
+  const [hidden, setHidden] = useState<Record<string, boolean>>({});
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleLegendClick = (payload: any) => {
+    const key = payload?.dataKey;
+    if (typeof key !== "string") return;
+    setHidden((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const legendFormatter = (value: string, entry: any) => {
+    const key = typeof entry?.dataKey === "string" ? entry.dataKey : undefined;
+    const isHidden = key ? (hidden[key] ?? false) : false;
+    return (
+      <span style={{ opacity: isHidden ? 0.4 : 1, cursor: "pointer", userSelect: "none" }}>
+        {value}
+      </span>
+    );
+  };
+
   return (
     <div className="h-72 w-full">
       <ChartState
@@ -67,7 +88,11 @@ export function TokenMixChart() {
                 name,
               ]}
             />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Legend
+              wrapperStyle={{ fontSize: 12 }}
+              onClick={handleLegendClick}
+              formatter={legendFormatter}
+            />
             {SERIES.map((s) => (
               <Bar
                 key={s.key}
@@ -76,6 +101,7 @@ export function TokenMixChart() {
                 stackId="tokens"
                 fill={s.color}
                 isAnimationActive={false}
+                hide={hidden[s.key] ?? false}
               />
             ))}
           </BarChart>

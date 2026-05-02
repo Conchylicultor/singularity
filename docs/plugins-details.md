@@ -948,18 +948,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `costConvSidePane`
       - Contributes:
         - `Pane.Register` `stats-cost-conv-side` (path `c/:sideConvId`)
-        - `Stats.Chart` "Cost & tokens — summary" → `CostKpis`
-        - `Stats.Chart` "Daily cost by model" → `DailyCostChart`
-        - `Stats.Chart` "Cumulative cost over time" → `CumulativeCostChart`
+        - `Stats.Chart` "Cost & Tokens" → `CostSection`
         - `Stats.Chart` "Token mix per day" → `TokenMixChart`
+        - `Stats.Chart` "Cost distribution per conversation" → `CostDistributionChart`
+        - `Stats.Chart` "Sessions per day by model family" → `ModelUsageChart`
         - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
       - Server:
         - Uses: `tasks-core._conversations`
         - `GET /api/stats/cost/daily`
+        - `GET /api/stats/cost/daily-by-family`
         - `GET /api/stats/cost/cumulative`
         - `GET /api/stats/cost/token-mix`
         - `GET /api/stats/cost/totals`
         - `GET /api/stats/cost/sessions`
+        - `GET /api/stats/cost/distribution`
     - **`tasks`** — Task-based stats: active (open) tasks over time.
       - Contributes:
         - `Stats.Chart` "Active tasks over time" → `TasksCumulativeChart`

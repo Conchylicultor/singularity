@@ -3,6 +3,8 @@ import { costConfig } from "../shared/config";
 import {
   handleCumulative,
   handleDaily,
+  handleDailyByFamily,
+  handleDistribution,
   handleSessions,
   handleTokenMix,
   handleTotals,
@@ -17,10 +19,12 @@ export default {
   config: costConfig,
   httpRoutes: {
     "GET /api/stats/cost/daily": handleDaily,
+    "GET /api/stats/cost/daily-by-family": handleDailyByFamily,
     "GET /api/stats/cost/cumulative": handleCumulative,
     "GET /api/stats/cost/token-mix": handleTokenMix,
     "GET /api/stats/cost/totals": handleTotals,
     "GET /api/stats/cost/sessions": handleSessions,
+    "GET /api/stats/cost/distribution": handleDistribution,
   },
   onReady: () => {
     // Walk ~/.claude/projects in the background so the first chart fetch hits
