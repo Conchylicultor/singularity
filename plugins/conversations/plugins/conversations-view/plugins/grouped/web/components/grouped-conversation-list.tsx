@@ -1,4 +1,5 @@
-import { useMemo, useState, useCallback, type ReactNode } from "react";
+import { useMemo, useState, useCallback, Fragment, type ReactNode } from "react";
+import { generateKeyBetween } from "fractional-indexing";
 import {
   DndContext,
   DragOverlay,
@@ -29,11 +30,12 @@ import {
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { MdChevronRight, MdClose, MdRemoveCircleOutline } from "react-icons/md";
+import { MdChevronRight, MdClose, MdFolder, MdRemoveCircleOutline } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { DraggableRow, type DropTarget } from "./draggable-row";
 import { GroupBox } from "./group-box";
 import { GroupContainer } from "./group-container";
+import { GroupGapZone } from "./group-gap-zone";
 import { NewGroupDropZone } from "./new-group-drop-zone";
 
 type ConversationEntry = Conversation;
@@ -48,6 +50,11 @@ const GONE_EXPANDED_KEY = "conv-groups:gone:expanded";
 function parseConvDragId(id: string | number): string | null {
   if (typeof id !== "string" || !id.startsWith("conv-")) return null;
   return id.slice("conv-".length);
+}
+
+function parseGroupDragId(id: string | number): string | null {
+  if (typeof id !== "string" || !id.startsWith("group-")) return null;
+  return id.slice("group-".length);
 }
 
 export interface GroupedConversationListProps {
@@ -174,6 +181,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
   }, [autoGroups]);
 
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   // All rootConvIds in the same auto-group as the dragged conv (includes the dragged conv itself).
   // Empty array when the dragged conv is not in any auto-group.
   const [activeSiblingConvIds, setActiveSiblingConvIds] = useState<string[]>([]);
@@ -213,7 +221,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
       return next;
     });
   }, []);
-  const dragInProgress = activeConvId !== null;
+  const dragInProgress = activeConvId !== null || activeGroupId !== null;
   const allConversations = useMemo(
     () => [...active, ...system, ...recentGone, ...paginatedItems],
     [active, system, recentGone, paginatedItems],
@@ -225,6 +233,11 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
 
   const onDragStart = useCallback(
     (event: DragStartEvent) => {
+      const groupId = parseGroupDragId(event.active.id);
+      if (groupId) {
+        setActiveGroupId(groupId);
+        return;
+      }
       const convId = parseConvDragId(event.active.id);
       setActiveConvId(convId);
       // Capture sibling IDs at drag start — stable across live-state updates during drag.
@@ -234,10 +247,32 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
   );
 
   const onDragEnd = async (event: DragEndEvent) => {
+    const { active: activeDrag, over } = event;
+
+    // Group reorder path — must run before conv logic clears state.
+    const draggedGroupId = parseGroupDragId(activeDrag.id);
+    if (draggedGroupId !== null) {
+      setActiveGroupId(null);
+      if (!over) return;
+      const target = over.data.current as DropTarget | undefined;
+      if (!target || target.kind !== "group-gap") return;
+      const { prevGroupId, nextGroupId } = target;
+      // no-op: dropping at a gap immediately adjacent to itself
+      if (prevGroupId === draggedGroupId || nextGroupId === draggedGroupId) return;
+      const prevRank = prevGroupId ? (groups.find((g) => g.id === prevGroupId)?.rank ?? null) : null;
+      const nextRank = nextGroupId ? (groups.find((g) => g.id === nextGroupId)?.rank ?? null) : null;
+      const newRank = generateKeyBetween(prevRank, nextRank);
+      await fetch(`/api/conversation-groups/${draggedGroupId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rank: newRank }),
+      });
+      return;
+    }
+
     const capturedSiblings = activeSiblingConvIds;
     setActiveConvId(null);
     setActiveSiblingConvIds([]);
-    const { active: activeDrag, over } = event;
     if (!over) return;
     const draggedId = parseConvDragId(activeDrag.id);
     const target = over.data.current as DropTarget | undefined;
@@ -297,6 +332,8 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
       });
       return;
     }
+
+    if (target.kind !== "conv") return;
 
     // target.kind === "conv"
     const targetGroupId = groupIdByConvId.get(target.convId);
@@ -398,47 +435,60 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
   };
 
   return (
-    <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActiveConvId(null)}>
+    <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => { setActiveConvId(null); setActiveGroupId(null); setActiveSiblingConvIds([]); }}>
       <div className="flex flex-col gap-1.5">
         <NewGroupDropZone visible={dragInProgress} />
-        {groups.map((g) => {
+        {groups.map((g, i) => {
           const ags = groupedAttemptGroups.get(g.id) ?? [];
           return (
-            <GroupBox
-              key={g.id}
-              group={g}
-              isEmpty={ags.length === 0}
-              count={ags.length}
-              dragInProgress={dragInProgress}
-              hasActiveChild={hasActiveInGroup(ags)}
-              autoFocusRename={pendingFocusGroupId === g.id}
-              onRenameFocused={() => setPendingFocusGroupId(null)}
-              onRename={async (next) => {
-                await fetch(`/api/conversation-groups/${g.id}`, {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ title: next }),
-                });
-              }}
-              onToggleExpanded={async (next) => {
-                await fetch(`/api/conversation-groups/${g.id}`, {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ expanded: next }),
-                });
-              }}
-              onDelete={async () => {
-                await fetch(`/api/conversation-groups/${g.id}`, {
-                  method: "DELETE",
-                });
-              }}
-            >
-              <SidebarMenu>
-                {ags.map((ag) => renderAttemptGroup(ag, g.id))}
-              </SidebarMenu>
-            </GroupBox>
+            <Fragment key={g.id}>
+              <GroupGapZone
+                prevGroupId={i === 0 ? null : (groups[i - 1]?.id ?? null)}
+                nextGroupId={g.id}
+                visible={activeGroupId !== null}
+              />
+              <GroupBox
+                group={g}
+                isEmpty={ags.length === 0}
+                count={ags.length}
+                dragInProgress={dragInProgress}
+                hasActiveChild={hasActiveInGroup(ags)}
+                autoFocusRename={pendingFocusGroupId === g.id}
+                onRenameFocused={() => setPendingFocusGroupId(null)}
+                onRename={async (next) => {
+                  await fetch(`/api/conversation-groups/${g.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title: next }),
+                  });
+                }}
+                onToggleExpanded={async (next) => {
+                  await fetch(`/api/conversation-groups/${g.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ expanded: next }),
+                  });
+                }}
+                onDelete={async () => {
+                  await fetch(`/api/conversation-groups/${g.id}`, {
+                    method: "DELETE",
+                  });
+                }}
+              >
+                <SidebarMenu>
+                  {ags.map((ag) => renderAttemptGroup(ag, g.id))}
+                </SidebarMenu>
+              </GroupBox>
+            </Fragment>
           );
         })}
+        {groups.length > 0 && (
+          <GroupGapZone
+            prevGroupId={groups[groups.length - 1]?.id ?? null}
+            nextGroupId={null}
+            visible={activeGroupId !== null}
+          />
+        )}
         {autoGroups.map((ag) => (
           <AutoGroupBox
             key={ag.clusterKey}
@@ -548,7 +598,14 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
         )}
       </div>
       <DragOverlay dropAnimation={null}>
-        {activeConv ? (
+        {activeGroupId ? (
+          <div className="bg-background/90 border-accent flex items-center gap-1.5 rounded border px-2 py-1.5 text-sm font-medium shadow-md">
+            <MdFolder className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="truncate">
+              {groups.find((g) => g.id === activeGroupId)?.title || "Group"}
+            </span>
+          </div>
+        ) : activeConv ? (
           <div className="bg-background/90 border-accent flex items-center rounded border px-2 py-1.5 text-sm shadow-md">
             <ConversationItem conv={activeConv} />
           </div>

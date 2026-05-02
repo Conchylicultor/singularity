@@ -7,7 +7,8 @@ export type DropTarget =
   | { kind: "group"; groupId: string }
   | { kind: "auto-group"; rootConvIds: string[]; title: string }
   | { kind: "new-group" }
-  | { kind: "ungroup" };
+  | { kind: "ungroup" }
+  | { kind: "group-gap"; prevGroupId: string | null; nextGroupId: string | null };
 
 // Wraps a sidebar conversation row to make the row itself draggable AND a drop
 // target. The drag id is the conversation id; the drop id is namespaced so it

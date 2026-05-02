@@ -1,5 +1,6 @@
-import { MdDeleteOutline } from "react-icons/md";
+import { MdDeleteOutline, MdDragIndicator } from "react-icons/md";
 import type { ReactNode } from "react";
+import { useDraggable } from "@dnd-kit/core";
 import type { ConversationGroup } from "../../shared";
 import { GroupContainer } from "./group-container";
 import { GroupRename } from "./group-rename";
@@ -29,6 +30,11 @@ export function GroupBox({
   onRenameFocused?: () => void;
   children: ReactNode;
 }) {
+  const { attributes, listeners, setNodeRef: setHandleRef } = useDraggable({
+    id: `group-${group.id}`,
+    data: { kind: "drag-group", groupId: group.id },
+  });
+
   return (
     <GroupContainer
       droppableId={`drop-group-${group.id}`}
@@ -48,22 +54,34 @@ export function GroupBox({
         />
       }
       trailingAction={
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            void onDelete();
-          }}
-          aria-label="Delete group"
-          className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover/header:opacity-100"
-          title={
-            isEmpty
-              ? "Delete group"
-              : "Delete group (members return to ungrouped)"
-          }
-        >
-          <MdDeleteOutline className="size-3.5" />
-        </button>
+        <div className="flex items-center gap-0.5">
+          <button
+            ref={setHandleRef}
+            {...attributes}
+            {...listeners}
+            type="button"
+            aria-label="Reorder group"
+            className="flex size-5 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover/header:opacity-100 touch-none"
+          >
+            <MdDragIndicator className="size-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              void onDelete();
+            }}
+            aria-label="Delete group"
+            className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover/header:opacity-100"
+            title={
+              isEmpty
+                ? "Delete group"
+                : "Delete group (members return to ungrouped)"
+            }
+          >
+            <MdDeleteOutline className="size-3.5" />
+          </button>
+        </div>
       }
     >
       {isEmpty ? (
