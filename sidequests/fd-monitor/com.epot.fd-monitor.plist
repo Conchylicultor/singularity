@@ -7,7 +7,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/bin/zsh</string>
-        <string>/Users/admin/__A__/dev/singularity/sidequests/fd-monitor/fd-monitor.sh</string>
+        <string>/Users/epot/__A__/dev/singularity/sidequests/fd-monitor/fd-monitor.sh</string>
     </array>
     <key>StartInterval</key>
     <integer>5</integer>

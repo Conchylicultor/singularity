@@ -113,7 +113,7 @@ The build CLI (out of scope) writes these files. For day-1 use, hand-write `~/.s
 
 ## Go package layout
 
-Single Go module under `/Users/admin/__A__/dev/singularity/gateway/`. External deps: `github.com/fsnotify/fsnotify` only; everything else is stdlib.
+Single Go module under `gateway/`. External deps: `github.com/fsnotify/fsnotify` only; everything else is stdlib.
 
 ```
 gateway/
@@ -544,21 +544,21 @@ End-to-end manual test:
 
 ## Critical files to be created
 
-- `/Users/admin/__A__/dev/singularity/gateway/cmd/gateway/main.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/registry/registry.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/registry/paths.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/backend/backend.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/backend/readiness.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/proxy/router.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/proxy/http.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/proxy/ws.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/proxy/static.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/discovery/watcher.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/sweeper/sweeper.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/gatewayapi/api.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/portpool/portpool.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/config/config.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/logx/logx.go`
+- `gateway/cmd/gateway/main.go`
+- `gateway/internal/registry/registry.go`
+- `gateway/internal/registry/paths.go`
+- `gateway/internal/backend/backend.go`
+- `gateway/internal/backend/readiness.go`
+- `gateway/internal/proxy/router.go`
+- `gateway/internal/proxy/http.go`
+- `gateway/internal/proxy/ws.go`
+- `gateway/internal/proxy/static.go`
+- `gateway/internal/discovery/watcher.go`
+- `gateway/internal/sweeper/sweeper.go`
+- `gateway/internal/gatewayapi/api.go`
+- `gateway/internal/portpool/portpool.go`
+- `gateway/internal/config/config.go`
+- `gateway/internal/logx/logx.go`
 
 ## Files affected outside the gateway (separate, follow-up tasks)
 

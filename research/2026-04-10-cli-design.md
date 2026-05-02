@@ -120,7 +120,7 @@ cli-design     Idle      -      0       5m ago
 
 ```
 NAME           SERVER                                          WEB
-head           /Users/admin/__A__/dev/singularity/server       ...web/dist
+head           server       ...web/dist
 cli-design     ~/.singularity/agents/cli-design/server         ...web/dist
 ```
 

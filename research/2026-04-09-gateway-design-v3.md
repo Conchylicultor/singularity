@@ -187,13 +187,13 @@ And the verification step `Hand-write ~/.singularity/worktrees/head.json pointin
 
 ## Critical files to be created
 
-- `/Users/admin/__A__/dev/singularity/gateway/main.go`
-- `/Users/admin/__A__/dev/singularity/gateway/worktree.go`
-- `/Users/admin/__A__/dev/singularity/gateway/registry.go`
-- `/Users/admin/__A__/dev/singularity/gateway/proxy.go`
-- `/Users/admin/__A__/dev/singularity/gateway/ports.go`
-- `/Users/admin/__A__/dev/singularity/gateway/go.mod`
-- `/Users/admin/__A__/dev/singularity/gateway/README.md`
+- `gateway/main.go`
+- `gateway/worktree.go`
+- `gateway/registry.go`
+- `gateway/proxy.go`
+- `gateway/ports.go`
+- `gateway/go.mod`
+- `gateway/README.md`
 
 ## Files affected outside the gateway
 

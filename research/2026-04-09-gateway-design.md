@@ -90,7 +90,7 @@ The build CLI (out of scope) is responsible for writing these files. For day-1 u
 
 ## Go package layout
 
-Single Go module under `/Users/admin/__A__/dev/singularity/gateway/`. External deps: `github.com/fsnotify/fsnotify` only; everything else is stdlib.
+Single Go module under `gateway/`. External deps: `github.com/fsnotify/fsnotify` only; everything else is stdlib.
 
 ```
 gateway/
@@ -448,15 +448,15 @@ End-to-end manual test:
 
 ## Critical files to be created
 
-- `/Users/admin/__A__/dev/singularity/gateway/cmd/gateway/main.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/registry/registry.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/backend/backend.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/proxy/router.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/proxy/ws.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/discovery/watcher.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/sweeper/sweeper.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/gatewayapi/api.go`
-- `/Users/admin/__A__/dev/singularity/gateway/internal/dashboard/dashboard.go`
+- `gateway/cmd/gateway/main.go`
+- `gateway/internal/registry/registry.go`
+- `gateway/internal/backend/backend.go`
+- `gateway/internal/proxy/router.go`
+- `gateway/internal/proxy/ws.go`
+- `gateway/internal/discovery/watcher.go`
+- `gateway/internal/sweeper/sweeper.go`
+- `gateway/internal/gatewayapi/api.go`
+- `gateway/internal/dashboard/dashboard.go`
 
 ## Files affected outside the gateway (separate, follow-up tasks)
 

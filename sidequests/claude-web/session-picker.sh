@@ -6,7 +6,7 @@
 # Shows existing sessions with arrow-key navigation, or creates a new one.
 # Pass --new to skip the menu and immediately create a fresh session.
 
-WORKDIR="/Users/admin/__A__/dev/singularity"
+WORKDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PREFIX="claude"
 TMUX="/opt/homebrew/bin/tmux"
 CLAUDE="/Users/admin/.local/bin/claude"

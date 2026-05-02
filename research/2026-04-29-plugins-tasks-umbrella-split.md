@@ -299,12 +299,12 @@ Each step ends with `./singularity check --plugin-boundaries`, `./singularity bu
 
 ## Critical files
 
-- `/Users/admin/__A__/dev/singularity/.claude/worktrees/att-1777417095-s2eq/plugins/tasks/web/index.ts` — becomes barrel + thin plugin def
-- `/Users/admin/__A__/dev/singularity/.claude/worktrees/att-1777417095-s2eq/plugins/tasks/web/panes.tsx` — collapses to `TasksRoot` host body only
-- `/Users/admin/__A__/dev/singularity/.claude/worktrees/att-1777417095-s2eq/plugins/tasks/web/slots.ts` — keep `Tasks.List`, `Tasks.TaskActions`; delete `Tasks.View`
-- `/Users/admin/__A__/dev/singularity/.claude/worktrees/att-1777417095-s2eq/plugins/tasks/web/components/task-detail.tsx` — deleted by step 4 (broken into sub-plugins)
-- `/Users/admin/__A__/dev/singularity/.claude/worktrees/att-1777417095-s2eq/plugins/conversations/plugins/conversation-view/plugins/tasks-panel/web/components/tasks-pane.tsx` — verify but should require no edits (public API preserved)
-- `/Users/admin/__A__/dev/singularity/.claude/worktrees/att-1777417095-s2eq/web/src/plugins.ts` — add 9 sub-plugin imports/registrations
+- `.claude/worktrees/att-1777417095-s2eq/plugins/tasks/web/index.ts` — becomes barrel + thin plugin def
+- `.claude/worktrees/att-1777417095-s2eq/plugins/tasks/web/panes.tsx` — collapses to `TasksRoot` host body only
+- `.claude/worktrees/att-1777417095-s2eq/plugins/tasks/web/slots.ts` — keep `Tasks.List`, `Tasks.TaskActions`; delete `Tasks.View`
+- `.claude/worktrees/att-1777417095-s2eq/plugins/tasks/web/components/task-detail.tsx` — deleted by step 4 (broken into sub-plugins)
+- `.claude/worktrees/att-1777417095-s2eq/plugins/conversations/plugins/conversation-view/plugins/tasks-panel/web/components/tasks-pane.tsx` — verify but should require no edits (public API preserved)
+- `.claude/worktrees/att-1777417095-s2eq/web/src/plugins.ts` — add 9 sub-plugin imports/registrations
 
 ## Reused primitives (do not reinvent)
 
