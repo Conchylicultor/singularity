@@ -118,7 +118,6 @@ export function JsonlPane({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2 border-b px-2 py-1.5">
-        <div className="text-sm font-medium">JSONL</div>
         {events !== null && (
           <span className="tabular-nums text-xs text-muted-foreground">
             {events.length}
