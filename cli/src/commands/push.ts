@@ -1,4 +1,6 @@
 import type { Command } from "commander";
+import { existsSync, readdirSync, readFileSync, rmSync, statSync } from "fs";
+import { join } from "path";
 import { runChecks } from "../checks";
 
 async function run(
@@ -25,6 +27,130 @@ async function exec(cmd: string[], cwd?: string): Promise<void> {
   if (exitCode !== 0) {
     process.exit(1);
   }
+}
+
+async function getWorktreeRoot(): Promise<string> {
+  const { stdout } = await run(["git", "rev-parse", "--show-toplevel"]);
+  if (!stdout) {
+    console.error("Not in a git repository");
+    process.exit(1);
+  }
+  return stdout;
+}
+
+async function getGitDir(): Promise<string> {
+  const { stdout } = await run(["git", "rev-parse", "--git-dir"]);
+  if (!stdout) {
+    console.error("Not in a git repository");
+    process.exit(1);
+  }
+  return stdout;
+}
+
+const CONFLICT_MARKER_RE = /^(<{7}|={7}|>{7}) /m;
+
+function findClaudeMdConflicts(root: string): string[] {
+  const offenders: string[] = [];
+  const pluginsDir = join(root, "plugins");
+  const walk = (dir: string) => {
+    let entries: string[];
+    try {
+      entries = readdirSync(dir);
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const full = join(dir, e);
+      let st;
+      try {
+        st = statSync(full);
+      } catch {
+        continue;
+      }
+      if (st.isDirectory()) {
+        walk(full);
+      } else if (e === "CLAUDE.md") {
+        const txt = readFileSync(full, "utf8");
+        if (CONFLICT_MARKER_RE.test(txt)) offenders.push(full);
+      }
+    }
+  };
+  walk(pluginsDir);
+  return offenders;
+}
+
+/**
+ * Post-rebase normalize. Runs only if the rebase's custom merge drivers
+ * (.gitattributes) actually fired — they drop marker files in
+ * .git/singularity-merge-markers/ when invoked. Without conflicts, this is
+ * a no-op and the agent's commits land unchanged.
+ *
+ * On a marker hit, we re-derive canonical content from the rebased source
+ * tree and amend the head commit:
+ *   - migrations marker: regen-migrations runs the hand-edit detector first
+ *     (aborts loudly if any branch-local .sql was hand-edited), then resets
+ *     branch-local files and re-runs drizzle-kit generate.
+ *   - docs marker: regen-docs rewrites all autogen blocks (incl. inside
+ *     CLAUDE.md files), erasing any benign autogen-only conflict markers left
+ *     by regen-claudemd. We then scan plugins/**\/CLAUDE.md for residual
+ *     conflict markers — those would be in hand-written prose, a real
+ *     conflict the agent must resolve.
+ */
+async function postRebaseNormalize(root: string, pushId: string): Promise<void> {
+  const gitDir = await getGitDir();
+  // git-dir may be relative to cwd (".git") or absolute; resolve via cwd.
+  const markerDir = gitDir.startsWith("/") ? join(gitDir, "singularity-merge-markers") : join(root, gitDir, "singularity-merge-markers");
+  const migrationsMarker = join(markerDir, "migrations");
+  const docsMarker = join(markerDir, "docs");
+  const ranMigrations = existsSync(migrationsMarker);
+  const ranDocs = existsSync(docsMarker);
+
+  if (!ranMigrations && !ranDocs) return; // clean rebase, no auto-resolve happened
+
+  console.log("Normalizing artifacts auto-resolved during rebase...");
+
+  if (ranMigrations) {
+    await exec(["bun", "cli/src/index.ts", "regen-migrations"], root);
+    rmSync(migrationsMarker, { force: true });
+  }
+
+  if (ranDocs) {
+    await exec(["bun", "cli/src/index.ts", "regen-docs"], root);
+    rmSync(docsMarker, { force: true });
+
+    const conflicted = findClaudeMdConflicts(root);
+    if (conflicted.length) {
+      console.error(
+        [
+          "",
+          "Real merge conflict in plugin CLAUDE.md prose section(s):",
+          ...conflicted.map((f) => `  ${f}`),
+          "",
+          "These are hand-written and require manual resolution. Edit the files,",
+          "remove the conflict markers, then re-run ./singularity push.",
+        ].join("\n"),
+      );
+      process.exit(1);
+    }
+  }
+
+  const { stdout: dirty } = await run(["git", "status", "--porcelain"], root);
+  if (!dirty) return;
+  console.log("Amending head commit with regenerated artifacts...");
+  await exec(["git", "add", "-A"], root);
+  await exec(
+    [
+      "git",
+      "-c",
+      "trailer.ifexists=replace",
+      "commit",
+      "--amend",
+      "--no-edit",
+      "--trailer",
+      `Singularity-Push=${pushId}`,
+    ],
+    root,
+  );
 }
 
 async function getMainWorktree(): Promise<string> {
@@ -70,6 +196,12 @@ export function registerPush(program: Command) {
     }) => {
       const branch = await getCurrentBranch();
       const onMain = branch === "main";
+
+      // Clear stale merge-driver markers from any previous failed push.
+      const root0 = await getWorktreeRoot();
+      const gitDir0 = await getGitDir();
+      const markerDir0 = gitDir0.startsWith("/") ? join(gitDir0, "singularity-merge-markers") : join(root0, gitDir0, "singularity-merge-markers");
+      rmSync(markerDir0, { recursive: true, force: true });
 
       // One push id per invocation; every commit that lands on main as part of
       // this push gets stamped with it (via `git commit --trailer` for the
@@ -126,6 +258,7 @@ export function registerPush(program: Command) {
           "--exec",
           `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
         ]);
+        await postRebaseNormalize(await getWorktreeRoot(), pushId);
         console.log("Running checks...");
         const ok = await runChecks();
         if (!ok) {
@@ -180,6 +313,14 @@ export function registerPush(program: Command) {
         );
         process.exit(1);
       }
+
+      // 3b. Post-rebase normalize: regenerate auto-generated artifacts
+      //     (docs, drizzle migrations) from the rebased source tree and
+      //     amend the head commit. The merge drivers in .gitattributes
+      //     accepted the upstream side during the rebase; this step makes
+      //     the final commit canonical. Aborts on hand-edited migrations
+      //     or on real conflict markers in CLAUDE.md prose.
+      await postRebaseNormalize(await getWorktreeRoot(), pushId);
 
       // 4. Run checks on the rebased tree — this is exactly what will land on main.
       console.log("Running checks...");

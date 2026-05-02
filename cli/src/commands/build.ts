@@ -5,6 +5,7 @@ import { basename, join, resolve } from "path";
 import { homedir } from "os";
 import { generateMigration } from "../migrations";
 import { generatePluginDocs, collectAllPlugins } from "../docgen";
+import { registerMergeDrivers } from "../git/register-merge-drivers";
 import { runChecks } from "../checks";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
@@ -292,6 +293,7 @@ export function registerBuild(program: Command) {
     )
     .action(async (opts: { migrationName?: string; resetMigration?: boolean; restart: boolean; skipChecks?: boolean; allowMain?: boolean }) => {
       await ensureHooksPath();
+      await registerMergeDrivers(await getWorktreeRoot());
 
       const branch = await getCurrentBranch();
       if (branch === "main" && !opts.allowMain) {

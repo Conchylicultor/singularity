@@ -188,7 +188,11 @@ async function resolveRef(serverDir: string): Promise<string | null> {
   return null;
 }
 
-async function listTrackedMigrationBasenames(
+export async function resolveMainRef(serverDir: string): Promise<string | null> {
+  return resolveRef(serverDir);
+}
+
+export async function listTrackedMigrationBasenames(
   serverDir: string,
   ref: string,
 ): Promise<Set<string>> {
