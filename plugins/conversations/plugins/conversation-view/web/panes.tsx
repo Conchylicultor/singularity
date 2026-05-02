@@ -11,6 +11,7 @@ export const conversationPane = Pane.define({
   component: ConversationView,
   provides: type<{ conversation: ConversationRecord }>(),
   provide: ConversationPaneProvide,
+  width: 600,
 });
 
 /**
