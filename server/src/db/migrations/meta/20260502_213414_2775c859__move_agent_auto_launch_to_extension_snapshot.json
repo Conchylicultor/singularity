@@ -1,6 +1,6 @@
 {
-  "id": "0c4aec73-64d3-46d9-9f24-8f1902dd4c94",
-  "prevId": "f3ef6f1c-80d7-46d3-96b0-6aa4e23c60c1",
+  "id": "ae931750-a5d1-476e-bd90-057145d8cb9b",
+  "prevId": "8749c2f8-306e-44a8-bcd6-caf4b8416053",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1576,6 +1576,45 @@
           "columns": [
             "workflow_run_id",
             "wait_name"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.reorder_prefs": {
+      "name": "reorder_prefs",
+      "schema": "",
+      "columns": {
+        "slot_id": {
+          "name": "slot_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contribution_id": {
+          "name": "contribution_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rank": {
+          "name": "rank",
+          "type": "rank_text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "reorder_prefs_slot_id_contribution_id_pk": {
+          "name": "reorder_prefs_slot_id_contribution_id_pk",
+          "columns": [
+            "slot_id",
+            "contribution_id"
           ]
         }
       },

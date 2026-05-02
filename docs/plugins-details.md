@@ -73,14 +73,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `DELETE /api/agents/:id`
     - `POST /api/agents/:id/launch`
     - `GET /api/agents/:id/launches`
+  - Imported by: `toggle`
   - Slot contributors: `toggle`
-  - Endpoint callers: `toggle`
   - Plugins:
     - **`auto-launch`** — Umbrella plugin for agent auto-launch. Sub-plugins contribute row actions and settings.
       - Plugins:
-        - **`toggle`** — Toggle on/off to activate agent auto-launch. Placeholder — wiring to schema TBD.
+        - **`toggle`** — Toggle on/off to activate agent auto-launch. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive. Server side of the agent auto-launch toggle. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive.
+          - Defines:
+            - DB schema: `plugins/agents/plugins/auto-launch/plugins/toggle/server/internal/tables.ts`
+          - Exports (server):
+            - Values: `_agentAutoLaunchExt`, `agentAutoLaunchResource`
           - Contributes:
             - `Agents.AgentActions` → `AutoLaunchToggle`
+          - Server:
+            - Uses: `agents._agents`
+            - Resources: `agent-auto-launch` (push)
+            - `POST /api/agent-auto-launch/:agentId`
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - Exports (web):
@@ -735,6 +743,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `ensurePgSymlinks`, `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_MIGRATING_SENTINEL`, `PG_MIGRATION_DONE_MARKER`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `pgBin`, `useSystemPg`
       - Central:
         - `GET /api/database/status`
+    - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
+      - Defines:
+        - DB schema: `plugins/infra/plugins/entity-extensions/server/internal/define-extension.ts`
+      - Exports (server):
+        - Values: `defineExtension`, `EntityExtensions`, `getExtension`, `upsertExtension`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
       - Defines:
         - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`

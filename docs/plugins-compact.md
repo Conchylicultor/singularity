@@ -15,7 +15,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
   - Plugins:
     - **`auto-launch`** — Umbrella plugin for agent auto-launch. Sub-plugins contribute row actions and settings.
       - Plugins:
-        - **`toggle`** — Toggle on/off to activate agent auto-launch. Placeholder — wiring to schema TBD.
+        - **`toggle`** — Toggle on/off to activate agent auto-launch. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive. Server side of the agent auto-launch toggle. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive.
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
 
@@ -212,6 +212,11 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - Values: `ensurePgSymlinks`, `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_MIGRATING_SENTINEL`, `PG_MIGRATION_DONE_MARKER`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `pgBin`, `useSystemPg`
       - Central:
         - `GET /api/database/status`
+    - **`entity-extensions`** [load-bearing] — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
+      - Defines:
+        - DB schema: `plugins/infra/plugins/entity-extensions/server/internal/define-extension.ts`
+      - Exports (server):
+        - Values: `defineExtension`, `EntityExtensions`, `getExtension`, `upsertExtension`
     - **`events`** [load-bearing] — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
       - Defines:
         - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`

@@ -442,6 +442,13 @@
       "tag": "20260502_165711_e5ba066f__reorder_prefs",
       "hash": "e5ba066f",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777757654000,
+      "tag": "20260502_213414_2775c859__move_agent_auto_launch_to_extension",
+      "hash": "2775c859",
+      "breakpoints": true
     }
   ]
 }
