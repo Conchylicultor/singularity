@@ -3,14 +3,15 @@ import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@/components/ui/button";
 import { tasksResource, type Task } from "@plugins/tasks/shared";
+import { useTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 
 const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 
 export function TaskDependencies({ taskId }: { taskId: string }) {
+  const task = useTask(taskId);
   const { data } = useResource(tasksResource);
   const tasks = data ?? [];
-  const task = tasks.find((t) => t.id === taskId) ?? null;
 
   const deps = task?.dependencies ?? [];
 

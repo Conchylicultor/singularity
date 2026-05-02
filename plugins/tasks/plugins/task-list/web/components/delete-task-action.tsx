@@ -1,4 +1,5 @@
 import { MdDelete } from "react-icons/md";
+import { deleteTask } from "@plugins/tasks/web";
 import { cn } from "@/lib/utils";
 
 export function DeleteTaskAction({
@@ -16,7 +17,7 @@ export function DeleteTaskAction({
   const onClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (disabled) return;
-    await fetch(`/api/tasks/${taskId}`, { method: "DELETE" });
+    await deleteTask(taskId);
   };
 
   return (

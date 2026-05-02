@@ -1,6 +1,7 @@
 import { MdUnfoldLess, MdUnfoldMore } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { tasksResource } from "@plugins/tasks/shared";
+import { patchTask } from "@plugins/tasks/web";
 import { cn } from "@/lib/utils";
 
 type TaskRow = { id: string; parentId: string | null; expanded: boolean };
@@ -51,13 +52,7 @@ export function ExpandCollapseAllAction({
     await Promise.all(
       nodes
         .filter((n) => n.expanded !== next)
-        .map((n) =>
-          fetch(`/api/tasks/${n.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ expanded: next }),
-          }),
-        ),
+        .map((n) => patchTask(n.id, { expanded: next })),
     );
   };
 

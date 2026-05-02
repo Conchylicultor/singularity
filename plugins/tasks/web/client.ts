@@ -1,0 +1,47 @@
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { tasksResource, type Task } from "../shared";
+
+export type TaskPatch = Partial<{
+  title: string;
+  description: string | null;
+  drop: boolean;
+  hold: boolean;
+  expanded: boolean;
+  parentId: string | null;
+  rank: string;
+}>;
+
+export type AutoStartModel = "opus" | "sonnet" | "none";
+
+export async function patchTask(id: string, patch: TaskPatch): Promise<void> {
+  await fetch(`/api/tasks/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function setAutoStart(
+  id: string,
+  model: AutoStartModel,
+): Promise<void> {
+  if (model === "none") {
+    await fetch(`/api/tasks/${id}/auto-start`, { method: "DELETE" });
+    return;
+  }
+  await fetch(`/api/tasks/${id}/auto-start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model }),
+  });
+}
+
+export async function deleteTask(id: string): Promise<void> {
+  await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+}
+
+export function useTask(id: string | null | undefined): Task | null {
+  const { data } = useResource(tasksResource);
+  if (!id) return null;
+  return data?.find((t) => t.id === id) ?? null;
+}

@@ -871,6 +871,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `GET /api/stats/tasks/cumulative`
 
 - **`tasks`** — Nested tasks with attempts linking to conversations.
+  - Exports (web):
+    - Types: `AutoStartModel`, `TaskPatch`
+    - Values: `deleteTask`, `patchTask`, `setAutoStart`, `useTask`
   - Exports (server):
     - Types: `Attempt`, `AttemptStatus`, `Push`, `Task`, `TaskStatus`
     - Values: `armTaskAutoStart`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `CONVERSATIONS_META_TASK_ID`, `nextRankUnder`, `pushesResource`, `PushSchema`, `TaskSchema`, `tasksResource`, `TaskStatusSchema`
@@ -892,7 +895,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/tasks/:id/dependencies`
     - `DELETE /api/tasks/:id/dependencies/:depId`
     - `GET /api/repo-info`
-  - Endpoint callers: `task`, `task-dependencies`, `task-description`, `task-draft-form`, `task-events`, `task-header`, `task-list`
+  - Endpoint callers: `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-header`, `task-list`
   - Plugins:
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
       - Contributes:

@@ -2,8 +2,7 @@ import { MdChecklist } from "react-icons/md";
 import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { tasksResource } from "@plugins/tasks/shared";
+import { useTask } from "@plugins/tasks/web";
 import { convTasksPane } from "../panes";
 
 const STATUS_DOT: Record<string, string> = {
@@ -23,8 +22,7 @@ export function TasksButton() {
   const isOpen =
     match?.chain.some((e) => e.pane === convTasksPane._internal) ?? false;
 
-  const { data: tasks } = useResource(tasksResource);
-  const task = tasks?.find((t) => t.id === conversation.taskId);
+  const task = useTask(conversation.taskId);
   const dotClass = task ? STATUS_DOT[task.status] : undefined;
 
   return (

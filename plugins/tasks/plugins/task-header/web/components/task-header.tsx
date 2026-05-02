@@ -1,9 +1,9 @@
 import { useCallback } from "react";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { tasksResource, type Task } from "@plugins/tasks/shared";
+import { type Task } from "@plugins/tasks/shared";
+import { patchTask, setAutoStart, useTask } from "@plugins/tasks/web";
 import { buildTaskPrompt } from "@plugins/tasks-core/shared";
 import { useFlushAll, useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { Button } from "@/components/ui/button";
@@ -38,25 +38,8 @@ const STATUS_CLASSES: Record<Task["status"], string> = {
   blocked: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300",
 };
 
-async function patchTask(
-  taskId: string,
-  patch: Partial<{
-    title: string;
-    description: string | null;
-    drop: boolean;
-    hold: boolean;
-  }>,
-): Promise<void> {
-  await fetch(`/api/tasks/${taskId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
-  });
-}
-
 export function TaskHeader({ taskId }: { taskId: string }) {
-  const { data } = useResource(tasksResource);
-  const task = data?.find((t) => t.id === taskId) ?? null;
+  const task = useTask(taskId);
   const flushAll = useFlushAll();
 
   const titleField = useEditableField({
@@ -75,18 +58,8 @@ export function TaskHeader({ taskId }: { taskId: string }) {
     void patchTask(taskId, { hold: task.status !== "held" });
   };
 
-  const setAutoStart = useCallback(
-    async (model: "opus" | "sonnet" | "none") => {
-      if (model === "none") {
-        await fetch(`/api/tasks/${taskId}/auto-start`, { method: "DELETE" });
-      } else {
-        await fetch(`/api/tasks/${taskId}/auto-start`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model }),
-        });
-      }
-    },
+  const onAutoStartChange = useCallback(
+    (model: "opus" | "sonnet" | "none") => setAutoStart(taskId, model),
     [taskId],
   );
 
@@ -170,7 +143,7 @@ export function TaskHeader({ taskId }: { taskId: string }) {
         <Select
           value={task.autoStartModel ?? "none"}
           onValueChange={(v: string | null) => {
-            if (v) void setAutoStart(v as "opus" | "sonnet" | "none");
+            if (v) void onAutoStartChange(v as "opus" | "sonnet" | "none");
           }}
         >
           <SelectTrigger className="h-7 w-32 text-xs">

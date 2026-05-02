@@ -9,6 +9,7 @@ import {
 import type { TreeNode } from "@plugins/primitives/plugins/tree/shared";
 import type { TaskStatus } from "@plugins/tasks-core/shared";
 import { tasksResource } from "@plugins/tasks/shared";
+import { patchTask, setAutoStart } from "@plugins/tasks/web";
 import { Tasks as TasksSlots } from "../slots";
 import { StatusIcon } from "./task-status";
 import { cn } from "@/lib/utils";
@@ -19,25 +20,6 @@ type Task = TreeItem & {
   autoStartAt: Date | string | null;
   autoStartModel: "opus" | "sonnet" | null;
 };
-
-type TaskPatch = {
-  title?: string;
-  expanded?: boolean;
-  parentId?: string | null;
-  rank?: string;
-};
-
-async function patchTask(id: string, patch: TaskPatch) {
-  await fetch(`/api/tasks/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
-  });
-}
-
-async function clearAutoStart(id: string) {
-  await fetch(`/api/tasks/${id}/auto-start`, { method: "DELETE" });
-}
 
 async function createTaskRow(args: {
   parentId: string | null;
@@ -102,7 +84,7 @@ function QueuedChip({ taskId, model }: { taskId: string; model: "opus" | "sonnet
       aria-label={`Cancel auto-start (${label})`}
       onClick={(e) => {
         e.stopPropagation();
-        void clearAutoStart(taskId);
+        void setAutoStart(taskId, "none");
       }}
       className="ml-1 inline-flex shrink-0 items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
     >

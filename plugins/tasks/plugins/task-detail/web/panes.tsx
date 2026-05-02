@@ -1,12 +1,12 @@
 import { type ReactElement, useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Outlet, Pane, PaneChrome, type, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { ConversationView } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   Tasks as TasksSlots,
   TasksList,
 } from "@plugins/tasks/plugins/task-list/web";
-import { tasksResource, type Task } from "@plugins/tasks/shared";
+import { type Task } from "@plugins/tasks/shared";
+import { useTask } from "@plugins/tasks/web";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -98,9 +98,7 @@ function TaskDetailBody(): ReactElement {
 
 function TaskDetailBodyContent(): ReactElement {
   const { taskId } = taskDetailPane.useParams();
-  const { data } = useResource(tasksResource);
-  const allTasks = data ?? [];
-  const task = allTasks.find((t) => t.id === taskId) ?? null;
+  const task = useTask(taskId);
   const { filePath } = useTaskDetailFilePeek();
   const sidePanels = TaskDetailSlots.SidePanel.useContributions();
   const orderedSidePanels = useMemo(
