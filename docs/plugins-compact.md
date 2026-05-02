@@ -96,7 +96,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
   - Imported by: `agents`, `conversation-category`, `conversation-progress`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
-  - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `grouped`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
+  - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `grouped`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
     - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
@@ -106,6 +106,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - **`conversation-view`** — Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
+        - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Plugins:
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
@@ -322,7 +323,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
   - Server:
     - Register: `pushLanded`, `taskStatusChanged`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `active-data`, `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
+  - Imported by: `active-data`, `agents`, `allow-monitor`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
 

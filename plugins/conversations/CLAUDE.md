@@ -32,7 +32,7 @@
   - `GET /api/conversations/:id/turns`
   - `POST /api/conversations/:id/close`
 - Imported by: `agents`, `conversation-category`, `conversation-progress`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
-- Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `grouped`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
+- Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `grouped`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
 - Sub-plugins:
   - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
   - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.

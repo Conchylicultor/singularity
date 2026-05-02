@@ -192,7 +192,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
   - Imported by: `agents`, `conversation-category`, `conversation-progress`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
-  - Endpoint callers: `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `grouped`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
+  - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `grouped`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
       - Defines:
@@ -252,6 +252,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `Conversation.ActionBar`
           - Exports (web):
             - Values: `ActionBarView`, `Conversation`
+        - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
+          - Contributes:
+            - `conversationPane.Actions` → `AllowMonitorChip`
+          - Server:
+            - Uses: `tasks-core.getConversation`
+            - `GET /api/conversations/:id/allow-files`
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Defines:
             - Slots: `Code.ToolbarButton`
@@ -969,7 +975,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Register: `pushLanded`, `taskStatusChanged`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `active-data`, `agents`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
+  - Imported by: `active-data`, `agents`, `allow-monitor`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):

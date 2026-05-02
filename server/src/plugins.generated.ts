@@ -16,6 +16,7 @@ import configPlugin from "@plugins/config/server";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
 import conversationsConversationCategoryPlugin from "@plugins/conversations/plugins/conversation-category/server";
 import conversationsConversationProgressPlugin from "@plugins/conversations/plugins/conversation-progress/server";
+import conversationsConversationViewAllowMonitorPlugin from "@plugins/conversations/plugins/conversation-view/plugins/allow-monitor/server";
 import conversationsConversationViewCodeReviewPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/server";
 import conversationsConversationViewCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import conversationsConversationViewCommitsGraphPlugin from "@plugins/conversations/plugins/conversation-view/plugins/commits-graph/server";
@@ -66,6 +67,7 @@ export const plugins: ServerPluginDefinition[] = [
   conversationsRecoverPlugin,
   conversationsConversationCategoryPlugin,
   conversationsConversationProgressPlugin,
+  conversationsConversationViewAllowMonitorPlugin,
   conversationsConversationViewCodeReviewPlugin,
   conversationsConversationViewCodePlugin,
   conversationsConversationViewCommitsGraphPlugin,
