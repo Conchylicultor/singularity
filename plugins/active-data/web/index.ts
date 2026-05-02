@@ -5,6 +5,13 @@ export type { ActiveDataContribution, ActiveDataBlockContribution, ActiveDataInl
 export { useActiveDataSegments } from "./internal/segment-active-data";
 export type { ActiveDataSegment } from "./internal/segment-active-data";
 export { useActiveDataLinkify } from "./internal/linkify-active-data";
+export {
+  ActiveDataIdentityProvider,
+  useActiveDataIdentity,
+} from "./internal/identity-context";
+export type { ActiveDataIdentity } from "./internal/identity-context";
+export { useActiveDataBinding } from "./internal/use-active-data-binding";
+export type { ActiveDataBindingHandle } from "./internal/use-active-data-binding";
 
 export default {
   id: "active-data",

@@ -1,14 +1,20 @@
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
+import { z } from "zod";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { taskSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
-import { TaskSchema, type Task } from "@plugins/tasks-core/shared";
+import { useActiveDataBinding } from "@plugins/active-data/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { attemptsResource, type Attempt } from "@plugins/tasks/shared";
+import {
+  attemptsResource,
+  tasksResource,
+  type Attempt,
+} from "@plugins/tasks/shared";
 import { taskConversationPane } from "@plugins/tasks/plugins/task-detail/web";
+import { TaskSchema, type Task } from "@plugins/tasks-core/shared";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +34,12 @@ const ATTEMPT_STATUS_LABELS: Record<Attempt["status"], string> = {
   abandoned: "Abandoned",
 };
 
+const TaskBindingSchema = z.object({
+  taskId: z.string(),
+  launchedConvId: z.string().optional(),
+});
+type TaskBinding = z.infer<typeof TaskBindingSchema>;
+
 export function TaskCard({
   content,
 }: {
@@ -39,20 +51,29 @@ export function TaskCard({
   const { conversation } = conversationPane.useData();
   const hostTaskId = conversation.taskId;
 
+  const binding = useActiveDataBinding<TaskBinding>(TaskBindingSchema);
+
   const [prompt, setPrompt] = useState(initial);
   const [creating, setCreating] = useState(false);
-  const [createdTask, setCreatedTask] = useState<Task | null>(null);
-  const [launchedConvId, setLaunchedConvId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Captured in a ref (not state) because onLaunched closes over the render
+  // it was created in — a state setter from getRequest wouldn't be visible
+  // to the in-flight callback. The ref always reads the latest value.
+  const pendingTaskIdRef = useRef<string | null>(null);
 
   if (!initial) return null;
 
-  if (launchedConvId && createdTask) {
-    return <LaunchedAttempts taskId={createdTask.id} />;
+  // Wait for the binding to load before rendering anything destructive — the
+  // editable card collapses to a chip once we know the persisted state, so
+  // showing the card during load would briefly invite a duplicate Create.
+  if (binding.enabled && binding.isLoading) return null;
+
+  if (binding.value?.launchedConvId && binding.value.taskId) {
+    return <LaunchedAttempts taskId={binding.value.taskId} />;
   }
 
-  if (createdTask) {
-    return <TaskChip task={createdTask} />;
+  if (binding.value?.taskId) {
+    return <TaskChip taskId={binding.value.taskId} />;
   }
 
   const trimmed = prompt.trim();
@@ -79,7 +100,7 @@ export function TaskCard({
     setError(null);
     try {
       const task = await createTask();
-      setCreatedTask(task);
+      await binding.set({ taskId: task.id });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -119,10 +140,16 @@ export function TaskCard({
           openAfterLaunch={false}
           getRequest={async () => {
             const task = await createTask();
-            setCreatedTask(task);
+            pendingTaskIdRef.current = task.id;
+            await binding.set({ taskId: task.id });
             return { taskId: task.id, prompt: trimmed };
           }}
-          onLaunched={(conv) => setLaunchedConvId(conv.id)}
+          onLaunched={async (conv) => {
+            const taskId = pendingTaskIdRef.current;
+            if (taskId) {
+              await binding.set({ taskId, launchedConvId: conv.id });
+            }
+          }}
         />
       </div>
     </div>
@@ -201,15 +228,17 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
   );
 }
 
-function TaskChip({ task }: { task: Task }) {
+function TaskChip({ taskId }: { taskId: string }) {
   const { conversation } = conversationPane.useData();
-  const title = task.title?.trim() || "Untitled task";
+  const { data: tasks } = useResource(tasksResource);
+  const task = tasks?.find((t) => t.id === taskId);
+  const title = task?.title?.trim() || "Untitled task";
   return (
     <button
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        taskSidePane.open({ convId: conversation.id, taskId: task.id });
+        taskSidePane.open({ convId: conversation.id, taskId });
       }}
       className="bg-muted text-primary hover:bg-muted/80 inline-flex max-w-full items-center gap-1.5 rounded px-1.5 py-0.5 align-baseline text-xs hover:underline"
       title={title}

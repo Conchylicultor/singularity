@@ -6,6 +6,7 @@
 // `plugins-registry-in-sync` check fails on drift.
 
 import type { ServerPluginDefinition } from "./types";
+import activeDataPlugin from "@plugins/active-data/server";
 import agentsPlugin from "@plugins/agents/server";
 import authGooglePlugin from "@plugins/auth/plugins/google/server";
 import authNotionPlugin from "@plugins/auth/plugins/notion/server";
@@ -55,6 +56,7 @@ import tasksPlugin from "@plugins/tasks/server";
 import terminalPlugin from "@plugins/terminal/server";
 
 export const plugins: ServerPluginDefinition[] = [
+  activeDataPlugin,
   agentsPlugin,
   authGooglePlugin,
   authNotionPlugin,

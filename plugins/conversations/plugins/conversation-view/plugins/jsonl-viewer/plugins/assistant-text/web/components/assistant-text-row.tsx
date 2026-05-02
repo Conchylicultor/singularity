@@ -8,6 +8,7 @@ import {
   parseFileLinks,
 } from "@plugins/primitives/plugins/file-links/web";
 import {
+  ActiveDataIdentityProvider,
   useActiveDataSegments,
   useActiveDataLinkify,
 } from "@plugins/active-data/web";
@@ -222,15 +223,42 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
       </div>
       {markdownMode ? (
         <div className="text-sm leading-6">
-          {segments.map((seg, i) =>
-            seg.type === "block" ? (
-              <seg.component key={i} content={seg.content} attrs={seg.attrs} />
-            ) : (
-              <ReactMarkdown key={i} remarkPlugins={REMARK_PLUGINS} components={mdComponents}>
-                {seg.text}
-              </ReactMarkdown>
-            ),
-          )}
+          {(() => {
+            // Per-tag occurrence counter so each <task>, <conv>, etc. gets a
+            // stable index across renders — that's the persistence key for
+            // active-data bindings.
+            const counts = new Map<string, number>();
+            return segments.map((seg, i) => {
+              if (seg.type !== "block") {
+                return (
+                  <ReactMarkdown
+                    key={i}
+                    remarkPlugins={REMARK_PLUGINS}
+                    components={mdComponents}
+                  >
+                    {seg.text}
+                  </ReactMarkdown>
+                );
+              }
+              const idx = counts.get(seg.tag) ?? 0;
+              counts.set(seg.tag, idx + 1);
+              const block = (
+                <seg.component content={seg.content} attrs={seg.attrs} />
+              );
+              if (!e.messageId) return <span key={i}>{block}</span>;
+              return (
+                <ActiveDataIdentityProvider
+                  key={i}
+                  conversationId={conversation.id}
+                  messageId={e.messageId}
+                  tag={seg.tag}
+                  occurrenceIndex={idx}
+                >
+                  {block}
+                </ActiveDataIdentityProvider>
+              );
+            });
+          })()}
         </div>
       ) : (
         <div className="whitespace-pre-wrap break-words text-sm">{e.text}</div>

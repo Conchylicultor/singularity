@@ -7,6 +7,7 @@ export type ActiveDataSegment =
   | { type: "markdown"; text: string }
   | {
       type: "block";
+      tag: string;
       component: ComponentType<{ content: string; attrs: Record<string, string> }>;
       content: string;
       attrs: Record<string, string>;
@@ -51,7 +52,7 @@ function buildSegments(
     const attrs = attrStr ? parseAttrs(attrStr) : {};
     const contrib = blockContribs.find((c) => c.tag === tag)!;
 
-    segments.push({ type: "block", component: contrib.component, content, attrs });
+    segments.push({ type: "block", tag, component: contrib.component, content, attrs });
     cursor = m.index + m[0].length;
   }
 
