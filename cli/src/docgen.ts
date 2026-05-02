@@ -82,7 +82,7 @@ function stripTypes(src: string): string {
   }
 }
 
-function findAllPluginDirs(pluginsRoot: string): string[] {
+export function findAllPluginDirs(pluginsRoot: string): string[] {
   const out: string[] = [];
   function walk(dir: string, depth: number) {
     if (depth > 10) return;

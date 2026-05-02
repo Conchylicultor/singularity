@@ -8,14 +8,20 @@ const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 // import grammar (R4) and the "default-import is registry-only" rule (R5)).
 //
 // Principled exemptions:
-//   - web/src/plugins.ts / server/src/plugins.ts: plugin registries. Their
-//     entire purpose is to import every PluginDefinition (default exports).
+//   - web/src/plugins.ts / server/src/plugins.ts / central/src/plugins.ts: plugin
+//     registries (today, 1-line re-exports of the .generated.ts twins).
+//   - web/src/plugins.generated.ts / server/src/plugins.generated.ts /
+//     central/src/plugins.generated.ts: codegen output of `./singularity build`,
+//     emits one default-import per plugin barrel by design.
 //
 const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
   "web/src/plugins.ts",
+  "web/src/plugins.generated.ts",
   "server/src/plugins.ts",
+  "server/src/plugins.generated.ts",
   "server/src/index.ts",
   "central/src/plugins.ts",
+  "central/src/plugins.generated.ts",
   "central/src/index.ts",
 ]);
 

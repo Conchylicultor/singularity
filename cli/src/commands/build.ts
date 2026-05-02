@@ -4,6 +4,7 @@ import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
 import { basename, join, resolve } from "path";
 import { generateMigration } from "../migrations";
 import { generatePluginDocs, collectAllPlugins } from "../docgen";
+import { generatePluginRegistry } from "../plugin-registry-gen";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
 import { runChecks } from "../checks";
 import { SINGULARITY_DIR } from "../paths";
@@ -345,7 +346,11 @@ export function registerBuild(program: Command) {
       console.log("Generating plugins doc...");
       await generatePluginDocs({ root });
 
-      // 3b. Run repo validation checks (typescript, plugin-boundaries, eslint,
+      // 3b. Regenerate plugin registry files (web/server/central plugins.generated.ts).
+      console.log("Generating plugin registry...");
+      await generatePluginRegistry({ root });
+
+      // 3c. Run repo validation checks (typescript, plugin-boundaries, eslint,
       // plugin-contributed checks, ...). Fail before the expensive frontend
       // build kicks off. `--skip-checks` opts out for fast iteration; checks
       // still gate `push`.

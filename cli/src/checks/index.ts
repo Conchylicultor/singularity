@@ -14,6 +14,7 @@ import { pluginBoundaries } from "./plugin-boundaries";
 import { typescript } from "./typescript";
 import { pluginsDocInSync } from "./plugins-doc-in-sync";
 import { pluginsHaveClaudeMd } from "./plugins-have-claudemd";
+import { pluginsRegistryInSync } from "./plugins-registry-in-sync";
 import { snapshotChainIntact } from "./snapshot-chain-intact";
 import type { Check } from "./types";
 
@@ -22,6 +23,7 @@ export const CHECKS: Check[] = [
   migrationsInSync,
   snapshotChainIntact,
   pluginsDocInSync,
+  pluginsRegistryInSync,
   pluginsHaveClaudeMd,
   pluginBoundaries,
   noPluginImportsInCore,
