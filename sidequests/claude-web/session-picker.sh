@@ -9,7 +9,7 @@
 WORKDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PREFIX="claude"
 TMUX="/opt/homebrew/bin/tmux"
-CLAUDE="/Users/admin/.local/bin/claude"
+CLAUDE="/Users/epot/.local/bin/claude"
 GIT=/usr/bin/git
 WORKTREE_DIR="$WORKDIR/.claude/worktrees"
 
@@ -47,7 +47,7 @@ resume_session() {
 [[ "$1" == "--new" ]] && create_new
 
 # Collect existing sessions
-existing=$($TMUX list-sessions -F "#{session_name}" -f "#{m:${PREFIX}-*,#{session_name}}" 2>/dev/null)
+existing=$($TMUX list-sessions -F "#{session_created} #{session_name}" 2>/dev/null | sort -rn | awk '{print $2}')
 
 # No existing sessions — go straight to new
 if [[ -z "$existing" ]]; then
