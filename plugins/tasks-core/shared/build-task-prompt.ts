@@ -7,5 +7,10 @@ export function buildTaskPrompt(
 ): string {
   const title = (task.title ?? "").trim() || "Untitled";
   const desc = (task.description ?? "").trim();
-  return desc ? `${title}\n\n${desc}` : title;
+  if (!desc) return title;
+  // When the description already starts with the title (improve-form tasks store
+  // the full user text in the description, and the title is derived from its first
+  // line), prepending the title again would duplicate that first line.
+  if (desc.startsWith(title)) return desc;
+  return `${title}\n\n${desc}`;
 }
