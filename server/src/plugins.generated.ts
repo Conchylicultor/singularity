@@ -49,6 +49,7 @@ import infraJobsPlugin from "@plugins/infra/plugins/jobs/server";
 import infraMcpPlugin from "@plugins/infra/plugins/mcp/server";
 import infraPlugin from "@plugins/infra/server";
 import primitivesRankPlugin from "@plugins/primitives/plugins/rank/server";
+import publishPlugin from "@plugins/publish/server";
 import screenshotPlugin from "@plugins/screenshot/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/server";
@@ -100,6 +101,7 @@ export const plugins: ServerPluginDefinition[] = [
   infraMcpPlugin,
   infraPlugin,
   primitivesRankPlugin,
+  publishPlugin,
   screenshotPlugin,
   statsCommitsPlugin,
   statsTasksPlugin,

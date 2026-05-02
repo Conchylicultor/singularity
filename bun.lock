@@ -471,6 +471,10 @@
       "name": "@singularity/plugin-primitives-tree",
       "version": "0.0.1",
     },
+    "plugins/publish": {
+      "name": "@singularity/plugin-publish",
+      "version": "0.0.1",
+    },
     "plugins/screenshot": {
       "name": "@singularity/plugin-screenshot",
       "version": "0.0.1",
@@ -1347,6 +1351,8 @@
     "@singularity/plugin-primitives-task-draft-form": ["@singularity/plugin-primitives-task-draft-form@workspace:plugins/primitives/plugins/task-draft-form"],
 
     "@singularity/plugin-primitives-tree": ["@singularity/plugin-primitives-tree@workspace:plugins/primitives/plugins/tree"],
+
+    "@singularity/plugin-publish": ["@singularity/plugin-publish@workspace:plugins/publish"],
 
     "@singularity/plugin-screenshot": ["@singularity/plugin-screenshot@workspace:plugins/screenshot"],
 

@@ -94,6 +94,7 @@ import primitivesSyntaxHighlightPlugin from "@plugins/primitives/plugins/syntax-
 import primitivesTaskDraftFormPlugin from "@plugins/primitives/plugins/task-draft-form/web";
 import primitivesTreePlugin from "@plugins/primitives/plugins/tree/web";
 import primitivesPlugin from "@plugins/primitives/web";
+import publishPlugin from "@plugins/publish/web";
 import screenshotDrawCanvasPlugin from "@plugins/screenshot/plugins/draw-canvas/web";
 import screenshotDrawOnAppPlugin from "@plugins/screenshot/plugins/draw-on-app/web";
 import screenshotPlugin from "@plugins/screenshot/web";
@@ -204,6 +205,7 @@ export const plugins: PluginDefinition[] = [
   primitivesTaskDraftFormPlugin,
   primitivesTreePlugin,
   primitivesPlugin,
+  publishPlugin,
   screenshotDrawCanvasPlugin,
   screenshotDrawOnAppPlugin,
   screenshotPlugin,
