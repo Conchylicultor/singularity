@@ -17,6 +17,7 @@ import {
   MAX_CONNECTIONS,
   PG_DATA_DIR,
   PG_LOG_FILE,
+  PG_MIGRATING_SENTINEL,
   PG_PID_FILE,
   PG_PORT,
   PG_SOCKET_DIR,
@@ -149,9 +150,9 @@ export async function onReady(): Promise<void> {
   try {
     if (priorMigrationInProgress()) {
       throw new Error(
-        `Prior migration sentinel found at ~/.singularity/postgres/.migrating. ` +
+        `Prior migration sentinel found at ${PG_MIGRATING_SENTINEL}. ` +
           `A previous auto-migration from system PG did not complete. ` +
-          `Inspect logs, then remove the sentinel and ~/.singularity/postgres/data-pg18/ to retry.`,
+          `Inspect logs, then remove the sentinel and ${PG_DATA_DIR} to retry.`,
       );
     }
 
