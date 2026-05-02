@@ -1,4 +1,4 @@
-import { PluginErrorBoundary } from "@core";
+import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
   PaneMatchContext,
   useMatchForPath,

@@ -9,7 +9,7 @@ const SIDEBAR_GROUPS: Record<
 > = {
   System: { icon: MdTune },
 };
-import { PluginErrorBoundary } from "@core";
+import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { Shell as ShellCommands } from "../commands";
 import { Shell } from "../slots";

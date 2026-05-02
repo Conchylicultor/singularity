@@ -9,6 +9,7 @@
   - DB schema: `plugins/crashes/server/internal/schema.ts`
   - DB schema: `plugins/crashes/server/internal/tables.ts`
 - Exports (web):
+  - Types: `CrashContext`
   - Values: `report`
 - Exports (server):
   - Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `recordCrash`

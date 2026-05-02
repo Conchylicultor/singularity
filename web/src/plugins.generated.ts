@@ -87,6 +87,7 @@ import layoutsMillerPlugin from "@plugins/layouts/plugins/miller/web";
 import primitivesAutoScrollPlugin from "@plugins/primitives/plugins/auto-scroll/web";
 import primitivesAvatarPlugin from "@plugins/primitives/plugins/avatar/web";
 import primitivesEditableFieldPlugin from "@plugins/primitives/plugins/editable-field/web";
+import primitivesErrorBoundaryPlugin from "@plugins/primitives/plugins/error-boundary/web";
 import primitivesFileLinksPlugin from "@plugins/primitives/plugins/file-links/web";
 import primitivesLaunchPlugin from "@plugins/primitives/plugins/launch/web";
 import primitivesLiveStatePlugin from "@plugins/primitives/plugins/live-state/web";
@@ -203,6 +204,7 @@ export const plugins: PluginDefinition[] = [
   primitivesAutoScrollPlugin,
   primitivesAvatarPlugin,
   primitivesEditableFieldPlugin,
+  primitivesErrorBoundaryPlugin,
   primitivesFileLinksPlugin,
   primitivesLaunchPlugin,
   primitivesLiveStatePlugin,

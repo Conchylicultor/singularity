@@ -140,8 +140,9 @@ export default {
 
 ## Live state, networking, editable fields
 
-`@core` is the **framework** only — slots, commands, contributions, plugin context, error boundaries, and the `PluginDefinition` type. Cross-cutting client-side primitives live as plugins under [`plugins/primitives/`](../plugins/primitives/):
+`@core` is the **framework** only — slots, commands, contributions, plugin context, and the `PluginDefinition` type. Cross-cutting client-side primitives live as plugins under [`plugins/primitives/`](../plugins/primitives/):
 
+- `<PluginErrorBoundary>`, `ErrorBoundary.Action`, `registerBoundaryReporter` → `@plugins/primitives/plugins/error-boundary/web`
 - `useResource`, `NotificationsProvider`, `resourceDescriptor` → `@plugins/primitives/plugins/live-state/web` (and `…/shared` for plugin `shared/resources.ts` declarations)
 - `useReconnectingWebSocket`, `ReconnectingEventSource`, `SharedWebSocket`, `fetchWithRetry`, `subscribeWsStatus` → `@plugins/primitives/plugins/networking/web`
 - `useEditableField` → `@plugins/primitives/plugins/editable-field/web`
@@ -156,7 +157,6 @@ plugin-core/              # This package — framework primitives
 ├── slots.ts              # defineSlot(), Slot<P>, Core.Root
 ├── commands.ts           # defineCommand()
 ├── context.tsx           # PluginProvider, PluginRuntimeContext
-├── error-boundary.tsx    # PluginErrorBoundary, registerBoundaryReporter
 └── index.ts              # Barrel export
 
 plugins/

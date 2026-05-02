@@ -258,6 +258,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
     - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
     - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
+    - **`error-boundary`** — Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a registerBoundaryReporter() hook for opt-in crash reporting.
     - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable buttons that fire onFileOpen. Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides.
     - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
     - **`live-state`** [load-bearing] — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.

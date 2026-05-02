@@ -3,6 +3,7 @@ import { Core } from "@core";
 import { CrashReporter } from "./components/crash-reporter";
 
 export { report } from "./report";
+export type { CrashContext } from "./report";
 
 export default {
   id: "crashes",

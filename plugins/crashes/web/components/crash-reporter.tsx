@@ -1,11 +1,11 @@
 import { useEffect } from "react";
-import { registerBoundaryReporter } from "@core";
+import { registerBoundaryReporter } from "@plugins/primitives/plugins/error-boundary/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { report, type CrashReportResult } from "../report";
 
 // Effect-only Core.Root contribution. Installs window-level error + rejection
 // listeners and forwards to POST /api/crashes. React render errors come in
-// through the componentDidCatch hook in plugin-core/error-boundary.tsx.
+// through registerBoundaryReporter in the error-boundary primitive plugin.
 export function CrashReporter() {
   useEffect(() => {
     const announce = (errorType: string | null, message: string) =>

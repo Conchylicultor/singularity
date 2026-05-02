@@ -1,4 +1,5 @@
-import { PluginProvider, PluginErrorBoundary, Core } from "@core";
+import { PluginProvider, Core } from "@core";
+import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { NotificationsProvider } from "@plugins/primitives/plugins/live-state/web";
 import { plugins } from "./plugins";
 

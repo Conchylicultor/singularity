@@ -2,7 +2,6 @@ import { useContext } from "react";
 import { PluginRuntimeContext } from "./context";
 import type { Contribution } from "./types";
 import type { ComponentType } from "react";
-import type { BoundaryErrorReport } from "./error-boundary";
 
 export interface Slot<P> {
   (props: P): Contribution;
@@ -29,10 +28,4 @@ export function defineSlot<P>(id: string): Slot<P> {
 
 export const Core = {
   Root: defineSlot<{ component: ComponentType }>("core.root"),
-  CrashAction: defineSlot<{
-    component: ComponentType<{
-      report: BoundaryErrorReport;
-      taskId: string | null;
-    }>;
-  }>("core.crash-action"),
 };

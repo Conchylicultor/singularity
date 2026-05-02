@@ -7,7 +7,7 @@ import {
   MdMoreHoriz,
   MdOpenInFull,
 } from "react-icons/md";
-import { PluginErrorBoundary } from "@core";
+import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PaneMatchContext, type PaneObject } from "../pane";

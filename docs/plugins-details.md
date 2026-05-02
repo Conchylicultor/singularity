@@ -565,6 +565,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/crashes/server/internal/schema.ts`
     - DB schema: `plugins/crashes/server/internal/tables.ts`
   - Exports (web):
+    - Types: `CrashContext`
     - Values: `report`
   - Exports (server):
     - Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `recordCrash`
@@ -578,7 +579,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
       - Contributes:
-        - `Core.CrashAction` → `LaunchFixButton`
+        - `ErrorBoundary.Action` → `LaunchFixButton`
 
 - **`debug`** — Debug tools sidebar group.
   - Defines:
@@ -788,6 +789,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `EditableField`, `UseEditableFieldOptions`
         - Values: `useEditableField`
+    - **`error-boundary`** — Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a registerBoundaryReporter() hook for opt-in crash reporting.
+      - Defines:
+        - Slots: `ErrorBoundary.Action`
+      - Exports (web):
+        - Types: `BoundaryErrorReport`
+        - Values: `ErrorBoundary`, `PluginErrorBoundary`, `registerBoundaryReporter`
+      - Slot contributors: `launch-fix`
     - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable buttons that fire onFileOpen. Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides.
       - Exports (web):
         - Types: `FileLinkSegment`, `FileLinkTextProps`

@@ -1,5 +1,6 @@
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
-import { Core } from "./slots";
+import { ErrorBoundary } from "../slots";
+import { callReporter, type BoundaryErrorReport } from "../reporter";
 
 interface Props {
   slot?: string;
@@ -10,41 +11,6 @@ interface Props {
 interface State {
   error: Error | null;
   componentStack: string | null;
-}
-
-export interface BoundaryErrorReport {
-  error: Error;
-  componentStack: string | null;
-  slot: string | null;
-  label: string | null;
-}
-
-export interface BoundaryReportResult {
-  taskId: string | null;
-}
-
-type Reporter = (
-  r: BoundaryErrorReport,
-) => Promise<BoundaryReportResult | null | void> | void;
-
-// Registered by the `crashes` plugin at mount time. Module-level callback
-// avoids a hard import from plugin-core into a plugin; the reporter is
-// optional and best-effort. May return a Promise resolving to the recorded
-// crash's taskId so the fallback UI can offer task-scoped actions.
-let reporter: Reporter | null = null;
-
-export function registerBoundaryReporter(fn: Reporter | null): void {
-  reporter = fn;
-}
-
-function callReporter(
-  report: BoundaryErrorReport,
-): Promise<BoundaryReportResult | null | void> | void {
-  try {
-    return reporter?.(report);
-  } catch {
-    return undefined;
-  }
 }
 
 export class PluginErrorBoundary extends Component<Props, State> {
@@ -87,8 +53,8 @@ function CrashFallback({
   report: BoundaryErrorReport;
   retry: () => void;
 }) {
-  const actions = Core.CrashAction.useContributions();
-  const [taskId, setTaskId] = useState<string | null>(null);
+  const actions = ErrorBoundary.Action.useContributions();
+  const [context, setContext] = useState<unknown>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,13 +63,15 @@ function CrashFallback({
     const timer = setTimeout(() => {
       const result = callReporter(report);
       if (result && typeof (result as Promise<unknown>).then === "function") {
-        (result as Promise<BoundaryReportResult | null | void>)
+        (result as Promise<unknown>)
           .then((r) => {
-            if (!cancelled && r && r.taskId) setTaskId(r.taskId);
+            if (!cancelled) setContext(r ?? null);
           })
           .catch(() => {
             // Never throw from the error path.
           });
+      } else if (result !== undefined) {
+        setContext(result);
       }
     }, 0);
     return () => {
@@ -120,7 +88,7 @@ function CrashFallback({
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {actions.map((action, i) => {
           const Component = action.component;
-          return <Component key={i} report={report} taskId={taskId} />;
+          return <Component key={i} report={report} context={context} />;
         })}
         <button className="underline hover:no-underline" onClick={retry}>
           Retry

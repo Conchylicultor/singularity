@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MdAutoFixHigh } from "react-icons/md";
-import type { BoundaryErrorReport } from "@core";
+import type { BoundaryErrorReport } from "@plugins/primitives/plugins/error-boundary/web";
+import type { CrashContext } from "@plugins/crashes/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import {
   Popover,
@@ -10,14 +11,15 @@ import {
 
 export function LaunchFixButton({
   report,
-  taskId,
+  context,
 }: {
   report: BoundaryErrorReport;
-  taskId: string | null;
+  context: unknown;
 }) {
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
 
+  const taskId = (context as CrashContext | null)?.taskId ?? null;
   const disabled = taskId === null;
 
   return (

@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { Core } from "@core";
+import { ErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { LaunchFixButton } from "./components/launch-fix-button";
 
 export default {
@@ -7,5 +7,5 @@ export default {
   name: "Crashes: Launch fix agent",
   description:
     "Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.",
-  contributions: [Core.CrashAction({ component: LaunchFixButton })],
+  contributions: [ErrorBoundary.Action({ component: LaunchFixButton })],
 } satisfies PluginDefinition;

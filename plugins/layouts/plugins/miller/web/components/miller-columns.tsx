@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, type ReactNode } from "react";
-import { PluginErrorBoundary } from "@core";
+import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
   PaneMatchContext,
   type PaneMatch,
