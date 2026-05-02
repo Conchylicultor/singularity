@@ -75,7 +75,8 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - DB schema: `plugins/conversations/server/internal/tables-turn-completed-event.ts`
     - DB schema: `plugins/conversations/server/schema.ts`
   - Exports (web):
-    - Values: `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
+    - Types: `ConversationActionOpts`
+    - Values: `GonePageSchema`, `useConversation`, `useConversationAction`, `useConversationById`, `useConversations`
   - Exports (server):
     - Types: `Conversation`, `ConversationCreatedPayload`, `ConversationKind`, `ConversationModel`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`
     - Values: `afterTurn`, `conversationCreated`, `ConversationKindSchema`, `ConversationModelSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `databaseExists`, `deleteConversation`, `dropDatabase`, `findTranscriptPath`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `recentConversationsResource`, `resolveAttachmentRefs`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`
