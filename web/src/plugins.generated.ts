@@ -67,6 +67,7 @@ import conversationsConversationViewTurnSummaryPlugin from "@plugins/conversatio
 import conversationsConversationViewVscodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/vscode/web";
 import conversationsConversationViewPlugin from "@plugins/conversations/plugins/conversation-view/web";
 import conversationsConversationsViewGroupedPlugin from "@plugins/conversations/plugins/conversations-view/plugins/grouped/web";
+import conversationsConversationsViewHistoryPlugin from "@plugins/conversations/plugins/conversations-view/plugins/history/web";
 import conversationsConversationsViewQueuePlugin from "@plugins/conversations/plugins/conversations-view/plugins/queue/web";
 import conversationsConversationsViewPlugin from "@plugins/conversations/plugins/conversations-view/web";
 import conversationsSummaryPlugin from "@plugins/conversations/plugins/summary/web";
@@ -182,6 +183,7 @@ export const plugins: PluginDefinition[] = [
   conversationsConversationViewVscodePlugin,
   conversationsConversationViewPlugin,
   conversationsConversationsViewGroupedPlugin,
+  conversationsConversationsViewHistoryPlugin,
   conversationsConversationsViewQueuePlugin,
   conversationsConversationsViewPlugin,
   conversationsSummaryPlugin,

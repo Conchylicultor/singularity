@@ -200,7 +200,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
   - Imported by: `agents`, `conversation-category`, `conversation-progress`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
-  - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `grouped`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
+  - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `fork-conversation`, `fork-session`, `grouped`, `history`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
       - Defines:
@@ -497,7 +497,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Shell.Sidebar` "Conversations" → `ConversationList`
         - `Core.Root` → `ForkErrorWatcher`
         - `Core.Root` → `AutoLaunchWatcher`
-      - Slot contributors: `grouped`, `queue`
+      - Slot contributors: `grouped`, `history`, `queue`
       - Plugins:
         - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
           - Defines:
@@ -516,6 +516,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `DELETE /api/conversation-groups/:id`
             - `POST /api/conversation-groups/:id/members`
             - `DELETE /api/conversation-groups/members/:conversationId`
+        - **`history`** — All conversations in historical order of creation.
+          - Contributes:
+            - `ConversationsView.View` "History" → `HistoryView`
         - **`queue`** — Anki-style global priority queue of conversations awaiting user input. Top of the deck is what to do next; finishing a turn returns the conversation to position 2 so the top stays stable. Server side of the global Anki-style conversations queue: reorder route + onReady backfill of ranks for legacy rows.
           - Contributes:
             - `ConversationsView.View` "Queue" → `QueueView`
