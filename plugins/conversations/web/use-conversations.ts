@@ -33,10 +33,11 @@ export function useConversation(id: string): ConversationEntry | null {
   return [...active, ...recentGone, ...system].find((c) => c.id === id) ?? null;
 }
 
-// Point lookup by id. Hits `GET /api/conversations/:id` on demand and caches
-// per id — independent of `recentConversationsResource`, so it works for
+// Point lookup by id. Checks the live WS-backed resource first (real-time
+// updates for recent conversations), falling back to a one-shot fetch for
 // conversations older than the sidebar's bounded recent-gone window.
 export function useConversationById(id: string | null): ConversationEntry | null {
+  const liveConv = useConversation(id ?? "");
   const q = useQuery({
     queryKey: ["conversation", id],
     queryFn: async (): Promise<ConversationEntry | null> => {
@@ -45,8 +46,8 @@ export function useConversationById(id: string | null): ConversationEntry | null
       if (!res.ok) throw new Error(`Failed to fetch conversation ${id}: ${res.status}`);
       return ConversationSchema.parse(await res.json());
     },
-    enabled: id !== null,
+    enabled: id !== null && liveConv === null,
     staleTime: Infinity,
   });
-  return q.data ?? null;
+  return liveConv ?? q.data ?? null;
 }
