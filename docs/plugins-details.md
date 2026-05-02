@@ -667,6 +667,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `getHealth`, `waitForRestart`
   - Contributes:
     - `Core.Root` → `ReconnectWatcher`
+    - `Shell.Toolbar` (group `actions`) → `HealthDot`
   - Server:
     - `GET /api/health`
 

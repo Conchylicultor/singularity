@@ -9,6 +9,7 @@
   - Values: `getHealth`, `waitForRestart`
 - Contributes:
   - `Core.Root` → `ReconnectWatcher`
+  - `Shell.Toolbar` (group `actions`) → `HealthDot`
 - Server:
   - `GET /api/health`
 
