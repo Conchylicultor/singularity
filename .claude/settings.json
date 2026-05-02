@@ -7,37 +7,11 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Write|Edit|NotebookEdit",
+        "matcher": "Bash|Write|Edit|NotebookEdit|Agent",
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/guard-main-edits.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/guard-find.sh"
-          },
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/guard-migrations.sh"
-          },
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/guard-main-writes.sh"
-          }
-        ]
-      },
-      {
-        "matcher": "Agent",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/guard-agent-model.sh"
+            "command": "bun cli/src/guard.ts"
           }
         ]
       }
