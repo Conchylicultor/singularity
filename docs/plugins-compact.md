@@ -159,6 +159,8 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
 - **`conversations-recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
 
 - **`crashes`** — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
+  - Plugins:
+    - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
 
 - **`debug`** — Debug tools sidebar group.
   - Plugins:

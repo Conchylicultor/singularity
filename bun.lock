@@ -325,6 +325,10 @@
       "name": "@singularity/plugin-crashes",
       "version": "0.0.1",
     },
+    "plugins/crashes/plugins/launch-fix": {
+      "name": "@singularity/plugin-crashes-launch-fix",
+      "version": "0.0.1",
+    },
     "plugins/debug": {
       "name": "@singularity/plugin-debug",
       "version": "0.0.1",
@@ -1277,6 +1281,8 @@
     "@singularity/plugin-core": ["@singularity/plugin-core@workspace:plugin-core"],
 
     "@singularity/plugin-crashes": ["@singularity/plugin-crashes@workspace:plugins/crashes"],
+
+    "@singularity/plugin-crashes-launch-fix": ["@singularity/plugin-crashes-launch-fix@workspace:plugins/crashes/plugins/launch-fix"],
 
     "@singularity/plugin-debug": ["@singularity/plugin-debug@workspace:plugins/debug"],
 

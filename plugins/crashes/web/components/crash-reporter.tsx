@@ -51,7 +51,7 @@ export function CrashReporter() {
     window.addEventListener("unhandledrejection", onRejection);
 
     registerBoundaryReporter((r) => {
-      void report({
+      const promise = report({
         source: "react-boundary",
         errorType: r.error.name,
         message: r.error.message,
@@ -61,7 +61,9 @@ export function CrashReporter() {
         label: r.label,
         url: window.location.href,
         userAgent: navigator.userAgent,
-      }).then(announce(r.error.name, r.error.message));
+      });
+      void promise.then(announce(r.error.name, r.error.message));
+      return promise.then((result) => ({ taskId: result?.taskId ?? null }));
     });
 
     return () => {

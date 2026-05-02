@@ -561,6 +561,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Resources: `crashes` (push)
     - `POST /api/crashes`
   - Imported by: `conversations`
+  - Plugins:
+    - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
+      - Contributes:
+        - `Core.CrashAction` → `LaunchFixButton`
 
 - **`debug`** — Debug tools sidebar group.
   - Defines:
