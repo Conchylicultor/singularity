@@ -355,13 +355,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `conversations.findTranscriptPath`, `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
-          - Slot contributors: `assistant-text`, `assistant-tool-use`, `fork-session`, `summary`, `system`, `user-image`, `user-text`, `user-tool-result`
+          - Slot contributors: `assistant-text`, `assistant-thinking`, `assistant-tool-use`, `fork-session`, `summary`, `system`, `user-image`, `user-text`, `user-tool-result`
           - Plugins:
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `AssistantTextRow`
                 - `JsonlViewer.RowAction` → `MarkdownToggleAction`
                 - `JsonlViewer.RowAction` → `CopyAssistantTextAction`
+            - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
+              - Contributes:
+                - `JsonlViewer.EventRenderer` → `AssistantThinkingRow`
             - **`assistant-tool-use`** — Renders assistant tool-use events in the JSONL viewer.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `AssistantToolUseRow`

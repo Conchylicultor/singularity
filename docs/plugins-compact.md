@@ -126,6 +126,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
           - Plugins:
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
+            - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
             - **`assistant-tool-use`** — Renders assistant tool-use events in the JSONL viewer.
             - **`summary`** — Renders summary separator events in the JSONL viewer.
             - **`system`** — Renders system events in the JSONL viewer.

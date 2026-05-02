@@ -67,6 +67,7 @@ async function pushTextWithImages(text: string, at: string, out: JsonlEvent[]): 
 interface RawBlock {
   type?: string;
   text?: string;
+  thinking?: string;
   id?: string;
   name?: string;
   input?: unknown;
@@ -213,7 +214,14 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
         usageAttributedMsgIds.add(msgId);
       };
       for (const block of msg.content as RawBlock[]) {
-        if (block?.type === "text" && typeof block.text === "string") {
+        if (block?.type === "thinking" && typeof block.thinking === "string") {
+          events.push({
+            kind: "assistant-thinking",
+            at: ts,
+            messageId: msgId,
+            thinking: block.thinking,
+          });
+        } else if (block?.type === "text" && typeof block.text === "string") {
           if (msgId) {
             const existing = assistantTextByMsgId.get(msgId);
             if (existing) {

@@ -36,6 +36,12 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     isError: z.boolean().optional(),
   }),
   z.object({
+    kind: z.literal("assistant-thinking"),
+    at: z.string(),
+    messageId: z.string().optional(),
+    thinking: z.string(),
+  }),
+  z.object({
     kind: z.literal("assistant-text"),
     at: z.string(),
     messageId: z.string().optional(),
