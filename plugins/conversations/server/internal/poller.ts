@@ -6,6 +6,7 @@ import {
   recentConversationsResource,
 } from "@plugins/tasks-core/server";
 import { recordCrash } from "@plugins/crashes/server";
+import { isMain } from "@plugins/infra/plugins/paths/server";
 import { Runtime, type RuntimeInfo } from "./runtime";
 import { findTranscriptPath } from "./claude-transcript";
 import type { ConversationStatus } from "../../shared";
@@ -66,23 +67,29 @@ async function tick(): Promise<void> {
   ]);
   const dbById = new Map(rows.map((r) => [r.id, r]));
 
-  // Adopt orphans: live sessions with no DB row.
-  const orphans = [...next.keys()].filter((id) => !dbById.has(id));
-  if (orphans.length > 0) {
-    for (const id of orphans) {
-      const live = next.get(id)!;
-      if (live.dead) continue;
-      if (!live.worktreePath) continue;
-      const adopted = await adoptOrphanConversation({
-        id,
-        worktreePath: live.worktreePath,
-        runtimeId: live.runtime,
-        status: liveStatusFor(live),
-        title: live.title || null,
-      });
-      if (adopted) {
-        dbById.set(adopted.id, adopted);
-        changed = true;
+  // Adopt orphans: live sessions with no DB row. Main-only: tmux is global
+  // (one server per host), so every worktree's poller sees every other
+  // worktree's sessions. Without this guard, each non-main worktree's DB
+  // would phantom-clone every conversation it didn't spawn into its own
+  // task/attempt/conversation rows.
+  if (isMain()) {
+    const orphans = [...next.keys()].filter((id) => !dbById.has(id));
+    if (orphans.length > 0) {
+      for (const id of orphans) {
+        const live = next.get(id)!;
+        if (live.dead) continue;
+        if (!live.worktreePath) continue;
+        const adopted = await adoptOrphanConversation({
+          id,
+          worktreePath: live.worktreePath,
+          runtimeId: live.runtime,
+          status: liveStatusFor(live),
+          title: live.title || null,
+        });
+        if (adopted) {
+          dbById.set(adopted.id, adopted);
+          changed = true;
+        }
       }
     }
   }

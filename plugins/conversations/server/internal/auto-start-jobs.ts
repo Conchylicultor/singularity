@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { isMain } from "@plugins/infra/plugins/paths/server";
 import {
   claimAutoStart,
   getTask,
@@ -23,6 +24,12 @@ export const maybeLaunchTaskJob = defineJob({
   input: z.object({ taskId: z.string() }),
   event: z.never(),
   run: async ({ input: { taskId } }) => {
+    // Main-only: a forked sub-worktree DB inherits the autoStart marker and
+    // taskStatusChanged triggers from main at fork time, so the same job
+    // would fire independently in every worktree's worker — each calling
+    // createConversation against its own DB and producing a parallel tmux
+    // session. CAS protects within a single DB, not across forks.
+    if (!isMain()) return;
     const t = await getTask(taskId);
     if (!t) {
       console.warn(

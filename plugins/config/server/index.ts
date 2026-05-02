@@ -5,7 +5,7 @@ import { configResource } from "./internal/resource";
 import { configSecretsResource } from "./internal/secrets-resource";
 import { buildRegistry } from "./internal/registry";
 import { migratePlaintextSecretsToSecretStore } from "./internal/migrate-secrets";
-import { isMain } from "./internal/paths";
+import { isMain } from "@plugins/infra/plugins/paths/server";
 import {
   handleDelete,
   handleGet,

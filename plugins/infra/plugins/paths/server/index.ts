@@ -12,6 +12,8 @@ export {
   CRASHES_DIR,
   CLAUDE_PROJECTS_DIR,
   CLAUDE_SESSIONS_DIR,
+  MAIN_WORKTREE_NAME,
+  isMain,
 } from "./internal/paths";
 
 export { GIT, PGREP, CLAUDE, TMUX } from "./internal/bins";

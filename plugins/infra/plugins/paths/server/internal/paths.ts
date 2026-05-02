@@ -1,6 +1,12 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 
+export const MAIN_WORKTREE_NAME  = "singularity";
+
+export function isMain(): boolean {
+  return process.env.SINGULARITY_WORKTREE === MAIN_WORKTREE_NAME;
+}
+
 export const HOME_DIR             = homedir();
 export const SINGULARITY_DIR     = join(HOME_DIR, ".singularity");
 export const BACKUPS_DIR         = join(HOME_DIR, ".backups/singularity");
