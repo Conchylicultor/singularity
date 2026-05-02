@@ -52,6 +52,7 @@ import primitivesRankPlugin from "@plugins/primitives/plugins/rank/server";
 import publishPlugin from "@plugins/publish/server";
 import screenshotPlugin from "@plugins/screenshot/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
+import statsCostPlugin from "@plugins/stats/plugins/cost/server";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/server";
 import tasksCorePlugin from "@plugins/tasks-core/server";
 import tasksPlugin from "@plugins/tasks/server";
@@ -104,6 +105,7 @@ export const plugins: ServerPluginDefinition[] = [
   publishPlugin,
   screenshotPlugin,
   statsCommitsPlugin,
+  statsCostPlugin,
   statsTasksPlugin,
   tasksCorePlugin,
   tasksPlugin,

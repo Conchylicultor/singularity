@@ -106,6 +106,7 @@ import screenshotDrawOnAppPlugin from "@plugins/screenshot/plugins/draw-on-app/w
 import screenshotPlugin from "@plugins/screenshot/web";
 import shellPlugin from "@plugins/shell/web";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/web";
+import statsCostPlugin from "@plugins/stats/plugins/cost/web";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/web";
 import statsPlugin from "@plugins/stats/web";
 import tasksTaskAttachmentsPlugin from "@plugins/tasks/plugins/task-attachments/web";
@@ -223,6 +224,7 @@ export const plugins: PluginDefinition[] = [
   screenshotPlugin,
   shellPlugin,
   statsCommitsPlugin,
+  statsCostPlugin,
   statsTasksPlugin,
   statsPlugin,
   tasksTaskAttachmentsPlugin,

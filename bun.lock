@@ -542,6 +542,13 @@
       "name": "@singularity/plugin-stats-commits",
       "version": "0.0.1",
     },
+    "plugins/stats/plugins/cost": {
+      "name": "@singularity/plugin-stats-cost",
+      "version": "0.0.1",
+      "dependencies": {
+        "ccusage": "^18.0.11",
+      },
+    },
     "plugins/stats/plugins/tasks": {
       "name": "@singularity/plugin-stats-tasks",
       "version": "0.0.1",
@@ -1413,6 +1420,8 @@
 
     "@singularity/plugin-stats-commits": ["@singularity/plugin-stats-commits@workspace:plugins/stats/plugins/commits"],
 
+    "@singularity/plugin-stats-cost": ["@singularity/plugin-stats-cost@workspace:plugins/stats/plugins/cost"],
+
     "@singularity/plugin-stats-tasks": ["@singularity/plugin-stats-tasks@workspace:plugins/stats/plugins/tasks"],
 
     "@singularity/plugin-tasks": ["@singularity/plugin-tasks@workspace:plugins/tasks"],
@@ -1674,6 +1683,8 @@
     "caniuse-lite": ["caniuse-lite@1.0.30001787", "", {}, "sha512-mNcrMN9KeI68u7muanUpEejSLghOKlVhRqS/Za2IeyGllJ9I9otGpR9g3nsw7n4W378TE/LyIteA0+/FOZm4Kg=="],
 
     "ccount": ["ccount@2.0.1", "", {}, "sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg=="],
+
+    "ccusage": ["ccusage@18.0.11", "", { "bin": { "ccusage": "dist/index.js" } }, "sha512-QIFCY2gh06vjWelND1gDwJxrniAcNkPw0OHUhz985iE7FIEf738YVzxUKQMKhA2fO9CIJCz0dSpnyIufaKdjdA=="],
 
     "chai": ["chai@6.2.2", "", {}, "sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg=="],
 

@@ -821,7 +821,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `TypeMarker`
         - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneDepthContext`, `PaneHistoryButtons`, `PaneIconAction`, `PaneLevel`, `PaneMatchContext`, `PaneRouter`, `type`, `useCurrentPane`, `useMatchForPath`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `publish`, `queue`, `review`, `screenshot`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `task-file-peek`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `publish`, `queue`, `review`, `screenshot`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `task-file-peek`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
       - Exports (web):
         - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `PromptEditor`, `rewriteAttachmentMarkdown`
@@ -905,7 +905,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Pane.Register` `stats` (path `/stats`)
     - `Shell.Sidebar` "Stats" (group `System`)
     - `statsPane.open`
-  - Slot contributors: `commits`, `tasks`
+  - Slot contributors: `commits`, `cost`, `tasks`
   - Plugins:
     - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
       - Defines:
@@ -925,7 +925,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `GET /api/stats/commits/excluded-path-state`
         - `PATCH /api/stats/commits/excluded-path-state`
         - `DELETE /api/stats/commits/excluded-path-state/:path`
-      - Endpoint callers: `tasks`
+      - Endpoint callers: `cost`, `tasks`
+    - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, sourced from ccusage.
+      - Exports (web):
+        - Values: `costConvSidePane`
+      - Contributes:
+        - `Pane.Register` `stats-cost-conv-side` (path `c/:sideConvId`)
+        - `Stats.Chart` "Cost & tokens — summary" → `CostKpis`
+        - `Stats.Chart` "Daily cost by model" → `DailyCostChart`
+        - `Stats.Chart` "Cumulative cost over time" → `CumulativeCostChart`
+        - `Stats.Chart` "Token mix per day" → `TokenMixChart`
+        - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
+      - Server:
+        - Uses: `tasks-core._conversations`
+        - `GET /api/stats/cost/daily`
+        - `GET /api/stats/cost/cumulative`
+        - `GET /api/stats/cost/token-mix`
+        - `GET /api/stats/cost/totals`
+        - `GET /api/stats/cost/sessions`
     - **`tasks`** — Task-based stats: active (open) tasks over time.
       - Contributes:
         - `Stats.Chart` "Active tasks over time" → `TasksCumulativeChart`
@@ -1020,7 +1037,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Register: `pushLanded`, `taskStatusChanged`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `active-data`, `agents`, `allow-monitor`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
+  - Imported by: `active-data`, `agents`, `allow-monitor`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):
