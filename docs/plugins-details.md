@@ -956,7 +956,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Stats.Chart` "Cost & Tokens" → `CostSection`
         - `Stats.Chart` "Token mix per day" → `TokenMixChart`
         - `Stats.Chart` "Cost distribution per conversation" → `CostDistributionChart`
-        - `Stats.Chart` "Sessions per day by model family" → `ModelUsageChart`
         - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
       - Server:
         - Uses: `tasks-core._conversations`

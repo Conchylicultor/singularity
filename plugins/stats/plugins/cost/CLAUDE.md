@@ -26,7 +26,6 @@ fetch URL so `useFetchJson` re-fetches when the toggle flips.
   - `Stats.Chart` "Cost & Tokens" → `CostSection`
   - `Stats.Chart` "Token mix per day" → `TokenMixChart`
   - `Stats.Chart` "Cost distribution per conversation" → `CostDistributionChart`
-  - `Stats.Chart` "Sessions per day by model family" → `ModelUsageChart`
   - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
 - Server:
   - Uses: `tasks-core._conversations`

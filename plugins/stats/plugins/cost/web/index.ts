@@ -5,7 +5,6 @@ import { Stats } from "@plugins/stats/web";
 import { costConfig } from "../shared/config";
 import { CostDistributionChart } from "./components/cost-distribution-chart";
 import { CostSection } from "./components/cost-section";
-import { ModelUsageChart } from "./components/model-usage-chart";
 import { TokenMixChart } from "./components/token-mix-chart";
 import { TopConversationsTable } from "./components/top-conversations-table";
 import { costConvSidePane } from "./panes";
@@ -34,11 +33,6 @@ export default {
       id: "cost-distribution",
       title: "Cost distribution per conversation",
       component: CostDistributionChart,
-    }),
-    Stats.Chart({
-      id: "cost-model-usage",
-      title: "Sessions per day by model family",
-      component: ModelUsageChart,
     }),
     Stats.Chart({
       id: "cost-top-conversations",
