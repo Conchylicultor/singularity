@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { findNextRankUnder } from "../queries/tasks";
 import { CONVERSATIONS_META_TASK_ID } from "./tasks";
 import { tasksResource, attemptsResource, recentConversationsResource } from "../resources";
+import path from "path";
 
 export interface AdoptOrphanInput {
   id: string;
@@ -20,18 +21,18 @@ export interface AdoptOrphanInput {
 //
 // `input.id` is forced to be the conversation id because the poller matches
 // live tmux sessions to DB rows by id (the tmux session name is fixed once
-// spawned). Task and attempt rows get fresh ids — there is no semantic reason
-// for them to alias the conversation id, and the prior aliasing was the root
-// of the "attempt id == conversation id" confusion.
+// spawned). The attempt id is derived from the worktree basename so that
+// `basename(attempt.worktreePath) === attempt.id` — the invariant the rest of
+// the system relies on (e.g. the "Open app" button).
 const TASK_PREFIX = "task";
-const ATTEMPT_PREFIX = "att";
-const newId = (prefix: string) =>
-  `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const newTaskId = () =>
+  `${TASK_PREFIX}-${Math.floor(Date.now() / 1000)}-${Math.random().toString(36).slice(2, 6)}`;
 
 export async function adoptOrphanConversation(input: AdoptOrphanInput) {
   let inserted = false;
-  const taskId = newId(TASK_PREFIX);
-  const attemptId = newId(ATTEMPT_PREFIX);
+  const taskId = newTaskId();
+  // Derive attempt id from the worktree directory name so basename(worktreePath) === attemptId.
+  const attemptId = path.basename(input.worktreePath);
   await db.transaction(async (tx) => {
     const rank = await findNextRankUnder(CONVERSATIONS_META_TASK_ID, tx);
     await tx
