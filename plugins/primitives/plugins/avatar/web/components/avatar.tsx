@@ -37,7 +37,7 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
       ref={ref}
       title={title}
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center rounded-full text-white",
+        "relative inline-flex shrink-0 items-center justify-center rounded-full",
         sz.box,
         bg,
         className,

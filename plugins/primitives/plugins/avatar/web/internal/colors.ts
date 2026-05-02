@@ -1,18 +1,17 @@
-// Full-saturation Tailwind hues for filled avatar discs. Keys are aligned
-// with the conversation-category palette so the two systems read consistently
-// even though they don't share the file (avatars are filled, chips are muted).
+// Soft pastel hues for avatar discs — light bg + matching dark text (light mode),
+// muted dark bg + light text (dark mode). Keys align with the conversation-category palette.
 
 export const AVATAR_COLORS = {
-  sky: "bg-sky-500",
-  emerald: "bg-emerald-500",
-  amber: "bg-amber-500",
-  rose: "bg-rose-500",
-  violet: "bg-violet-500",
-  indigo: "bg-indigo-500",
-  teal: "bg-teal-500",
-  pink: "bg-pink-500",
-  orange: "bg-orange-500",
-  slate: "bg-slate-500",
+  sky: "bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300",
+  emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300",
+  amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300",
+  rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300",
+  violet: "bg-violet-100 text-violet-700 dark:bg-violet-900/60 dark:text-violet-300",
+  indigo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300",
+  teal: "bg-teal-100 text-teal-700 dark:bg-teal-900/60 dark:text-teal-300",
+  pink: "bg-pink-100 text-pink-700 dark:bg-pink-900/60 dark:text-pink-300",
+  orange: "bg-orange-100 text-orange-700 dark:bg-orange-900/60 dark:text-orange-300",
+  slate: "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300",
 } as const;
 
 export type AvatarColor = keyof typeof AVATAR_COLORS;
