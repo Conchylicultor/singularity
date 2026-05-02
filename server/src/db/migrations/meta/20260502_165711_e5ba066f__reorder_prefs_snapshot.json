@@ -1,6 +1,6 @@
 {
-  "id": "82f24df0-385b-4f43-b713-2122a7c5856b",
-  "prevId": "24f91888-f5b8-4a6f-b80d-3e9543213d61",
+  "id": "8749c2f8-306e-44a8-bcd6-caf4b8416053",
+  "prevId": "f3ef6f1c-80d7-46d3-96b0-6aa4e23c60c1",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -193,8 +193,27 @@
           "primaryKey": false,
           "notNull": false
         },
+        "icon": {
+          "name": "icon",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "icon_color": {
+          "name": "icon_color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "expanded": {
           "name": "expanded",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "auto_launch": {
+          "name": "auto_launch",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -2826,8 +2845,27 @@
           "primaryKey": false,
           "notNull": false
         },
+        "icon": {
+          "name": "icon",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "icon_color": {
+          "name": "icon_color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "expanded": {
           "name": "expanded",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "auto_launch": {
+          "name": "auto_launch",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -2854,7 +2892,7 @@
           "default": "now()"
         }
       },
-      "definition": "select \"id\", \"parent_id\", \"name\", \"description\", \"prompt\", \"model\", \"expanded\", \"rank\", \"created_at\", \"updated_at\", (\"prompt\" IS NULL) as \"is_folder\" from \"agents\"",
+      "definition": "select \"id\", \"parent_id\", \"name\", \"description\", \"prompt\", \"model\", \"icon\", \"icon_color\", \"expanded\", \"auto_launch\", \"rank\", \"created_at\", \"updated_at\", (\"prompt\" IS NULL) as \"is_folder\" from \"agents\"",
       "name": "agents_v",
       "schema": "public",
       "isExisting": false,

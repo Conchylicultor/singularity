@@ -16,6 +16,7 @@ import configPlugin from "@plugins/config/server";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
 import conversationsConversationCategoryPlugin from "@plugins/conversations/plugins/conversation-category/server";
 import conversationsConversationProgressPlugin from "@plugins/conversations/plugins/conversation-progress/server";
+import conversationsConversationViewAllowMonitorPlugin from "@plugins/conversations/plugins/conversation-view/plugins/allow-monitor/server";
 import conversationsConversationViewCodeReviewPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/server";
 import conversationsConversationViewCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import conversationsConversationViewCommitsGraphPlugin from "@plugins/conversations/plugins/conversation-view/plugins/commits-graph/server";
@@ -48,9 +49,11 @@ import infraJobsPlugin from "@plugins/infra/plugins/jobs/server";
 import infraMcpPlugin from "@plugins/infra/plugins/mcp/server";
 import infraPlugin from "@plugins/infra/server";
 import primitivesRankPlugin from "@plugins/primitives/plugins/rank/server";
+import publishPlugin from "@plugins/publish/server";
 import reorderPlugin from "@plugins/reorder/server";
 import screenshotPlugin from "@plugins/screenshot/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
+import statsCostPlugin from "@plugins/stats/plugins/cost/server";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/server";
 import tasksCorePlugin from "@plugins/tasks-core/server";
 import tasksPlugin from "@plugins/tasks/server";
@@ -67,6 +70,7 @@ export const plugins: ServerPluginDefinition[] = [
   conversationsRecoverPlugin,
   conversationsConversationCategoryPlugin,
   conversationsConversationProgressPlugin,
+  conversationsConversationViewAllowMonitorPlugin,
   conversationsConversationViewCodeReviewPlugin,
   conversationsConversationViewCodePlugin,
   conversationsConversationViewCommitsGraphPlugin,
@@ -99,9 +103,11 @@ export const plugins: ServerPluginDefinition[] = [
   infraMcpPlugin,
   infraPlugin,
   primitivesRankPlugin,
+  publishPlugin,
   reorderPlugin,
   screenshotPlugin,
   statsCommitsPlugin,
+  statsCostPlugin,
   statsTasksPlugin,
   tasksCorePlugin,
   tasksPlugin,

@@ -246,7 +246,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Slot contributors: `agents`, `conversation-category`, `conversation-progress`
     - **`conversation-view`** — Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
       - Defines:
-        - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`, `Conversation.AbovePromptInput`, `Conversation.TitlePrefix`
+        - Slots: `Conversation.PromptInput`, `Conversation.TitlePrefix`
       - Exports (web):
         - Types: `ConversationRecord`, `PromptDraft`
         - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `PromptDraftProvider`, `usePromptDraft`
@@ -256,8 +256,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Slot contributors: `agents`, `attempt-view`, `code`, `commits-graph`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `push-counter`, `quick-prompts`, `resume`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
-          - Defines:
-            - Slots: `Conversation.ActionBar`
           - Exports (web):
             - Values: `ActionBarView`, `Conversation`
         - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
@@ -866,6 +864,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - `GET /api/publish/tree`
 
+- **`reorder`** — Generic reorder primitive. Slot owners opt in via Reorder.area; hosts render with Reorder.useArea. Generic reorder primitive: per-worktree storage of slot contribution ranks.
+  - Defines:
+    - DB schema: `plugins/reorder/server/internal/tables.ts`
+    - DB schema: `plugins/reorder/server/schema.ts`
+  - Exports (web):
+    - Types: `HostOverride`, `ReorderableSlot`, `ReorderConfig`, `UseAreaResult`
+    - Values: `Reorder`, `setEditMode`, `useEditMode`
+  - Exports (server):
+    - Values: `_reorderPrefs`, `reorderPrefsResource`
+  - Exports (shared):
+    - Types: `ReorderSlotPrefs`
+    - Values: `reorderPrefsResource`, `ReorderSlotPrefsSchema`
+  - Server:
+    - `GET /api/reorder/:slotId`
+    - `PATCH /api/reorder/:slotId`
+  - Plugins:
+    - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
+      - Contributes:
+        - `Shell.Toolbar` (group `actions`) → `PenButton`
+        - `Core.Root` → `EscHandler`
+
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Exports (web):
     - Values: `captureApp`, `screenshotPane`
@@ -887,14 +906,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`shell`** — Foundational app layout; defines the slots and commands most other plugins extend.
   - Defines:
-    - Slots: `Shell.Sidebar`, `Shell.Toolbar`
     - Commands: `Shell.Toast`
   - Exports (web):
     - Types: `ToastArgs`, `ToastVariant`
     - Values: `Shell`, `ShellCommands`
   - Contributes:
     - `Core.Root` → `ShellLayout`
-  - Slot contributors: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `debug`, `draw-on-app`, `improve`, `publish`, `screenshot`, `stats`, `task-detail`, `theme`, `worktree-switcher`
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Defines:

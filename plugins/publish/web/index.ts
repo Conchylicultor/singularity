@@ -14,6 +14,7 @@ export default {
   contributions: [
     Pane.Register({ pane: publishPane }),
     Shell.Sidebar({
+      id: "publish",
       title: "Publish",
       icon: MdPublish,
       group: "System",

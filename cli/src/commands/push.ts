@@ -300,6 +300,8 @@ export function registerPush(program: Command) {
           [
             `Rebase of ${branch} onto main failed (aborted).`,
             ``,
+            `Conflicts during this rebase are routine when main has moved — resolve them yourself, don't bail out.`,
+            ``,
             `To resolve:`,
             `  1. git fetch origin main`,
             `  2. git rebase origin/main     (NEVER 'git merge' — push re-rebases and a merge commit produces churn)`,

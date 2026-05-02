@@ -288,6 +288,24 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
 
 - **`publish`** — Review the worktree's plugin tree before publishing to the marketplace. Read-only review surface for the marketplace publish flow. Walks the worktree's plugin tree and exposes it as a flat tree.
 
+- **`reorder`** [load-bearing] — Generic reorder primitive. Slot owners opt in via Reorder.area; hosts render with Reorder.useArea. Generic reorder primitive: per-worktree storage of slot contribution ranks.
+  - Defines:
+    - DB schema: `plugins/reorder/server/internal/tables.ts`
+    - DB schema: `plugins/reorder/server/schema.ts`
+  - Exports (web):
+    - Types: `HostOverride`, `ReorderableSlot`, `ReorderConfig`, `UseAreaResult`
+    - Values: `Reorder`, `setEditMode`, `useEditMode`
+  - Exports (server):
+    - Values: `_reorderPrefs`, `reorderPrefsResource`
+  - Exports (shared):
+    - Types: `ReorderSlotPrefs`
+    - Values: `reorderPrefsResource`, `ReorderSlotPrefsSchema`
+  - Server:
+    - `GET /api/reorder/:slotId`
+    - `PATCH /api/reorder/:slotId`
+  - Plugins:
+    - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
+
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Plugins:
     - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.
@@ -295,14 +313,12 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
 
 - **`shell`** [load-bearing] — Foundational app layout; defines the slots and commands most other plugins extend.
   - Defines:
-    - Slots: `Shell.Sidebar`, `Shell.Toolbar`
     - Commands: `Shell.Toast`
   - Exports (web):
     - Types: `ToastArgs`, `ToastVariant`
     - Values: `Shell`, `ShellCommands`
   - Contributes:
     - `Core.Root` → `ShellLayout`
-  - Slot contributors: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `debug`, `draw-on-app`, `improve`, `publish`, `screenshot`, `stats`, `task-detail`, `theme`, `worktree-switcher`
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Plugins:
