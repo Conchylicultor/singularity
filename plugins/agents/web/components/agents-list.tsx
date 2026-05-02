@@ -6,6 +6,10 @@ import {
   type TreeItem,
 } from "@plugins/primitives/plugins/tree/web";
 import type { TreeNode } from "@plugins/primitives/plugins/tree/shared";
+import {
+  AVATAR_ICON_KEYS,
+  AVATAR_COLOR_KEYS,
+} from "@plugins/primitives/plugins/avatar/web";
 import { agentsResource } from "../../shared/resources";
 import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";
@@ -32,6 +36,10 @@ async function patchAgent(id: string, patch: AgentPatch) {
   });
 }
 
+function randomFrom<T>(arr: readonly T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)] as T;
+}
+
 async function createAgentRow(args: {
   parentId: string | null;
   rank?: string;
@@ -39,7 +47,13 @@ async function createAgentRow(args: {
   const res = await fetch("/api/agents", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...args, name: "New agent", prompt: "" }),
+    body: JSON.stringify({
+      ...args,
+      name: "New agent",
+      prompt: "",
+      icon: randomFrom(AVATAR_ICON_KEYS),
+      iconColor: randomFrom(AVATAR_COLOR_KEYS),
+    }),
   });
   if (!res.ok) return null;
   const agent = (await res.json()) as Agent;

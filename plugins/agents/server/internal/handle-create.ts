@@ -11,6 +11,8 @@ export async function handleCreate(req: Request): Promise<Response> {
     description?: string | null;
     prompt?: string | null;
     model?: string | null;
+    icon?: string | null;
+    iconColor?: string | null;
   };
   const id = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const parentId = body.parentId ?? null;
@@ -24,6 +26,8 @@ export async function handleCreate(req: Request): Promise<Response> {
       description: body.description ?? null,
       prompt: body.prompt ?? null,
       model: body.model ?? null,
+      icon: body.icon ?? null,
+      iconColor: body.iconColor ?? null,
       rank,
     })
     .returning();
