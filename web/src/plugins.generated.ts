@@ -6,7 +6,9 @@
 // `plugins-registry-in-sync` check fails on drift.
 
 import type { PluginDefinition } from "@core";
+import activeDataAttemptPlugin from "@plugins/active-data/plugins/attempt/web";
 import activeDataConvPlugin from "@plugins/active-data/plugins/conv/web";
+import activeDataTaskLinkPlugin from "@plugins/active-data/plugins/task-link/web";
 import activeDataTaskPlugin from "@plugins/active-data/plugins/task/web";
 import activeDataPlugin from "@plugins/active-data/web";
 import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/plugins/toggle/web";
@@ -126,7 +128,9 @@ import welcomePlugin from "@plugins/welcome/web";
 import worktreeSwitcherPlugin from "@plugins/worktree-switcher/web";
 
 export const plugins: PluginDefinition[] = [
+  activeDataAttemptPlugin,
   activeDataConvPlugin,
+  activeDataTaskLinkPlugin,
   activeDataTaskPlugin,
   activeDataPlugin,
   agentsAutoLaunchTogglePlugin,

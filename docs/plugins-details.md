@@ -20,8 +20,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `tasks-core._conversations`
     - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
     - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
-  - Slot contributors: `conv`, `task`
+  - Slot contributors: `attempt`, `conv`, `task`, `task-link`
   - Plugins:
+    - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed.
+      - Exports (web):
+        - Values: `AttemptChip`
+      - Contributes:
+        - `ActiveData.Tag` `ATTEMPT_ID_RE` → `AttemptChip`
     - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.
       - Exports (web):
         - Values: `ConvChip`
@@ -30,6 +35,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
       - Contributes:
         - `ActiveData.Tag` → `TaskCard`
+    - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed.
+      - Exports (web):
+        - Values: `TaskLinkChip`
+      - Contributes:
+        - `ActiveData.Tag` `TASK_ID_RE` → `TaskLinkChip`
 
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
   - Defines:
