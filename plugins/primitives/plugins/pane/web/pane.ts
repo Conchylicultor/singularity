@@ -73,6 +73,17 @@ export interface PaneInternal {
   fullPath: string;
   component: ComponentType;
   chrome: NormalizedChrome;
+  /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
+  width?: number;
+  /**
+   * Optional component that loads the pane's `provides` data and renders
+   * `<thisPane.Provider value={data}>{children}</thisPane.Provider>` so
+   * descendant panes can read it via `pane.useData()`. Layout renderers
+   * (e.g. Miller) compose the chain's `provide` components above the chain
+   * body so sibling columns share ancestor data even though they're not
+   * nested in the React tree.
+   */
+  provide?: ComponentType<{ children: ReactNode }>;
   dataContext: ReturnType<typeof createContext<unknown>>;
   actionsSlot: Slot<{ component: ComponentType; position?: "left" | "right" }>;
 }
@@ -403,6 +414,22 @@ interface DefineArgs<Path extends string, Provides, ParentParams> {
   component: ComponentType;
   provides?: TypeMarker<Provides>;
   chrome?: PaneChromeConfig<ParentParams & InferParams<Path>> | false;
+  /**
+   * Default column width in pixels. Read by layout renderers (e.g. Miller
+   * columns). The leaf column ignores this and flex-grows. Defaults to 400.
+   */
+  width?: number;
+  /**
+   * Component that loads the pane's `provides` data and wraps children in
+   * `<thisPane.Provider value={data}>`. Required when `provides` is set if
+   * descendant panes will read via `useData()` — Miller renders sibling
+   * columns rather than nesting them, so the wrapper is composed at the
+   * chain level (not from inside the pane's own component).
+   *
+   * When data is still loading, return a loading element to suspend the
+   * chain render; once loaded, render the Provider with children.
+   */
+  provide?: ComponentType<{ children: ReactNode }>;
 }
 
 function define<
@@ -435,6 +462,8 @@ function define<
     fullPath,
     component: args.component,
     chrome: normalizeChrome(args.chrome),
+    width: args.width,
+    provide: args.provide,
     dataContext,
     actionsSlot,
   };

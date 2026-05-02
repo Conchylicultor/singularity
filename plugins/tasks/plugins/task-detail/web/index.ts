@@ -10,8 +10,8 @@ import {
 
 export { TaskDetail as TaskDetailSlots } from "./slots";
 export {
-  TaskDetailFilePeekProvider,
-  useTaskDetailFilePeek,
+  TaskFileOpenProvider,
+  useTaskFileOpen,
   useFlushAll,
   useRegisterFlush,
 } from "./context";
@@ -22,7 +22,7 @@ export default {
   id: "task-detail",
   name: "Task Detail",
   description:
-    "Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section,SidePanel} slots and the file-peek + flush-registry context that section sub-plugins share.",
+    "Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.",
   contributions: [
     Pane.Register({ pane: tasksRootPane }),
     Pane.Register({ pane: taskDetailPane }),

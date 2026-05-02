@@ -1,13 +1,12 @@
 import type { ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Outlet, Pane, PaneChrome, type, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
-import { conversationPane, ConversationView } from "@plugins/conversations/plugins/conversation-view/web";
-import { AgentSideBody } from "./components/agent-side-body";
+import { Pane, PaneChrome, type, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
+  conversationPane,
+  ConversationProvide,
+  ConversationView,
+} from "@plugins/conversations/plugins/conversation-view/web";
+import { AgentSideBody } from "./components/agent-side-body";
 import { agentsResource, type Agent } from "../shared/resources";
 import { Agents as AgentsSlots } from "./slots";
 import { AgentsList } from "./components/agents-list";
@@ -18,8 +17,9 @@ export const agentsRootPane = Pane.define({
   id: "agents-root",
   path: "/agents",
   component: AgentsRoot,
-  // Layout container — owns the full-viewport split, so no chrome of its own.
+  // No chrome; the agents list is its own UI.
   chrome: false,
+  width: 320,
 });
 
 export const agentDetailPane = Pane.define({
@@ -28,6 +28,7 @@ export const agentDetailPane = Pane.define({
   path: ":id",
   component: AgentDetailBody,
   provides: type<{ agent: Agent }>(),
+  width: 360,
 });
 
 export const agentConversationPane = Pane.define({
@@ -66,38 +67,20 @@ function AgentsRoot(): ReactElement {
   const selectedSystemId = match?.chain.find(
     (e) => e.pane === systemAgentDetailPane._internal,
   )?.params.systemId;
-  const hasAgentSelected =
-    selectedUserId !== undefined || selectedSystemId !== undefined;
 
   return (
-    <div className="h-[calc(100svh-3rem)] min-h-0 overflow-hidden">
-      <ResizablePanelGroup orientation="horizontal" className="h-full">
-        <ResizablePanel defaultSize={25} minSize={15}>
-          <div className="h-full overflow-auto p-4">
-            <AgentsList
-              selectedId={selectedUserId}
-              selectedSystemId={selectedSystemId}
-            />
-            {lists.length > 0 && (
-              <div className="mt-6 flex flex-col gap-4">
-                {lists.map((l) => (
-                  <l.component key={l.id} />
-                ))}
-              </div>
-            )}
-          </div>
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={75} minSize={25}>
-          {hasAgentSelected ? (
-            <Outlet />
-          ) : (
-            <div className="text-muted-foreground flex h-full items-center justify-center p-6 text-sm">
-              Select an agent
-            </div>
-          )}
-        </ResizablePanel>
-      </ResizablePanelGroup>
+    <div className="h-full overflow-auto p-4">
+      <AgentsList
+        selectedId={selectedUserId}
+        selectedSystemId={selectedSystemId}
+      />
+      {lists.length > 0 && (
+        <div className="mt-6 flex flex-col gap-4">
+          {lists.map((l) => (
+            <l.component key={l.id} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -107,11 +90,6 @@ function AgentDetailBody(): ReactElement {
   const { data } = useResource(agentsResource);
   const agent = data?.find((a: Agent) => a.id === id) ?? null;
   const views = AgentsSlots.View.useContributions();
-
-  const match = usePaneMatch();
-  const hasConv = match?.chain.some(
-    (e) => e.pane === agentConversationPane._internal,
-  );
 
   const body = (
     <div className="h-full overflow-auto">
@@ -131,23 +109,9 @@ function AgentDetailBody(): ReactElement {
     </div>
   );
 
-  const content: ReactElement = hasConv ? (
-    <ResizablePanelGroup orientation="horizontal" className="h-full">
-      <ResizablePanel defaultSize={55} minSize={25}>
-        {body}
-      </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={45} minSize={25}>
-        <Outlet />
-      </ResizablePanel>
-    </ResizablePanelGroup>
-  ) : (
-    body
-  );
-
   const wrapped = (
     <PaneChrome pane={agentDetailPane} title={agent?.name}>
-      {content}
+      {body}
     </PaneChrome>
   );
 
@@ -161,7 +125,11 @@ function AgentDetailBody(): ReactElement {
 
 function AgentConversationBody(): ReactElement {
   const { convId } = agentConversationPane.useParams();
-  return <ConversationView key={convId} sessionId={convId} />;
+  return (
+    <ConversationProvide key={convId} convId={convId}>
+      <ConversationView />
+    </ConversationProvide>
+  );
 }
 
 function SystemAgentDetailBody(): ReactElement {

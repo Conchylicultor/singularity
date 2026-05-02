@@ -13,10 +13,4 @@ export const TaskDetail = {
     order?: number;
     component: ComponentType<{ taskId: string }>;
   }>("task-detail.section"),
-
-  SidePanel: defineSlot<{
-    id: string;
-    order?: number;
-    component: ComponentType<{ taskId: string }>;
-  }>("task-detail.side-panel"),
 };

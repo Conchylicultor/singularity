@@ -1,13 +1,8 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Outlet, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { attemptsResource } from "@plugins/tasks/shared";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
 import { attemptPane, attemptConversationPane } from "../panes";
 
@@ -24,9 +19,8 @@ export function AttemptPane() {
   const selectedConvId = match?.chain.find(
     (e) => e.pane === attemptConversationPane._internal,
   )?.params.convId;
-  const hasConvSelected = selectedConvId != null;
 
-  const list = (
+  return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="border-b px-3 py-2">
         <div className="text-sm font-medium">Attempt</div>
@@ -78,26 +72,6 @@ export function AttemptPane() {
           </ul>
         )}
       </div>
-    </div>
-  );
-
-  return (
-    <div className="h-[calc(100svh-3rem)] min-h-0 overflow-hidden">
-      <ResizablePanelGroup orientation="horizontal" className="h-full">
-        <ResizablePanel defaultSize={25} minSize={15}>
-          {list}
-        </ResizablePanel>
-        <ResizableHandle withHandle />
-        <ResizablePanel defaultSize={75} minSize={25}>
-          {hasConvSelected ? (
-            <Outlet />
-          ) : (
-            <div className="text-muted-foreground flex h-full items-center justify-center p-6 text-sm">
-              Select a conversation
-            </div>
-          )}
-        </ResizablePanel>
-      </ResizablePanelGroup>
     </div>
   );
 }

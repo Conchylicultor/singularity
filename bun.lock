@@ -416,6 +416,14 @@
         "@napi-rs/keyring": "^1.1.6",
       },
     },
+    "plugins/layouts": {
+      "name": "@singularity/plugin-layouts",
+      "version": "0.0.1",
+    },
+    "plugins/layouts/plugins/miller": {
+      "name": "@singularity/plugin-layouts-miller",
+      "version": "0.0.1",
+    },
     "plugins/primitives": {
       "name": "@singularity/plugin-primitives",
       "version": "0.0.1",
@@ -1339,6 +1347,10 @@
     "@singularity/plugin-infra-paths": ["@singularity/plugin-infra-paths@workspace:plugins/infra/plugins/paths"],
 
     "@singularity/plugin-infra-secrets": ["@singularity/plugin-infra-secrets@workspace:plugins/infra/plugins/secrets"],
+
+    "@singularity/plugin-layouts": ["@singularity/plugin-layouts@workspace:plugins/layouts"],
+
+    "@singularity/plugin-layouts-miller": ["@singularity/plugin-layouts-miller@workspace:plugins/layouts/plugins/miller"],
 
     "@singularity/plugin-primitives": ["@singularity/plugin-primitives@workspace:plugins/primitives"],
 

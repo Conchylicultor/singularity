@@ -2,13 +2,18 @@ import { useEditableField } from "@plugins/primitives/plugins/editable-field/web
 import { patchTask, useTask } from "@plugins/tasks/web";
 import {
   useRegisterFlush,
-  useTaskDetailFilePeek,
+  useTaskFileOpen,
 } from "@plugins/tasks/plugins/task-detail/web";
+import { taskFilePeekPane } from "@plugins/tasks/plugins/task-file-peek/web";
 import { DescriptionView } from "./description-view";
 
 export function TaskDescription({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
-  const { openFile } = useTaskDetailFilePeek();
+  const override = useTaskFileOpen();
+  const openFile = (path: string) => {
+    if (override) override(path);
+    else taskFilePeekPane.open({ taskId, filePath: path });
+  };
 
   const descField = useEditableField({
     value: task?.description ?? "",

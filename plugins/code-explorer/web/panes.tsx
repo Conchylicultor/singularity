@@ -1,8 +1,5 @@
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import {
-  conversationPane,
-  markMainPane,
-} from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { ConvFileTreeBody } from "./components/conv-file-tree-body";
 import { GlobalFileTreeBody } from "./components/global-file-tree-body";
 
@@ -17,10 +14,8 @@ export const convFileTreePane = Pane.define({
   parent: conversationPane,
   path: "files",
   component: ConvFileTreeChromedBody,
+  width: 280,
 });
-
-// Take over the conversation main area (two-column explorer layout).
-markMainPane(convFileTreePane);
 
 function GlobalFileTreeChromedBody() {
   const { worktree } = globalFileTreePane.useParams();

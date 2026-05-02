@@ -249,6 +249,8 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - `POST /api/secrets/meta`
         - `POST /api/secrets/list`
 
+- **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
+
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
     - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
@@ -271,9 +273,9 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
       - Defines:
         - Slots: `Pane.Register`
       - Exports (web):
-        - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
-        - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `publish`, `queue`, `review`, `screenshot`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
+        - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `TypeMarker`
+        - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneDepthContext`, `PaneHistoryButtons`, `PaneIconAction`, `PaneLevel`, `PaneMatchContext`, `PaneRouter`, `type`, `useCurrentPane`, `useMatchForPath`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `publish`, `queue`, `review`, `screenshot`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `task-file-peek`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
@@ -309,9 +311,9 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
     - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the parent task when applicable.
     - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.
-    - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section,SidePanel} slots and the file-peek + flush-registry context that section sub-plugins share.
+    - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.
     - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens taskConversationPane.
-    - **`task-file-peek`** — Right-panel preview for files referenced from a task description. Reads filePath from the task-detail file-peek context.
+    - **`task-file-peek`** — Right-panel preview for files referenced from a task description. Opens as a child pane (Miller column) of taskDetailPane.
     - **`task-graph`** — Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions slots and ships the row actions (delete, expand-all, launch-agent).

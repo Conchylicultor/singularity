@@ -82,6 +82,7 @@ import eventsTestPlugin from "@plugins/events-test/web";
 import healthPlugin from "@plugins/health/web";
 import improvePlugin from "@plugins/improve/web";
 import infraAttachmentsPlugin from "@plugins/infra/plugins/attachments/web";
+import layoutsMillerPlugin from "@plugins/layouts/plugins/miller/web";
 import primitivesAutoScrollPlugin from "@plugins/primitives/plugins/auto-scroll/web";
 import primitivesAvatarPlugin from "@plugins/primitives/plugins/avatar/web";
 import primitivesEditableFieldPlugin from "@plugins/primitives/plugins/editable-field/web";
@@ -196,6 +197,7 @@ export const plugins: PluginDefinition[] = [
   healthPlugin,
   improvePlugin,
   infraAttachmentsPlugin,
+  layoutsMillerPlugin,
   primitivesAutoScrollPlugin,
   primitivesAvatarPlugin,
   primitivesEditableFieldPlugin,

@@ -249,7 +249,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`, `Conversation.AbovePromptInput`, `Conversation.TitlePrefix`
       - Exports (web):
         - Types: `ConversationRecord`, `PromptDraft`
-        - Values: `Conversation`, `conversationPane`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `isMainPaneId`, `markMainPane`, `PromptDraftProvider`, `usePromptDraft`
+        - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `PromptDraftProvider`, `usePromptDraft`
       - Contributes:
         - `Pane.Register` `conversation` (path `/c/:convId`)
         - `Conversation.ActionBar` → `ExpandConversationButton`
@@ -764,6 +764,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `POST /api/secrets/meta`
         - `POST /api/secrets/list`
 
+- **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
+  - Exports (web):
+    - Values: `MillerColumns`
+
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
     - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
@@ -801,9 +805,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Defines:
         - Slots: `Pane.Register`
       - Exports (web):
-        - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneMatch`, `PaneObject`, `TypeMarker`
-        - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneRouter`, `type`, `useCurrentPane`, `usePaneMatch`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `publish`, `queue`, `review`, `screenshot`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
+        - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `TypeMarker`
+        - Values: `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneDepthContext`, `PaneHistoryButtons`, `PaneIconAction`, `PaneLevel`, `PaneMatchContext`, `PaneRouter`, `type`, `useCurrentPane`, `useMatchForPath`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `publish`, `queue`, `review`, `screenshot`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `task-file-peek`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
       - Exports (web):
         - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `PromptEditor`, `rewriteAttachmentMarkdown`
@@ -951,11 +955,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.
       - Contributes:
         - `TaskDetailSlots.Section` → `TaskDescription`
-    - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section,SidePanel} slots and the file-peek + flush-registry context that section sub-plugins share.
+    - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.
       - Defines:
-        - Slots: `TaskDetail.Above`, `TaskDetail.Section`, `TaskDetail.SidePanel`
+        - Slots: `TaskDetail.Above`, `TaskDetail.Section`
       - Exports (web):
-        - Values: `taskConversationPane`, `TaskDetail`, `TaskDetailFilePeekProvider`, `taskDetailPane`, `TaskDetailSlots`, `tasksRootPane`, `useFlushAll`, `useRegisterFlush`, `useTaskDetailFilePeek`
+        - Values: `taskConversationPane`, `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskFileOpenProvider`, `tasksRootPane`, `useFlushAll`, `useRegisterFlush`, `useTaskFileOpen`
       - Contributes:
         - `Pane.Register` `tasks-root` (path `/tasks`)
         - `Pane.Register` `task-detail` (path `:taskId`)
@@ -965,9 +969,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens taskConversationPane.
       - Contributes:
         - `TaskDetailSlots.Section` → `TaskEvents`
-    - **`task-file-peek`** — Right-panel preview for files referenced from a task description. Reads filePath from the task-detail file-peek context.
+    - **`task-file-peek`** — Right-panel preview for files referenced from a task description. Opens as a child pane (Miller column) of taskDetailPane.
+      - Exports (web):
+        - Values: `taskFilePeekPane`
       - Contributes:
-        - `TaskDetailSlots.SidePanel` → `TaskFilePeek`
+        - `Pane.Register` `task-file-peek` (path `file/:filePath*`)
     - **`task-graph`** — Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.
       - Contributes:
         - `TaskDetailSlots.Above` → `TaskGraph`

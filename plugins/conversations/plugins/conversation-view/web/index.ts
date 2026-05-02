@@ -6,7 +6,7 @@ import { Conversation as ActionBarConversation } from "@plugins/conversations/pl
 
 export { Conversation } from "./slots";
 export type { ConversationRecord } from "./slots";
-export { conversationPane, markMainPane, isMainPaneId } from "./panes";
+export { conversationPane, ConversationProvide } from "./panes";
 export { ConversationView } from "./components/conversation-view";
 export {
   PromptDraftProvider,

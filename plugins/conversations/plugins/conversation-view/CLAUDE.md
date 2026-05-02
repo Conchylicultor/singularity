@@ -9,7 +9,7 @@
   - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`, `Conversation.AbovePromptInput`, `Conversation.TitlePrefix`
 - Exports (web):
   - Types: `ConversationRecord`, `PromptDraft`
-  - Values: `Conversation`, `conversationPane`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `isMainPaneId`, `markMainPane`, `PromptDraftProvider`, `usePromptDraft`
+  - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `PromptDraftProvider`, `usePromptDraft`
 - Contributes:
   - `Pane.Register` `conversation` (path `/c/:convId`)
   - `Conversation.ActionBar` → `ExpandConversationButton`

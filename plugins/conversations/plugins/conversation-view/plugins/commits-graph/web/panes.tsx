@@ -7,6 +7,7 @@ export const convCommitsGraphPane = Pane.define({
   parent: conversationPane,
   path: "commits",
   component: ConvCommitsGraphBody,
+  width: 520,
 });
 
 function ConvCommitsGraphBody() {

@@ -1,6 +1,16 @@
 import type { PluginDefinition } from "@core";
 
-export { Pane, type, usePaneMatch, useCurrentPane } from "./pane";
+export {
+  Pane,
+  type,
+  usePaneMatch,
+  useCurrentPane,
+  PaneMatchContext,
+  PaneDepthContext,
+  useMatchForPath,
+  usePathname,
+  useSyncPaneRegistry,
+} from "./pane";
 export type {
   PaneObject,
   PaneMatch,
@@ -8,8 +18,9 @@ export type {
   PaneChromeConfig,
   TypeMarker,
   InferParams,
+  PaneInternal,
 } from "./pane";
-export { Outlet } from "./components/outlet";
+export { Outlet, PaneLevel } from "./components/outlet";
 export { PaneRouter } from "./components/pane-router";
 export {
   PaneChrome,

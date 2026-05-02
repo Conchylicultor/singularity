@@ -1,13 +1,13 @@
 import type { PluginDefinition } from "@core";
-import { TaskDetailSlots } from "@plugins/tasks/plugins/task-detail/web";
-import { TaskFilePeek } from "./components/task-file-peek";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { taskFilePeekPane } from "./panes";
+
+export { taskFilePeekPane } from "./panes";
 
 export default {
   id: "task-file-peek",
   name: "Task: File peek",
   description:
-    "Right-panel preview for files referenced from a task description. Reads filePath from the task-detail file-peek context.",
-  contributions: [
-    TaskDetailSlots.SidePanel({ id: "file-peek", order: 0, component: TaskFilePeek }),
-  ],
+    "Right-panel preview for files referenced from a task description. Opens as a child pane (Miller column) of taskDetailPane.",
+  contributions: [Pane.Register({ pane: taskFilePeekPane })],
 } satisfies PluginDefinition;

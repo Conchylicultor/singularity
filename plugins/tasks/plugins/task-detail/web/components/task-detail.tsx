@@ -1,14 +1,7 @@
 import { useMemo } from "react";
 import { TaskDetail as TaskDetailSlots } from "../slots";
-import { TaskDetailFilePeekProvider } from "../context";
 
-export function TaskDetail({
-  taskId,
-  onFileOpen,
-}: {
-  taskId: string;
-  onFileOpen?: (path: string) => void;
-}) {
+export function TaskDetail({ taskId }: { taskId: string }) {
   const sections = TaskDetailSlots.Section.useContributions();
   const ordered = useMemo(
     () =>
@@ -16,20 +9,11 @@ export function TaskDetail({
     [sections],
   );
 
-  const body = (
+  return (
     <div className="flex flex-col gap-4 p-6">
       {ordered.map((s) => (
         <s.component key={s.id} taskId={taskId} />
       ))}
     </div>
   );
-
-  if (onFileOpen) {
-    return (
-      <TaskDetailFilePeekProvider override={{ openFile: onFileOpen }}>
-        {body}
-      </TaskDetailFilePeekProvider>
-    );
-  }
-  return body;
 }

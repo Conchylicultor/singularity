@@ -5,15 +5,8 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
   type ReactNode,
 } from "react";
-
-type FilePeekState = {
-  filePath: string | null;
-  openFile: (path: string) => void;
-  closeFile: () => void;
-};
 
 type FlushFn = () => Promise<void> | void;
 
@@ -22,43 +15,19 @@ type FlushRegistry = {
   flushAll: () => Promise<void>;
 };
 
-const NOOP_PEEK: FilePeekState = {
-  filePath: null,
-  openFile: () => {},
-  closeFile: () => {},
-};
+type FileOpenHandler = (path: string) => void;
 
 const NOOP_FLUSH: FlushRegistry = {
   register: () => () => {},
   flushAll: async () => {},
 };
 
-const TaskDetailFilePeekCtx = createContext<FilePeekState>(NOOP_PEEK);
 const TaskDetailFlushCtx = createContext<FlushRegistry>(NOOP_FLUSH);
+const TaskFileOpenCtx = createContext<FileOpenHandler | undefined>(undefined);
 
-export function TaskDetailFilePeekProvider({
-  override,
-  children,
-}: {
-  override?: Pick<FilePeekState, "openFile">;
-  children: ReactNode;
-}) {
-  const [filePath, setFilePath] = useState<string | null>(null);
-  const overrideOpen = override?.openFile;
-  const value = useMemo<FilePeekState>(
-    () =>
-      overrideOpen
-        ? { filePath: null, openFile: overrideOpen, closeFile: () => {} }
-        : {
-            filePath,
-            openFile: setFilePath,
-            closeFile: () => setFilePath(null),
-          },
-    [filePath, overrideOpen],
-  );
-
+export function TaskDetailFlushProvider({ children }: { children: ReactNode }) {
   const fns = useRef(new Set<FlushFn>());
-  const flushValue = useMemo<FlushRegistry>(
+  const value = useMemo<FlushRegistry>(
     () => ({
       register: (fn) => {
         fns.current.add(fn);
@@ -72,18 +41,11 @@ export function TaskDetailFilePeekProvider({
     }),
     [],
   );
-
   return (
-    <TaskDetailFilePeekCtx.Provider value={value}>
-      <TaskDetailFlushCtx.Provider value={flushValue}>
-        {children}
-      </TaskDetailFlushCtx.Provider>
-    </TaskDetailFilePeekCtx.Provider>
+    <TaskDetailFlushCtx.Provider value={value}>
+      {children}
+    </TaskDetailFlushCtx.Provider>
   );
-}
-
-export function useTaskDetailFilePeek() {
-  return useContext(TaskDetailFilePeekCtx);
 }
 
 export function useFlushAll() {
@@ -94,4 +56,10 @@ export function useRegisterFlush(fn: FlushFn) {
   const { register } = useContext(TaskDetailFlushCtx);
   const stable = useCallback(fn, [fn]);
   useEffect(() => register(stable), [register, stable]);
+}
+
+export const TaskFileOpenProvider = TaskFileOpenCtx.Provider;
+
+export function useTaskFileOpen(): FileOpenHandler | undefined {
+  return useContext(TaskFileOpenCtx);
 }

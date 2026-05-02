@@ -13,6 +13,7 @@ export const convFilePeekPane = Pane.define({
   path: "file/:worktree/:filePath*",
   component: ConvFilePeekPaneBody,
   chrome: { history: false },
+  width: 600,
 });
 
 function ConvFilePeekPaneBody() {

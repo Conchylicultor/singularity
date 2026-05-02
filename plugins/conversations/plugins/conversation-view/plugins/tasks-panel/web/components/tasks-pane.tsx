@@ -4,7 +4,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { TasksList } from "@plugins/tasks/plugins/task-list/web";
-import { TaskDetail } from "@plugins/tasks/plugins/task-detail/web";
+import { TaskDetail, TaskFileOpenProvider } from "@plugins/tasks/plugins/task-detail/web";
 import { tasksResource } from "@plugins/tasks/shared";
 import { convTasksPane } from "../panes";
 import { TasksPaneContext } from "./tasks-pane-context";
@@ -34,17 +34,17 @@ export function TasksPane() {
             />
           </div>
           <div className="min-h-0 flex-1 overflow-auto">
-            <TaskDetail
-              key={selectedId}
-              taskId={selectedId}
-              onFileOpen={(path) =>
+            <TaskFileOpenProvider
+              value={(path) =>
                 convFilePeekPane.open({
                   convId: conversation.id,
                   worktree: "main",
                   filePath: path,
                 })
               }
-            />
+            >
+              <TaskDetail key={selectedId} taskId={selectedId} />
+            </TaskFileOpenProvider>
           </div>
         </div>
       </PaneChrome>

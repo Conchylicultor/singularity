@@ -1,15 +1,8 @@
-import { Outlet, PaneChrome, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { ActionBarView } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
 import { Conversation, type ConversationRecord } from "../slots";
-import { conversationPane, isMainPaneId } from "../panes";
-import { PromptDraftProvider } from "../prompt-draft-context";
+import { conversationPane } from "../panes";
 import { JsonlPane } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { useConversation, useConversationById } from "@plugins/conversations/web";
 
 type PromptBarItem = ReturnType<typeof Conversation.PromptBar.useContributions>[number];
 
@@ -46,129 +39,64 @@ function PromptBar({
   );
 }
 
-export function ConversationView({ sessionId }: { sessionId: string }) {
+/**
+ * Visual body of the conversation pane. Reads the loaded conversation from
+ * `conversationPane.useData()` (provided by `ConversationProvide` either at
+ * the chain level via Miller or wrapped explicitly by an embedding host).
+ */
+export function ConversationView() {
+  const { conversation } = conversationPane.useData();
   const promptBarItems = Conversation.PromptBar.useContributions();
   const promptInputItems = Conversation.PromptInput.useContributions();
   const abovePromptInputItems = Conversation.AbovePromptInput.useContributions();
   const titlePrefixItems = Conversation.TitlePrefix.useContributions();
   const PromptInputComponent = promptInputItems[0]?.component ?? null;
-  // useConversation subscribes to the live WebSocket resource (recentConversationsResource),
-  // so status updates (starting → working → done) are reflected in real time.
-  // Fall back to the point-lookup only for older conversations outside the recent window.
-  const liveConversation = useConversation(sessionId);
-  const fetchedConversation = useConversationById(liveConversation ? null : sessionId);
-  const conversation = liveConversation ?? fetchedConversation;
-
-  // Decide layout from the current pane match. When conversationPane is the
-  // leaf, there's no sub-pane — just the JSONL view fills the area. When a
-  // main sub-pane (e.g. review) is active, render the Outlet full-height.
-  // Otherwise we have a side sub-pane (terminal/docs/tasks) — split JSONL
-  // and Outlet.
-  const match = usePaneMatch();
-  const convEntry = match?.chain.find((e) => e.pane === conversationPane._internal);
-  const leafPane = match?.chain[match.chain.length - 1]?.pane;
-  const isConvActive = !!convEntry;
-  const hasSubPane = isConvActive && leafPane !== conversationPane._internal;
-  const isMain = hasSubPane && !!leafPane && isMainPaneId(leafPane.id);
 
   const showBottomBar =
-    !!conversation &&
-    (!!PromptInputComponent ||
-      promptBarItems.length > 0 ||
-      abovePromptInputItems.length > 0);
+    !!PromptInputComponent ||
+    promptBarItems.length > 0 ||
+    abovePromptInputItems.length > 0;
 
-  const mainBlock = conversation && (
-    <JsonlPane
-      conversation={conversation}
-      actions={<ActionBarView />}
-    >
-      {showBottomBar && (
-        <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-1.5 pb-2">
-          {abovePromptInputItems.map((item, i) => {
-            const Cmp = item.component;
-            return <Cmp key={i} conversation={conversation} />;
-          })}
-          {PromptInputComponent && (
-            <PromptInputComponent conversation={conversation} />
-          )}
-          {promptBarItems.length > 0 && (
-            <div className="flex justify-end">
-              <PromptBar items={promptBarItems} conversation={conversation} />
-            </div>
-          )}
-        </div>
-      )}
-    </JsonlPane>
-  );
-
-  const mainAndSide = (
-    <ResizablePanelGroup orientation="horizontal" className="h-full">
-      <ResizablePanel defaultSize={hasSubPane ? 55 : 100} minSize={20}>
-        {mainBlock}
-      </ResizablePanel>
-      {hasSubPane && (
-        <>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={45} minSize={25}>
-            <Outlet />
-          </ResizablePanel>
-        </>
-      )}
-    </ResizablePanelGroup>
-  );
-
-  // Sub-panes call `conversationPane.useData()`, so don't mount them until
-  // the conversation is loaded (and the Provider below is wrapping).
-  const mainArea =
-    !conversation ? (
-      <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
-        Loading conversation…
-      </div>
-    ) : isMain ? (
-      <Outlet />
-    ) : (
-      mainAndSide
-    );
-
-  const body = (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="min-h-0 flex-1 overflow-hidden">{mainArea}</div>
-    </div>
-  );
-
-  if (!conversation) {
-    return <PromptDraftProvider>{body}</PromptDraftProvider>;
-  }
-  // Main sub-panes (e.g. Review, Files) replace the main area entirely and
-  // render their own PaneChrome; suppress the parent chrome so we don't
-  // stack two headers.
   return (
-    <PromptDraftProvider>
-      <conversationPane.Provider value={{ conversation }}>
-        {isMain ? (
-          body
+    <PaneChrome
+      pane={conversationPane}
+      title={
+        titlePrefixItems.length > 0 ? (
+          <span className="flex items-center gap-2">
+            {titlePrefixItems.map((item, i) => {
+              const Cmp = item.component;
+              return <Cmp key={i} conversation={conversation} />;
+            })}
+            <span className="truncate">{conversation.title ?? conversation.id}</span>
+          </span>
         ) : (
-          <PaneChrome
-            pane={conversationPane}
-            title={
-              titlePrefixItems.length > 0 ? (
-                <span className="flex items-center gap-2">
-                  {titlePrefixItems.map((item, i) => {
-                    const Cmp = item.component;
-                    return <Cmp key={i} conversation={conversation} />;
-                  })}
-                  <span className="truncate">{conversation.title ?? conversation.id}</span>
-                </span>
-              ) : (
-                conversation.title ?? conversation.id
-              )
-            }
-            hideRightActions
-          >
-            {body}
-          </PaneChrome>
-        )}
-      </conversationPane.Provider>
-    </PromptDraftProvider>
+          conversation.title ?? conversation.id
+        )
+      }
+      hideRightActions
+    >
+      <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <JsonlPane conversation={conversation} actions={<ActionBarView />}>
+            {showBottomBar && (
+              <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-1.5 pb-2">
+                {abovePromptInputItems.map((item, i) => {
+                  const Cmp = item.component;
+                  return <Cmp key={i} conversation={conversation} />;
+                })}
+                {PromptInputComponent && (
+                  <PromptInputComponent conversation={conversation} />
+                )}
+                {promptBarItems.length > 0 && (
+                  <div className="flex justify-end">
+                    <PromptBar items={promptBarItems} conversation={conversation} />
+                  </div>
+                )}
+              </div>
+            )}
+          </JsonlPane>
+        </div>
+      </div>
+    </PaneChrome>
   );
 }

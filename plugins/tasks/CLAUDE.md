@@ -34,9 +34,9 @@
   - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
   - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the parent task when applicable.
   - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.
-  - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section,SidePanel} slots and the file-peek + flush-registry context that section sub-plugins share.
+  - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.
   - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens taskConversationPane.
-  - **`task-file-peek`** — Right-panel preview for files referenced from a task description. Reads filePath from the task-detail file-peek context.
+  - **`task-file-peek`** — Right-panel preview for files referenced from a task description. Opens as a child pane (Miller column) of taskDetailPane.
   - **`task-graph`** — Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.
   - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
   - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions slots and ships the row actions (delete, expand-all, launch-agent).

@@ -10,7 +10,7 @@ const SIDEBAR_GROUPS: Record<
   System: { icon: MdTune },
 };
 import { PluginErrorBoundary } from "@core";
-import { PaneRouter } from "@plugins/primitives/plugins/pane/web";
+import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { Shell as ShellCommands } from "../commands";
 import { Shell } from "../slots";
 import { Toaster } from "./toaster";
@@ -261,7 +261,7 @@ export function ShellLayout() {
           </header>
 
           <main className="min-h-0 flex-1 overflow-hidden bg-muted/30">
-            <PaneRouter />
+            <MillerColumns />
           </main>
 
         </SidebarInset>

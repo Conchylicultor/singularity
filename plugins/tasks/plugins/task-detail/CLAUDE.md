@@ -4,11 +4,11 @@
 
 ## Plugin reference
 
-- Description: Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section,SidePanel} slots and the file-peek + flush-registry context that section sub-plugins share.
+- Description: Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.
 - Defines:
-  - Slots: `TaskDetail.Above`, `TaskDetail.Section`, `TaskDetail.SidePanel`
+  - Slots: `TaskDetail.Above`, `TaskDetail.Section`
 - Exports (web):
-  - Values: `taskConversationPane`, `TaskDetail`, `TaskDetailFilePeekProvider`, `taskDetailPane`, `TaskDetailSlots`, `tasksRootPane`, `useFlushAll`, `useRegisterFlush`, `useTaskDetailFilePeek`
+  - Values: `taskConversationPane`, `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskFileOpenProvider`, `tasksRootPane`, `useFlushAll`, `useRegisterFlush`, `useTaskFileOpen`
 - Contributes:
   - `Pane.Register` `tasks-root` (path `/tasks`)
   - `Pane.Register` `task-detail` (path `:taskId`)
