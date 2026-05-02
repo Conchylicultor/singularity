@@ -1,5 +1,6 @@
 import { cpSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "fs";
-import { join, relative, resolve } from "path";
+import { basename, join, relative, resolve } from "path";
+import { libpqEnv } from "../paths";
 import type { Check } from "./types";
 
 async function getRoot(): Promise<string> {
@@ -49,7 +50,12 @@ export const migrationsInSync: Check = {
           "generate",
           `--config=${relative(serverDir, tmpConfig)}`,
         ],
-        { cwd: serverDir, stdout: "pipe", stderr: "pipe" },
+        {
+          cwd: serverDir,
+          stdout: "pipe",
+          stderr: "pipe",
+          env: { ...process.env, ...libpqEnv(), SINGULARITY_WORKTREE: basename(root) },
+        },
       );
       const stderr = await new Response(proc.stderr).text();
       const exitCode = await proc.exited;

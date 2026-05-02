@@ -218,11 +218,6 @@ export function registerPush(program: Command) {
         console.error(`--from-main requires being on main (currently on ${branch}).`);
         process.exit(1);
       }
-      if (opts.fromMain && !opts.message) {
-        console.error('--from-main requires -m "commit message".');
-        process.exit(1);
-      }
-
       // 1. Commit if -m provided, otherwise require clean tree
       const { stdout: status } = await run(["git", "status", "--porcelain"]);
       if (opts.message) {
@@ -232,9 +227,6 @@ export function registerPush(program: Command) {
           for (const f of files) console.log(`  ${f}`);
           await exec(["git", "add", "-A"]);
           await exec(["git", "commit", "-m", opts.message]);
-        } else if (opts.fromMain) {
-          console.error("Nothing to commit.");
-          process.exit(1);
         } else {
           console.log("No files to commit.");
         }
