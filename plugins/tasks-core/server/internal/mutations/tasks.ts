@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { _attempts, _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../schema";
@@ -119,6 +119,24 @@ export async function setTaskAutoStart(
       updatedAt: new Date(),
     })
     .where(eq(_tasks.id, id))
+    .returning({ id: _tasks.id });
+  if (row) tasksResource.notify();
+  return !!row;
+}
+
+// Atomic compare-and-swap on auto_start_at. Returns true iff this caller
+// nulled the marker (and therefore owns the launch slot); false if another
+// runner already cleared it. Collapses at-least-once event delivery into
+// exactly-one launch in maybeLaunchTaskJob.
+export async function claimAutoStart(id: string): Promise<boolean> {
+  const [row] = await db
+    .update(_tasks)
+    .set({
+      autoStartAt: null,
+      autoStartModel: null,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(_tasks.id, id), isNotNull(_tasks.autoStartAt)))
     .returning({ id: _tasks.id });
   if (row) tasksResource.notify();
   return !!row;

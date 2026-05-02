@@ -91,6 +91,7 @@ export {
   updateTask,
   updateTaskTitle,
   setTaskAutoStart,
+  claimAutoStart,
   deleteTask,
   addTaskDependency,
   removeTaskDependency,
