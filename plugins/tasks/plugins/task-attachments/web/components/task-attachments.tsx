@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { listAttachments, type Attachment } from "@plugins/infra/plugins/attachments/web";
+import { ShellCommands } from "@plugins/shell/web";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -10,7 +11,13 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
   const [attachments, setAttachments] = useState<Attachment[] | null>(null);
 
   useEffect(() => {
-    listAttachments("task", taskId).then(setAttachments).catch(console.error);
+    listAttachments("task", taskId).then(setAttachments).catch((err: unknown) => {
+      ShellCommands.Toast({
+        title: "Failed to load attachments",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "error",
+      });
+    });
   }, [taskId]);
 
   if (!attachments || attachments.length === 0) return null;

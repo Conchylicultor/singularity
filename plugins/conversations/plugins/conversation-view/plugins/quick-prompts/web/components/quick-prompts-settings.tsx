@@ -1,9 +1,18 @@
 import { useRef, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
+import { ShellCommands } from "@plugins/shell/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { quickPromptsResource } from "../../shared/resources";
+
+function toastError(title: string, err: unknown) {
+  ShellCommands.Toast({
+    title,
+    description: err instanceof Error ? err.message : String(err),
+    variant: "error",
+  });
+}
 
 async function createPrompt(): Promise<void> {
   const res = await fetch("/api/quick-prompts", {
@@ -45,7 +54,7 @@ export function QuickPromptsSettings() {
 
   function handleDelete(id: string) {
     deletingRef.current.add(id);
-    deletePrompt(id).catch(console.error);
+    deletePrompt(id).catch((err: unknown) => toastError("Failed to delete prompt", err));
   }
 
   return (
@@ -68,7 +77,7 @@ export function QuickPromptsSettings() {
         variant="outline"
         size="sm"
         className="self-start"
-        onClick={() => createPrompt().catch(console.error)}
+        onClick={() => createPrompt().catch((err: unknown) => toastError("Failed to create prompt", err))}
       >
         Add prompt
       </Button>
@@ -101,7 +110,7 @@ function PromptRow({
           className="h-7 text-xs"
           onBlur={(e) =>
             updatePrompt(id, { title: e.currentTarget.value }).catch(
-              console.error,
+              (err: unknown) => toastError("Failed to save title", err),
             )
           }
         />
@@ -110,7 +119,7 @@ function PromptRow({
             if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
             if (body === lastSavedRef.current) return;
             lastSavedRef.current = body;
-            updatePrompt(id, { prompt: body }).catch(console.error);
+            updatePrompt(id, { prompt: body }).catch((err: unknown) => toastError("Failed to save prompt", err));
           }}
         >
           <PromptEditor

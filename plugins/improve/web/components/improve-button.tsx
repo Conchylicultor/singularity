@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MdAdd, MdVerticalAlignTop, MdVerticalAlignBottom } from "react-icons/md";
 import { TaskDraftPopover } from "@plugins/primitives/plugins/task-draft-form/web";
+import { ShellCommands } from "@plugins/shell/web";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Improve } from "../commands";
 import { IMPROVEMENTS_META_TASK_ID } from "../../shared/constants";
@@ -21,7 +22,13 @@ export function ImproveButton() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ taskIds }),
-    }).catch(console.error);
+    }).catch((err: unknown) => {
+      ShellCommands.Toast({
+        title: "Failed to update queue position",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "error",
+      });
+    });
   };
 
   const queueToggle = (
