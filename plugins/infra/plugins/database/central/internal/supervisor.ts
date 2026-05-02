@@ -222,11 +222,26 @@ export async function onShutdown(): Promise<void> {
     state.watchdog = null;
   }
   if (!state.proc) return;
-  console.log("[database] shutting down embedded PG");
-  state.proc.kill("SIGTERM");
+  console.log("[database] shutting down embedded PG (fast shutdown)");
+  // SIGINT = "fast shutdown": aborts in-flight transactions, checkpoints,
+  // exits cleanly. SIGTERM (smart shutdown) waits indefinitely for clients
+  // to disconnect, which never happens with persistent per-worktree pools —
+  // we'd time out and SIGKILL, leaving an unclean shutdown that forces WAL
+  // recovery on the next start (and a flood of "the database system is
+  // starting up" errors in every worktree backend during the recovery window).
+  state.proc.kill("SIGINT");
   const exited = state.proc.exited;
-  await Promise.race([exited, Bun.sleep(5000)]);
-  if (!state.proc.killed) {
+  const SHUTDOWN_GRACE_MS = 15_000;
+  const timedOut = Symbol("timeout");
+  const result = await Promise.race([
+    exited,
+    Bun.sleep(SHUTDOWN_GRACE_MS).then(() => timedOut),
+  ]);
+  if (result === timedOut) {
+    console.error(
+      `[database] PG did not shut down within ${SHUTDOWN_GRACE_MS}ms; forcing SIGKILL ` +
+        `(next start will require WAL recovery)`,
+    );
     state.proc.kill("SIGKILL");
     await exited;
   }

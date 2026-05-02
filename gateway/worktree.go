@@ -326,6 +326,16 @@ func (w *Worktree) Snapshot() WorktreeStatus {
 // ShouldSweep reports whether the sweeper should tear this worktree down now.
 // The decision lives on Worktree because it touches private state.
 func (w *Worktree) ShouldSweep(idleTimeout time.Duration) bool {
+	// `central` is a singleton runtime that owns heavyweight state (the
+	// embedded Postgres cluster, secrets keychain, leader-elected
+	// notifications). Tearing it down on idle forces a PG restart cycle —
+	// every per-worktree backend's pool then sees the postmaster die and
+	// retries land in the WAL-recovery window with `57P03 the database
+	// system is starting up`. Pin it so it lives until gateway shutdown.
+	// Same magic name as `central-routes.json`'s `"backend": "central"`.
+	if w.Name == "central" {
+		return false
+	}
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.state != StateRunning {

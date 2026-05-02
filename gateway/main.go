@@ -106,6 +106,22 @@ func main() {
 	}()
 	go reg.Sweep(ctx)
 
+	// Eagerly spawn `central` so the embedded Postgres cluster (owned by the
+	// database plugin's onReady) is up before any per-worktree backend tries
+	// to connect to it. Without this, a cold gateway start races: the first
+	// /api/* hit to a worktree fails because PG isn't listening yet, and the
+	// backend crashes before it can retry. Lazy-spawn through a central route
+	// would normally cover this (the browser hits /ws/central-notifications
+	// on app load), but curl/probe/headless callers don't, and the race is
+	// nondeterministic when both fire concurrently.
+	if wt := reg.Get("central"); wt != nil {
+		go func() {
+			if _, err := wt.Ensure(ctx); err != nil {
+				slog.Warn("eager central spawn failed", "err", err)
+			}
+		}()
+	}
+
 	srv := &http.Server{
 		Addr:              cfg.Listen,
 		Handler:           NewProxy(reg, routes),
