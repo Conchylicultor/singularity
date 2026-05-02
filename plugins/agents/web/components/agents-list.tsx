@@ -8,8 +8,10 @@ import {
 } from "@plugins/primitives/plugins/tree/web";
 import type { TreeNode } from "@plugins/primitives/plugins/tree/shared";
 import {
+  Avatar,
   AVATAR_ICON_KEYS,
   AVATAR_COLOR_KEYS,
+  DEFAULT_AGENT_AVATAR,
 } from "@plugins/primitives/plugins/avatar/web";
 import { agentsResource } from "../../shared/resources";
 import { Agents as AgentsSlots } from "../slots";
@@ -20,6 +22,8 @@ import { SystemFolder } from "./system-folder";
 type Agent = TreeItem & {
   name: string;
   prompt: string | null;
+  icon: string | null;
+  iconColor: string | null;
 };
 
 type AgentPatch = {
@@ -78,6 +82,12 @@ function AgentRow({ node, depth }: { node: TreeNode<Agent>; depth: number }) {
         <act.component key={act.id} agentId={node.id} />
       ))}
     >
+      <Avatar
+        icon={node.icon ?? DEFAULT_AGENT_AVATAR.icon}
+        color={node.iconColor ?? DEFAULT_AGENT_AVATAR.color}
+        size="xs"
+        fallbackKey={node.id}
+      />
       <AgentStatus agentId={node.id} />
       <RenameInput
         nodeId={node.id}
