@@ -1,3 +1,4 @@
+import { MdAdd } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   RenameInput,
@@ -66,6 +67,13 @@ function AgentRow({ node, depth }: { node: TreeNode<Agent>; depth: number }) {
     <RowChrome
       node={node}
       depth={depth}
+      menu={({ addBelow }) => [
+        {
+          icon: MdAdd,
+          label: "Add agent below",
+          onClick: () => void addBelow(),
+        },
+      ]}
       actions={actions.map((act) => (
         <act.component key={act.id} agentId={node.id} />
       ))}
