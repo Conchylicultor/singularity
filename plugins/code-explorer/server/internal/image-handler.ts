@@ -1,6 +1,5 @@
-import { homedir } from "node:os";
 import { resolve, sep } from "node:path";
-import { GIT } from "@plugins/infra/plugins/paths/server";
+import { GIT, HOME_DIR } from "@plugins/infra/plugins/paths/server";
 import { ALLOWED_REFS, resolveRef } from "./resolve-ref";
 import { resolveWorktreePath } from "./resolve-worktree-path";
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -33,8 +32,8 @@ function isPathInside(root: string, target: string): boolean {
 }
 
 function expandTilde(path: string): string {
-  if (path === "~") return homedir();
-  if (path.startsWith("~/")) return resolve(homedir(), path.slice(2));
+  if (path === "~") return HOME_DIR;
+  if (path.startsWith("~/")) return resolve(HOME_DIR, path.slice(2));
   return path;
 }
 

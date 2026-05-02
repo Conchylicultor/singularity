@@ -1,9 +1,7 @@
 import type { Command } from "commander";
 import { closeSync, mkdirSync, openSync, readFileSync, writeFileSync } from "fs";
-import { homedir } from "os";
 import { dirname, join, resolve } from "path";
-
-const SINGULARITY_DIR = join(homedir(), ".singularity");
+import { SINGULARITY_DIR } from "../paths";
 const LOGS_DIR = join(SINGULARITY_DIR, "logs");
 const GATEWAY_LOG = join(LOGS_DIR, "gateway.log");
 const PID_FILE = join(SINGULARITY_DIR, "gateway.pid");

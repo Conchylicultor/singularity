@@ -1,4 +1,5 @@
 import { spawn, type IPty } from "bun-pty";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/server";
 
 interface Session {
   id: string;
@@ -20,7 +21,7 @@ export function createSession(options: CreateSessionOptions): string {
   const id = crypto.randomUUID();
   const cmd = options.command?.[0] ?? (process.env.SHELL || "bash");
   const args = options.command?.slice(1) ?? [];
-  const cwd = options.cwd || process.env.HOME || "/";
+  const cwd = options.cwd || HOME_DIR || "/";
 
   const p = spawn(cmd, args, {
     name: "xterm-256color",

@@ -10,8 +10,8 @@ function resolveBin(name: string, extraCandidates: string[]): string {
   return name;
 }
 
-export const GIT   = Bun.which("git")   ?? "/usr/bin/git";
-export const PGREP = Bun.which("pgrep") ?? "/usr/bin/pgrep";
+export const GIT   = Bun.which("git")   ?? "git";
+export const PGREP = Bun.which("pgrep") ?? "pgrep";
 
 export const CLAUDE =
   process.env.SINGULARITY_CLAUDE_BIN ??

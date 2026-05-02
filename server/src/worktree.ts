@@ -1,4 +1,4 @@
-const GIT = Bun.which("git") ?? "/usr/bin/git";
+import { GIT } from "./paths";
 
 let cachedRepoRoot: string | null = null;
 

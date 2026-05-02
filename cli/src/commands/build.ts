@@ -2,14 +2,13 @@ import type { Command } from "commander";
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
 import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
 import { basename, join, resolve } from "path";
-import { homedir } from "os";
 import { generateMigration } from "../migrations";
 import { generatePluginDocs, collectAllPlugins } from "../docgen";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
 import { runChecks } from "../checks";
+import { SINGULARITY_DIR } from "../paths";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
-const SINGULARITY_DIR = join(homedir(), ".singularity");
 const WORKTREES_DIR = join(SINGULARITY_DIR, "worktrees");
 const CENTRAL_ROUTES_FILE = join(SINGULARITY_DIR, "central-routes.json");
 

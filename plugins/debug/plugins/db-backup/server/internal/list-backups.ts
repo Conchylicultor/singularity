@@ -1,6 +1,6 @@
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { homedir } from "node:os";
+import { BACKUPS_DIR } from "@plugins/infra/plugins/paths/server";
 
 export type TableStat = {
   name: string;
@@ -92,7 +92,7 @@ async function getDumpStats(file: string, name: string): Promise<DumpStats> {
 }
 
 export async function listBackups(): Promise<Response> {
-  const baseDir = `${homedir()}/.backups/singularity`;
+  const baseDir = BACKUPS_DIR;
 
   let entries: string[];
   try {

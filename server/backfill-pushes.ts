@@ -19,7 +19,7 @@ import { Pool } from "pg";
 import { pgTable, text, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
 
 const DRY_RUN = !process.argv.includes("--write");
-const GIT = Bun.which("git") ?? "/usr/bin/git";
+const GIT = Bun.which("git") ?? "git";
 
 // ── inline schema (avoid importing server internals) ─────────────────────────
 
