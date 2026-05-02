@@ -26,9 +26,7 @@ export function ProgressDots({ phase, compact = false }: ProgressDotsProps) {
       <span className="inline-flex items-center gap-0.5">
         {dots.map(({ p, dotClass }) => (
           <Tooltip key={p}>
-            <TooltipTrigger>
-              <span className={dotClass} />
-            </TooltipTrigger>
+            <TooltipTrigger render={<span className={dotClass} />} />
             <TooltipContent>{PHASE_LABELS[p]}</TooltipContent>
           </Tooltip>
         ))}
@@ -41,9 +39,7 @@ export function ProgressDots({ phase, compact = false }: ProgressDotsProps) {
       {dots.map(({ p, i, dotClass }) => (
         <span key={p} className="inline-flex items-center gap-1">
           <Tooltip>
-            <TooltipTrigger>
-              <span className={dotClass} />
-            </TooltipTrigger>
+            <TooltipTrigger render={<span className={dotClass} />} />
             <TooltipContent>{PHASE_LABELS[p]}</TooltipContent>
           </Tooltip>
           {i < PHASE_ORDER.length - 1 && (
