@@ -104,7 +104,7 @@ as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
 
     const depIds = Array.from(new Set(dependencies ?? []))
       .map((d) => (d === "current" ? currentTaskId : d))
-      .filter((d) => d !== "" && d !== parentId && d !== task.id);
+      .filter((d) => d !== "" && d !== task.id);
     for (const depId of depIds) {
       try {
         await addTaskDependency(task.id, depId);
