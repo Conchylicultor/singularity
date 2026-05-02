@@ -7,7 +7,13 @@ import { generatePluginDocs, collectAllPlugins } from "../docgen";
 import { generatePluginRegistry } from "../plugin-registry-gen";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
 import { runChecks } from "../checks";
-import { SINGULARITY_DIR } from "../paths";
+import {
+  libpqEnv,
+  PG_DATA_DIR,
+  PG_LOG_FILE,
+  PG_MIGRATING_SENTINEL,
+  SINGULARITY_DIR,
+} from "../paths";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const WORKTREES_DIR = join(SINGULARITY_DIR, "worktrees");
@@ -200,19 +206,114 @@ async function ensureHooksPath(): Promise<void> {
 // for __singularity_migrations ensures we don't race a still-in-progress
 // (or silently-dead) restore.
 async function databaseReady(name: string): Promise<boolean> {
-  const proc = Bun.spawn(
-    [
-      "psql",
-      "-d",
-      name,
-      "-tAc",
-      "SELECT 1 FROM __singularity_migrations LIMIT 1",
-    ],
-    { stdout: "pipe", stderr: "pipe" },
+  // Use a direct pg client instead of `psql`: psql is not bundled by
+  // embedded-postgres, and we'd rather not depend on the user's PATH for
+  // routine readiness checks.
+  const env = libpqEnv();
+  const { Client } = await import("pg");
+  const c = new Client({
+    host: env.PGHOST,
+    port: parseInt(env.PGPORT, 10),
+    user: env.PGUSER,
+    database: name,
+    connectionTimeoutMillis: 1500,
+  });
+  try {
+    await c.connect();
+    const r = await c.query("SELECT 1 FROM __singularity_migrations LIMIT 1");
+    return r.rowCount === 1;
+  } catch {
+    return false;
+  } finally {
+    try {
+      await c.end();
+    } catch {}
+  }
+}
+
+/**
+ * Force the gateway to lazy-spawn the central runtime (which boots the
+ * embedded Postgres cluster owned by `plugins/infra/plugins/database/`)
+ * and wait until PG is ready. The status handler itself awaits the
+ * supervisor's `ready` promise, so we just need to hit it once.
+ *
+ * Skipped when the user has opted into system PG.
+ */
+async function ensureDatabaseReachable(): Promise<void> {
+  if (process.env.SINGULARITY_USE_SYSTEM_PG === "1") return;
+
+  // If central was already running with an older plugins.generated.ts
+  // (pre-database plugin), it would 404 our status route. Restart it so
+  // it picks up the freshly-written registry. Best-effort — gateway may
+  // not be running yet on first start, in which case the lazy-spawn path
+  // below produces the right central regardless.
+  try {
+    await fetch("http://localhost:9000/gateway/worktrees/central/restart", {
+      method: "POST",
+    });
+  } catch {}
+
+  const url = "http://localhost:9000/api/database/status";
+  // Generous deadline: bulk auto-migration can take many minutes on a
+  // heavy install (hundreds of worktree DBs). Subsequent boots skip
+  // migration entirely and resolve in <1s.
+  const deadline = Date.now() + 30 * 60 * 1000;
+  let warned = false;
+  let migrationWarned = false;
+  let lastProgressKey = "";
+  let lastErr: string | null = null;
+  while (Date.now() < deadline) {
+    try {
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const body = (await resp.json()) as {
+          pg?: string;
+          migration?: string;
+          migrationError?: string | null;
+          migrationProgress?: { total: number; done: number; current: string | null };
+        };
+        if (body.pg === "running" && body.migration === "completed") return;
+        if (body.migration === "failed") {
+          console.error(
+            `ERROR: embedded PG migration failed: ${body.migrationError ?? "unknown"}`,
+          );
+          console.error(
+            `To retry: rm ${PG_MIGRATING_SENTINEL} ${PG_DATA_DIR} and re-run.`,
+          );
+          process.exit(1);
+        }
+        if (body.pg === "running" && body.migration === "running") {
+          if (!migrationWarned) {
+            console.log("Embedded PG running; auto-migrating from system PG (one-time)...");
+            migrationWarned = true;
+          }
+          const p = body.migrationProgress;
+          if (p && p.total > 0) {
+            const key = `${p.done}/${p.total}`;
+            if (key !== lastProgressKey) {
+              console.log(`  migrating ${p.done}/${p.total}${p.current ? ` (${p.current})` : ""}`);
+              lastProgressKey = key;
+            }
+          }
+        }
+        lastErr = `pg=${body.pg ?? "?"} migration=${body.migration ?? "?"}`;
+      } else {
+        lastErr = `HTTP ${resp.status}`;
+      }
+    } catch (err) {
+      lastErr = err instanceof Error ? err.message : String(err);
+    }
+    if (!warned) {
+      console.log("Waiting for embedded Postgres to be ready (first run can take ~30s)...");
+      warned = true;
+    }
+    await Bun.sleep(1000);
+  }
+  console.error(
+    `ERROR: embedded Postgres did not become ready within 30 minutes (last: ${lastErr ?? "no response"}).`,
   );
-  const output = await new Response(proc.stdout).text();
-  await proc.exited;
-  return output.trim() === "1";
+  console.error(`Check ${PG_LOG_FILE} for details.`);
+  process.exit(1);
 }
 
 async function waitForDatabase(name: string): Promise<void> {
@@ -321,19 +422,49 @@ export function registerBuild(program: Command) {
         process.exit(1);
       }
 
-      // 0. Ensure the worktree's DB fork has completed (forked asynchronously
-      // during conversation creation).
-      await waitForDatabase(name);
-
       const webDir = resolve(root, "web");
       await acquireBuildLock(resolve(webDir, ".build.lock"));
       await sweepStagingLeftovers(webDir);
 
-      // 1. Install dependencies
+      // 1. Install dependencies (required before central can boot — the
+      // database plugin's central/internal/binaries.ts uses createRequire
+      // to resolve @embedded-postgres/<platform>).
       console.log("Installing dependencies...");
       await exec(["bun", "install"], root);
 
-      // 2. Regenerate DB migrations from plugin schema files
+      // 2a. Regenerate plugin registry files — must happen before central
+      // is spawned so its plugins.generated.ts contains the database plugin.
+      console.log("Generating plugin registry...");
+      await generatePluginRegistry({ root });
+
+      // 2b. Refresh the central-routes manifest so the gateway knows that
+      // /api/database/status is a central route. Required for the very first
+      // build of a fresh install — without this the gateway would 404 the
+      // status poke and `ensureDatabaseReachable()` would time out.
+      await writeCentralRoutesManifest(root);
+
+      // 2b'. Write the central spec early too — otherwise the gateway has no
+      // way to spawn central. (Repeated at end of build for idempotency.)
+      const centralDir = resolve(root, "central");
+      if (existsSync(join(centralDir, "src", "index.ts"))) {
+        mkdirSync(WORKTREES_DIR, { recursive: true });
+        writeFileSync(
+          join(WORKTREES_DIR, "central.json"),
+          JSON.stringify({ server: centralDir }, null, 2) + "\n",
+        );
+      }
+
+      // 2c. Ensure the embedded Postgres cluster is up. The gateway lazy-
+      // spawns central on the first request hitting a central route; the
+      // database plugin boots embedded PG in its onReady. Poke once and
+      // wait for `pg=running`.
+      await ensureDatabaseReachable();
+
+      // 2d. Ensure the worktree's DB fork has completed (forked asynchronously
+      // during conversation creation).
+      await waitForDatabase(name);
+
+      // 3. Regenerate DB migrations from plugin schema files
       console.log("Generating DB migrations...");
       await generateMigration({
         serverDir: resolve(root, "server"),
@@ -342,13 +473,9 @@ export function registerBuild(program: Command) {
         resetMigration: opts.resetMigration,
       });
 
-      // 3. Regenerate plugins/CLAUDE.md
+      // 4. Regenerate plugins/CLAUDE.md
       console.log("Generating plugins doc...");
       await generatePluginDocs({ root });
-
-      // 3b. Regenerate plugin registry files (web/server/central plugins.generated.ts).
-      console.log("Generating plugin registry...");
-      await generatePluginRegistry({ root });
 
       // 3c. Run repo validation checks (typescript, plugin-boundaries, eslint,
       // plugin-contributed checks, ...). Fail before the expensive frontend
@@ -368,7 +495,6 @@ export function registerBuild(program: Command) {
       await exec(["bunx", "tsc"], resolve(root, "server"));
 
       // 4b. Type-check central if present. Same rationale as server.
-      const centralDir = resolve(root, "central");
       if (existsSync(join(centralDir, "src", "index.ts"))) {
         console.log("Type-checking central...");
         await exec(["bunx", "tsc"], centralDir);

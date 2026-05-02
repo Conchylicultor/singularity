@@ -199,6 +199,17 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - `DELETE /api/attachments/:id`
       - Endpoint callers: `agents`, `conversation-view`, `conversations`, `paste-images`, `quick-prompts`, `screenshot`, `task-attachments`, `tasks-core`
     - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
+    - **`database`** [load-bearing] — Embedded Postgres on the central runtime. Single shared cluster, one DB per worktree. Replaces user-installed system PG.
+      - Exports (server):
+        - Types: `PgBinName`
+        - Values: `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MIGRATING_SENTINEL`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `pgBin`
+      - Exports (central):
+        - Values: `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `ready`, `useSystemPg`
+      - Exports (shared):
+        - Types: `PgBinName`
+        - Values: `ensurePgSymlinks`, `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_MIGRATING_SENTINEL`, `PG_MIGRATION_DONE_MARKER`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `pgBin`, `useSystemPg`
+      - Central:
+        - `GET /api/database/status`
     - **`events`** [load-bearing] — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
       - Defines:
         - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`

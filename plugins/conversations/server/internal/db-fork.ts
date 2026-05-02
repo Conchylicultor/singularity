@@ -1,4 +1,4 @@
-import { adminPool, openShortLivedClient } from "@server/db/client";
+import { adminPool, libpqSubprocessEnv, openShortLivedClient } from "@server/db/client";
 
 function assertSafeName(name: string): void {
   if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
@@ -15,12 +15,20 @@ export async function forkDatabase(name: string, source = "singularity"): Promis
   // (SIGKILL on the entire process group); without detaching, a mid-fork
   // pg_dump/pg_restore would die with the server and leave an empty DB shell
   // behind (CREATE DATABASE already ran, DROP DATABASE cleanup never fires).
+  // pg_dump/pg_restore are not bundled by `embedded-postgres`; we rely on
+  // the user's PATH-resolved client tools (system Postgres install). The
+  // libpqSubprocessEnv override directs them at the embedded socket so
+  // they fork the embedded cluster's `singularity` DB into a sibling DB,
+  // not a system-PG DB.
+  const subprocessEnv = { ...process.env, ...libpqSubprocessEnv };
   const dump = Bun.spawn(["pg_dump", "-Fc", source], {
+    env: subprocessEnv,
     stdout: "pipe",
     stderr: "pipe",
     detached: true,
   });
   const restore = Bun.spawn(["pg_restore", "-d", name], {
+    env: subprocessEnv,
     stdin: dump.stdout,
     stdout: "pipe",
     stderr: "pipe",

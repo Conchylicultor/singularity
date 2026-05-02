@@ -8,6 +8,7 @@ import {
   writeFileSync,
 } from "fs";
 import { join, resolve } from "path";
+import { libpqEnv } from "./paths";
 
 const NEW_FORMAT = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 // Drizzle-kit normally numbers files (0000, 0001, …) but emits "0NaN" when
@@ -51,7 +52,11 @@ export async function generateMigration(opts: {
     stdin: "inherit",
     stdout: "inherit",
     stderr: "pipe",
-    env: { ...process.env, SINGULARITY_WORKTREE: worktreeName },
+    env: {
+      ...process.env,
+      ...libpqEnv(),
+      SINGULARITY_WORKTREE: worktreeName,
+    },
   });
 
   // Tee stderr: forward live to the user AND capture so we can detect cases

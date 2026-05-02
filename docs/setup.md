@@ -4,31 +4,35 @@ One-time environment setup for developing Singularity.
 
 ## Prerequisites
 
-| Tool       | Version | Install                         |
-| ---------- | ------- | ------------------------------- |
-| Bun        | >= 1.0  | `brew install oven-sh/bun/bun`  |
-| Go         | >= 1.22 | `brew install go`               |
-| PostgreSQL | >= 17   | `brew install postgresql@18`    |
+| Tool                | Version | Install                        |
+| ------------------- | ------- | ------------------------------ |
+| Bun                 | >= 1.0  | `brew install oven-sh/bun/bun` |
+| Go                  | >= 1.22 | `brew install go`              |
+| Postgres client CLI | 18      | `brew install postgresql@18`   |
 
-## PostgreSQL
+The Postgres **server** is bundled (`embedded-postgres` ships `postgres` / `initdb` / `pg_ctl`). The Postgres **client tools** (`pg_dump`, `pg_restore`, `pg_dumpall`) are not bundled yet and must be on PATH — they're used to fork worktree databases and to run the one-time auto-migration from system PG. They'll be bundled in a follow-up so this prerequisite goes away.
 
-Singularity uses a local Postgres server. Each conversation (worktree) gets its own database, forked from the `singularity` database at conversation-creation time via `pg_dump | pg_restore`.
+## Postgres
 
-```sh
-brew install postgresql@18
-brew services start postgresql@18
-createdb singularity
-```
+Singularity ships an embedded Postgres 18 cluster managed by the central runtime — see [`plugins/infra/plugins/database/`](../plugins/infra/plugins/database/CLAUDE.md). Binaries come from `@embedded-postgres/<platform>` (installed via `bun install`); `initdb` runs on first start, the cluster lives in `~/.singularity/postgres/data-pg18/`, and `postgres` listens on a Unix socket at `~/.singularity/postgres/socket` on port `5433`.
 
-The `singularity` database is the main namespace's DB (the app served at `singularity.localhost:9000` off `main`) and the **fork source**. New conversations get their own database with a point-in-time snapshot of `singularity`'s data via `pg_dump -Fc singularity | pg_restore -d <conv>`. `pg_dump` works against a live DB, so the main backend stays connected throughout.
+Each conversation (worktree) gets its own database inside the same cluster, forked from `singularity` at conversation-creation time via `pg_dump | pg_restore`. The default user is `singularity` with peer/trust auth on the Unix socket — no password to manage.
 
-Default connection uses Unix-socket trust auth with your OS user — no password needed. Override via env if your setup differs:
+### Auto-migration from system PG
 
-- `PGHOST` (default `localhost`)
-- `PGPORT` (default `5432`)
-- `PGUSER` (default `$USER`)
+If you already have a system Postgres install with a `singularity` database (the previous setup), the central runtime auto-detects it on first start (when `~/.singularity/postgres/data-pg18/` does not yet exist) and migrates `singularity` plus every `att-*` / `claude-*` worktree DB into the embedded cluster via `pg_dump | pg_restore`. One-time, ~30s plus a few seconds per worktree DB. Original system data is read-only throughout — never modified.
 
-The server picks which database to connect to via `SINGULARITY_WORKTREE` (set by the gateway).
+If migration fails partway, the sentinel file `~/.singularity/postgres/.migrating` blocks subsequent starts so you can inspect logs (`~/.singularity/postgres/postgres.log`). To retry, remove the sentinel and the half-populated `data-pg18/` directory.
+
+### Escape hatch: keep using system PG
+
+Set `SINGULARITY_USE_SYSTEM_PG=1` in the environment that runs `./singularity start`. This:
+
+- Disables the embedded-PG supervisor in the central runtime.
+- Reverts `server/src/db/client.ts` to the previous `PGHOST`/`PGPORT`/`PGUSER` semantics (defaults `localhost:5432`).
+- Skips the auto-migration check.
+
+In this mode you're responsible for `brew install postgresql@18 && brew services start postgresql@18 && createdb singularity` as before.
 
 ## Git hooks
 

@@ -8,6 +8,14 @@ const host = process.env.PGHOST ?? "localhost";
 const port = process.env.PGPORT ?? "5432";
 const user = process.env.PGUSER ?? process.env.USER ?? "postgres";
 
+// libpq treats hosts starting with "/" as a Unix-socket directory; encoded
+// as `?host=…&port=…` query params on the URL form. Embedded PG always
+// hands us a Unix socket (see plugins/infra/plugins/database/), so the CLI
+// passes PGHOST=/<…>/socket via libpqEnv().
+const url = host.startsWith("/")
+  ? `postgres://${user}@/${worktree}?host=${encodeURIComponent(host)}&port=${port}`
+  : `postgres://${user}@${host}:${port}/${worktree}`;
+
 export default defineConfig({
   dialect: "postgresql",
   // Glob discovery: drizzle-kit picks up every plugin's schema files directly.
@@ -22,7 +30,5 @@ export default defineConfig({
     "../plugins/**/server/**/internal/schema-*.ts",
   ],
   out: "./src/db/migrations",
-  dbCredentials: {
-    url: `postgres://${user}@${host}:${port}/${worktree}`,
-  },
+  dbCredentials: { url },
 });
