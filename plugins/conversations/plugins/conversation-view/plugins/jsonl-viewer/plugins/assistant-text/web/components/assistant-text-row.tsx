@@ -128,6 +128,18 @@ function buildMdComponents(
       // Active-data patterns (e.g. conv-ids) override the code wrapper entirely
       const linked = activeDataLinkify(text);
       if (linked !== text) return <>{linked}</>;
+      if (text.startsWith("http://") || text.startsWith("https://")) {
+        return (
+          <a
+            className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-primary underline hover:opacity-80"
+            href={text}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {text}
+          </a>
+        );
+      }
       const segments = parseFileLinks(text);
       if (segments.length === 1 && segments[0]?.type === "path") {
         return (
