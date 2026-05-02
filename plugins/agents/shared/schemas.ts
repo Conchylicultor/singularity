@@ -15,7 +15,6 @@ export const AgentSchema = z.object({
   icon: z.string().nullable(),
   iconColor: z.string().nullable(),
   expanded: z.boolean(),
-  autoLaunch: z.boolean(),
   rank: z.string(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),

@@ -1,20 +1,19 @@
 import { MdRocketLaunch } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { agentsResource } from "@plugins/agents/web";
+import { agentAutoLaunchResource } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 
-async function patchAutoLaunch(agentId: string, autoLaunch: boolean) {
-  await fetch(`/api/agents/${agentId}`, {
-    method: "PATCH",
+async function patchAutoLaunch(agentId: string, enabled: boolean) {
+  await fetch(`/api/agent-auto-launch/${agentId}`, {
+    method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ autoLaunch }),
+    body: JSON.stringify({ enabled }),
   });
 }
 
 export function AutoLaunchToggle({ agentId }: { agentId: string }) {
-  const { data: agents } = useResource(agentsResource);
-  const agent = agents?.find((a) => a.id === agentId);
-  const enabled = agent?.autoLaunch ?? false;
+  const { data: rows } = useResource(agentAutoLaunchResource);
+  const enabled = rows?.find((r) => r.parentId === agentId)?.enabled ?? false;
 
   return (
     <button

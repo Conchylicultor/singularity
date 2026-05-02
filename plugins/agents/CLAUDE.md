@@ -36,8 +36,8 @@
   - `DELETE /api/agents/:id`
   - `POST /api/agents/:id/launch`
   - `GET /api/agents/:id/launches`
+- Imported by: `toggle`
 - Slot contributors: `toggle`
-- Endpoint callers: `toggle`
 - Sub-plugins:
   - **`auto-launch`** — Umbrella plugin for agent auto-launch. Sub-plugins contribute row actions and settings.
 

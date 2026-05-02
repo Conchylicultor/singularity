@@ -414,6 +414,10 @@
         "@embedded-postgres/linux-x64": "18.3.0-beta.17",
       },
     },
+    "plugins/infra/plugins/entity-extensions": {
+      "name": "@singularity/plugin-infra-entity-extensions",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/events": {
       "name": "@singularity/plugin-infra-events",
       "version": "0.0.1",
@@ -1401,6 +1405,8 @@
     "@singularity/plugin-infra-claude-cli": ["@singularity/plugin-infra-claude-cli@workspace:plugins/infra/plugins/claude-cli"],
 
     "@singularity/plugin-infra-database": ["@singularity/plugin-infra-database@workspace:plugins/infra/plugins/database"],
+
+    "@singularity/plugin-infra-entity-extensions": ["@singularity/plugin-infra-entity-extensions@workspace:plugins/infra/plugins/entity-extensions"],
 
     "@singularity/plugin-infra-events": ["@singularity/plugin-infra-events@workspace:plugins/infra/plugins/events"],
 

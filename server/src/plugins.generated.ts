@@ -7,6 +7,7 @@
 
 import type { ServerPluginDefinition } from "./types";
 import activeDataPlugin from "@plugins/active-data/server";
+import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/plugins/toggle/server";
 import agentsPlugin from "@plugins/agents/server";
 import authGooglePlugin from "@plugins/auth/plugins/google/server";
 import authNotionPlugin from "@plugins/auth/plugins/notion/server";
@@ -44,6 +45,7 @@ import healthPlugin from "@plugins/health/server";
 import improvePlugin from "@plugins/improve/server";
 import infraAttachmentsPlugin from "@plugins/infra/plugins/attachments/server";
 import infraClaudeCliPlugin from "@plugins/infra/plugins/claude-cli/server";
+import infraEntityExtensionsPlugin from "@plugins/infra/plugins/entity-extensions/server";
 import infraEventsPlugin from "@plugins/infra/plugins/events/server";
 import infraJobsPlugin from "@plugins/infra/plugins/jobs/server";
 import infraMcpPlugin from "@plugins/infra/plugins/mcp/server";
@@ -61,6 +63,7 @@ import terminalPlugin from "@plugins/terminal/server";
 
 export const plugins: ServerPluginDefinition[] = [
   activeDataPlugin,
+  agentsAutoLaunchTogglePlugin,
   agentsPlugin,
   authGooglePlugin,
   authNotionPlugin,
@@ -98,6 +101,7 @@ export const plugins: ServerPluginDefinition[] = [
   improvePlugin,
   infraAttachmentsPlugin,
   infraClaudeCliPlugin,
+  infraEntityExtensionsPlugin,
   infraEventsPlugin,
   infraJobsPlugin,
   infraMcpPlugin,

@@ -6,7 +6,7 @@ export default {
   id: "agents-auto-launch-toggle",
   name: "Agents: Auto-Launch Toggle",
   description:
-    "Toggle on/off to activate agent auto-launch. Placeholder — wiring to schema TBD.",
+    "Toggle on/off to activate agent auto-launch. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive.",
   contributions: [
     Agents.AgentActions({ id: "auto-launch", component: AutoLaunchToggle }),
   ],
