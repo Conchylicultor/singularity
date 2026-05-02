@@ -17,8 +17,7 @@ via `rewriteAttachmentMarkdown` so Claude reads the images from disk.
 
 - Description: Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
 - Exports (web):
-  - Types: `ImageNodePayload`
-  - Values: `applyMarkdownToEditor`, `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `buildInitialConfig`, `clearEditor`, `EnterKeyPlugin`, `extractAttachmentIds`, `ImageNode`, `ImageUploadPlugin`, `isAttachmentUrl`, `Lightbox`, `PromptEditor`, `rewriteAttachmentMarkdown`, `serializeEditorToMarkdown`
+  - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `PromptEditor`, `rewriteAttachmentMarkdown`
 - Exports (shared):
   - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `rewriteAttachmentMarkdown`
 

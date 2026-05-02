@@ -4,21 +4,6 @@ export { PromptEditor } from "./components/prompt-editor";
 export { AttachmentThumbnail } from "./components/attachment-thumbnail";
 export { Lightbox } from "./components/lightbox";
 
-export { ImageUploadPlugin } from "./internal/image-upload-plugin";
-export {
-  ImageNode,
-  $createImageNode,
-  $isImageNode,
-  type ImageNodePayload,
-} from "./internal/image-node";
-export { buildInitialConfig } from "./internal/lexical-config";
-export {
-  applyMarkdownToEditor,
-  serializeEditorToMarkdown,
-  clearEditor,
-} from "./internal/markdown";
-export { EnterKeyPlugin } from "./internal/enter-key-plugin";
-
 export {
   attachmentUrl,
   attachmentMarkdown,
