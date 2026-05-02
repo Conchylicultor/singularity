@@ -21,6 +21,7 @@ export async function handleUpdate(
     icon?: string | null;
     iconColor?: string | null;
     expanded?: boolean;
+    autoLaunch?: boolean;
     parentId?: string | null;
     rank?: string;
   };
@@ -42,6 +43,7 @@ export async function handleUpdate(
     patch.iconColor = body.iconColor;
   }
   if (typeof body.expanded === "boolean") patch.expanded = body.expanded;
+  if (typeof body.autoLaunch === "boolean") patch.autoLaunch = body.autoLaunch;
   if (body.parentId === null || typeof body.parentId === "string") {
     if (body.parentId === id) {
       return new Response("Cannot parent an agent to itself", { status: 400 });

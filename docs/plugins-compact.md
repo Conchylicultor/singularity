@@ -10,6 +10,10 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
 
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
+  - Plugins:
+    - **`auto-launch`** — Umbrella plugin for agent auto-launch. Sub-plugins contribute row actions and settings.
+      - Plugins:
+        - **`toggle`** — Toggle on/off to activate agent auto-launch. Placeholder — wiring to schema TBD.
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
 

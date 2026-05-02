@@ -428,6 +428,13 @@
       "tag": "20260502_024851_d39d2983__merged_20260502_0248",
       "hash": "d39d2983",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777714622000,
+      "tag": "20260502_093702_39c5a4e0__add_agent_auto_launch",
+      "hash": "39c5a4e0",
+      "breakpoints": true
     }
   ]
 }

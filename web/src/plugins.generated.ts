@@ -9,6 +9,8 @@ import type { PluginDefinition } from "@core";
 import activeDataConvPlugin from "@plugins/active-data/plugins/conv/web";
 import activeDataTaskPlugin from "@plugins/active-data/plugins/task/web";
 import activeDataPlugin from "@plugins/active-data/web";
+import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/plugins/toggle/web";
+import agentsAutoLaunchPlugin from "@plugins/agents/plugins/auto-launch/web";
 import agentsPlugin from "@plugins/agents/web";
 import attemptViewPlugin from "@plugins/attempt-view/web";
 import authGooglePlugin from "@plugins/auth/plugins/google/web";
@@ -121,6 +123,8 @@ export const plugins: PluginDefinition[] = [
   activeDataConvPlugin,
   activeDataTaskPlugin,
   activeDataPlugin,
+  agentsAutoLaunchTogglePlugin,
+  agentsAutoLaunchPlugin,
   agentsPlugin,
   attemptViewPlugin,
   authGooglePlugin,

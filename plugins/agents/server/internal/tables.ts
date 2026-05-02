@@ -29,6 +29,7 @@ export const _agents = pgTable(
     icon: text("icon"),
     iconColor: text("icon_color"),
     expanded: boolean("expanded").notNull().default(false),
+    autoLaunch: boolean("auto_launch").notNull().default(false),
     rank: rankText("rank").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

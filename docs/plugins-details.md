@@ -39,7 +39,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/agents/server/internal/tables.ts`
   - Exports (web):
     - Types: `SystemAgentDescriptor`
-    - Values: `agentConversationPane`, `agentDetailPane`, `Agents`, `agentSidePane`, `agentsRootPane`, `defineSystemAgent`, `systemAgentDetailPane`
+    - Values: `agentConversationPane`, `agentDetailPane`, `Agents`, `agentSidePane`, `agentsResource`, `agentsRootPane`, `defineSystemAgent`, `systemAgentDetailPane`
   - Exports (server):
     - Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`
     - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
@@ -63,6 +63,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `DELETE /api/agents/:id`
     - `POST /api/agents/:id/launch`
     - `GET /api/agents/:id/launches`
+  - Slot contributors: `toggle`
+  - Endpoint callers: `toggle`
+  - Plugins:
+    - **`auto-launch`** — Umbrella plugin for agent auto-launch. Sub-plugins contribute row actions and settings.
+      - Plugins:
+        - **`toggle`** — Toggle on/off to activate agent auto-launch. Placeholder — wiring to schema TBD.
+          - Contributes:
+            - `Agents.AgentActions` → `AutoLaunchToggle`
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - Exports (web):
