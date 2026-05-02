@@ -24,6 +24,7 @@ RULES:
 - NEVER run `./singularity push` unless instructed to. The user needs to review your code first.
 - NEVER commit files yourself (this will create branch conflicts). Always use `./singularity push -m "commit message"`
 - NEVER run `drizzle-kit generate` or `bun src/db/migrate.ts` manually — always go through `./singularity build`.
+- NEVER add or modify anything under `central/` unless the user explicitly instructs so. The central runtime is shared infrastructure; unintended changes can affect all worktrees.
 
 ## Architecture
 
