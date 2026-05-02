@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MdAdd, MdVerticalAlignTop, MdVerticalAlignBottom } from "react-icons/md";
-import { TaskDraftPopover } from "@plugins/primitives/plugins/task-draft-form/web";
+import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Improve } from "../commands";

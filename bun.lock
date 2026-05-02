@@ -491,13 +491,6 @@
       "name": "@singularity/plugin-primitives-syntax-highlight",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/task-draft-form": {
-      "name": "@singularity/plugin-primitives-task-draft-form",
-      "version": "0.0.1",
-      "dependencies": {
-        "modern-screenshot": "^4.6.0",
-      },
-    },
     "plugins/primitives/plugins/tree": {
       "name": "@singularity/plugin-primitives-tree",
       "version": "0.0.1",
@@ -584,6 +577,13 @@
     "plugins/tasks/plugins/task-detail": {
       "name": "@singularity/plugin-tasks-task-detail",
       "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/task-draft-form": {
+      "name": "@singularity/plugin-tasks-task-draft-form",
+      "version": "0.0.1",
+      "dependencies": {
+        "modern-screenshot": "^4.6.0",
+      },
     },
     "plugins/tasks/plugins/task-events": {
       "name": "@singularity/plugin-tasks-task-events",
@@ -1410,8 +1410,6 @@
 
     "@singularity/plugin-primitives-syntax-highlight": ["@singularity/plugin-primitives-syntax-highlight@workspace:plugins/primitives/plugins/syntax-highlight"],
 
-    "@singularity/plugin-primitives-task-draft-form": ["@singularity/plugin-primitives-task-draft-form@workspace:plugins/primitives/plugins/task-draft-form"],
-
     "@singularity/plugin-primitives-tree": ["@singularity/plugin-primitives-tree@workspace:plugins/primitives/plugins/tree"],
 
     "@singularity/plugin-publish": ["@singularity/plugin-publish@workspace:plugins/publish"],
@@ -1447,6 +1445,8 @@
     "@singularity/plugin-tasks-task-description": ["@singularity/plugin-tasks-task-description@workspace:plugins/tasks/plugins/task-description"],
 
     "@singularity/plugin-tasks-task-detail": ["@singularity/plugin-tasks-task-detail@workspace:plugins/tasks/plugins/task-detail"],
+
+    "@singularity/plugin-tasks-task-draft-form": ["@singularity/plugin-tasks-task-draft-form@workspace:plugins/tasks/plugins/task-draft-form"],
 
     "@singularity/plugin-tasks-task-events": ["@singularity/plugin-tasks-task-events@workspace:plugins/tasks/plugins/task-events"],
 

@@ -35,6 +35,7 @@
   - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the parent task when applicable.
   - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.
   - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.
+  - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
   - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens taskConversationPane.
   - **`task-file-peek`** — Right-panel preview for files referenced from a task description. Opens as a child pane (Miller column) of taskDetailPane.
   - **`task-graph`** — Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.

@@ -17,7 +17,7 @@ import {
   type TaskChainCard,
   type TaskChainSubmitBody,
   type TaskChainSubmitResponse,
-} from "@plugins/primitives/plugins/task-draft-form/shared";
+} from "@plugins/tasks/plugins/task-draft-form/shared";
 import { db } from "@server/db/client";
 import { armTaskAutoStart } from "./arm-auto-start";
 

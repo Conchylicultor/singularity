@@ -97,7 +97,6 @@ import primitivesPasteImagesPlugin from "@plugins/primitives/plugins/paste-image
 import primitivesRankPlugin from "@plugins/primitives/plugins/rank/web";
 import primitivesRelativeTimePlugin from "@plugins/primitives/plugins/relative-time/web";
 import primitivesSyntaxHighlightPlugin from "@plugins/primitives/plugins/syntax-highlight/web";
-import primitivesTaskDraftFormPlugin from "@plugins/primitives/plugins/task-draft-form/web";
 import primitivesTreePlugin from "@plugins/primitives/plugins/tree/web";
 import primitivesPlugin from "@plugins/primitives/web";
 import publishPlugin from "@plugins/publish/web";
@@ -115,6 +114,7 @@ import tasksTaskAttachmentsPlugin from "@plugins/tasks/plugins/task-attachments/
 import tasksTaskDependenciesPlugin from "@plugins/tasks/plugins/task-dependencies/web";
 import tasksTaskDescriptionPlugin from "@plugins/tasks/plugins/task-description/web";
 import tasksTaskDetailPlugin from "@plugins/tasks/plugins/task-detail/web";
+import tasksTaskDraftFormPlugin from "@plugins/tasks/plugins/task-draft-form/web";
 import tasksTaskEventsPlugin from "@plugins/tasks/plugins/task-events/web";
 import tasksTaskFilePeekPlugin from "@plugins/tasks/plugins/task-file-peek/web";
 import tasksTaskGraphPlugin from "@plugins/tasks/plugins/task-graph/web";
@@ -217,7 +217,6 @@ export const plugins: PluginDefinition[] = [
   primitivesRankPlugin,
   primitivesRelativeTimePlugin,
   primitivesSyntaxHighlightPlugin,
-  primitivesTaskDraftFormPlugin,
   primitivesTreePlugin,
   primitivesPlugin,
   publishPlugin,
@@ -235,6 +234,7 @@ export const plugins: PluginDefinition[] = [
   tasksTaskDependenciesPlugin,
   tasksTaskDescriptionPlugin,
   tasksTaskDetailPlugin,
+  tasksTaskDraftFormPlugin,
   tasksTaskEventsPlugin,
   tasksTaskFilePeekPlugin,
   tasksTaskGraphPlugin,
