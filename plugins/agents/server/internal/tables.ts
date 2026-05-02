@@ -24,6 +24,10 @@ export const _agents = pgTable(
     // launchable agent whose prompt is fed to the spawned conversation.
     prompt: text("prompt"),
     model: text("model"),
+    // Avatar key (icon + color) into the avatar primitive's registry. Both
+    // null = use the default robot/violet avatar.
+    icon: text("icon"),
+    iconColor: text("icon_color"),
     expanded: boolean("expanded").notNull().default(false),
     rank: rankText("rank").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

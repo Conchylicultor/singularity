@@ -3,6 +3,7 @@ import type {
   ConversationStatus,
 } from "@plugins/conversations/shared";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { Avatar } from "@plugins/primitives/plugins/avatar/web";
 import { cn } from "@/lib/utils";
 import { Item } from "../slots";
 
@@ -21,6 +22,19 @@ function ChipsSlot({ conv }: { conv: ConversationItemConv }) {
   );
 }
 
+// Renders the first Item.Avatar contribution whose `match` predicate returns
+// true for this conversation. Falls back to a blank-disc placeholder so the
+// title column stays aligned across rows.
+function AvatarSlot({ conv, size }: { conv: ConversationItemConv; size: "xs" | "sm" }) {
+  const items = Item.Avatar.useContributions();
+  const matched = items.find((item) => item.match(conv));
+  if (!matched) {
+    return <Avatar size={size} statusDot={CONV_STATUS_DOT[conv.status]} />;
+  }
+  const Component = matched.component;
+  return <Component conv={conv} />;
+}
+
 export const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
   starting: "bg-muted-foreground/60",
   working: "bg-[oklch(0.58_0.1_240)]",
@@ -30,7 +44,9 @@ export const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
 
 // Structural prop type — accepts both the full `Conversation` and the
 // narrower `ConversationSummary` carried by `attemptsResource`. Anything
-// with these fields renders.
+// with these fields renders. `taskId` is optional because `ConversationSummary`
+// doesn't carry it (only the full Conversation row does); contributions that
+// need it should bail out when it's undefined.
 export type ConversationItemConv = {
   id: string;
   title: string | null;
@@ -38,6 +54,7 @@ export type ConversationItemConv = {
   kind: ConversationKind;
   createdAt: Date;
   spawnedBy?: string | null;
+  taskId?: string | null;
 };
 
 export type ConversationItemProps = {
@@ -97,7 +114,7 @@ export function ConversationItem({
   if (layout === "inline") {
     return (
       <span className={cn("inline-flex max-w-full items-center gap-1.5", active && "opacity-60")}>
-        <ConvStatusDot conv={conv} />
+        <AvatarSlot conv={conv} size="xs" />
         <ConvTitle conv={conv} />
         <ConvSysBadge conv={conv} />
         <ChipsSlot conv={conv} />
@@ -106,8 +123,8 @@ export function ConversationItem({
   }
   return (
     <div className={cn("flex items-start gap-2 overflow-hidden", active && "opacity-60")}>
-      <span className="mt-1.5">
-        <ConvStatusDot conv={conv} />
+      <span className="mt-0.5">
+        <AvatarSlot conv={conv} size="sm" />
       </span>
       <div className="flex flex-col gap-0.5 overflow-hidden">
         <div className="flex items-center gap-1.5 overflow-hidden">

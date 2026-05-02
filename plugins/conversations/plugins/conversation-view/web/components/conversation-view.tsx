@@ -50,6 +50,7 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
   const promptBarItems = Conversation.PromptBar.useContributions();
   const promptInputItems = Conversation.PromptInput.useContributions();
   const abovePromptInputItems = Conversation.AbovePromptInput.useContributions();
+  const titlePrefixItems = Conversation.TitlePrefix.useContributions();
   const PromptInputComponent = promptInputItems[0]?.component ?? null;
   // useConversation subscribes to the live WebSocket resource (recentConversationsResource),
   // so status updates (starting → working → done) are reflected in real time.
@@ -149,7 +150,19 @@ export function ConversationView({ sessionId }: { sessionId: string }) {
         ) : (
           <PaneChrome
             pane={conversationPane}
-            title={conversation.title ?? conversation.id}
+            title={
+              titlePrefixItems.length > 0 ? (
+                <span className="flex items-center gap-2">
+                  {titlePrefixItems.map((item, i) => {
+                    const Cmp = item.component;
+                    return <Cmp key={i} conversation={conversation} />;
+                  })}
+                  <span className="truncate">{conversation.title ?? conversation.id}</span>
+                </span>
+              ) : (
+                conversation.title ?? conversation.id
+              )
+            }
             hideRightActions
           >
             {body}

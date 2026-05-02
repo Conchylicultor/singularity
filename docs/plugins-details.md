@@ -51,8 +51,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Pane.Register` `agent-side` (path `agent/:agentId`)
     - `Shell.Sidebar` "Agents" (group `System`)
     - `agentsRootPane.open`
-    - `Item.Chips` → `AgentChipRow`
-    - `conversationPane.Actions` → `AgentChipToolbar`
+    - `Item.Avatar` → `AgentAvatarRow`
+    - `Conversation.TitlePrefix` → `AgentAvatarTitlePrefix`
   - Server:
     - Uses: `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
     - Resources: `agent-launches` (push), `agents` (push)
@@ -231,21 +231,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
           - Defines:
-            - Slots: `Item.Chips`
+            - Slots: `Item.Chips`, `Item.Avatar`
           - Exports (web):
             - Types: `ConversationItemConv`, `ConversationItemProps`
             - Values: `CONV_STATUS_DOT`, `ConversationItem`, `ConvRelativeTime`, `ConvStatusDot`, `ConvSysBadge`, `ConvTitle`, `formatRelativeTime`, `Item`
           - Slot contributors: `agents`, `conversation-category`, `conversation-progress`
     - **`conversation-view`** — Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
       - Defines:
-        - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`, `Conversation.AbovePromptInput`
+        - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`, `Conversation.AbovePromptInput`, `Conversation.TitlePrefix`
       - Exports (web):
         - Types: `ConversationRecord`, `PromptDraft`
         - Values: `Conversation`, `conversationPane`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `isMainPaneId`, `markMainPane`, `PromptDraftProvider`, `usePromptDraft`
       - Contributes:
         - `Pane.Register` `conversation` (path `/c/:convId`)
         - `Conversation.ActionBar` → `ExpandConversationButton`
-      - Slot contributors: `attempt-view`, `code`, `commits-graph`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `push-counter`, `quick-prompts`, `resume`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+      - Slot contributors: `agents`, `attempt-view`, `code`, `commits-graph`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `push-counter`, `quick-prompts`, `resume`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Defines:
@@ -749,6 +749,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `JumpToBottomButtonProps`, `StickyScrollHandle`, `UseStickyScrollOptions`
         - Values: `JumpToBottomButton`, `useStickyScroll`
+    - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
+      - Exports (web):
+        - Types: `AvatarColor`, `AvatarPickerProps`, `AvatarProps`, `AvatarSize`, `AvatarSpec`
+        - Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `AVATAR_ICON_KEYS`, `AVATAR_ICONS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`, `resolveAvatarIcon`
     - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
       - Exports (web):
         - Types: `EditableField`, `UseEditableFieldOptions`

@@ -16,4 +16,9 @@ export const Conversation = {
   AbovePromptInput: defineSlot<{
     component: ComponentType<{ conversation: ConversationRecord }>;
   }>("conversation.above-prompt-input"),
+  // Renders inline before the conversation pane title (e.g. agent avatar).
+  // Multiple contributions render in the order they were registered.
+  TitlePrefix: defineSlot<{
+    component: ComponentType<{ conversation: ConversationRecord }>;
+  }>("conversation.title-prefix"),
 };

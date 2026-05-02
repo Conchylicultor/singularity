@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { MdPrecisionManufacturing } from "react-icons/md";
 import {
   agentsRootPane,
@@ -11,8 +11,8 @@ import {
   systemAgentDetailPane,
   agentSidePane,
 } from "./panes";
-import { AgentChipRow } from "./components/agent-chip-row";
-import { AgentChipToolbar } from "./components/agent-chip-toolbar";
+import { AgentAvatarRow } from "./components/agent-avatar-row";
+import { AgentAvatarTitlePrefix } from "./components/agent-avatar-title-prefix";
 
 export {
   agentsRootPane,
@@ -41,7 +41,10 @@ export default {
       group: "System",
       onClick: () => agentsRootPane.open({}),
     }),
-    Item.Chips({ component: AgentChipRow }),
-    conversationPane.Actions({ component: AgentChipToolbar, position: "left" }),
+    Item.Avatar({
+      match: (conv) => conv.kind === "agent",
+      component: AgentAvatarRow,
+    }),
+    Conversation.TitlePrefix({ component: AgentAvatarTitlePrefix }),
   ],
 } satisfies PluginDefinition;

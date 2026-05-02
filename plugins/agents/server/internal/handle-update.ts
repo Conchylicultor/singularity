@@ -18,6 +18,8 @@ export async function handleUpdate(
     description?: string | null;
     prompt?: string | null;
     model?: string | null;
+    icon?: string | null;
+    iconColor?: string | null;
     expanded?: boolean;
     parentId?: string | null;
     rank?: string;
@@ -32,6 +34,12 @@ export async function handleUpdate(
   }
   if (body.model === null || typeof body.model === "string") {
     patch.model = body.model;
+  }
+  if (body.icon === null || typeof body.icon === "string") {
+    patch.icon = body.icon;
+  }
+  if (body.iconColor === null || typeof body.iconColor === "string") {
+    patch.iconColor = body.iconColor;
   }
   if (typeof body.expanded === "boolean") patch.expanded = body.expanded;
   if (body.parentId === null || typeof body.parentId === "string") {
