@@ -41,6 +41,9 @@ export const conversationTrailer: Check = {
   description:
     "SINGULARITY_CONVERSATION_ID is set and every commit ahead of main carries the Singularity-Conversation trailer",
   async run() {
+    const branch = await currentBranch();
+    if (branch === "main") return { ok: true };
+
     const envId = process.env.SINGULARITY_CONVERSATION_ID;
     if (!envId) {
       return {
@@ -50,9 +53,6 @@ export const conversationTrailer: Check = {
         hint: STOP_MESSAGE,
       };
     }
-
-    const branch = await currentBranch();
-    if (branch === "main") return { ok: true };
 
     const commits = await commitsAheadOfMain();
     if (commits.length === 0) return { ok: true };
