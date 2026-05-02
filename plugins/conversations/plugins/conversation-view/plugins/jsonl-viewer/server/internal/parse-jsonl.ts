@@ -228,7 +228,7 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
             at: ts,
             messageId: msgId,
             text: block.text,
-            stopReason: msg.stop_reason,
+            stopReason: msg.stop_reason ?? undefined,
           };
           if (msgId) assistantTextByMsgId.set(msgId, event);
           setUsageOnce(event);
