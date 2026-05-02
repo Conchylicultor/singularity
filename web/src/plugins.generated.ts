@@ -19,10 +19,10 @@ import codeExplorerPlugin from "@plugins/code-explorer/web";
 import configPlugin from "@plugins/config/web";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/web";
 import conversationsConversationCategoryPlugin from "@plugins/conversations/plugins/conversation-category/web";
-import conversationsConversationGroupsPlugin from "@plugins/conversations/plugins/conversation-groups/web";
 import conversationsConversationProgressPlugin from "@plugins/conversations/plugins/conversation-progress/web";
 import conversationsConversationUiItemPlugin from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import conversationsConversationUiPlugin from "@plugins/conversations/plugins/conversation-ui/web";
+import conversationsConversationViewActionBarPlugin from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import conversationsConversationViewCodeDocsButtonPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/docs-button/web";
 import conversationsConversationViewCodeFilePaneDiffPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import conversationsConversationViewCodeFilePaneImagePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/image/web";
@@ -62,6 +62,8 @@ import conversationsConversationViewTerminalPanePlugin from "@plugins/conversati
 import conversationsConversationViewTurnSummaryPlugin from "@plugins/conversations/plugins/conversation-view/plugins/turn-summary/web";
 import conversationsConversationViewVscodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/vscode/web";
 import conversationsConversationViewPlugin from "@plugins/conversations/plugins/conversation-view/web";
+import conversationsConversationsViewGroupedPlugin from "@plugins/conversations/plugins/conversations-view/plugins/grouped/web";
+import conversationsConversationsViewQueuePlugin from "@plugins/conversations/plugins/conversations-view/plugins/queue/web";
 import conversationsConversationsViewPlugin from "@plugins/conversations/plugins/conversations-view/web";
 import conversationsSummaryPlugin from "@plugins/conversations/plugins/summary/web";
 import crashesPlugin from "@plugins/crashes/web";
@@ -83,6 +85,7 @@ import primitivesLiveStatePlugin from "@plugins/primitives/plugins/live-state/we
 import primitivesNetworkingPlugin from "@plugins/primitives/plugins/networking/web";
 import primitivesPanePlugin from "@plugins/primitives/plugins/pane/web";
 import primitivesPasteImagesPlugin from "@plugins/primitives/plugins/paste-images/web";
+import primitivesRankPlugin from "@plugins/primitives/plugins/rank/web";
 import primitivesRelativeTimePlugin from "@plugins/primitives/plugins/relative-time/web";
 import primitivesSyntaxHighlightPlugin from "@plugins/primitives/plugins/syntax-highlight/web";
 import primitivesTaskDraftFormPlugin from "@plugins/primitives/plugins/task-draft-form/web";
@@ -123,10 +126,10 @@ export const plugins: PluginDefinition[] = [
   configPlugin,
   conversationsRecoverPlugin,
   conversationsConversationCategoryPlugin,
-  conversationsConversationGroupsPlugin,
   conversationsConversationProgressPlugin,
   conversationsConversationUiItemPlugin,
   conversationsConversationUiPlugin,
+  conversationsConversationViewActionBarPlugin,
   conversationsConversationViewCodeDocsButtonPlugin,
   conversationsConversationViewCodeFilePaneDiffPlugin,
   conversationsConversationViewCodeFilePaneImagePlugin,
@@ -166,6 +169,8 @@ export const plugins: PluginDefinition[] = [
   conversationsConversationViewTurnSummaryPlugin,
   conversationsConversationViewVscodePlugin,
   conversationsConversationViewPlugin,
+  conversationsConversationsViewGroupedPlugin,
+  conversationsConversationsViewQueuePlugin,
   conversationsConversationsViewPlugin,
   conversationsSummaryPlugin,
   crashesPlugin,
@@ -187,6 +192,7 @@ export const plugins: PluginDefinition[] = [
   primitivesNetworkingPlugin,
   primitivesPanePlugin,
   primitivesPasteImagesPlugin,
+  primitivesRankPlugin,
   primitivesRelativeTimePlugin,
   primitivesSyntaxHighlightPlugin,
   primitivesTaskDraftFormPlugin,

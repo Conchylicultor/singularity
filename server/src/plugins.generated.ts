@@ -14,7 +14,6 @@ import codeExplorerPlugin from "@plugins/code-explorer/server";
 import configPlugin from "@plugins/config/server";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
 import conversationsConversationCategoryPlugin from "@plugins/conversations/plugins/conversation-category/server";
-import conversationsConversationGroupsPlugin from "@plugins/conversations/plugins/conversation-groups/server";
 import conversationsConversationProgressPlugin from "@plugins/conversations/plugins/conversation-progress/server";
 import conversationsConversationViewCodeReviewPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/server";
 import conversationsConversationViewCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
@@ -28,6 +27,8 @@ import conversationsConversationViewPushAndExitPlugin from "@plugins/conversatio
 import conversationsConversationViewQuickPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server";
 import conversationsConversationViewResumePlugin from "@plugins/conversations/plugins/conversation-view/plugins/resume/server";
 import conversationsConversationViewTurnSummaryPlugin from "@plugins/conversations/plugins/conversation-view/plugins/turn-summary/server";
+import conversationsConversationsViewGroupedPlugin from "@plugins/conversations/plugins/conversations-view/plugins/grouped/server";
+import conversationsConversationsViewQueuePlugin from "@plugins/conversations/plugins/conversations-view/plugins/queue/server";
 import conversationsRuntimeApiPlugin from "@plugins/conversations/plugins/runtime-api/server";
 import conversationsRuntimeTmuxPlugin from "@plugins/conversations/plugins/runtime-tmux/server";
 import conversationsSummaryPlugin from "@plugins/conversations/plugins/summary/server";
@@ -45,6 +46,7 @@ import infraEventsPlugin from "@plugins/infra/plugins/events/server";
 import infraJobsPlugin from "@plugins/infra/plugins/jobs/server";
 import infraMcpPlugin from "@plugins/infra/plugins/mcp/server";
 import infraPlugin from "@plugins/infra/server";
+import primitivesRankPlugin from "@plugins/primitives/plugins/rank/server";
 import screenshotPlugin from "@plugins/screenshot/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/server";
@@ -61,7 +63,6 @@ export const plugins: ServerPluginDefinition[] = [
   configPlugin,
   conversationsRecoverPlugin,
   conversationsConversationCategoryPlugin,
-  conversationsConversationGroupsPlugin,
   conversationsConversationProgressPlugin,
   conversationsConversationViewCodeReviewPlugin,
   conversationsConversationViewCodePlugin,
@@ -75,6 +76,8 @@ export const plugins: ServerPluginDefinition[] = [
   conversationsConversationViewQuickPromptsPlugin,
   conversationsConversationViewResumePlugin,
   conversationsConversationViewTurnSummaryPlugin,
+  conversationsConversationsViewGroupedPlugin,
+  conversationsConversationsViewQueuePlugin,
   conversationsRuntimeApiPlugin,
   conversationsRuntimeTmuxPlugin,
   conversationsSummaryPlugin,
@@ -92,6 +95,7 @@ export const plugins: ServerPluginDefinition[] = [
   infraJobsPlugin,
   infraMcpPlugin,
   infraPlugin,
+  primitivesRankPlugin,
   screenshotPlugin,
   statsCommitsPlugin,
   statsTasksPlugin,
