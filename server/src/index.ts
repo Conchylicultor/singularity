@@ -1,5 +1,6 @@
 import type { WsData, HttpHandler, WsHandler } from "./types";
 import { plugins } from "./plugins";
+import { awaitPgReady } from "./db/client";
 import { runMigrations } from "./db/migrate";
 import { notificationsWsHandler, handleResourceHttp } from "./resources";
 import { topoSortPlugins } from "./topo";
@@ -22,6 +23,7 @@ for (const p of ordered) {
   }
 }
 
+await awaitPgReady();
 await runMigrations();
 
 // Phase 2 — onReady: parallel. Background work that needs the DB / a fully

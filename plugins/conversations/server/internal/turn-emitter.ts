@@ -4,7 +4,7 @@ import {
   getConversationClaudeSessionId,
   listConversationsForInfra,
 } from "@plugins/tasks-core/server";
-import { db } from "@server/db/client";
+import { db, isTransientPgError } from "@server/db/client";
 import { findTranscriptPath } from "./claude-transcript";
 import {
   _conversationTurnCompletedTriggers,
@@ -59,7 +59,9 @@ async function tick(): Promise<void> {
   try {
     convs = await listConversationsForInfra();
   } catch (err) {
-    console.error("[conversations.turn-emitter] listConversationsForInfra failed", err);
+    if (!isTransientPgError(err)) {
+      console.error("[conversations.turn-emitter] listConversationsForInfra failed", err);
+    }
     return;
   }
 
@@ -77,6 +79,7 @@ async function tick(): Promise<void> {
   await Promise.all(
     [...activeIds].map((id) =>
       pollRoom(id).catch((err) => {
+        if (isTransientPgError(err)) return;
         console.error(`[conversations.turn-emitter] ${id} tick failed`, err);
       }),
     ),

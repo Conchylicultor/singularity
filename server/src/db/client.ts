@@ -74,3 +74,55 @@ export const libpqSubprocessEnv: Record<string, string> = {
   PGPORT: port,
   PGUSER: user,
 };
+
+// Errors that mean "PG isn't reachable yet; retry shortly":
+//  - 57P03 — SQLSTATE "the database system is starting up", emitted while
+//    the cluster is in WAL recovery or just after central re-spawned PG.
+//  - ENOENT — Unix socket file doesn't exist yet (central hasn't bound it).
+//  - ECONNREFUSED — TCP listener not up yet (system-PG escape hatch).
+// Everything else (auth failure, syntax error, …) bubbles up so we don't
+// mask real bugs.
+export function isTransientPgError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { code?: string; errno?: string };
+  const code = e.code ?? e.errno;
+  return code === "57P03" || code === "ENOENT" || code === "ECONNREFUSED";
+}
+
+const PG_READY_TIMEOUT_MS = 30_000;
+let readyPromise: Promise<void> | null = null;
+
+// Wait for PG to be reachable before issuing the first real query. Per-worktree
+// backends spawn in parallel with central at gateway startup, so the first
+// connect can race PG's bind; central can also be unhealthy / mid-restart when
+// a backend boots. Without this loop, the backend hard-crashes with ENOENT or
+// ECONNREFUSED instead of waiting the few hundred ms for central to come up.
+export async function awaitPgReady(): Promise<void> {
+  if (readyPromise) return readyPromise;
+  readyPromise = (async () => {
+    const deadline = Date.now() + PG_READY_TIMEOUT_MS;
+    let delay = 100;
+    let lastErr: unknown = null;
+    while (Date.now() < deadline) {
+      try {
+        const client = await pool.connect();
+        try {
+          await client.query("SELECT 1");
+          return;
+        } finally {
+          client.release();
+        }
+      } catch (err) {
+        if (!isTransientPgError(err)) throw err;
+        lastErr = err;
+        await Bun.sleep(delay);
+        delay = Math.min(delay * 2, 1000);
+      }
+    }
+    throw new Error(
+      `Postgres did not become reachable within ${PG_READY_TIMEOUT_MS}ms`,
+      { cause: lastErr },
+    );
+  })();
+  return readyPromise;
+}

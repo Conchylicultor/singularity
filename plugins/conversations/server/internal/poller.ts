@@ -7,6 +7,7 @@ import {
 } from "@plugins/tasks-core/server";
 import { recordCrash } from "@plugins/crashes/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
+import { isTransientPgError } from "@server/db/client";
 import { Runtime, type RuntimeInfo } from "./runtime";
 import { findTranscriptPath } from "./claude-transcript";
 import type { ConversationStatus } from "../../shared";
@@ -184,9 +185,16 @@ async function tick(): Promise<void> {
   if (changed) recentConversationsResource.notify();
 }
 
+function logTickError(label: string, err: unknown): void {
+  // Transient = central is restarting / catching up. Next tick will pick up
+  // naturally; logging would just spam the recovery window.
+  if (isTransientPgError(err)) return;
+  console.error(`[conversations.poller] ${label} failed`, err);
+}
+
 export function startPoller(): void {
-  tick().catch((err) => console.error("[conversations.poller] initial tick failed", err));
+  tick().catch((err) => logTickError("initial tick", err));
   setInterval(() => {
-    tick().catch((err) => console.error("[conversations.poller] tick failed", err));
+    tick().catch((err) => logTickError("tick", err));
   }, TICK_MS);
 }
