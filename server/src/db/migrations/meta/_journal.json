@@ -452,9 +452,16 @@
     },
     {
       "version": "7",
-      "when": 1777800000000,
+      "when": 1777798800000,
       "tag": "20260503_090000_39283cb0__migrate_category_to_extension",
       "hash": "39283cb0",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777824561000,
+      "tag": "20260503_160921_301b81af__git_watcher_ref_advanced",
+      "hash": "301b81af",
       "breakpoints": true
     }
   ]

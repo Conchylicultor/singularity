@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   listAttempts,
   insertPush,
@@ -5,15 +6,8 @@ import {
   listPushShasIn,
 } from "@plugins/tasks-core/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
-
+import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { GIT } from "@plugins/infra/plugins/paths/server";
-const TICK_MS = 1000;
-// Periodic self-heal scan: a bounded recent window reconciled against
-// the DB. Catches commits the delta path missed, e.g. a process restart
-// during a `./singularity push` merge where `lastSha` got seeded just
-// before main advanced.
-const HEAL_LIMIT = 200;
-const HEAL_INTERVAL_MS = 60_000;
 
 const FORMAT =
   "%H%x00%cI%x00" +
@@ -44,6 +38,10 @@ async function runGit(args: string[], cwd: string): Promise<string> {
   return text;
 }
 
+// Trailer-only commits get rejected: the pushes table joins through the
+// conversation/attempt graph, and a commit lacking either trailer (e.g. a
+// `--from-main` push) can't be attributed. The git-watcher event still fires
+// for those commits — auto-build runs regardless of trailers.
 function parseLog(raw: string): ParsedCommit[] {
   const records = raw.split("\0\n").filter((r) => r.length > 0);
   const out: ParsedCommit[] = [];
@@ -66,27 +64,20 @@ function parseLog(raw: string): ParsedCommit[] {
   return out;
 }
 
-async function resolveMainSha(cwd: string): Promise<string> {
-  const text = await runGit(["rev-parse", "refs/heads/main"], cwd);
-  return text.trim();
-}
-
-async function readCommits(
-  range: string | null,
+async function readCommitsInRange(
+  range: string,
   cwd: string,
 ): Promise<ParsedCommit[]> {
-  const args = ["log", "--no-color", `--format=${FORMAT}`];
-  args.push(range ?? "main");
-  const raw = await runGit(args, cwd);
+  const raw = await runGit(
+    ["log", "--no-color", `--format=${FORMAT}`, range],
+    cwd,
+  );
   return parseLog(raw);
 }
 
-async function readRecentCommits(
-  cwd: string,
-  limit: number,
-): Promise<ParsedCommit[]> {
+async function readAllMainCommits(cwd: string): Promise<ParsedCommit[]> {
   const raw = await runGit(
-    ["log", "--no-color", "-n", String(limit), `--format=${FORMAT}`, "main"],
+    ["log", "--no-color", `--format=${FORMAT}`, "refs/heads/main"],
     cwd,
   );
   return parseLog(raw);
@@ -116,8 +107,9 @@ async function recordCommits(commits: ParsedCommit[]): Promise<boolean> {
 }
 
 // Filter to commits not already in the DB before re-running per-commit
-// conversation/attempt resolution. One indexed SELECT keeps the heal
-// scan cheap in the steady state.
+// conversation/attempt resolution. One indexed SELECT keeps the heal scan
+// cheap in the steady state — bounded by the trigger event's previousSha
+// window.
 async function recordMissing(commits: ParsedCommit[]): Promise<boolean> {
   if (commits.length === 0) return false;
   const have = await listPushShasIn(commits.map((c) => c.sha));
@@ -125,37 +117,10 @@ async function recordMissing(commits: ParsedCommit[]): Promise<boolean> {
   return recordCommits(missing);
 }
 
-let lastSha: string | null = null;
-let lastHealAt = 0;
-
-async function tick(cwd: string): Promise<void> {
-  let head: string;
-  try {
-    head = await resolveMainSha(cwd);
-  } catch (err) {
-    console.error("[tasks.push-watcher] rev-parse failed", err);
-    return;
-  }
-  const headChanged = head !== lastSha;
-  const dueForHeal = Date.now() - lastHealAt >= HEAL_INTERVAL_MS;
-  if (!headChanged && !dueForHeal) return;
-  try {
-    if (dueForHeal) {
-      const commits = await readRecentCommits(cwd, HEAL_LIMIT);
-      await recordMissing(commits);
-      lastHealAt = Date.now();
-    } else {
-      const range = lastSha ? `${lastSha}..${head}` : null;
-      const commits = await readCommits(range, cwd);
-      await recordCommits(commits);
-    }
-    lastSha = head;
-  } catch (err) {
-    console.error("[tasks.push-watcher] tick failed", err);
-  }
-}
-
-export async function startPushWatcher(): Promise<void> {
+// One-shot reconcile run at server boot. Walks the entire local-main history
+// and records anything missing from the DB. Cheap on a fresh worktree DB
+// (forked from main has most pushes already).
+export async function runInitialReconcile(): Promise<void> {
   let cwd: string;
   try {
     cwd = await ensureMainWorktreeRoot();
@@ -163,21 +128,44 @@ export async function startPushWatcher(): Promise<void> {
     console.error("[tasks.push-watcher] cannot resolve main worktree", err);
     return;
   }
-  // Initial reconcile: full main history diffed against the DB. The
-  // only unbounded scan; subsequent ticks use the bounded HEAL_LIMIT
-  // window. One-time cost on a fresh DB; near-zero on a DB forked from
-  // main where most pushes are already present.
   try {
-    const commits = await readCommits(null, cwd);
+    const commits = await readAllMainCommits(cwd);
     await recordMissing(commits);
-    lastSha = await resolveMainSha(cwd);
-    lastHealAt = Date.now();
   } catch (err) {
     console.error("[tasks.push-watcher] initial reconcile failed", err);
   }
-  setInterval(() => {
-    tick(cwd).catch((err) =>
-      console.error("[tasks.push-watcher] tick threw", err),
-    );
-  }, TICK_MS);
 }
+
+// Trigger handler bound to git.refAdvanced. Walks the commit range
+// (previousSha..sha] and ingests any trailer-bearing commits.
+export const pushIngestJob = defineJob({
+  name: "tasks.push-ingest",
+  input: z.object({}),
+  event: z.object({
+    refName: z.string(),
+    sha: z.string(),
+    previousSha: z.string().nullable(),
+  }),
+  run: async ({ event }) => {
+    if (!event) return;
+    if (event.refName !== "refs/heads/main") return;
+    let cwd: string;
+    try {
+      cwd = await ensureMainWorktreeRoot();
+    } catch (err) {
+      console.error("[tasks.push-ingest] cannot resolve main worktree", err);
+      return;
+    }
+    try {
+      // No previousSha (first emit after fresh boot) → fall back to the full
+      // history. recordMissing dedups against the DB so re-running the
+      // reconcile is idempotent.
+      const commits = event.previousSha
+        ? await readCommitsInRange(`${event.previousSha}..${event.sha}`, cwd)
+        : await readAllMainCommits(cwd);
+      await recordMissing(commits);
+    } catch (err) {
+      console.error("[tasks.push-ingest] ingest failed", err);
+    }
+  },
+});

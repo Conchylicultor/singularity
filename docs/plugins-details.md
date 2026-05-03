@@ -147,7 +147,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Toolbar` (group `actions`) → `BuildButton`
   - Server:
     - Register: `buildRunJob`
-    - Uses: `config.readConfig`, `tasks-core.pushLanded`
+    - Uses: `config.readConfig`
+    - Resources: `build.mainAheadCount` (push)
     - `POST /api/build`
     - `GET /api/build/status`
 
@@ -762,6 +763,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `DELETE /api/events/triggers/:id`
         - `PATCH /api/events/triggers/:id`
       - Endpoint callers: `queue`
+    - **`git-watcher`** — Watches local git refs (refs/heads/main by default) via @parcel/watcher. Emits the git.refAdvanced trigger event and notifies the refHeadResource live-state resource on every advance.
+      - Defines:
+        - DB schema: `plugins/infra/plugins/git-watcher/server/internal/tables-ref-advanced.ts`
+      - Exports (server):
+        - Types: `RefAdvancedPayload`, `RefHead`
+        - Values: `_refAdvancedTriggers`, `refAdvanced`, `refHeadResource`, `RefHeadSchema`
+      - Server:
+        - Register: `refAdvanced`
     - **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
       - Defines:
         - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
@@ -1007,7 +1016,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
     - Values: `attemptsResource`, `pushesResource`, `tasksResource`
   - Server:
-    - Register: `addTaskTool`
+    - Register: `addTaskTool`, `pushIngestJob`
     - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.scheduleTaskTitleUpdate`, `tasks-core.setTaskAutoStart`, `tasks-core.synthesiseTitleFallback`, `tasks-core.taskStatusChanged`, `tasks-core.updateTask`
     - `GET /api/tasks`
     - `POST /api/tasks`
@@ -1090,7 +1099,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Register: `pushLanded`, `taskStatusChanged`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `active-data`, `agents`, `allow-monitor`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
+  - Imported by: `active-data`, `agents`, `allow-monitor`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):

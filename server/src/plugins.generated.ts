@@ -47,6 +47,7 @@ import infraAttachmentsPlugin from "@plugins/infra/plugins/attachments/server";
 import infraClaudeCliPlugin from "@plugins/infra/plugins/claude-cli/server";
 import infraEntityExtensionsPlugin from "@plugins/infra/plugins/entity-extensions/server";
 import infraEventsPlugin from "@plugins/infra/plugins/events/server";
+import infraGitWatcherPlugin from "@plugins/infra/plugins/git-watcher/server";
 import infraJobsPlugin from "@plugins/infra/plugins/jobs/server";
 import infraMcpPlugin from "@plugins/infra/plugins/mcp/server";
 import infraPlugin from "@plugins/infra/server";
@@ -103,6 +104,7 @@ export const plugins: ServerPluginDefinition[] = [
   infraClaudeCliPlugin,
   infraEntityExtensionsPlugin,
   infraEventsPlugin,
+  infraGitWatcherPlugin,
   infraJobsPlugin,
   infraMcpPlugin,
   infraPlugin,

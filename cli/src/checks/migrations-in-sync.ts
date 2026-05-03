@@ -43,9 +43,13 @@ export const migrationsInSync: Check = {
       );
 
       const before = listSql(tmpOut);
+      // `--bun` forces Bun runtime; without it, bunx falls back to Node for
+      // drizzle-kit's `#!/usr/bin/env node` shebang and crashes when the
+      // schema closure pulls in `paths/bins.ts` (Bun.which is undefined).
       const proc = Bun.spawn(
         [
           "bunx",
+          "--bun",
           "drizzle-kit",
           "generate",
           `--config=${relative(serverDir, tmpConfig)}`,

@@ -422,6 +422,10 @@
       "name": "@singularity/plugin-infra-events",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/git-watcher": {
+      "name": "@singularity/plugin-infra-git-watcher",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/jobs": {
       "name": "@singularity/plugin-infra-jobs",
       "version": "0.0.1",
@@ -1409,6 +1413,8 @@
     "@singularity/plugin-infra-entity-extensions": ["@singularity/plugin-infra-entity-extensions@workspace:plugins/infra/plugins/entity-extensions"],
 
     "@singularity/plugin-infra-events": ["@singularity/plugin-infra-events@workspace:plugins/infra/plugins/events"],
+
+    "@singularity/plugin-infra-git-watcher": ["@singularity/plugin-infra-git-watcher@workspace:plugins/infra/plugins/git-watcher"],
 
     "@singularity/plugin-infra-jobs": ["@singularity/plugin-infra-jobs@workspace:plugins/infra/plugins/jobs"],
 

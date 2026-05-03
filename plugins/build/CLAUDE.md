@@ -9,7 +9,8 @@
   - `Shell.Toolbar` (group `actions`) → `BuildButton`
 - Server:
   - Register: `buildRunJob`
-  - Uses: `config.readConfig`, `tasks-core.pushLanded`
+  - Uses: `config.readConfig`
+  - Resources: `build.mainAheadCount` (push)
   - `POST /api/build`
   - `GET /api/build/status`
 

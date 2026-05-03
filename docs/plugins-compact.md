@@ -231,6 +231,14 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
         - `DELETE /api/events/triggers/:id`
         - `PATCH /api/events/triggers/:id`
       - Endpoint callers: `queue`
+    - **`git-watcher`** [load-bearing] — Watches local git refs (refs/heads/main by default) via @parcel/watcher. Emits the git.refAdvanced trigger event and notifies the refHeadResource live-state resource on every advance.
+      - Defines:
+        - DB schema: `plugins/infra/plugins/git-watcher/server/internal/tables-ref-advanced.ts`
+      - Exports (server):
+        - Types: `RefAdvancedPayload`, `RefHead`
+        - Values: `_refAdvancedTriggers`, `refAdvanced`, `refHeadResource`, `RefHeadSchema`
+      - Server:
+        - Register: `refAdvanced`
     - **`jobs`** [load-bearing] — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
       - Defines:
         - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
@@ -372,7 +380,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
   - Server:
     - Register: `pushLanded`, `taskStatusChanged`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
-  - Imported by: `active-data`, `agents`, `allow-monitor`, `build`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
+  - Imported by: `active-data`, `agents`, `allow-monitor`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
 

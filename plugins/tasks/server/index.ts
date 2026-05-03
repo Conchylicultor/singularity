@@ -13,7 +13,12 @@ import {
 } from "./internal/handle-dependencies";
 import { handleRepoInfo } from "./internal/handle-repo-info";
 import { handleTaskAttachments } from "./internal/handle-task-attachments";
-import { startPushWatcher } from "./internal/push-watcher";
+import { pushIngestJob, runInitialReconcile } from "./internal/push-watcher";
+import {
+  deleteTriggersFor,
+  trigger,
+} from "@plugins/infra/plugins/events/server";
+import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
 import {
   backfillConversationsMetaParent,
   ensureConversationsMetaTask,
@@ -64,12 +69,21 @@ export default {
   },
   // Resources are now mounted on tasks-core; tasks plugin owns no resources.
   resources: [],
-  register: [addTaskTool],
+  register: [addTaskTool, pushIngestJob],
   onReady: async () => {
     const created = await ensureConversationsMetaTask();
     if (created) {
       await backfillConversationsMetaParent();
     }
-    await startPushWatcher();
+    // Reconcile catches any commits that landed while the server was down.
+    // The git-watcher trigger keeps us live from this point forward.
+    await runInitialReconcile();
+    await deleteTriggersFor(pushIngestJob);
+    await trigger({
+      on: refAdvanced.where({ refName: "refs/heads/main" }),
+      do: pushIngestJob,
+      with: {},
+      oneShot: false,
+    });
   },
 } satisfies ServerPluginDefinition;

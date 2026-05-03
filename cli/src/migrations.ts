@@ -44,7 +44,12 @@ export async function generateMigration(opts: {
 
   const before = new Set(readdirSync(migrationsDir));
 
-  const cmd = ["bunx", "drizzle-kit", "generate"];
+  // `bunx` falls back to Node when the binary's shebang is `#!/usr/bin/env node`
+  // (drizzle-kit ships exactly that). Once Node owns the process, transitive
+  // imports through plugin barrels can pull in `paths/bins.ts`, which calls
+  // `Bun.which()` and crashes with "Bun is not defined" — silently exit-0,
+  // no migration generated. `--bun` forces Bun runtime regardless of shebang.
+  const cmd = ["bunx", "--bun", "drizzle-kit", "generate"];
   if (migrationName) cmd.push("--name", migrationName);
 
   const proc = Bun.spawn(cmd, {

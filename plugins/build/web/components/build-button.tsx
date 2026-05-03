@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { getHealth, waitForRestart } from "@plugins/health/web";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { MdRefresh } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { mainAheadCountResource } from "../../shared/resources";
 
 interface BuildStatus {
-  mainAheadCount: number;
   frontendHash: string;
   autoBuildAt: string | null;
 }
@@ -24,14 +25,15 @@ async function getBuildStatus(): Promise<BuildStatus | null> {
 export function BuildButton() {
   const [building, setBuilding] = useState(false);
   const [autoBuilding, setAutoBuilding] = useState(false);
-  const [mainAheadCount, setMainAheadCount] = useState(0);
   const [staleTab, setStaleTab] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const initialHashRef = useRef<string | null>(null);
   const lastAutoBuildAtRef = useRef<string | null | undefined>(undefined);
 
+  const { data: aheadData } = useResource(mainAheadCountResource);
+  const mainAheadCount = aheadData?.count ?? 0;
+
   function applyStatus(status: BuildStatus) {
-    setMainAheadCount(status.mainAheadCount);
     if (initialHashRef.current === null) {
       initialHashRef.current = status.frontendHash;
       setLoaded(true);
