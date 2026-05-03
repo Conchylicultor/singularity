@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
-import { readStatus, setStatus } from "./state";
+import { setStatus } from "./state";
 
 // `exit_clean` and `flag_raise` are the model-facing terminus of the
 // push-and-exit flow. The toolbar button enqueues `pushAndExitJob` which
@@ -14,10 +14,9 @@ import { readStatus, setStatus } from "./state";
 // still-streaming response. `flag_raise` is fire-and-forget: a status
 // write is safe mid-turn and the conversation stays open for the user.
 //
-// Both handlers no-op when no push-and-exit row exists for the
-// conversation: the model could in principle call these tools without
-// being prompted, and we don't want a stray call to delete a conversation
-// the user didn't ask to close.
+// Both handlers are callable without an in-flight push-and-exit row so that
+// the model can call them in response to an explicit "Exit" instruction
+// outside of the toolbar-initiated flow.
 
 export const exitCleanTool = Mcp.tool({
   name: "exit_clean",
@@ -26,12 +25,6 @@ export const exitCleanTool = Mcp.tool({
 Only call this in response to the push-and-exit prompt. If anything went wrong or there's something worth surfacing, call \`flag_raise\` instead.`,
   inputSchema: {},
   async handler(_args, { conversationId }) {
-    const current = await readStatus(conversationId);
-    if (current === null) {
-      throw new Error(
-        "exit_clean called for a conversation with no in-flight push-and-exit. Only call this tool in response to the push-and-exit prompt.",
-      );
-    }
     await setStatus(conversationId, "clean", null);
     await exitCleanFinalizeJob.enqueue(
       { conversationId },
@@ -62,12 +55,6 @@ Only call this in response to the push-and-exit prompt.`,
       ),
   },
   async handler({ reason }, { conversationId }) {
-    const current = await readStatus(conversationId);
-    if (current === null) {
-      throw new Error(
-        "flag_raise called for a conversation with no in-flight push-and-exit. Only call this tool in response to the push-and-exit prompt.",
-      );
-    }
     await setStatus(conversationId, "flag", reason);
     return {
       content: [{ type: "text", text: JSON.stringify({ ok: true }) }],
