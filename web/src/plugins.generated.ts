@@ -113,6 +113,7 @@ import statsCommitsPlugin from "@plugins/stats/plugins/commits/web";
 import statsCostPlugin from "@plugins/stats/plugins/cost/web";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/web";
 import statsPlugin from "@plugins/stats/web";
+import tasksAutoStartPlugin from "@plugins/tasks/plugins/auto-start/web";
 import tasksTaskAttachmentsPlugin from "@plugins/tasks/plugins/task-attachments/web";
 import tasksTaskDependenciesPlugin from "@plugins/tasks/plugins/task-dependencies/web";
 import tasksTaskDescriptionPlugin from "@plugins/tasks/plugins/task-description/web";
@@ -236,6 +237,7 @@ export const plugins: PluginDefinition[] = [
   statsCostPlugin,
   statsTasksPlugin,
   statsPlugin,
+  tasksAutoStartPlugin,
   tasksTaskAttachmentsPlugin,
   tasksTaskDependenciesPlugin,
   tasksTaskDescriptionPlugin,

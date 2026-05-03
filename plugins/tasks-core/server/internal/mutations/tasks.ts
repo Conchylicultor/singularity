@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { _attempts, _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../schema";
@@ -102,44 +102,6 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
   await emitStatusChangeIfChanged(id, before);
   const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
   return row ?? null;
-}
-
-// Write or clear the auto-start columns on a task. Pass `null` to clear.
-// Used by the new-child-task popover (Create & queue) and the queued-children
-// launcher/canceller jobs in the conversations plugin.
-export async function setTaskAutoStart(
-  id: string,
-  autoStart: { model: "opus" | "sonnet" } | null,
-): Promise<boolean> {
-  const [row] = await db
-    .update(_tasks)
-    .set({
-      autoStartAt: autoStart ? new Date() : null,
-      autoStartModel: autoStart ? autoStart.model : null,
-      updatedAt: new Date(),
-    })
-    .where(eq(_tasks.id, id))
-    .returning({ id: _tasks.id });
-  if (row) tasksResource.notify();
-  return !!row;
-}
-
-// Atomic compare-and-swap on auto_start_at. Returns true iff this caller
-// nulled the marker (and therefore owns the launch slot); false if another
-// runner already cleared it. Collapses at-least-once event delivery into
-// exactly-one launch in maybeLaunchTaskJob.
-export async function claimAutoStart(id: string): Promise<boolean> {
-  const [row] = await db
-    .update(_tasks)
-    .set({
-      autoStartAt: null,
-      autoStartModel: null,
-      updatedAt: new Date(),
-    })
-    .where(and(eq(_tasks.id, id), isNotNull(_tasks.autoStartAt)))
-    .returning({ id: _tasks.id });
-  if (row) tasksResource.notify();
-  return !!row;
 }
 
 export async function updateTaskTitle(

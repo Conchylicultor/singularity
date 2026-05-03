@@ -8,6 +8,7 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+
 import { rankText } from "@server/db/types";
 
 // Physical tables only. This file is a load-order leaf: it must NOT import
@@ -34,13 +35,6 @@ export const _tasks = pgTable(
     heldAt: timestamp("held_at", { withTimezone: true }),
     expanded: boolean("expanded").notNull().default(false),
     rank: rankText("rank").notNull(),
-    // Set when the task is queued to auto-launch as soon as all its
-    // dependencies are non-blocking (done or dropped). The new-child-task
-    // popover writes this; the maybeLaunchTask job in the conversations
-    // plugin reads it. Both columns are written/cleared together (either
-    // both null or both set).
-    autoStartAt: timestamp("auto_start_at", { withTimezone: true }),
-    autoStartModel: text("auto_start_model").$type<"opus" | "sonnet">(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

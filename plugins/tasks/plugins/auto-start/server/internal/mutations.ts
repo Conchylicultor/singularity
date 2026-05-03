@@ -1,0 +1,44 @@
+import { eq } from "drizzle-orm";
+import { db } from "@server/db/client";
+import { _tasks, tasksResource } from "@plugins/tasks-core/server";
+import { getExtension, upsertExtension } from "@plugins/infra/plugins/entity-extensions/server";
+import { _tasksAutoStartExt } from "./tables";
+
+export async function getTaskAutoStart(id: string) {
+  return getExtension(_tasksAutoStartExt, id);
+}
+
+// Write or clear the auto-start ext-table row. Pass `null` to clear.
+export async function setTaskAutoStart(
+  id: string,
+  autoStart: { model: "opus" | "sonnet" } | null,
+): Promise<boolean> {
+  const [task] = await db
+    .select({ id: _tasks.id })
+    .from(_tasks)
+    .where(eq(_tasks.id, id))
+    .limit(1);
+  if (!task) return false;
+  if (autoStart) {
+    await upsertExtension(_tasksAutoStartExt, id, {
+      autoStartAt: new Date(),
+      autoStartModel: autoStart.model,
+    });
+  } else {
+    await db.delete(_tasksAutoStartExt).where(eq(_tasksAutoStartExt.parentId, id));
+  }
+  tasksResource.notify();
+  return true;
+}
+
+// Atomic CAS: delete the ext-table row and return true iff this caller
+// won the race. Collapses at-least-once trigger delivery into exactly-one
+// launch in maybeLaunchTaskJob.
+export async function claimAutoStart(id: string): Promise<boolean> {
+  const [row] = await db
+    .delete(_tasksAutoStartExt)
+    .where(eq(_tasksAutoStartExt.parentId, id))
+    .returning({ parentId: _tasksAutoStartExt.parentId });
+  if (row) tasksResource.notify();
+  return !!row;
+}

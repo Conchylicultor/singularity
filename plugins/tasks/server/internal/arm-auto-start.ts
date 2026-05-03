@@ -1,8 +1,5 @@
-import {
-  hasBlockingDep,
-  setTaskAutoStart,
-  taskStatusChanged,
-} from "@plugins/tasks-core/server";
+import { hasBlockingDep, taskStatusChanged } from "@plugins/tasks-core/server";
+import { setTaskAutoStart } from "@plugins/tasks/plugins/auto-start/server";
 import { trigger } from "@plugins/infra/plugins/events/server";
 import { maybeLaunchTaskJob } from "@plugins/conversations/server";
 

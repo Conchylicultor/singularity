@@ -13,7 +13,7 @@ export {
   _conversationAttachments,
   _taskAttachments,
 } from "./internal/schema-attachments";
-export { _conversations } from "./internal/tables";
+export { _tasks, _conversations } from "./internal/tables";
 
 // Zod schemas and TS types
 export {
@@ -90,8 +90,6 @@ export {
   createTask,
   updateTask,
   updateTaskTitle,
-  setTaskAutoStart,
-  claimAutoStart,
   deleteTask,
   addTaskDependency,
   removeTaskDependency,

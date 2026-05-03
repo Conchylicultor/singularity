@@ -1,13 +1,12 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
+import { getTask, hasBlockingDep, listAttemptsForTask } from "@plugins/tasks-core/server";
+import { buildTaskPrompt } from "@plugins/tasks-core/shared";
 import {
   claimAutoStart,
-  getTask,
-  hasBlockingDep,
-  listAttemptsForTask,
-} from "@plugins/tasks-core/server";
-import { buildTaskPrompt } from "@plugins/tasks-core/shared";
+  getTaskAutoStart,
+} from "@plugins/tasks/plugins/auto-start/server";
 import { createConversation } from "./lifecycle";
 
 // Job that launches a queued task once all its dependencies are non-blocking.
@@ -37,9 +36,10 @@ export const maybeLaunchTaskJob = defineJob({
       );
       return;
     }
-    if (!t.autoStartAt) {
+    const ext = await getTaskAutoStart(taskId);
+    if (!ext) {
       console.warn(
-        `[tasks.maybe-launch] task ${taskId} has no auto_start_at; trigger fired but no launch (already launched, cancelled, or never armed)`,
+        `[tasks.maybe-launch] task ${taskId} has no auto_start row; trigger fired but no launch (already launched, cancelled, or never armed)`,
       );
       return;
     }
@@ -57,9 +57,9 @@ export const maybeLaunchTaskJob = defineJob({
     if (attempts.length > 0) return;
 
     // Marker is cleared; if createConversation throws, retry is harmless
-    // (next run sees autoStartAt null and exits). A stuck-on-failure task
+    // (next run sees no ext row and exits). A stuck-on-failure task
     // is better than a runaway spawn.
-    const model = t.autoStartModel ?? "sonnet";
+    const model = ext.autoStartModel;
     await createConversation({
       taskId,
       model,

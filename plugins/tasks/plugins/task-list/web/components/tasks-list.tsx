@@ -1,5 +1,6 @@
 import { MdAdd } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
 import {
   RenameInput,
   RowChrome,
@@ -17,8 +18,6 @@ import { cn } from "@/lib/utils";
 type Task = TreeItem & {
   title: string;
   status: TaskStatus;
-  autoStartAt: Date | string | null;
-  autoStartModel: "opus" | "sonnet" | null;
 };
 
 async function createTaskRow(args: {
@@ -40,7 +39,8 @@ function TaskRow({ node, depth }: { node: TreeNode<Task>; depth: number }) {
   const hasChildren = node.children.length > 0;
   const dropped = node.status === "dropped";
   const done = node.status === "done";
-  const queuedModel = node.autoStartAt ? node.autoStartModel : null;
+  const autoStart = useTaskAutoStart(node.id);
+  const queuedModel = autoStart?.autoStartModel ?? null;
   return (
     <RowChrome
       node={node}

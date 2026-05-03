@@ -15,8 +15,13 @@
   - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
   - Values: `attemptsResource`, `pushesResource`, `tasksResource`
 - Server:
+<<<<<<< .merge_file_Tt7j0r
   - Register: `addTaskTool`, `pushIngestJob`
   - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.scheduleTaskTitleUpdate`, `tasks-core.setTaskAutoStart`, `tasks-core.synthesiseTitleFallback`, `tasks-core.taskStatusChanged`, `tasks-core.updateTask`
+=======
+  - Register: `addTaskTool`
+  - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.scheduleTaskTitleUpdate`, `tasks-core.synthesiseTitleFallback`, `tasks-core.taskStatusChanged`, `tasks-core.updateTask`
+>>>>>>> .merge_file_jdOLT6
   - `GET /api/tasks`
   - `POST /api/tasks`
   - `POST /api/tasks/chain`
@@ -31,6 +36,7 @@
   - `GET /api/repo-info`
 - Endpoint callers: `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-header`, `task-list`
 - Sub-plugins:
+  - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
   - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
   - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the parent task when applicable.
   - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.

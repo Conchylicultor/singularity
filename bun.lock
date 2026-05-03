@@ -596,6 +596,10 @@
       "name": "@singularity/plugin-tasks-core",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/auto-start": {
+      "name": "@singularity/plugin-tasks-auto-start",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/task-attachments": {
       "name": "@singularity/plugin-tasks-task-attachments",
       "version": "0.0.1",
@@ -1489,6 +1493,8 @@
     "@singularity/plugin-stats-tasks": ["@singularity/plugin-stats-tasks@workspace:plugins/stats/plugins/tasks"],
 
     "@singularity/plugin-tasks": ["@singularity/plugin-tasks@workspace:plugins/tasks"],
+
+    "@singularity/plugin-tasks-auto-start": ["@singularity/plugin-tasks-auto-start@workspace:plugins/tasks/plugins/auto-start"],
 
     "@singularity/plugin-tasks-core": ["@singularity/plugin-tasks-core@workspace:plugins/tasks-core"],
 

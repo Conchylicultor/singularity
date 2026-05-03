@@ -1,4 +1,4 @@
-import { setTaskAutoStart } from "@plugins/tasks-core/server";
+import { setTaskAutoStart } from "@plugins/tasks/plugins/auto-start/server";
 
 // Clear the autoStart columns on a single task. Per-dep trigger rows stay
 // alive but no-op when they fire (maybe-launch reads autoStartAt and exits

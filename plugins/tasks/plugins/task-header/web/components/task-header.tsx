@@ -4,6 +4,7 @@ import { useEditableField } from "@plugins/primitives/plugins/editable-field/web
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { type Task } from "@plugins/tasks/shared";
 import { patchTask, setAutoStart, useTask } from "@plugins/tasks/web";
+import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
 import { buildTaskPrompt } from "@plugins/tasks-core/shared";
 import { useFlushAll, useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ const STATUS_CLASSES: Record<Task["status"], string> = {
 
 export function TaskHeader({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
+  const autoStart = useTaskAutoStart(taskId);
   const flushAll = useFlushAll();
 
   const titleField = useEditableField({
@@ -141,7 +143,7 @@ export function TaskHeader({ taskId }: { taskId: string }) {
           Auto-start
         </span>
         <Select
-          value={task.autoStartModel ?? "none"}
+          value={autoStart?.autoStartModel ?? "none"}
           onValueChange={(v: string | null) => {
             if (v) void onAutoStartChange(v as "opus" | "sonnet" | "none");
           }}
