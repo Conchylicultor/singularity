@@ -4,7 +4,7 @@ Embedded Postgres owned by the central runtime. One cluster per host, multiple d
 
 ## Topology
 
-- **Single embedded cluster on the central runtime.** The `central/index.ts` plugin barrel registers an `onReady` that runs `initdb` on first start (writing to `~/.singularity/postgres/data-pg18/`), then spawns `postgres` as a detached child listening on a Unix socket at `~/.singularity/postgres/socket/.s.PGSQL.5433`. Cluster is shared by every worktree backend; isolation comes from per-worktree databases inside the cluster, not separate clusters.
+- **Single embedded cluster, decoupled from central's lifecycle.** The `central/index.ts` plugin barrel registers an `onReady` that runs `initdb` on first start (writing to `~/.singularity/postgres/data-pg18/`), then starts PG via `pg_ctl start` — daemonizing it as an orphaned process that survives any number of central restarts. PG listens on a Unix socket at `~/.singularity/postgres/socket/.s.PGSQL.5433`. Cluster is shared by every worktree backend; isolation comes from per-worktree databases inside the cluster, not separate clusters. Because PG is detached, `./singularity build` can freely restart central to pick up new code without disrupting any worktree's connection.
 - **Binaries from `embedded-postgres` npm.** The `embedded-postgres` package vendors PG 18 binaries per platform via `@embedded-postgres/<platform>` optionalDependencies. The package only ships `postgres`, `initdb`, and `pg_ctl`. Client tools (`pg_isready`, `psql`) are replaced with `pg.Client` calls; `pg_dump`/`pg_restore`/`pg_dumpall` are PATH-resolved (relying on the user's system PG client install until we bundle our own).
 - **Lazy `dylib` symlinks.** The platform tarballs ship versioned dylibs (e.g. `libicudata.77.1.dylib`) but PG's runtime loader expects unversioned aliases. `ensurePgSymlinks()` reads the package's `pg-symlinks.json` manifest and creates the missing symlinks the first time `pgBin()` is called.
 - **No PgBouncer (yet).** v1 ships with `max_connections=500` set on `initdb`. With ~7 connections per worktree, that's headroom for ~70 active worktrees. PgBouncer is a v2 follow-up — adding it later is purely additive (introduce a second socket env var, swap the app pool destination).
@@ -23,16 +23,16 @@ Worktree backends connect via `server/src/db/client.ts`. After this plugin lande
 
 `onReady()` in `internal/supervisor.ts`:
 1. Skip entirely if `SINGULARITY_USE_SYSTEM_PG=1`.
-2. If `data-pg18/` is partial (no `PG_VERSION`): wipe it.
-3. If `data-pg18/` does not exist: run `initdb -D <data> -U singularity --no-locale --encoding UTF8`. (Auto-migration runs after PG is up, fire-and-forget — see below.)
-4. If `data-pg18/postmaster.pid` exists from a prior run, ping via `pg.Client`. If alive, skip spawn. If dead, unlink the pidfile.
-5. Spawn `postgres -D <data> -k <socket> -p 5433 -c max_connections=500`. Logs piped to `~/.singularity/postgres/postgres.log`.
-6. Poll `pg.Client.connect()` with backoff, 30s timeout. Resolve the exported `ready` promise.
+2. If a prior migration sentinel exists, throw — refuse to boot until the user investigates.
+3. If `data-pg18/postmaster.pid` exists AND `pg.Client` connects: PG is already running (left over from the previous central instance). Reattach by starting the watchdog and resolving `ready`. No spawn.
+4. Otherwise: if `data-pg18/` is partial (no `PG_VERSION`), wipe; if `data-pg18/` is missing, run `initdb`; else if a stale pidfile exists, unlink it.
+5. Run `pg_ctl start -D <data> -l <log> -o "-k <socket> -p 5433 -c max_connections=500" -w -t 30` (env: PGHOST/PGPORT/PGUSER set so `-w` finds the non-default Unix socket). pg_ctl daemonizes PG and exits; PG keeps running.
+6. Resolve the exported `ready` promise; arm the watchdog.
 7. If fresh, fire-and-forget `migrateFromSystemPg(progress)` — central must bind its HTTP socket within the gateway's ~15s readiness window, so a multi-minute migration runs out-of-band. Status surfaces via `GET /api/database/status` (`migration: "running" | "completed" | "failed"`, plus a progress counter).
 
-`onShutdown()`: SIGTERM → 5s grace → SIGKILL.
+`onShutdown()`: clear the watchdog interval. Nothing else — PG is a long-lived daemon owned by no central instance, surviving central restart on every `./singularity build`. Full PG stop is a separate manual operation (`pg_ctl stop -D <data>`); we don't have a CLI wrapper for it yet.
 
-Watchdog: a 2s `pg.Client.connect()` check (`.unref()`-ed). If PG dies, log + attempt one re-spawn, then set `crashed: true`. Surfaced via `GET /api/database/status`. We do **not** auto-restart in a tight loop — that would mask persistent failures.
+Watchdog: a 2s `pg.Client.connect()` check (`.unref()`-ed). If PG dies, log + attempt one re-spawn (unlink the dead postmaster.pid first, then `pg_ctl start`), then set `crashed: true`. Surfaced via `GET /api/database/status`. We do **not** auto-restart in a tight loop — that would mask persistent failures.
 
 ## What this plugin does NOT do
 

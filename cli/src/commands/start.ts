@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { closeSync, mkdirSync, openSync, readFileSync, writeFileSync } from "fs";
-import { dirname, join, resolve } from "path";
+import { join } from "path";
+import { getMainRepoRoot } from "../git/main-repo-root";
 import { SINGULARITY_DIR } from "../paths";
 const LOGS_DIR = join(SINGULARITY_DIR, "logs");
 const GATEWAY_LOG = join(LOGS_DIR, "gateway.log");
@@ -33,17 +34,6 @@ async function isGatewayListening(): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-async function getMainRepoRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--git-common-dir"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const raw = (await new Response(proc.stdout).text()).trim();
-  await proc.exited;
-  // In a worktree this is absolute; in main it may be ".git" (relative to cwd).
-  return dirname(resolve(raw));
 }
 
 export function registerStart(program: Command) {

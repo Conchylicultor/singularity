@@ -1,5 +1,4 @@
-import type { Subprocess } from "bun";
-import { existsSync, openSync, unlinkSync } from "node:fs";
+import { existsSync, unlinkSync } from "node:fs";
 import { Client } from "pg";
 import { pgBin } from "./binaries";
 import {
@@ -28,7 +27,6 @@ import {
 type MigrationStatus = "idle" | "running" | "completed" | "failed";
 
 interface State {
-  proc: Subprocess | null;
   ready: boolean;
   crashed: boolean;
   migration: MigrationStatus;
@@ -38,7 +36,6 @@ interface State {
 }
 
 const state: State = {
-  proc: null,
   ready: false,
   crashed: false,
   migration: "idle",
@@ -78,42 +75,46 @@ async function pgIsReady(): Promise<boolean> {
   }
 }
 
-async function waitReady(timeoutMs: number): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  let delay = 100;
-  while (Date.now() < deadline) {
-    if (await pgIsReady()) return;
-    await Bun.sleep(delay);
-    delay = Math.min(delay * 2, 1000);
-  }
-  throw new Error(`Embedded PG did not become ready within ${timeoutMs}ms`);
-}
-
-function spawnPostgres(): Subprocess {
-  const log = openSync(PG_LOG_FILE, "a");
+// Use `pg_ctl start` rather than spawning `postgres` directly. pg_ctl
+// daemonizes PG (forks + setsid), waits for ready, then exits — leaving PG
+// running with no parent process. This decouples PG's lifecycle from
+// central's: central can be restarted on every `./singularity build`
+// without disrupting the cluster, and worktree backends keep their PG
+// connections alive across central blips.
+//
+// `-w` makes pg_ctl wait for ready by opening a libpq connection. Since we
+// listen only on a non-default Unix socket (`-k <PG_SOCKET_DIR>` and empty
+// listen_addresses), pg_ctl needs PGHOST/PGPORT/PGUSER in its env to find PG
+// — otherwise it would dial a TCP loopback that doesn't exist and time out.
+async function startPostgres(): Promise<void> {
   const proc = Bun.spawn(
     [
-      pgBin("postgres"),
+      pgBin("pg_ctl"),
+      "start",
       "-D",
       PG_DATA_DIR,
-      "-k",
-      PG_SOCKET_DIR,
-      "-p",
-      String(PG_PORT),
-      "-c",
-      `max_connections=${MAX_CONNECTIONS}`,
-      "-c",
-      "listen_addresses=",
+      "-l",
+      PG_LOG_FILE,
+      "-o",
+      `-k ${PG_SOCKET_DIR} -p ${PG_PORT} -c max_connections=${MAX_CONNECTIONS} -c listen_addresses=`,
+      "-w",
+      "-t",
+      "30",
     ],
     {
-      stdout: log,
-      stderr: log,
-      // Detached so SIGTERM to central propagates explicitly via onShutdown;
-      // we don't want central's exit alone to kill PG mid-write.
-      detached: false,
+      stdout: "inherit",
+      stderr: "inherit",
+      env: {
+        ...process.env,
+        PGHOST: PG_SOCKET_DIR,
+        PGPORT: String(PG_PORT),
+        PGUSER: PG_USER,
+      },
     },
   );
-  return proc;
+  if ((await proc.exited) !== 0) {
+    throw new Error(`pg_ctl start failed; see ${PG_LOG_FILE}`);
+  }
 }
 
 function startWatchdog(): void {
@@ -124,8 +125,14 @@ function startWatchdog(): void {
       console.error("[database] PG appears down; attempting one re-spawn");
       state.ready = false;
       try {
-        state.proc = spawnPostgres();
-        await waitReady(15_000);
+        // Stale pidfile from the dead postmaster will block `pg_ctl start`;
+        // unlink before retrying.
+        if (existsSync(PG_PID_FILE)) {
+          try {
+            unlinkSync(PG_PID_FILE);
+          } catch {}
+        }
+        await startPostgres();
         state.ready = true;
         console.log("[database] PG re-spawned successfully");
       } catch (err) {
@@ -156,6 +163,22 @@ export async function onReady(): Promise<void> {
       );
     }
 
+    // PG is detached from central's process group, so a freshly-started
+    // central instance (e.g. after `./singularity build` restart) finds PG
+    // already running. Reattach by socket health rather than spawning a
+    // duplicate. Migration must already be complete in this branch — if it
+    // weren't, the sentinel above would have thrown.
+    if (existsSync(PG_PID_FILE) && (await pgIsReady())) {
+      state.ready = true;
+      state.migration = "completed";
+      startWatchdog();
+      resolveReady();
+      console.log(
+        `[database] embedded PG already running at ${PG_SOCKET_DIR}:${PG_PORT}`,
+      );
+      return;
+    }
+
     if (dataDirPartial()) {
       console.log(
         "[database] data dir is partial (no PG_VERSION); cleaning and re-initdb",
@@ -166,18 +189,16 @@ export async function onReady(): Promise<void> {
     const fresh = !dataDirValid();
     if (fresh) {
       await initdb();
-    } else if (existsSync(PG_PID_FILE) && !(await pgIsReady())) {
-      // Stale pidfile from a crashed prior run; PG has the data-dir lock
-      // until startup, so the new postgres invocation will fail with a clear
-      // error. Best we can do is unlink the file when the process is gone.
+    } else if (existsSync(PG_PID_FILE)) {
+      // Stale pidfile from a crashed prior run; pg_ctl start will refuse
+      // until it's gone.
       console.log("[database] removing stale postmaster.pid");
       try {
         unlinkSync(PG_PID_FILE);
       } catch {}
     }
 
-    state.proc = spawnPostgres();
-    await waitReady(30_000);
+    await startPostgres();
 
     state.ready = true;
     startWatchdog();
@@ -217,35 +238,14 @@ export async function onReady(): Promise<void> {
 }
 
 export async function onShutdown(): Promise<void> {
+  // PG is a long-lived daemon owned by no central instance — it survives
+  // central restart on every `./singularity build`. Shutdown only clears
+  // central's local watchdog; PG keeps serving every worktree pool. A full
+  // PG stop is a separate manual operation (`pg_ctl stop -D <data>`).
   if (state.watchdog) {
     clearInterval(state.watchdog);
     state.watchdog = null;
   }
-  if (!state.proc) return;
-  console.log("[database] shutting down embedded PG (fast shutdown)");
-  // SIGINT = "fast shutdown": aborts in-flight transactions, checkpoints,
-  // exits cleanly. SIGTERM (smart shutdown) waits indefinitely for clients
-  // to disconnect, which never happens with persistent per-worktree pools —
-  // we'd time out and SIGKILL, leaving an unclean shutdown that forces WAL
-  // recovery on the next start (and a flood of "the database system is
-  // starting up" errors in every worktree backend during the recovery window).
-  state.proc.kill("SIGINT");
-  const exited = state.proc.exited;
-  const SHUTDOWN_GRACE_MS = 15_000;
-  const timedOut = Symbol("timeout");
-  const result = await Promise.race([
-    exited,
-    Bun.sleep(SHUTDOWN_GRACE_MS).then(() => timedOut),
-  ]);
-  if (result === timedOut) {
-    console.error(
-      `[database] PG did not shut down within ${SHUTDOWN_GRACE_MS}ms; forcing SIGKILL ` +
-        `(next start will require WAL recovery)`,
-    );
-    state.proc.kill("SIGKILL");
-    await exited;
-  }
-  state.proc = null;
   state.ready = false;
 }
 

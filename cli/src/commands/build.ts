@@ -5,6 +5,7 @@ import { basename, join, resolve } from "path";
 import { generateMigration } from "../migrations";
 import { generatePluginDocs, collectAllPlugins } from "../docgen";
 import { generatePluginRegistry } from "../plugin-registry-gen";
+import { getMainRepoRoot } from "../git/main-repo-root";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
 import { runChecks } from "../checks";
 import {
@@ -369,6 +370,37 @@ async function probeHealth(name: string): Promise<void> {
   process.exit(1);
 }
 
+// Central has no /api/health (it's not a worktree backend). /api/database/status
+// is the only central-mounted route reachable through any subdomain via the
+// central-routes manifest — refusing 'migration: running' avoids the first-
+// install footgun where a restart mid-migration trips the priorMigrationInProgress
+// guard on the next boot.
+async function probeCentralHealth(): Promise<void> {
+  console.log("Probing central /api/database/status...");
+  const url = "http://singularity.localhost:9000/api/database/status";
+  const deadline = Date.now() + 10_000;
+  let lastStatus: number | string = "no response";
+  while (Date.now() < deadline) {
+    try {
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const body = (await resp.json()) as { migration?: string };
+        if (body.migration !== "running") return;
+        lastStatus = "migration in progress";
+      } else {
+        lastStatus = resp.status;
+      }
+    } catch (err) {
+      lastStatus = err instanceof Error ? err.message : String(err);
+    }
+    await Bun.sleep(250);
+  }
+  console.warn(
+    `Central did not become healthy within 10s (last: ${lastStatus}). ` +
+      `Build artifacts are valid; central will retry on next request.`,
+  );
+}
+
 export function registerBuild(program: Command) {
   program
     .command("build")
@@ -445,7 +477,12 @@ export function registerBuild(program: Command) {
 
       // 2b'. Write the central spec early too — otherwise the gateway has no
       // way to spawn central. (Repeated at end of build for idempotency.)
-      const centralDir = resolve(root, "central");
+      // central.json always points at *main's* central/, not the current
+      // worktree's: central is a singleton serving every worktree, so the
+      // canonical source is main. The file is idempotent across worktree
+      // builds — same content every time.
+      const mainRoot = await getMainRepoRoot();
+      const centralDir = resolve(mainRoot, "central");
       if (existsSync(join(centralDir, "src", "index.ts"))) {
         mkdirSync(WORKTREES_DIR, { recursive: true });
         writeFileSync(
@@ -495,9 +532,13 @@ export function registerBuild(program: Command) {
       await exec(["bunx", "tsc"], resolve(root, "server"));
 
       // 4b. Type-check central if present. Same rationale as server.
-      if (existsSync(join(centralDir, "src", "index.ts"))) {
+      // Type-check the *worktree's* central, not main's: local edits must be
+      // validated even though the running central runs main's code. (Errors
+      // here would otherwise only surface after merge.)
+      const worktreeCentralDir = resolve(root, "central");
+      if (existsSync(join(worktreeCentralDir, "src", "index.ts"))) {
         console.log("Type-checking central...");
-        await exec(["bunx", "tsc"], centralDir);
+        await exec(["bunx", "tsc"], worktreeCentralDir);
       }
 
       // 5. Build frontend into a per-pid staging dir, then atomically
@@ -542,18 +583,35 @@ export function registerBuild(program: Command) {
       // and wsRoutes maps.
       await writeCentralRoutesManifest(root);
 
-      // 6c. Register the `central` worktree spec if any central plugins exist.
-      // Central is the singleton headless backend that hosts the central
-      // routing manifest's targets; the gateway lazy-spawns it on the first
-      // request that matches a manifest prefix. We always overwrite so the
-      // most recently built worktree's `central/` directory is what runs —
-      // matches the per-worktree spec write above.
+      // 6c. Re-register the `central` worktree spec for idempotency. Path is
+      // always main's central/ — see comment at the early write above.
       if (existsSync(join(centralDir, "src", "index.ts"))) {
         const centralSpec = { server: centralDir };
         writeFileSync(
           join(WORKTREES_DIR, "central.json"),
           JSON.stringify(centralSpec, null, 2) + "\n",
         );
+
+        // 6d. Restart central so it picks up freshly-merged main code. The
+        // fsnotify watcher in the gateway only updates the spec lazily — the
+        // running process keeps its old code until explicitly restarted. PG
+        // is detached from central's process group (see plugins/infra/plugins/
+        // database/central/internal/supervisor.ts), so this restart is safe:
+        // worktree backends keep talking to PG through the brief central blip.
+        console.log("Restarting central...");
+        try {
+          const resp = await fetch(
+            "http://localhost:9000/gateway/worktrees/central/restart",
+            { method: "POST" },
+          );
+          if (resp.ok) {
+            await probeCentralHealth();
+          } else if (resp.status !== 404) {
+            console.warn(`Central restart returned ${resp.status}`);
+          }
+        } catch {
+          // Gateway not running — central will spawn fresh on first request.
+        }
       }
 
       // 4. Restart the backend if the gateway has it running
