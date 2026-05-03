@@ -69,7 +69,12 @@ export function TaskCard({
   if (binding.enabled && binding.isLoading) return null;
 
   if (binding.value?.launchedConvId && binding.value.taskId) {
-    return <LaunchedAttempts taskId={binding.value.taskId} />;
+    return (
+      <div className="my-2 flex flex-col gap-1.5">
+        <p className="text-muted-foreground text-sm">{initial}</p>
+        <LaunchedAttempts taskId={binding.value.taskId} />
+      </div>
+    );
   }
 
   if (binding.value?.taskId) {
@@ -172,14 +177,14 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
 
   if (attempts.length === 0) {
     return (
-      <span className="text-muted-foreground my-2 block text-xs">
+      <span className="text-muted-foreground block text-xs">
         Launching…
       </span>
     );
   }
 
   return (
-    <div className="border-border my-2 flex flex-col gap-2 rounded-md border px-3 py-2">
+    <div className="border-border flex flex-col gap-2 rounded-md border px-3 py-2">
       {attempts.map((attempt) => (
         <div key={attempt.id} className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
