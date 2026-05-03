@@ -42,6 +42,8 @@ async function queuePost(path: string, body: Record<string, unknown>) {
 
 const WORKING_EXPANDED_KEY = "queue-view:working:expanded";
 const QUEUE_EXPANDED_KEY = "queue-view:queue:expanded";
+const UNRANKED_EXPANDED_KEY = "queue-view:unranked:expanded";
+const GONE_EXPANDED_KEY = "queue-view:gone:expanded";
 
 function SectionBox({
   title,
@@ -88,7 +90,7 @@ export function QueueView({
   onNavigate,
   onCloseConversation,
 }: ViewProps) {
-  const { active, isLoading } = useConversations();
+  const { active, recentGone, isLoading } = useConversations();
   const { data: rankRows } = useResource(queueRanksResource);
 
   const working = useMemo(
@@ -102,16 +104,24 @@ export function QueueView({
   // owned by the queue plugin's side-table (queueRanksResource) — a
   // conversation only appears in the deck once the seed-rank job has fired.
   // Uses code-point order (not localeCompare) to match Postgres COLLATE "C".
-  const deck = useMemo(() => {
+  // Waiting conversations with no rank entry yet go into `unranked`.
+  const { deck, unranked } = useMemo(() => {
     const ranks = new Map((rankRows ?? []).map((r) => [r.conversationId, r.rank]));
-    const waiting: Array<Conversation & { rank: string }> = [];
+    const ranked: Array<Conversation & { rank: string }> = [];
+    const noRank: Conversation[] = [];
     for (const c of active) {
       if (c.status !== "waiting") continue;
       const rank = ranks.get(c.id);
-      if (!rank) continue;
-      waiting.push({ ...c, rank });
+      if (rank) {
+        ranked.push({ ...c, rank });
+      } else {
+        noRank.push(c);
+      }
     }
-    return waiting.sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0));
+    return {
+      deck: ranked.sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0)),
+      unranked: noRank,
+    };
   }, [active, rankRows]);
 
   const [workingExpanded, setWorkingExpanded] = useState<boolean>(() => {
@@ -148,6 +158,40 @@ export function QueueView({
     });
   }, []);
 
+  const [unrankedExpanded, setUnrankedExpanded] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(UNRANKED_EXPANDED_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const toggleUnrankedExpanded = useCallback(() => {
+    setUnrankedExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(UNRANKED_EXPANDED_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const [goneExpanded, setGoneExpanded] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(GONE_EXPANDED_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const toggleGoneExpanded = useCallback(() => {
+    setGoneExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(GONE_EXPANDED_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  }, []);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
@@ -171,7 +215,7 @@ export function QueueView({
     await queuePost("reorder", { conversationId, targetId: drop.targetId, zone: drop.zone });
   }, []);
 
-  if (!isLoading && deck.length === 0 && working.length === 0) {
+  if (!isLoading && deck.length === 0 && working.length === 0 && unranked.length === 0 && recentGone.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-xs text-muted-foreground">
         All clear — no conversations are waiting on you.
@@ -264,6 +308,59 @@ export function QueueView({
           </SidebarMenu>
         )}
       </SectionBox>
+      {unranked.length > 0 && (
+        <SectionBox
+          title="Unranked"
+          count={unranked.length}
+          expanded={unrankedExpanded}
+          onToggleExpanded={toggleUnrankedExpanded}
+        >
+          <SidebarMenu>
+            {unranked.map((conv) => (
+              <li key={conv.id} className="group/menu-item relative list-none">
+                <SidebarMenuButton
+                  className="h-auto py-1.5"
+                  isActive={conv.id === activeId}
+                  onClick={() => onNavigate(conv.id)}
+                >
+                  <ConversationItem conv={conv} />
+                </SidebarMenuButton>
+                <SidebarMenuAction
+                  onClick={(e: React.MouseEvent) =>
+                    void onCloseConversation(conv.id, e)
+                  }
+                  className="opacity-0 group-hover/menu-item:opacity-100"
+                  aria-label="Close conversation"
+                >
+                  <MdClose className="size-3.5" />
+                </SidebarMenuAction>
+              </li>
+            ))}
+          </SidebarMenu>
+        </SectionBox>
+      )}
+      {recentGone.length > 0 && (
+        <SectionBox
+          title="Recently gone"
+          count={recentGone.length}
+          expanded={goneExpanded}
+          onToggleExpanded={toggleGoneExpanded}
+        >
+          <SidebarMenu>
+            {recentGone.map((conv) => (
+              <li key={conv.id} className="group/menu-item relative list-none">
+                <SidebarMenuButton
+                  className="h-auto py-1.5 opacity-60"
+                  isActive={conv.id === activeId}
+                  onClick={() => onNavigate(conv.id)}
+                >
+                  <ConversationItem conv={conv} />
+                </SidebarMenuButton>
+              </li>
+            ))}
+          </SidebarMenu>
+        </SectionBox>
+      )}
     </div>
   );
 }
