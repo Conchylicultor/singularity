@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 
-export { NotificationsProvider, useResource } from "./use-resource";
+export { NotificationsProvider, useResource, useNotificationsStatus } from "./use-resource";
 export { NotificationsClient, queryKeyFor } from "./notifications-client";
 export type { ResourceKey } from "./notifications-client";
 export { resourceDescriptor, centralResourceDescriptor } from "../shared/resource";

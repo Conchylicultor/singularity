@@ -1,4 +1,4 @@
-import { createContext, createElement, useContext, useEffect, type ReactNode } from "react";
+import { createContext, createElement, useContext, useEffect, useState, type ReactNode } from "react";
 import {
   QueryClient,
   QueryClientProvider,
@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { NotificationsClient, queryKeyFor } from "./notifications-client";
 import type { ResourceDescriptor } from "../shared/resource";
+import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
 
 type ResourceParams = Record<string, string>;
 
@@ -51,6 +52,14 @@ let singleton: NotificationsClient | null = null;
 function getOrCreateNotifications(qc: QueryClient): NotificationsClient {
   if (!singleton) singleton = new NotificationsClient(qc);
   return singleton;
+}
+
+export function useNotificationsStatus(): WsStatus {
+  const client = useContext(NotificationsContext);
+  if (!client) throw new Error("useNotificationsStatus must be inside NotificationsProvider");
+  const [status, setStatus] = useState(() => client.getStatus());
+  useEffect(() => client.subscribeStatus(setStatus), [client]);
+  return status;
 }
 
 // AGENT RULE: Never cast the `data` returned by useResource (e.g. `data as Foo[]`).

@@ -36,7 +36,7 @@ current payloads are small and parse cost is negligible.
 - Load-bearing: yes
 - Exports (web):
   - Types: `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`
-  - Values: `centralResourceDescriptor`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useResource`
+  - Values: `centralResourceDescriptor`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useNotificationsStatus`, `useResource`
 - Exports (shared):
   - Types: `ResourceDescriptor`, `ResourceOrigin`
   - Values: `centralResourceDescriptor`, `resourceDescriptor`

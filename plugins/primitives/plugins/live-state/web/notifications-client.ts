@@ -1,6 +1,10 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { ZodType } from "zod";
-import { SharedWebSocket } from "@plugins/primitives/plugins/networking/web";
+import {
+  SharedWebSocket,
+  subscribeWsStatus,
+  type WsStatus,
+} from "@plugins/primitives/plugins/networking/web";
 import type { ResourceOrigin } from "../shared/resource";
 
 // Drives the TanStack Query cache off server resource notifications. Uses
@@ -77,12 +81,41 @@ export class NotificationsClient {
    * (resources are singletons defined at module scope).
    */
   private schemas = new Map<string, ZodType<unknown>>();
+  private channelStatuses = new Map<string, WsStatus>();
+  private statusListeners = new Set<(s: WsStatus) => void>();
+  private unsubscribeFromBus: () => void;
 
   constructor(private queryClient: QueryClient) {
     this.channels = {
       worktree: this.openChannel("worktree"),
       central: this.openChannel("central"),
     };
+    const ownedUrls = new Set<string>(Object.values(WS_URLS));
+    this.unsubscribeFromBus = subscribeWsStatus(({ url, status }) => {
+      if (!ownedUrls.has(url)) return;
+      this.channelStatuses.set(url, status);
+      const next = this.getStatus();
+      for (const fn of this.statusListeners) fn(next);
+    });
+  }
+
+  getStatus(): WsStatus {
+    const vals = [...this.channelStatuses.values()];
+    if (vals.length === 0) return "connecting";
+    if (vals.some((s) => s === "reconnecting")) return "reconnecting";
+    if (vals.some((s) => s === "closed")) return "closed";
+    if (vals.some((s) => s === "connecting")) return "connecting";
+    return "open";
+  }
+
+  subscribeStatus(fn: (s: WsStatus) => void): () => void {
+    fn(this.getStatus());
+    this.statusListeners.add(fn);
+    return () => this.statusListeners.delete(fn);
+  }
+
+  destroy(): void {
+    this.unsubscribeFromBus();
   }
 
   /** Observer count increased for (key, params). Sub on 0→1. */
