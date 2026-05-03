@@ -1003,6 +1003,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Pane.Register` `stats-cost-conv-side` (path `c/:sideConvId`)
         - `Stats.Chart` "Cost & Tokens" → `CostSection`
         - `Stats.Chart` "Token mix per day" → `TokenMixChart`
+        - `Stats.Chart` "Average cost per conversation" → `AvgCostPerConversationChart`
         - `Stats.Chart` "Cost distribution per conversation" → `CostDistributionChart`
         - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
       - Server:
@@ -1014,6 +1015,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `GET /api/stats/cost/totals`
         - `GET /api/stats/cost/sessions`
         - `GET /api/stats/cost/distribution`
+        - `GET /api/stats/cost/avg-per-conversation`
     - **`tasks`** — Task-based stats: active (open) tasks over time.
       - Contributes:
         - `Stats.Chart` "Active tasks over time" → `TasksCumulativeChart`
