@@ -20,3 +20,10 @@ export const _improvePendingGroups = pgTable("improve_pending_groups", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+// Tracks tasks whose first conversation should be promoted to the top of the
+// queue when its first turn completes. Written at submit time via
+// POST /api/improve/queue-top; cleared by applyQueueTopJob.
+export const _improvePendingQueueTop = pgTable("improve_pending_queue_top", {
+  taskId: text("task_id").primaryKey(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});

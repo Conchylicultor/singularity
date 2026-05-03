@@ -99,23 +99,29 @@ export function QueueView({
     [active],
   );
 
-  // Ranked conversations form the Anki-style deck; unranked (no turn yet) stay
-  // in a separate section above until their first turn fires the seed-rank job.
+  // Anki-style deck: a single global ordered list of waiting conversations,
+  // sorted by rank ascending. Top of the list is "what to do next". Rank is
+  // owned by the queue plugin's side-table (queueRanksResource) — a
+  // conversation only appears in the deck once the seed-rank job has fired.
+  // Uses code-point order (not localeCompare) to match Postgres COLLATE "C".
+  // Waiting conversations with no rank entry yet go into `unranked`.
   const { deck, unranked } = useMemo(() => {
     const ranks = new Map((rankRows ?? []).map((r) => [r.conversationId, r.rank]));
-    const unrankedList: Conversation[] = [];
     const ranked: Array<Conversation & { rank: string }> = [];
+    const noRank: Conversation[] = [];
     for (const c of active) {
       if (c.status !== "waiting") continue;
       const rank = ranks.get(c.id);
       if (rank) {
         ranked.push({ ...c, rank });
       } else {
-        unrankedList.push(c);
+        noRank.push(c);
       }
     }
-    ranked.sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0));
-    return { deck: ranked as Conversation[], unranked: unrankedList };
+    return {
+      deck: ranked.sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0)),
+      unranked: noRank,
+    };
   }, [active, rankRows]);
 
   const [workingExpanded, setWorkingExpanded] = useState<boolean>(() => {
@@ -221,37 +227,6 @@ export function QueueView({
 
   return (
     <div className="flex flex-col gap-1.5">
-      {unranked.length > 0 && (
-        <SectionBox
-          title="Unranked"
-          count={unranked.length}
-          expanded={unrankedExpanded}
-          onToggleExpanded={toggleUnrankedExpanded}
-        >
-          <SidebarMenu>
-            {unranked.map((conv) => (
-              <li key={conv.id} className="group/menu-item relative list-none">
-                <SidebarMenuButton
-                  className="h-auto py-1.5"
-                  isActive={conv.id === activeId}
-                  onClick={() => onNavigate(conv.id)}
-                >
-                  <ConversationItem conv={conv} />
-                </SidebarMenuButton>
-                <SidebarMenuAction
-                  onClick={(e: React.MouseEvent) =>
-                    void onCloseConversation(conv.id, e)
-                  }
-                  className="opacity-0 group-hover/menu-item:opacity-100"
-                  aria-label="Close conversation"
-                >
-                  <MdClose className="size-3.5" />
-                </SidebarMenuAction>
-              </li>
-            ))}
-          </SidebarMenu>
-        </SectionBox>
-      )}
       <SectionBox
         title="Queue"
         count={deck.length}
@@ -333,6 +308,37 @@ export function QueueView({
           </SidebarMenu>
         )}
       </SectionBox>
+      {unranked.length > 0 && (
+        <SectionBox
+          title="Unranked"
+          count={unranked.length}
+          expanded={unrankedExpanded}
+          onToggleExpanded={toggleUnrankedExpanded}
+        >
+          <SidebarMenu>
+            {unranked.map((conv) => (
+              <li key={conv.id} className="group/menu-item relative list-none">
+                <SidebarMenuButton
+                  className="h-auto py-1.5"
+                  isActive={conv.id === activeId}
+                  onClick={() => onNavigate(conv.id)}
+                >
+                  <ConversationItem conv={conv} />
+                </SidebarMenuButton>
+                <SidebarMenuAction
+                  onClick={(e: React.MouseEvent) =>
+                    void onCloseConversation(conv.id, e)
+                  }
+                  className="opacity-0 group-hover/menu-item:opacity-100"
+                  aria-label="Close conversation"
+                >
+                  <MdClose className="size-3.5" />
+                </SidebarMenuAction>
+              </li>
+            ))}
+          </SidebarMenu>
+        </SectionBox>
+      )}
       {recentGone.length > 0 && (
         <SectionBox
           title="Recently gone"

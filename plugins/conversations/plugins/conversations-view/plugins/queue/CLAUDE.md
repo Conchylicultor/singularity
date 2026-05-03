@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Anki-style global priority queue of conversations awaiting user input. Top of the deck is what to do next; finishing a turn returns the conversation to position 2 so the top stays stable. Server side of the global Anki-style conversations queue. Owns the conversations_ext_queue side-table via the entity-extensions primitive and seeds rank at position-2 on conversationTurnCompleted. New conversations are unranked and surface at the top of the queue until their first turn.
+- Description: Anki-style global priority queue of conversations awaiting user input. Top of the deck is what to do next; finishing a turn returns the conversation to position 2 so the top stays stable. Server side of the global Anki-style conversations queue. Owns the conversations_ext_queue side-table via the entity-extensions primitive and seeds rank on conversationCreated + conversationTurnCompleted.
 - Defines:
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`
   - Entity extension of: `tasks-core` (table `conversations_ext_queue`)
@@ -14,7 +14,7 @@
   - `ConversationsView.View` "Queue" → `QueueView`
 - Server:
   - Register: `seedRankJob`
-  - Uses: `conversations.conversationTurnCompleted`, `tasks-core._conversations`, `tasks-core.getConversation`
+  - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `tasks-core._conversations`, `tasks-core.getConversation`
   - Resources: `queue-ranks` (push)
   - `POST /api/conversations-queue/reorder`
   - `POST /api/conversations-queue/promote`
