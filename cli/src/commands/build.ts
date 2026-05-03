@@ -10,9 +10,7 @@ import { registerMergeDrivers } from "../git/register-merge-drivers";
 import { runChecks } from "../checks";
 import {
   libpqEnv,
-  PG_DATA_DIR,
   PG_LOG_FILE,
-  PG_MIGRATING_SENTINEL,
   SINGULARITY_DIR,
 } from "../paths";
 
@@ -233,85 +231,46 @@ async function databaseReady(name: string): Promise<boolean> {
 }
 
 /**
- * Force the gateway to lazy-spawn the central runtime (which boots the
- * embedded Postgres cluster owned by `plugins/infra/plugins/database/`)
- * and wait until PG is ready. The status handler itself awaits the
- * supervisor's `ready` promise, so we just need to hit it once.
- *
- * Skipped when the user has opted into system PG.
+ * Wait for the gateway-supervised embedded Postgres cluster to be ready.
+ * Probes the cluster directly via libpq to the embedded socket — this is the
+ * same ground truth the gateway's supervisor uses, and it avoids any
+ * dependency on a particular gateway binary version. Skipped when the user
+ * has opted into system PG.
  */
-async function ensureDatabaseReachable(): Promise<void> {
+async function waitForPg(): Promise<void> {
   if (process.env.SINGULARITY_USE_SYSTEM_PG === "1") return;
-
-  // If central was already running with an older plugins.generated.ts
-  // (pre-database plugin), it would 404 our status route. Restart it so
-  // it picks up the freshly-written registry. Best-effort — gateway may
-  // not be running yet on first start, in which case the lazy-spawn path
-  // below produces the right central regardless.
-  try {
-    await fetch("http://localhost:9000/gateway/worktrees/central/restart", {
-      method: "POST",
-    });
-  } catch {}
-
-  const url = "http://localhost:9000/api/database/status";
-  // Generous deadline: bulk auto-migration can take many minutes on a
-  // heavy install (hundreds of worktree DBs). Subsequent boots skip
-  // migration entirely and resolve in <1s.
-  const deadline = Date.now() + 30 * 60 * 1000;
+  const env = libpqEnv();
+  const { Client } = await import("pg");
+  const deadline = Date.now() + 60_000;
   let warned = false;
-  let migrationWarned = false;
-  let lastProgressKey = "";
   let lastErr: string | null = null;
   while (Date.now() < deadline) {
+    const c = new Client({
+      host: env.PGHOST,
+      port: parseInt(env.PGPORT, 10),
+      user: env.PGUSER,
+      database: "postgres",
+      connectionTimeoutMillis: 1500,
+    });
     try {
-      const resp = await fetch(url);
-      if (resp.ok) {
-        const body = (await resp.json()) as {
-          pg?: string;
-          migration?: string;
-          migrationError?: string | null;
-          migrationProgress?: { total: number; done: number; current: string | null };
-        };
-        if (body.pg === "running" && body.migration === "completed") return;
-        if (body.migration === "failed") {
-          console.error(
-            `ERROR: embedded PG migration failed: ${body.migrationError ?? "unknown"}`,
-          );
-          console.error(
-            `To retry: rm ${PG_MIGRATING_SENTINEL} ${PG_DATA_DIR} and re-run.`,
-          );
-          process.exit(1);
-        }
-        if (body.pg === "running" && body.migration === "running") {
-          if (!migrationWarned) {
-            console.log("Embedded PG running; auto-migrating from system PG (one-time)...");
-            migrationWarned = true;
-          }
-          const p = body.migrationProgress;
-          if (p && p.total > 0) {
-            const key = `${p.done}/${p.total}`;
-            if (key !== lastProgressKey) {
-              console.log(`  migrating ${p.done}/${p.total}${p.current ? ` (${p.current})` : ""}`);
-              lastProgressKey = key;
-            }
-          }
-        }
-        lastErr = `pg=${body.pg ?? "?"} migration=${body.migration ?? "?"}`;
-      } else {
-        lastErr = `HTTP ${resp.status}`;
-      }
+      await c.connect();
+      await c.query("SELECT 1");
+      await c.end();
+      return;
     } catch (err) {
       lastErr = err instanceof Error ? err.message : String(err);
+      try {
+        await c.end();
+      } catch {}
     }
     if (!warned) {
-      console.log("Waiting for embedded Postgres to be ready (first run can take ~30s)...");
+      console.log("Waiting for embedded Postgres to be ready...");
       warned = true;
     }
-    await Bun.sleep(1000);
+    await Bun.sleep(500);
   }
   console.error(
-    `ERROR: embedded Postgres did not become ready within 30 minutes (last: ${lastErr ?? "no response"}).`,
+    `ERROR: embedded Postgres did not become ready within 60s (last: ${lastErr ?? "no response"}).`,
   );
   console.error(`Check ${PG_LOG_FILE} for details.`);
   process.exit(1);
@@ -370,34 +329,28 @@ async function probeHealth(name: string): Promise<void> {
   process.exit(1);
 }
 
-// Central has no /api/health (it's not a worktree backend). /api/database/status
-// is the only central-mounted route reachable through any subdomain via the
-// central-routes manifest — refusing 'migration: running' avoids the first-
-// install footgun where a restart mid-migration trips the priorMigrationInProgress
-// guard on the next boot.
-async function probeCentralHealth(): Promise<void> {
-  console.log("Probing central /api/database/status...");
-  const url = "http://singularity.localhost:9000/api/database/status";
+// `/gateway/worktrees` is the gateway's own API and exists on every gateway
+// version — a 200 here proves the gateway is alive. Central's own readiness
+// is covered by the gateway's waitReady on its Unix socket; no separate
+// central-side liveness probe.
+async function probeGatewayHealth(): Promise<void> {
+  console.log("Probing gateway /gateway/worktrees...");
+  const url = "http://localhost:9000/gateway/worktrees";
   const deadline = Date.now() + 10_000;
   let lastStatus: number | string = "no response";
   while (Date.now() < deadline) {
     try {
       const resp = await fetch(url);
-      if (resp.ok) {
-        const body = (await resp.json()) as { migration?: string };
-        if (body.migration !== "running") return;
-        lastStatus = "migration in progress";
-      } else {
-        lastStatus = resp.status;
-      }
+      if (resp.ok) return;
+      lastStatus = resp.status;
     } catch (err) {
       lastStatus = err instanceof Error ? err.message : String(err);
     }
     await Bun.sleep(250);
   }
   console.warn(
-    `Central did not become healthy within 10s (last: ${lastStatus}). ` +
-      `Build artifacts are valid; central will retry on next request.`,
+    `Gateway did not become healthy within 10s (last: ${lastStatus}). ` +
+      `Build artifacts are valid; gateway will retry on next request.`,
   );
 }
 
@@ -462,21 +415,19 @@ export function registerBuild(program: Command) {
       await acquireBuildLock(resolve(webDir, ".build.lock"));
       await sweepStagingLeftovers(webDir);
 
-      // 1. Install dependencies (required before central can boot — the
-      // database plugin's central/internal/binaries.ts uses createRequire
-      // to resolve @embedded-postgres/<platform>).
+      // 1. Install dependencies. Required before the gateway can find the
+      // platform-specific embedded-postgres binaries under
+      // plugins/infra/plugins/database/node_modules/@embedded-postgres/.
       console.log("Installing dependencies...");
       await exec(["bun", "install"], root);
 
       // 2a. Regenerate plugin registry files — must happen before central
-      // is spawned so its plugins.generated.ts contains the database plugin.
+      // is spawned so its plugins.generated.ts is in sync.
       console.log("Generating plugin registry...");
       await generatePluginRegistry({ root });
 
-      // 2b. Refresh the central-routes manifest so the gateway knows that
-      // /api/database/status is a central route. Required for the very first
-      // build of a fresh install — without this the gateway would 404 the
-      // status poke and `ensureDatabaseReachable()` would time out.
+      // 2b. Refresh the central-routes manifest so the gateway knows which
+      // path prefixes are owned by central plugins.
       await writeCentralRoutesManifest(root);
 
       // 2b'. Write the central spec early too — otherwise the gateway has no
@@ -495,11 +446,10 @@ export function registerBuild(program: Command) {
         );
       }
 
-      // 2c. Ensure the embedded Postgres cluster is up. The gateway lazy-
-      // spawns central on the first request hitting a central route; the
-      // database plugin boots embedded PG in its onReady. Poke once and
-      // wait for `pg=running`.
-      await ensureDatabaseReachable();
+      // 2c. Ensure the embedded Postgres cluster is up. The gateway owns
+      // PG supervision now (see gateway/postgres.go) and answers
+      // /api/database/status from its own state — central is not involved.
+      await waitForPg();
 
       // 2d. Ensure the worktree's DB fork has completed (forked asynchronously
       // during conversation creation).
@@ -600,9 +550,9 @@ export function registerBuild(program: Command) {
         // 6d. Restart central so it picks up freshly-merged main code. The
         // fsnotify watcher in the gateway only updates the spec lazily — the
         // running process keeps its old code until explicitly restarted. PG
-        // is detached from central's process group (see plugins/infra/plugins/
-        // database/central/internal/supervisor.ts), so this restart is safe:
-        // worktree backends keep talking to PG through the brief central blip.
+        // is supervised by the gateway and decoupled from central's process
+        // group (see gateway/postgres.go), so this restart never disrupts
+        // worktree backends' DB connections.
         console.log("Restarting central...");
         try {
           const resp = await fetch(
@@ -610,7 +560,7 @@ export function registerBuild(program: Command) {
             { method: "POST" },
           );
           if (resp.ok) {
-            await probeCentralHealth();
+            await probeGatewayHealth();
           } else if (resp.status !== 404) {
             console.warn(`Central restart returned ${resp.status}`);
           }

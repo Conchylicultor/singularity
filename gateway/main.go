@@ -26,6 +26,7 @@ type Config struct {
 	RegistryDir       string
 	SocketsDir        string
 	CentralRoutesFile string
+	RepoRoot          string
 }
 
 func parseFlags() Config {
@@ -47,6 +48,7 @@ func parseFlags() Config {
 	flag.StringVar(&cfg.SocketsDir, "sockets-dir", defaultSockets, "directory for per-worktree Unix sockets")
 	defaultCentralRoutes := filepath.Join(home, ".singularity", "central-routes.json")
 	flag.StringVar(&cfg.CentralRoutesFile, "central-routes-file", defaultCentralRoutes, "path to the central routing manifest")
+	flag.StringVar(&cfg.RepoRoot, "repo-root", "", "main repo root for resolving embedded Postgres binaries")
 
 	flag.Parse()
 	return cfg
@@ -90,6 +92,7 @@ func main() {
 	sweepStaleSockets(cfg.SocketsDir, reg)
 
 	routes := NewCentralRoutesStore(cfg.CentralRoutesFile)
+	pgSup := NewPgSupervisor(cfg.RepoRoot)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -106,14 +109,18 @@ func main() {
 	}()
 	go reg.Sweep(ctx)
 
-	// Eagerly spawn `central` so the embedded Postgres cluster (owned by the
-	// database plugin's onReady) is up before any per-worktree backend tries
-	// to connect to it. Without this, a cold gateway start races: the first
-	// /api/* hit to a worktree fails because PG isn't listening yet, and the
-	// backend crashes before it can retry. Lazy-spawn through a central route
-	// would normally cover this (the browser hits /ws/central-notifications
-	// on app load), but curl/probe/headless callers don't, and the race is
-	// nondeterministic when both fire concurrently.
+	// Bring up the embedded PG cluster before central. Worktree backends and
+	// central all assume PG is reachable; with the gateway as the supervisor,
+	// PG must be ready before any backend is asked to start. If it fails, log
+	// loudly but keep serving — /api/database/status will show "stopped" or
+	// "crashed" so build.ts and operators can tell.
+	if err := pgSup.Start(ctx); err != nil {
+		slog.Error("pg: supervisor start failed; continuing without embedded PG", "err", err)
+	}
+
+	// Eagerly spawn `central` so plugins that load on boot (auth, secrets) are
+	// ready before the first request lands. PG is up by this point, so
+	// central's plugins can connect immediately.
 	if wt := reg.Get("central"); wt != nil {
 		go func() {
 			if _, err := wt.Ensure(ctx); err != nil {
@@ -124,7 +131,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              cfg.Listen,
-		Handler:           NewProxy(reg, routes),
+		Handler:           NewProxy(reg, routes, pgSup),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -137,6 +144,8 @@ func main() {
 		defer shutCancel()
 		_ = srv.Shutdown(shutCtx)
 		_ = reg.StopAll(shutCtx)
+		// Clears the watchdog only; PG itself keeps running as a daemon.
+		pgSup.Stop()
 	}()
 
 	slog.Info("gateway listening", "addr", cfg.Listen, "registry-dir", cfg.RegistryDir, "sockets-dir", cfg.SocketsDir)

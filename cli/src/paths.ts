@@ -11,7 +11,6 @@ export const SINGULARITY_DIR = join(HOME_DIR, ".singularity");
 export const PG_DIR = join(SINGULARITY_DIR, "postgres");
 export const PG_DATA_DIR = join(PG_DIR, "data-pg18");
 export const PG_LOG_FILE = join(PG_DIR, "postgres.log");
-export const PG_MIGRATING_SENTINEL = join(PG_DIR, ".migrating");
 const EMBEDDED_PG_SOCKET = join(PG_DIR, "socket");
 const EMBEDDED_PG_PORT = "5433";
 const EMBEDDED_PG_USER = "singularity";

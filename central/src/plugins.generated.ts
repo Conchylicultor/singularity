@@ -9,13 +9,11 @@ import type { CentralPluginDefinition } from "./types";
 import authPlugin from "@plugins/auth/central";
 import authGooglePlugin from "@plugins/auth/plugins/google/central";
 import authNotionPlugin from "@plugins/auth/plugins/notion/central";
-import infraDatabasePlugin from "@plugins/infra/plugins/database/central";
 import infraSecretsPlugin from "@plugins/infra/plugins/secrets/central";
 
 export const plugins: CentralPluginDefinition[] = [
   authPlugin,
   authGooglePlugin,
   authNotionPlugin,
-  infraDatabasePlugin,
   infraSecretsPlugin,
 ];

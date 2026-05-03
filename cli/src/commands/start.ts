@@ -89,12 +89,15 @@ export function registerStart(program: Command) {
       mkdirSync(LOGS_DIR, { recursive: true });
       const logFd = openSync(GATEWAY_LOG, "a");
 
-      const gw = Bun.spawn([gatewayBin, "-log-level", opts.logLevel], {
-        cwd: gatewayDir,
-        stdout: logFd,
-        stderr: logFd,
-        stdin: "ignore",
-      });
+      const gw = Bun.spawn(
+        [gatewayBin, "-log-level", opts.logLevel, "-repo-root", repoRoot],
+        {
+          cwd: gatewayDir,
+          stdout: logFd,
+          stderr: logFd,
+          stdin: "ignore",
+        },
+      );
 
       closeSync(logFd);
       writeFileSync(PID_FILE, String(gw.pid) + "\n");

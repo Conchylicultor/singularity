@@ -15,8 +15,6 @@ export const PG_DIR = join(SINGULARITY_DIR, "postgres");
 export const PG_DATA_DIR = join(PG_DIR, `data-pg${PG_MAJOR}`);
 export const PG_SOCKET_DIR = join(PG_DIR, "socket");
 export const PG_LOG_FILE = join(PG_DIR, "postgres.log");
-export const PG_MIGRATING_SENTINEL = join(PG_DIR, ".migrating");
-export const PG_MIGRATION_DONE_MARKER = join(PG_DIR, "migration-completed-at");
 export const PG_PID_FILE = join(PG_DATA_DIR, "postmaster.pid");
 
 /** True when the user has explicitly opted to keep using system Postgres. */

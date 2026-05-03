@@ -19,10 +19,11 @@ import (
 type Proxy struct {
 	reg    *Registry
 	routes *CentralRoutesStore
+	pg     *PgSupervisor
 }
 
-func NewProxy(reg *Registry, routes *CentralRoutesStore) *Proxy {
-	return &Proxy{reg: reg, routes: routes}
+func NewProxy(reg *Registry, routes *CentralRoutesStore, pg *PgSupervisor) *Proxy {
+	return &Proxy{reg: reg, routes: routes, pg: pg}
 }
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -31,6 +32,15 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// /gateway/* is reserved on every host, including the no-subdomain root.
 	if strings.HasPrefix(r.URL.Path, "/gateway/") {
 		p.handleGatewayAPI(w, r)
+		return
+	}
+
+	// /api/database/status is owned by the gateway: PG is supervised here, not
+	// in central. Intercept before the central-routes lookup so this answer is
+	// authoritative even if a stale manifest still routes the path elsewhere.
+	if r.URL.Path == "/api/database/status" && r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(p.pg.Status())
 		return
 	}
 

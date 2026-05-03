@@ -12,6 +12,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 - Hands each backend a Unix domain socket at `~/.singularity/sockets/<name>.sock`; backends read `SOCKET_PATH` from env. Gateway dials the socket directly — no TCP between gateway and backend.
 - Discovers worktrees from `~/.singularity/worktrees/<name>.json`
 - Exposes `/gateway/*` on every host as an API for apps to query gateway state
+- **Supervises the embedded Postgres cluster** (one daemon per host, shared by every worktree). See "Postgres supervision" below.
 
 ## Key Design Decisions
 
@@ -51,13 +52,33 @@ Flat single-package layout:
 
 ```
 gateway/
-├── main.go        # Flags, wiring, signal handling, sockets-dir setup
+├── main.go        # Flags, wiring, signal handling, sockets-dir setup, PG bring-up
 ├── worktree.go    # Worktree state machine (Idle→Starting→Running→Stopping), spawn, lifecycle
 ├── registry.go    # Map of worktrees, fsnotify file watcher, idle sweeper, stale-socket sweep
+├── postgres.go    # Embedded Postgres supervisor: initdb, pg_ctl, watchdog, status
 └── proxy.go       # http.Handler: routing, static serving, HTTP/WS proxy, /gateway API
 ```
 
-Logic belongs with the data it operates on: spawn/stop/readiness are methods on `Worktree`, discovery/sweeping are methods on `Registry`, all request handling is in `Proxy.ServeHTTP`.
+Logic belongs with the data it operates on: spawn/stop/readiness are methods on `Worktree`, discovery/sweeping are methods on `Registry`, all request handling is in `Proxy.ServeHTTP`, PG lifecycle is on `PgSupervisor`.
+
+## Postgres supervision
+
+The embedded Postgres cluster is a host-level singleton, owned by the gateway. Bootstrap order on a cold gateway start:
+
+1. HTTP server binds (`:9000`) — `/api/database/status` immediately answers `{"pg":"stopped"}` while PG comes up.
+2. `PgSupervisor.Start(ctx)` runs synchronously in main:
+   - Resolves the platform's `embedded-postgres` binary dir under `<repoRoot>/plugins/infra/plugins/database/node_modules/@embedded-postgres/<plat>/native/bin/` (`-repo-root` flag).
+   - Recreates the dylib alias symlinks listed in `pg-symlinks.json` (npm doesn't preserve symlinks).
+   - If `~/.singularity/postgres/data-pg18/postmaster.pid` exists and the socket dials, reattaches without spawning (PG outlived a prior gateway instance).
+   - Otherwise: `initdb` if needed, then `pg_ctl start -w` which daemonizes PG and exits.
+   - Arms a 2s watchdog that dials the PG socket; on failure, attempts one re-spawn; if that also fails, marks state Crashed and stops watching.
+3. `central` worktree is eagerly spawned in a goroutine — by this point PG is ready, so central plugins can connect immediately.
+
+PG runs entirely outside the gateway's process group (orphan reparented to init). Killing the gateway leaves PG alive — `./singularity start --force` rebuilds and relaunches the gateway, but worktree backends keep their pools open across the gateway blip.
+
+`SINGULARITY_USE_SYSTEM_PG=1` skips the supervisor entirely; `/api/database/status` returns `{"pg":"running","useSystemPg":true}` and the gateway never touches `pg_ctl`.
+
+`/api/database/status` is intercepted in `proxy.ServeHTTP` *before* the central-routes lookup, so the gateway's answer is authoritative even if a stale `central-routes.json` still lists it.
 
 ## Build & Run
 
