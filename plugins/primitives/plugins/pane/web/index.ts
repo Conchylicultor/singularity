@@ -28,6 +28,7 @@ export {
   PaneActionsSlot,
 } from "./components/pane-chrome";
 export { PaneIconAction } from "./components/pane-icon-action";
+export { PaneLayoutContext } from "./maximize-context";
 
 export default {
   id: "pane",

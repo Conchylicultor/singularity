@@ -11,6 +11,7 @@ import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PaneMatchContext, type PaneObject } from "../pane";
+import { PaneLayoutContext } from "../maximize-context";
 
 interface PaneChromeProps {
   pane: PaneObject<any, any>;
@@ -49,12 +50,16 @@ interface PaneChromeProps {
 export function PaneChrome({ pane, title, actions, hideRightActions, children }: PaneChromeProps) {
   const chrome = pane._internal.chrome;
   const fallbackTitle = useChromeTitle(pane);
+  const layoutCtx = useContext(PaneLayoutContext);
   if (!chrome.enabled) return <>{children}</>;
   const resolvedTitle = title ?? fallbackTitle;
   const showClose = chrome.close && pane._internal.parent != null;
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-10 items-center gap-2 border-b px-2">
+      <div
+        className="flex h-10 items-center gap-2 border-b px-2"
+        onDoubleClick={layoutCtx?.onDoubleClickHeader}
+      >
         {chrome.history && <PaneHistoryButtons pane={pane} />}
         {resolvedTitle != null && resolvedTitle !== "" && (
           <span className="truncate text-sm font-medium">{resolvedTitle}</span>

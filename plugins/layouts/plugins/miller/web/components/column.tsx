@@ -1,9 +1,11 @@
 import { useLayoutEffect, useRef } from "react";
 import {
   PaneDepthContext,
+  PaneLayoutContext,
   type MatchEntry,
 } from "@plugins/primitives/plugins/pane/web";
 import { useColumnCollapse } from "../hooks/use-column-collapse";
+import { clearMaximize, getMaximizedId, useColumnMaximize } from "../hooks/use-column-maximize";
 import { hasStoredWidth, useColumnWidth } from "../hooks/use-column-widths";
 import { CollapsedBar } from "./collapsed-bar";
 import { ResizeHandle } from "./resize-handle";
@@ -17,7 +19,8 @@ interface ColumnProps {
 }
 
 export function Column({ entry, depth, isLast }: ColumnProps) {
-  const [collapsed, toggle] = useColumnCollapse(entry.pane.id);
+  const [collapsed, toggleCollapse] = useColumnCollapse(entry.pane.id);
+  const [isMaximized, toggleMaximize] = useColumnMaximize(entry.pane.id);
   const [width, setWidth] = useColumnWidth(
     entry.pane.id,
     entry.pane.width ?? DEFAULT_WIDTH,
@@ -49,9 +52,18 @@ export function Column({ entry, depth, isLast }: ColumnProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLast, paneId]);
 
-  if (collapsed && !isLast) {
-    return <CollapsedBar entry={entry} onExpand={toggle} />;
+  // Some other column is maximized → collapse this one (overrides isLast guard).
+  const forcedCollapse = !isMaximized && getMaximizedId() !== null;
+  if (forcedCollapse) {
+    return <CollapsedBar entry={entry} onExpand={clearMaximize} />;
   }
+
+  if (collapsed && !isLast) {
+    return <CollapsedBar entry={entry} onExpand={toggleCollapse} />;
+  }
+
+  // Maximized column fills all available space regardless of its position.
+  const expandFull = isLast || isMaximized;
 
   const Component = entry.pane.component;
 
@@ -59,21 +71,23 @@ export function Column({ entry, depth, isLast }: ColumnProps) {
     <>
       <div
         ref={divRef}
-        style={isLast ? undefined : { width }}
+        style={expandFull ? undefined : { width }}
         className={
-          isLast
+          expandFull
             ? "flex h-full min-w-[200px] flex-1 flex-col overflow-hidden"
             : "flex h-full shrink-0 flex-col overflow-hidden"
         }
       >
         <PaneDepthContext.Provider value={depth}>
-          <Component />
+          <PaneLayoutContext.Provider value={{ onDoubleClickHeader: toggleMaximize }}>
+            <Component />
+          </PaneLayoutContext.Provider>
         </PaneDepthContext.Provider>
       </div>
-      {!isLast && (
+      {!isLast && !isMaximized && (
         <ResizeHandle
           onResize={(dx) => setWidth((w) => w + dx)}
-          onCollapse={toggle}
+          onCollapse={toggleCollapse}
         />
       )}
     </>
