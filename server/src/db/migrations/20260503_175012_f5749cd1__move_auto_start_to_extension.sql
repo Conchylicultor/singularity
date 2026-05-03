@@ -6,18 +6,6 @@ CREATE TABLE IF NOT EXISTS "tasks_ext_auto_start" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-INSERT INTO "tasks_ext_auto_start" ("parent_id", "auto_start_at", "auto_start_model", "created_at", "updated_at")
-SELECT "id", "auto_start_at", "auto_start_model", now(), now()
-FROM "tasks"
-WHERE "auto_start_at" IS NOT NULL AND "auto_start_model" IS NOT NULL
-ON CONFLICT DO NOTHING;
---> statement-breakpoint
-DO $$ BEGIN
- ALTER TABLE "tasks_ext_auto_start" ADD CONSTRAINT "tasks_ext_auto_start_parent_id_tasks_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."tasks"("id") ON DELETE cascade ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
 DROP VIEW "public"."tasks_v";--> statement-breakpoint
 ALTER TABLE "tasks" DROP COLUMN IF EXISTS "auto_start_at";--> statement-breakpoint
 ALTER TABLE "tasks" DROP COLUMN IF EXISTS "auto_start_model";--> statement-breakpoint
@@ -47,7 +35,7 @@ CREATE VIEW "public"."tasks_v" AS (with "task_facts" as (select "id", EXISTS (
                SELECT 1 FROM "attempts_v" a
                 WHERE a.task_id = dep.id AND a.status = 'completed'
              )
-        ) as "has_blocking_dep" from "tasks") select "tasks"."id", "tasks"."parent_id", "tasks"."title", "tasks"."description", "tasks"."author", "tasks"."dropped_at", "tasks"."held_at", "tasks"."expanded", "tasks"."rank", "tasks"."created_at", "tasks"."updated_at",
+        ) as "has_blocking_dep" from "tasks") select "tasks"."id", "tasks"."parent_id", "tasks"."title", "tasks"."description", "tasks"."author", "tasks"."dropped_at", "tasks"."held_at", "tasks"."expanded", "tasks"."rank", "tasks"."created_at", "tasks"."updated_at", 
         CASE
           WHEN "tasks"."dropped_at" IS NOT NULL              THEN 'dropped'
           WHEN "tasks"."held_at"    IS NOT NULL              THEN 'held'
@@ -64,7 +52,7 @@ CREATE VIEW "public"."tasks_v" AS (with "task_facts" as (select "id", EXISTS (
         AND NOT "has_completed"
         AND NOT "has_blocking_dep"
         AND "has_active"
-      ) as "active",
+      ) as "active", 
         CASE
           WHEN "tasks"."dropped_at" IS NOT NULL   THEN "tasks"."dropped_at"
           WHEN "has_completed"             THEN "min_completed_push_at"

@@ -459,13 +459,6 @@
     },
     {
       "version": "7",
-      "when": 1777804800000,
-      "tag": "20260503_120000_70bab42f__move_auto_start_to_extension",
-      "hash": "70bab42f",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
       "when": 1777824561000,
       "tag": "20260503_160921_301b81af__git_watcher_ref_advanced",
       "hash": "301b81af",
@@ -483,6 +476,13 @@
       "when": 1777828545000,
       "tag": "20260503_171545_9ab5c74b__migrate_turn_summaries_to_ext",
       "hash": "9ab5c74b",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777830612000,
+      "tag": "20260503_175012_f5749cd1__move_auto_start_to_extension",
+      "hash": "f5749cd1",
       "breakpoints": true
     }
   ]
