@@ -9,9 +9,13 @@ See [`plugins.md`](plugins.md) for the specific plugins used by the agent manage
 Frontend framework for composing an app out of independent feature modules.
 
 - **Plugin** — self-contained module exporting a `PluginDefinition { id, name, contributions }`.
+- **Plugin registry** — A static flat list in `web/src/plugins.ts` / `server/src/plugins.ts`; the sole registration mechanism.
+- **Umbrella plugin** — A grouping shell that nests related sub-plugins under `plugins/<umbrella>/plugins/<child>/` without re-exporting their APIs.
 - **Slot** — typed extension point a plugin declares for others to fill (`defineSlot<P>(id)`).
 - **Contribution** — a value another plugin provides to a slot; retrieved with `slot.useContributions()`.
 - **Command** — typed request-response action with one handler and many dispatchers (`defineCommand<Args, Ret>`).
+- **Active-data tag** — An inline-widget extension point where sub-plugins claim an XML tag name and render it inside markdown text via react-markdown.
+- **Pane** — A routed view unit created via `Pane.define({ id, path, component })` that encapsulates URL params and `pane.open(params)` navigation.
 - **View factory** — function returning a `{ title, component }` descriptor, used to hand components across plugin boundaries without leaking internals.
 - **Plugin provider** — React context that collects contributions from all registered plugins and exposes them to slots.
 - **Root slot** — the single entry point (`Core.Root`) the app shell contributes its layout to.
@@ -24,6 +28,8 @@ Shared backend hosting plugin routes in a single Bun process.
 - **HTTP route** — `"METHOD /path"` → handler function; literal and `:param` segments supported.
 - **WebSocket route** — `/ws/...` → `{ open, message, close }` handler matching Bun's native interface.
 - **Public API (`index.ts`)** — the subset a plugin exports for cross-plugin import; anything under `internal/` is private.
+- **onReady hook** — A lifecycle callback invoked once after DB migrations complete, used to start background pollers that need a ready database.
+- **MCP tool** — A server-side tool registered via `Mcp.registerTool` and exposed through the HTTP MCP endpoint for Claude CLI sessions to call.
 
 ## Live state
 
@@ -88,11 +94,14 @@ Per-instance, per-plugin typed configuration with a unified storage and Settings
 - **`readConfig(descriptor)`** — server-side typed read; merges DB overrides with declared defaults.
 - **`useConfigValues(descriptor, pluginId)`** — React hook returning a typed value object, kept in sync via the live-state primitive.
 - **Settings UI** — auto-generated panel; plugins contribute their descriptor to a slot and the panel renders a section per plugin.
+- **Secrets** — Encrypted key/value store (AES-256-GCM) for sensitive config; read via `configSecretsResource`, kept separate from plain config.
+- **Attachment** — A polymorphic file on disk (UUID-named); consumers declare ownership with `Attachments.defineLink(ownerTable)` and orphan sweep reclaims unreferenced rows.
 
 ## Events & triggers
 
 Typed cross-plugin reactions to state changes. See [`events.md`](events.md) for the full mental model.
 
+- **Job** — A durable background task declared by plugins and enqueued via `job.enqueue()`; backed by graphile-worker.
 - **Event** — a named fact a plugin emits when its state transitions (`defineTriggerEvent({ name, filters })`); dual-purpose handle with `.emit(payload)` for the owner and `.where(filter)` for subscribers.
 - **Action** — a named typed handler registered at plugin load (`defineAction({ name, config: zodSchema, run })`); returns a callable factory that produces an `ActionRef` for subscription and a `.deleteTargeting({...})` sweeper for cleanup.
 - **Source** — what `trigger({ on })` accepts. The bare event is a match-any Source; `.where({...})` refines it. Compound / cron sources slot into the same position without changing the `trigger` API.
