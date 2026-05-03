@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { taskSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { tasksResource } from "@plugins/tasks/shared";
 import type { TaskStatus } from "@plugins/tasks-core/shared";
@@ -18,6 +20,7 @@ const TASK_STATUS_DOT: Record<TaskStatus, string> = {
 export function TaskLinkChip({ content }: { content: string; attrs: Record<string, string> }) {
   const taskId = content.trim();
   const { data } = useResource(tasksResource);
+  const { conversation } = conversationPane.useData() ?? {};
   const task = useMemo(
     () => data?.find((t) => t.id === taskId) ?? null,
     [data, taskId],
@@ -32,7 +35,11 @@ export function TaskLinkChip({ content }: { content: string; attrs: Record<strin
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        taskDetailPane.open({ taskId });
+        if (conversation) {
+          taskSidePane.open({ convId: conversation.id, taskId });
+        } else {
+          taskDetailPane.open({ taskId });
+        }
       }}
       className="inline-flex max-w-full items-center gap-1.5 rounded bg-muted px-1.5 py-0.5 align-baseline text-xs text-primary hover:bg-muted/80 hover:underline"
       title={task ? `${task.title} · ${taskId}` : taskId}
