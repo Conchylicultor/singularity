@@ -146,7 +146,7 @@ Server-side plugin dependencies (like `bun-pty`) are declared in the plugin's ow
 Drizzle ORM + Postgres, one DB per worktree (`SINGULARITY_WORKTREE` env var picks the database name).
 
 - Each plugin defines its tables in `plugins/{name}/server/internal/tables.ts` and any derived views/Zod schemas in `plugins/{name}/server/internal/schema.ts`.
-- `drizzle.config.ts` discovers plugin schemas via glob (`plugins/**/server/**/internal/{tables,schema}.ts`) — there is **no central aggregator file**. Adding a new plugin's tables requires no edits outside that plugin. The glob relies on those files being pure drizzle-orm definitions (no Bun imports in their transitive closure) because drizzle-kit's loader runs outside the server Bun runtime.
+- `drizzle.config.ts` discovers plugin schemas via glob (`plugins/**/server/**/internal/{tables,schema}.ts`) — there is **no central aggregator file**. Adding a new plugin's tables requires no edits outside that plugin.
 - `server/src/db/client.ts` exports `db = drizzle(sql)` without a schema object — the codebase uses the SQL builder API (`db.select().from(...)`), not drizzle's relational query API (`db.query.<table>`), so no runtime schema aggregation is needed.
 - Migrations live in `server/src/db/migrations/` (committed to git).
 
