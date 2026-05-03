@@ -30,6 +30,14 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
     [GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"],
     { stdout: "pipe", stderr: "pipe" },
   ).exited;
+  // Trust the mise config so agents can run build commands without hitting
+  // "config file is not trusted" errors. No-op if mise is not installed.
+  try {
+    await Bun.spawn(["mise", "trust", `${wtPath}/mise.toml`], {
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
+  } catch {}
 }
 
 export async function removeWorktree(wtPath: string): Promise<void> {

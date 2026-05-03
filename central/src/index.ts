@@ -22,7 +22,10 @@ await Promise.all(
   ordered.map((p) =>
     Promise.resolve()
       .then(() => p.onReady?.())
-      .catch((err) => console.error(`[plugin.${p.id}] onReady failed`, err)),
+      .catch((err) => {
+        console.error(`[plugin.${p.id}] onReady failed`, err);
+        if (p.loadBearing) throw err;
+      }),
   ),
 );
 
