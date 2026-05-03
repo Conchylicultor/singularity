@@ -7,6 +7,7 @@
 - Description: Toggle on/off to activate agent auto-launch. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive. Server side of the agent auto-launch toggle. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive.
 - Defines:
   - DB schema: `plugins/agents/plugins/auto-launch/plugins/toggle/server/internal/tables.ts`
+  - Entity extension of: `agents` (table `agents_ext_auto_launch`)
 - Exports (server):
   - Values: `_agentAutoLaunchExt`, `agentAutoLaunchResource`
 - Contributes:

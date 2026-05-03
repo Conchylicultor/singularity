@@ -7,6 +7,7 @@
 - Description: Anki-style global priority queue of conversations awaiting user input. Top of the deck is what to do next; finishing a turn returns the conversation to position 2 so the top stays stable. Server side of the global Anki-style conversations queue. Owns the conversations_ext_queue side-table via the entity-extensions primitive and seeds rank on conversationCreated + conversationTurnCompleted.
 - Defines:
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`
+  - Entity extension of: `tasks-core` (table `conversations_ext_queue`)
 - Exports (server):
   - Values: `_conversationsExtQueue`, `endRank`, `positionTwoRank`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterN`, `rankForBottom`, `rankForTop`, `seedRankJob`
 - Contributes:

@@ -40,6 +40,7 @@ unless the user clicks "Re-classify with Haiku".
 - Defines:
   - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables-colors.ts`
   - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
+  - Entity extension of: `tasks-core` (table `conversations_ext_category`)
 - Exports (server):
   - Values: `_conversationCategoryColors`, `_conversationCategoryExt`, `categoryColorsResource`, `classifyConversationJob`, `conversationCategoriesResource`
 - Exports (shared):

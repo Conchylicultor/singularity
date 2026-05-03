@@ -33,6 +33,18 @@ interface BarrelExport {
   kind: "type" | "value";
 }
 
+interface EntityExtension {
+  parentPlugin: string;
+  extName: string;
+  tableName: string;
+}
+
+interface EntityExtensionRef {
+  childPlugin: string;
+  extName: string;
+  tableName: string;
+}
+
 interface PluginInfo {
   dir: string;
   name: string;
@@ -63,6 +75,10 @@ interface PluginInfo {
   slotContributors: string[];
   /** Plugins (by name) whose code calls HTTP routes registered by this plugin. */
   endpointCallers: string[];
+  /** Side-tables this plugin attaches to another plugin's entity via defineExtension(). */
+  entityExtensions: EntityExtension[];
+  /** Other plugins that have attached side-tables to this plugin's entities. */
+  extendedBy: EntityExtensionRef[];
   children: PluginInfo[];
 }
 
@@ -492,6 +508,43 @@ function parseRegisterTokens(src: string): string[] {
   return tokens;
 }
 
+interface RawExtRef {
+  parentVarName: string;
+  parentModule: string;
+  extName: string;
+}
+
+function parseEntityExtensionCalls(dbFiles: string[]): RawExtRef[] {
+  const out: RawExtRef[] = [];
+  for (const f of dbFiles) {
+    const raw = readIfExists(f);
+    if (!raw || !raw.includes("defineExtension")) continue;
+    const src = stripTypes(raw);
+    const imports = parseImports(src);
+    const re = /\bdefineExtension\s*\(\s*([A-Za-z_$][\w$]*)\s*,\s*"([^"]+)"/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src))) {
+      const imp = imports.get(m[1]!);
+      if (!imp) continue;
+      out.push({ parentVarName: imp.original, parentModule: imp.module, extName: m[2]! });
+    }
+  }
+  return out;
+}
+
+function parseTableNamesFromDbFiles(dbFiles: string[]): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const f of dbFiles) {
+    const raw = readIfExists(f);
+    if (!raw) continue;
+    const src = stripTypes(raw);
+    const re = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*pgTable\s*\(\s*["']([^"']+)["']/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(src))) out.set(m[1]!, m[2]!);
+  }
+  return out;
+}
+
 function findDbFiles(pluginDir: string): string[] {
   const serverDir = join(pluginDir, "server");
   if (!existsSync(serverDir)) return [];
@@ -646,6 +699,8 @@ function collectPlugin(dir: string, pluginsRoot: string): PluginInfo {
     importedBy: [],
     slotContributors: [],
     endpointCallers: [],
+    entityExtensions: [],
+    extendedBy: [],
     children: [],
   };
 }
@@ -701,6 +756,11 @@ function renderPluginBody(
   }
   for (const f of p.dbFiles) {
     defines.push(`${subIndent}- DB schema: \`${relative(root, f)}\``);
+  }
+  for (const ext of p.entityExtensions) {
+    defines.push(
+      `${subIndent}- Entity extension of: \`${ext.parentPlugin}\` (table \`${ext.tableName}\`)`,
+    );
   }
   if (defines.length > 0) {
     lines.push(`${bodyIndent}- Defines:`);
@@ -787,6 +847,11 @@ function renderPluginBody(
   if (p.endpointCallers.length > 0) {
     lines.push(
       `${bodyIndent}- Endpoint callers: ${p.endpointCallers.map((n) => `\`${n}\``).join(", ")}`,
+    );
+  }
+  if (p.extendedBy.length > 0) {
+    lines.push(
+      `${bodyIndent}- Extended by: ${p.extendedBy.map((e) => `\`${e.childPlugin}\` (table \`${e.tableName}\`)`).join(", ")}`,
     );
   }
 }
@@ -927,6 +992,36 @@ function computeReverseIndexes(byDir: Map<string, PluginInfo>): void {
     info.importedBy.sort();
     info.slotContributors.sort();
     info.endpointCallers.sort();
+  }
+
+  // 4. entityExtensions — detect defineExtension() calls; cross-link to parent plugin
+  const pluginVarToTable = new Map<string, Map<string, string>>();
+  for (const info of byDir.values()) {
+    pluginVarToTable.set(info.name, parseTableNamesFromDbFiles(info.dbFiles));
+  }
+  const pluginModuleRe = /@plugins\/([^/"'`]+)\/(?:server|central|shared)/;
+  for (const info of byDir.values()) {
+    for (const ref of parseEntityExtensionCalls(info.dbFiles)) {
+      const pluginMatch = ref.parentModule.match(pluginModuleRe);
+      if (!pluginMatch) continue;
+      const parentPluginName = pluginMatch[1]!;
+      const parentTableName =
+        (pluginVarToTable.get(parentPluginName) ?? new Map()).get(ref.parentVarName) ?? "";
+      const tableName = parentTableName
+        ? `${parentTableName}_ext_${ref.extName}`
+        : `${parentPluginName}_ext_${ref.extName}`;
+      if (!info.entityExtensions.some((e) => e.tableName === tableName)) {
+        info.entityExtensions.push({ parentPlugin: parentPluginName, extName: ref.extName, tableName });
+      }
+      const parentPlugin = byName.get(parentPluginName);
+      if (parentPlugin && !parentPlugin.extendedBy.some((e) => e.tableName === tableName)) {
+        parentPlugin.extendedBy.push({ childPlugin: info.name, extName: ref.extName, tableName });
+      }
+    }
+  }
+  for (const info of byDir.values()) {
+    info.entityExtensions.sort((a, b) => a.tableName.localeCompare(b.tableName));
+    info.extendedBy.sort((a, b) => a.tableName.localeCompare(b.tableName));
   }
 }
 

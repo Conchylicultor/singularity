@@ -38,6 +38,7 @@
   - `GET /api/agents/:id/launches`
 - Imported by: `toggle`
 - Slot contributors: `toggle`
+- Extended by: `toggle` (table `agents_ext_auto_launch`)
 - Sub-plugins:
   - **`auto-launch`** — Umbrella plugin for agent auto-launch. Sub-plugins contribute row actions and settings.
 
