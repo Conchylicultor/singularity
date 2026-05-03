@@ -132,7 +132,7 @@ func main() {
 	go func() {
 		defer close(shutdownDone)
 		<-ctx.Done()
-		slog.Info("shutdown signal received")
+		logSigtermSender()
 		shutCtx, shutCancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer shutCancel()
 		_ = srv.Shutdown(shutCtx)
