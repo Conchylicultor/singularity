@@ -871,7 +871,7 @@ function renderPluginTree(
   const marker = mode === "compact" && p.loadBearing ? " [load-bearing]" : "";
   lines.push(`${headerIndent}- **\`${p.name}\`**${marker}${desc}`);
 
-  const includeBody = mode === "detail" || p.loadBearing;
+  const includeBody = mode === "detail";
   if (includeBody) renderPluginBody(p, bodyIndent, root, lines);
 
   if (p.children.length > 0) {
@@ -1077,7 +1077,7 @@ function renderTreeBody(roots: PluginInfo[], root: string, mode: RenderMode): st
 
 const COMPACT_HEADER =
   "# Plugins (compact)\n\n" +
-  "Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` show full detail; others show only `name — description`. Read [`plugins-details.md`](./plugins-details.md) for the full reference, or open the per-plugin `CLAUDE.md` when working inside a specific plugin.\n\n";
+  "Slim, always-loaded index of every plugin. Shows only `name — description`; load-bearing infrastructure plugins are marked `[load-bearing]`. Read [`plugins-details.md`](./plugins-details.md) for the full reference, or open the per-plugin `CLAUDE.md` when working inside a specific plugin.\n\n";
 
 const DETAILS_HEADER =
   "# Plugins (details)\n\n" +
