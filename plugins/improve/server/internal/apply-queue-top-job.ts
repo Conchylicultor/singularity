@@ -1,14 +1,14 @@
 import { z } from "zod";
-import { asc, and, eq, isNotNull } from "drizzle-orm";
-import { generateKeyBetween } from "fractional-indexing";
+import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { upsertExtension } from "@plugins/infra/plugins/entity-extensions/server";
+import { getConversation } from "@plugins/tasks-core/server";
 import {
-  _conversations,
-  getConversation,
-  updateConversation,
-  recentConversationsResource,
-} from "@plugins/tasks-core/server";
+  _conversationsExtQueue,
+  queueRanksResource,
+  rankForTop,
+} from "@plugins/conversations/plugins/conversations-view/plugins/queue/server";
 import { _improvePendingQueueTop } from "./tables";
 
 export const applyQueueTopJob = defineJob({
@@ -34,16 +34,10 @@ export const applyQueueTopJob = defineJob({
       .delete(_improvePendingQueueTop)
       .where(eq(_improvePendingQueueTop.taskId, conv.taskId));
 
-    // Insert before the current top waiting conversation
-    const [first] = await db
-      .select({ rank: _conversations.rank })
-      .from(_conversations)
-      .where(and(eq(_conversations.status, "waiting"), isNotNull(_conversations.rank)))
-      .orderBy(asc(_conversations.rank))
-      .limit(1);
-
-    const topRank = generateKeyBetween(null, first?.rank ?? null);
-    await updateConversation(event.conversationId, { rank: topRank });
-    recentConversationsResource.notify();
+    const topRank = await rankForTop(event.conversationId);
+    await upsertExtension(_conversationsExtQueue, event.conversationId, {
+      rank: topRank,
+    });
+    queueRanksResource.notify();
   },
 });

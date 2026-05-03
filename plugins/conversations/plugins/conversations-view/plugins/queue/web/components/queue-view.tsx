@@ -16,6 +16,8 @@ import { useConversations } from "@plugins/conversations/web";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import type { Conversation } from "@plugins/tasks-core/shared";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { queueRanksResource } from "../../shared/resources";
 import {
   SidebarMenu,
   SidebarMenuAction,
@@ -87,6 +89,7 @@ export function QueueView({
   onCloseConversation,
 }: ViewProps) {
   const { active, isLoading } = useConversations();
+  const { data: rankRows } = useResource(queueRanksResource);
 
   const working = useMemo(
     () =>
@@ -95,17 +98,21 @@ export function QueueView({
   );
 
   // Anki-style deck: a single global ordered list of waiting conversations,
-  // sorted by rank ascending. Top of the list is "what to do next". The rank
-  // column is guaranteed populated server-side (assigned on insert + on every
-  // transition into waiting); the null-guard here is a defensive belt.
+  // sorted by rank ascending. Top of the list is "what to do next". Rank is
+  // owned by the queue plugin's side-table (queueRanksResource) — a
+  // conversation only appears in the deck once the seed-rank job has fired.
   // Uses code-point order (not localeCompare) to match Postgres COLLATE "C".
   const deck = useMemo(() => {
-    const waiting = active.filter(
-      (c): c is Conversation & { rank: string } =>
-        c.status === "waiting" && c.rank !== null,
-    );
-    return [...waiting].sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0));
-  }, [active]);
+    const ranks = new Map((rankRows ?? []).map((r) => [r.conversationId, r.rank]));
+    const waiting: Array<Conversation & { rank: string }> = [];
+    for (const c of active) {
+      if (c.status !== "waiting") continue;
+      const rank = ranks.get(c.id);
+      if (!rank) continue;
+      waiting.push({ ...c, rank });
+    }
+    return waiting.sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0));
+  }, [active, rankRows]);
 
   const [workingExpanded, setWorkingExpanded] = useState<boolean>(() => {
     try {

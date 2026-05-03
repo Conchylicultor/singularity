@@ -227,7 +227,6 @@ export const ConversationSchema = createSelectSchema(_conversations, {
   status: ConversationStatusSchema,
   model: ConversationModelSchema,
   kind: ConversationKindSchema,
-  rank: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   endedAt: z.coerce.date().nullable(),

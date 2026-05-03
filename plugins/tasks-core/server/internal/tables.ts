@@ -120,16 +120,8 @@ export const _conversations = pgTable(
     kind: text("kind").$type<ConversationKind>().notNull().default("user"),
     claudeSessionId: text("claude_session_id"),
     spawnedBy: text("spawned_by"),
-    // Stack-rank for the global priority queue (Anki-style deck). Assigned at
-    // insert time (end of deck); reassigned to "position 2" on every transition
-    // into `waiting` from a non-waiting state, so the top of the deck stays
-    // stable while items cycle. Manual drag overrides until the next cycle.
-    // Nullable in the DB for additive-migration safety; the queue plugin
-    // backfills any leftover NULLs at boot.
-    rank: rankText("rank"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     endedAt: timestamp("ended_at", { withTimezone: true }),
   },
-  (t) => [index("conversations_status_rank_idx").on(t.status, t.rank)],
 );
