@@ -20,6 +20,7 @@ export function WelcomeView() {
   const conversations = [...active, ...recentGone];
 
   const activeCount = active.length;
+  const workingCount = active.filter((c) => c.status === "working").length;
   const totalCount = activeCount + totalGoneCount;
 
   const openConversation = (name: string) => {
@@ -45,7 +46,7 @@ export function WelcomeView() {
             {[
               { label: "Total", value: totalCount },
               { label: "Active", value: activeCount },
-              { label: "Idle", value: totalGoneCount },
+              { label: "Working", value: workingCount },
             ].map((stat) => (
               <div
                 key={stat.label}
