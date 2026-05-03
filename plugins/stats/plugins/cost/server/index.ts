@@ -1,6 +1,7 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { costConfig } from "../shared/config";
 import {
+  handleAvgPerConversation,
   handleCumulative,
   handleDaily,
   handleDailyByFamily,
@@ -25,6 +26,7 @@ export default {
     "GET /api/stats/cost/totals": handleTotals,
     "GET /api/stats/cost/sessions": handleSessions,
     "GET /api/stats/cost/distribution": handleDistribution,
+    "GET /api/stats/cost/avg-per-conversation": handleAvgPerConversation,
   },
   onReady: () => {
     // Walk ~/.claude/projects in the background so the first chart fetch hits

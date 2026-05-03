@@ -266,6 +266,115 @@ function fmtCost(n: number): string {
   return `$${n.toFixed(2)}`;
 }
 
+interface FamilyData {
+  cost: number;
+  tokens: number;
+}
+
+interface DayData {
+  totalCost: number;
+  totalTokens: number;
+  count: number;
+  byFamily: Map<string, FamilyData>;
+}
+
+export async function handleAvgPerConversation(
+  req: Request,
+): Promise<Response> {
+  const scope = parseScope(req);
+  const { sessions } = await loadBundle();
+  const filtered = filterSessions(sessions, scope);
+
+  const allFamilies = new Set<string>();
+  const byDate = new Map<string, DayData>();
+
+  for (const s of filtered) {
+    const date = s.lastActivity.slice(0, 10);
+    if (!date) continue;
+    if (!byDate.has(date)) {
+      byDate.set(date, {
+        totalCost: 0,
+        totalTokens: 0,
+        count: 0,
+        byFamily: new Map(),
+      });
+    }
+    const day = byDate.get(date)!;
+    day.totalCost += s.cost;
+    day.totalTokens += s.totalTokens;
+    day.count += 1;
+
+    // Split cost/tokens evenly across model families used in this session
+    const families = [
+      ...new Set(s.modelsUsed.map((m) => modelFamily(canonicalModel(m)))),
+    ];
+    if (families.length === 0) continue;
+    const share = 1 / families.length;
+    for (const fam of families) {
+      allFamilies.add(fam);
+      const f = day.byFamily.get(fam) ?? { cost: 0, tokens: 0 };
+      f.cost += s.cost * share;
+      f.tokens += s.totalTokens * share;
+      day.byFamily.set(fam, f);
+    }
+  }
+
+  const sorted = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const families = [...allFamilies].sort();
+
+  const points = sorted.map(([date, day], i) => {
+    const avgCost = day.count > 0 ? roundCents(day.totalCost / day.count) : 0;
+    const avgTokens =
+      day.count > 0 ? Math.round(day.totalTokens / day.count) : 0;
+
+    // 7-day rolling window (weighted by session count, not simple avg of avgs)
+    const win = sorted.slice(Math.max(0, i - 6), i + 1);
+    const wCost = win.reduce((acc, [, d]) => acc + d.totalCost, 0);
+    const wTokens = win.reduce((acc, [, d]) => acc + d.totalTokens, 0);
+    const wCount = win.reduce((acc, [, d]) => acc + d.count, 0);
+    const rolling7Cost = wCount > 0 ? roundCents(wCost / wCount) : null;
+    const rolling7Tokens = wCount > 0 ? Math.round(wTokens / wCount) : null;
+
+    const byFamily: Record<string, { avgCost: number; avgTokens: number }> = {};
+    const rolling7ByFamily: Record<
+      string,
+      { cost: number | null; tokens: number | null }
+    > = {};
+    for (const fam of families) {
+      const f = day.byFamily.get(fam) ?? { cost: 0, tokens: 0 };
+      byFamily[fam] = {
+        avgCost: day.count > 0 ? roundCents(f.cost / day.count) : 0,
+        avgTokens: day.count > 0 ? Math.round(f.tokens / day.count) : 0,
+      };
+      const wFamCost = win.reduce(
+        (acc, [, d]) => acc + (d.byFamily.get(fam)?.cost ?? 0),
+        0,
+      );
+      const wFamTokens = win.reduce(
+        (acc, [, d]) => acc + (d.byFamily.get(fam)?.tokens ?? 0),
+        0,
+      );
+      rolling7ByFamily[fam] = {
+        cost: wCount > 0 ? roundCents(wFamCost / wCount) : null,
+        tokens: wCount > 0 ? Math.round(wFamTokens / wCount) : null,
+      };
+    }
+
+    return {
+      date,
+      avgCost,
+      avgTokens,
+      sessionCount: day.count,
+      byFamily,
+      rolling7ByFamily,
+      rolling7Cost,
+      rolling7Tokens,
+    };
+  });
+
+  return Response.json({ points, families });
+}
+
 function roundCents(n: number): number {
   return Math.round(n * 100) / 100;
 }
