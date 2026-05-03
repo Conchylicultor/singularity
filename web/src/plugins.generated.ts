@@ -78,6 +78,7 @@ import crashesPlugin from "@plugins/crashes/web";
 import debugClaudeCliCallsPlugin from "@plugins/debug/plugins/claude-cli-calls/web";
 import debugDbBackupPlugin from "@plugins/debug/plugins/db-backup/web";
 import debugLogsPlugin from "@plugins/debug/plugins/logs/web";
+import debugMemoryPlugin from "@plugins/debug/plugins/memory/web";
 import debugQueuePlugin from "@plugins/debug/plugins/queue/web";
 import debugWorktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/web";
 import debugPlugin from "@plugins/debug/web";
@@ -200,6 +201,7 @@ export const plugins: PluginDefinition[] = [
   debugClaudeCliCallsPlugin,
   debugDbBackupPlugin,
   debugLogsPlugin,
+  debugMemoryPlugin,
   debugQueuePlugin,
   debugWorktreeCleanupPlugin,
   debugPlugin,

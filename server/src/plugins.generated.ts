@@ -39,6 +39,7 @@ import conversationsPlugin from "@plugins/conversations/server";
 import crashesPlugin from "@plugins/crashes/server";
 import debugDbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
 import debugLogsPlugin from "@plugins/debug/plugins/logs/server";
+import debugMemoryPlugin from "@plugins/debug/plugins/memory/server";
 import debugWorktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/server";
 import eventsTestPlugin from "@plugins/events-test/server";
 import healthPlugin from "@plugins/health/server";
@@ -96,6 +97,7 @@ export const plugins: ServerPluginDefinition[] = [
   crashesPlugin,
   debugDbBackupPlugin,
   debugLogsPlugin,
+  debugMemoryPlugin,
   debugWorktreeCleanupPlugin,
   eventsTestPlugin,
   healthPlugin,
