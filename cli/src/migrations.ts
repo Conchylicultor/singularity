@@ -26,8 +26,9 @@ export async function generateMigration(opts: {
   worktreeName: string;
   migrationName?: string;
   resetMigration?: boolean;
+  customMigration?: boolean;
 }): Promise<void> {
-  const { serverDir, worktreeName, migrationName, resetMigration } = opts;
+  const { serverDir, worktreeName, migrationName, resetMigration, customMigration } = opts;
 
   if (migrationName && !MIGRATION_NAME_REGEX.test(migrationName)) {
     console.error(
@@ -50,6 +51,7 @@ export async function generateMigration(opts: {
   // `Bun.which()` and crashes with "Bun is not defined" — silently exit-0,
   // no migration generated. `--bun` forces Bun runtime regardless of shebang.
   const cmd = ["bunx", "--bun", "drizzle-kit", "generate"];
+  if (customMigration) cmd.push("--custom");
   if (migrationName) cmd.push("--name", migrationName);
 
   const proc = Bun.spawn(cmd, {

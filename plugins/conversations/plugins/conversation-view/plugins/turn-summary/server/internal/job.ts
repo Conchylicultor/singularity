@@ -75,7 +75,7 @@ export const generateTurnSummaryJob = defineJob({
     const existing = await db
       .select({ messageId: _turnSummaries.messageId })
       .from(_turnSummaries)
-      .where(eq(_turnSummaries.conversationId, conversationId))
+      .where(eq(_turnSummaries.parentId, conversationId))
       .limit(1);
     if (existing[0]?.messageId === messageId) return;
 
@@ -118,20 +118,21 @@ export const generateTurnSummaryJob = defineJob({
     await db
       .insert(_turnSummaries)
       .values({
-        conversationId,
+        parentId: conversationId,
         messageId,
         summary: parsed.summary,
         caveats: parsed.caveats,
         actions: parsed.actions,
       })
       .onConflictDoUpdate({
-        target: _turnSummaries.conversationId,
+        target: _turnSummaries.parentId,
         set: {
           messageId,
           summary: parsed.summary,
           caveats: parsed.caveats,
           actions: parsed.actions,
           generatedAt: new Date(),
+          updatedAt: new Date(),
         },
       });
 

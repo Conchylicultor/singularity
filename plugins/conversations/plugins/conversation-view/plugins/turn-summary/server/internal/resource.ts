@@ -13,7 +13,7 @@ export const turnSummariesResource = defineResource<TurnSummariesPayload>({
   loader: async () => {
     const rows = await db
       .select({
-        conversationId: _turnSummaries.conversationId,
+        conversationId: _turnSummaries.parentId,
         messageId: _turnSummaries.messageId,
         summary: _turnSummaries.summary,
         caveats: _turnSummaries.caveats,
