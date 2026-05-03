@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS "conversations_ext_turn_summary" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-DROP TABLE IF EXISTS "turn_summaries" CASCADE;--> statement-breakpoint
+DROP TABLE "turn_summaries" CASCADE;--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "conversations_ext_turn_summary" ADD CONSTRAINT "conversations_ext_turn_summary_parent_id_conversations_id_fk" FOREIGN KEY ("parent_id") REFERENCES "public"."conversations"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
