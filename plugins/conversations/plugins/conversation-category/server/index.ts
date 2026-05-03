@@ -19,7 +19,7 @@ import {
   handleDeleteColor,
 } from "./internal/colors-routes";
 
-export { _conversationCategories } from "./internal/tables";
+export { _conversationCategoryExt } from "./internal/tables";
 export { _conversationCategoryColors } from "./internal/tables-colors";
 export { conversationCategoriesResource } from "./internal/resource";
 export { categoryColorsResource } from "./internal/colors-resource";

@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { readConfig } from "@plugins/config/server";
+import { upsertExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { conversationCategoryConfig } from "../../shared/config";
-import { _conversationCategories } from "./tables";
+import { _conversationCategoryExt } from "./tables";
 import { conversationCategoriesResource } from "./resource";
 import { classifyConversationJob } from "./classify-job";
 
@@ -59,21 +60,10 @@ export async function handleSetCategory(
     );
   }
 
-  await db
-    .insert(_conversationCategories)
-    .values({
-      conversationId,
-      category,
-      source: "manual",
-    })
-    .onConflictDoUpdate({
-      target: _conversationCategories.conversationId,
-      set: {
-        category,
-        source: "manual",
-        classifiedAt: new Date(),
-      },
-    });
+  await upsertExtension(_conversationCategoryExt, conversationId, {
+    category,
+    source: "manual",
+  });
   conversationCategoriesResource.notify();
 
   return Response.json({ ok: true });
@@ -91,8 +81,8 @@ export async function handleClearCategory(
     );
   }
   await db
-    .delete(_conversationCategories)
-    .where(eq(_conversationCategories.conversationId, conversationId));
+    .delete(_conversationCategoryExt)
+    .where(eq(_conversationCategoryExt.parentId, conversationId));
   conversationCategoriesResource.notify();
   return Response.json({ ok: true });
 }

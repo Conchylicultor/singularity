@@ -449,6 +449,13 @@
       "tag": "20260502_213414_2775c859__move_agent_auto_launch_to_extension",
       "hash": "2775c859",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777800000000,
+      "tag": "20260503_090000_39283cb0__migrate_category_to_extension",
+      "hash": "39283cb0",
+      "breakpoints": true
     }
   ]
 }

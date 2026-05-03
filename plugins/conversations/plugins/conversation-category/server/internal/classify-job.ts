@@ -2,6 +2,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { upsertExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { readConfig } from "@plugins/config/server";
 import {
   readConversationTurns,
@@ -13,7 +14,7 @@ import {
   runClaudePrint,
 } from "@plugins/infra/plugins/claude-cli/server";
 import { conversationCategoryConfig } from "../../shared/config";
-import { _conversationCategories } from "./tables";
+import { _conversationCategoryExt } from "./tables";
 import { conversationCategoriesResource } from "./resource";
 import { pickCategory } from "./pick-category";
 
@@ -46,7 +47,7 @@ function buildTranscriptDigest(turns: Turn[]): string {
 
 // Triggered globally on every `conversationTurnCompleted` event (see the
 // onReady hook in this plugin's barrel) and direct-enqueued from the
-// re-classify HTTP route. Idempotent: skips if a row already exists with
+// re-classify HTTP route. Idempotent: skips if a row exists with
 // `source: "manual"` (user override wins over auto), and skips Haiku for
 // rows already classified by Haiku unless `force: true`.
 export const classifyConversationJob = defineJob({
@@ -73,8 +74,8 @@ export const classifyConversationJob = defineJob({
 
     const existing = await db
       .select()
-      .from(_conversationCategories)
-      .where(eq(_conversationCategories.conversationId, conversationId))
+      .from(_conversationCategoryExt)
+      .where(eq(_conversationCategoryExt.parentId, conversationId))
       .limit(1);
     const prior = existing[0];
 
@@ -125,21 +126,10 @@ export const classifyConversationJob = defineJob({
 
     const picked = pickCategory(raw, categories);
 
-    await db
-      .insert(_conversationCategories)
-      .values({
-        conversationId,
-        category: picked,
-        source: "haiku",
-      })
-      .onConflictDoUpdate({
-        target: _conversationCategories.conversationId,
-        set: {
-          category: picked,
-          source: "haiku",
-          classifiedAt: new Date(),
-        },
-      });
+    await upsertExtension(_conversationCategoryExt, conversationId, {
+      category: picked,
+      source: "haiku",
+    });
 
     conversationCategoriesResource.notify();
   },
