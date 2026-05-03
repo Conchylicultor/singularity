@@ -75,12 +75,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/agents/:id/launches`
   - Imported by: `toggle`
   - Slot contributors: `toggle`
+  - Extended by: `toggle` (table `agents_ext_auto_launch`)
   - Plugins:
     - **`auto-launch`** — Umbrella plugin for agent auto-launch. Sub-plugins contribute row actions and settings.
       - Plugins:
         - **`toggle`** — Toggle on/off to activate agent auto-launch. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive. Server side of the agent auto-launch toggle. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive.
           - Defines:
             - DB schema: `plugins/agents/plugins/auto-launch/plugins/toggle/server/internal/tables.ts`
+            - Entity extension of: `agents` (table `agents_ext_auto_launch`)
           - Exports (server):
             - Values: `_agentAutoLaunchExt`, `agentAutoLaunchResource`
           - Contributes:
@@ -225,6 +227,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Defines:
         - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables-colors.ts`
         - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
+        - Entity extension of: `tasks-core` (table `conversations_ext_category`)
       - Exports (server):
         - Values: `_conversationCategoryColors`, `_conversationCategoryExt`, `categoryColorsResource`, `classifyConversationJob`, `conversationCategoriesResource`
       - Exports (shared):
@@ -491,6 +494,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/turn-summary/server/internal/tables.ts`
+            - Entity extension of: `tasks-core` (table `conversations_ext_turn_summary`)
           - Exports (server):
             - Values: `_turnSummaries`, `generateTurnSummaryJob`, `turnSummariesResource`
           - Exports (shared):
@@ -539,6 +543,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`queue`** — Anki-style global priority queue of conversations awaiting user input. Top of the deck is what to do next; finishing a turn returns the conversation to position 2 so the top stays stable. Server side of the global Anki-style conversations queue. Owns the conversations_ext_queue side-table via the entity-extensions primitive and seeds rank on conversationCreated + conversationTurnCompleted.
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`
+            - Entity extension of: `tasks-core` (table `conversations_ext_queue`)
           - Exports (server):
             - Values: `_conversationsExtQueue`, `endRank`, `positionTwoRank`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterN`, `rankForBottom`, `rankForTop`, `seedRankJob`
           - Contributes:
@@ -1116,6 +1121,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `pushLanded`, `taskStatusChanged`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
   - Imported by: `active-data`, `agents`, `allow-monitor`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
+  - Extended by: `conversation-category` (table `conversations_ext_category`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`)
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):

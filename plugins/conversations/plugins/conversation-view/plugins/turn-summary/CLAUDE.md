@@ -28,6 +28,7 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
 - Description: Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
 - Defines:
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/turn-summary/server/internal/tables.ts`
+  - Entity extension of: `tasks-core` (table `conversations_ext_turn_summary`)
 - Exports (server):
   - Values: `_turnSummaries`, `generateTurnSummaryJob`, `turnSummariesResource`
 - Exports (shared):

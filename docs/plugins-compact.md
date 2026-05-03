@@ -382,6 +382,7 @@ Slim, always-loaded index of every plugin. Plugins flagged `loadBearing: true` s
     - Register: `pushLanded`, `taskStatusChanged`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
   - Imported by: `active-data`, `agents`, `allow-monitor`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `tasks`, `turn-summary`, `worktree-cleanup`
+  - Extended by: `conversation-category` (table `conversations_ext_category`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`)
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
 
