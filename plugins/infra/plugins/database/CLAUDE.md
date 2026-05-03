@@ -6,7 +6,7 @@ The cluster lifecycle is **owned by the gateway** (Go), not by this plugin. See 
 
 - The `@embedded-postgres/<platform>` binary as an optionalDependency in `package.json` so `bun install` lands the binaries the gateway resolves at runtime.
 - `shared/` constants (PG_PORT, PG_SOCKET_DIR, PG_USER, PG_DATA_DIR, ...) reused by worktree backends and the CLI.
-- A near-empty `server/` runtime so other plugins can import paths from the standard `@plugins/infra/plugins/database/server` barrel.
+- `server/` cluster-level DDL helpers (`dropDatabase`, `databaseExists`) for plugins that manage the worktree DB lifecycle.
 
 ## Topology
 
@@ -37,7 +37,7 @@ Worktree backends connect via `server/src/db/client.ts`:
 ## What this plugin does NOT do
 
 - Manage PgBouncer (deferred to v2).
-- Run `CREATE DATABASE` / `DROP DATABASE` on worktree create/destroy — that's still owned by `plugins/conversations/server/internal/db-fork.ts` and the worktree-cleanup plugin. The gateway only manages the cluster.
+- Run `CREATE DATABASE` on worktree create — that's owned by `plugins/conversations/server/internal/db-fork.ts` (the fork uses pg_dump/pg_restore). The gateway only manages the cluster.
 - Expose a `pg` client. Sibling code that needs PG access continues to import from `@server/db/client`.
 - Supervise PG itself. That's the gateway's job — see `gateway/postgres.go`.
 
@@ -51,7 +51,7 @@ Worktree backends connect via `server/src/db/client.ts`:
 ## Plugin reference
 
 - Exports (server):
-  - Values: `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
+  - Values: `databaseExists`, `dropDatabase`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
 - Exports (shared):
   - Values: `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `useSystemPg`
 

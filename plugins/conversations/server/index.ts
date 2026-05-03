@@ -46,7 +46,6 @@ export { afterTurn } from "./internal/after-turn";
 export { conversationCreated } from "./internal/tables-created-event";
 export type { ConversationCreatedPayload } from "./internal/tables-created-event";
 export { SYSTEM_META_TASK_ID } from "./internal/meta-system";
-export { dropDatabase, databaseExists } from "./internal/db-fork";
 
 export default {
   id: "conversations",

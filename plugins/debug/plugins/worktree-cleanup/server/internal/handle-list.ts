@@ -1,6 +1,6 @@
 import { stat } from "node:fs/promises";
 import { listAttempts, listTasks } from "@plugins/tasks-core/server";
-import { databaseExists } from "@plugins/conversations/server";
+import { databaseExists } from "@plugins/infra/plugins/database/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";
