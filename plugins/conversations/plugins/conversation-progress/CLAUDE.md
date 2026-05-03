@@ -7,6 +7,7 @@
 - Description: 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
 - Defines:
   - DB schema: `plugins/conversations/plugins/conversation-progress/server/internal/tables.ts`
+  - Entity extension of: `tasks-core` (table `conversations_ext_progress`)
 - Exports (server):
   - Values: `_conversationProgress`, `classifyProgressJob`, `conversationProgressResource`, `markProgressPushedJob`
 - Contributes:

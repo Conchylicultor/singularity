@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { _conversations } from "@plugins/tasks-core/server";
+import { upsertExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { _conversationProgress } from "./tables";
 import { conversationProgressResource } from "./resource";
 
@@ -39,13 +40,10 @@ export const markProgressPushedJob = defineJob({
     }
 
     for (const cId of ids) {
-      await db
-        .insert(_conversationProgress)
-        .values({ conversationId: cId, phase: "pushed", source: "push", updatedAt: new Date() })
-        .onConflictDoUpdate({
-          target: _conversationProgress.conversationId,
-          set: { phase: "pushed", source: "push", updatedAt: new Date() },
-        });
+      await upsertExtension(_conversationProgress, cId, {
+        phase: "pushed",
+        source: "push",
+      });
     }
 
     conversationProgressResource.notify();

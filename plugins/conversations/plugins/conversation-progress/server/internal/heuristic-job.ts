@@ -1,8 +1,7 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
-import { db } from "@server/db/client";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConversation } from "@plugins/tasks-core/server";
+import { getExtension, upsertExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { PHASE_ORDER, type ConversationPhase } from "../../shared/schemas";
 import { _conversationProgress } from "./tables";
 import { conversationProgressResource } from "./resource";
@@ -62,30 +61,16 @@ export const classifyProgressJob = defineJob({
 
     const newPhase = await detectPhase(conversation.worktreePath);
 
-    const existing = await db
-      .select({ phase: _conversationProgress.phase })
-      .from(_conversationProgress)
-      .where(eq(_conversationProgress.conversationId, conversationId))
-      .limit(1);
-    const prior = existing[0];
-
+    const prior = await getExtension(_conversationProgress, conversationId);
     const currentIndex = prior
       ? PHASE_ORDER.indexOf(prior.phase as ConversationPhase)
       : -1;
     if (PHASE_ORDER.indexOf(newPhase) <= currentIndex) return;
 
-    await db
-      .insert(_conversationProgress)
-      .values({
-        conversationId,
-        phase: newPhase,
-        source: "heuristic",
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: _conversationProgress.conversationId,
-        set: { phase: newPhase, source: "heuristic", updatedAt: new Date() },
-      });
+    await upsertExtension(_conversationProgress, conversationId, {
+      phase: newPhase,
+      source: "heuristic",
+    });
 
     conversationProgressResource.notify();
   },

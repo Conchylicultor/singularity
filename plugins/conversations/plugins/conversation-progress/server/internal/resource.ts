@@ -15,12 +15,12 @@ export const conversationProgressResource =
     loader: async () => {
       return db
         .select({
-          conversationId: _conversationProgress.conversationId,
+          conversationId: _conversationProgress.parentId,
           phase: _conversationProgress.phase,
           source: _conversationProgress.source,
           updatedAt: _conversationProgress.updatedAt,
         })
         .from(_conversationProgress)
-        .orderBy(asc(_conversationProgress.conversationId));
+        .orderBy(asc(_conversationProgress.parentId));
     },
   });
