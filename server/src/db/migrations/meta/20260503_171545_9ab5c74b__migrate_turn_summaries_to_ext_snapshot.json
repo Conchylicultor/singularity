@@ -1,6 +1,6 @@
 {
-  "id": "2af4c4f4-3f36-421b-9896-058ffec1a95f",
-  "prevId": "c247ce61-e305-45e8-ac52-0daa55e8600c",
+  "id": "c7d4d770-469c-45f0-acb9-71b4cc8bb92f",
+  "prevId": "432a4497-964b-43cf-aecc-2816e1f8b17d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -833,6 +833,59 @@
       },
       "indexes": {},
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.conversations_ext_queue": {
+      "name": "conversations_ext_queue",
+      "schema": "",
+      "columns": {
+        "parent_id": {
+          "name": "parent_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "rank": {
+          "name": "rank",
+          "type": "rank_text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "conversations_ext_queue_parent_id_conversations_id_fk": {
+          "name": "conversations_ext_queue_parent_id_conversations_id_fk",
+          "tableFrom": "conversations_ext_queue",
+          "tableTo": "conversations",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -1798,12 +1851,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "rank": {
-          "name": "rank",
-          "type": "rank_text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1825,29 +1872,7 @@
           "notNull": false
         }
       },
-      "indexes": {
-        "conversations_status_rank_idx": {
-          "name": "conversations_status_rank_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "rank",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "conversations_attempt_id_attempts_id_fk": {
           "name": "conversations_attempt_id_attempts_id_fk",
@@ -3136,12 +3161,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "rank": {
-          "name": "rank",
-          "type": "rank_text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -3175,7 +3194,7 @@
           "notNull": true
         }
       },
-      "definition": "select \"conversations\".\"id\", \"conversations\".\"attempt_id\", \"conversations\".\"title\", \"conversations\".\"status\", \"conversations\".\"runtime\", \"conversations\".\"model\", \"conversations\".\"kind\", \"conversations\".\"claude_session_id\", \"conversations\".\"spawned_by\", \"conversations\".\"rank\", \"conversations\".\"created_at\", \"conversations\".\"updated_at\", \"conversations\".\"ended_at\", \"attempts\".\"worktree_path\", \"attempts\".\"task_id\", (\"conversations\".\"status\" <> 'gone') as \"active\" from \"conversations\" inner join \"attempts\" on \"attempts\".\"id\" = \"conversations\".\"attempt_id\"",
+      "definition": "select \"conversations\".\"id\", \"conversations\".\"attempt_id\", \"conversations\".\"title\", \"conversations\".\"status\", \"conversations\".\"runtime\", \"conversations\".\"model\", \"conversations\".\"kind\", \"conversations\".\"claude_session_id\", \"conversations\".\"spawned_by\", \"conversations\".\"created_at\", \"conversations\".\"updated_at\", \"conversations\".\"ended_at\", \"attempts\".\"worktree_path\", \"attempts\".\"task_id\", (\"conversations\".\"status\" <> 'gone') as \"active\" from \"conversations\" inner join \"attempts\" on \"attempts\".\"id\" = \"conversations\".\"attempt_id\"",
       "name": "conversations_v",
       "schema": "public",
       "isExisting": false,

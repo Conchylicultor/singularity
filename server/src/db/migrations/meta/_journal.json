@@ -470,6 +470,13 @@
       "tag": "20260503_163048_e5339d4b__move_conversation_rank_to_extension",
       "hash": "e5339d4b",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777828545000,
+      "tag": "20260503_171545_9ab5c74b__migrate_turn_summaries_to_ext",
+      "hash": "9ab5c74b",
+      "breakpoints": true
     }
   ]
 }

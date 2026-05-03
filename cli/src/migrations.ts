@@ -56,7 +56,13 @@ export async function generateMigration(opts: {
 
   const proc = Bun.spawn(cmd, {
     cwd: serverDir,
-    stdin: "inherit",
+    // "inherit" would break non-TTY environments: @clack/prompts checks
+    // isTTY and aborts when stdin is a pipe, so any interactive "rename
+    // table?" prompt drizzle-kit shows would silently exit without generating.
+    // "pipe" + a leading \r answers every select-prompt with its default
+    // (Enter = accept highlighted choice), which is "create table" — the
+    // correct answer when we're replacing a table, not renaming it.
+    stdin: "pipe",
     stdout: "inherit",
     stderr: "pipe",
     env: {
@@ -65,6 +71,9 @@ export async function generateMigration(opts: {
       SINGULARITY_WORKTREE: worktreeName,
     },
   });
+  // Send Enter to auto-accept the default answer on any select prompt.
+  proc.stdin.write(new Uint8Array([0x0d]));
+  proc.stdin.end();
 
   // Tee stderr: forward live to the user AND capture so we can detect cases
   // where drizzle-kit printed a diagnostic but still exited 0 (seen with
