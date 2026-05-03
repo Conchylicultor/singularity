@@ -484,6 +484,13 @@
       "tag": "20260503_175012_f5749cd1__move_auto_start_to_extension",
       "hash": "f5749cd1",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1777832246000,
+      "tag": "20260503_181726_6917477c__remove_improve_pending_queue_top",
+      "hash": "6917477c",
+      "breakpoints": true
     }
   ]
 }

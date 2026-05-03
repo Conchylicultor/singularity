@@ -3,10 +3,7 @@ import {
   deleteTriggersFor,
   trigger,
 } from "@plugins/infra/plugins/events/server";
-import {
-  conversationCreated,
-  conversationTurnCompleted,
-} from "@plugins/conversations/server";
+import { conversationTurnCompleted } from "@plugins/conversations/server";
 import { handleReorder } from "./internal/handle-reorder";
 import { handlePromote } from "./internal/handle-promote";
 import { handleDemote } from "./internal/handle-demote";
@@ -23,7 +20,7 @@ export default {
   id: "conversations-queue",
   name: "Conversations Queue",
   description:
-    "Server side of the global Anki-style conversations queue. Owns the conversations_ext_queue side-table via the entity-extensions primitive and seeds rank on conversationCreated + conversationTurnCompleted.",
+    "Server side of the global Anki-style conversations queue. Owns the conversations_ext_queue side-table via the entity-extensions primitive and seeds rank at position-2 on conversationTurnCompleted. New conversations are unranked and surface at the top of the queue until their first turn.",
   resources: [queueRanksResource],
   register: [seedRankJob],
   httpRoutes: {
@@ -34,12 +31,6 @@ export default {
   },
   onReady: async () => {
     await deleteTriggersFor(seedRankJob);
-    await trigger({
-      on: conversationCreated,
-      do: seedRankJob,
-      with: {},
-      oneShot: false,
-    });
     await trigger({
       on: conversationTurnCompleted,
       do: seedRankJob,
