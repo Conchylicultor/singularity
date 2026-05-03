@@ -42,6 +42,7 @@ async function queuePost(path: string, body: Record<string, unknown>) {
 
 const WORKING_EXPANDED_KEY = "queue-view:working:expanded";
 const QUEUE_EXPANDED_KEY = "queue-view:queue:expanded";
+const UNRANKED_EXPANDED_KEY = "queue-view:unranked:expanded";
 const GONE_EXPANDED_KEY = "queue-view:gone:expanded";
 
 function SectionBox({
@@ -98,14 +99,11 @@ export function QueueView({
     [active],
   );
 
-  // Anki-style deck: a single global ordered list of waiting conversations.
-  // Unranked conversations (never responded yet) float to the top; ranked
-  // conversations follow in rank-ascending order (code-point, matching Postgres
-  // COLLATE "C"). A conversation gets its first rank on conversationTurnCompleted
-  // and lands at position-2 to enter the normal cycling.
-  const { deck, unrankedIds } = useMemo(() => {
+  // Ranked conversations form the Anki-style deck; unranked (no turn yet) stay
+  // in a separate section above until their first turn fires the seed-rank job.
+  const { deck, unranked } = useMemo(() => {
     const ranks = new Map((rankRows ?? []).map((r) => [r.conversationId, r.rank]));
-    const unranked: Conversation[] = [];
+    const unrankedList: Conversation[] = [];
     const ranked: Array<Conversation & { rank: string }> = [];
     for (const c of active) {
       if (c.status !== "waiting") continue;
@@ -113,14 +111,11 @@ export function QueueView({
       if (rank) {
         ranked.push({ ...c, rank });
       } else {
-        unranked.push(c);
+        unrankedList.push(c);
       }
     }
     ranked.sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0));
-    return {
-      deck: [...unranked, ...ranked] as Conversation[],
-      unrankedIds: new Set(unranked.map((c) => c.id)),
-    };
+    return { deck: ranked as Conversation[], unranked: unrankedList };
   }, [active, rankRows]);
 
   const [workingExpanded, setWorkingExpanded] = useState<boolean>(() => {
@@ -152,6 +147,23 @@ export function QueueView({
       const next = !prev;
       try {
         localStorage.setItem(QUEUE_EXPANDED_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const [unrankedExpanded, setUnrankedExpanded] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(UNRANKED_EXPANDED_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const toggleUnrankedExpanded = useCallback(() => {
+    setUnrankedExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(UNRANKED_EXPANDED_KEY, next ? "1" : "0");
       } catch {}
       return next;
     });
@@ -197,7 +209,7 @@ export function QueueView({
     await queuePost("reorder", { conversationId, targetId: drop.targetId, zone: drop.zone });
   }, []);
 
-  if (!isLoading && deck.length === 0 && working.length === 0 && recentGone.length === 0) {
+  if (!isLoading && deck.length === 0 && working.length === 0 && unranked.length === 0 && recentGone.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-xs text-muted-foreground">
         All clear — no conversations are waiting on you.
@@ -209,6 +221,37 @@ export function QueueView({
 
   return (
     <div className="flex flex-col gap-1.5">
+      {unranked.length > 0 && (
+        <SectionBox
+          title="Unranked"
+          count={unranked.length}
+          expanded={unrankedExpanded}
+          onToggleExpanded={toggleUnrankedExpanded}
+        >
+          <SidebarMenu>
+            {unranked.map((conv) => (
+              <li key={conv.id} className="group/menu-item relative list-none">
+                <SidebarMenuButton
+                  className="h-auto py-1.5"
+                  isActive={conv.id === activeId}
+                  onClick={() => onNavigate(conv.id)}
+                >
+                  <ConversationItem conv={conv} />
+                </SidebarMenuButton>
+                <SidebarMenuAction
+                  onClick={(e: React.MouseEvent) =>
+                    void onCloseConversation(conv.id, e)
+                  }
+                  className="opacity-0 group-hover/menu-item:opacity-100"
+                  aria-label="Close conversation"
+                >
+                  <MdClose className="size-3.5" />
+                </SidebarMenuAction>
+              </li>
+            ))}
+          </SidebarMenu>
+        </SectionBox>
+      )}
       <SectionBox
         title="Queue"
         count={deck.length}
@@ -236,7 +279,6 @@ export function QueueView({
                   isBottom={idx === deck.length - 1}
                   canStepDown={idx < deck.length - 1}
                   isActive={conv.id === activeId}
-                  isUnranked={unrankedIds.has(conv.id)}
                   dragInProgress={dragInProgress}
                   onNavigate={onNavigate}
                   onClose={onCloseConversation}
@@ -323,7 +365,6 @@ function QueueRow({
   isBottom,
   canStepDown,
   isActive,
-  isUnranked,
   dragInProgress,
   onNavigate,
   onClose,
@@ -336,7 +377,6 @@ function QueueRow({
   isBottom: boolean;
   canStepDown: boolean;
   isActive: boolean;
-  isUnranked: boolean;
   dragInProgress: boolean;
   onNavigate: (id: string) => void;
   onClose: (id: string, e: React.MouseEvent) => void | Promise<void>;
@@ -347,7 +387,6 @@ function QueueRow({
   const draggable = useDraggable({
     id: `queue-conv-${conv.id}`,
     data: { kind: "drag-conv", convId: conv.id } as const,
-    disabled: isUnranked,
   });
   const beforeDrop = useDroppable({
     id: `queue-before-${conv.id}`,
@@ -384,7 +423,7 @@ function QueueRow({
           <ConversationItem conv={conv} />
         </SidebarMenuButton>
         <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 group-hover/menu-item:opacity-100">
-          {!isUnranked && !isTop && (
+          {!isTop && (
             <button
               onClick={(e) => { e.stopPropagation(); void onPromoteToTop(conv.id); }}
               className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
@@ -393,7 +432,7 @@ function QueueRow({
               <MdVerticalAlignTop className="size-3.5" />
             </button>
           )}
-          {!isUnranked && canStepDown && (
+          {canStepDown && (
             <button
               onClick={(e) => { e.stopPropagation(); void onStepDown(conv.id); }}
               className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
@@ -402,7 +441,7 @@ function QueueRow({
               <MdKeyboardDoubleArrowDown className="size-3.5" />
             </button>
           )}
-          {!isUnranked && !isBottom && (
+          {!isBottom && (
             <button
               onClick={(e) => { e.stopPropagation(); void onSendToBottom(conv.id); }}
               className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
