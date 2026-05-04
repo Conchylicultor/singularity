@@ -170,7 +170,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/code/:worktree/diff`
     - `GET /api/code/:worktree/image`
     - `GET /api/code/:worktree/push`
-  - Endpoint callers: `assistant-text`, `diff`, `docs-button`, `file-pane`, `image`, `review`
+    - `GET /api/code/:worktree/commit`
+  - Endpoint callers: `assistant-text`, `commits-graph`, `diff`, `docs-button`, `file-pane`, `image`, `review`
 
 - **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
   - Defines:
@@ -343,6 +344,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `commitDeltaResource`, `CommitDeltaSchema`, `CommitRowSchema`, `commitsGraphResource`, `CommitsGraphSchema`
           - Contributes:
             - `Pane.Register` `conv-commits-graph` (path `commits`)
+            - `Pane.Register` `conv-commit-diff` (path `:sha`)
             - `Conversation.ActionBar` → `CommitsChip`
           - Server:
             - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesForAttempt`, `tasks-core.pushesResource`
