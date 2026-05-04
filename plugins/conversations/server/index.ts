@@ -29,7 +29,6 @@ export {
 } from "@plugins/tasks-core/server";
 export type { Conversation, ConversationKind } from "@plugins/tasks-core/server";
 export { createConversation, deleteConversation, resumeConversation } from "./internal/lifecycle";
-export { resolveAttachmentRefs } from "./internal/resolve-prompt-attachments";
 export type { Turn } from "./internal/claude-transcript";
 export { findTranscriptPath } from "./internal/claude-transcript";
 export {
