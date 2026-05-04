@@ -89,6 +89,8 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
           - `/api/conversations-queue/step-down (POST)`
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
       - `/api/conversation-summary/:conversationId/generate (POST)`
+    - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the on-disk JSONL path for a conversation's full raw Claude session transcript.
+      - `/api/conversations/:id/transcript (GET)`
 
 - **`conversations-recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
   - `/api/conversations-recover/restore-batch (POST)`
