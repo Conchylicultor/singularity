@@ -63,6 +63,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `agentsRootPane.open`
     - `Item.Avatar` → `AgentAvatarRow`
     - `Conversation.TitlePrefix` → `AgentAvatarTitlePrefix`
+    - `Agents.AgentActions` → `DeleteAgentAction`
   - Server:
     - Uses: `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
     - Resources: `agent-launches` (push), `agents` (push)

@@ -13,6 +13,8 @@ import {
 } from "./panes";
 import { AgentAvatarRow } from "./components/agent-avatar-row";
 import { AgentAvatarTitlePrefix } from "./components/agent-avatar-title-prefix";
+import { DeleteAgentAction } from "./components/delete-agent-action";
+import { Agents as AgentsSlots } from "./slots";
 
 export {
   agentsRootPane,
@@ -48,5 +50,6 @@ export default {
       component: AgentAvatarRow,
     }),
     Conversation.TitlePrefix({ component: AgentAvatarTitlePrefix }),
+    AgentsSlots.AgentActions({ id: "delete", component: DeleteAgentAction }),
   ],
 } satisfies PluginDefinition;
