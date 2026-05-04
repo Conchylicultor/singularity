@@ -6,10 +6,10 @@ import {
   RowActionButton,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { ConversationSchema, type ConversationModel } from "@plugins/conversations/shared";
+import { ConversationSchema } from "@plugins/conversations/shared";
+import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
 
-const MODELS: ConversationModel[] = ["sonnet", "opus"];
-const ICON_SIZE: Record<ConversationModel, string> = { sonnet: "size-2.5", opus: "size-3.5" };
+const MODELS = Object.keys(MODEL_REGISTRY) as ConversationModel[];
 
 export function ForkConversationAction({ event }: { event: JsonlEvent }) {
   const lastAssistant = useLastAssistantEvent();
@@ -46,7 +46,7 @@ export function ForkConversationAction({ event }: { event: JsonlEvent }) {
           disabled={!!launching}
           onClick={(e) => launch(e, model)}
         >
-          <MdAdd className={ICON_SIZE[model]} />
+          <MdAdd className={MODEL_REGISTRY[model].iconSize} />
         </RowActionButton>
       ))}
     </>

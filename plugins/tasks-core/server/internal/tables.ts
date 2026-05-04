@@ -10,11 +10,13 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { rankText } from "@server/db/types";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
 
 // Physical tables only. This file is a load-order leaf: it must NOT import
 // from any other plugin's schema/tables file so that cross-plugin schemas can
 // depend on it without forming a cycle. Views, Zod schemas, and types live in
-// `./schema.ts`.
+// `./schema.ts`. The model-provider/shared import is safe — it has zero plugin
+// deps and introduces no cycle.
 //
 // These five tables form a single FK cluster and are co-located here to
 // eliminate the cycle that existed when _conversations lived in the
@@ -90,9 +92,8 @@ export const pushes = pgTable(
   ],
 );
 
-// Conversation model, status, and kind are owned here (co-located with the
-// table) and re-exported through conversations/server/api for backward compat.
-type ConversationModel = "opus" | "sonnet";
+// ConversationModel is imported from model-provider (zero-dep plugin, no cycle).
+// ConversationStatus and ConversationKind remain local — they have no shared registry.
 type ConversationStatus = "starting" | "working" | "waiting" | "gone";
 // "user"   = manually created via the UI / default path
 // "agent"  = launched via the agents plugin (saved prompt + button click)

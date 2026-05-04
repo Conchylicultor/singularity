@@ -2,7 +2,7 @@ import type {
   ConversationRuntime,
   RuntimeInfo,
 } from "@plugins/conversations/server";
-import type { ConversationModel } from "@plugins/conversations/server";
+import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
 import { CLAUDE, TMUX } from "@plugins/infra/plugins/paths/server";
 import { resolveClaudeSessionId } from "./claude-session";
 // Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename
@@ -141,7 +141,8 @@ export const tmuxRuntime: ConversationRuntime = {
     if (!parentHost) {
       throw new Error("tmux runtime requires SINGULARITY_WORKTREE to route MCP back to the parent server");
     }
-    const claudeBase = opts?.model ? `${CLAUDE} --model ${opts.model}` : CLAUDE;
+    const cliFlag = opts?.model ? MODEL_REGISTRY[opts.model].cliFlag : undefined;
+    const claudeBase = cliFlag ? `${CLAUDE} --model ${cliFlag}` : CLAUDE;
     const cmdParts: string[] = [claudeBase];
     if (opts?.resumeSessionId) {
       cmdParts.push(`--resume ${opts.resumeSessionId}`);

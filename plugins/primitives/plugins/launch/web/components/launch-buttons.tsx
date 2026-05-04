@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { MdAdd, MdPlayArrow } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import {
-  ConversationSchema,
-  type Conversation,
-  type ConversationModel,
-} from "@plugins/conversations/shared";
+import { ConversationSchema, type Conversation } from "@plugins/conversations/shared";
+import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -26,9 +23,7 @@ export type LaunchButtonsProps = {
   className?: string;
 };
 
-const MODELS: ConversationModel[] = ["sonnet", "opus"];
-const LABEL: Record<ConversationModel, string> = { sonnet: "Sonnet", opus: "Opus" };
-const ICON_SIZE: Record<ConversationModel, string> = { sonnet: "size-3", opus: "size-4" };
+const MODELS = Object.keys(MODEL_REGISTRY) as ConversationModel[];
 
 export function LaunchButtons({
   getRequest,
@@ -79,14 +74,14 @@ export function LaunchButtons({
             type="button"
             onClick={(e) => launch(e, model)}
             disabled={disabled || launching !== null}
-            title={`Launch ${LABEL[model]}`}
-            aria-label={`Launch ${LABEL[model]}`}
+            title={`Launch ${MODEL_REGISTRY[model].label}`}
+            aria-label={`Launch ${MODEL_REGISTRY[model].label}`}
             className={cn(
               "hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded",
               launching === model && "opacity-50",
             )}
           >
-            <MdPlayArrow className={ICON_SIZE[model]} />
+            <MdPlayArrow className={MODEL_REGISTRY[model].iconSize} />
           </button>
         ))}
       </div>
@@ -107,7 +102,7 @@ export function LaunchButtons({
           disabled={disabled || launching !== null}
         >
           <MdAdd className="size-4" />
-          {launching === model ? "Launching…" : LABEL[model]}
+          {launching === model ? "Launching…" : MODEL_REGISTRY[model].label}
         </Button>
       ))}
     </div>

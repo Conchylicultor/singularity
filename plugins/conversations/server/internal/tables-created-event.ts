@@ -1,6 +1,6 @@
 import { text } from "drizzle-orm/pg-core";
 import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
-import type { ConversationModel } from "../schema";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
 
 export interface ConversationCreatedPayload {
   conversationId: string;

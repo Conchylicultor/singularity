@@ -32,6 +32,7 @@ import conversationsConversationViewResumePlugin from "@plugins/conversations/pl
 import conversationsConversationViewTurnSummaryPlugin from "@plugins/conversations/plugins/conversation-view/plugins/turn-summary/server";
 import conversationsConversationsViewGroupedPlugin from "@plugins/conversations/plugins/conversations-view/plugins/grouped/server";
 import conversationsConversationsViewQueuePlugin from "@plugins/conversations/plugins/conversations-view/plugins/queue/server";
+import conversationsModelProviderPlugin from "@plugins/conversations/plugins/model-provider/server";
 import conversationsRuntimeApiPlugin from "@plugins/conversations/plugins/runtime-api/server";
 import conversationsRuntimeTmuxPlugin from "@plugins/conversations/plugins/runtime-tmux/server";
 import conversationsSummaryPlugin from "@plugins/conversations/plugins/summary/server";
@@ -93,6 +94,7 @@ export const plugins: ServerPluginDefinition[] = [
   conversationsConversationViewTurnSummaryPlugin,
   conversationsConversationsViewGroupedPlugin,
   conversationsConversationsViewQueuePlugin,
+  conversationsModelProviderPlugin,
   conversationsRuntimeApiPlugin,
   conversationsRuntimeTmuxPlugin,
   conversationsSummaryPlugin,

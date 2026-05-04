@@ -3,6 +3,7 @@ import { pgView } from "drizzle-orm/pg-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { _attempts, _conversations, _taskDependencies, _tasks, pushes } from "./tables";
+import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/shared";
 
 // Derived views + Zod schemas + types. All tables live in `./tables.ts` so
 // this file can import them without any cross-plugin dependency, eliminating
@@ -184,10 +185,6 @@ export const AttemptStatusSchema = z.enum([
 ]);
 export type AttemptStatus = z.infer<typeof AttemptStatusSchema>;
 
-// Defined locally so this file remains a leaf with no cross-plugin imports.
-// conversations/server/model.ts and status.ts remain the public API for
-// consumers outside tasks-core; they define identical schemas.
-const ConversationModelSchema = z.enum(["opus", "sonnet"]);
 const ConversationStatusSchema = z.enum(["starting", "working", "waiting", "gone"]);
 export const ConversationKindSchema = z.enum(["user", "agent", "system"]);
 export type ConversationKind = z.infer<typeof ConversationKindSchema>;

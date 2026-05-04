@@ -18,8 +18,6 @@ import { conversationTurnCompleted } from "./internal/tables-turn-completed-even
 
 export { maybeLaunchTaskJob } from "./internal/auto-start-jobs";
 
-export { ConversationModelSchema } from "./schema";
-export type { ConversationModel } from "./schema";
 export { ConversationStatusSchema, isActiveStatus } from "./status";
 export type { ConversationStatus } from "./status";
 export {

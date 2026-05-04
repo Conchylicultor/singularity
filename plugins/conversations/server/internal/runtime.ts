@@ -27,7 +27,7 @@ export interface ConversationRuntime {
     worktreePath: string,
     opts?: {
       prompt?: string;
-      model?: import("../schema").ConversationModel;
+      model?: import("@plugins/conversations/plugins/model-provider/shared").ConversationModel;
       resumeSessionId?: string;
       forkSession?: boolean;
     },

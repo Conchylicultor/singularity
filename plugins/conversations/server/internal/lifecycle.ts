@@ -14,7 +14,7 @@ import {
   synthesiseTitleFallback,
 } from "@plugins/tasks/plugins/task-title/server";
 import { Runtime } from "./runtime";
-import type { ConversationModel } from "../schema";
+import { DEFAULT_MODEL, type ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
 import type { Conversation, ConversationKind } from "../../shared";
 import { forkDatabase } from "./db-fork";
 import { reportForkError } from "./fork-errors";
@@ -24,7 +24,6 @@ import { SYSTEM_META_TASK_ID } from "./meta-system";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
 
 const DEFAULT_RUNTIME = "tmux";
-const DEFAULT_MODEL: ConversationModel = "opus";
 
 // Three independent id namespaces, each self-describing in logs and URLs.
 // Legacy rows may still carry the pre-rename `claude-…` prefix; matchers that
