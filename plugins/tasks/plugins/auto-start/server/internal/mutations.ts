@@ -1,11 +1,15 @@
 import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { _tasks, tasksResource } from "@plugins/tasks-core/server";
-import { getExtension, upsertExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { _tasksAutoStartExt } from "./tables";
 
 export async function getTaskAutoStart(id: string) {
-  return getExtension(_tasksAutoStartExt, id);
+  const rows = await db
+    .select()
+    .from(_tasksAutoStartExt)
+    .where(eq(_tasksAutoStartExt.parentId, id))
+    .limit(1);
+  return rows[0];
 }
 
 // Write or clear the auto-start ext-table row. Pass `null` to clear.
@@ -20,10 +24,19 @@ export async function setTaskAutoStart(
     .limit(1);
   if (!task) return false;
   if (autoStart) {
-    await upsertExtension(_tasksAutoStartExt, id, {
-      autoStartAt: new Date(),
-      autoStartModel: autoStart.model,
-    });
+    const now = new Date();
+    await db
+      .insert(_tasksAutoStartExt)
+      .values({
+        parentId: id,
+        autoStartAt: now,
+        autoStartModel: autoStart.model,
+        updatedAt: now,
+      })
+      .onConflictDoUpdate({
+        target: _tasksAutoStartExt.parentId,
+        set: { autoStartAt: now, autoStartModel: autoStart.model, updatedAt: now },
+      });
   } else {
     await db.delete(_tasksAutoStartExt).where(eq(_tasksAutoStartExt.parentId, id));
   }

@@ -1,8 +1,7 @@
 import { db } from "@server/db/client";
-import { syncOwnerAttachments } from "@plugins/infra/plugins/attachments/server";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/shared";
 import { launchPromptsTable } from "./tables";
-import { _launchPromptAttachments } from "./tables-attachments";
+import { launchPromptAttachments } from "./tables-attachments";
 import { launchPromptsServerResource } from "./resources";
 import { nextRank } from "./rank";
 
@@ -33,11 +32,7 @@ export async function handleCreate(req: Request): Promise<Response> {
     .values({ id, title: body.title.trim(), prompt: body.prompt, model, rank })
     .returning();
 
-  await syncOwnerAttachments(
-    _launchPromptAttachments,
-    id,
-    extractAttachmentIds(body.prompt),
-  );
+  await launchPromptAttachments.set(id, extractAttachmentIds(body.prompt));
 
   launchPromptsServerResource.notify();
   return Response.json(row, { status: 201 });

@@ -9,7 +9,7 @@
   - DB schema: `plugins/agents/plugins/auto-launch/plugins/toggle/server/internal/tables.ts`
   - Entity extension of: `agents` (table `agents_ext_auto_launch`)
 - Exports (server):
-  - Values: `_agentAutoLaunchExt`, `agentAutoLaunchResource`
+  - Values: `agentAutoLaunch`, `agentAutoLaunchResource`
 - Contributes:
   - `Agents.AgentActions` → `AutoLaunchToggle`
 - Server:

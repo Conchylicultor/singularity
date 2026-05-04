@@ -14,7 +14,7 @@ import { handleStepDown } from "./internal/handle-step-down";
 import { seedRankJob } from "./internal/seed-rank-job";
 import { queueRanksResource } from "./internal/resource";
 
-export { _conversationsExtQueue } from "./internal/tables";
+export { conversationsQueue } from "./internal/tables";
 export { queueRanksResource } from "./internal/resource";
 export { seedRankJob } from "./internal/seed-rank-job";
 export { rankForTop, rankForBottom, rankAfterN, rankAdjacentTo, endRank, positionTwoRank } from "./internal/queue-ranks";

@@ -1,10 +1,7 @@
 import type { ServerPluginDefinition } from "@server/types";
 
-export {
-  defineExtension,
-  getExtension,
-  upsertExtension,
-} from "./internal/define-extension";
+export { defineExtension } from "./internal/define-extension";
+export type { EntityExtension } from "./internal/define-extension";
 export { EntityExtensions } from "./internal/entity-extensions";
 
 export default {

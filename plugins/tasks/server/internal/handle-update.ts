@@ -1,5 +1,4 @@
-import { _taskAttachments, updateTask } from "@plugins/tasks-core/server";
-import { syncOwnerAttachments } from "@plugins/infra/plugins/attachments/server";
+import { taskAttachments, updateTask } from "@plugins/tasks-core/server";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/shared";
 
 export async function handleUpdate(
@@ -33,7 +32,7 @@ export async function handleUpdate(
   // link.
   if (typeof body.description === "string" || body.description === null) {
     const ids = body.description ? extractAttachmentIds(body.description) : [];
-    await syncOwnerAttachments(_taskAttachments, id, ids);
+    await taskAttachments.set(id, ids);
   }
   return Response.json(row);
 }

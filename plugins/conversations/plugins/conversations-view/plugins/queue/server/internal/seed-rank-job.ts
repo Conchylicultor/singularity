@@ -1,8 +1,7 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { upsertExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { positionTwoRank } from "./queue-ranks";
-import { _conversationsExtQueue } from "./tables";
+import { conversationsQueue } from "./tables";
 import { queueRanksResource } from "./resource";
 
 // Bound to both `conversationCreated` and `conversationTurnCompleted`. Every
@@ -22,7 +21,7 @@ export const seedRankJob = defineJob({
     const conversationId = event?.conversationId;
     if (!conversationId) return;
     const rank = await positionTwoRank();
-    await upsertExtension(_conversationsExtQueue, conversationId, { rank });
+    await conversationsQueue.upsert(conversationId, { rank });
     queueRanksResource.notify();
   },
 });

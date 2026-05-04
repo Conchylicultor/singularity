@@ -9,7 +9,7 @@ import { classifyProgressJob } from "./internal/heuristic-job";
 import { markProgressPushedJob } from "./internal/push-job";
 import { conversationProgressResource } from "./internal/resource";
 
-export { _conversationProgress } from "./internal/tables";
+export { conversationProgress } from "./internal/tables";
 export { conversationProgressResource } from "./internal/resource";
 export { classifyProgressJob } from "./internal/heuristic-job";
 export { markProgressPushedJob } from "./internal/push-job";

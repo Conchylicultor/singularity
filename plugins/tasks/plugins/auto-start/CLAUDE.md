@@ -11,7 +11,7 @@
   - Types: `TaskAutoStartRow`
   - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`, `useTaskAutoStart`
 - Exports (server):
-  - Values: `_tasksAutoStartExt`, `claimAutoStart`, `getTaskAutoStart`, `setTaskAutoStart`, `tasksAutoStartResource`
+  - Values: `claimAutoStart`, `getTaskAutoStart`, `setTaskAutoStart`, `tasksAutoStartResource`
 - Exports (shared):
   - Types: `TaskAutoStartRow`
   - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`

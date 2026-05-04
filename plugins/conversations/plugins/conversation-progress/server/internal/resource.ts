@@ -5,7 +5,7 @@ import {
   ConversationProgressPayloadSchema,
   type ConversationProgressPayload,
 } from "../../shared/schemas";
-import { _conversationProgress } from "./tables";
+import { conversationProgress } from "./tables";
 
 export const conversationProgressResource =
   defineResource<ConversationProgressPayload>({
@@ -15,12 +15,12 @@ export const conversationProgressResource =
     loader: async () => {
       return db
         .select({
-          conversationId: _conversationProgress.parentId,
-          phase: _conversationProgress.phase,
-          source: _conversationProgress.source,
-          updatedAt: _conversationProgress.updatedAt,
+          conversationId: conversationProgress.table.parentId,
+          phase: conversationProgress.table.phase,
+          source: conversationProgress.table.source,
+          updatedAt: conversationProgress.table.updatedAt,
         })
-        .from(_conversationProgress)
-        .orderBy(asc(_conversationProgress.parentId));
+        .from(conversationProgress.table)
+        .orderBy(asc(conversationProgress.table.parentId));
     },
   });

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { db } from "@server/db/client";
 import { defineResource } from "@server/resources";
 import { QueueRankRowSchema, type QueueRankRow } from "../../shared/resources";
-import { _conversationsExtQueue } from "./tables";
+import { conversationsQueue } from "./tables";
 
 export const queueRanksResource = defineResource({
   key: "queue-ranks",
@@ -11,10 +11,10 @@ export const queueRanksResource = defineResource({
   loader: async (): Promise<QueueRankRow[]> => {
     const rows = await db
       .select({
-        parentId: _conversationsExtQueue.parentId,
-        rank: _conversationsExtQueue.rank,
+        parentId: conversationsQueue.table.parentId,
+        rank: conversationsQueue.table.rank,
       })
-      .from(_conversationsExtQueue);
+      .from(conversationsQueue.table);
     return rows.map((r) => ({ conversationId: r.parentId, rank: r.rank }));
   },
 });

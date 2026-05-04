@@ -1,6 +1,5 @@
-import { upsertExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { agentAutoLaunchResource } from "./resource";
-import { _agentAutoLaunchExt } from "./tables";
+import { agentAutoLaunch } from "./tables";
 
 export async function handleSet(
   req: Request,
@@ -12,9 +11,7 @@ export async function handleSet(
   if (typeof body.enabled !== "boolean") {
     return new Response("Missing enabled", { status: 400 });
   }
-  const row = await upsertExtension(_agentAutoLaunchExt, agentId, {
-    enabled: body.enabled,
-  });
+  const row = await agentAutoLaunch.upsert(agentId, { enabled: body.enabled });
   agentAutoLaunchResource.notify();
   return Response.json(row);
 }

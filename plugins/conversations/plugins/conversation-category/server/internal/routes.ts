@@ -1,9 +1,6 @@
-import { eq } from "drizzle-orm";
-import { db } from "@server/db/client";
 import { readConfig } from "@plugins/config/server";
-import { upsertExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { conversationCategoryConfig } from "../../shared/config";
-import { _conversationCategoryExt } from "./tables";
+import { conversationCategory } from "./tables";
 import { conversationCategoriesResource } from "./resource";
 import { classifyConversationJob } from "./classify-job";
 
@@ -60,7 +57,7 @@ export async function handleSetCategory(
     );
   }
 
-  await upsertExtension(_conversationCategoryExt, conversationId, {
+  await conversationCategory.upsert(conversationId, {
     category,
     source: "manual",
   });
@@ -80,9 +77,7 @@ export async function handleClearCategory(
       { status: 400 },
     );
   }
-  await db
-    .delete(_conversationCategoryExt)
-    .where(eq(_conversationCategoryExt.parentId, conversationId));
+  await conversationCategory.delete(conversationId);
   conversationCategoriesResource.notify();
   return Response.json({ ok: true });
 }

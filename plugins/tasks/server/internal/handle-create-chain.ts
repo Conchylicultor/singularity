@@ -1,5 +1,5 @@
 import {
-  _taskAttachments,
+  taskAttachments,
   addTaskDependency,
   createTask,
   getTask,
@@ -20,7 +20,6 @@ import {
   type TaskChainSubmitBody,
   type TaskChainSubmitResponse,
 } from "@plugins/tasks/plugins/task-draft-form/shared";
-import { db } from "@server/db/client";
 import { armTaskAutoStart } from "./arm-auto-start";
 
 export async function handleCreateChain(req: Request): Promise<Response> {
@@ -106,12 +105,7 @@ export async function handleCreateChain(req: Request): Promise<Response> {
     taskIds.push(newTask.id);
 
     if (attachments.length > 0) {
-      await db
-        .insert(_taskAttachments)
-        .values(
-          attachments.map((a) => ({ ownerId: newTask.id, attachmentId: a.id })),
-        )
-        .onConflictDoNothing();
+      await taskAttachments.add(newTask.id, attachments.map((a) => a.id));
     }
 
     // Compute blockers for this card.

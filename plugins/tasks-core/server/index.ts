@@ -7,11 +7,12 @@ import {
 } from "./internal/resources";
 import { pushLanded, taskStatusChanged } from "./internal/tables-events";
 
-// Per-domain attachment link tables (FK cascade on owner deletion). In their
+// Per-domain attachment link handles (FK cascade on owner deletion). In their
 // own file so they don't leak server-only imports into tasks-core/shared.
+// The underlying pgTables stay in `internal/` — only the handles are exported.
 export {
-  _conversationAttachments,
-  _taskAttachments,
+  taskAttachments,
+  conversationAttachments,
 } from "./internal/schema-attachments";
 export { _tasks, _conversations } from "./internal/tables";
 

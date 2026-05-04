@@ -4,4 +4,6 @@ import { _agents } from "./tables";
 // Agent ↔ attachment link. Agent description and prompt can both carry pasted
 // images via `![](/api/attachments/<id>)` markdown refs. Reconciled on update;
 // cascade-deleted with the agent row.
-export const _agentAttachments = Attachments.defineLink(_agents);
+export const agentAttachments = Attachments.defineLink(_agents);
+// Re-export the underlying pgTable so drizzle-kit's schema glob picks it up.
+export const _agentAttachmentsTable = agentAttachments.table;

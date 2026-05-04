@@ -1,9 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
-import { syncOwnerAttachments } from "@plugins/infra/plugins/attachments/server";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/shared";
 import { _agents } from "./tables";
-import { _agentAttachments } from "./tables-attachments";
+import { agentAttachments } from "./tables-attachments";
 import { agents } from "./schema";
 import { agentsResource } from "./resources";
 
@@ -86,7 +85,7 @@ export async function handleUpdate(
       ...extractAttachmentIds(description ?? ""),
       ...extractAttachmentIds(prompt ?? ""),
     ]);
-    await syncOwnerAttachments(_agentAttachments, id, Array.from(ids));
+    await agentAttachments.set(id, Array.from(ids));
   }
 
   const [row] = await db.select().from(agents).where(eq(agents.id, id)).limit(1);

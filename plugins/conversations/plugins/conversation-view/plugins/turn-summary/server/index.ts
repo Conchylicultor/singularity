@@ -8,7 +8,7 @@ import { turnSummaryConfig } from "../shared/config";
 import { generateTurnSummaryJob } from "./internal/job";
 import { turnSummariesResource } from "./internal/resource";
 
-export { _turnSummaries } from "./internal/tables";
+export { turnSummaries } from "./internal/tables";
 export { turnSummariesResource } from "./internal/resource";
 export { generateTurnSummaryJob } from "./internal/job";
 

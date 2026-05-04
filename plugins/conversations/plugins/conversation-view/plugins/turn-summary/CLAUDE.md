@@ -30,7 +30,7 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/turn-summary/server/internal/tables.ts`
   - Entity extension of: `tasks-core` (table `conversations_ext_turn_summary`)
 - Exports (server):
-  - Values: `_turnSummaries`, `generateTurnSummaryJob`, `turnSummariesResource`
+  - Values: `generateTurnSummaryJob`, `turnSummaries`, `turnSummariesResource`
 - Exports (shared):
   - Types: `TurnSummariesPayload`, `TurnSummary`
   - Values: `TurnSummariesPayloadSchema`, `turnSummariesResource`, `turnSummaryConfig`, `TurnSummarySchema`

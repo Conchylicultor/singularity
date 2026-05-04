@@ -9,7 +9,7 @@
   - DB schema: `plugins/conversations/plugins/conversation-progress/server/internal/tables.ts`
   - Entity extension of: `tasks-core` (table `conversations_ext_progress`)
 - Exports (server):
-  - Values: `_conversationProgress`, `classifyProgressJob`, `conversationProgressResource`, `markProgressPushedJob`
+  - Values: `classifyProgressJob`, `conversationProgress`, `conversationProgressResource`, `markProgressPushedJob`
 - Contributes:
   - `conversationPane.Actions` → `ProgressBarToolbar`
   - `Item.Chips` → `ProgressBarRow`

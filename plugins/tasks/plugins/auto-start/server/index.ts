@@ -1,7 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { tasksAutoStartResource } from "./internal/resource";
 
-export { _tasksAutoStartExt } from "./internal/tables";
 export { tasksAutoStartResource } from "./internal/resource";
 export { setTaskAutoStart, claimAutoStart, getTaskAutoStart } from "./internal/mutations";
 

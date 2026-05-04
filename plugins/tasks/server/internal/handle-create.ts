@@ -1,5 +1,5 @@
 import {
-  _taskAttachments,
+  taskAttachments,
   addTaskDependency,
   createTask,
   getTask,
@@ -8,7 +8,6 @@ import {
   scheduleTaskTitleUpdate,
   synthesiseTitleFallback,
 } from "@plugins/tasks/plugins/task-title/server";
-import { syncOwnerAttachments } from "@plugins/infra/plugins/attachments/server";
 import { armTaskAutoStart } from "./arm-auto-start";
 
 interface AutoStartInput {
@@ -47,7 +46,7 @@ export async function handleCreate(req: Request): Promise<Response> {
   }
 
   if (Array.isArray(body.attachmentIds) && body.attachmentIds.length > 0) {
-    await syncOwnerAttachments(_taskAttachments, row.id, body.attachmentIds);
+    await taskAttachments.set(row.id, body.attachmentIds);
   }
 
   const dependencies = Array.isArray(body.dependencies)

@@ -1,7 +1,5 @@
-import { defineExtension, getExtension, upsertExtension } from "./define-extension";
+import { defineExtension } from "./define-extension";
 
 export const EntityExtensions = {
   defineExtension,
-  getExtension,
-  upsertExtension,
 };

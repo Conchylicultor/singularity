@@ -1,8 +1,7 @@
 import { db } from "@server/db/client";
-import { syncOwnerAttachments } from "@plugins/infra/plugins/attachments/server";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/shared";
 import { quickPromptsTable } from "./tables";
-import { _quickPromptAttachments } from "./tables-attachments";
+import { quickPromptAttachments } from "./tables-attachments";
 import { quickPromptsServerResource } from "./resources";
 import { nextRank } from "./rank";
 
@@ -26,11 +25,7 @@ export async function handleCreate(req: Request): Promise<Response> {
     .values({ id, title: body.title.trim(), prompt: body.prompt, rank })
     .returning();
 
-  await syncOwnerAttachments(
-    _quickPromptAttachments,
-    id,
-    extractAttachmentIds(body.prompt),
-  );
+  await quickPromptAttachments.set(id, extractAttachmentIds(body.prompt));
 
   quickPromptsServerResource.notify();
   return Response.json(row, { status: 201 });

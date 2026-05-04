@@ -3,8 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { _conversations } from "@plugins/tasks-core/server";
-import { upsertExtension } from "@plugins/infra/plugins/entity-extensions/server";
-import { _conversationProgress } from "./tables";
+import { conversationProgress } from "./tables";
 import { conversationProgressResource } from "./resource";
 
 // Triggered on every `pushLanded` event. Sets phase = "pushed" for ALL
@@ -40,7 +39,7 @@ export const markProgressPushedJob = defineJob({
     }
 
     for (const cId of ids) {
-      await upsertExtension(_conversationProgress, cId, {
+      await conversationProgress.upsert(cId, {
         phase: "pushed",
         source: "push",
       });

@@ -1,6 +1,4 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
-import { db } from "@server/db/client";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { readConfig } from "@plugins/config/server";
 import { readConversationTurns } from "@plugins/conversations/server";
@@ -10,7 +8,7 @@ import {
   runClaudePrint,
 } from "@plugins/infra/plugins/claude-cli/server";
 import { turnSummaryConfig } from "../../shared/config";
-import { _turnSummaries } from "./tables";
+import { turnSummaries } from "./tables";
 import { turnSummariesResource } from "./resource";
 import { parseMarkdownSections } from "./parse";
 
@@ -72,12 +70,8 @@ export const generateTurnSummaryJob = defineJob({
       return;
     }
 
-    const existing = await db
-      .select({ messageId: _turnSummaries.messageId })
-      .from(_turnSummaries)
-      .where(eq(_turnSummaries.parentId, conversationId))
-      .limit(1);
-    if (existing[0]?.messageId === messageId) return;
+    const existing = await turnSummaries.get(conversationId);
+    if (existing?.messageId === messageId) return;
 
     const conversation = await getConversation(conversationId);
     if (!conversation) return;
@@ -115,26 +109,13 @@ export const generateTurnSummaryJob = defineJob({
     const parsed = parseMarkdownSections(raw);
     if (!parsed.summary && !parsed.caveats && !parsed.actions) return;
 
-    await db
-      .insert(_turnSummaries)
-      .values({
-        parentId: conversationId,
-        messageId,
-        summary: parsed.summary,
-        caveats: parsed.caveats,
-        actions: parsed.actions,
-      })
-      .onConflictDoUpdate({
-        target: _turnSummaries.parentId,
-        set: {
-          messageId,
-          summary: parsed.summary,
-          caveats: parsed.caveats,
-          actions: parsed.actions,
-          generatedAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
+    await turnSummaries.upsert(conversationId, {
+      messageId,
+      summary: parsed.summary,
+      caveats: parsed.caveats,
+      actions: parsed.actions,
+      generatedAt: new Date(),
+    });
 
     turnSummariesResource.notify();
   },

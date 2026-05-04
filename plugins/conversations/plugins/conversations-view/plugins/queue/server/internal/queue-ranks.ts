@@ -2,7 +2,9 @@ import { and, asc, desc, eq, gt, lt, ne } from "drizzle-orm";
 import { generateKeyBetween } from "fractional-indexing";
 import { db } from "@server/db/client";
 import { _conversations } from "@plugins/tasks-core/server";
-import { _conversationsExtQueue } from "./tables";
+import { conversationsQueue } from "./tables";
+
+const _conversationsExtQueue = conversationsQueue.table;
 
 // All "deck" reads join the queue ext-table with `_conversations` and filter
 // to `status = "waiting"`. The queue is the single global ordered list of

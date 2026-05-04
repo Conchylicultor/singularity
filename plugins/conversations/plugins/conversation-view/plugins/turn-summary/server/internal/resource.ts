@@ -4,7 +4,7 @@ import {
   TurnSummariesPayloadSchema,
   type TurnSummariesPayload,
 } from "../../shared";
-import { _turnSummaries } from "./tables";
+import { turnSummaries } from "./tables";
 
 export const turnSummariesResource = defineResource<TurnSummariesPayload>({
   key: "turn-summaries",
@@ -13,14 +13,14 @@ export const turnSummariesResource = defineResource<TurnSummariesPayload>({
   loader: async () => {
     const rows = await db
       .select({
-        conversationId: _turnSummaries.parentId,
-        messageId: _turnSummaries.messageId,
-        summary: _turnSummaries.summary,
-        caveats: _turnSummaries.caveats,
-        actions: _turnSummaries.actions,
-        generatedAt: _turnSummaries.generatedAt,
+        conversationId: turnSummaries.table.parentId,
+        messageId: turnSummaries.table.messageId,
+        summary: turnSummaries.table.summary,
+        caveats: turnSummaries.table.caveats,
+        actions: turnSummaries.table.actions,
+        generatedAt: turnSummaries.table.generatedAt,
       })
-      .from(_turnSummaries);
+      .from(turnSummaries.table);
     const out: TurnSummariesPayload = {};
     for (const r of rows) out[r.conversationId] = r;
     return out;

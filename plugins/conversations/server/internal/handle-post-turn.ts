@@ -1,7 +1,4 @@
-import { eq } from "drizzle-orm";
-import { db } from "@server/db/client";
-import { syncOwnerAttachments } from "@plugins/infra/plugins/attachments/server";
-import { _conversationAttachments, getConversation, getTask } from "@plugins/tasks-core/server";
+import { conversationAttachments, getConversation, getTask } from "@plugins/tasks-core/server";
 import { scheduleTaskTitleUpdate } from "@plugins/tasks/plugins/task-title/server";
 import { sendTurn } from "./runtime";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
@@ -36,22 +33,7 @@ export async function handlePostTurn(
   }
 
   if (attachmentIds.length > 0) {
-    // A turn never *removes* attachments from a conversation, only adds.
-    // Past turns may still reference earlier attachments, so we union the
-    // current link set with the new ids before reconciling.
-    const existing = await db
-      .select({ attachmentId: _conversationAttachments.attachmentId })
-      .from(_conversationAttachments)
-      .where(eq(_conversationAttachments.ownerId, id));
-    const merged = new Set<string>([
-      ...existing.map((r) => r.attachmentId),
-      ...attachmentIds,
-    ]);
-    await syncOwnerAttachments(
-      _conversationAttachments,
-      id,
-      Array.from(merged),
-    );
+    await conversationAttachments.add(id, attachmentIds);
   }
 
   try {

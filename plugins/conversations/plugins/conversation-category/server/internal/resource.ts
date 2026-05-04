@@ -5,7 +5,9 @@ import {
   ConversationCategoriesPayloadSchema,
   type ConversationCategoriesPayload,
 } from "../../shared";
-import { _conversationCategoryExt } from "./tables";
+import { conversationCategory } from "./tables";
+
+const t = conversationCategory.table;
 
 export const conversationCategoriesResource = defineResource<ConversationCategoriesPayload>({
   key: "conversation-categories",
@@ -14,12 +16,12 @@ export const conversationCategoriesResource = defineResource<ConversationCategor
   loader: async () => {
     return db
       .select({
-        conversationId: _conversationCategoryExt.parentId,
-        category: _conversationCategoryExt.category,
-        source: _conversationCategoryExt.source,
-        classifiedAt: _conversationCategoryExt.updatedAt,
+        conversationId: t.parentId,
+        category: t.category,
+        source: t.source,
+        classifiedAt: t.updatedAt,
       })
-      .from(_conversationCategoryExt)
-      .orderBy(asc(_conversationCategoryExt.parentId));
+      .from(t)
+      .orderBy(asc(t.parentId));
   },
 });

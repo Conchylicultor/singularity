@@ -6,11 +6,10 @@ import { _conversations, _tasks } from "./tables";
 // web code imports); pulling `@plugins/infra/plugins/attachments/server` into it would drag
 // postgres + db/client into the browser bundle. This file is included in the
 // drizzle-kit glob via the `schema*.ts` pattern in `server/drizzle.config.ts`.
-export const _taskAttachments = Attachments.defineLink(_tasks);
-
-// Conversation ↔ attachment link. Pasted images in the prompt-input upload
-// to /api/attachments and surface as `![](/api/attachments/<id>)` markdown
-// refs in the draft. When a turn submits, the conversations server records a
-// link row per referenced id so the orphan sweep leaves them alone while the
-// conversation is alive.
-export const _conversationAttachments = Attachments.defineLink(_conversations);
+export const taskAttachments = Attachments.defineLink(_tasks);
+export const conversationAttachments = Attachments.defineLink(_conversations);
+// Re-export the underlying pgTable so drizzle-kit's schema glob picks it up.
+// The leading `_` and the `internal/` location keep cross-plugin imports
+// impossible — only the handle is barrel-exported.
+export const _taskAttachmentsTable = taskAttachments.table;
+export const _conversationAttachmentsTable = conversationAttachments.table;

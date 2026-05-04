@@ -2,7 +2,7 @@ import type { ServerPluginDefinition } from "@server/types";
 import { handleSet } from "./internal/handle-set";
 import { agentAutoLaunchResource } from "./internal/resource";
 
-export { _agentAutoLaunchExt } from "./internal/tables";
+export { agentAutoLaunch } from "./internal/tables";
 export { agentAutoLaunchResource } from "./internal/resource";
 
 export default {

@@ -1,8 +1,5 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
-import { db } from "@server/db/client";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { upsertExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { readConfig } from "@plugins/config/server";
 import {
   readConversationTurns,
@@ -14,7 +11,7 @@ import {
   runClaudePrint,
 } from "@plugins/infra/plugins/claude-cli/server";
 import { conversationCategoryConfig } from "../../shared/config";
-import { _conversationCategoryExt } from "./tables";
+import { conversationCategory } from "./tables";
 import { conversationCategoriesResource } from "./resource";
 import { pickCategory } from "./pick-category";
 
@@ -72,12 +69,7 @@ export const classifyConversationJob = defineJob({
     }
     const force = input.force ?? false;
 
-    const existing = await db
-      .select()
-      .from(_conversationCategoryExt)
-      .where(eq(_conversationCategoryExt.parentId, conversationId))
-      .limit(1);
-    const prior = existing[0];
+    const prior = await conversationCategory.get(conversationId);
 
     // Manual override always wins; never overwrite without an explicit force.
     if (prior?.source === "manual" && !force) return;
@@ -126,7 +118,7 @@ export const classifyConversationJob = defineJob({
 
     const picked = pickCategory(raw, categories);
 
-    await upsertExtension(_conversationCategoryExt, conversationId, {
+    await conversationCategory.upsert(conversationId, {
       category: picked,
       source: "haiku",
     });

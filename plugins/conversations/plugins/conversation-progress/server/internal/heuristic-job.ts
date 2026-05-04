@@ -1,9 +1,8 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConversation } from "@plugins/tasks-core/server";
-import { getExtension, upsertExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { PHASE_ORDER, type ConversationPhase } from "../../shared/schemas";
-import { _conversationProgress } from "./tables";
+import { conversationProgress } from "./tables";
 import { conversationProgressResource } from "./resource";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";
@@ -61,13 +60,13 @@ export const classifyProgressJob = defineJob({
 
     const newPhase = await detectPhase(conversation.worktreePath);
 
-    const prior = await getExtension(_conversationProgress, conversationId);
+    const prior = await conversationProgress.get(conversationId);
     const currentIndex = prior
       ? PHASE_ORDER.indexOf(prior.phase as ConversationPhase)
       : -1;
     if (PHASE_ORDER.indexOf(newPhase) <= currentIndex) return;
 
-    await upsertExtension(_conversationProgress, conversationId, {
+    await conversationProgress.upsert(conversationId, {
       phase: newPhase,
       source: "heuristic",
     });
