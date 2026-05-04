@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { tasksResource, type Task } from "@plugins/tasks/shared";
 import {
   Popover,
@@ -24,6 +25,12 @@ const HEAD_DEFAULT_MODEL: ChainModel = "sonnet";
 
 function freshCards(): CardDraft[] {
   return [makeCard(HEAD_DEFAULT_MODEL)];
+}
+
+function draftScope(target: TaskChainTarget): string {
+  return target.kind === "metaTask"
+    ? `metaTask:${target.metaTaskId}`
+    : `child:${target.parentTaskId}`;
 }
 
 export interface TaskDraftRelate {
@@ -65,7 +72,11 @@ export function TaskDraftPopover({
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : uncontrolledOpen;
 
-  const [cards, setCards] = useState<CardDraft[]>(freshCards);
+  const [cards, setCards, clearCards] = useDraft<CardDraft[]>(
+    "task-draft:cards",
+    freshCards,
+    { scope: draftScope(target) },
+  );
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -114,7 +125,7 @@ export function TaskDraftPopover({
   };
 
   const resetForm = () => {
-    setCards(freshCards());
+    clearCards();
     seenIdsRef.current = new Set();
     setRelateMode(relate?.defaultMode);
   };
