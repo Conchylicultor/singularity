@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { MdPlayArrow } from "react-icons/md";
 import type { JsonlEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/shared";
 import {
@@ -6,7 +5,7 @@ import {
   RowActionButton,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { ConversationSchema } from "@plugins/conversations/shared";
+import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
 import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
 
 const MODELS = Object.keys(MODEL_REGISTRY) as ConversationModel[];
@@ -14,28 +13,11 @@ const MODELS = Object.keys(MODEL_REGISTRY) as ConversationModel[];
 export function ForkSessionAction({ event }: { event: JsonlEvent }) {
   const lastAssistant = useLastAssistantEvent();
   const { conversation } = conversationPane.useData();
-  const [launching, setLaunching] = useState<ConversationModel | null>(null);
+  const { launch, launching } = useLaunchConversation({
+    getRequest: () => ({ forkFromConversationId: conversation.id }),
+  });
 
   if (event !== lastAssistant || !conversation.claudeSessionId) return null;
-
-  const launch = async (e: React.MouseEvent, model: ConversationModel) => {
-    e.stopPropagation();
-    if (launching) return;
-    setLaunching(model);
-    try {
-      const res = await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model, forkFromConversationId: conversation.id }),
-      });
-      if (res.ok) {
-        const conv = ConversationSchema.parse(await res.json());
-        conversationPane.open({ convId: conv.id });
-      }
-    } finally {
-      setLaunching(null);
-    }
-  };
 
   return (
     <>

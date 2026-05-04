@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-export { LaunchButtons, type LaunchButtonsProps, type LaunchRequest } from "./components/launch-buttons";
+export { LaunchButtons, useLaunchConversation, type LaunchButtonsProps, type LaunchRequest } from "./components/launch-buttons";
 
 export default {
   id: "launch",

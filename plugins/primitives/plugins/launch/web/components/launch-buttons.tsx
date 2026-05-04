@@ -25,15 +25,11 @@ export type LaunchButtonsProps = {
 
 const MODELS = Object.keys(MODEL_REGISTRY) as ConversationModel[];
 
-export function LaunchButtons({
+export function useLaunchConversation({
   getRequest,
   openAfterLaunch = true,
   onLaunched,
-  variant = "default",
-  size = "default",
-  disabled,
-  className,
-}: LaunchButtonsProps) {
+}: Pick<LaunchButtonsProps, "getRequest" | "openAfterLaunch" | "onLaunched">) {
   const [launching, setLaunching] = useState<ConversationModel | null>(null);
 
   const launch = async (e: React.MouseEvent, model: ConversationModel) => {
@@ -57,13 +53,25 @@ export function LaunchButtons({
       }
       const conversation = ConversationSchema.parse(await res.json());
       onLaunched?.(conversation);
-      if (openAfterLaunch) {
-        conversationPane.open({ convId: conversation.id });
-      }
+      if (openAfterLaunch) conversationPane.open({ convId: conversation.id });
     } finally {
       setLaunching(null);
     }
   };
+
+  return { launch, launching };
+}
+
+export function LaunchButtons({
+  getRequest,
+  openAfterLaunch = true,
+  onLaunched,
+  variant = "default",
+  size = "default",
+  disabled,
+  className,
+}: LaunchButtonsProps) {
+  const { launch, launching } = useLaunchConversation({ getRequest, openAfterLaunch, onLaunched });
 
   if (size === "icon") {
     return (
