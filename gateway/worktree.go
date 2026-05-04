@@ -376,6 +376,8 @@ func (w *Worktree) startBackend(spec *Spec) (*exec.Cmd, chan struct{}, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	slog.Info(fmt.Sprintf("--- starting %s ---", w.Name))
+	w.logBuf.Append("gateway", fmt.Sprintf("--- starting %s ---", w.Name), time.Now().UnixMilli())
 	if err := cmd.Start(); err != nil {
 		return nil, nil, err
 	}
