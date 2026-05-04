@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { Stats } from "@plugins/stats/web";
-import { TasksCumulativeChart } from "./components/tasks-cumulative-chart";
+import { TasksSection } from "./components/tasks-section";
 
 export default {
   id: "stats-tasks",
@@ -9,8 +9,8 @@ export default {
   contributions: [
     Stats.Chart({
       id: "tasks-active",
-      title: "Active tasks over time",
-      component: TasksCumulativeChart,
+      title: "Tasks",
+      component: TasksSection,
     }),
   ],
 } satisfies PluginDefinition;
