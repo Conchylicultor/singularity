@@ -3,6 +3,7 @@ import {
   createTask,
   updateTaskTitle,
   createAttempt,
+  deleteAttempt,
   getAttempt,
   insertConversation,
   getConversation,
@@ -85,8 +86,14 @@ export async function createConversation(
   }
   const model = opts.model ?? inheritedModel ?? DEFAULT_MODEL;
 
+  const spawnedBy = opts.spawnedBy ?? Bun.env.SINGULARITY_WORKTREE;
+  if (!spawnedBy) {
+    throw new Error("createConversation requires spawnedBy (or SINGULARITY_WORKTREE)");
+  }
+
   let worktreePath: string;
   let conversationId: string;
+  let newAttemptId: string | undefined;
 
   if (attemptId) {
     const attempt = await getAttempt(attemptId);
@@ -102,7 +109,7 @@ export async function createConversation(
       const task = await createTask({
         parentId,
         title: fallbackTitle,
-        author: opts.spawnedBy ?? Bun.env.SINGULARITY_WORKTREE ?? "user",
+        author: spawnedBy,
       });
       taskId = task.id;
     } else {
@@ -113,37 +120,46 @@ export async function createConversation(
       scheduleTaskTitleUpdate(taskId, prompt, fallbackTitle);
     }
 
-    attemptId = newId(ATTEMPT_PREFIX);
-    const newAttemptId = attemptId;
-    worktreePath = await worktreePathFor(newAttemptId);
-    await setupWorktree(newAttemptId, worktreePath);
-    void forkDatabase(newAttemptId).catch((err) => {
-      console.error(`[conversations] db fork failed for ${newAttemptId}`, err);
-      reportForkError(newAttemptId, err);
+    newAttemptId = newId(ATTEMPT_PREFIX);
+    const thisAttemptId = newAttemptId;
+    attemptId = thisAttemptId;
+    worktreePath = await worktreePathFor(thisAttemptId);
+    await setupWorktree(thisAttemptId, worktreePath);
+    void forkDatabase(thisAttemptId).catch((err) => {
+      console.error(`[conversations] db fork failed for ${thisAttemptId}`, err);
+      reportForkError(thisAttemptId, err);
     });
-    await createAttempt({ id: newAttemptId, taskId, worktreePath });
+    await createAttempt({ id: thisAttemptId, taskId, worktreePath });
     conversationId = newId(CONVERSATION_PREFIX);
-  }
-
-  const spawnedBy = opts.spawnedBy ?? Bun.env.SINGULARITY_WORKTREE;
-  if (!spawnedBy) {
-    throw new Error("createConversation requires spawnedBy (or SINGULARITY_WORKTREE)");
   }
 
   // Single chokepoint for `![](/api/attachments/<id>)` → `@<disk-path>` rewriting
   // so every entry point (HTTP create, agent launch, auto-start) gets it.
-  const resolvedPrompt = opts.prompt
-    ? (await resolveAttachmentRefs(opts.prompt)).text
-    : undefined;
+  // Wrapped in try/catch: if anything throws before insertConversation, the newly
+  // created attempt has no conversation and must be cleaned up — otherwise the task
+  // shows in_progress forever. The error is re-thrown so the caller still sees it.
+  let resolvedPrompt: string | undefined;
+  try {
+    resolvedPrompt = opts.prompt
+      ? (await resolveAttachmentRefs(opts.prompt)).text
+      : undefined;
 
-  await insertConversation({
-    id: conversationId,
-    attemptId,
-    runtime: runtimeId,
-    model,
-    spawnedBy,
-    kind: opts.kind ?? "user",
-  });
+    await insertConversation({
+      id: conversationId,
+      attemptId,
+      runtime: runtimeId,
+      model,
+      spawnedBy,
+      kind: opts.kind ?? "user",
+    });
+  } catch (err) {
+    if (newAttemptId) {
+      await deleteAttempt(newAttemptId).catch((e) => {
+        console.error(`[conversations] failed to delete orphaned attempt ${newAttemptId} during cleanup`, e);
+      });
+    }
+    throw err;
+  }
 
   try {
     await runtime.create(conversationId, worktreePath, {

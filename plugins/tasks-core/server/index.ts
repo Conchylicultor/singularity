@@ -6,6 +6,7 @@ import {
   recentConversationsResource,
 } from "./internal/resources";
 import { pushLanded, taskStatusChanged } from "./internal/tables-events";
+import { sweepOrphanedAttempts } from "./internal/sweep-orphaned-attempts";
 
 // Per-domain attachment link handles (FK cascade on owner deletion). In their
 // own file so they don't leak server-only imports into tasks-core/shared.
@@ -102,7 +103,7 @@ export type {
   UpdateTaskPatch,
 } from "./internal/mutations/tasks";
 
-export { createAttempt } from "./internal/mutations/attempts";
+export { createAttempt, deleteAttempt } from "./internal/mutations/attempts";
 export type { CreateAttemptInput } from "./internal/mutations/attempts";
 
 export {
@@ -151,4 +152,5 @@ export default {
   loadBearing: true,
   resources: [tasksResource, attemptsResource, pushesResource, recentConversationsResource],
   register: [pushLanded, taskStatusChanged],
+  onReady: sweepOrphanedAttempts,
 } satisfies ServerPluginDefinition;

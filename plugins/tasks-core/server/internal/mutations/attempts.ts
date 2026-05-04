@@ -5,6 +5,19 @@ import { attemptsResource } from "../resources";
 import { eq } from "drizzle-orm";
 import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
 
+export async function deleteAttempt(id: string): Promise<void> {
+  const [row] = await db
+    .select({ taskId: _attempts.taskId })
+    .from(_attempts)
+    .where(eq(_attempts.id, id))
+    .limit(1);
+  if (!row) return;
+  const before = await readTaskStatus(row.taskId);
+  await db.delete(_attempts).where(eq(_attempts.id, id));
+  attemptsResource.notify();
+  await emitStatusChangeIfChanged(row.taskId, before);
+}
+
 export interface CreateAttemptInput {
   id: string;
   taskId: string;
