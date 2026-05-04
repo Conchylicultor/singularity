@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   MdAdd,
   MdFilterAlt,
@@ -76,6 +76,33 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
   );
   const clearPendingFocus = useCallback(() => setPendingFocusId(null), []);
 
+  const [optimisticExpanded, setOptimisticExpanded] = useState<
+    Map<string, boolean>
+  >(() => new Map());
+
+  // Clear overrides once the server push confirms the value.
+  useEffect(() => {
+    if (optimisticExpanded.size === 0) return;
+    const stale = [...optimisticExpanded.entries()].filter(([id, v]) => {
+      const row = rows.find((r) => r.id === id);
+      return !row || row.expanded === v;
+    });
+    if (stale.length === 0) return;
+    setOptimisticExpanded((prev) => {
+      const next = new Map(prev);
+      stale.forEach(([id]) => next.delete(id));
+      return next;
+    });
+  }, [rows, optimisticExpanded]);
+
+  const wrappedOnToggleExpanded = useCallback(
+    (id: string, next: boolean) => {
+      setOptimisticExpanded((prev) => new Map(prev).set(id, next));
+      return onToggleExpanded(id, next);
+    },
+    [onToggleExpanded],
+  );
+
   const createAtRoot = useCallback(
     async (parentId: string | null, rank?: string) => {
       const id = await onCreate({ parentId, rank });
@@ -87,9 +114,19 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     [onCreate, onSelect],
   );
 
-  const scoped = useMemo(
+  const scopedBase = useMemo(
     () => (rootId ? filterSubtree(rows, rootId) : [...rows]),
     [rows, rootId],
+  );
+  const scoped = useMemo(
+    () =>
+      optimisticExpanded.size === 0
+        ? scopedBase
+        : scopedBase.map((r) => {
+            const ov = optimisticExpanded.get(r.id);
+            return ov !== undefined ? { ...r, expanded: ov } : r;
+          }),
+    [scopedBase, optimisticExpanded],
   );
   const tree = useMemo(() => buildTree(scoped), [scoped]);
   const isTerminal = toolbar?.hideTerminal?.isTerminal;
@@ -113,9 +150,9 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     await Promise.all(
       nodesWithChildren
         .filter((r) => r.expanded !== next)
-        .map((r) => onToggleExpanded(r.id, next)),
+        .map((r) => wrappedOnToggleExpanded(r.id, next)),
     );
-  }, [nodesWithChildren, allExpanded, onToggleExpanded]);
+  }, [nodesWithChildren, allExpanded, wrappedOnToggleExpanded]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -170,7 +207,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       pendingFocusId,
       clearPendingFocus,
       onSelect,
-      onToggleExpanded,
+      onToggleExpanded: wrappedOnToggleExpanded,
       onCreate,
       Row,
     }),
@@ -181,7 +218,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       pendingFocusId,
       clearPendingFocus,
       onSelect,
-      onToggleExpanded,
+      wrappedOnToggleExpanded,
       onCreate,
       Row,
     ],
