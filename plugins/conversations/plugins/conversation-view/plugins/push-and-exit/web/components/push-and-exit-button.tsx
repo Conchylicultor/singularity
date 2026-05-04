@@ -62,6 +62,15 @@ export function PushAndExitButton({
   }, [files, pushes, active, conversationsLoading, conversation.attemptId, conversation.id, conversation.worktreePath]);
 
   useEffect(() => {
+    if (!busy) return;
+    if (isActiveStatus(live.status)) return;
+    fetch(
+      `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
+      { method: "DELETE" },
+    ).catch(() => {});
+  }, [busy, live.status, conversation.id]);
+
+  useEffect(() => {
     if (job?.status !== "clean") return;
     Shell.Toast({ description: "Pushed and closed", variant: "success" });
     fetch(
