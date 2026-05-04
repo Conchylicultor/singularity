@@ -241,10 +241,14 @@ export function useCurrentPane(): PaneInternal | null {
 // Navigation + location hook.
 // ---------------------------------------------------------------------------
 
-function navigate(url: string): void {
+function navigate(url: string, replace = false): void {
   if (typeof window === "undefined") return;
   if (window.location.pathname === url) return;
-  window.history.pushState({}, "", url);
+  if (replace) {
+    window.history.replaceState({}, "", url);
+  } else {
+    window.history.pushState({}, "", url);
+  }
   window.dispatchEvent(new PopStateEvent("popstate"));
   window.dispatchEvent(new CustomEvent("shell:navigate"));
 }
@@ -336,7 +340,8 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
   }
 
   function open(params: Record<string, string>): void {
-    navigate(buildUrl(internal, params ?? {}));
+    const replace = internal.chrome.enabled && !internal.chrome.history;
+    navigate(buildUrl(internal, params ?? {}), replace);
   }
 
   function close(): void {
@@ -348,7 +353,8 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     // Need fullParams here: buildUrl walks parent.fullPath and requires every
     // `:name` along it, including ancestor-contributed ones.
     const params = parentEntry?.fullParams ?? {};
-    navigate(buildUrl(parent, params));
+    const replace = internal.chrome.enabled && !internal.chrome.history;
+    navigate(buildUrl(parent, params), replace);
   }
 
   function expand(): void {
