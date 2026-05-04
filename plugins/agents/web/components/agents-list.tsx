@@ -33,7 +33,7 @@ type AgentPatch = {
   rank?: string;
 };
 
-async function patchAgent(id: string, patch: AgentPatch) {
+export async function patchAgent(id: string, patch: AgentPatch) {
   await fetch(`/api/agents/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -67,6 +67,7 @@ async function createAgentRow(args: {
 
 function AgentRow({ node, depth }: { node: TreeNode<Agent>; depth: number }) {
   const actions = AgentsSlots.AgentActions.useContributions();
+  const hasChildren = node.children.length > 0;
   return (
     <RowChrome
       node={node}
@@ -79,7 +80,7 @@ function AgentRow({ node, depth }: { node: TreeNode<Agent>; depth: number }) {
         },
       ]}
       actions={actions.map((act) => (
-        <act.component key={act.id} agentId={node.id} />
+        <act.component key={act.id} agentId={node.id} hasChildren={hasChildren} />
       ))}
     >
       <Avatar

@@ -1,11 +1,13 @@
 import { MdDelete } from "react-icons/md";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { cn } from "@/lib/utils";
-import { agentsResource } from "../../shared/resources";
 
-export function DeleteAgentAction({ agentId }: { agentId: string }) {
-  const { data } = useResource(agentsResource);
-  const hasChildren = (data ?? []).some((a) => a.parentId === agentId);
+export function DeleteAgentAction({
+  agentId,
+  hasChildren,
+}: {
+  agentId: string;
+  hasChildren: boolean;
+}) {
   const disabled = hasChildren;
   const title = disabled
     ? "Delete (only leaf agents can be deleted)"

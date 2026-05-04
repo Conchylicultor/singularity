@@ -14,6 +14,7 @@ import {
 import { AgentAvatarRow } from "./components/agent-avatar-row";
 import { AgentAvatarTitlePrefix } from "./components/agent-avatar-title-prefix";
 import { DeleteAgentAction } from "./components/delete-agent-action";
+import { ExpandCollapseAllAction } from "./components/expand-collapse-all-action";
 import { Agents as AgentsSlots } from "./slots";
 
 export {
@@ -27,6 +28,7 @@ export { Agents } from "./slots";
 export { agentsResource } from "../shared/resources";
 export { defineSystemAgent } from "./system-agents";
 export type { SystemAgentDescriptor } from "./system-agents";
+export { patchAgent } from "./components/agents-list";
 
 export default {
   id: "agents",
@@ -50,6 +52,10 @@ export default {
       component: AgentAvatarRow,
     }),
     Conversation.TitlePrefix({ component: AgentAvatarTitlePrefix }),
+    AgentsSlots.AgentActions({
+      id: "expand-collapse-all",
+      component: ExpandCollapseAllAction,
+    }),
     AgentsSlots.AgentActions({ id: "delete", component: DeleteAgentAction }),
   ],
 } satisfies PluginDefinition;

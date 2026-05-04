@@ -49,7 +49,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/agents/server/internal/tables.ts`
   - Exports (web):
     - Types: `SystemAgentDescriptor`
-    - Values: `agentConversationPane`, `agentDetailPane`, `Agents`, `agentSidePane`, `agentsResource`, `agentsRootPane`, `defineSystemAgent`, `systemAgentDetailPane`
+    - Values: `agentConversationPane`, `agentDetailPane`, `Agents`, `agentSidePane`, `agentsResource`, `agentsRootPane`, `defineSystemAgent`, `patchAgent`, `systemAgentDetailPane`
   - Exports (server):
     - Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`
     - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
@@ -63,6 +63,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `agentsRootPane.open`
     - `Item.Avatar` → `AgentAvatarRow`
     - `Conversation.TitlePrefix` → `AgentAvatarTitlePrefix`
+    - `Agents.AgentActions` → `ExpandCollapseAllAction`
     - `Agents.AgentActions` → `DeleteAgentAction`
   - Server:
     - Uses: `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`

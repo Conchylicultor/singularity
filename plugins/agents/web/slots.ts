@@ -14,7 +14,7 @@ export const Agents = {
   }>("agents.view"),
   AgentActions: defineSlot<{
     id: string;
-    component: ComponentType<{ agentId: string }>;
+    component: ComponentType<{ agentId: string; hasChildren: boolean }>;
   }>("agents.agent-actions"),
   SystemAgent: defineSlot<SystemAgentDescriptor>("agents.system-agent"),
 };
