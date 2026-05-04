@@ -3,7 +3,7 @@ import { HOME_DIR } from "../../paths";
 import type { FileInput, Guard } from "../types";
 
 function message(file: string, cwd: string): string {
-  return `Refusing to edit ${file} — this path is not in the allowlist (worktree ${cwd}, ~/.claude/projects/*/memory/, /tmp). Edit files inside your worktree (including the project .claude/ !). If — and only if — the user has EXPLICITLY instructed you in this conversation to edit outside these locations, create ${cwd}/.allow-main to bypass (gitignored, worktree-local). Do NOT create that file on your own initiative. Do NOT assume you have permission just based on the user task. Permission has to be EXPLICIT.`;
+  return `Refusing to edit ${file} — this path is not in the allowlist (worktree ${cwd}, ~/.claude/projects/*/memory/, /tmp). Edit files inside your worktree, including ${cwd}/.claude/** for project config changes. If — and only if — the user has EXPLICITLY instructed you in this conversation to edit outside these locations, create ${cwd}/.allow-main to bypass (gitignored, worktree-local). Do NOT create that file on your own initiative. Do NOT assume you have permission just based on the user task. Permission has to be EXPLICIT.`;
 }
 
 export const mainEditsGuard: Guard<FileInput> = {

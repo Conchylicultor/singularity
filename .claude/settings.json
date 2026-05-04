@@ -1,4 +1,8 @@
 {
+  "showThinkingSummaries": true,
+  "env": {
+    "CLAUDE_CODE_EXTRA_BODY": "{\"thinking\":{\"type\":\"adaptive\",\"display\":\"summarized\"}}"
+  },
   "permissions": {
     "defaultMode": "bypassPermissions",
     "deny": ["EnterWorktree", "ExitWorktree"]
