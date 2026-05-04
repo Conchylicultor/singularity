@@ -62,6 +62,7 @@ import statsCostPlugin from "@plugins/stats/plugins/cost/server";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/server";
 import tasksCorePlugin from "@plugins/tasks-core/server";
 import tasksAutoStartPlugin from "@plugins/tasks/plugins/auto-start/server";
+import tasksTaskTitlePlugin from "@plugins/tasks/plugins/task-title/server";
 import tasksPlugin from "@plugins/tasks/server";
 import terminalPlugin from "@plugins/terminal/server";
 
@@ -122,6 +123,7 @@ export const plugins: ServerPluginDefinition[] = [
   statsTasksPlugin,
   tasksCorePlugin,
   tasksAutoStartPlugin,
+  tasksTaskTitlePlugin,
   tasksPlugin,
   terminalPlugin,
 ];

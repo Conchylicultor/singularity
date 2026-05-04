@@ -3,9 +3,11 @@ import {
   addTaskDependency,
   createTask,
   getTask,
+} from "@plugins/tasks-core/server";
+import {
   scheduleTaskTitleUpdate,
   synthesiseTitleFallback,
-} from "@plugins/tasks-core/server";
+} from "@plugins/tasks/plugins/task-title/server";
 import { syncOwnerAttachments } from "@plugins/infra/plugins/attachments/server";
 import { armTaskAutoStart } from "./arm-auto-start";
 

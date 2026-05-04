@@ -2,15 +2,17 @@ import {
   CONVERSATIONS_META_TASK_ID,
   createTask,
   updateTaskTitle,
-  scheduleTaskTitleUpdate,
   createAttempt,
   getAttempt,
   insertConversation,
   getConversation,
   getConversationRuntime,
   updateConversation,
-  synthesiseTitleFallback,
 } from "@plugins/tasks-core/server";
+import {
+  scheduleTaskTitleUpdate,
+  synthesiseTitleFallback,
+} from "@plugins/tasks/plugins/task-title/server";
 import { Runtime } from "./runtime";
 import type { ConversationModel } from "../schema";
 import type { Conversation, ConversationKind } from "../../shared";

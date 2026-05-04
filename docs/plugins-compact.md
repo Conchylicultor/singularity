@@ -179,6 +179,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`task-graph`** — Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions slots and ships the row actions (delete, expand-all, launch-agent).
+    - **`task-title`** — Haiku-backed task title generation. Synthesises an instant first-line fallback; upgrades asynchronously so task creation never blocks on the Claude CLI round-trip.
 
 - **`tasks-core`** [load-bearing] — Schema + repository layer for the tasks/attempts/conversations FK cluster.
 

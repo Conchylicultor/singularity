@@ -141,16 +141,6 @@ export { readTaskStatus, emitStatusChangeIfChanged } from "./internal/status-emi
 export { adoptOrphanConversation } from "./internal/mutations/cross-table";
 export type { AdoptOrphanInput } from "./internal/mutations/cross-table";
 
-// Title generation helpers — Haiku-backed, with a first-line-80-chars fallback
-// so task creation never fails on Claude CLI being unavailable.
-// `scheduleTaskTitleUpdate` upgrades the title asynchronously so launches
-// don't block on the Haiku round-trip.
-export {
-  generateTaskTitle,
-  scheduleTaskTitleUpdate,
-  synthesiseTitleFallback,
-} from "./internal/generate-title";
-
 export default {
   id: "tasks-core",
   name: "Tasks Core",

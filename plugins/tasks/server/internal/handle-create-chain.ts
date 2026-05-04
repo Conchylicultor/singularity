@@ -3,10 +3,12 @@ import {
   addTaskDependency,
   createTask,
   getTask,
-  scheduleTaskTitleUpdate,
-  synthesiseTitleFallback,
   type Task,
 } from "@plugins/tasks-core/server";
+import {
+  scheduleTaskTitleUpdate,
+  synthesiseTitleFallback,
+} from "@plugins/tasks/plugins/task-title/server";
 import { getAttachment } from "@plugins/infra/plugins/attachments/server";
 import {
   attachmentMarkdown,

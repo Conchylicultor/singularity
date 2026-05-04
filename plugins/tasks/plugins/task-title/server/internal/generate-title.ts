@@ -1,5 +1,5 @@
 import { runClaudePrint } from "@plugins/infra/plugins/claude-cli/server";
-import { updateTaskTitle } from "./mutations/tasks";
+import { updateTaskTitle } from "@plugins/tasks-core/server";
 
 // Haiku ignores a system-only instruction when the user message looks like a
 // feature request — it answers conversationally instead. Restating the task in
@@ -48,7 +48,7 @@ export async function generateTaskTitle(
     if (!cleaned) return fallback;
     return cleaned.length > 80 ? `${cleaned.slice(0, 77)}…` : cleaned;
   } catch (err) {
-    console.warn("[tasks-core] generateTaskTitle fell back:", err);
+    console.warn("[task-title] generateTaskTitle fell back:", err);
     return fallback;
   }
 }
@@ -69,7 +69,7 @@ export function scheduleTaskTitleUpdate(
       if (generated === fallbackTitle) return;
       await updateTaskTitle(taskId, generated, [fallbackTitle]);
     } catch (err) {
-      console.warn("[tasks-core] scheduleTaskTitleUpdate failed:", err);
+      console.warn("[task-title] scheduleTaskTitleUpdate failed:", err);
     }
   })();
 }

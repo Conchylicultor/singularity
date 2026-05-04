@@ -646,6 +646,10 @@
       "name": "@singularity/plugin-tasks-task-list",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/task-title": {
+      "name": "@singularity/plugin-tasks-task-title",
+      "version": "0.0.1",
+    },
     "plugins/terminal": {
       "name": "@singularity/plugin-terminal",
       "version": "0.0.1",
@@ -1522,6 +1526,8 @@
     "@singularity/plugin-tasks-task-header": ["@singularity/plugin-tasks-task-header@workspace:plugins/tasks/plugins/task-header"],
 
     "@singularity/plugin-tasks-task-list": ["@singularity/plugin-tasks-task-list@workspace:plugins/tasks/plugins/task-list"],
+
+    "@singularity/plugin-tasks-task-title": ["@singularity/plugin-tasks-task-title@workspace:plugins/tasks/plugins/task-title"],
 
     "@singularity/plugin-terminal": ["@singularity/plugin-terminal@workspace:plugins/terminal"],
 
