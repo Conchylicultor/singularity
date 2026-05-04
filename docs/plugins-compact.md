@@ -64,6 +64,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`summary`** — Renders summary separator events in the JSONL viewer.
             - **`system`** — Renders system events in the JSONL viewer.
             - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
+              - Plugins:
+                - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
             - **`user-image`** — Renders inline image thumbnails for user-image events.
             - **`user-text`** — Renders user text events in the JSONL viewer.
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.

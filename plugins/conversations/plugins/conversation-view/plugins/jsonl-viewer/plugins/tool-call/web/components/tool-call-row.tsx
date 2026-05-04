@@ -25,6 +25,12 @@ function resolveRenderer(
   return GenericToolView;
 }
 
+function inputDescription(input: unknown): string {
+  if (typeof input !== "object" || input === null || !("description" in input)) return "";
+  const desc = (input as Record<string, unknown>).description;
+  return typeof desc === "string" ? desc : "";
+}
+
 export function ToolCallRow({ event }: { event: JsonlEvent }) {
   const e = event as ToolCallEvent;
   const contributions = JsonlViewerTool.Renderer.useContributions();
@@ -32,6 +38,7 @@ export function ToolCallRow({ event }: { event: JsonlEvent }) {
 
   const hasError = e.result?.isError;
   const isRunning = !e.result;
+  const description = inputDescription(e.input);
   const borderClass = hasError
     ? "border-destructive/60"
     : "border-border/60";
@@ -41,7 +48,7 @@ export function ToolCallRow({ event }: { event: JsonlEvent }) {
     <details className={`group rounded-md border ${borderClass} ${bgClass} px-3 py-2`}>
       <summary className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
         <span
-          className={`rounded px-1.5 py-0.5 font-mono text-[11px] ${
+          className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] ${
             hasError
               ? "bg-destructive/15 text-destructive"
               : "bg-primary/10 text-primary"
@@ -49,8 +56,11 @@ export function ToolCallRow({ event }: { event: JsonlEvent }) {
         >
           {e.name || "tool_call"}
         </span>
+        {description && (
+          <span className="min-w-0 flex-1 truncate opacity-70">{description}</span>
+        )}
         {isRunning && (
-          <span className="flex items-center gap-1">
+          <span className="flex shrink-0 items-center gap-1">
             {[0, 150, 300].map((delay) => (
               <span
                 key={delay}
@@ -61,9 +71,9 @@ export function ToolCallRow({ event }: { event: JsonlEvent }) {
           </span>
         )}
         {hasError && (
-          <span className="text-[11px] text-destructive">error</span>
+          <span className="shrink-0 text-[11px] text-destructive">error</span>
         )}
-        <span className="ml-auto flex items-center gap-2">
+        <span className={`flex shrink-0 items-center gap-2 ${description ? "" : "ml-auto"}`}>
           {e.usage ? <TokenBadge usage={e.usage} /> : null}
           <span className="tabular-nums">{formatTime(e.at)}</span>
         </span>

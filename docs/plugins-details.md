@@ -414,6 +414,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `ToolCallRow`
                 - `JsonlViewer.RowAction` → `CopyToolResultAction`
+              - Slot contributors: `bash`
+              - Plugins:
+                - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
+                  - Contributes:
+                    - `JsonlViewerTool.Renderer` → `BashToolView`
             - **`user-image`** — Renders inline image thumbnails for user-image events.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `UserImageRow`
