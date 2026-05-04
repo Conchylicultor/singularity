@@ -1017,10 +1017,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `GET /api/stats/cost/avg-per-conversation`
     - **`tasks`** — Task-based stats: active (open) tasks over time.
       - Contributes:
-        - `Stats.Chart` "Active tasks over time" → `TasksCumulativeChart`
+        - `Stats.Chart` "Tasks" → `TasksSection`
       - Server:
         - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.listTasks`
         - `GET /api/stats/tasks/cumulative`
+        - `GET /api/stats/tasks/daily`
 
 - **`tasks`** — Nested tasks with attempts linking to conversations.
   - Exports (web):
