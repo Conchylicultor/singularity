@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ShikiTransformer } from "shiki";
 import {
   getHighlighter,
   languageForPath,
@@ -7,6 +8,17 @@ import {
   useDarkMode,
 } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useFileContent } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+
+const LINE_NUMBERS_TRANSFORMER: ShikiTransformer = {
+  line(node, line) {
+    node.children.unshift({
+      type: "element",
+      tagName: "span",
+      properties: { class: "ln" },
+      children: [{ type: "text", value: String(line) }],
+    });
+  },
+};
 
 export function RawView({
   worktree,
@@ -35,7 +47,11 @@ export function RawView({
     getHighlighter(resolvedLang)
       .then((hl) => {
         if (cancelled) return;
-        const out = hl.codeToHtml(content, { lang: resolvedLang, theme });
+        const out = hl.codeToHtml(content, {
+          lang: resolvedLang,
+          theme,
+          transformers: [LINE_NUMBERS_TRANSFORMER],
+        });
         setHtml(out);
         setHighlightError(null);
       })
@@ -77,7 +93,7 @@ export function RawView({
 
   return (
     <div
-      className="[&>pre]:m-0 [&>pre]:min-h-full [&>pre]:bg-transparent [&>pre]:p-3 [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5"
+      className="[&>pre]:m-0 [&>pre]:min-h-full [&>pre]:bg-transparent [&>pre]:p-3 [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5 [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
