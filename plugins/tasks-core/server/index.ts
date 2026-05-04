@@ -108,6 +108,7 @@ export {
   insertConversation,
   insertConversationOnConflictDoNothing,
   updateConversation,
+  updateConversationsTitleForTask,
   deleteConversationRow,
   markConversationClosed,
 } from "./internal/mutations/conversations";

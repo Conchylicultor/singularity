@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { _attempts, _conversations } from "../tables";
 import { conversations } from "../schema";
@@ -105,6 +105,26 @@ export async function updateConversation(
 
   await db.update(_conversations).set(dbPatch).where(eq(_conversations.id, id));
   if (taskId) await emitStatusChangeIfChanged(taskId, before);
+}
+
+export async function updateConversationsTitleForTask(
+  taskId: string,
+  title: string,
+): Promise<void> {
+  const rows = await db
+    .select({ id: _conversations.id })
+    .from(_conversations)
+    .innerJoin(_attempts, eq(_conversations.attemptId, _attempts.id))
+    .where(and(eq(_attempts.taskId, taskId), isNull(_conversations.title)));
+
+  if (rows.length === 0) return;
+
+  await db
+    .update(_conversations)
+    .set({ title, updatedAt: new Date() })
+    .where(inArray(_conversations.id, rows.map((r) => r.id)));
+
+  recentConversationsResource.notify();
 }
 
 export async function deleteConversationRow(id: string): Promise<void> {
