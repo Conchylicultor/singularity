@@ -1,4 +1,6 @@
-import type { JsonlEvent, TokenUsage } from "../../shared";
+import type { JsonlEvent, TokenUsage, ToolCallResult } from "../../shared";
+
+type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 
 // Matches `@/absolute/path.ext` patterns for common image formats.
 const AT_IMAGE_RE = /@(\/\S+\.(?:png|jpg|jpeg|gif|webp|svg|bmp|tiff))/gi;
@@ -120,16 +122,15 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
   const raw = await file.text();
 
   const events: JsonlEvent[] = [];
-  // Matches the turn-merging logic in readTurns(): assistant events sharing a
-  // message.id are streaming chunks of one logical turn and should collapse.
   const assistantTextByMsgId = new Map<
     string,
     JsonlEvent & { kind: "assistant-text" }
   >();
-  // Same message.id can appear across multiple JSONL lines (streaming or
-  // resumes) with the same usage repeated. Track which msgIds have already
-  // been credited so totals don't double-count.
   const usageAttributedMsgIds = new Set<string>();
+  // tool-call pairing: toolUseId → emitted ToolCallEvent (result populated later)
+  const toolCallByUseId = new Map<string, ToolCallEvent>();
+  // Deferred tool results whose call hasn't appeared yet
+  const pendingResults: { toolUseId: string; result: ToolCallResult }[] = [];
 
   for (const line of raw.split("\n")) {
     if (!line) continue;
@@ -161,14 +162,19 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
       } else if (Array.isArray(content)) {
         for (const block of content as RawBlock[]) {
           if (block?.type === "tool_result") {
-            events.push({
-              kind: "user-tool-result",
+            const toolUseId =
+              typeof block.tool_use_id === "string" ? block.tool_use_id : "";
+            const result: ToolCallResult = {
               at: ts,
-              toolUseId:
-                typeof block.tool_use_id === "string" ? block.tool_use_id : "",
               content: extractText(block.content),
               isError: block.is_error === true ? true : undefined,
-            });
+            };
+            const existing = toolCallByUseId.get(toolUseId);
+            if (existing) {
+              existing.result = result;
+            } else {
+              pendingResults.push({ toolUseId, result });
+            }
           } else if (block?.type === "text" && typeof block.text === "string") {
             await pushTextWithImages(block.text, ts, events);
           } else if (
@@ -197,12 +203,9 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
       const lineUsage = extractUsage((msg as { usage?: unknown }).usage);
       const shouldAttributeUsage =
         !!lineUsage && !!msgId && !usageAttributedMsgIds.has(msgId);
-      // Anchor usage on the first assistant event we emit for this message,
-      // so totals don't double-count when one message spans text + tool_use,
-      // streamed chunks, or repeats across resume lines.
-      let usageAnchor: (JsonlEvent & ({ kind: "assistant-text" } | { kind: "assistant-tool-use" })) | null = null;
+      let usageAnchor: (JsonlEvent & ({ kind: "assistant-text" } | { kind: "tool-call" })) | null = null;
       const setUsageOnce = (
-        event: JsonlEvent & ({ kind: "assistant-text" } | { kind: "assistant-tool-use" }),
+        event: JsonlEvent & ({ kind: "assistant-text" } | { kind: "tool-call" }),
       ) => {
         if (!shouldAttributeUsage || !lineUsage || !msgId) return;
         if (usageAnchor) {
@@ -242,16 +245,18 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
           setUsageOnce(event);
           events.push(event);
         } else if (block?.type === "tool_use") {
-          const event: JsonlEvent & { kind: "assistant-tool-use" } = {
-            kind: "assistant-tool-use",
+          const toolUseId = typeof block.id === "string" ? block.id : "";
+          const event: ToolCallEvent = {
+            kind: "tool-call",
             at: ts,
             messageId: msgId,
-            toolUseId: typeof block.id === "string" ? block.id : "",
+            toolUseId,
             name: typeof block.name === "string" ? block.name : "",
             input: block.input,
           };
           setUsageOnce(event);
           events.push(event);
+          toolCallByUseId.set(toolUseId, event);
         }
       }
       if (msgId && msg.stop_reason) {
@@ -283,6 +288,25 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
           : "";
       if (text) events.push({ kind: "summary", at: ts, text });
       continue;
+    }
+  }
+
+  // Second pass: resolve deferred results that arrived before their call
+  // (shouldn't happen in normal flow, but handle gracefully)
+  for (const { toolUseId, result } of pendingResults) {
+    const call = toolCallByUseId.get(toolUseId);
+    if (call) {
+      call.result = result;
+    } else {
+      // Orphan result — no matching call; emit as a tool-call with empty name
+      events.push({
+        kind: "tool-call",
+        at: result.at,
+        toolUseId,
+        name: "",
+        input: null,
+        result,
+      });
     }
   }
 

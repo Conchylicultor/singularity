@@ -44,12 +44,11 @@ import conversationsConversationViewForkSessionPlugin from "@plugins/conversatio
 import conversationsConversationViewHoldAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/hold-and-exit/web";
 import conversationsConversationViewJsonlViewerAssistantTextPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text/web";
 import conversationsConversationViewJsonlViewerAssistantThinkingPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-thinking/web";
-import conversationsConversationViewJsonlViewerAssistantToolUsePlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-tool-use/web";
 import conversationsConversationViewJsonlViewerSummaryPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary/web";
 import conversationsConversationViewJsonlViewerSystemPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/system/web";
+import conversationsConversationViewJsonlViewerToolCallPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import conversationsConversationViewJsonlViewerUserImagePlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-image/web";
 import conversationsConversationViewJsonlViewerUserTextPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-text/web";
-import conversationsConversationViewJsonlViewerUserToolResultPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-tool-result/web";
 import conversationsConversationViewJsonlViewerPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import conversationsConversationViewLaunchPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/launch-prompts/web";
 import conversationsConversationViewModelPlugin from "@plugins/conversations/plugins/conversation-view/plugins/model/web";
@@ -170,12 +169,11 @@ export const plugins: PluginDefinition[] = [
   conversationsConversationViewHoldAndExitPlugin,
   conversationsConversationViewJsonlViewerAssistantTextPlugin,
   conversationsConversationViewJsonlViewerAssistantThinkingPlugin,
-  conversationsConversationViewJsonlViewerAssistantToolUsePlugin,
   conversationsConversationViewJsonlViewerSummaryPlugin,
   conversationsConversationViewJsonlViewerSystemPlugin,
+  conversationsConversationViewJsonlViewerToolCallPlugin,
   conversationsConversationViewJsonlViewerUserImagePlugin,
   conversationsConversationViewJsonlViewerUserTextPlugin,
-  conversationsConversationViewJsonlViewerUserToolResultPlugin,
   conversationsConversationViewJsonlViewerPlugin,
   conversationsConversationViewLaunchPromptsPlugin,
   conversationsConversationViewModelPlugin,

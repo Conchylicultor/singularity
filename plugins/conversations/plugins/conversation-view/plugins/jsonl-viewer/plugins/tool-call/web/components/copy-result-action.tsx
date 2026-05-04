@@ -2,6 +2,6 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/conversation-vie
 import { CopyTextAction } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
 export function CopyToolResultAction({ event }: { event: JsonlEvent }) {
-  if (event.kind !== "user-tool-result") return null;
-  return <CopyTextAction text={event.content ?? ""} title="Copy result" />;
+  if (event.kind !== "tool-call" || !event.result) return null;
+  return <CopyTextAction text={event.result.content ?? ""} title="Copy result" />;
 }

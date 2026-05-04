@@ -22,7 +22,7 @@ function aggregateUsage(events: JsonlEvent[] | null): UsageTotals | null {
   let latestContext = 0;
   let sawAny = false;
   for (const event of events) {
-    if (event.kind !== "assistant-text" && event.kind !== "assistant-tool-use") continue;
+    if (event.kind !== "assistant-text" && event.kind !== "tool-call") continue;
     if (!event.usage) continue;
     sawAny = true;
     output += event.usage.output;
@@ -146,7 +146,10 @@ export function JsonlPane({
               <LastAssistantProvider event={lastAssistantEvent}>
                 <div className="flex flex-col gap-2 p-2 pb-10">
                   {events.map((event, i) => (
-                    <EventRow key={i} event={event} />
+                    <EventRow
+                      key={event.kind === "tool-call" ? event.toolUseId : i}
+                      event={event}
+                    />
                   ))}
                   {isWorking && <WorkingIndicator startAt={workingStartAt} />}
                 </div>

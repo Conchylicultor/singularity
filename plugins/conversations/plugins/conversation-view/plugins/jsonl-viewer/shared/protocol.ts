@@ -15,6 +15,13 @@ const UserTextSegmentSchema = z.discriminatedUnion("kind", [
 ]);
 export type UserTextSegment = z.infer<typeof UserTextSegmentSchema>;
 
+const ToolCallResultSchema = z.object({
+  at: z.string(),
+  content: z.string(),
+  isError: z.boolean().optional(),
+});
+export type ToolCallResult = z.infer<typeof ToolCallResultSchema>;
+
 export const JsonlEventSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("user-text"),
@@ -29,11 +36,14 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     data: z.string(),
   }),
   z.object({
-    kind: z.literal("user-tool-result"),
+    kind: z.literal("tool-call"),
     at: z.string(),
+    messageId: z.string().optional(),
     toolUseId: z.string(),
-    content: z.string(),
-    isError: z.boolean().optional(),
+    name: z.string(),
+    input: z.unknown(),
+    usage: TokenUsageSchema.optional(),
+    result: ToolCallResultSchema.optional(),
   }),
   z.object({
     kind: z.literal("assistant-thinking"),
@@ -47,15 +57,6 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     messageId: z.string().optional(),
     text: z.string(),
     stopReason: z.string().optional(),
-    usage: TokenUsageSchema.optional(),
-  }),
-  z.object({
-    kind: z.literal("assistant-tool-use"),
-    at: z.string(),
-    messageId: z.string().optional(),
-    toolUseId: z.string(),
-    name: z.string(),
-    input: z.unknown(),
     usage: TokenUsageSchema.optional(),
   }),
   z.object({

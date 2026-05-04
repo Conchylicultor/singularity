@@ -380,14 +380,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Types: `EventRendererContribution`, `RowActionContribution`
             - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`
           - Exports (shared):
-            - Types: `JsonlEvent`, `JsonlEventsResponse`, `TokenUsage`, `UserTextSegment`
+            - Types: `JsonlEvent`, `JsonlEventsResponse`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`
             - Values: `jsonlEventsResource`
           - Contributes:
             - `JsonlViewer.RowAction` → `RawJsonAction`
           - Server:
             - Uses: `conversations.findTranscriptPath`, `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
-          - Slot contributors: `assistant-text`, `assistant-thinking`, `assistant-tool-use`, `fork-session`, `summary`, `system`, `user-image`, `user-text`, `user-tool-result`
+          - Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `summary`, `system`, `tool-call`, `user-image`, `user-text`
           - Plugins:
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Contributes:
@@ -397,25 +397,29 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `AssistantThinkingRow`
-            - **`assistant-tool-use`** — Renders assistant tool-use events in the JSONL viewer.
-              - Contributes:
-                - `JsonlViewer.EventRenderer` → `AssistantToolUseRow`
             - **`summary`** — Renders summary separator events in the JSONL viewer.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `SummaryRow`
             - **`system`** — Renders system events in the JSONL viewer.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `SystemRow`
+            - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
+              - Defines:
+                - Slots: `JsonlViewerTool.Renderer`
+              - Exports (web):
+                - Types: `ToolRendererContribution`
+                - Values: `JsonlViewerTool`
+              - Exports (shared):
+                - Types: `ToolCallEvent`, `ToolRendererProps`
+              - Contributes:
+                - `JsonlViewer.EventRenderer` → `ToolCallRow`
+                - `JsonlViewer.RowAction` → `CopyToolResultAction`
             - **`user-image`** — Renders inline image thumbnails for user-image events.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `UserImageRow`
             - **`user-text`** — Renders user text events in the JSONL viewer.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `UserTextRow`
-            - **`user-tool-result`** — Renders user tool-result events in the JSONL viewer.
-              - Contributes:
-                - `JsonlViewer.EventRenderer` → `UserToolResultRow`
-                - `JsonlViewer.RowAction` → `CopyToolResultAction`
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/launch-prompts/server/internal/tables-attachments.ts`

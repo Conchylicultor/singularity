@@ -61,12 +61,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
           - Plugins:
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
             - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
-            - **`assistant-tool-use`** — Renders assistant tool-use events in the JSONL viewer.
             - **`summary`** — Renders summary separator events in the JSONL viewer.
             - **`system`** — Renders system events in the JSONL viewer.
+            - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
             - **`user-image`** — Renders inline image thumbnails for user-image events.
             - **`user-text`** — Renders user text events in the JSONL viewer.
-            - **`user-tool-result`** — Renders user tool-result events in the JSONL viewer.
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
         - **`new-child-task`** — Toolbar button that opens a popover to create a child task under the conversation's parent task.

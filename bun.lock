@@ -234,10 +234,6 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-thinking",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-tool-use": {
-      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-tool-use",
-      "version": "0.0.1",
-    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary",
       "version": "0.0.1",
@@ -246,16 +242,16 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-system",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-image": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-user-image",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-text": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-user-text",
-      "version": "0.0.1",
-    },
-    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-tool-result": {
-      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-user-tool-result",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/launch-prompts": {
@@ -1345,17 +1341,15 @@
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-thinking": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-thinking@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-thinking"],
 
-    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-tool-use": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-tool-use@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-tool-use"],
-
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-system": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-system@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/system"],
 
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call"],
+
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-user-image": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-user-image@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-image"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-user-text": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-user-text@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-text"],
-
-    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-user-tool-result": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-user-tool-result@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-tool-result"],
 
     "@singularity/plugin-conversations-conversation-view-launch-prompts": ["@singularity/plugin-conversations-conversation-view-launch-prompts@workspace:plugins/conversations/plugins/conversation-view/plugins/launch-prompts"],
 
