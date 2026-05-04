@@ -8,7 +8,7 @@
 - Defines:
   - Slots: `Tasks.List`, `Tasks.TaskActions`
 - Exports (web):
-  - Values: `STATUS_META`, `StatusIcon`, `Tasks`, `TasksList`
+  - Values: `Tasks`, `TasksList`
 - Contributes:
   - `Tasks.TaskActions` → `ExpandCollapseAllAction`
   - `Tasks.TaskActions` → `DeleteTaskAction`

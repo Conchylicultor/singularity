@@ -6,7 +6,6 @@ import { LaunchAgentAction } from "./components/launch-agent-action";
 
 export { Tasks } from "./slots";
 export { TasksList } from "./components/tasks-list";
-export { StatusIcon, STATUS_META } from "./components/task-status";
 
 export default {
   id: "task-list",

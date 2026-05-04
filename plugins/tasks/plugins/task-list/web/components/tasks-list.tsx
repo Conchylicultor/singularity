@@ -12,7 +12,7 @@ import type { TaskStatus } from "@plugins/tasks-core/shared";
 import { tasksResource } from "@plugins/tasks/shared";
 import { patchTask, setAutoStart } from "@plugins/tasks/web";
 import { Tasks as TasksSlots } from "../slots";
-import { StatusIcon } from "./task-status";
+import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import { cn } from "@/lib/utils";
 
 type Task = TreeItem & {

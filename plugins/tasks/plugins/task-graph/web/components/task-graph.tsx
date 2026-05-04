@@ -17,7 +17,7 @@ import "@xyflow/react/dist/style.css";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { tasksResource, type Task } from "@plugins/tasks/shared";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
-import { STATUS_META } from "@plugins/tasks/plugins/task-list/web";
+import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 import { cn } from "@/lib/utils";
 
 const NODE_WIDTH = 200;
@@ -139,7 +139,7 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
         position={Position.Left}
         className="!bg-transparent !border-0 !w-1 !h-1"
       />
-      <Icon className={cn("size-4 shrink-0", meta.className)} />
+      <Icon className={cn("size-4 shrink-0", meta.iconClassName)} />
       <span
         className={cn(
           "truncate",

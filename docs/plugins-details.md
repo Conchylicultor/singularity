@@ -1116,11 +1116,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Defines:
         - Slots: `Tasks.List`, `Tasks.TaskActions`
       - Exports (web):
-        - Values: `STATUS_META`, `StatusIcon`, `Tasks`, `TasksList`
+        - Values: `Tasks`, `TasksList`
       - Contributes:
         - `Tasks.TaskActions` → `ExpandCollapseAllAction`
         - `Tasks.TaskActions` → `DeleteTaskAction`
         - `Tasks.TaskActions` → `LaunchAgentAction`
+    - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
+      - Exports (web):
+        - Values: `STATUS_META`, `StatusBadge`, `StatusIcon`
     - **`task-title`** — Haiku-backed task title generation. Synthesises an instant first-line fallback; upgrades asynchronously so task creation never blocks on the Claude CLI round-trip.
       - Exports (server):
         - Values: `generateTaskTitle`, `scheduleTaskTitleUpdate`, `synthesiseTitleFallback`

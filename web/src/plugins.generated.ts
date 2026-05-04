@@ -125,6 +125,7 @@ import tasksTaskFilePeekPlugin from "@plugins/tasks/plugins/task-file-peek/web";
 import tasksTaskGraphPlugin from "@plugins/tasks/plugins/task-graph/web";
 import tasksTaskHeaderPlugin from "@plugins/tasks/plugins/task-header/web";
 import tasksTaskListPlugin from "@plugins/tasks/plugins/task-list/web";
+import tasksTaskStatusPlugin from "@plugins/tasks/plugins/task-status/web";
 import terminalPlugin from "@plugins/terminal/web";
 import themePlugin from "@plugins/theme/web";
 import welcomePlugin from "@plugins/welcome/web";
@@ -250,6 +251,7 @@ export const plugins: PluginDefinition[] = [
   tasksTaskGraphPlugin,
   tasksTaskHeaderPlugin,
   tasksTaskListPlugin,
+  tasksTaskStatusPlugin,
   terminalPlugin,
   themePlugin,
   welcomePlugin,

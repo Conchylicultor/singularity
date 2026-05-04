@@ -7,6 +7,7 @@ import { patchTask, setAutoStart, useTask } from "@plugins/tasks/web";
 import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
 import { buildTaskPrompt } from "@plugins/tasks-core/shared";
 import { useFlushAll, useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
+import { StatusBadge } from "@plugins/tasks/plugins/task-status/web";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -16,28 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AuthorDisplay } from "./author-display";
-
-const STATUS_LABELS: Record<Task["status"], string> = {
-  new: "New",
-  in_progress: "In progress",
-  need_action: "Need action",
-  attempted: "Attempted",
-  done: "Done",
-  held: "Held",
-  dropped: "Dropped",
-  blocked: "Blocked",
-};
-
-const STATUS_CLASSES: Record<Task["status"], string> = {
-  new: "bg-muted",
-  in_progress: "bg-muted",
-  need_action: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
-  attempted: "bg-muted",
-  done: "bg-muted",
-  held: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  dropped: "bg-muted text-muted-foreground/60 italic",
-  blocked: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300",
-};
 
 export function TaskHeader({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
@@ -94,11 +73,7 @@ export function TaskHeader({ taskId }: { taskId: string }) {
         <span className="text-muted-foreground text-xs uppercase tracking-wide">
           Status
         </span>
-        <span
-          className={`rounded px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[task.status]}`}
-        >
-          {STATUS_LABELS[task.status]}
-        </span>
+        <StatusBadge status={task.status} />
         <Button
           size="sm"
           variant={task.status === "held" ? "secondary" : "outline"}
