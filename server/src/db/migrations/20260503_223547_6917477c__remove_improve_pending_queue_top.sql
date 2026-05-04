@@ -1,0 +1,1 @@
+DROP TABLE "improve_pending_queue_top" CASCADE;
