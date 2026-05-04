@@ -10,4 +10,8 @@ export const Tasks = {
     id: string;
     component: ComponentType<{ taskId: string; hasChildren: boolean }>;
   }>("tasks.task-actions"),
+  ListActions: defineSlot<{
+    id: string;
+    component: ComponentType;
+  }>("tasks.list-actions"),
 };

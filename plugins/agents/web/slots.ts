@@ -7,6 +7,10 @@ export const Agents = {
     id: string;
     component: ComponentType;
   }>("agents.list"),
+  ListActions: defineSlot<{
+    id: string;
+    component: ComponentType;
+  }>("agents.list-actions"),
   View: defineSlot<{
     id: string;
     title?: string;

@@ -6,7 +6,7 @@
 
 - Description: Named agent definitions that launch conversations. Named agent definitions that launch conversations.
 - Defines:
-  - Slots: `Agents.List`, `Agents.View`, `Agents.AgentActions`, `Agents.SystemAgent`
+  - Slots: `Agents.List`, `Agents.ListActions`, `Agents.View`, `Agents.AgentActions`, `Agents.SystemAgent`
   - DB schema: `plugins/agents/server/internal/schema.ts`
   - DB schema: `plugins/agents/server/internal/tables-attachments.ts`
   - DB schema: `plugins/agents/server/internal/tables.ts`

@@ -51,6 +51,8 @@ export type TreeListProps<T extends TreeItem> = {
   toolbar?: {
     expandAll?: boolean;
     hideTerminal?: { isTerminal: (row: T) => boolean };
+    /** Extra content rendered on the left side of the toolbar row. */
+    start?: ReactNode;
   };
   /** Root-level "Add" button label. Pass `null` to hide (e.g. subtree mode). */
   addLabel?: string | null;
@@ -197,7 +199,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     [rows, onMove],
   );
 
-  const hasToolbar = showExpandAll || !!toolbar?.hideTerminal;
+  const hasToolbar = showExpandAll || !!toolbar?.hideTerminal || !!toolbar?.start;
   const showRootAdd = !rootId && addLabel != null;
 
   const ctxValue = useMemo(
@@ -236,41 +238,44 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       <TreeListProvider value={ctxValue}>
         <div className="flex flex-col gap-0.5">
           {hasToolbar && (
-            <div className="mb-1 flex items-center justify-end gap-1">
-              {showExpandAll && (
-                <button
-                  type="button"
-                  onClick={expandAll}
-                  title={allExpanded ? "Collapse all" : "Expand all"}
-                  aria-label={allExpanded ? "Collapse all" : "Expand all"}
-                  className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-7 items-center justify-center rounded"
-                >
-                  {allExpanded ? (
-                    <MdUnfoldLess className="size-4" />
-                  ) : (
-                    <MdUnfoldMore className="size-4" />
-                  )}
-                </button>
-              )}
-              {toolbar?.hideTerminal && (
-                <button
-                  type="button"
-                  onClick={() => setHideTerminal((v) => !v)}
-                  aria-pressed={hideTerminal}
-                  title={hideTerminal ? "Show completed" : "Hide completed"}
-                  className={cn(
-                    "hover:bg-accent flex w-fit items-center gap-1 rounded px-2 py-1 text-xs",
-                    hideTerminal ? "text-foreground" : "text-muted-foreground",
-                  )}
-                >
-                  {hideTerminal ? (
-                    <MdFilterAlt className="size-4" />
-                  ) : (
-                    <MdFilterAltOff className="size-4" />
-                  )}
-                  {hideTerminal ? "Completed hidden" : "Hide completed"}
-                </button>
-              )}
+            <div className="mb-1 flex items-center gap-1">
+              <div className="flex items-center gap-1">{toolbar?.start}</div>
+              <div className="ml-auto flex items-center gap-1">
+                {showExpandAll && (
+                  <button
+                    type="button"
+                    onClick={expandAll}
+                    title={allExpanded ? "Collapse all" : "Expand all"}
+                    aria-label={allExpanded ? "Collapse all" : "Expand all"}
+                    className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-7 items-center justify-center rounded"
+                  >
+                    {allExpanded ? (
+                      <MdUnfoldLess className="size-4" />
+                    ) : (
+                      <MdUnfoldMore className="size-4" />
+                    )}
+                  </button>
+                )}
+                {toolbar?.hideTerminal && (
+                  <button
+                    type="button"
+                    onClick={() => setHideTerminal((v) => !v)}
+                    aria-pressed={hideTerminal}
+                    title={hideTerminal ? "Show completed" : "Hide completed"}
+                    className={cn(
+                      "hover:bg-accent flex w-fit items-center gap-1 rounded px-2 py-1 text-xs",
+                      hideTerminal ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    {hideTerminal ? (
+                      <MdFilterAlt className="size-4" />
+                    ) : (
+                      <MdFilterAltOff className="size-4" />
+                    )}
+                    {hideTerminal ? "Completed hidden" : "Hide completed"}
+                  </button>
+                )}
+              </div>
             </div>
           )}
           {visibleTree.map((node) => (

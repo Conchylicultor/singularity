@@ -105,6 +105,7 @@ export function TasksList({
 }) {
   const { data } = useResource(tasksResource);
   const rows = data ?? [];
+  const listActions = TasksSlots.ListActions.useContributions();
 
   return (
     <TreeList<Task>
@@ -122,6 +123,7 @@ export function TasksList({
         hideTerminal: {
           isTerminal: (t) => t.status === "done" || t.status === "dropped",
         },
+        start: listActions.map((a) => <a.component key={a.id} />),
       }}
       addLabel={rootTaskId ? null : "Add"}
     />

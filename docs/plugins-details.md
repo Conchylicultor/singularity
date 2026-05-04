@@ -43,7 +43,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
   - Defines:
-    - Slots: `Agents.List`, `Agents.View`, `Agents.AgentActions`, `Agents.SystemAgent`
+    - Slots: `Agents.List`, `Agents.ListActions`, `Agents.View`, `Agents.AgentActions`, `Agents.SystemAgent`
     - DB schema: `plugins/agents/server/internal/schema.ts`
     - DB schema: `plugins/agents/server/internal/tables-attachments.ts`
     - DB schema: `plugins/agents/server/internal/tables.ts`
@@ -1118,9 +1118,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
       - Contributes:
         - `TaskDetailSlots.Section` → `TaskHeader`
-    - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions slots and ships the row actions (delete, expand-all, launch-agent).
+    - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
       - Defines:
-        - Slots: `Tasks.List`, `Tasks.TaskActions`
+        - Slots: `Tasks.List`, `Tasks.TaskActions`, `Tasks.ListActions`
       - Exports (web):
         - Values: `Tasks`, `TasksList`
       - Contributes:

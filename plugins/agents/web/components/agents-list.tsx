@@ -111,6 +111,7 @@ export function AgentsList({
 }) {
   const { data } = useResource(agentsResource);
   const rows = data ?? [];
+  const listActions = AgentsSlots.ListActions.useContributions();
 
   return (
     <div className="flex flex-col gap-1">
@@ -126,6 +127,10 @@ export function AgentsList({
         onCreate={createAgentRow}
         Row={AgentRow}
         dragOverlay={(a) => a.name || "Untitled"}
+        toolbar={{
+          expandAll: true,
+          start: listActions.map((a) => <a.component key={a.id} />),
+        }}
         addLabel="Agent"
       />
     </div>

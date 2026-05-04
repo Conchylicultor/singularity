@@ -11,7 +11,7 @@ export default {
   id: "task-list",
   name: "Task: List",
   description:
-    "Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions slots and ships the row actions (delete, expand-all, launch-agent).",
+    "Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).",
   contributions: [
     TasksSlots.TaskActions({
       id: "expand-collapse-all",

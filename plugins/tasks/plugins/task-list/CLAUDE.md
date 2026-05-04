@@ -4,9 +4,9 @@
 
 ## Plugin reference
 
-- Description: Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions slots and ships the row actions (delete, expand-all, launch-agent).
+- Description: Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
 - Defines:
-  - Slots: `Tasks.List`, `Tasks.TaskActions`
+  - Slots: `Tasks.List`, `Tasks.TaskActions`, `Tasks.ListActions`
 - Exports (web):
   - Values: `Tasks`, `TasksList`
 - Contributes:
