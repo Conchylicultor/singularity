@@ -117,6 +117,7 @@ export function TasksVelocityChart() {
             <Bar
               dataKey="completed"
               name="Completed"
+              stackId="resolved"
               fill={COMPLETED_COLOR}
               opacity={0.8}
               isAnimationActive={false}
@@ -125,6 +126,7 @@ export function TasksVelocityChart() {
             <Bar
               dataKey="dropped"
               name="Dropped/held"
+              stackId="resolved"
               fill={DROPPED_COLOR}
               opacity={0.8}
               isAnimationActive={false}
