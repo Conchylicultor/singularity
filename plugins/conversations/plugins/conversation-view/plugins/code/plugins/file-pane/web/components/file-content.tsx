@@ -3,10 +3,12 @@ import type { ResolvedRenderer } from "../slots";
 export function FileContent({
   worktree,
   path,
+  line,
   active,
 }: {
   worktree: string;
   path: string;
+  line?: number;
   active: ResolvedRenderer | null;
 }) {
   if (!active) {
@@ -17,5 +19,5 @@ export function FileContent({
     );
   }
   const Component = active.contribution.component;
-  return <Component worktree={worktree} path={path} />;
+  return <Component worktree={worktree} path={path} line={line} />;
 }

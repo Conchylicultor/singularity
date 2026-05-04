@@ -8,7 +8,7 @@ import { useFileContent, useFileOpen } from "@plugins/conversations/plugins/conv
 const REMARK_PLUGINS = [remarkGfm];
 
 function buildComponents(
-  onFileOpen: ((path: string) => void) | undefined,
+  onFileOpen: ((path: string, line?: number) => void) | undefined,
 ): Components {
   const lc = onFileOpen
     ? (children: ReactNode) => linkifyChildren(children, onFileOpen)

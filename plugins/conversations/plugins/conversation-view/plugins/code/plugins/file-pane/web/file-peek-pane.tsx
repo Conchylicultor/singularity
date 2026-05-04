@@ -18,9 +18,15 @@ export const convFilePeekPane = Pane.define({
 
 function ConvFilePeekPaneBody() {
   const { convId } = conversationPane.useParams();
-  const { worktree, filePath } = convFilePeekPane.useParams();
+  const { worktree, filePath: rawFilePath } = convFilePeekPane.useParams();
+
+  const lineMatch = rawFilePath.match(/:(\d+)$/);
+  const line = lineMatch ? parseInt(lineMatch[1]!, 10) : undefined;
+  const filePath = lineMatch ? rawFilePath.slice(0, -lineMatch[0]!.length) : rawFilePath;
+
   const onFileOpen = useCallback(
-    (fp: string) => convFilePeekPane.open({ convId, worktree, filePath: fp }),
+    (fp: string, ln?: number) =>
+      convFilePeekPane.open({ convId, worktree, filePath: ln != null ? `${fp}:${ln}` : fp }),
     [convId, worktree],
   );
   const renderers = useFileRenderers({ path: filePath, status: "clean" });
@@ -35,6 +41,7 @@ function ConvFilePeekPaneBody() {
           <FileContent
             worktree={worktree}
             path={filePath}
+            line={line}
             active={renderers.active}
           />
         </div>

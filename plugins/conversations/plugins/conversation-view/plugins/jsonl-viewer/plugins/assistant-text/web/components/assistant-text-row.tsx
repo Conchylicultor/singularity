@@ -53,7 +53,7 @@ function isExternalUrl(src: string): boolean {
 
 function buildMdComponents(
   worktree: string,
-  onFileOpen: (path: string) => void,
+  onFileOpen: (path: string, line?: number) => void,
   activeDataLinkify: (children: ReactNode) => ReactNode,
 ): Components {
   const transform = (children: ReactNode) =>
@@ -142,16 +142,17 @@ function buildMdComponents(
       }
       const segments = parseFileLinks(text);
       if (segments.length === 1 && segments[0]?.type === "path") {
+        const seg = segments[0]!;
         return (
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onFileOpen(segments[0]!.value);
+              onFileOpen(seg.value, seg.line);
             }}
             className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-primary dark:text-blue-400 cursor-pointer hover:underline"
           >
-            {segments[0]!.value}
+            {seg.line != null ? `${seg.value}:${seg.line}` : seg.value}
           </button>
         );
       }
@@ -209,11 +210,11 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
   const { conversation } = conversationPane.useData();
   const segments = useActiveDataSegments(e.text);
   const activeDataLinkify = useActiveDataLinkify();
-  const onFileOpen = (path: string) =>
+  const onFileOpen = (path: string, line?: number) =>
     convFilePeekPane.open({
       convId: conversation.id,
       worktree: conversation.attemptId,
-      filePath: path,
+      filePath: line != null ? `${path}:${line}` : path,
     });
   const mdComponents: Components = buildMdComponents(
     conversation.attemptId,

@@ -18,7 +18,7 @@ const SKIP_TYPES = new Set(["code", "pre", "a"]);
 // active-data ConvChip relies on its children being the raw conv-id string).
 export function linkifyChildren(
   children: ReactNode,
-  onFileOpen?: (path: string) => void,
+  onFileOpen?: (path: string, line?: number) => void,
 ): ReactNode {
   if (children == null || typeof children === "boolean") return children;
   if (typeof children === "string") {

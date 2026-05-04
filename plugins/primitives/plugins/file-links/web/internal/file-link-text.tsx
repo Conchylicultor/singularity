@@ -3,7 +3,7 @@ import { parseFileLinks } from "./parse";
 
 export interface FileLinkTextProps {
   text: string;
-  onFileOpen?: (path: string) => void;
+  onFileOpen?: (path: string, line?: number) => void;
 }
 
 export function FileLinkText({ text, onFileOpen }: FileLinkTextProps): ReactNode {
@@ -34,11 +34,11 @@ export function FileLinkText({ text, onFileOpen }: FileLinkTextProps): ReactNode
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                onFileOpen(seg.value);
+                onFileOpen(seg.value, seg.line);
               }}
               className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-primary dark:text-blue-400 cursor-pointer hover:underline"
             >
-              {seg.value}
+              {seg.line != null ? `${seg.value}:${seg.line}` : seg.value}
             </button>
           );
         }

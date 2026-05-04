@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 
-export type FileOpenHandler = (filePath: string) => void;
+export type FileOpenHandler = (filePath: string, line?: number) => void;
 
 const FileOpenContext = createContext<FileOpenHandler | undefined>(undefined);
 

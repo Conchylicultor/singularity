@@ -13,7 +13,7 @@ export interface FileRendererContribution {
   id: string;
   label: string;
   supports(file: FileRendererTarget): RendererMatch;
-  component: ComponentType<{ worktree: string; path: string }>;
+  component: ComponentType<{ worktree: string; path: string; line?: number }>;
 }
 
 export const FilePane = {

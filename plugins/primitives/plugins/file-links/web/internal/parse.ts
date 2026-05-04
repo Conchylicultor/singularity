@@ -6,8 +6,9 @@
 // Final segment must either contain a dot (xx.yy, .zshrc, .tmux.conf) or be a
 // well-known extensionless name (Makefile, Dockerfile, …).
 // The : in the lookbehind prevents matching URL port numbers (e.g. localhost:9000/plugins/...)
+// Optional (?::(\d+)(?!\w))? captures a trailing :N line number (e.g. foo.ts:148).
 export const FILE_PATH_RE =
-  /(?<![\w./~:-])((?:~\/(?:[\w.\-]+\/)*|(?:[\w.\-]+\/)+)(?:[\w\-]*(?:\.[\w\-]+)+|Makefile|Dockerfile|Gemfile|Rakefile|Procfile|Brewfile))(?![\w/-])/g;
+  /(?<![\w./~:-])((?:~\/(?:[\w.\-]+\/)*|(?:[\w.\-]+\/)+)(?:[\w\-]*(?:\.[\w\-]+)+|Makefile|Dockerfile|Gemfile|Rakefile|Procfile|Brewfile))(?::(\d+)(?!\w))?(?![\w/-])/g;
 
 // Matches http/https URLs; strips trailing sentence punctuation.
 export const URL_RE = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g;
@@ -15,9 +16,10 @@ export const URL_RE = /https?:\/\/[^\s<>"{}|\\^`[\]]+/g;
 export interface FileLinkSegment {
   type: "text" | "path" | "url";
   value: string;
+  line?: number;
 }
 
-type RawMatch = { index: number; end: number; type: "path" | "url"; value: string };
+type RawMatch = { index: number; end: number; type: "path" | "url"; value: string; line?: number };
 
 export function parseFileLinks(text: string): FileLinkSegment[] {
   const raw: RawMatch[] = [];
@@ -25,7 +27,8 @@ export function parseFileLinks(text: string): FileLinkSegment[] {
   FILE_PATH_RE.lastIndex = 0;
   let m: RegExpExecArray | null;
   while ((m = FILE_PATH_RE.exec(text)) !== null) {
-    raw.push({ index: m.index, end: m.index + m[0].length, type: "path", value: m[1] ?? "" });
+    const line = m[2] ? parseInt(m[2], 10) : undefined;
+    raw.push({ index: m.index, end: m.index + m[0].length, type: "path", value: m[1] ?? "", line });
   }
 
   URL_RE.lastIndex = 0;
@@ -44,7 +47,7 @@ export function parseFileLinks(text: string): FileLinkSegment[] {
     if (r.index > lastIndex) {
       segments.push({ type: "text", value: text.slice(lastIndex, r.index) });
     }
-    segments.push({ type: r.type, value: r.value });
+    segments.push({ type: r.type, value: r.value, line: r.line });
     lastIndex = r.end;
   }
   if (lastIndex < text.length) {
