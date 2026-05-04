@@ -136,9 +136,9 @@ export const pluginBoundaries: Check = {
         }
       }
 
-      // R9: forbid inline `import("@plugins/...")` type expressions. They bypass
-      // the static import scanner and make cross-plugin deps invisible to the
-      // boundary system. Use a top-level `import type { X } from "..."` instead.
+      // R9: forbid inline import-type expressions targeting plugin barrels. They
+      // bypass the static import scanner and make cross-plugin deps invisible to
+      // the boundary system. Use a top-level `import type { X } from "…"` instead.
       for (const inlinePath of extractInlineImports(src)) {
         const resolved = resolveImport(inlinePath, pluginSet);
         if (!resolved) continue;
@@ -147,7 +147,7 @@ export const pluginBoundaries: Check = {
           rule: "inline-import",
           file: relFile,
           message: `inline \`import("${inlinePath}")\` type expression bypasses the boundary system`,
-          fix: `replace with a top-level \`import type { … } from "${inlinePath}"\``,
+          fix: `replace with a top-level import type statement: \`import type { … } from "${inlinePath}"\``,
         });
       }
 
@@ -741,11 +741,11 @@ function extractRelativeImports(rawSrc: string): string[] {
 }
 
 /**
- * Extract every inline `import("@plugins/...")` type expression.
- * These appear in type positions (e.g. `model?: import("@plugins/foo/shared").Bar`)
+ * Extract every inline import-type expression that targets a plugin barrel.
+ * These appear in type positions (e.g. `model?: import("plugins/…/shared").Bar`)
  * and are invisible to `extractPluginImports`, which only scans static
- * `import ... from` statements. R9 flags them: use a top-level
- * `import type { Bar } from "@plugins/foo/shared"` instead.
+ * `import … from` statements. R9 flags them: use a top-level
+ * `import type { Bar } from "…/shared"` instead.
  */
 function extractInlineImports(rawSrc: string): string[] {
   const src = stripComments(rawSrc);
