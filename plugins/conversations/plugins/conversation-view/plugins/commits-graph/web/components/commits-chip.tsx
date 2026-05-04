@@ -1,8 +1,10 @@
-import { MdAltRoute } from "react-icons/md";
+import { useMemo } from "react";
+import { MdAltRoute, MdPublish } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
+import { pushesResource } from "@plugins/tasks/shared";
 import { commitDeltaResource } from "../../shared/resources";
 import { convCommitsGraphPane } from "../panes";
 
@@ -11,6 +13,11 @@ export function CommitsChip() {
   const { data } = useResource(commitDeltaResource, {
     attemptId: conversation.attemptId,
   });
+  const { data: pushes } = useResource(pushesResource);
+  const pushCount = useMemo(
+    () => (pushes ?? []).filter((p) => p.attemptId === conversation.attemptId).length,
+    [pushes, conversation.attemptId],
+  );
   const match = usePaneMatch();
   const isOpen =
     match?.chain.some((e) => e.pane === convCommitsGraphPane._internal) ?? false;
@@ -23,9 +30,12 @@ export function CommitsChip() {
   const behind = data?.behind ?? 0;
   const branch = data?.branch ?? null;
 
-  const title = branch
-    ? `${branch}: ${ahead} ahead, ${behind} behind main`
-    : `${ahead} ahead, ${behind} behind main`;
+  const parts = [
+    `${ahead} ahead`,
+    behind > 0 ? `${behind} behind main` : "main",
+    pushCount > 0 ? `${pushCount} push${pushCount !== 1 ? "es" : ""}` : null,
+  ].filter(Boolean);
+  const title = branch ? `${branch}: ${parts.join(", ")}` : parts.join(", ");
 
   return (
     <Button
@@ -48,6 +58,13 @@ export function CommitsChip() {
         <>
           <span className="text-muted-foreground">↓</span>
           <span className="text-amber-500">{behind}</span>
+        </>
+      ) : null}
+      {pushCount > 0 ? (
+        <>
+          <span className="text-muted-foreground">·</span>
+          <MdPublish className="size-3.5 text-emerald-500" />
+          <span className="text-emerald-500">{pushCount}</span>
         </>
       ) : null}
     </Button>

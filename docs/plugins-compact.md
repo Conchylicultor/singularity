@@ -73,7 +73,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
         - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
-        - **`push-counter`** — Displays the number of pushes for the conversation's attempt in the toolbar.
         - **`quick-prompts`** — Named prompt chips in the conversation floating bar. Click to send a preset message to the active conversation. Named prompts that appear as chips in the conversation toolbar. Click to send a preset message.
         - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
         - **`side-conversation`** — Right side pane that shows a second conversation alongside the host (read-only viewer; expand to pop out).

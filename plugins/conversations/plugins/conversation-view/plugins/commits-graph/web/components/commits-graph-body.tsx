@@ -5,6 +5,7 @@ import type { CommitRow } from "../../shared/protocol";
 import { CommitRail, MergeBaseMarker, COMMIT_ROW_HEIGHT } from "./commit-rail";
 
 const BRANCH_COLOR = "var(--primary)";
+const LANDED_COLOR = "#10b981"; // emerald-500 — commits pushed to main
 const MAIN_COLOR = "var(--muted-foreground)";
 const BEHIND_COLOR = "color-mix(in srgb, var(--muted-foreground) 50%, transparent)";
 
@@ -88,7 +89,7 @@ export function CommitsGraphBody() {
         {hasAgentWork && (
           <MergeBaseMarker
             color={BRANCH_COLOR}
-            mainColor={MAIN_COLOR}
+            mainColor={landedCommits.length > 0 ? LANDED_COLOR : MAIN_COLOR}
             shortSha={mergeBase ? mergeBase.slice(0, 7) : null}
             hasPending={commits.length > 0}
           />
@@ -99,7 +100,8 @@ export function CommitsGraphBody() {
             commit={commit}
             isFirst={false}
             isLast={idx === landedCommits.length - 1}
-            color={MAIN_COLOR}
+            color={LANDED_COLOR}
+            pushed
           />
         ))}
         {behindCommits.length > 0 && (
@@ -146,11 +148,13 @@ function CommitRowItem({
   isFirst,
   isLast,
   color,
+  pushed = false,
 }: {
   commit: CommitRow;
   isFirst: boolean;
   isLast: boolean;
   color: string;
+  pushed?: boolean;
 }) {
   return (
     <li
@@ -167,6 +171,11 @@ function CommitRowItem({
       <span className="flex-1 truncate" title={commit.subject}>
         {commit.subject}
       </span>
+      {pushed && (
+        <span className="shrink-0 rounded px-1.5 py-0.5 text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+          pushed
+        </span>
+      )}
       <span className="hidden truncate text-xs text-muted-foreground sm:inline">
         {commit.authorName}
       </span>

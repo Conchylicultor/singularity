@@ -57,7 +57,6 @@ import conversationsConversationViewNewChildTaskPlugin from "@plugins/conversati
 import conversationsConversationViewOpenAppPlugin from "@plugins/conversations/plugins/conversation-view/plugins/open-app/web";
 import conversationsConversationViewPromptInputPlugin from "@plugins/conversations/plugins/conversation-view/plugins/prompt-input/web";
 import conversationsConversationViewPushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/web";
-import conversationsConversationViewPushCounterPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-counter/web";
 import conversationsConversationViewQuickPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/web";
 import conversationsConversationViewResumePlugin from "@plugins/conversations/plugins/conversation-view/plugins/resume/web";
 import conversationsConversationViewSideConversationPlugin from "@plugins/conversations/plugins/conversation-view/plugins/side-conversation/web";
@@ -184,7 +183,6 @@ export const plugins: PluginDefinition[] = [
   conversationsConversationViewOpenAppPlugin,
   conversationsConversationViewPromptInputPlugin,
   conversationsConversationViewPushAndExitPlugin,
-  conversationsConversationViewPushCounterPlugin,
   conversationsConversationViewQuickPromptsPlugin,
   conversationsConversationViewResumePlugin,
   conversationsConversationViewSideConversationPlugin,
