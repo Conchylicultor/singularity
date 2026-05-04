@@ -3,16 +3,18 @@ import { MdStop } from "react-icons/md";
 import {
   type ConversationRecord,
   isDraftEmpty,
-  usePromptDraft,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
+import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { Button } from "@/components/ui/button";
 
 export function PromptInput({ conversation }: { conversation: ConversationRecord }) {
   const live = useConversation(conversation.id) ?? conversation;
-  const { draft, setDraft, clearDraft } = usePromptDraft(conversation.id);
+  const [draft, setDraft, clearDraft] = useDraft("conversation:prompt", "", {
+    scope: conversation.id,
+  });
   const [sending, setSending] = useState(false);
   const [stopping, setStopping] = useState(false);
 
@@ -33,7 +35,7 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
         {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text: current.markdown }),
+          body: JSON.stringify({ text: current }),
         },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -58,7 +60,7 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as { ok: boolean; rewindText: string | null };
-      if (data.rewindText) setDraft({ markdown: data.rewindText });
+      if (data.rewindText) setDraft(data.rewindText);
     } catch (err) {
       Shell.Toast({
         description: `Failed to stop: ${err instanceof Error ? err.message : String(err)}`,
@@ -79,8 +81,8 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
     <div className="flex items-end gap-2">
       <div className="min-w-0 flex-1">
         <PromptEditor
-          value={draft.markdown}
-          onChange={(markdown) => setDraft({ markdown })}
+          value={draft}
+          onChange={setDraft}
           onSubmit={send}
           submitMode="enter"
           placeholder={placeholder}

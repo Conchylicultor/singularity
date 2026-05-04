@@ -2,8 +2,8 @@ import { GitFork } from "lucide-react";
 import {
   type ConversationRecord,
   draftToPlainText,
-  usePromptDraft,
 } from "@plugins/conversations/plugins/conversation-view/web";
+import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import {
   Tooltip,
@@ -16,7 +16,9 @@ export function ForkConversationButtons({
 }: {
   conversation: ConversationRecord;
 }) {
-  const { draft, clearDraft } = usePromptDraft(conversation.id);
+  const [draft, , clearDraft] = useDraft("conversation:prompt", "", {
+    scope: conversation.id,
+  });
   const plainPrompt = draftToPlainText(draft);
   return (
     <Tooltip>

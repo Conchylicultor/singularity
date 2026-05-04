@@ -8,8 +8,8 @@
 - Defines:
   - Slots: `Conversation.PromptInput`, `Conversation.TitlePrefix`
 - Exports (web):
-  - Types: `ConversationRecord`, `PromptDraft`
-  - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `PromptDraftProvider`, `usePromptDraft`
+  - Types: `ConversationRecord`
+  - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`
 - Contributes:
   - `Pane.Register` `conversation` (path `/c/:convId`)
   - `Conversation.ActionBar` → `ExpandConversationButton`

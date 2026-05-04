@@ -3,7 +3,6 @@ import { Pane, type } from "@plugins/primitives/plugins/pane/web";
 import { useConversation, useConversationById } from "@plugins/conversations/web";
 import type { ConversationRecord } from "./slots";
 import { ConversationView } from "./components/conversation-view";
-import { PromptDraftProvider } from "./prompt-draft-context";
 
 export const conversationPane = Pane.define({
   id: "conversation",
@@ -16,10 +15,9 @@ export const conversationPane = Pane.define({
 
 /**
  * Loads the conversation record by `convId` and wraps children in
- * `<conversationPane.Provider>` (and `<PromptDraftProvider>`). Reused by
- * any host (the conversation column, agent/task columns hosting an embedded
- * conversation) that needs sibling panes to access the conversation via
- * `conversationPane.useData()`.
+ * `<conversationPane.Provider>`. Reused by any host (the conversation column,
+ * agent/task columns hosting an embedded conversation) that needs sibling panes
+ * to access the conversation via `conversationPane.useData()`.
  */
 export function ConversationProvide({
   convId,
@@ -44,11 +42,9 @@ export function ConversationProvide({
   }
 
   return (
-    <PromptDraftProvider>
-      <conversationPane.Provider value={{ conversation }}>
-        {children}
-      </conversationPane.Provider>
-    </PromptDraftProvider>
+    <conversationPane.Provider value={{ conversation }}>
+      {children}
+    </conversationPane.Provider>
   );
 }
 

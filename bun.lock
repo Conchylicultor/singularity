@@ -516,6 +516,10 @@
         "lexical": "^0.44.0",
       },
     },
+    "plugins/primitives/plugins/persistent-draft": {
+      "name": "@singularity/plugin-primitives-persistent-draft",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/rank": {
       "name": "@singularity/plugin-primitives-rank",
       "version": "0.0.1",
@@ -1470,6 +1474,8 @@
     "@singularity/plugin-primitives-pane": ["@singularity/plugin-primitives-pane@workspace:plugins/primitives/plugins/pane"],
 
     "@singularity/plugin-primitives-paste-images": ["@singularity/plugin-primitives-paste-images@workspace:plugins/primitives/plugins/paste-images"],
+
+    "@singularity/plugin-primitives-persistent-draft": ["@singularity/plugin-primitives-persistent-draft@workspace:plugins/primitives/plugins/persistent-draft"],
 
     "@singularity/plugin-primitives-rank": ["@singularity/plugin-primitives-rank@workspace:plugins/primitives/plugins/rank"],
 

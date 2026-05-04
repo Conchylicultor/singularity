@@ -97,6 +97,7 @@ import primitivesLiveStatePlugin from "@plugins/primitives/plugins/live-state/we
 import primitivesNetworkingPlugin from "@plugins/primitives/plugins/networking/web";
 import primitivesPanePlugin from "@plugins/primitives/plugins/pane/web";
 import primitivesPasteImagesPlugin from "@plugins/primitives/plugins/paste-images/web";
+import primitivesPersistentDraftPlugin from "@plugins/primitives/plugins/persistent-draft/web";
 import primitivesRankPlugin from "@plugins/primitives/plugins/rank/web";
 import primitivesRelativeTimePlugin from "@plugins/primitives/plugins/relative-time/web";
 import primitivesSyntaxHighlightPlugin from "@plugins/primitives/plugins/syntax-highlight/web";
@@ -221,6 +222,7 @@ export const plugins: PluginDefinition[] = [
   primitivesNetworkingPlugin,
   primitivesPanePlugin,
   primitivesPasteImagesPlugin,
+  primitivesPersistentDraftPlugin,
   primitivesRankPlugin,
   primitivesRelativeTimePlugin,
   primitivesSyntaxHighlightPlugin,

@@ -8,14 +8,7 @@ export { Conversation } from "./slots";
 export type { ConversationRecord } from "./slots";
 export { conversationPane, ConversationProvide } from "./panes";
 export { ConversationView } from "./components/conversation-view";
-export {
-  PromptDraftProvider,
-  usePromptDraft,
-  draftToPlainText,
-  isDraftEmpty,
-  EMPTY_DRAFT,
-} from "./prompt-draft-context";
-export type { PromptDraft } from "./prompt-draft-context";
+export { draftToPlainText, isDraftEmpty } from "./prompt-draft-utils";
 
 export default {
   id: "conversation",

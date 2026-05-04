@@ -271,8 +271,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Defines:
         - Slots: `Conversation.PromptInput`, `Conversation.TitlePrefix`
       - Exports (web):
-        - Types: `ConversationRecord`, `PromptDraft`
-        - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `EMPTY_DRAFT`, `isDraftEmpty`, `PromptDraftProvider`, `usePromptDraft`
+        - Types: `ConversationRecord`
+        - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`
       - Contributes:
         - `Pane.Register` `conversation` (path `/c/:convId`)
         - `Conversation.ActionBar` → `ExpandConversationButton`
@@ -746,7 +746,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `POST /api/attachments`
         - `GET /api/attachments/:id`
         - `DELETE /api/attachments/:id`
-      - Endpoint callers: `agents`, `conversation-view`, `conversations`, `paste-images`, `quick-prompts`, `screenshot`, `task-attachments`, `tasks-core`
+      - Endpoint callers: `agents`, `conversations`, `paste-images`, `quick-prompts`, `screenshot`, `task-attachments`, `tasks-core`
     - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
       - Defines:
         - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
@@ -888,6 +888,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `PromptEditor`, `rewriteAttachmentMarkdown`
       - Exports (shared):
         - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `rewriteAttachmentMarkdown`
+    - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
+      - Exports (web):
+        - Values: `useDraft`
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
       - Exports (web):
         - Values: `generateKeyBetween`
