@@ -14,7 +14,7 @@ One `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers all active conversations. A p
 - Exports (server):
   - Values: `findTranscriptPath`, `readJsonlEvents`, `watchTranscript`
 - Exports (shared):
-  - Types: `JsonlEvent`, `TokenUsage`, `UserTextSegment`
+  - Types: `JsonlEvent`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`
   - Values: `JsonlEventSchema`, `TokenUsageSchema`
 - Server:
   - Uses: `tasks-core.getConversationClaudeSessionId`

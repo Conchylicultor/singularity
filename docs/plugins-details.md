@@ -380,7 +380,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Types: `EventRendererContribution`, `RowActionContribution`
             - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`
           - Exports (shared):
-            - Types: `JsonlEvent`, `JsonlEventsResponse`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`
+            - Types: `JsonlEventsResponse`
             - Values: `JsonlEventsPayloadSchema`, `jsonlEventsResource`
           - Contributes:
             - `JsonlViewer.RowAction` → `RawJsonAction`
@@ -593,7 +593,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Values: `findTranscriptPath`, `readJsonlEvents`, `watchTranscript`
       - Exports (shared):
-        - Types: `JsonlEvent`, `TokenUsage`, `UserTextSegment`
+        - Types: `JsonlEvent`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`
         - Values: `JsonlEventSchema`, `TokenUsageSchema`
       - Server:
         - Uses: `tasks-core.getConversationClaudeSessionId`
