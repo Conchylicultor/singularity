@@ -547,25 +547,25 @@ export function registerBuild(program: Command) {
           JSON.stringify(centralSpec, null, 2) + "\n",
         );
 
-        // 6d. Restart central so it picks up freshly-merged main code. The
-        // fsnotify watcher in the gateway only updates the spec lazily — the
-        // running process keeps its old code until explicitly restarted. PG
-        // is supervised by the gateway and decoupled from central's process
-        // group (see gateway/postgres.go), so this restart never disrupts
-        // worktree backends' DB connections.
-        console.log("Restarting central...");
-        try {
-          const resp = await fetch(
-            "http://localhost:9000/gateway/worktrees/central/restart",
-            { method: "POST" },
-          );
-          if (resp.ok) {
-            await probeGatewayHealth();
-          } else if (resp.status !== 404) {
-            console.warn(`Central restart returned ${resp.status}`);
+        // 6d. Restart central so it picks up freshly-merged main code. Only
+        // done when building from main — agent worktrees never change central's
+        // running code (central always runs main's central/), so restarting on
+        // every worktree build would needlessly drop every open WS connection.
+        if (root === mainRoot) {
+          console.log("Restarting central...");
+          try {
+            const resp = await fetch(
+              "http://localhost:9000/gateway/worktrees/central/restart",
+              { method: "POST" },
+            );
+            if (resp.ok) {
+              await probeGatewayHealth();
+            } else if (resp.status !== 404) {
+              console.warn(`Central restart returned ${resp.status}`);
+            }
+          } catch {
+            // Gateway not running — central will spawn fresh on first request.
           }
-        } catch {
-          // Gateway not running — central will spawn fresh on first request.
         }
       }
 
