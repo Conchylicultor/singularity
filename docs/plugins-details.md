@@ -1075,7 +1075,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `TaskAutoStartRow`
         - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`
       - Server:
-        - Uses: `tasks-core._tasks`, `tasks-core.tasksResource`
+        - Uses: `tasks-core._tasks`
         - Resources: `tasks-auto-start` (push)
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
       - Contributes:

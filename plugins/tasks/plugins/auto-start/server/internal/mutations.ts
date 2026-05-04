@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
-import { _tasks, tasksResource } from "@plugins/tasks-core/server";
+import { _tasks } from "@plugins/tasks-core/server";
+import { tasksAutoStartResource } from "./resource";
 import { _tasksAutoStartExt } from "./tables";
 
 export async function getTaskAutoStart(id: string) {
@@ -40,7 +41,7 @@ export async function setTaskAutoStart(
   } else {
     await db.delete(_tasksAutoStartExt).where(eq(_tasksAutoStartExt.parentId, id));
   }
-  tasksResource.notify();
+  tasksAutoStartResource.notify();
   return true;
 }
 
@@ -52,6 +53,6 @@ export async function claimAutoStart(id: string): Promise<boolean> {
     .delete(_tasksAutoStartExt)
     .where(eq(_tasksAutoStartExt.parentId, id))
     .returning({ parentId: _tasksAutoStartExt.parentId });
-  if (row) tasksResource.notify();
+  if (row) tasksAutoStartResource.notify();
   return !!row;
 }
