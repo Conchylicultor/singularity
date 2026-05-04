@@ -85,7 +85,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/agents/plugins/auto-launch/plugins/toggle/server/internal/tables.ts`
             - Entity extension of: `agents` (table `agents_ext_auto_launch`)
           - Exports (server):
-            - Values: `_agentAutoLaunchExt`, `agentAutoLaunchResource`
+            - Values: `agentAutoLaunch`, `agentAutoLaunchResource`
           - Contributes:
             - `Agents.AgentActions` → `AutoLaunchToggle`
           - Server:
@@ -210,7 +210,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ConversationKindSchema`, `ConversationSchema`, `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
   - Server:
     - Register: `maybeLaunchTaskJob`, `conversationCreated`, `conversationTurnCompleted`
-    - Uses: `crashes.recordCrash`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core._conversationAttachments`, `tasks-core.adoptOrphanConversation`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
+    - Uses: `crashes.recordCrash`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/gone`
     - `GET /api/conversations/:id`
@@ -229,7 +229,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
         - Entity extension of: `tasks-core` (table `conversations_ext_category`)
       - Exports (server):
-        - Values: `_conversationCategoryColors`, `_conversationCategoryExt`, `categoryColorsResource`, `classifyConversationJob`, `conversationCategoriesResource`
+        - Values: `_conversationCategoryColors`, `categoryColorsResource`, `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`
       - Exports (shared):
         - Types: `ConversationCategoriesPayload`, `ConversationCategory`
         - Values: `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`
@@ -251,7 +251,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/conversations/plugins/conversation-progress/server/internal/tables.ts`
         - Entity extension of: `tasks-core` (table `conversations_ext_progress`)
       - Exports (server):
-        - Values: `_conversationProgress`, `classifyProgressJob`, `conversationProgressResource`, `markProgressPushedJob`
+        - Values: `classifyProgressJob`, `conversationProgress`, `conversationProgressResource`, `markProgressPushedJob`
       - Contributes:
         - `conversationPane.Actions` → `ProgressBarToolbar`
         - `Item.Chips` → `ProgressBarRow`
@@ -497,7 +497,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/turn-summary/server/internal/tables.ts`
             - Entity extension of: `tasks-core` (table `conversations_ext_turn_summary`)
           - Exports (server):
-            - Values: `_turnSummaries`, `generateTurnSummaryJob`, `turnSummariesResource`
+            - Values: `generateTurnSummaryJob`, `turnSummaries`, `turnSummariesResource`
           - Exports (shared):
             - Types: `TurnSummariesPayload`, `TurnSummary`
             - Values: `TurnSummariesPayloadSchema`, `turnSummariesResource`, `turnSummaryConfig`, `TurnSummarySchema`
@@ -546,7 +546,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`
             - Entity extension of: `tasks-core` (table `conversations_ext_queue`)
           - Exports (server):
-            - Values: `_conversationsExtQueue`, `endRank`, `positionTwoRank`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterN`, `rankForBottom`, `rankForTop`, `seedRankJob`
+            - Values: `conversationsQueue`, `endRank`, `positionTwoRank`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterN`, `rankForBottom`, `rankForTop`, `seedRankJob`
           - Contributes:
             - `ConversationsView.View` "Queue" → `QueueView`
           - Server:
@@ -745,12 +745,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `Attachment`, `UploadedAttachment`
         - Values: `listAttachments`, `uploadAttachment`
       - Exports (server):
-        - Values: `_attachments`, `Attachments`, `deleteAttachment`, `getAttachment`, `syncOwnerAttachments`
+        - Types: `AttachmentLink`
+        - Values: `_attachments`, `Attachments`, `deleteAttachment`, `getAttachment`
       - Server:
         - `POST /api/attachments`
         - `GET /api/attachments/:id`
         - `DELETE /api/attachments/:id`
-      - Endpoint callers: `agents`, `conversations`, `paste-images`, `quick-prompts`, `screenshot`, `task-attachments`, `tasks-core`
+      - Endpoint callers: `agents`, `conversations`, `paste-images`, `quick-prompts`, `screenshot`, `task-attachments`
     - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
       - Defines:
         - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
@@ -771,7 +772,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Defines:
         - DB schema: `plugins/infra/plugins/entity-extensions/server/internal/define-extension.ts`
       - Exports (server):
-        - Values: `defineExtension`, `EntityExtensions`, `getExtension`, `upsertExtension`
+        - Types: `EntityExtension`
+        - Values: `defineExtension`, `EntityExtensions`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
       - Defines:
         - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`
@@ -1046,7 +1048,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `attemptsResource`, `pushesResource`, `tasksResource`
   - Server:
     - Register: `addTaskTool`, `pushIngestJob`
-    - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core._taskAttachments`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.taskStatusChanged`, `tasks-core.updateTask`
+    - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.taskAttachments`, `tasks-core.taskStatusChanged`, `tasks-core.updateTask`
     - `GET /api/tasks`
     - `POST /api/tasks`
     - `POST /api/tasks/chain`
@@ -1068,7 +1070,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `TaskAutoStartRow`
         - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`, `useTaskAutoStart`
       - Exports (server):
-        - Values: `_tasksAutoStartExt`, `claimAutoStart`, `getTaskAutoStart`, `setTaskAutoStart`, `tasksAutoStartResource`
+        - Values: `claimAutoStart`, `getTaskAutoStart`, `setTaskAutoStart`, `tasksAutoStartResource`
       - Exports (shared):
         - Types: `TaskAutoStartRow`
         - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`
@@ -1143,7 +1145,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/tasks-core/server/internal/tables.ts`
   - Exports (server):
     - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskStatus`, `TaskStatusChangedPayload`, `UpdateConversationPatch`, `UpdateTaskPatch`
-    - Values: `_conversationAttachments`, `_conversations`, `_pushLandedTriggers`, `_taskAttachments`, `_tasks`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `emitStatusChangeIfChanged`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listAttempts`, `listAttemptsForTask`, `listConversationsForDisplay`, `listConversationsForInfra`, `listGoneConversations`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `updateConversation`, `updateConversationsTitleForTask`, `updateTask`, `updateTaskTitle`
+    - Values: `_conversations`, `_pushLandedTriggers`, `_tasks`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `conversationAttachments`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteConversationRow`, `deleteTask`, `emitStatusChangeIfChanged`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listAttempts`, `listAttemptsForTask`, `listConversationsForDisplay`, `listConversationsForInfra`, `listGoneConversations`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskAttachments`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `updateConversation`, `updateConversationsTitleForTask`, `updateTask`, `updateTaskTitle`
   - Exports (shared):
     - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
