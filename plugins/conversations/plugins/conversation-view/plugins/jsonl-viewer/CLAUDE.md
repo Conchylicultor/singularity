@@ -12,11 +12,11 @@
   - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`
 - Exports (shared):
   - Types: `JsonlEvent`, `JsonlEventsResponse`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`
-  - Values: `jsonlEventsResource`
+  - Values: `JsonlEventsPayloadSchema`, `jsonlEventsResource`
 - Contributes:
   - `JsonlViewer.RowAction` → `RawJsonAction`
 - Server:
-  - Uses: `conversations.findTranscriptPath`, `tasks-core.getConversationClaudeSessionId`
+  - Uses: `tasks-core.getConversationClaudeSessionId`
   - Resources: `jsonl-events` (push)
 - Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `summary`, `system`, `tool-call`, `user-image`, `user-text`
 - Sub-plugins:

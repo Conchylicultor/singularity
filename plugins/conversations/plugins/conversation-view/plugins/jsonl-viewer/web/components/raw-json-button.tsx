@@ -4,7 +4,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { JsonlEvent } from "../../shared";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
 import { rowActionClass } from "./row-action-button";
 
 export function RawJsonAction({ event }: { event: JsonlEvent }) {

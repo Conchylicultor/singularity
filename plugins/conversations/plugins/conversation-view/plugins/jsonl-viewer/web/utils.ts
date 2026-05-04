@@ -1,5 +1,5 @@
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import type { TokenUsage } from "../shared";
+import type { TokenUsage } from "@plugins/conversations/plugins/transcript-watcher/shared";
 
 function isToday(d: Date): boolean {
   const now = new Date();

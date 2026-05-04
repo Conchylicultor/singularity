@@ -6,7 +6,8 @@ import {
 } from "@plugins/primitives/plugins/auto-scroll/web";
 
 import type { Conversation } from "@plugins/conversations/shared";
-import { jsonlEventsResource, type JsonlEvent } from "../../shared";
+import { jsonlEventsResource } from "../../shared";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";

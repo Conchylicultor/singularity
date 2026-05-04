@@ -4,8 +4,8 @@ import {
   getConversationRuntime,
   getConversationClaudeSessionId,
 } from "@plugins/tasks-core/server";
+import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
 import {
-  findTranscriptPath,
   readTurns,
   rewindLastUserTurn,
   type Turn,

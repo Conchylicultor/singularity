@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from "react";
-import type { JsonlEvent } from "../../shared";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
 
 const LastAssistantContext = createContext<JsonlEvent | null>(null);
 

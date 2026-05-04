@@ -1,42 +1,20 @@
 import { sql } from "drizzle-orm";
 import { isActiveStatus } from "../../shared";
-import {
-  getConversationClaudeSessionId,
-  listConversationsForInfra,
-} from "@plugins/tasks-core/server";
+import { listConversationsForInfra } from "@plugins/tasks-core/server";
 import { db, isTransientPgError } from "@server/db/client";
-import { findTranscriptPath } from "./claude-transcript";
+import { watchTranscript } from "@plugins/conversations/plugins/transcript-watcher/server";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
 import {
   _conversationTurnCompletedTriggers,
   conversationTurnCompleted,
 } from "./tables-turn-completed-event";
 
-// Poll cadence for the always-on end_turn emitter. We want durable workflows
-// waiting on `conversation.turn-completed` to resume promptly, but we also
-// don't want to thrash the filesystem — 500ms is the same budget the UI-side
-// JSONL viewer uses for its watchers, so the two are in line.
-const POLL_MS = 500;
+// Poll cadence for active-conversation discovery. File reads are now
+// event-driven (transcript-watcher); this loop only manages subscriptions.
+const POLL_MS = 5_000;
 
-interface RoomState {
-  claudeSessionId: string | null;
-  transcriptPath: string | null;
-  lastMtimeMs: number;
-  emittedEndTurnIds: Set<string>;
-  /**
-   * First successful read PRIMES the dedupe set without emitting in the
-   * default case: we can't tell which turns predate server start vs landed
-   * during a restart, and re-firing an already-past turn would wrongly
-   * resolve a waitFor from another in-flight workflow. EXCEPTION: if there
-   * is a pending durable-jobs trigger row matching this conversationId,
-   * we replay the most recent end_turn so a workflow that suspended just
-   * before the restart can resume — the wait was registered specifically
-   * for this conversation, so re-emitting cannot cross-pollinate other
-   * subscribers.
-   */
-  hasPrimed: boolean;
-}
-
-const rooms = new Map<string, RoomState>();
+// conversationId → unsubscribe
+const subscriptions = new Map<string, () => void>();
 
 let timer: ReturnType<typeof setInterval> | null = null;
 
@@ -51,7 +29,8 @@ export function stopTurnEmitter(): void {
     clearInterval(timer);
     timer = null;
   }
-  rooms.clear();
+  for (const unsub of subscriptions.values()) unsub();
+  subscriptions.clear();
 }
 
 async function tick(): Promise<void> {
@@ -71,109 +50,78 @@ async function tick(): Promise<void> {
     activeIds.add(c.id);
   }
 
-  // Evict rooms for conversations that are no longer active (gone/deleted).
-  for (const id of rooms.keys()) {
-    if (!activeIds.has(id)) rooms.delete(id);
+  // Unsubscribe from conversations that are no longer active.
+  for (const id of subscriptions.keys()) {
+    if (!activeIds.has(id)) {
+      subscriptions.get(id)?.();
+      subscriptions.delete(id);
+    }
   }
 
-  await Promise.all(
-    [...activeIds].map((id) =>
-      pollRoom(id).catch((err) => {
-        if (isTransientPgError(err)) return;
-        console.error(`[conversations.turn-emitter] ${id} tick failed`, err);
-      }),
-    ),
-  );
+  // Subscribe to newly active conversations.
+  for (const id of activeIds) {
+    if (!subscriptions.has(id)) {
+      subscriptions.set(id, subscribeToConversation(id));
+    }
+  }
 }
 
-async function pollRoom(conversationId: string): Promise<void> {
-  let room = rooms.get(conversationId);
-  if (!room) {
-    room = {
-      claudeSessionId: null,
-      transcriptPath: null,
-      lastMtimeMs: 0,
-      emittedEndTurnIds: new Set(),
-      hasPrimed: false,
-    };
-    rooms.set(conversationId, room);
-  }
+type EndTurnEvent = Extract<JsonlEvent, { kind: "assistant-text" }> & {
+  messageId: string;
+};
 
-  if (room.claudeSessionId === null) {
-    const sid = await getConversationClaudeSessionId(conversationId);
-    if (sid === undefined) return;
-    if (sid) room.claudeSessionId = sid;
-    else return;
-  }
-  if (!room.transcriptPath) {
-    const path = await findTranscriptPath(room.claudeSessionId);
-    if (!path) return;
-    room.transcriptPath = path;
-  }
+function subscribeToConversation(conversationId: string): () => void {
+  let hasPrimed = false;
+  const emittedIds = new Set<string>();
 
-  const file = Bun.file(room.transcriptPath);
-  if (!(await file.exists())) return;
-  const mtime = file.lastModified;
-  if (mtime === room.lastMtimeMs) return;
-  room.lastMtimeMs = mtime;
+  async function handleEvents(events: JsonlEvent[]): Promise<void> {
+    const endTurns = events.filter(
+      (e): e is EndTurnEvent =>
+        e.kind === "assistant-text" &&
+        e.stopReason === "end_turn" &&
+        typeof e.messageId === "string",
+    );
 
-  const lines = (await file.text()).split("\n");
-  const endTurns = extractEndTurns(lines);
-
-  if (!room.hasPrimed) {
-    for (const t of endTurns) room.emittedEndTurnIds.add(t.messageId);
-    room.hasPrimed = true;
-
-    if (endTurns.length > 0 && (await hasPendingTrigger(conversationId))) {
-      // A durable workflow is waiting on this conversation; the most recent
-      // end_turn is the candidate it would have woken on. The waiting
-      // handler re-checks the payload itself (token interpretation), so a
-      // false positive here just resumes the handler — it doesn't decide
-      // verdict.
-      const latest = endTurns[endTurns.length - 1];
-      if (latest) {
-        try {
-          await conversationTurnCompleted.emit({
-            conversationId,
-            stopReason: "end_turn",
-            text: latest.text,
-            messageId: latest.messageId,
-          });
-        } catch (err) {
-          console.error(
-            `[conversations.turn-emitter] prime-emit failed for ${conversationId}`,
-            err,
-          );
-        }
+    if (!hasPrimed) {
+      // First callback (seed read): populate dedupe set without emitting.
+      // Exception: if a durable job is waiting on this conversation, replay
+      // the most recent end_turn so it can resume after a server restart.
+      for (const t of endTurns) emittedIds.add(t.messageId);
+      hasPrimed = true;
+      if (endTurns.length > 0 && (await hasPendingTrigger(conversationId))) {
+        const latest = endTurns[endTurns.length - 1];
+        if (latest) await emitEndTurn(conversationId, latest);
       }
+      return;
     }
-    return;
+
+    for (const t of endTurns) {
+      if (emittedIds.has(t.messageId)) continue;
+      emittedIds.add(t.messageId);
+      await emitEndTurn(conversationId, t);
+    }
   }
 
-  for (const turn of endTurns) {
-    if (room.emittedEndTurnIds.has(turn.messageId)) continue;
-    room.emittedEndTurnIds.add(turn.messageId);
-    try {
-      await conversationTurnCompleted.emit({
-        conversationId,
-        stopReason: "end_turn",
-        text: turn.text,
-        messageId: turn.messageId,
-      });
-    } catch (err) {
-      console.error(
-        `[conversations.turn-emitter] emit failed for ${conversationId}`,
-        err,
-      );
-    }
+  return watchTranscript(conversationId, (events) => {
+    void handleEvents(events);
+  });
+}
+
+async function emitEndTurn(conversationId: string, turn: EndTurnEvent): Promise<void> {
+  try {
+    await conversationTurnCompleted.emit({
+      conversationId,
+      stopReason: "end_turn",
+      text: turn.text,
+      messageId: turn.messageId,
+    });
+  } catch (err) {
+    console.error(`[conversations.turn-emitter] emit failed for ${conversationId}`, err);
   }
 }
 
 // A durable workflow is "waiting" on this conversation iff the events plugin
-// has at least one enabled trigger row keyed to it. We don't read the jobs
-// plugin's _jobWaits table directly — cross-plugin internal access is banned
-// and would also miss future consumers that wait on this event for non-jobs
-// reasons.
+// has at least one enabled trigger row keyed to it.
 async function hasPendingTrigger(conversationId: string): Promise<boolean> {
   const result = await db.execute<{ id: string }>(
     sql`SELECT id FROM ${_conversationTurnCompletedTriggers}
@@ -181,61 +129,4 @@ async function hasPendingTrigger(conversationId: string): Promise<boolean> {
         LIMIT 1`,
   );
   return result.rows.length > 0;
-}
-
-interface EndTurn {
-  messageId: string;
-  text: string;
-}
-
-// Lightweight re-parse: we only need end-turn assistant messages with a
-// message.id and concatenated text. Mirrors the merging logic in
-// parse-jsonl.ts without pulling in that plugin (cross-plugin internal
-// imports are forbidden).
-function extractEndTurns(lines: string[]): EndTurn[] {
-  const byId = new Map<string, { text: string; stopReason?: string }>();
-
-  for (const line of lines) {
-    if (!line) continue;
-    let obj: Record<string, unknown>;
-    try {
-      obj = JSON.parse(line);
-    } catch {
-      continue;
-    }
-    if (obj.type !== "assistant") continue;
-    const msg = obj.message as
-      | {
-          role?: string;
-          content?: unknown;
-          id?: string;
-          stop_reason?: string;
-        }
-      | undefined;
-    if (!msg || msg.role !== "assistant" || !Array.isArray(msg.content)) continue;
-    const id = msg.id;
-    if (!id) continue;
-
-    let rec = byId.get(id);
-    if (!rec) {
-      rec = { text: "" };
-      byId.set(id, rec);
-    }
-    for (const block of msg.content as Array<{ type?: string; text?: string }>) {
-      if (block?.type === "text" && typeof block.text === "string") {
-        rec.text += block.text;
-      }
-    }
-    if (typeof msg.stop_reason === "string" && !rec.stopReason) {
-      rec.stopReason = msg.stop_reason;
-    }
-  }
-
-  const out: EndTurn[] = [];
-  for (const [id, rec] of byId) {
-    if (rec.stopReason === "end_turn") {
-      out.push({ messageId: id, text: rec.text });
-    }
-  }
-  return out;
 }

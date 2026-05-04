@@ -37,6 +37,7 @@ import conversationsRuntimeApiPlugin from "@plugins/conversations/plugins/runtim
 import conversationsRuntimeTmuxPlugin from "@plugins/conversations/plugins/runtime-tmux/server";
 import conversationsSummaryPlugin from "@plugins/conversations/plugins/summary/server";
 import conversationsTranscriptApiPlugin from "@plugins/conversations/plugins/transcript-api/server";
+import conversationsTranscriptWatcherPlugin from "@plugins/conversations/plugins/transcript-watcher/server";
 import conversationsPlugin from "@plugins/conversations/server";
 import crashesPlugin from "@plugins/crashes/server";
 import debugDbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
@@ -99,6 +100,7 @@ export const plugins: ServerPluginDefinition[] = [
   conversationsRuntimeTmuxPlugin,
   conversationsSummaryPlugin,
   conversationsTranscriptApiPlugin,
+  conversationsTranscriptWatcherPlugin,
   conversationsPlugin,
   crashesPlugin,
   debugDbBackupPlugin,

@@ -1,4 +1,4 @@
-import type { TokenUsage } from "../../shared";
+import type { TokenUsage } from "@plugins/conversations/plugins/transcript-watcher/shared";
 import { formatTokenCount, tokenUsageTooltip } from "../utils";
 
 export function TokenBadge({ usage }: { usage: TokenUsage }) {

@@ -1,5 +1,6 @@
 import { getConversationClaudeSessionId } from "@plugins/tasks-core/server";
-import { findTranscriptPath, readTurns } from "./claude-transcript";
+import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
+import { readTurns } from "./claude-transcript";
 
 export async function handleListTurns(
   req: Request,

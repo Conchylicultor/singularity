@@ -9,7 +9,7 @@ import { recordCrash } from "@plugins/crashes/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { isTransientPgError } from "@server/db/client";
 import { Runtime, type RuntimeInfo } from "./runtime";
-import { findTranscriptPath } from "./claude-transcript";
+import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { ConversationStatus } from "../../shared";
 
 function liveStatusFor(info: RuntimeInfo): ConversationStatus {

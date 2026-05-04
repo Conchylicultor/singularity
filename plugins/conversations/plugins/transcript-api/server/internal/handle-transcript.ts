@@ -1,5 +1,5 @@
 import { getConversationClaudeSessionId } from "@plugins/tasks-core/server";
-import { findTranscriptPath } from "@plugins/conversations/server";
+import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
 
 export async function handleTranscript(
   _req: Request,

@@ -1,9 +1,11 @@
 import { defineResource } from "@server/resources";
-import { findTranscriptPath } from "@plugins/conversations/server";
+import {
+  findTranscriptPath,
+  readJsonlEvents,
+  watchTranscript,
+} from "@plugins/conversations/plugins/transcript-watcher/server";
 import { getConversationClaudeSessionId } from "@plugins/tasks-core/server";
 import { JsonlEventsPayloadSchema } from "../../shared/protocol";
-import { readJsonlEvents } from "./parse-jsonl";
-import { watchJsonl } from "./watch-jsonl";
 
 type Params = { id: string };
 
@@ -22,7 +24,7 @@ export const jsonlEventsResource = defineResource({
   },
   async onFirstSubscribe({ id }: Params) {
     if (unsubscribes.has(id)) return;
-    const unsub = watchJsonl(id, () => {
+    const unsub = watchTranscript(id, () => {
       jsonlEventsResource.notify({ id });
     });
     unsubscribes.set(id, unsub);

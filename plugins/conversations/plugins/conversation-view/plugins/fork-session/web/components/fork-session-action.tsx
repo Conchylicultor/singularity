@@ -1,5 +1,5 @@
 import { MdPlayArrow } from "react-icons/md";
-import type { JsonlEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/shared";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
 import {
   useLastAssistantEvent,
   RowActionButton,

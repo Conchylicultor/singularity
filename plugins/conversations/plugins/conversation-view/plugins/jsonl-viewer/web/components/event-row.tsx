@@ -1,4 +1,4 @@
-import type { JsonlEvent } from "../../shared";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
 import { JsonlViewer } from "../slots";
 import { RowMarkdownProvider } from "./row-markdown-context";
 

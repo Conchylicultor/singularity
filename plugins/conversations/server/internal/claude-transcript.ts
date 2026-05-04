@@ -1,5 +1,3 @@
-import { CLAUDE_PROJECTS_DIR as PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
-
 export type TurnRole = "user" | "assistant";
 
 export interface Turn {
@@ -12,24 +10,6 @@ export interface Turn {
   stopReason?: string;
   /** Assistant-only message id; equal-id events are merged into one turn. */
   messageId?: string;
-}
-
-// Cache positive matches only. Sessions are stable once found; negative
-// lookups happen before Claude has written anything and should retry.
-const pathCache = new Map<string, string>();
-
-export async function findTranscriptPath(
-  sessionId: string,
-): Promise<string | null> {
-  const cached = pathCache.get(sessionId);
-  if (cached) return cached;
-  const glob = new Bun.Glob(`*/${sessionId}.jsonl`);
-  for await (const rel of glob.scan({ cwd: PROJECTS_DIR, onlyFiles: true })) {
-    const full = `${PROJECTS_DIR}/${rel}`;
-    pathCache.set(sessionId, full);
-    return full;
-  }
-  return null;
 }
 
 export async function rewindLastUserTurn(path: string): Promise<string | null> {

@@ -352,6 +352,10 @@
     "plugins/conversations/plugins/transcript-api": {
       "name": "@singularity/plugin-conversations-transcript-api",
     },
+    "plugins/conversations/plugins/transcript-watcher": {
+      "name": "@singularity/plugin-conversations-transcript-watcher",
+      "version": "0.0.1",
+    },
     "plugins/crashes": {
       "name": "@singularity/plugin-crashes",
       "version": "0.0.1",
@@ -1402,6 +1406,8 @@
     "@singularity/plugin-conversations-summary": ["@singularity/plugin-conversations-summary@workspace:plugins/conversations/plugins/summary"],
 
     "@singularity/plugin-conversations-transcript-api": ["@singularity/plugin-conversations-transcript-api@workspace:plugins/conversations/plugins/transcript-api"],
+
+    "@singularity/plugin-conversations-transcript-watcher": ["@singularity/plugin-conversations-transcript-watcher@workspace:plugins/conversations/plugins/transcript-watcher"],
 
     "@singularity/plugin-core": ["@singularity/plugin-core@workspace:plugin-core"],
 
