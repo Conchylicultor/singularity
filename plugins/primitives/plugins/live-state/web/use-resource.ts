@@ -6,6 +6,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import { NotificationsClient, queryKeyFor } from "./notifications-client";
+import type { ChannelStatuses } from "./notifications-client";
 import type { ResourceDescriptor } from "../shared/resource";
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
 
@@ -60,6 +61,14 @@ export function useNotificationsStatus(): WsStatus {
   const [status, setStatus] = useState(() => client.getStatus());
   useEffect(() => client.subscribeStatus(setStatus), [client]);
   return status;
+}
+
+export function useNotificationsChannelStatuses(): ChannelStatuses {
+  const client = useContext(NotificationsContext);
+  if (!client) throw new Error("useNotificationsChannelStatuses must be inside NotificationsProvider");
+  const [statuses, setStatuses] = useState(() => client.getChannelStatuses());
+  useEffect(() => client.subscribeChannelStatuses(setStatuses), [client]);
+  return statuses;
 }
 
 // AGENT RULE: Never cast the `data` returned by useResource (e.g. `data as Foo[]`).

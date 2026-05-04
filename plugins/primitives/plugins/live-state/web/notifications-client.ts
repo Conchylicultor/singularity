@@ -26,6 +26,8 @@ const WS_URLS = {
 
 type SocketKind = keyof typeof WS_URLS;
 
+export type ChannelStatuses = { worktree: WsStatus; central: WsStatus };
+
 function socketKindFor(origin: ResourceOrigin | undefined): SocketKind {
   return origin === "central" ? "central" : "worktree";
 }
@@ -83,6 +85,7 @@ export class NotificationsClient {
   private schemas = new Map<string, ZodType<unknown>>();
   private channelStatuses = new Map<string, WsStatus>();
   private statusListeners = new Set<(s: WsStatus) => void>();
+  private channelStatusListeners = new Set<(s: ChannelStatuses) => void>();
   private unsubscribeFromBus: () => void;
 
   constructor(private queryClient: QueryClient) {
@@ -96,6 +99,8 @@ export class NotificationsClient {
       this.channelStatuses.set(url, status);
       const next = this.getStatus();
       for (const fn of this.statusListeners) fn(next);
+      const channels = this.getChannelStatuses();
+      for (const fn of this.channelStatusListeners) fn(channels);
     });
   }
 
@@ -112,6 +117,19 @@ export class NotificationsClient {
     fn(this.getStatus());
     this.statusListeners.add(fn);
     return () => this.statusListeners.delete(fn);
+  }
+
+  getChannelStatuses(): ChannelStatuses {
+    return {
+      worktree: this.channelStatuses.get(WS_URLS.worktree) ?? "connecting",
+      central: this.channelStatuses.get(WS_URLS.central) ?? "connecting",
+    };
+  }
+
+  subscribeChannelStatuses(fn: (s: ChannelStatuses) => void): () => void {
+    fn(this.getChannelStatuses());
+    this.channelStatusListeners.add(fn);
+    return () => this.channelStatusListeners.delete(fn);
   }
 
   destroy(): void {

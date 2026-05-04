@@ -890,8 +890,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `LaunchButtons`, `useLaunchConversation`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
       - Exports (web):
-        - Types: `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`
-        - Values: `centralResourceDescriptor`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useNotificationsStatus`, `useResource`
+        - Types: `ChannelStatuses`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`
+        - Values: `centralResourceDescriptor`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useNotificationsChannelStatuses`, `useNotificationsStatus`, `useResource`
       - Exports (shared):
         - Types: `ResourceDescriptor`, `ResourceOrigin`
         - Values: `centralResourceDescriptor`, `resourceDescriptor`
