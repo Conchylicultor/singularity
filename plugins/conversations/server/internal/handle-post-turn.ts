@@ -1,9 +1,12 @@
 import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { syncOwnerAttachments } from "@plugins/infra/plugins/attachments/server";
-import { _conversationAttachments } from "@plugins/tasks-core/server";
+import { _conversationAttachments, getConversation, getTask } from "@plugins/tasks-core/server";
+import { scheduleTaskTitleUpdate } from "@plugins/tasks/plugins/task-title/server";
 import { sendTurn } from "./runtime";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
+
+const UNINFORMATIVE_TITLES = ["Untitled", "Untitled conversation"];
 
 // JSON only: { text: string }. The text is markdown that may contain
 // `![](/api/attachments/<id>)` refs; we resolve those into `@<disk-path>`
@@ -59,5 +62,20 @@ export async function handlePostTurn(
     }
     throw err;
   }
+
+  // If the conversation was started with no prompt (task title is still
+  // uninformative), upgrade it with this first real turn text.
+  void (async () => {
+    try {
+      const conv = await getConversation(id);
+      if (!conv) return;
+      const task = await getTask(conv.taskId);
+      if (!task || !UNINFORMATIVE_TITLES.includes(task.title)) return;
+      scheduleTaskTitleUpdate(conv.taskId, body.text as string, task.title);
+    } catch (err) {
+      console.warn("[conversations] turn title upgrade failed:", err);
+    }
+  })();
+
   return Response.json({ ok: true, attachmentIds });
 }
