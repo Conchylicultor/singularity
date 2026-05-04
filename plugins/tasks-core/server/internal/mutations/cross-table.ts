@@ -41,7 +41,7 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
         id: taskId,
         parentId: CONVERSATIONS_META_TASK_ID,
         title: input.title?.trim() || "Untitled",
-        rank,
+        rank: rank.toJSON(),
       });
     await tx
       .insert(_attempts)

@@ -18,6 +18,7 @@ import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui
 import type { Conversation } from "@plugins/tasks-core/shared";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { queueRanksResource } from "../../shared/resources";
+import { Rank } from "@plugins/primitives/plugins/rank/shared";
 import {
   SidebarMenu,
   SidebarMenuAction,
@@ -107,7 +108,7 @@ export function QueueView({
   // Waiting conversations with no rank entry yet go into `unranked`.
   const { deck, unranked } = useMemo(() => {
     const ranks = new Map((rankRows ?? []).map((r) => [r.conversationId, r.rank]));
-    const ranked: Array<Conversation & { rank: string }> = [];
+    const ranked: Array<Conversation & { rank: Rank }> = [];
     const noRank: Conversation[] = [];
     for (const c of active) {
       if (c.status !== "waiting") continue;
@@ -119,7 +120,7 @@ export function QueueView({
       }
     }
     return {
-      deck: ranked.sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0)),
+      deck: ranked.sort((a, b) => Rank.compare(a.rank, b.rank)),
       unranked: noRank,
     };
   }, [active, rankRows]);

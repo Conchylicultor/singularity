@@ -11,7 +11,7 @@ import {
   type DraggableAttributes,
   type DraggableSyntheticListeners,
 } from "@dnd-kit/core";
-import { generateKeyBetween } from "fractional-indexing";
+import { Rank } from "@plugins/primitives/plugins/rank/shared";
 import type { TreeNode } from "../../shared";
 import { pendingFocus } from "./pending-focus";
 import type { TreeItem } from "./types";
@@ -26,7 +26,7 @@ export type TreeListContextValue<T extends TreeItem> = {
   onToggleExpanded: (id: string, next: boolean) => void | Promise<void>;
   onCreate: (args: {
     parentId: string | null;
-    rank?: string;
+    rank?: Rank;
   }) => Promise<string | null | undefined>;
   Row: (props: { node: TreeNode<T>; depth: number }) => ReactNode;
 };
@@ -134,14 +134,14 @@ export function useTreeRow<T extends TreeItem>(
   const addBelow = useCallback(async () => {
     const siblings = ctx.rows
       .filter((r) => r.parentId === node.parentId)
-      .sort((a, b) => a.rank.localeCompare(b.rank));
+      .sort((a, b) => Rank.compare(a.rank, b.rank));
     const idx = siblings.findIndex((s) => s.id === node.id);
     const next = siblings[idx + 1];
-    let rank: string;
+    let rank: Rank;
     try {
-      rank = generateKeyBetween(node.rank, next?.rank ?? null);
+      rank = Rank.between(node.rank, next?.rank ?? null);
     } catch {
-      rank = generateKeyBetween(node.rank, null);
+      rank = Rank.between(node.rank, null);
     }
     const id = await ctx.onCreate({ parentId: node.parentId, rank });
     if (!id) return;

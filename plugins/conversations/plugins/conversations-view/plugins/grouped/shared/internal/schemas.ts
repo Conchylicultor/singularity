@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/shared";
+import { RankSchema } from "@plugins/primitives/plugins/rank/shared";
 
 export const ConversationGroupSchema = z.object({
   id: z.string(),
   title: z.string(),
   expanded: z.boolean(),
-  rank: z.string(),
+  rank: RankSchema,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -14,7 +15,7 @@ export type ConversationGroup = z.infer<typeof ConversationGroupSchema>;
 export const ConversationGroupMemberSchema = z.object({
   conversationId: z.string(),
   groupId: z.string(),
-  rank: z.string(),
+  rank: RankSchema,
 });
 export type ConversationGroupMember = z.infer<typeof ConversationGroupMemberSchema>;
 

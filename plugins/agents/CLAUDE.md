@@ -30,7 +30,7 @@
   - `Agents.AgentActions` → `DeleteAgentAction`
 - Server:
   - Uses: `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
-  - Resources: `agent-launches` (push), `agents` (push)
+  - Resources: `agent-launches` (push)
   - `GET /api/agents`
   - `POST /api/agents`
   - `GET /api/agents/:id`

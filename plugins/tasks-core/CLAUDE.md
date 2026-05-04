@@ -20,7 +20,7 @@
   - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
 - Server:
   - Register: `pushLanded`, `taskStatusChanged`
-  - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
+  - Resources: `attempts` (push), `conversations` (push), `pushes` (push)
 - Imported by: `active-data`, `agents`, `allow-monitor`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `task-title`, `tasks`, `transcript-api`, `turn-summary`, `worktree-cleanup`
 - Extended by: `conversation-category` (table `conversations_ext_category`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`)
 

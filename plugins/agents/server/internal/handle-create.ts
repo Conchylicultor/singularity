@@ -28,7 +28,7 @@ export async function handleCreate(req: Request): Promise<Response> {
       model: body.model ?? null,
       icon: body.icon ?? null,
       iconColor: body.iconColor ?? null,
-      rank,
+      rank: rank.toJSON(),
     })
     .returning();
   if (parentId) {

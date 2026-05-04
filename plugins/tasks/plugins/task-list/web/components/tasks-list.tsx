@@ -14,6 +14,7 @@ import { patchTask, setAutoStart } from "@plugins/tasks/web";
 import { Tasks as TasksSlots } from "../slots";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import { cn } from "@/lib/utils";
+import type { Rank } from "@plugins/primitives/plugins/rank/shared";
 
 type Task = TreeItem & {
   title: string;
@@ -22,7 +23,7 @@ type Task = TreeItem & {
 
 async function createTaskRow(args: {
   parentId: string | null;
-  rank?: string;
+  rank?: Rank;
 }): Promise<string | null> {
   const res = await fetch("/api/tasks", {
     method: "POST",

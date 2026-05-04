@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ConversationStatusSchema } from "@plugins/conversations/shared";
+import { RankSchema } from "@plugins/primitives/plugins/rank/shared";
 
 // Pure Zod schemas for agent types — no drizzle imports, safe to use in
 // shared/ and web/. The server schema.ts imports from here and wraps with
@@ -15,7 +16,7 @@ export const AgentSchema = z.object({
   icon: z.string().nullable(),
   iconColor: z.string().nullable(),
   expanded: z.boolean(),
-  rank: z.string(),
+  rank: RankSchema,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   isFolder: z.boolean(),

@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@server/db/client";
 import { defineResource } from "@server/resources";
+import type { Rank } from "@plugins/primitives/plugins/rank/shared";
 import {
   ReorderSlotPrefsSchema,
   type ReorderSlotPrefs,
@@ -23,7 +24,7 @@ export const reorderPrefsResource = defineResource<
       .from(_reorderPrefs)
       .where(eq(_reorderPrefs.slotId, slotId));
     const out: ReorderSlotPrefs = {};
-    for (const r of rows) out[r.contributionId] = { rank: r.rank };
+    for (const r of rows) out[r.contributionId] = { rank: r.rank as unknown as Rank };
     return out;
   },
 });

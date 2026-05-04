@@ -1,5 +1,6 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { nextRankUnder, type RankExecutor } from "@plugins/primitives/plugins/rank/server";
+import type { Rank } from "@plugins/primitives/plugins/rank/shared";
 import { db } from "@server/db/client";
 import { _taskDependencies, _tasks } from "../tables";
 import { attempts, tasks } from "../schema";
@@ -10,10 +11,10 @@ export interface TaskFilters {
 }
 
 export async function listTasks(filters?: TaskFilters): Promise<Task[]> {
-  const rows = await db
+  const rows = (await db
     .select()
     .from(tasks)
-    .orderBy(asc(tasks.rank), asc(tasks.createdAt));
+    .orderBy(asc(tasks.rank), asc(tasks.createdAt))) as unknown as Task[];
   if (filters?.excludeId) {
     return rows.filter((r) => r.id !== filters.excludeId);
   }
@@ -21,7 +22,7 @@ export async function listTasks(filters?: TaskFilters): Promise<Task[]> {
 }
 
 export async function getTask(id: string): Promise<Task | null> {
-  const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+  const [row] = (await db.select().from(tasks).where(eq(tasks.id, id)).limit(1)) as unknown as Task[];
   return row ?? null;
 }
 
@@ -50,7 +51,7 @@ export async function hasBlockingDep(taskId: string): Promise<boolean> {
 export async function findNextRankUnder(
   parentId: string | null,
   executor: RankExecutor = db,
-): Promise<string> {
+): Promise<Rank> {
   return nextRankUnder(_tasks, _tasks.parentId, parentId, executor);
 }
 

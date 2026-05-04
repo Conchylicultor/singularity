@@ -7,6 +7,7 @@ import {
   type TreeItem,
 } from "@plugins/primitives/plugins/tree/web";
 import type { TreeNode } from "@plugins/primitives/plugins/tree/shared";
+import type { Rank } from "@plugins/primitives/plugins/rank/shared";
 import {
   Avatar,
   AVATAR_ICON_KEYS,
@@ -30,7 +31,7 @@ type AgentPatch = {
   name?: string;
   expanded?: boolean;
   parentId?: string | null;
-  rank?: string;
+  rank?: Rank;
 };
 
 export async function patchAgent(id: string, patch: AgentPatch) {
@@ -47,7 +48,7 @@ function randomFrom<T>(arr: readonly T[]): T {
 
 async function createAgentRow(args: {
   parentId: string | null;
-  rank?: string;
+  rank?: Rank;
 }): Promise<string | null> {
   const res = await fetch("/api/agents", {
     method: "POST",

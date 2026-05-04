@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, Fragment, type ReactNode } from "react";
-import { generateKeyBetween } from "fractional-indexing";
+import { Rank } from "@plugins/primitives/plugins/rank/shared";
 import {
   DndContext,
   DragOverlay,
@@ -261,7 +261,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
       if (prevGroupId === draggedGroupId || nextGroupId === draggedGroupId) return;
       const prevRank = prevGroupId ? (groups.find((g) => g.id === prevGroupId)?.rank ?? null) : null;
       const nextRank = nextGroupId ? (groups.find((g) => g.id === nextGroupId)?.rank ?? null) : null;
-      const newRank = generateKeyBetween(prevRank, nextRank);
+      const newRank = Rank.between(prevRank, nextRank);
       await fetch(`/api/conversation-groups/${draggedGroupId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

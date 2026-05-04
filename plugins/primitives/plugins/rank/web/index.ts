@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 
-export { generateKeyBetween } from "../shared";
+export { Rank, RankSchema } from "../shared";
 
 export default {
   id: "rank",

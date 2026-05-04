@@ -1,6 +1,6 @@
 import { desc, eq, isNull } from "drizzle-orm";
 import { type AnyPgColumn, type PgTable } from "drizzle-orm/pg-core";
-import { generateKeyBetween } from "fractional-indexing";
+import { Rank } from "@plugins/primitives/plugins/rank/shared";
 import { db } from "@server/db/client";
 
 export type RankExecutor =
@@ -11,13 +11,14 @@ export type RankExecutor =
 export async function nextRankIn(
   table: PgTable & { rank: AnyPgColumn },
   executor: RankExecutor = db,
-): Promise<string> {
+): Promise<Rank> {
   const [last] = await executor
     .select({ rank: table.rank })
     .from(table)
     .orderBy(desc(table.rank))
     .limit(1);
-  return generateKeyBetween((last as { rank: string } | undefined)?.rank ?? null, null);
+  const raw = (last as { rank: string } | undefined)?.rank ?? null;
+  return Rank.between(raw !== null ? Rank.from(raw) : null, null);
 }
 
 // Appends a new item after the last sibling sharing the same parent value.
@@ -28,12 +29,13 @@ export async function nextRankUnder(
   parentCol: AnyPgColumn,
   parentId: string | null,
   executor: RankExecutor = db,
-): Promise<string> {
+): Promise<Rank> {
   const [last] = await executor
     .select({ rank: table.rank })
     .from(table)
     .where(parentId === null ? isNull(parentCol) : eq(parentCol, parentId))
     .orderBy(desc(table.rank))
     .limit(1);
-  return generateKeyBetween((last as { rank: string } | undefined)?.rank ?? null, null);
+  const raw = (last as { rank: string } | undefined)?.rank ?? null;
+  return Rank.between(raw !== null ? Rank.from(raw) : null, null);
 }

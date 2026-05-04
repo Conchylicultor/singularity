@@ -18,6 +18,6 @@ export const launchPromptsServerResource = defineResource<LaunchPrompt[]>({
       })
       .from(launchPromptsTable)
       .orderBy(asc(launchPromptsTable.rank), asc(launchPromptsTable.createdAt));
-    return rows as LaunchPrompt[];
+    return rows as unknown as LaunchPrompt[];
   },
 });

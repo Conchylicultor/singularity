@@ -3,7 +3,7 @@ import { db } from "@server/db/client";
 import { defineResource } from "@server/resources";
 import { pushes } from "./tables";
 import { attempts, tasks } from "./schema";
-import { TaskSchema, PushSchema } from "./schema";
+import { TaskSchema, PushSchema, type Task } from "./schema";
 import type { ConversationSummary } from "../../shared";
 import {
   AttemptWithConversationsSchema,
@@ -81,11 +81,11 @@ export const attemptsResource = defineResource({
   },
 });
 
-export const tasksResource = defineResource({
+export const tasksResource = defineResource<Task[]>({
   key: "tasks",
   mode: "push",
   schema: z.array(TaskSchema),
   dependsOn: [{ resource: attemptsResource }],
   loader: async () =>
-    db.select().from(tasks).orderBy(asc(tasks.rank), asc(tasks.createdAt)),
+    db.select().from(tasks).orderBy(asc(tasks.rank), asc(tasks.createdAt)) as unknown as Promise<Task[]>,
 });

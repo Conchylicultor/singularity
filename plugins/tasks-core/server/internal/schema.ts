@@ -4,6 +4,7 @@ import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { _attempts, _conversations, _taskDependencies, _tasks, pushes } from "./tables";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/shared";
+import { RankSchema } from "@plugins/primitives/plugins/rank/shared";
 
 // Derived views + Zod schemas + types. All tables live in `./tables.ts` so
 // this file can import them without any cross-plugin dependency, eliminating
@@ -194,7 +195,7 @@ export const TaskSchema = createSelectSchema(_tasks, {
   updatedAt: z.coerce.date(),
   droppedAt: z.coerce.date().nullable(),
   heldAt: z.coerce.date().nullable(),
-  rank: z.string(),
+  rank: RankSchema,
 }).extend({
   status: TaskStatusSchema,
   active: z.boolean(),

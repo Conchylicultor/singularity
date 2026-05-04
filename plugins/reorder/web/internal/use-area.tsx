@@ -15,7 +15,7 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { generateKeyBetween } from "@plugins/primitives/plugins/rank/shared";
+import { Rank } from "@plugins/primitives/plugins/rank/shared";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { reorderPrefsResource } from "../../shared/resource";
 import {
@@ -98,7 +98,7 @@ export function useArea<P extends BaseItem>(
         if (ax && bx) return a.naturalIdx - b.naturalIdx;
         const ar = rankMap?.[a.item.id]?.rank ?? null;
         const br = rankMap?.[b.item.id]?.rank ?? null;
-        if (ar && br) return ar.localeCompare(br);
+        if (ar && br) return Rank.compare(ar, br);
         if (ar) return -1;
         if (br) return 1;
         return a.naturalIdx - b.naturalIdx;
@@ -150,9 +150,9 @@ export function useArea<P extends BaseItem>(
       const prevRank = prev ? (rm?.[prev.id]?.rank ?? null) : null;
       const nextRank = next ? (rm?.[next.id]?.rank ?? null) : null;
 
-      let newRank: string;
+      let newRank: Rank;
       try {
-        newRank = generateKeyBetween(prevRank, nextRank);
+        newRank = Rank.between(prevRank, nextRank);
       } catch {
         return;
       }

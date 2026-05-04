@@ -9,6 +9,7 @@ import {
   synthesiseTitleFallback,
 } from "@plugins/tasks/plugins/task-title/server";
 import { armTaskAutoStart } from "./arm-auto-start";
+import { Rank } from "@plugins/primitives/plugins/rank/shared";
 
 interface AutoStartInput {
   model?: "opus" | "sonnet";
@@ -38,7 +39,7 @@ export async function handleCreate(req: Request): Promise<Response> {
     title,
     description,
     author: body.author ?? "user",
-    rank: body.rank,
+    rank: body.rank ? Rank.from(body.rank) : undefined,
   });
 
   if (!explicitTitle && description && fallbackTitle) {

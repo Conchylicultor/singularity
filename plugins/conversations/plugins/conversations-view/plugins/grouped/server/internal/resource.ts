@@ -26,6 +26,6 @@ export const conversationGroupsResource = defineResource<ConversationGroupsPaylo
         .from(_conversationGroupMembers)
         .orderBy(asc(_conversationGroupMembers.rank)),
     ]);
-    return { groups, members };
+    return { groups, members } as unknown as ConversationGroupsPayload;
   },
 });

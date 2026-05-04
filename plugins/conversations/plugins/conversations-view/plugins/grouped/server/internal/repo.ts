@@ -1,5 +1,5 @@
 import { eq, inArray } from "drizzle-orm";
-import { generateKeyBetween } from "fractional-indexing";
+import { Rank } from "@plugins/primitives/plugins/rank/shared";
 import { db } from "@server/db/client";
 import { nextRankIn, nextRankUnder } from "@plugins/primitives/plugins/rank/server";
 import { _conversationGroupMembers, _conversationGroups } from "./tables";
@@ -22,7 +22,7 @@ export async function createGroupWithMembers(input: CreateGroupInput) {
   const title = input.title?.trim() || "Group";
   await db.transaction(async (tx) => {
     const rank = await nextRankIn(_conversationGroups, tx);
-    await tx.insert(_conversationGroups).values({ id, title, rank });
+    await tx.insert(_conversationGroups).values({ id, title, rank: rank.toJSON() });
     // If any of the incoming conversations are already in another group, the
     // PK on conversation_id will reject re-insert. We delete any existing
     // membership rows first so a "drop A onto B" call always lands A in the
@@ -30,13 +30,13 @@ export async function createGroupWithMembers(input: CreateGroupInput) {
     await tx
       .delete(_conversationGroupMembers)
       .where(inArray(_conversationGroupMembers.conversationId, input.conversationIds));
-    let prevRank: string | null = null;
+    let prevRank: Rank | null = null;
     for (const conversationId of input.conversationIds) {
-      const memberRank = generateKeyBetween(prevRank, null);
+      const memberRank = Rank.between(prevRank, null);
       await tx.insert(_conversationGroupMembers).values({
         conversationId,
         groupId: id,
-        rank: memberRank,
+        rank: memberRank.toJSON(),
       });
       prevRank = memberRank;
     }
@@ -59,10 +59,10 @@ export async function addMembersToGroup(groupId: string, conversationIds: string
       // group rather than rejected.
       await tx
         .insert(_conversationGroupMembers)
-        .values({ conversationId, groupId, rank })
+        .values({ conversationId, groupId, rank: rank.toJSON() })
         .onConflictDoUpdate({
           target: _conversationGroupMembers.conversationId,
-          set: { groupId, rank, createdAt: new Date() },
+          set: { groupId, rank: rank.toJSON(), createdAt: new Date() },
         });
     }
   });
@@ -86,14 +86,14 @@ export async function removeMember(conversationId: string): Promise<boolean> {
 export interface UpdateGroupPatch {
   title?: string;
   expanded?: boolean;
-  rank?: string;
+  rank?: Rank;
 }
 
 export async function updateGroup(id: string, patch: UpdateGroupPatch): Promise<boolean> {
   const dbPatch: Record<string, unknown> = { updatedAt: new Date() };
   if (typeof patch.title === "string") dbPatch.title = patch.title;
   if (typeof patch.expanded === "boolean") dbPatch.expanded = patch.expanded;
-  if (typeof patch.rank === "string" && patch.rank.length > 0) dbPatch.rank = patch.rank;
+  if (patch.rank instanceof Rank) dbPatch.rank = patch.rank.toJSON();
   const [row] = await db
     .update(_conversationGroups)
     .set(dbPatch)

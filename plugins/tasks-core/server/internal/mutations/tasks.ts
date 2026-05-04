@@ -5,6 +5,7 @@ import { tasks } from "../schema";
 import { tasksResource } from "../resources";
 import { findNextRankUnder, isDescendant, taskDependsOn } from "../queries/tasks";
 import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
+import { Rank } from "@plugins/primitives/plugins/rank/shared";
 
 export const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 
@@ -13,7 +14,7 @@ export interface CreateTaskInput {
   parentId?: string | null;
   title: string;
   author?: string;
-  rank?: string;
+  rank?: Rank;
   description?: string | null;
 }
 
@@ -24,7 +25,7 @@ export interface UpdateTaskPatch {
   hold?: boolean;
   expanded?: boolean;
   parentId?: string | null;
-  rank?: string;
+  rank?: Rank;
 }
 
 export async function createTask(input: CreateTaskInput) {
@@ -37,7 +38,7 @@ export async function createTask(input: CreateTaskInput) {
     parentId,
     title: input.title,
     author: input.author,
-    rank,
+    rank: rank.toJSON(),
     description: input.description ?? null,
   });
   if (parentId) {
@@ -80,8 +81,8 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
     }
     dbPatch.parentId = patch.parentId;
   }
-  if (typeof patch.rank === "string" && patch.rank.length > 0) {
-    dbPatch.rank = patch.rank;
+  if (patch.rank instanceof Rank) {
+    dbPatch.rank = patch.rank.toJSON();
   }
   // Snapshot status before the write so we can detect a flip
   // (typical: drop/hold transitions).
@@ -188,7 +189,7 @@ export async function ensureMetaTask(id: string, title: string): Promise<boolean
   const rank = await findNextRankUnder(null);
   const rows = await db
     .insert(_tasks)
-    .values({ id, title, rank })
+    .values({ id, title, rank: rank.toJSON() })
     .onConflictDoNothing({ target: _tasks.id })
     .returning({ id: _tasks.id });
   return rows.length === 1;

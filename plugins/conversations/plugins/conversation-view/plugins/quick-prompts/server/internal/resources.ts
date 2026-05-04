@@ -8,9 +8,10 @@ export const quickPromptsServerResource = defineResource<QuickPrompt[]>({
   key: "quick-prompts",
   mode: "push",
   async loader() {
-    return db
+    const rows = await db
       .select()
       .from(quickPromptsTable)
       .orderBy(asc(quickPromptsTable.rank), asc(quickPromptsTable.createdAt));
+    return rows as unknown as QuickPrompt[];
   },
 });

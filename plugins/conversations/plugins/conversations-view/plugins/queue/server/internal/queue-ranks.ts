@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, gt, lt, ne } from "drizzle-orm";
-import { generateKeyBetween } from "fractional-indexing";
+import { Rank } from "@plugins/primitives/plugins/rank/shared";
 import { db } from "@server/db/client";
 import { _conversations } from "@plugins/tasks-core/server";
 import { conversationsQueue } from "./tables";
@@ -19,29 +19,29 @@ function joinedWaiting() {
 }
 
 // End of deck: greater than every currently-waiting rank.
-export async function endRank(): Promise<string> {
+export async function endRank(): Promise<Rank> {
   const [last] = await joinedWaiting()
     .where(eq(_conversations.status, "waiting"))
     .orderBy(desc(_conversationsExtQueue.rank))
     .limit(1);
-  return generateKeyBetween(last?.rank ?? null, null);
+  return Rank.between(last?.rank ? Rank.from(last.rank as string) : null, null);
 }
 
 // Position 2 of the deck: between the current top and second-place ranks.
 // 0 waiting → returns any rank (becomes the only item).
 // 1 waiting → returns a rank after that single item.
-export async function positionTwoRank(): Promise<string> {
+export async function positionTwoRank(): Promise<Rank> {
   const top2 = await joinedWaiting()
     .where(eq(_conversations.status, "waiting"))
     .orderBy(asc(_conversationsExtQueue.rank))
     .limit(2);
-  const top = top2[0]?.rank ?? null;
-  const second = top2[1]?.rank ?? null;
-  return generateKeyBetween(top, second);
+  const top = top2[0]?.rank ? Rank.from(top2[0].rank as string) : null;
+  const second = top2[1]?.rank ? Rank.from(top2[1].rank as string) : null;
+  return Rank.between(top, second);
 }
 
 // Rank that places a conversation before all currently-waiting conversations.
-export async function rankForTop(excludeId: string): Promise<string> {
+export async function rankForTop(excludeId: string): Promise<Rank> {
   const [first] = await joinedWaiting()
     .where(
       and(
@@ -51,11 +51,11 @@ export async function rankForTop(excludeId: string): Promise<string> {
     )
     .orderBy(asc(_conversationsExtQueue.rank))
     .limit(1);
-  return generateKeyBetween(null, first?.rank ?? null);
+  return Rank.between(null, first?.rank ? Rank.from(first.rank as string) : null);
 }
 
 // Rank that places a conversation after all currently-waiting conversations.
-export async function rankForBottom(excludeId: string): Promise<string> {
+export async function rankForBottom(excludeId: string): Promise<Rank> {
   const [last] = await joinedWaiting()
     .where(
       and(
@@ -65,12 +65,12 @@ export async function rankForBottom(excludeId: string): Promise<string> {
     )
     .orderBy(desc(_conversationsExtQueue.rank))
     .limit(1);
-  return generateKeyBetween(last?.rank ?? null, null);
+  return Rank.between(last?.rank ? Rank.from(last.rank as string) : null, null);
 }
 
 // Rank that moves a conversation n positions down in the deck. Falls back to
 // rankForBottom when fewer than n items exist below the current position.
-export async function rankAfterN(conversationId: string, n: number): Promise<string> {
+export async function rankAfterN(conversationId: string, n: number): Promise<Rank> {
   const [self] = await db
     .select({ rank: _conversationsExtQueue.rank })
     .from(_conversationsExtQueue)
@@ -90,7 +90,10 @@ export async function rankAfterN(conversationId: string, n: number): Promise<str
     .limit(n + 1);
 
   if (rows.length < n) return rankForBottom(conversationId);
-  return generateKeyBetween(rows[n - 1].rank, rows[n]?.rank ?? null);
+  return Rank.between(
+    Rank.from(rows[n - 1].rank as string),
+    rows[n]?.rank ? Rank.from(rows[n].rank as string) : null,
+  );
 }
 
 // Rank that slots a conversation immediately before or after targetId in the
@@ -99,7 +102,7 @@ export async function rankAfterN(conversationId: string, n: number): Promise<str
 export async function rankAdjacentTo(
   targetId: string,
   zone: "before" | "after",
-): Promise<string> {
+): Promise<Rank> {
   const [target] = await db
     .select({ rank: _conversationsExtQueue.rank })
     .from(_conversationsExtQueue)
@@ -117,7 +120,7 @@ export async function rankAdjacentTo(
       )
       .orderBy(desc(_conversationsExtQueue.rank))
       .limit(1);
-    return generateKeyBetween(pred?.rank ?? null, target.rank);
+    return Rank.between(pred?.rank ? Rank.from(pred.rank as string) : null, Rank.from(target.rank as string));
   } else {
     const [succ] = await joinedWaiting()
       .where(
@@ -128,6 +131,6 @@ export async function rankAdjacentTo(
       )
       .orderBy(asc(_conversationsExtQueue.rank))
       .limit(1);
-    return generateKeyBetween(target.rank, succ?.rank ?? null);
+    return Rank.between(Rank.from(target.rank as string), succ?.rank ? Rank.from(succ.rank as string) : null);
   }
 }

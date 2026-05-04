@@ -1,10 +1,10 @@
-import { generateKeyBetween } from "fractional-indexing";
+import { Rank } from "@plugins/primitives/plugins/rank/shared";
 
 export type DropZone = "before" | "after" | "child";
 
 export type TreeNode<T> = T & { children: TreeNode<T>[] };
 
-type Node = { id: string; parentId: string | null; rank: string };
+type Node = { id: string; parentId: string | null; rank: Rank };
 
 export function buildTree<T extends Node>(rows: readonly T[]): TreeNode<T>[] {
   const byId = new Map<string, TreeNode<T>>();
@@ -42,19 +42,19 @@ export function computeDrop<T extends Node>(
   draggedId: string,
   zone: DropZone,
   targetId: string,
-): { parentId: string | null; rank: string } | null {
+): { parentId: string | null; rank: Rank } | null {
   const target = rows.find((r) => r.id === targetId);
   if (!target) return null;
 
   if (zone === "child") {
     const children = rows
       .filter((r) => r.parentId === target.id && r.id !== draggedId)
-      .sort((a, b) => a.rank.localeCompare(b.rank));
+      .sort((a, b) => Rank.compare(a.rank, b.rank));
     const last = children[children.length - 1];
     try {
       return {
         parentId: target.id,
-        rank: generateKeyBetween(last?.rank ?? null, null),
+        rank: Rank.between(last?.rank ?? null, null),
       };
     } catch {
       return null;
@@ -63,7 +63,7 @@ export function computeDrop<T extends Node>(
 
   const siblings = rows
     .filter((r) => r.parentId === target.parentId && r.id !== draggedId)
-    .sort((a, b) => a.rank.localeCompare(b.rank));
+    .sort((a, b) => Rank.compare(a.rank, b.rank));
   const idx = siblings.findIndex((s) => s.id === target.id);
   if (idx === -1) return null;
 
@@ -72,13 +72,13 @@ export function computeDrop<T extends Node>(
       const prev = siblings[idx - 1];
       return {
         parentId: target.parentId,
-        rank: generateKeyBetween(prev?.rank ?? null, target.rank),
+        rank: Rank.between(prev?.rank ?? null, target.rank),
       };
     }
     const next = siblings[idx + 1];
     return {
       parentId: target.parentId,
-      rank: generateKeyBetween(target.rank, next?.rank ?? null),
+      rank: Rank.between(target.rank, next?.rank ?? null),
     };
   } catch {
     return null;

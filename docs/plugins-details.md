@@ -67,7 +67,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Agents.AgentActions` → `DeleteAgentAction`
   - Server:
     - Uses: `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
-    - Resources: `agent-launches` (push), `agents` (push)
+    - Resources: `agent-launches` (push)
     - `GET /api/agents`
     - `POST /api/agents`
     - `GET /api/agents/:id`
@@ -899,12 +899,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `useDraft`
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
       - Exports (web):
-        - Values: `generateKeyBetween`
+        - Values: `Rank`, `RankSchema`
       - Exports (server):
         - Types: `RankExecutor`
         - Values: `nextRankIn`, `nextRankUnder`, `rankText`
       - Exports (shared):
-        - Values: `generateKeyBetween`
+        - Values: `Rank`, `RankSchema`
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
       - Exports (web):
         - Values: `formatRelativeTime`, `RelativeTime`
@@ -1151,7 +1151,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
     - Register: `pushLanded`, `taskStatusChanged`
-    - Resources: `attempts` (push), `conversations` (push), `pushes` (push), `tasks` (push)
+    - Resources: `attempts` (push), `conversations` (push), `pushes` (push)
   - Imported by: `active-data`, `agents`, `allow-monitor`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `queue`, `summary`, `task-title`, `tasks`, `transcript-api`, `turn-summary`, `worktree-cleanup`
   - Extended by: `conversation-category` (table `conversations_ext_category`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`)
 

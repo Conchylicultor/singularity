@@ -1,5 +1,6 @@
 import { taskAttachments, updateTask } from "@plugins/tasks-core/server";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/shared";
+import { Rank } from "@plugins/primitives/plugins/rank/shared";
 
 export async function handleUpdate(
   req: Request,
@@ -18,7 +19,10 @@ export async function handleUpdate(
   };
   let row;
   try {
-    row = await updateTask(id, body);
+    row = await updateTask(id, {
+      ...body,
+      rank: body.rank ? Rank.from(body.rank) : undefined,
+    });
   } catch (err) {
     return new Response(err instanceof Error ? err.message : "Bad request", {
       status: 400,

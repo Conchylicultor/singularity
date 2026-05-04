@@ -15,6 +15,6 @@ export const queueRanksResource = defineResource({
         rank: conversationsQueue.table.rank,
       })
       .from(conversationsQueue.table);
-    return rows.map((r) => ({ conversationId: r.parentId, rank: r.rank }));
+    return rows.map((r) => ({ conversationId: r.parentId, rank: r.rank })) as unknown as QueueRankRow[];
   },
 });

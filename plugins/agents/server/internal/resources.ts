@@ -16,12 +16,12 @@ import {
 } from "./schema";
 import type { AgentLaunchConversationRef } from "../../shared/resources";
 
-export const agentsResource = defineResource({
+export const agentsResource = defineResource<Agent[]>({
   key: "agents",
   mode: "push",
   schema: z.array(AgentSchema),
-  loader: async (): Promise<Agent[]> =>
-    db.select().from(agents).orderBy(asc(agents.rank), asc(agents.createdAt)),
+  loader: async () =>
+    db.select().from(agents).orderBy(asc(agents.rank), asc(agents.createdAt)) as unknown as Promise<Agent[]>,
 });
 
 export const agentLaunchesResource = defineResource({

@@ -19,7 +19,7 @@ export async function handleGetSlot(
     .from(_reorderPrefs)
     .where(eq(_reorderPrefs.slotId, slotId));
   const out: Record<string, { rank: string }> = {};
-  for (const r of rows) out[r.contributionId] = { rank: r.rank };
+  for (const r of rows) out[r.contributionId] = { rank: r.rank as string };
   return Response.json(out);
 }
 

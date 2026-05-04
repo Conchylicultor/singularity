@@ -1,5 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { tasksResource, type Task } from "../shared";
+import type { Rank } from "@plugins/primitives/plugins/rank/shared";
 
 export type TaskPatch = Partial<{
   title: string;
@@ -8,7 +9,7 @@ export type TaskPatch = Partial<{
   hold: boolean;
   expanded: boolean;
   parentId: string | null;
-  rank: string;
+  rank: Rank;
 }>;
 
 export type AutoStartModel = "opus" | "sonnet" | "none";

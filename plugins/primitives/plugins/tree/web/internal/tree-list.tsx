@@ -23,6 +23,7 @@ import {
   type DropZone,
   type TreeNode,
 } from "../../shared";
+import { Rank } from "@plugins/primitives/plugins/rank/shared";
 import { cn } from "@/lib/utils";
 import { pendingFocus } from "./pending-focus";
 import { TreeListProvider } from "./use-tree-row";
@@ -36,11 +37,11 @@ export type TreeListProps<T extends TreeItem> = {
   onToggleExpanded: (id: string, next: boolean) => void | Promise<void>;
   onMove: (
     id: string,
-    dest: { parentId: string | null; rank: string },
+    dest: { parentId: string | null; rank: Rank },
   ) => void | Promise<void>;
   onCreate: (args: {
     parentId: string | null;
-    rank?: string;
+    rank?: Rank;
   }) => Promise<string | null | undefined>;
   /** The component used to render every row. Recursion through children is
    * handled by RowChrome (which reads this from context). */
@@ -104,7 +105,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
   );
 
   const createAtRoot = useCallback(
-    async (parentId: string | null, rank?: string) => {
+    async (parentId: string | null, rank?: Rank) => {
       const id = await onCreate({ parentId, rank });
       if (!id) return;
       pendingFocus.set(id);
@@ -187,7 +188,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       if (
         current &&
         current.parentId === dest.parentId &&
-        current.rank === dest.rank
+        Rank.equals(current.rank, dest.rank)
       ) {
         return;
       }

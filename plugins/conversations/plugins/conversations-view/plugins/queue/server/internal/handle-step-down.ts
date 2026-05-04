@@ -11,7 +11,7 @@ export async function handleStepDown(req: Request): Promise<Response> {
   const conv = await getConversation(conversationId);
   if (!conv) return new Response("Not found", { status: 404 });
   const rank = await rankAfterN(conversationId, steps);
-  await conversationsQueue.upsert(conversationId, { rank });
+  await conversationsQueue.upsert(conversationId, { rank: rank.toJSON() });
   queueRanksResource.notify();
   return Response.json({ ok: true });
 }

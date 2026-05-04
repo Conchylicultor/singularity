@@ -6,6 +6,7 @@ import {
   removeMember,
   updateGroup,
 } from "./repo";
+import { RankSchema } from "@plugins/primitives/plugins/rank/shared";
 
 const CreateBody = z.object({
   title: z.string().optional(),
@@ -21,7 +22,7 @@ export async function handleCreateGroup(req: Request): Promise<Response> {
 const PatchBody = z.object({
   title: z.string().optional(),
   expanded: z.boolean().optional(),
-  rank: z.string().min(1).optional(),
+  rank: RankSchema.optional(),
 });
 
 export async function handlePatchGroup(

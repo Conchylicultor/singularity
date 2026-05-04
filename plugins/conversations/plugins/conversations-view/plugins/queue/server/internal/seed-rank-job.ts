@@ -21,7 +21,7 @@ export const seedRankJob = defineJob({
     const conversationId = event?.conversationId;
     if (!conversationId) return;
     const rank = await positionTwoRank();
-    await conversationsQueue.upsert(conversationId, { rank });
+    await conversationsQueue.upsert(conversationId, { rank: rank.toJSON() });
     queueRanksResource.notify();
   },
 });
