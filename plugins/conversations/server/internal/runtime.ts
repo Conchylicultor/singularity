@@ -1,4 +1,5 @@
 import type { Registration } from "@server/types";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
 import {
   getConversationRuntime,
   getConversationClaudeSessionId,
@@ -27,7 +28,7 @@ export interface ConversationRuntime {
     worktreePath: string,
     opts?: {
       prompt?: string;
-      model?: import("@plugins/conversations/plugins/model-provider/shared").ConversationModel;
+      model?: ConversationModel;
       resumeSessionId?: string;
       forkSession?: boolean;
     },

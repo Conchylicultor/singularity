@@ -136,6 +136,21 @@ export const pluginBoundaries: Check = {
         }
       }
 
+      // R9: forbid inline `import("@plugins/...")` type expressions. They bypass
+      // the static import scanner and make cross-plugin deps invisible to the
+      // boundary system. Use a top-level `import type { X } from "..."` instead.
+      for (const inlinePath of extractInlineImports(src)) {
+        const resolved = resolveImport(inlinePath, pluginSet);
+        if (!resolved) continue;
+        if (sourcePlugin && sourcePlugin === resolved.pluginPath) continue;
+        violations.push({
+          rule: "inline-import",
+          file: relFile,
+          message: `inline \`import("${inlinePath}")\` type expression bypasses the boundary system`,
+          fix: `replace with a top-level \`import type { … } from "${inlinePath}"\``,
+        });
+      }
+
       const imports = extractPluginImports(src);
 
       for (const imp of imports) {
@@ -722,6 +737,22 @@ function extractRelativeImports(rawSrc: string): string[] {
   let m: RegExpExecArray | null;
   while ((m = withFromRe.exec(src))) results.push(m[1]!);
   while ((m = bareRe.exec(src))) results.push(m[1]!);
+  return results;
+}
+
+/**
+ * Extract every inline `import("@plugins/...")` type expression.
+ * These appear in type positions (e.g. `model?: import("@plugins/foo/shared").Bar`)
+ * and are invisible to `extractPluginImports`, which only scans static
+ * `import ... from` statements. R9 flags them: use a top-level
+ * `import type { Bar } from "@plugins/foo/shared"` instead.
+ */
+function extractInlineImports(rawSrc: string): string[] {
+  const src = stripComments(rawSrc);
+  const results: string[] = [];
+  const re = /\bimport\s*\(\s*["'](@plugins\/[^"']+)["']\s*\)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(src))) results.push(m[1]!);
   return results;
 }
 
