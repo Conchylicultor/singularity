@@ -58,7 +58,10 @@ export function Column({ entry, depth, isLast }: ColumnProps) {
     return <CollapsedBar entry={entry} onExpand={clearMaximize} />;
   }
 
-  if (collapsed && !isLast) {
+  const isCollapsed = collapsed && !isLast;
+  const keepMounted = entry.pane.chrome.keepMountedWhenCollapsed;
+
+  if (isCollapsed && !keepMounted) {
     return <CollapsedBar entry={entry} onExpand={toggleCollapse} />;
   }
 
@@ -67,15 +70,20 @@ export function Column({ entry, depth, isLast }: ColumnProps) {
 
   const Component = entry.pane.component;
 
+  // When keepMounted is true and the column is collapsed, the body div stays
+  // mounted at tree position 0 (hidden via display:none) so the component
+  // subtree is never torn down. The CollapsedBar takes position 1.
   return (
     <>
       <div
         ref={divRef}
-        style={expandFull ? undefined : { width }}
+        style={isCollapsed ? { display: "none" } : (expandFull ? undefined : { width })}
         className={
-          expandFull
-            ? "flex h-full min-w-[200px] flex-1 flex-col overflow-hidden"
-            : "flex h-full shrink-0 flex-col overflow-hidden"
+          isCollapsed
+            ? undefined
+            : expandFull
+              ? "flex h-full min-w-[200px] flex-1 flex-col overflow-hidden"
+              : "flex h-full shrink-0 flex-col overflow-hidden"
         }
       >
         <PaneDepthContext.Provider value={depth}>
@@ -84,11 +92,15 @@ export function Column({ entry, depth, isLast }: ColumnProps) {
           </PaneLayoutContext.Provider>
         </PaneDepthContext.Provider>
       </div>
-      {!isLast && !isMaximized && (
-        <ResizeHandle
-          onResize={(dx) => setWidth((w) => w + dx)}
-          onCollapse={toggleCollapse}
-        />
+      {isCollapsed ? (
+        <CollapsedBar entry={entry} onExpand={toggleCollapse} />
+      ) : (
+        !isLast && !isMaximized && (
+          <ResizeHandle
+            onResize={(dx) => setWidth((w) => w + dx)}
+            onCollapse={toggleCollapse}
+          />
+        )
       )}
     </>
   );

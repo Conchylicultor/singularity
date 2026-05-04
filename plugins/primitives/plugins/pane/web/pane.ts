@@ -56,6 +56,13 @@ export interface PaneChromeConfig<Params> {
    */
   close?: boolean;
   expand?: (params: Params) => string;
+  /**
+   * When true, the layout renderer (Miller columns) keeps the pane's
+   * component subtree mounted when the column is collapsed, hiding it via
+   * `display: none` instead of unmounting. Use for panes with live
+   * connections (e.g. terminal) to avoid a reconnect cycle on re-expand.
+   */
+  keepMountedWhenCollapsed?: boolean;
 }
 
 interface NormalizedChrome {
@@ -64,6 +71,7 @@ interface NormalizedChrome {
   history: boolean;
   close: boolean;
   expand?: (params: Record<string, string>) => string;
+  keepMountedWhenCollapsed: boolean;
 }
 
 export interface PaneInternal {
@@ -396,13 +404,16 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
 function normalizeChrome<Params>(
   chrome: PaneChromeConfig<Params> | false | undefined,
 ): NormalizedChrome {
-  if (chrome === false) return { enabled: false, history: false, close: false };
+  if (chrome === false) {
+    return { enabled: false, history: false, close: false, keepMountedWhenCollapsed: false };
+  }
   return {
     enabled: true,
     title: chrome?.title as NormalizedChrome["title"],
     history: chrome?.history ?? true,
     close: chrome?.close ?? true,
     expand: chrome?.expand as NormalizedChrome["expand"],
+    keepMountedWhenCollapsed: chrome?.keepMountedWhenCollapsed ?? false,
   };
 }
 

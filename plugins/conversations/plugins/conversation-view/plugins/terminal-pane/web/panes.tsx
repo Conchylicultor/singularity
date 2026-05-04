@@ -7,6 +7,7 @@ export const convTerminalPane = Pane.define({
   parent: conversationPane,
   path: "terminal",
   component: ConvTerminalBody,
+  chrome: { keepMountedWhenCollapsed: true },
 });
 
 function ConvTerminalBody() {
