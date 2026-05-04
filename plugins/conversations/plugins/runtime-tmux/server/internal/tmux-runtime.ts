@@ -131,12 +131,7 @@ export const tmuxRuntime: ConversationRuntime = {
     // worktree slug Claude's .mcp.json dials back to over HTTP — it must be a
     // host the gateway actually routes, so we read it straight from the
     // server's own worktree env rather than from a caller-supplied label.
-    // The ids are generated slugs (no shell metacharacters) but we still
-    // keep them wrapped in single quotes.
     const hasPrompt = typeof opts?.prompt === "string" && opts.prompt.length > 0;
-    const envArgs = hasPrompt
-      ? ["-e", `SINGULARITY_PROMPT=${opts!.prompt}`]
-      : [];
     const parentHost = Bun.env.SINGULARITY_WORKTREE;
     if (!parentHost) {
       throw new Error("tmux runtime requires SINGULARITY_WORKTREE to route MCP back to the parent server");
@@ -153,7 +148,9 @@ export const tmuxRuntime: ConversationRuntime = {
     // parses the prompt as an unknown flag, prints "error: unknown option …",
     // and exits 1 — the tmux pane dies in <1s, runtime.create has already
     // returned success, so the row sits in "starting" until the 30s sweep.
-    if (hasPrompt) cmdParts.push(`-- "$SINGULARITY_PROMPT"`);
+    // "$1" is the prompt positional arg passed as a separate argv element below,
+    // which avoids embedding prompt content in the shell script string.
+    if (hasPrompt) cmdParts.push(`-- "$1"`);
     const claudeCmd = cmdParts.join(" ");
     const proc = Bun.spawn(
       [
@@ -165,8 +162,23 @@ export const tmuxRuntime: ConversationRuntime = {
         conversationId,
         "-c",
         worktreePath,
-        ...envArgs,
-        `zsh -l -c 'export SINGULARITY_CONVERSATION_ID=${conversationId}; export SINGULARITY_PARENT_HOST=${parentHost}; ${claudeCmd}'`,
+        // Set env vars via tmux -e so the shell inherits them without explicit
+        // export. SINGULARITY_CONVERSATION_ID: git commit hook. SINGULARITY_PARENT_HOST: MCP routing.
+        "-e", `SINGULARITY_CONVERSATION_ID=${conversationId}`,
+        "-e", `SINGULARITY_PARENT_HOST=${parentHost}`,
+        // Split "zsh -l -c <script>" into separate argv elements rather than a
+        // single-quoted blob. tmux 3.6a passes trailing non-option args directly
+        // to exec, so zsh receives them as its own argv: -l -c <script> <$0> [<$1>].
+        // A "zsh -l -c '...'" single string can trigger tmux's command parser
+        // ("unknown command: zsh …") in edge cases — separate args avoid it.
+        "zsh", "-l", "-c", claudeCmd,
+        // $0 (script name) then, when present, $1 (prompt for claude --).
+        // Passing the prompt as a positional OS arg avoids embedding it in the
+        // shell script and eliminates the SINGULARITY_PROMPT env var indirection.
+        // tmux's per-arg cap (~16KB on 3.6a) still applies; oversized prompts
+        // surface here rather than silently dying inside the pane.
+        "zsh",
+        ...(hasPrompt ? [opts!.prompt!] : []),
       ],
       { stdout: "pipe", stderr: "pipe" },
     );
@@ -175,10 +187,6 @@ export const tmuxRuntime: ConversationRuntime = {
       proc.exited,
     ]);
     if (exit !== 0) {
-      // tmux's per-arg cap (~16KB on 3.6a) bites here when callers stuff a
-      // huge value into SINGULARITY_PROMPT — failure mode is a silent
-      // "command too long" with no session created. Surface it loudly so
-      // the conversation row never lands in a half-created state.
       throw new Error(
         `tmux new-session for ${conversationId} failed (exit ${exit}): ${stderr.trim() || "<no stderr>"}`,
       );
