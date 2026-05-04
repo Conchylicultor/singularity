@@ -35,6 +35,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
   - `/api/code/:worktree/diff (GET)`
   - `/api/code/:worktree/image (GET)`
   - `/api/code/:worktree/push (GET)`
+  - `/api/code/:worktree/commit (GET)`
 
 - **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
   - `/api/config (GET, PATCH)`

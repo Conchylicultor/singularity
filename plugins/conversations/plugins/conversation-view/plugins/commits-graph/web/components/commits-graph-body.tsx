@@ -3,6 +3,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { commitsGraphResource } from "../../shared/resources";
 import type { CommitRow } from "../../shared/protocol";
 import { CommitRail, MergeBaseMarker, COMMIT_ROW_HEIGHT } from "./commit-rail";
+import { convCommitDiffPane } from "../panes";
 
 const BRANCH_COLOR = "var(--primary)";
 const LANDED_COLOR = "#10b981"; // emerald-500 — commits pushed to main
@@ -26,6 +27,7 @@ function formatRelative(iso: string): string {
 
 export function CommitsGraphBody() {
   const { conversation } = conversationPane.useData();
+  const convId = conversation.id;
   const { data, error } = useResource(commitsGraphResource, {
     attemptId: conversation.attemptId,
   });
@@ -84,6 +86,7 @@ export function CommitsGraphBody() {
             isFirst={idx === 0}
             isLast={idx === commits.length - 1}
             color={BRANCH_COLOR}
+            convId={convId}
           />
         ))}
         {hasAgentWork && (
@@ -102,6 +105,7 @@ export function CommitsGraphBody() {
             isLast={idx === landedCommits.length - 1}
             color={LANDED_COLOR}
             pushed
+            convId={convId}
           />
         ))}
         {behindCommits.length > 0 && (
@@ -114,6 +118,7 @@ export function CommitsGraphBody() {
                 isFirst={false}
                 isLast={idx === behindCommits.length - 1}
                 color={BEHIND_COLOR}
+                convId={convId}
               />
             ))}
           </>
@@ -149,17 +154,20 @@ function CommitRowItem({
   isLast,
   color,
   pushed = false,
+  convId,
 }: {
   commit: CommitRow;
   isFirst: boolean;
   isLast: boolean;
   color: string;
   pushed?: boolean;
+  convId: string;
 }) {
   return (
     <li
-      className="flex items-center gap-2 border-b border-border/50 pl-2 pr-3 hover:bg-accent/50"
+      className="flex cursor-pointer items-center gap-2 border-b border-border/50 pl-2 pr-3 hover:bg-accent/50"
       style={{ height: COMMIT_ROW_HEIGHT }}
+      onClick={() => convCommitDiffPane.open({ convId, sha: commit.sha })}
     >
       <CommitRail isFirst={isFirst} isLast={isLast} color={color} />
       <span

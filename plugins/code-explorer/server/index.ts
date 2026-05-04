@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { handleCommitFiles } from "./internal/commit-handler";
 import { handleFileContent } from "./internal/file-content-handler";
 import { handleFileDiff } from "./internal/file-diff-handler";
 import { handleImageContent } from "./internal/image-handler";
@@ -16,5 +17,6 @@ export default {
     "GET /api/code/:worktree/diff": handleFileDiff,
     "GET /api/code/:worktree/image": handleImageContent,
     "GET /api/code/:worktree/push": handlePushFiles,
+    "GET /api/code/:worktree/commit": handleCommitFiles,
   },
 } satisfies ServerPluginDefinition;
