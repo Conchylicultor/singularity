@@ -103,6 +103,7 @@ export async function createConversation(
   } else {
     let taskId = opts.taskId;
     const fallbackTitle = synthesiseTitle(opts.prompt);
+    let titleIsUpgradeable: boolean;
     if (!taskId) {
       const parentId =
         opts.kind === "system" ? SYSTEM_META_TASK_ID : CONVERSATIONS_META_TASK_ID;
@@ -112,11 +113,17 @@ export async function createConversation(
         author: spawnedBy,
       });
       taskId = task.id;
+      titleIsUpgradeable = true;
     } else {
-      await updateTaskTitle(taskId, fallbackTitle, UNINFORMATIVE_TITLES);
+      // Only schedule a Haiku upgrade if the task title was actually uninformative
+      // and got replaced with the fallback. If the task already has a meaningful
+      // title, don't overwrite it — the CAS guard in scheduleTaskTitleUpdate uses
+      // [fallbackTitle], which would match when buildTaskPrompt's first line equals
+      // the existing title.
+      titleIsUpgradeable = await updateTaskTitle(taskId, fallbackTitle, UNINFORMATIVE_TITLES);
     }
     const prompt = opts.prompt?.trim() ?? "";
-    if (prompt && opts.kind !== "system") {
+    if (titleIsUpgradeable && prompt && opts.kind !== "system") {
       scheduleTaskTitleUpdate(taskId, prompt, fallbackTitle);
     }
 
