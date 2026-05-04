@@ -66,8 +66,9 @@ export function scheduleTaskTitleUpdate(
   void (async () => {
     try {
       const generated = await generateTaskTitle(description, taskId);
-      if (generated === fallbackTitle) return;
-      await updateTaskTitle(taskId, generated, [fallbackTitle]);
+      if (generated !== fallbackTitle) {
+        await updateTaskTitle(taskId, generated, [fallbackTitle]);
+      }
       await updateConversationsTitleForTask(taskId, generated);
     } catch (err) {
       console.warn("[task-title] scheduleTaskTitleUpdate failed:", err);

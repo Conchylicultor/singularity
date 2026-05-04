@@ -95,26 +95,22 @@ export async function createConversation(
     conversationId = newId(CONVERSATION_PREFIX);
   } else {
     let taskId = opts.taskId;
+    const fallbackTitle = synthesiseTitle(opts.prompt);
     if (!taskId) {
       const parentId =
         opts.kind === "system" ? SYSTEM_META_TASK_ID : CONVERSATIONS_META_TASK_ID;
-      const fallbackTitle = synthesiseTitle(opts.prompt);
       const task = await createTask({
         parentId,
         title: fallbackTitle,
         author: opts.spawnedBy ?? Bun.env.SINGULARITY_WORKTREE ?? "user",
       });
       taskId = task.id;
-      // Upgrade the fallback title with a Haiku-generated one in the background,
-      // mirroring handle-create.ts. Only fires for non-trivial prompts where the
-      // first-line heuristic is likely to produce a description sentence rather
-      // than a real title.
-      const prompt = opts.prompt?.trim() ?? "";
-      if (prompt && opts.kind !== "system") {
-        scheduleTaskTitleUpdate(taskId, prompt, fallbackTitle);
-      }
     } else {
-      await updateTaskTitle(taskId, synthesiseTitle(opts.prompt), UNINFORMATIVE_TITLES);
+      await updateTaskTitle(taskId, fallbackTitle, UNINFORMATIVE_TITLES);
+    }
+    const prompt = opts.prompt?.trim() ?? "";
+    if (prompt && opts.kind !== "system") {
+      scheduleTaskTitleUpdate(taskId, prompt, fallbackTitle);
     }
 
     attemptId = newId(ATTEMPT_PREFIX);
