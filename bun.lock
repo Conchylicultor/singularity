@@ -349,6 +349,9 @@
       "name": "@singularity/plugin-conversations-summary",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/transcript-api": {
+      "name": "@singularity/plugin-conversations-transcript-api",
+    },
     "plugins/crashes": {
       "name": "@singularity/plugin-crashes",
       "version": "0.0.1",
@@ -1385,6 +1388,8 @@
     "@singularity/plugin-conversations-runtime-tmux": ["@singularity/plugin-conversations-runtime-tmux@workspace:plugins/conversations/plugins/runtime-tmux"],
 
     "@singularity/plugin-conversations-summary": ["@singularity/plugin-conversations-summary@workspace:plugins/conversations/plugins/summary"],
+
+    "@singularity/plugin-conversations-transcript-api": ["@singularity/plugin-conversations-transcript-api@workspace:plugins/conversations/plugins/transcript-api"],
 
     "@singularity/plugin-core": ["@singularity/plugin-core@workspace:plugin-core"],
 
