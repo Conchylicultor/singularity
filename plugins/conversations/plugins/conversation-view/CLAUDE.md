@@ -11,7 +11,7 @@
   - Types: `ConversationRecord`
   - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`
 - Contributes:
-  - `Pane.Register` `conversation` (path `/c/:convId`)
+  - `Pane.Register` `conversation`
   - `Conversation.ActionBar` → `ExpandConversationButton`
 - Slot contributors: `agents`, `attempt-view`, `code`, `commits-graph`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
 - Sub-plugins:

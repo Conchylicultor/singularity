@@ -6,7 +6,6 @@ import { ConversationView } from "./components/conversation-view";
 
 export const conversationPane = Pane.define({
   id: "conversation",
-  path: "/c/:convId",
   after: [null, "attempt", "task-detail"],
   segment: "c/:convId",
   component: ConversationView,

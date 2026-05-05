@@ -81,12 +81,6 @@ interface NormalizedChrome {
 
 export interface PaneInternal {
   id: string;
-  /** @deprecated Use `after` instead. Kept during migration. */
-  parent: PaneInternal | null;
-  /** @deprecated Use `segment` instead. Kept during migration. */
-  ownPath: string;
-  /** @deprecated Computed from parent chain. Kept during migration. */
-  fullPath: string;
   /** Valid predecessor pane IDs. `null` means the pane can appear at root (position 0). */
   after: Set<string | null>;
   /** Own URL segment (no leading slash). Used by the chain URL parser/builder. */
@@ -109,7 +103,7 @@ export interface PaneInternal {
 }
 
 // Populated synchronously during <PaneRouter/> render via useSyncPaneRegistry.
-// matchRegistry / pane.close / pane.expand read from it; nobody writes to it
+// pane.close / pane.expand / parseUrl read from it; nobody writes to it
 // outside the sync hook.
 const registry = new Map<string, PaneInternal>();
 
@@ -118,37 +112,6 @@ const DATA_NOT_PROVIDED = Symbol("pane.data-not-provided");
 // ---------------------------------------------------------------------------
 // Path helpers.
 // ---------------------------------------------------------------------------
-
-function joinPath(parent: PaneInternal | null, own: string | undefined): string {
-  const trimmed = (own ?? "").replace(/^\/+|\/+$/g, "");
-  const parentPath = parent?.fullPath ?? "";
-  if (!trimmed) return parentPath || "/";
-  if (own && own.startsWith("/")) return "/" + trimmed;
-  if (!parent) return "/" + trimmed;
-  const base = parentPath === "/" ? "" : parentPath;
-  return base + "/" + trimmed;
-}
-
-export function buildUrl(
-  pane: PaneInternal,
-  params: Record<string, string>,
-): string {
-  const parts = pane.fullPath.split("/").map((seg) => {
-    if (!seg.startsWith(":")) return seg;
-    const wildcard = seg.endsWith("*");
-    const name = seg.slice(1).replace(/\*$/, "");
-    const val = params[name];
-    if (val === undefined) {
-      throw new Error(
-        `Pane "${pane.id}": missing param "${name}" for path "${pane.fullPath}"`,
-      );
-    }
-    return wildcard
-      ? val.split("/").map(encodeURIComponent).join("/")
-      : encodeURIComponent(val);
-  });
-  return parts.join("/") || "/";
-}
 
 export function matchPath(
   pattern: string,
@@ -188,55 +151,14 @@ export function matchPath(
 
 export interface MatchEntry {
   pane: PaneInternal;
-  /** Own-only params (only `:name`s from this pane's `ownPath`). */
+  /** Own-only params (only `:name`s from this pane's `segment`). */
   params: Record<string, string>;
-  /** All params up to and including this pane's `fullPath`. Used for
-   *  re-building URLs via `buildUrl(pane, fullParams)`. */
+  /** All params accumulated from the chain root up to and including this pane. */
   fullParams: Record<string, string>;
 }
 
 export interface PaneMatch {
   chain: MatchEntry[];
-}
-
-export function matchRegistry(pathname: string): PaneMatch | null {
-  let best: { pane: PaneInternal; depth: number } | null = null;
-  for (const pane of registry.values()) {
-    const params = matchPath(pane.fullPath, pathname);
-    if (!params) continue;
-    let d = 0;
-    for (let p: PaneInternal | null = pane; p; p = p.parent) d++;
-    if (!best || d > best.depth) best = { pane, depth: d };
-  }
-  if (!best) return null;
-
-  const reversed: PaneInternal[] = [];
-  for (let p: PaneInternal | null = best.pane; p; p = p.parent) reversed.push(p);
-  const orderedPanes = reversed.reverse();
-  // Ancestor panes have shorter fullPaths than `pathname`, so they can only
-  // match in prefix mode. The leaf match (exact) is re-derived with prefix=true
-  // too — its fullPath consumes the whole path, so prefix mode is equivalent.
-  //
-  // Params are kept own-only per design: each pane only receives the params
-  // whose `:name` appeared in that pane's own `ownPath`. Ancestor access is
-  // explicit via `ancestorPane.useParams()`.
-  const chain: MatchEntry[] = orderedPanes.map((pane) => {
-    const full = matchPath(pane.fullPath, pathname, { prefix: true }) ?? {};
-    const own: Record<string, string> = {};
-    for (const name of ownParamNames(pane.ownPath)) {
-      if (name in full) own[name] = full[name]!;
-    }
-    return { pane, params: own, fullParams: full };
-  });
-  return { chain };
-}
-
-function ownParamNames(ownPath: string): string[] {
-  if (!ownPath) return [];
-  return ownPath
-    .split("/")
-    .filter((seg) => seg.startsWith(":"))
-    .map((seg) => seg.slice(1).replace(/\*$/, ""));
 }
 
 // ---------------------------------------------------------------------------
@@ -563,9 +485,9 @@ export function usePathname(): string {
  * Typed handle returned by `Pane.define`.
  *
  * `FullParams` is the full resolved param set including ancestors — used for
- * `open()` and path construction. `OwnParams` is only the `:name`s declared in
- * this pane's own `path` — what `useParams()` returns. Keeping them separate
- * matches design decision 6 ("params are own-only").
+ * `open()`. `OwnParams` is only the `:name`s declared in this pane's own
+ * `segment` — what `useParams()` returns. Keeping them separate matches
+ * design decision 6 ("params are own-only").
  */
 export interface PaneObject<
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
@@ -574,7 +496,6 @@ export interface PaneObject<
   OwnParams = FullParams,
 > {
   id: string;
-  path: string;
   Provider: ComponentType<{ value: Provides; children: ReactNode }>;
   useParams(): OwnParams;
   useData(): Provides;
@@ -723,7 +644,6 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
 
   return {
     id: internal.id,
-    path: internal.fullPath,
     Provider: Provider as ComponentType<{ value: unknown; children: ReactNode }>,
     useParams,
     useData,
@@ -765,14 +685,11 @@ interface DefineArgs<Path extends string, Provides, ParentParams> {
   /**
    * Valid predecessors in the layout chain. `null` means the pane can appear
    * at root (position 0). Accepts PaneObject references, string pane IDs
-   * (for forward references), or null. Mutually exclusive with `parent`.
+   * (for forward references), or null.
    */
   after?: Array<PaneObject<any, any, any> | string | null>;
-  /** Own URL segment (no leading slash). Used with `after`. */
+  /** Own URL segment (no leading slash). */
   segment?: Path;
-  /** @deprecated Use `after`/`segment` instead. */
-  parent?: PaneObject<ParentParams, any, any>;
-  path?: Path;
   component: ComponentType;
   provides?: TypeMarker<Provides>;
   chrome?: PaneChromeConfig<ParentParams & InferParams<Path>> | false;
@@ -806,28 +723,16 @@ function define<
   Provides,
   InferParams<Path>
 > {
-  const parentInternal = args.parent?._internal ?? null;
-  const fullPath = joinPath(parentInternal, args.path);
-
-  // Compute `after` and `segment` from either new API or legacy `parent`/`path`
-  let afterSet: Set<string | null>;
-  let segment: string;
-  if (args.after) {
-    afterSet = new Set(
-      args.after.map((p) => {
-        if (p === null) return null;
-        if (typeof p === "string") return p;
-        return p._internal.id;
-      }),
-    );
-    segment = ((args.segment ?? args.path) ?? "").replace(/^\/+/, "");
-  } else if (parentInternal) {
-    afterSet = new Set<string | null>([parentInternal.id]);
-    segment = (args.path ?? "").replace(/^\/+/, "");
-  } else {
-    afterSet = new Set<string | null>([null]);
-    segment = (args.path ?? "").replace(/^\/+/, "");
-  }
+  const afterSet: Set<string | null> = args.after
+    ? new Set(
+        args.after.map((p) => {
+          if (p === null) return null;
+          if (typeof p === "string") return p;
+          return p._internal.id;
+        }),
+      )
+    : new Set<string | null>([null]);
+  const segment = (args.segment ?? "").replace(/^\/+/, "");
 
   const dataContext = createContext<unknown>(DATA_NOT_PROVIDED);
   dataContext.displayName = `PaneData(${args.id})`;
@@ -839,9 +744,6 @@ function define<
 
   const internal: PaneInternal = {
     id: args.id,
-    parent: parentInternal,
-    ownPath: args.path ?? "",
-    fullPath,
     after: afterSet,
     segment,
     component: args.component,
@@ -864,7 +766,7 @@ export const Pane = { define, Register: PaneSlots.Register };
 // ---------------------------------------------------------------------------
 // Registry sync — populates the module-local `registry` from the
 // `Pane.Register` slot. Called once from <PaneRouter/> at the start of
-// every render, synchronously via useMemo so matchRegistry() and the
+// every render, synchronously via useMemo so parseUrl() and the
 // pane.close() / pane.expand() event handlers always see fresh state.
 // ---------------------------------------------------------------------------
 

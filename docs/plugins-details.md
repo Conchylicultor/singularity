@@ -143,7 +143,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (web):
             - Values: `googleSetupPane`
           - Contributes:
-            - `Pane.Register` `google-setup` (path `google/setup`)
+            - `Pane.Register` `google-setup`
     - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
       - Exports (shared):
         - Values: `notionAuthConfig`
@@ -284,7 +284,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `ConversationRecord`
         - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`
       - Contributes:
-        - `Pane.Register` `conversation` (path `/c/:convId`)
+        - `Pane.Register` `conversation`
         - `Conversation.ActionBar` → `ExpandConversationButton`
       - Slot contributors: `agents`, `attempt-view`, `code`, `commits-graph`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
