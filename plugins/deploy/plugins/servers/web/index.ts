@@ -2,9 +2,9 @@ import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
 import { MdCloud } from "react-icons/md";
-import { serversRootPane, serverDetailPane } from "./panes";
+import { serversRootPane, addServerPane, serverDetailPane } from "./panes";
 
-export { serversRootPane, serverDetailPane } from "./panes";
+export { serversRootPane, addServerPane, serverDetailPane } from "./panes";
 export { serversResource } from "../shared";
 export type { Server } from "../shared";
 
@@ -14,6 +14,7 @@ export default {
   description: "Server registry for the deployment platform.",
   contributions: [
     Pane.Register({ pane: serversRootPane }),
+    Pane.Register({ pane: addServerPane }),
     Pane.Register({ pane: serverDetailPane }),
     Shell.Sidebar({
       id: "deploy",

@@ -1,26 +1,30 @@
-import { useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { serversResource, type Server } from "../../shared";
-import { serverDetailPane } from "../panes";
-import { CreateServerDialog } from "./create-server-dialog";
+import { addServerPane, serverDetailPane } from "../panes";
 import { ServerStatusBadge } from "./server-status-badge";
 
 export function ServersList() {
   const { data: servers } = useResource(serversResource);
-  const [showCreate, setShowCreate] = useState(false);
   const match = usePaneMatch();
   const selectedId = match?.chain.find(
     (e) => e.pane === serverDetailPane._internal,
   )?.params.serverId;
+  const addingServer = match?.chain.some(
+    (e) => e.pane === addServerPane._internal,
+  );
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-4 py-3">
         <h2 className="text-sm font-semibold">Servers</h2>
         <button
-          onClick={() => setShowCreate(true)}
-          className="bg-primary text-primary-foreground rounded px-2 py-1 text-xs font-medium"
+          onClick={() => addServerPane.open({})}
+          className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+            addingServer
+              ? "bg-accent text-accent-foreground"
+              : "bg-primary text-primary-foreground"
+          }`}
         >
           + Add
         </button>
@@ -42,20 +46,11 @@ export function ServersList() {
           </div>
         )}
       </div>
-      {showCreate && (
-        <CreateServerDialog onClose={() => setShowCreate(false)} />
-      )}
     </div>
   );
 }
 
-function ServerRow({
-  server,
-  selected,
-}: {
-  server: Server;
-  selected: boolean;
-}) {
+function ServerRow({ server, selected }: { server: Server; selected: boolean }) {
   return (
     <button
       onClick={() => serverDetailPane.open({ serverId: server.id })}

@@ -733,7 +733,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/deploy/plugins/servers/server/internal/tables.ts`
       - Exports (web):
         - Types: `Server`
-        - Values: `serverDetailPane`, `serversResource`, `serversRootPane`
+        - Values: `addServerPane`, `serverDetailPane`, `serversResource`, `serversRootPane`
       - Exports (server):
         - Values: `_deployServers`, `serversResource`
       - Exports (shared):
@@ -741,6 +741,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `ServerSchema`, `serversResource`, `ServerStatusSchema`
       - Contributes:
         - `Pane.Register` `deploy-servers`
+        - `Pane.Register` `deploy-add-server`
         - `Pane.Register` `deploy-server-detail`
         - `Shell.Sidebar` "Deploy" (group `System`)
         - `serversRootPane.open`

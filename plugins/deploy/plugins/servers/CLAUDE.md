@@ -9,7 +9,7 @@
   - DB schema: `plugins/deploy/plugins/servers/server/internal/tables.ts`
 - Exports (web):
   - Types: `Server`
-  - Values: `serverDetailPane`, `serversResource`, `serversRootPane`
+  - Values: `addServerPane`, `serverDetailPane`, `serversResource`, `serversRootPane`
 - Exports (server):
   - Values: `_deployServers`, `serversResource`
 - Exports (shared):
@@ -17,6 +17,7 @@
   - Values: `ServerSchema`, `serversResource`, `ServerStatusSchema`
 - Contributes:
   - `Pane.Register` `deploy-servers`
+  - `Pane.Register` `deploy-add-server`
   - `Pane.Register` `deploy-server-detail`
   - `Shell.Sidebar` "Deploy" (group `System`)
   - `serversRootPane.open`

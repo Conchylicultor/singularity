@@ -4,6 +4,7 @@ import { Deploy } from "@plugins/deploy/web";
 import { serversResource, type Server } from "../shared";
 import { ServersList } from "./components/servers-list";
 import { ServerDetail } from "./components/server-detail";
+import { AddServerForm } from "./components/add-server-form";
 
 export const serversRootPane = Pane.define({
   id: "deploy-servers",
@@ -12,6 +13,15 @@ export const serversRootPane = Pane.define({
   component: ServersRoot,
   chrome: false,
   width: 320,
+});
+
+export const addServerPane = Pane.define({
+  id: "deploy-add-server",
+  after: [serversRootPane],
+  segment: "add",
+  component: AddServerBody,
+  chrome: { title: "Add Server" },
+  width: 400,
 });
 
 export const serverDetailPane = Pane.define({
@@ -27,6 +37,16 @@ function ServersRoot() {
     <div className="h-full overflow-auto">
       <ServersList />
     </div>
+  );
+}
+
+function AddServerBody() {
+  return (
+    <PaneChrome pane={addServerPane}>
+      <AddServerForm
+        onSuccess={(id) => serverDetailPane.open({ serverId: id })}
+      />
+    </PaneChrome>
   );
 }
 
