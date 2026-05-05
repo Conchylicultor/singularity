@@ -5,16 +5,16 @@ import { CommitDiffView } from "./components/commit-diff-view";
 
 export const convCommitsGraphPane = Pane.define({
   id: "conv-commits-graph",
-  parent: conversationPane,
-  path: "commits",
+  after: [conversationPane],
+  segment: "commits",
   component: ConvCommitsGraphBody,
   width: 520,
 });
 
 export const convCommitDiffPane = Pane.define({
   id: "conv-commit-diff",
-  parent: convCommitsGraphPane,
-  path: ":sha",
+  after: [convCommitsGraphPane],
+  segment: ":sha",
   component: ConvCommitDiffBody,
   width: 720,
 });

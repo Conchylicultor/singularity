@@ -13,7 +13,7 @@ publish action wired up.
 - Exports (web):
   - Values: `publishPane`
 - Contributes:
-  - `Pane.Register` `publish` (path `/publish`)
+  - `Pane.Register` `publish`
   - `Shell.Sidebar` "Publish" (group `System`)
   - `publishPane.open`
 - Server:

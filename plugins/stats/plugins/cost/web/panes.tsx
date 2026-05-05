@@ -8,8 +8,8 @@ import { statsPane } from "@plugins/stats/web";
 
 export const costConvSidePane = Pane.define({
   id: "stats-cost-conv-side",
-  parent: statsPane,
-  path: "c/:sideConvId",
+  after: [statsPane],
+  segment: "c/:sideConvId",
   component: CostConvSideBody,
   chrome: {
     history: false,

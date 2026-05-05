@@ -3,7 +3,8 @@ import { WelcomeView } from "./components/welcome-view";
 
 export const welcomePane = Pane.define({
   id: "welcome",
-  path: "/",
+  after: [null],
+  segment: "/",
   component: WelcomeBody,
 });
 

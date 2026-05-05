@@ -4,8 +4,8 @@ import { SideConversationBody } from "./components/side-conversation-body";
 
 export const convSidePane = Pane.define({
   id: "conv-side",
-  parent: conversationPane,
-  path: "c/:sideConvId",
+  after: [conversationPane],
+  segment: "c/:sideConvId",
   component: SideConversationBody,
   chrome: {
     history: false,

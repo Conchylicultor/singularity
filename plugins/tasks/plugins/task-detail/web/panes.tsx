@@ -20,7 +20,8 @@ import { TaskDetail } from "./components/task-detail";
 
 export const tasksRootPane = Pane.define({
   id: "tasks-root",
-  path: "/tasks",
+  after: [null],
+  segment: "tasks",
   component: TasksRoot,
   // No chrome; the tasks list is its own UI.
   chrome: false,
@@ -29,8 +30,8 @@ export const tasksRootPane = Pane.define({
 
 export const taskDetailPane = Pane.define({
   id: "task-detail",
-  parent: tasksRootPane,
-  path: ":taskId",
+  after: [tasksRootPane],
+  segment: ":taskId",
   component: TaskDetailBody,
   provides: type<{ task: Task }>(),
   width: 480,
@@ -38,8 +39,8 @@ export const taskDetailPane = Pane.define({
 
 export const taskConversationPane = Pane.define({
   id: "task-conversation",
-  parent: taskDetailPane,
-  path: "c/:convId",
+  after: [taskDetailPane],
+  segment: "c/:convId",
   component: TaskConversationBody,
   // ConversationView owns its own PaneChrome (via conversationPane).
   chrome: false,

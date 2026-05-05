@@ -4,8 +4,8 @@ import { TerminalPaneBody } from "./components/terminal-pane-body";
 
 export const convTerminalPane = Pane.define({
   id: "conv-terminal",
-  parent: conversationPane,
-  path: "terminal",
+  after: [conversationPane],
+  segment: "terminal",
   component: ConvTerminalBody,
   chrome: { keepMountedWhenCollapsed: true },
 });

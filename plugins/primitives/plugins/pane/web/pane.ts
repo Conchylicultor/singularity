@@ -578,7 +578,7 @@ export interface PaneObject<
   Provider: ComponentType<{ value: Provides; children: ReactNode }>;
   useParams(): OwnParams;
   useData(): Provides;
-  open(params: FullParams): void;
+  open(params: FullParams & Record<string, string>): void;
   close(): void;
   expand(): void;
   back(): void;

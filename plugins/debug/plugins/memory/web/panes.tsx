@@ -3,7 +3,8 @@ import { MemoryPanel } from "./components/memory-panel";
 
 export const memoryPane = Pane.define({
   id: "debug-memory",
-  path: "/debug/memory",
+  after: [null],
+  segment: "debug/memory",
   component: MemoryBody,
 });
 

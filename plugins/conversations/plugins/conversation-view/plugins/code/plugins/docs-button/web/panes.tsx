@@ -4,8 +4,8 @@ import { DocsPane } from "./components/docs-pane";
 
 export const convDocsPane = Pane.define({
   id: "conv-docs",
-  parent: conversationPane,
-  path: "docs",
+  after: [conversationPane],
+  segment: "docs",
   component: DocsPane,
   chrome: { history: false },
 });

@@ -8,7 +8,7 @@
 - Exports (web):
   - Values: `dbBackupPane`
 - Contributes:
-  - `Pane.Register` `db-backup` (path `/debug/db-backup`)
+  - `Pane.Register` `db-backup`
   - `Debug.Item` "DB Backup"
   - `dbBackupPane.open`
 - Server:

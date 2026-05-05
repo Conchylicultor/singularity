@@ -4,8 +4,8 @@ import { SummaryPane } from "./components/summary-pane";
 
 export const convSummaryPane = Pane.define({
   id: "conv-summary",
-  parent: conversationPane,
-  path: "summary",
+  after: [conversationPane],
+  segment: "summary",
   component: ConvSummaryBody,
   chrome: { history: false },
 });

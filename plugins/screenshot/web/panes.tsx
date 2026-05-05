@@ -3,7 +3,8 @@ import { ScreenshotView } from "./components/screenshot-view";
 
 export const screenshotPane = Pane.define({
   id: "screenshot",
-  path: "/screenshot/:id",
+  after: [null],
+  segment: "screenshot/:id",
   component: ScreenshotBody,
 });
 

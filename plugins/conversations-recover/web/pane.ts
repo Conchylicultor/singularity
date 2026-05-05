@@ -3,6 +3,7 @@ import { RecoveryView } from "./components/recovery-view";
 
 export const recoveryPane = Pane.define({
   id: "conversations-recover",
-  path: "/recovery",
+  after: [null],
+  segment: "recovery",
   component: RecoveryView,
 });

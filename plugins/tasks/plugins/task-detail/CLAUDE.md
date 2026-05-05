@@ -10,9 +10,9 @@
 - Exports (web):
   - Values: `taskConversationPane`, `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskFileOpenProvider`, `tasksRootPane`, `useFlushAll`, `useRegisterFlush`, `useTaskFileOpen`
 - Contributes:
-  - `Pane.Register` `tasks-root` (path `/tasks`)
-  - `Pane.Register` `task-detail` (path `:taskId`)
-  - `Pane.Register` `task-conversation` (path `c/:convId`)
+  - `Pane.Register` `tasks-root`
+  - `Pane.Register` `task-detail`
+  - `Pane.Register` `task-conversation`
   - `Shell.Sidebar` "Tasks" (group `System`)
   - `tasksRootPane.open`
 

@@ -54,11 +54,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`
     - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
   - Contributes:
-    - `Pane.Register` `agents-root` (path `/agents`)
-    - `Pane.Register` `agent-detail` (path `:id`)
-    - `Pane.Register` `agent-conversation` (path `c/:convId`)
-    - `Pane.Register` `agent-system-detail` (path `system/:systemId`)
-    - `Pane.Register` `agent-side` (path `agent/:agentId`)
+    - `Pane.Register` `agents-root`
+    - `Pane.Register` `agent-detail`
+    - `Pane.Register` `agent-conversation`
+    - `Pane.Register` `agent-system-detail`
+    - `Pane.Register` `agent-side`
     - `Shell.Sidebar` "Agents" (group `System`)
     - `agentsRootPane.open`
     - `Item.Avatar` → `AgentAvatarRow`
@@ -98,8 +98,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `attemptConversationPane`, `attemptPane`
   - Contributes:
-    - `Pane.Register` `attempt` (path `/a/:attemptId`)
-    - `Pane.Register` `attempt-conversation` (path `c/:convId`)
+    - `Pane.Register` `attempt`
+    - `Pane.Register` `attempt-conversation`
     - `Conversation.ActionBar` → `AttemptSwitchButton`
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
@@ -115,7 +115,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
     - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`
   - Contributes:
-    - `Pane.Register` `accounts` (path `/accounts`)
+    - `Pane.Register` `accounts`
     - `Shell.Sidebar` "Accounts" (group `System`)
     - `accountsPane.open`
   - Central:
@@ -166,8 +166,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Contributes:
-    - `Pane.Register` `global-file-tree` (path `/code/:worktree`)
-    - `Pane.Register` `conv-file-tree` (path `files`)
+    - `Pane.Register` `global-file-tree`
+    - `Pane.Register` `conv-file-tree`
     - `Shell.Sidebar` "Explorer" (group `System`)
     - `globalFileTreePane.open`
     - `Code.ToolbarButton` → `ConvTreeButton`
@@ -194,7 +194,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `Schema`, `ValueOf`, `Values`
     - Values: `defineConfig`, `fullKey`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `validateKind`
   - Contributes:
-    - `Pane.Register` `settings` (path `/settings`)
+    - `Pane.Register` `settings`
     - `Shell.Sidebar` "Settings" (group `System`)
     - `settingsPane.open`
   - Server:
@@ -314,7 +314,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
               - Contributes:
-                - `Pane.Register` `conv-docs` (path `docs`)
+                - `Pane.Register` `conv-docs`
                 - `Code.ToolbarButton` → `DocsButton`
             - **`file-pane`** — Hosts the per-conversation file-peek pane and the FilePane.Renderer slot.
               - Defines:
@@ -323,7 +323,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Types: `FileContentState`, `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`
                 - Values: `convFilePeekPane`, `FileContent`, `FileOpenProvider`, `FilePane`, `FilePaneView`, `FilePathLabel`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileOpen`, `useFileRenderers`
               - Contributes:
-                - `Pane.Register` `conv-file-peek` (path `file/:worktree/:filePath*`)
+                - `Pane.Register` `conv-file-peek`
               - Slot contributors: `diff`, `image`, `markdown`, `raw`
               - Plugins:
                 - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
@@ -345,15 +345,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Exports (shared):
                 - Values: `reviewConfig`
               - Contributes:
-                - `Pane.Register` `conv-review` (path `review`)
+                - `Pane.Register` `conv-review`
                 - `Code.ToolbarButton` → `ReviewButton`
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
           - Exports (shared):
             - Types: `CommitDelta`, `CommitRow`, `CommitsGraph`
             - Values: `commitDeltaResource`, `CommitDeltaSchema`, `CommitRowSchema`, `commitsGraphResource`, `CommitsGraphSchema`
           - Contributes:
-            - `Pane.Register` `conv-commits-graph` (path `commits`)
-            - `Pane.Register` `conv-commit-diff` (path `:sha`)
+            - `Pane.Register` `conv-commits-graph`
+            - `Pane.Register` `conv-commit-diff`
             - `Conversation.ActionBar` → `CommitsChip`
           - Server:
             - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesForAttempt`, `tasks-core.pushesResource`
@@ -498,24 +498,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (web):
             - Values: `convSidePane`
           - Contributes:
-            - `Pane.Register` `conv-side` (path `c/:sideConvId`)
+            - `Pane.Register` `conv-side`
         - **`side-task`** — Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).
           - Exports (web):
             - Values: `taskSidePane`
           - Contributes:
-            - `Pane.Register` `task-side` (path `task/:taskId`)
+            - `Pane.Register` `task-side`
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Contributes:
             - `conversationPane.Actions` → `StatusBadge`
         - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
           - Contributes:
-            - `Pane.Register` `conv-tasks` (path `tasks`)
+            - `Pane.Register` `conv-tasks`
             - `Conversation.ActionBar` → `TasksButton`
             - `convTasksPane.Actions` → `GoToParentAction`
             - `convTasksPane.Actions` → `ExpandToTasksAction`
         - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
           - Contributes:
-            - `Pane.Register` `conv-terminal` (path `terminal`)
+            - `Pane.Register` `conv-terminal`
             - `Conversation.ActionBar` → `TerminalButton`
         - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
           - Defines:
@@ -600,7 +600,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Values: `_conversationSummaries`, `conversationSummariesResource`
       - Contributes:
-        - `Pane.Register` `conv-summary` (path `summary`)
+        - `Pane.Register` `conv-summary`
       - Server:
         - Register: `submitConversationSummaryTool`
         - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `tasks-core.getConversation`, `tasks-core.getTask`
@@ -623,7 +623,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `recoveryPane`
   - Contributes:
-    - `Pane.Register` `conversations-recover` (path `/recovery`)
+    - `Pane.Register` `conversations-recover`
     - `Debug.Item` "Recovery"
     - `recoveryPane.open`
   - Server:
@@ -664,14 +664,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Values: `claudeCliCallsPane`
       - Contributes:
-        - `Pane.Register` `claude-cli-calls` (path `/debug/claude-cli-calls`)
+        - `Pane.Register` `claude-cli-calls`
         - `Debug.Item` "Claude CLI Calls"
         - `claudeCliCallsPane.open`
     - **`db-backup`** — Backup non-worktree Postgres databases to ~/.backups/singularity/. Backup non-worktree Postgres databases to ~/.backups/singularity/.
       - Exports (web):
         - Values: `dbBackupPane`
       - Contributes:
-        - `Pane.Register` `db-backup` (path `/debug/db-backup`)
+        - `Pane.Register` `db-backup`
         - `Debug.Item` "DB Backup"
         - `dbBackupPane.open`
       - Server:
@@ -684,8 +684,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `LogChannel`, `LogStream`
         - Values: `Log`
       - Contributes:
-        - `Pane.Register` `logs` (path `/logs`)
-        - `Pane.Register` `logs-channel` (path `:channel`)
+        - `Pane.Register` `logs`
+        - `Pane.Register` `logs-channel`
         - `Debug.Item` "Logs"
         - `logsPane.open`
       - Server:
@@ -695,7 +695,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Values: `memoryPane`
       - Contributes:
-        - `Pane.Register` `debug-memory` (path `/debug/memory`)
+        - `Pane.Register` `debug-memory`
         - `Debug.Item` "Memory"
         - `memoryPane.open`
       - Server:
@@ -706,14 +706,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Values: `queuePane`
       - Contributes:
-        - `Pane.Register` `queue` (path `/debug/queue`)
+        - `Pane.Register` `queue`
         - `Debug.Item` "Queue"
         - `queuePane.open`
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
       - Exports (web):
         - Values: `worktreeCleanupPane`
       - Contributes:
-        - `Pane.Register` `worktree-cleanup` (path `/debug/worktree-cleanup`)
+        - `Pane.Register` `worktree-cleanup`
         - `Debug.Item` "Worktree Cleanup"
         - `worktreeCleanupPane.open`
       - Server:
@@ -728,7 +728,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `eventsTestPane`
   - Contributes:
-    - `Pane.Register` `events-test` (path `/events-test`)
+    - `Pane.Register` `events-test`
     - `Debug.Item` "Events Test"
     - `eventsTestPane.open`
   - Server:
@@ -956,7 +956,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `publishPane`
   - Contributes:
-    - `Pane.Register` `publish` (path `/publish`)
+    - `Pane.Register` `publish`
     - `Shell.Sidebar` "Publish" (group `System`)
     - `publishPane.open`
   - Server:
@@ -987,7 +987,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `captureApp`, `screenshotPane`
   - Contributes:
-    - `Pane.Register` `screenshot` (path `/screenshot/:id`)
+    - `Pane.Register` `screenshot`
     - `Shell.Toolbar` (group `actions`) → `ScreenshotButton`
   - Server:
     - `POST /api/screenshots/:id`
@@ -1017,7 +1017,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `Stats`, `statsPane`
   - Contributes:
-    - `Pane.Register` `stats` (path `/stats`)
+    - `Pane.Register` `stats`
     - `Shell.Sidebar` "Stats" (group `System`)
     - `statsPane.open`
   - Slot contributors: `commits`, `cost`, `tasks`
@@ -1045,7 +1045,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Values: `costConvSidePane`
       - Contributes:
-        - `Pane.Register` `stats-cost-conv-side` (path `c/:sideConvId`)
+        - `Pane.Register` `stats-cost-conv-side`
         - `Stats.Chart` "Cost & Tokens" → `CostSection`
         - `Stats.Chart` "Token mix per day" → `TokenMixChart`
         - `Stats.Chart` "Average cost per conversation" → `AvgCostPerConversationChart`
@@ -1125,9 +1125,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Values: `taskConversationPane`, `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskFileOpenProvider`, `tasksRootPane`, `useFlushAll`, `useRegisterFlush`, `useTaskFileOpen`
       - Contributes:
-        - `Pane.Register` `tasks-root` (path `/tasks`)
-        - `Pane.Register` `task-detail` (path `:taskId`)
-        - `Pane.Register` `task-conversation` (path `c/:convId`)
+        - `Pane.Register` `tasks-root`
+        - `Pane.Register` `task-detail`
+        - `Pane.Register` `task-conversation`
         - `Shell.Sidebar` "Tasks" (group `System`)
         - `tasksRootPane.open`
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
@@ -1144,7 +1144,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Values: `taskFilePeekPane`
       - Contributes:
-        - `Pane.Register` `task-file-peek` (path `file/:filePath*`)
+        - `Pane.Register` `task-file-peek`
     - **`task-graph`** — Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.
       - Contributes:
         - `TaskDetailSlots.Above` → `TaskGraph`
@@ -1203,7 +1203,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `welcomePane`
   - Contributes:
-    - `Pane.Register` `welcome` (path `/`)
+    - `Pane.Register` `welcome`
 
 - **`worktree-switcher`** — Toolbar dropdown to switch the active worktree namespace.
   - Contributes:

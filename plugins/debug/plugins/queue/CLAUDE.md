@@ -8,7 +8,7 @@
 - Exports (web):
   - Values: `queuePane`
 - Contributes:
-  - `Pane.Register` `queue` (path `/debug/queue`)
+  - `Pane.Register` `queue`
   - `Debug.Item` "Queue"
   - `queuePane.open`
 

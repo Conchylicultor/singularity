@@ -10,7 +10,7 @@
 - Exports (web):
   - Values: `eventsTestPane`
 - Contributes:
-  - `Pane.Register` `events-test` (path `/events-test`)
+  - `Pane.Register` `events-test`
   - `Debug.Item` "Events Test"
   - `eventsTestPane.open`
 - Server:

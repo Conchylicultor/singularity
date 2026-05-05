@@ -15,7 +15,8 @@ import { SystemAgentDetail } from "./components/system-agent-detail";
 
 export const agentsRootPane = Pane.define({
   id: "agents-root",
-  path: "/agents",
+  after: [null],
+  segment: "agents",
   component: AgentsRoot,
   // No chrome; the agents list is its own UI.
   chrome: false,
@@ -24,8 +25,8 @@ export const agentsRootPane = Pane.define({
 
 export const agentDetailPane = Pane.define({
   id: "agent-detail",
-  parent: agentsRootPane,
-  path: ":id",
+  after: [agentsRootPane],
+  segment: ":id",
   component: AgentDetailBody,
   provides: type<{ agent: Agent }>(),
   width: 360,
@@ -33,8 +34,8 @@ export const agentDetailPane = Pane.define({
 
 export const agentConversationPane = Pane.define({
   id: "agent-conversation",
-  parent: agentDetailPane,
-  path: "c/:convId",
+  after: [agentDetailPane],
+  segment: "c/:convId",
   component: AgentConversationBody,
   // ConversationView owns its own PaneChrome (via conversationPane).
   chrome: false,
@@ -42,15 +43,15 @@ export const agentConversationPane = Pane.define({
 
 export const systemAgentDetailPane = Pane.define({
   id: "agent-system-detail",
-  parent: agentsRootPane,
-  path: "system/:systemId",
+  after: [agentsRootPane],
+  segment: "system/:systemId",
   component: SystemAgentDetailBody,
 });
 
 export const agentSidePane = Pane.define({
   id: "agent-side",
-  parent: conversationPane,
-  path: "agent/:agentId",
+  after: [conversationPane],
+  segment: "agent/:agentId",
   component: AgentSideBody,
   chrome: {
     history: false,

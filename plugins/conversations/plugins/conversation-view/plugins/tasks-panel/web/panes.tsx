@@ -4,8 +4,8 @@ import { TasksPane } from "./components/tasks-pane";
 
 export const convTasksPane = Pane.define({
   id: "conv-tasks",
-  parent: conversationPane,
-  path: "tasks",
+  after: [conversationPane],
+  segment: "tasks",
   component: TasksPane,
   chrome: { history: false },
 });

@@ -8,7 +8,7 @@
 - Exports (web):
   - Values: `recoveryPane`
 - Contributes:
-  - `Pane.Register` `conversations-recover` (path `/recovery`)
+  - `Pane.Register` `conversations-recover`
   - `Debug.Item` "Recovery"
   - `recoveryPane.open`
 - Server:

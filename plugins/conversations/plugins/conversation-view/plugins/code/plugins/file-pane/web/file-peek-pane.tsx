@@ -9,8 +9,8 @@ import { FileOpenProvider } from "./file-open-context";
 
 export const convFilePeekPane = Pane.define({
   id: "conv-file-peek",
-  parent: conversationPane,
-  path: "file/:worktree/:filePath*",
+  after: [conversationPane],
+  segment: "file/:worktree/:filePath*",
   component: ConvFilePeekPaneBody,
   chrome: { history: false },
   width: 600,

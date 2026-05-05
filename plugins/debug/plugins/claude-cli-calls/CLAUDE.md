@@ -8,7 +8,7 @@
 - Exports (web):
   - Values: `claudeCliCallsPane`
 - Contributes:
-  - `Pane.Register` `claude-cli-calls` (path `/debug/claude-cli-calls`)
+  - `Pane.Register` `claude-cli-calls`
   - `Debug.Item` "Claude CLI Calls"
   - `claudeCliCallsPane.open`
 

@@ -10,7 +10,7 @@
 - Exports (server):
   - Values: `_conversationSummaries`, `conversationSummariesResource`
 - Contributes:
-  - `Pane.Register` `conv-summary` (path `summary`)
+  - `Pane.Register` `conv-summary`
 - Server:
   - Register: `submitConversationSummaryTool`
   - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `tasks-core.getConversation`, `tasks-core.getTask`

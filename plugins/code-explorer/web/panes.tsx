@@ -5,14 +5,15 @@ import { GlobalFileTreeBody } from "./components/global-file-tree-body";
 
 export const globalFileTreePane = Pane.define({
   id: "global-file-tree",
-  path: "/code/:worktree",
+  after: [null],
+  segment: "code/:worktree",
   component: GlobalFileTreeChromedBody,
 });
 
 export const convFileTreePane = Pane.define({
   id: "conv-file-tree",
-  parent: conversationPane,
-  path: "files",
+  after: [conversationPane],
+  segment: "files",
   component: ConvFileTreeChromedBody,
   width: 280,
 });

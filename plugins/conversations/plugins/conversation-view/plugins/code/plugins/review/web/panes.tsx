@@ -4,8 +4,8 @@ import { ReviewView } from "./components/review-view";
 
 export const convReviewPane = Pane.define({
   id: "conv-review",
-  parent: conversationPane,
-  path: "review",
+  after: [conversationPane],
+  segment: "review",
   component: ConvReviewBody,
   width: 720,
 });

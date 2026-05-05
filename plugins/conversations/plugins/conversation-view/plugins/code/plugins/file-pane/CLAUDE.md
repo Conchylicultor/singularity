@@ -11,7 +11,7 @@
   - Types: `FileContentState`, `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`
   - Values: `convFilePeekPane`, `FileContent`, `FileOpenProvider`, `FilePane`, `FilePaneView`, `FilePathLabel`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileOpen`, `useFileRenderers`
 - Contributes:
-  - `Pane.Register` `conv-file-peek` (path `file/:worktree/:filePath*`)
+  - `Pane.Register` `conv-file-peek`
 - Slot contributors: `diff`, `image`, `markdown`, `raw`
 - Sub-plugins:
   - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.

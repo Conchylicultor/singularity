@@ -11,8 +11,8 @@ import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 
 export const taskFilePeekPane = Pane.define({
   id: "task-file-peek",
-  parent: taskDetailPane,
-  path: "file/:filePath*",
+  after: [taskDetailPane],
+  segment: "file/:filePath*",
   component: TaskFilePeekBody,
   chrome: { history: false },
   width: 600,

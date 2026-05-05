@@ -4,14 +4,15 @@ import { LogViewer } from "./components/log-viewer";
 
 export const logsPane = Pane.define({
   id: "logs",
-  path: "/logs",
+  after: [null],
+  segment: "logs",
   component: LogsBody,
 });
 
 export const logChannelPane = Pane.define({
   id: "logs-channel",
-  parent: logsPane,
-  path: ":channel",
+  after: [logsPane],
+  segment: ":channel",
   component: LogsChannelBody,
 });
 

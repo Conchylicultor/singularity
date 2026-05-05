@@ -3,6 +3,7 @@ import { EventsTestView } from "./components/events-test-view";
 
 export const eventsTestPane = Pane.define({
   id: "events-test",
-  path: "/events-test",
+  after: [null],
+  segment: "events-test",
   component: EventsTestView,
 });

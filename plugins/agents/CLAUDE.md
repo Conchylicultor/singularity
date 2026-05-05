@@ -17,11 +17,11 @@
   - Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`
   - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
 - Contributes:
-  - `Pane.Register` `agents-root` (path `/agents`)
-  - `Pane.Register` `agent-detail` (path `:id`)
-  - `Pane.Register` `agent-conversation` (path `c/:convId`)
-  - `Pane.Register` `agent-system-detail` (path `system/:systemId`)
-  - `Pane.Register` `agent-side` (path `agent/:agentId`)
+  - `Pane.Register` `agents-root`
+  - `Pane.Register` `agent-detail`
+  - `Pane.Register` `agent-conversation`
+  - `Pane.Register` `agent-system-detail`
+  - `Pane.Register` `agent-side`
   - `Shell.Sidebar` "Agents" (group `System`)
   - `agentsRootPane.open`
   - `Item.Avatar` → `AgentAvatarRow`
