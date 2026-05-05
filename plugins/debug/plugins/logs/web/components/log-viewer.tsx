@@ -200,13 +200,15 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
         {entries.map((entry) => (
           <div
             key={entry.seq}
-            className={
-              entry.stream === "stderr"
-                ? "text-destructive"
-                : "text-foreground"
-            }
+            className={cn(
+              "flex gap-2",
+              entry.stream === "stderr" ? "text-destructive" : "text-foreground",
+            )}
           >
-            {entry.line}
+            <span className="shrink-0 text-muted-foreground">
+              {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
+            </span>
+            <span>{entry.line}</span>
           </div>
         ))}
       </div>
