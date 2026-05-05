@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net"
@@ -113,7 +114,9 @@ func TestNewReverseProxyOverUDS(t *testing.T) {
 func TestSweepStaleSockets(t *testing.T) {
 	dir := t.TempDir()
 	mustTouch(t, filepath.Join(dir, "alive.sock"))
+	mustTouch(t, filepath.Join(dir, "alive.next.sock"))
 	mustTouch(t, filepath.Join(dir, "orphan.sock"))
+	mustTouch(t, filepath.Join(dir, "orphan.next.sock"))
 	mustTouch(t, filepath.Join(dir, "ignore.txt"))
 
 	cfg := &Config{SocketsDir: dir}
@@ -129,8 +132,14 @@ func TestSweepStaleSockets(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "alive.sock")); err != nil {
 		t.Fatalf("alive.sock should remain: %v", err)
 	}
+	if _, err := os.Stat(filepath.Join(dir, "alive.next.sock")); err != nil {
+		t.Fatalf("alive.next.sock should remain: %v", err)
+	}
 	if _, err := os.Stat(filepath.Join(dir, "orphan.sock")); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("orphan.sock should be removed; stat err: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "orphan.next.sock")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("orphan.next.sock should be removed; stat err: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "ignore.txt")); err != nil {
 		t.Fatalf("ignore.txt should remain (only *.sock is swept): %v", err)
@@ -161,6 +170,9 @@ func TestStartBackendUnlinksStaleSocket(t *testing.T) {
 }
 
 func TestNewWorktreeRejectsOverlongSocketPath(t *testing.T) {
+	// .next.sock is 10 bytes + "/" separator + name. SocketsDir=80 chars +
+	// "/bbbbbbbbbb.next.sock" = 80+1+10+10 = 101 which is under 104.
+	// Push it past 104 to trigger rejection.
 	cfg := &Config{SocketsDir: strings.Repeat("a", 90)}
 	_, err := NewWorktree("bbbbbbbbbbbbbbbb", &Spec{Server: "/tmp/server"}, cfg)
 	if err == nil {
@@ -171,7 +183,150 @@ func TestNewWorktreeRejectsOverlongSocketPath(t *testing.T) {
 	}
 }
 
+func TestSocketPathAlternation(t *testing.T) {
+	dir := t.TempDir()
+	cfg := &Config{SocketsDir: dir}
+	wt, err := NewWorktree("test", &Spec{Server: "/tmp/server"}, cfg)
+	if err != nil {
+		t.Fatalf("NewWorktree: %v", err)
+	}
+
+	primary := wt.primarySocketPath()
+	secondary := wt.secondarySocketPath()
+
+	if primary == secondary {
+		t.Fatalf("primary and secondary should differ: %s", primary)
+	}
+	if !strings.HasSuffix(primary, ".sock") {
+		t.Fatalf("primary should end with .sock: %s", primary)
+	}
+	if !strings.HasSuffix(secondary, ".next.sock") {
+		t.Fatalf("secondary should end with .next.sock: %s", secondary)
+	}
+
+	// With no active backend, restartTargetPath returns primary.
+	wt.mu.Lock()
+	target := wt.restartTargetPath()
+	wt.mu.Unlock()
+	if target != primary {
+		t.Fatalf("restartTargetPath with nil active should be primary, got %s", target)
+	}
+
+	// With active on primary, restartTargetPath returns secondary.
+	wt.mu.Lock()
+	wt.active = &backend{socketPath: primary}
+	target = wt.restartTargetPath()
+	wt.mu.Unlock()
+	if target != secondary {
+		t.Fatalf("restartTargetPath with active on primary should be secondary, got %s", target)
+	}
+
+	// With active on secondary, restartTargetPath returns primary.
+	wt.mu.Lock()
+	wt.active = &backend{socketPath: secondary}
+	target = wt.restartTargetPath()
+	wt.mu.Unlock()
+	if target != primary {
+		t.Fatalf("restartTargetPath with active on secondary should be primary, got %s", target)
+	}
+}
+
+func TestBackendConnTracking(t *testing.T) {
+	bk := &backend{}
+	if bk.conns() != 0 {
+		t.Fatal("initial conns should be 0")
+	}
+	bk.incConns()
+	bk.incConns()
+	if bk.conns() != 2 {
+		t.Fatalf("expected 2 conns, got %d", bk.conns())
+	}
+	bk.decConns()
+	if bk.conns() != 1 {
+		t.Fatalf("expected 1 conn, got %d", bk.conns())
+	}
+	bk.decConns()
+	bk.decConns() // should not go negative
+	if bk.conns() != 0 {
+		t.Fatalf("expected 0 conns, got %d", bk.conns())
+	}
+}
+
+func TestOnBackendExitIgnoresDraining(t *testing.T) {
+	dir := shortTempDir(t)
+	cfg := &Config{SocketsDir: dir, ShutdownGrace: 5 * time.Second}
+	wt, err := NewWorktree("t", &Spec{Server: "/tmp/server"}, cfg)
+	if err != nil {
+		t.Fatalf("NewWorktree: %v", err)
+	}
+
+	activeBk := &backend{socketPath: filepath.Join(dir, "active.sock")}
+	drainingBk := &backend{socketPath: filepath.Join(dir, "draining.sock")}
+
+	wt.mu.Lock()
+	wt.state = StateRunning
+	wt.active = activeBk
+	wt.mu.Unlock()
+
+	// Simulate the draining backend exiting — should NOT change state.
+	wt.onBackendExit(drainingBk, nil)
+
+	wt.mu.Lock()
+	state := wt.state
+	active := wt.active
+	wt.mu.Unlock()
+
+	if state != StateRunning {
+		t.Fatalf("state should remain Running, got %s", state)
+	}
+	if active != activeBk {
+		t.Fatal("active backend should not change when a non-active backend exits")
+	}
+}
+
+func TestEnsureReturnsProxyDuringRestart(t *testing.T) {
+	dir := shortTempDir(t)
+	cfg := &Config{SocketsDir: dir}
+	wt, err := NewWorktree("t", &Spec{Server: "/tmp/server"}, cfg)
+	if err != nil {
+		t.Fatalf("NewWorktree: %v", err)
+	}
+
+	proxy := newReverseProxy(filepath.Join(dir, "t.sock"))
+	wt.mu.Lock()
+	wt.state = StateRestarting
+	wt.active = &backend{
+		socketPath: filepath.Join(dir, "t.sock"),
+		proxy:      proxy,
+	}
+	wt.restartDone = make(chan struct{})
+	wt.mu.Unlock()
+
+	// Ensure() should return the old proxy during a restart, not block or error.
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	got, err := wt.Ensure(ctx)
+	if err != nil {
+		t.Fatalf("Ensure during restart should not error: %v", err)
+	}
+	if got != proxy {
+		t.Fatal("Ensure during restart should return the old proxy")
+	}
+}
+
 // ─── helpers ─────────────────────────────────────────────────
+
+// shortTempDir creates a temp dir with a short path to stay within the
+// 104-byte macOS sun_path limit for socket paths in tests.
+func shortTempDir(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("/tmp", "gw-")
+	if err != nil {
+		t.Fatalf("MkdirTemp: %v", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	return dir
+}
 
 func mustTouch(t *testing.T, path string) {
 	t.Helper()

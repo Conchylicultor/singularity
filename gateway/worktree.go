@@ -31,6 +31,7 @@ const (
 	StateIdle State = iota
 	StateStarting
 	StateRunning
+	StateRestarting
 	StateStopping
 	StateBroken
 )
@@ -43,6 +44,8 @@ func (s State) String() string {
 		return "starting"
 	case StateRunning:
 		return "running"
+	case StateRestarting:
+		return "restarting"
 	case StateStopping:
 		return "stopping"
 	case StateBroken:
@@ -76,16 +79,44 @@ var (
 	ErrStopping    = errors.New("worktree is stopping")
 )
 
+// backend groups the per-process fields for one running backend instance.
+// A Worktree holds at most one active *backend; a second may exist briefly
+// as the "draining" old backend during a hot restart.
+type backend struct {
+	cmd        *exec.Cmd
+	exitCh     chan struct{} // closed when cmd.Wait returns
+	socketPath string
+	proxy      *httputil.ReverseProxy // nil until waitReady succeeds
+
+	connMu      sync.Mutex
+	activeConns int
+}
+
+func (b *backend) incConns() {
+	b.connMu.Lock()
+	b.activeConns++
+	b.connMu.Unlock()
+}
+
+func (b *backend) decConns() {
+	b.connMu.Lock()
+	if b.activeConns > 0 {
+		b.activeConns--
+	}
+	b.connMu.Unlock()
+}
+
+func (b *backend) conns() int {
+	b.connMu.Lock()
+	defer b.connMu.Unlock()
+	return b.activeConns
+}
+
 // Worktree owns one backend's lifecycle: spawn, supervise, proxy, idle teardown.
 type Worktree struct {
 	Name string
 
 	cfg *Config
-
-	// socketPath is derived deterministically from Name + cfg.SocketsDir at
-	// construction. Stable across the worktree's lifetime; safe to capture
-	// by value in proxy closures.
-	socketPath string
 
 	// spec is replaced atomically on file change. Lock-free reads.
 	spec atomic.Pointer[Spec]
@@ -93,14 +124,17 @@ type Worktree struct {
 	// All other fields below are guarded by mu.
 	mu           sync.Mutex
 	state        State
-	cmd          *exec.Cmd
-	exitCh       chan struct{} // closed when cmd.Wait returns
-	proxy        *httputil.ReverseProxy
+	active       *backend
 	lastActivity time.Time
-	activeConns  int
 	brokenUntil  time.Time
 	readyCh      chan struct{} // signal-only; waiters re-check state
 	lastSpawnErr error
+
+	// restartMu serializes concurrent Restart() calls.
+	restartMu sync.Mutex
+	// restartDone is non-nil during StateRestarting. Closed when restart
+	// settles (success or failure). Snapshot under w.mu; closed by Restart().
+	restartDone chan struct{}
 
 	// logBuf is a per-worktree ring of backend stdout/stderr lines. It
 	// persists across respawns so crash output remains visible after the
@@ -109,15 +143,15 @@ type Worktree struct {
 }
 
 func NewWorktree(name string, spec *Spec, cfg *Config) (*Worktree, error) {
-	socketPath := filepath.Join(cfg.SocketsDir, name+".sock")
-	if len(socketPath) > maxSocketPath {
-		return nil, fmt.Errorf("socket path %q is %d bytes; exceeds %d-byte limit (rename worktree)", socketPath, len(socketPath), maxSocketPath)
+	// Validate the longer .next.sock path — if it fits, the primary .sock does too.
+	longest := filepath.Join(cfg.SocketsDir, name+".next.sock")
+	if len(longest) > maxSocketPath {
+		return nil, fmt.Errorf("socket path %q is %d bytes; exceeds %d-byte limit (rename worktree)", longest, len(longest), maxSocketPath)
 	}
 	w := &Worktree{
-		Name:       name,
-		cfg:        cfg,
-		socketPath: socketPath,
-		logBuf:     newLogRing(cfg.LogBufferLines),
+		Name:   name,
+		cfg:    cfg,
+		logBuf: newLogRing(cfg.LogBufferLines),
 	}
 	w.spec.Store(spec)
 	return w, nil
@@ -134,6 +168,24 @@ func (w *Worktree) UpdateSpec(s *Spec) {
 	w.spec.Store(s)
 }
 
+func (w *Worktree) primarySocketPath() string {
+	return filepath.Join(w.cfg.SocketsDir, w.Name+".sock")
+}
+
+func (w *Worktree) secondarySocketPath() string {
+	return filepath.Join(w.cfg.SocketsDir, w.Name+".next.sock")
+}
+
+// restartTargetPath returns the socket path to use for the next hot restart.
+// Picks whichever of primary/secondary the current active backend is NOT using.
+// Must be called with w.mu held.
+func (w *Worktree) restartTargetPath() string {
+	if w.active != nil && w.active.socketPath == w.primarySocketPath() {
+		return w.secondarySocketPath()
+	}
+	return w.primarySocketPath()
+}
+
 // Ensure starts the backend if needed and returns a ready ReverseProxy.
 // Concurrent callers share a single in-flight spawn via readyCh.
 func (w *Worktree) Ensure(ctx context.Context) (*httputil.ReverseProxy, error) {
@@ -141,7 +193,13 @@ func (w *Worktree) Ensure(ctx context.Context) (*httputil.ReverseProxy, error) {
 
 	switch w.state {
 	case StateRunning:
-		p := w.proxy
+		p := w.active.proxy
+		w.mu.Unlock()
+		return p, nil
+
+	case StateRestarting:
+		// Old backend still serving — return its proxy for zero downtime.
+		p := w.active.proxy
 		w.mu.Unlock()
 		return p, nil
 
@@ -177,30 +235,31 @@ func (w *Worktree) Ensure(ctx context.Context) (*httputil.ReverseProxy, error) {
 	w.lastSpawnErr = nil
 	readyCh := w.readyCh
 	spec := w.Spec()
+	socketPath := w.primarySocketPath()
 	w.mu.Unlock()
 
 	// Run the spawn outside the lock so concurrent callers see Starting and wait.
-	cmd, exitCh, spawnErr := w.startBackend(spec)
+	bk, spawnErr := w.startBackend(spec, socketPath)
 	if spawnErr == nil {
 		// Make cmd visible so Stop can find it before readiness completes.
 		w.mu.Lock()
-		w.cmd = cmd
-		w.exitCh = exitCh
+		w.active = bk
 		w.mu.Unlock()
-		spawnErr = waitReady(w.socketPath, w.cfg.ReadyTimeout, exitCh)
+		spawnErr = waitReady(socketPath, w.cfg.ReadyTimeout, bk.exitCh)
 	}
 
 	if spawnErr != nil {
 		wrapped := fmt.Errorf("%w: %v", ErrSpawnFailed, spawnErr)
 		// Kill if the process started; wait for the exit goroutine to close exitCh.
-		if cmd != nil && cmd.Process != nil {
-			killGroup(cmd, syscall.SIGKILL)
-			<-exitCh
+		if bk != nil && bk.cmd != nil && bk.cmd.Process != nil {
+			killGroup(bk.cmd, syscall.SIGKILL)
+			<-bk.exitCh
 		}
-		_ = os.Remove(w.socketPath)
+		if bk != nil {
+			_ = os.Remove(bk.socketPath)
+		}
 		w.mu.Lock()
-		w.cmd = nil
-		w.exitCh = nil
+		w.active = nil
 		w.state = StateBroken
 		w.brokenUntil = time.Now().Add(w.cfg.BrokenCooldown)
 		w.lastSpawnErr = wrapped
@@ -212,20 +271,20 @@ func (w *Worktree) Ensure(ctx context.Context) (*httputil.ReverseProxy, error) {
 
 	w.mu.Lock()
 	w.state = StateRunning
-	w.proxy = newReverseProxy(w.socketPath)
+	bk.proxy = newReverseProxy(socketPath)
 	w.lastActivity = time.Now()
-	p := w.proxy
+	p := bk.proxy
 	w.mu.Unlock()
 	close(readyCh)
-	slog.Info("backend ready", "worktree", w.Name, "socket", w.socketPath)
+	slog.Info("backend ready", "worktree", w.Name, "socket", socketPath)
 	return p, nil
 }
 
 func (w *Worktree) snapshotAfterSpawn() (*httputil.ReverseProxy, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if w.state == StateRunning {
-		return w.proxy, nil
+	if w.state == StateRunning && w.active != nil {
+		return w.active.proxy, nil
 	}
 	if w.lastSpawnErr != nil {
 		return nil, w.lastSpawnErr
@@ -233,9 +292,109 @@ func (w *Worktree) snapshotAfterSpawn() (*httputil.ReverseProxy, error) {
 	return nil, errors.New("spawn did not complete successfully")
 }
 
+const drainTimeout = 30 * time.Second
+
+// Restart performs a zero-downtime restart: spawns a new backend on the
+// alternate socket, waits for it to be ready, atomically swaps the proxy
+// pointer, then drains and stops the old backend in the background.
+// If the new backend fails to start, the old backend is left intact.
+func (w *Worktree) Restart(ctx context.Context) error {
+	w.restartMu.Lock()
+	defer w.restartMu.Unlock()
+
+	// --- Step 1: Running → Restarting ---
+	w.mu.Lock()
+	if w.state != StateRunning {
+		s := w.state
+		w.mu.Unlock()
+		return fmt.Errorf("cannot hot-restart in state %s", s)
+	}
+	w.state = StateRestarting
+	oldBk := w.active
+	newSocketPath := w.restartTargetPath()
+	spec := w.Spec()
+	doneCh := make(chan struct{})
+	w.restartDone = doneCh
+	w.mu.Unlock()
+
+	defer func() {
+		w.mu.Lock()
+		w.restartDone = nil
+		w.mu.Unlock()
+		close(doneCh)
+	}()
+
+	// --- Step 2: Spawn new backend on alternate socket ---
+	slog.Info("hot restart: spawning", "worktree", w.Name, "socket", newSocketPath)
+	newBk, spawnErr := w.startBackend(spec, newSocketPath)
+
+	// --- Step 3: Wait for readiness ---
+	if spawnErr == nil {
+		spawnErr = waitReady(newSocketPath, w.cfg.ReadyTimeout, newBk.exitCh)
+	}
+
+	// --- Step 4 (failure): keep old backend, revert state ---
+	if spawnErr != nil {
+		if newBk != nil && newBk.cmd != nil && newBk.cmd.Process != nil {
+			_ = killGroup(newBk.cmd, syscall.SIGKILL)
+			<-newBk.exitCh
+		}
+		if newBk != nil {
+			_ = os.Remove(newBk.socketPath)
+		}
+		w.mu.Lock()
+		if w.state == StateRestarting {
+			w.state = StateRunning
+		}
+		w.mu.Unlock()
+		return fmt.Errorf("hot restart failed (old backend intact): %w", spawnErr)
+	}
+
+	// --- Step 4 (success): atomic swap ---
+	newBk.proxy = newReverseProxy(newSocketPath)
+	w.mu.Lock()
+	w.active = newBk
+	w.state = StateRunning
+	w.lastActivity = time.Now()
+	w.mu.Unlock()
+	slog.Info("hot restart: swapped", "worktree", w.Name,
+		"old_socket", oldBk.socketPath, "new_socket", newSocketPath)
+
+	// --- Step 5: Drain old backend in background ---
+	go w.drainAndStop(oldBk)
+	return nil
+}
+
+// drainAndStop waits for active WebSocket connections on bk to drain (up to
+// drainTimeout), then signals and waits for the process to exit. Runs in a
+// goroutine kicked off by Restart(); never modifies w.state.
+func (w *Worktree) drainAndStop(bk *backend) {
+	deadline := time.Now().Add(drainTimeout)
+	for bk.conns() > 0 && time.Now().Before(deadline) {
+		time.Sleep(200 * time.Millisecond)
+	}
+	if n := bk.conns(); n > 0 {
+		slog.Warn("drain timeout; forcing stop with active WS connections",
+			"worktree", w.Name, "activeConns", n)
+	}
+	if bk.cmd != nil && bk.cmd.Process != nil {
+		_ = killGroup(bk.cmd, syscall.SIGTERM)
+		select {
+		case <-bk.exitCh:
+		case <-time.After(w.cfg.ShutdownGrace):
+			_ = killGroup(bk.cmd, syscall.SIGKILL)
+			<-bk.exitCh
+		}
+	}
+	_ = os.Remove(bk.socketPath)
+	slog.Info("hot restart: old backend drained and stopped",
+		"worktree", w.Name, "socket", bk.socketPath)
+}
+
 // Stop performs a graceful shutdown: SIGTERM → grace → SIGKILL. Idempotent.
 // If the worktree is currently spawning, Stop waits for the spawn to settle
-// first to avoid racing the spawn cleanup path.
+// first to avoid racing the spawn cleanup path. If a hot restart is in flight,
+// waits for it to settle before stopping.
 func (w *Worktree) Stop(ctx context.Context) error {
 	w.mu.Lock()
 	if w.state == StateStarting {
@@ -248,34 +407,44 @@ func (w *Worktree) Stop(ctx context.Context) error {
 		}
 		w.mu.Lock()
 	}
+	if w.state == StateRestarting {
+		doneCh := w.restartDone
+		w.mu.Unlock()
+		if doneCh != nil {
+			select {
+			case <-doneCh:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+		w.mu.Lock()
+	}
 	if w.state != StateRunning {
 		w.mu.Unlock()
 		return nil
 	}
 	w.state = StateStopping
-	cmd := w.cmd
-	exitCh := w.exitCh
+	bk := w.active
 	w.mu.Unlock()
 
-	if cmd != nil && cmd.Process != nil {
-		_ = killGroup(cmd, syscall.SIGTERM)
+	if bk != nil && bk.cmd != nil && bk.cmd.Process != nil {
+		_ = killGroup(bk.cmd, syscall.SIGTERM)
 		select {
-		case <-exitCh:
+		case <-bk.exitCh:
 		case <-time.After(w.cfg.ShutdownGrace):
-			_ = killGroup(cmd, syscall.SIGKILL)
-			<-exitCh
+			_ = killGroup(bk.cmd, syscall.SIGKILL)
+			<-bk.exitCh
 		}
 	}
 
-	_ = os.Remove(w.socketPath)
+	if bk != nil {
+		_ = os.Remove(bk.socketPath)
+	}
 	w.mu.Lock()
-	w.cmd = nil
-	w.exitCh = nil
-	w.proxy = nil
+	w.active = nil
 	w.state = StateIdle
-	w.activeConns = 0
 	w.mu.Unlock()
-	slog.Info("backend stopped", "worktree", w.Name, "socket", w.socketPath)
+	slog.Info("backend stopped", "worktree", w.Name)
 	return nil
 }
 
@@ -286,22 +455,13 @@ func (w *Worktree) TouchBackend() {
 	w.mu.Unlock()
 }
 
-// IncConns marks a long-lived connection (WebSocket) as active. While
-// activeConns > 0, the sweeper will not tear the backend down.
-func (w *Worktree) IncConns() {
+// activeBackend returns the currently active backend, or nil. Called by
+// handleWebSocket to capture the backend at connection time so the WS
+// connection pins to that specific process.
+func (w *Worktree) activeBackend() *backend {
 	w.mu.Lock()
-	w.activeConns++
-	w.lastActivity = time.Now()
-	w.mu.Unlock()
-}
-
-func (w *Worktree) DecConns() {
-	w.mu.Lock()
-	if w.activeConns > 0 {
-		w.activeConns--
-	}
-	w.lastActivity = time.Now()
-	w.mu.Unlock()
+	defer w.mu.Unlock()
+	return w.active
 }
 
 // Snapshot returns a consistent view of the worktree state for /gateway/worktrees.
@@ -309,13 +469,19 @@ func (w *Worktree) Snapshot() WorktreeStatus {
 	w.mu.Lock()
 	state := w.state
 	last := w.lastActivity
-	conns := w.activeConns
+	bk := w.active
 	w.mu.Unlock()
 	spec := w.Spec()
+	var socketPath string
+	var conns int
+	if bk != nil {
+		socketPath = bk.socketPath
+		conns = bk.conns()
+	}
 	return WorktreeStatus{
 		Name:         w.Name,
 		State:        state.String(),
-		SocketPath:   w.socketPath,
+		SocketPath:   socketPath,
 		LastActivity: last,
 		ActiveConns:  conns,
 		Server:       spec.Server,
@@ -341,7 +507,7 @@ func (w *Worktree) ShouldSweep(idleTimeout time.Duration) bool {
 	if w.state != StateRunning {
 		return false
 	}
-	if w.activeConns > 0 {
+	if w.active != nil && w.active.conns() > 0 {
 		return false
 	}
 	return time.Since(w.lastActivity) >= idleTimeout
@@ -349,74 +515,80 @@ func (w *Worktree) ShouldSweep(idleTimeout time.Duration) bool {
 
 // ─── internal helpers ────────────────────────────────────────
 
-// startBackend builds and starts the backend process. On success, returns the
-// running cmd and an exitCh that closes when cmd.Wait returns.
-//
-// Removes any stale socket file at w.socketPath before spawning, since Bun
-// will EADDRINUSE if the path exists. This handles crashes that left a file
-// behind even though no process holds it.
-func (w *Worktree) startBackend(spec *Spec) (*exec.Cmd, chan struct{}, error) {
-	if err := os.Remove(w.socketPath); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, nil, fmt.Errorf("unlink stale socket: %w", err)
+// startBackend builds and starts a backend process on the given socketPath.
+// Returns a *backend with cmd and exitCh populated; proxy is nil until the
+// caller confirms readiness and calls newReverseProxy.
+func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error) {
+	if err := os.Remove(socketPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, fmt.Errorf("unlink stale socket: %w", err)
 	}
 
 	cmd := exec.Command("bun", "src/index.ts")
 	cmd.Dir = spec.Server
 	cmd.Env = append(os.Environ(),
-		fmt.Sprintf("SOCKET_PATH=%s", w.socketPath),
+		fmt.Sprintf("SOCKET_PATH=%s", socketPath),
 		fmt.Sprintf("SINGULARITY_WORKTREE=%s", w.Name),
 	)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	slog.Info(fmt.Sprintf("--- starting %s ---", w.Name))
 	w.logBuf.Append("gateway", fmt.Sprintf("--- starting %s ---", w.Name), time.Now().UnixMilli())
 	if err := cmd.Start(); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	exitCh := make(chan struct{})
-	log := slog.With("worktree", w.Name, "pid", cmd.Process.Pid, "socket", w.socketPath)
+	bk := &backend{
+		cmd:        cmd,
+		exitCh:     make(chan struct{}),
+		socketPath: socketPath,
+	}
+	log := slog.With("worktree", w.Name, "pid", cmd.Process.Pid, "socket", socketPath)
 	go pumpLog(stdout, log, "stdout", w.logBuf)
 	go pumpLog(stderr, log, "stderr", w.logBuf)
 	go func() {
 		err := cmd.Wait()
-		w.onProcExit(err)
-		close(exitCh)
+		w.onBackendExit(bk, err)
+		close(bk.exitCh)
 	}()
 	log.Info("backend spawned")
-	return cmd, exitCh, nil
+	return bk, nil
 }
 
-// onProcExit is invoked from the cmd.Wait goroutine. It only acts if the
-// worktree is in StateRunning — Starting and Stopping are handled by their
-// respective callers, which ensure cleanup themselves.
-func (w *Worktree) onProcExit(err error) {
+// onBackendExit is invoked from the cmd.Wait goroutine. It only transitions
+// state if the exiting backend is the currently active one — a draining old
+// backend from a hot restart is silently ignored.
+func (w *Worktree) onBackendExit(bk *backend, err error) {
 	w.mu.Lock()
+	isActive := (w.active == bk)
 	state := w.state
 	w.mu.Unlock()
-	if state != StateRunning {
+
+	if !isActive {
 		return
 	}
+
+	if state == StateStopping {
+		return
+	}
+
 	slog.Warn("backend exited unexpectedly", "worktree", w.Name, "err", err)
-	_ = os.Remove(w.socketPath)
+	_ = os.Remove(bk.socketPath)
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if w.state != StateRunning {
+	if w.active != bk {
 		return
 	}
-	w.cmd = nil
-	w.exitCh = nil
-	w.proxy = nil
+	w.active = nil
 	w.state = StateIdle
-	w.activeConns = 0
 }
 
 // waitReady polls the backend's Unix socket with dials until it accepts a

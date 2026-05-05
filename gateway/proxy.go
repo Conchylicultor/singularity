@@ -123,14 +123,16 @@ func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request, wt *Worktree)
 }
 
 // handleWebSocket cold-starts the backend, hijacks the client connection, and
-// shuttles bytes both ways until either side closes.
+// shuttles bytes both ways until either side closes. The WebSocket connection
+// is pinned to the backend that was active at dial time — a hot restart swaps
+// new requests to the new backend without disturbing open connections.
 func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Worktree) {
 	if _, err := wt.Ensure(r.Context()); err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
-	socketPath := wt.Snapshot().SocketPath
-	if socketPath == "" {
+	bk := wt.activeBackend()
+	if bk == nil {
 		http.Error(w, "backend socket unavailable", http.StatusBadGateway)
 		return
 	}
@@ -138,7 +140,7 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Work
 	dialCtx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
 	defer cancel()
 	var d net.Dialer
-	backendConn, err := d.DialContext(dialCtx, "unix", socketPath)
+	backendConn, err := d.DialContext(dialCtx, "unix", bk.socketPath)
 	if err != nil {
 		http.Error(w, "backend dial: "+err.Error(), http.StatusBadGateway)
 		return
@@ -163,8 +165,9 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Work
 		return
 	}
 
-	wt.IncConns()
-	defer wt.DecConns()
+	wt.TouchBackend()
+	bk.incConns()
+	defer bk.decConns()
 
 	errc := make(chan error, 2)
 	go func() {
@@ -213,8 +216,21 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 
 		switch {
 		case action == "restart" && r.Method == http.MethodPost:
-			if err := wt.Stop(r.Context()); err != nil {
-				http.Error(w, "stop failed: "+err.Error(), http.StatusInternalServerError)
+			ctx := r.Context()
+			snap := wt.Snapshot()
+			switch snap.State {
+			case "running", "restarting":
+				if err := wt.Restart(ctx); err != nil {
+					http.Error(w, "hot restart failed: "+err.Error(), http.StatusInternalServerError)
+					return
+				}
+			case "idle", "broken":
+				if _, err := wt.Ensure(ctx); err != nil {
+					http.Error(w, "cold start failed: "+err.Error(), http.StatusInternalServerError)
+					return
+				}
+			default:
+				http.Error(w, "backend is "+snap.State+"; retry shortly", http.StatusServiceUnavailable)
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")

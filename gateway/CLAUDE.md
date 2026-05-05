@@ -53,13 +53,23 @@ Flat single-package layout:
 ```
 gateway/
 ├── main.go        # Flags, wiring, signal handling, sockets-dir setup, PG bring-up
-├── worktree.go    # Worktree state machine (Idle→Starting→Running→Stopping), spawn, lifecycle
+├── worktree.go    # Worktree state machine (Idle→Starting→Running→Restarting→Stopping), spawn, lifecycle
 ├── registry.go    # Map of worktrees, fsnotify file watcher, idle sweeper, stale-socket sweep
 ├── postgres.go    # Embedded Postgres supervisor: initdb, pg_ctl, watchdog, status
 └── proxy.go       # http.Handler: routing, static serving, HTTP/WS proxy, /gateway API
 ```
 
 Logic belongs with the data it operates on: spawn/stop/readiness are methods on `Worktree`, discovery/sweeping are methods on `Registry`, all request handling is in `Proxy.ServeHTTP`, PG lifecycle is on `PgSupervisor`.
+
+## Zero-downtime restart
+
+`POST /gateway/worktrees/<name>/restart` performs a hot restart when the backend is already running. The gateway spawns a new backend on an alternate socket (`<name>.next.sock`) while the old one keeps serving. Once the new backend is ready, the proxy pointer is swapped atomically — new requests go to the new process, in-flight requests and WebSocket connections finish on the old one. The old backend then drains and exits.
+
+Two socket paths per worktree: `<name>.sock` (primary) and `<name>.next.sock` (secondary). They alternate on each restart — the gateway always spawns on whichever socket the current backend is NOT using. The `backend` struct groups per-process state (cmd, exitCh, proxy, socket path, WS conn count) so two backends can coexist briefly during the swap window.
+
+If the new backend fails to start (bad code, broken migration), the old backend stays up and the restart returns an error. Failed deploys cause zero downtime.
+
+State machine during restart: `Running → Restarting → Running`. During `Restarting`, `Ensure()` returns the old proxy immediately (no blocking, no 502). The idle sweeper skips worktrees in `Restarting` state. `Stop()` waits for an in-flight restart to settle before proceeding.
 
 ## Postgres supervision
 
@@ -104,11 +114,11 @@ In Bun: `Bun.serve({ unix: process.env.SOCKET_PATH, fetch, websocket })`. There 
 Two layers, both gateway-side:
 
 1. **Per-spawn unlink-before-bind** — `os.Remove(socketPath)` immediately before each spawn. Handles the case where a previous process crashed and left a socket file behind.
-2. **Boot sweep** — at gateway startup, any `*.sock` file under `~/.singularity/sockets/` whose stem isn't a registered worktree gets removed. Cosmetic; prevents accumulation when worktrees are deleted while their socket lingers.
+2. **Boot sweep** — at gateway startup, any `*.sock` or `*.next.sock` file under `~/.singularity/sockets/` whose worktree name isn't registered gets removed. Cosmetic; prevents accumulation when worktrees are deleted while their socket lingers.
 
 ## Path-length limit
 
-macOS `sun_path` is 104 bytes. With the standard prefix (`/Users/<user>/.singularity/sockets/`) and `.sock` suffix, worktree names up to ~67 chars fit. If a worktree's name produces an overlong path, `NewWorktree` returns an error and the worktree is rejected at registration. Rename or shorten the worktree to recover.
+macOS `sun_path` is 104 bytes. With the standard prefix (`/Users/<user>/.singularity/sockets/`) and `.next.sock` suffix (the longer of the two per-worktree sockets), worktree names up to ~62 chars fit. If a worktree's name produces an overlong path, `NewWorktree` returns an error and the worktree is rejected at registration. Rename or shorten the worktree to recover.
 
 ## File permissions
 
@@ -121,7 +131,7 @@ Two levels of locking:
 - `Registry.mu` (RWMutex) guards the worktree map. Held briefly for lookup/insert/delete. Never held during I/O
 - `Worktree.mu` guards per-worktree state. For slow ops (spawn, stop): lock → snapshot → unlock → work → relock → commit
 
-Concurrent cold-start callers share a single in-flight spawn via a `readyCh` channel — second caller blocks until the first finishes, then both proceed or both get the same error.
+Concurrent cold-start callers share a single in-flight spawn via a `readyCh` channel — second caller blocks until the first finishes, then both proceed or both get the same error. Concurrent `Restart()` calls are serialized by a separate `restartMu`; `restartDone` lets `Stop()` wait for an in-flight restart without holding the main mutex.
 
 ## Design Docs
 

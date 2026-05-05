@@ -571,7 +571,7 @@ export function registerBuild(program: Command) {
           try {
             const resp = await fetch(
               "http://localhost:9000/gateway/worktrees/central/restart",
-              { method: "POST" },
+              { method: "POST", signal: AbortSignal.timeout(30_000) },
             );
             if (resp.ok) {
               await probeGatewayHealth();
@@ -594,10 +594,10 @@ export function registerBuild(program: Command) {
       try {
         const resp = await fetch(
           `http://localhost:9000/gateway/worktrees/${name}/restart`,
-          { method: "POST" },
+          { method: "POST", signal: AbortSignal.timeout(30_000) },
         );
         if (resp.ok) {
-          console.log("Backend restarted (will respawn on next request)");
+          console.log("Backend restarted");
         } else if (resp.status === 404) {
           console.log("No running backend to restart");
         } else {

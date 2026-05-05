@@ -193,7 +193,7 @@ func (r *Registry) upsert(name string, spec *Spec) {
 		}
 		r.byName[name] = newWt
 		r.mu.Unlock()
-		slog.Info("worktree registered", "name", name, "server", spec.Server, "web", spec.Web, "socket", newWt.socketPath)
+		slog.Info("worktree registered", "name", name, "server", spec.Server, "web", spec.Web, "socket", newWt.primarySocketPath())
 		return
 	}
 	r.mu.Unlock()
@@ -256,7 +256,13 @@ func sweepStaleSockets(dir string, reg *Registry) {
 		if !strings.HasSuffix(name, ".sock") {
 			continue
 		}
-		stem := strings.TrimSuffix(name, ".sock")
+		// Derive worktree name from either <name>.sock or <name>.next.sock.
+		var stem string
+		if s, ok := strings.CutSuffix(name, ".next.sock"); ok {
+			stem = s
+		} else {
+			stem = strings.TrimSuffix(name, ".sock")
+		}
 		if reg.HasName(stem) {
 			continue
 		}
