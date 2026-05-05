@@ -1,5 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import { retryUntil, exponential } from "@packages/retry";
 import {
   EMBEDDED_PG_PORT,
   EMBEDDED_PG_SOCKET_DIR,
@@ -100,28 +101,33 @@ let readyPromise: Promise<void> | null = null;
 export async function awaitPgReady(): Promise<void> {
   if (readyPromise) return readyPromise;
   readyPromise = (async () => {
-    const deadline = Date.now() + PG_READY_TIMEOUT_MS;
-    let delay = 100;
     let lastErr: unknown = null;
-    while (Date.now() < deadline) {
-      try {
-        const client = await pool.connect();
+    await retryUntil(
+      async () => {
         try {
-          await client.query("SELECT 1");
-          return;
-        } finally {
-          client.release();
+          const client = await pool.connect();
+          try {
+            await client.query("SELECT 1");
+            return true;
+          } finally {
+            client.release();
+          }
+        } catch (err) {
+          if (!isTransientPgError(err)) throw err;
+          lastErr = err;
+          return null;
         }
-      } catch (err) {
-        if (!isTransientPgError(err)) throw err;
-        lastErr = err;
-        await Bun.sleep(delay);
-        delay = Math.min(delay * 2, 1000);
-      }
-    }
-    throw new Error(
-      `Postgres did not become reachable within ${PG_READY_TIMEOUT_MS}ms`,
-      { cause: lastErr },
+      },
+      {
+        delay: exponential({ initial: 100, max: 1_000 }),
+        deadline: PG_READY_TIMEOUT_MS,
+        onDeadline: () => {
+          throw new Error(
+            `Postgres did not become reachable within ${PG_READY_TIMEOUT_MS}ms`,
+            { cause: lastErr },
+          );
+        },
+      },
     );
   })();
   return readyPromise;

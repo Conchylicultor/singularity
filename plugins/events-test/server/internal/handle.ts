@@ -1,5 +1,6 @@
 import { asc, sql } from "drizzle-orm";
 import { deleteTrigger, deleteTriggersFor, trigger } from "@plugins/infra/plugins/events/server";
+import { retryUntil, fixed } from "@packages/retry";
 import { db } from "@server/db/client";
 import { logEntries, logPing, resetLog } from "./log-job";
 import { _pingedTriggers, pinged } from "./tables";
@@ -74,16 +75,20 @@ export function handleReset(): Response {
 export async function handleWaitIdle(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const timeoutMs = Number(url.searchParams.get("timeoutMs") ?? 2000);
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const result = await db.execute<{ n: number }>(
-      sql`SELECT count(*)::int AS n FROM graphile_worker.jobs WHERE task_identifier = 'jobs.run' AND attempts < max_attempts`,
-    );
-    const n = result.rows[0]?.n ?? 0;
-    if (n === 0) return Response.json({ idle: true });
-    await new Promise((r) => setTimeout(r, 25));
-  }
-  return Response.json({ idle: false, timeoutMs }, { status: 408 });
+  return retryUntil(
+    async () => {
+      const result = await db.execute<{ n: number }>(
+        sql`SELECT count(*)::int AS n FROM graphile_worker.jobs WHERE task_identifier = 'jobs.run' AND attempts < max_attempts`,
+      );
+      const n = result.rows[0]?.n ?? 0;
+      return n === 0 ? Response.json({ idle: true }) : null;
+    },
+    {
+      delay: fixed(25),
+      deadline: timeoutMs,
+      onDeadline: () => Response.json({ idle: false, timeoutMs }, { status: 408 }),
+    },
+  );
 }
 
 export async function handleDeleteTrigger(

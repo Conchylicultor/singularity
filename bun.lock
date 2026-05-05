@@ -65,6 +65,9 @@
         "typescript": "~5.8.3",
       },
     },
+    "packages/retry": {
+      "name": "@singularity/retry",
+    },
     "plugin-core": {
       "name": "@singularity/plugin-core",
       "version": "0.0.1",
@@ -1592,6 +1595,8 @@
     "@singularity/plugin-welcome": ["@singularity/plugin-welcome@workspace:plugins/welcome"],
 
     "@singularity/plugin-worktree-switcher": ["@singularity/plugin-worktree-switcher@workspace:plugins/worktree-switcher"],
+
+    "@singularity/retry": ["@singularity/retry@workspace:packages/retry"],
 
     "@singularity/server": ["@singularity/server@workspace:server"],
 

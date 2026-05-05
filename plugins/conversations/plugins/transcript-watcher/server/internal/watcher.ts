@@ -1,12 +1,12 @@
 import parcel from "@parcel/watcher";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
+import { retryUntil, fixed } from "@packages/retry";
 import { getConversationClaudeSessionId } from "@plugins/tasks-core/server";
 import { findTranscriptPath } from "./find-transcript-path";
 import { readJsonlEvents } from "./parse-jsonl";
 import type { JsonlEvent } from "../../shared";
 
 const RECONCILE_MS = 30_000;
-const POLL_MS = 1_000;
 
 type Listener = (events: JsonlEvent[]) => void;
 
@@ -25,18 +25,6 @@ const pathToConvId = new Map<string, string>();
 
 let subscription: parcel.AsyncSubscription | null = null;
 let reconcileTimer: ReturnType<typeof setInterval> | null = null;
-
-async function pollUntil<T>(
-  fn: () => Promise<T | null | undefined>,
-  opts: { intervalMs: number; signal: AbortSignal },
-): Promise<T> {
-  while (!opts.signal.aborted) {
-    const result = await fn();
-    if (result != null) return result;
-    await Bun.sleep(opts.intervalMs);
-  }
-  throw new DOMException("Aborted", "AbortError");
-}
 
 export async function startTranscriptWatcher(): Promise<void> {
   try {
@@ -127,14 +115,14 @@ export function watchTranscript(
 async function resolveRoom(room: Room): Promise<void> {
   const { signal } = room.abort;
 
-  const sessionId = await pollUntil(
+  const sessionId = await retryUntil(
     () => getConversationClaudeSessionId(room.conversationId),
-    { intervalMs: POLL_MS, signal },
+    { delay: fixed(1_000), signal },
   );
 
-  const path = await pollUntil(
+  const path = await retryUntil(
     () => findTranscriptPath(sessionId),
-    { intervalMs: POLL_MS, signal },
+    { delay: fixed(1_000), signal },
   );
 
   registerPath(room, path);

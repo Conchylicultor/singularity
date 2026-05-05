@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
 import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
+import { retryUntil, fixed } from "@packages/retry";
 import { basename, join, resolve } from "path";
 import { generateMigration } from "../migrations";
 import { generatePluginDocs, collectAllPlugins } from "../docgen";
@@ -241,39 +242,40 @@ async function waitForPg(): Promise<void> {
   if (process.env.SINGULARITY_USE_SYSTEM_PG === "1") return;
   const env = libpqEnv();
   const { Client } = await import("pg");
-  const deadline = Date.now() + 60_000;
-  let warned = false;
   let lastErr: string | null = null;
-  while (Date.now() < deadline) {
-    const c = new Client({
-      host: env.PGHOST,
-      port: parseInt(env.PGPORT, 10),
-      user: env.PGUSER,
-      database: "postgres",
-      connectionTimeoutMillis: 1500,
-    });
-    try {
-      await c.connect();
-      await c.query("SELECT 1");
-      await c.end();
-      return;
-    } catch (err) {
-      lastErr = err instanceof Error ? err.message : String(err);
+  await retryUntil(
+    async (attempt) => {
+      const c = new Client({
+        host: env.PGHOST,
+        port: parseInt(env.PGPORT, 10),
+        user: env.PGUSER,
+        database: "postgres",
+        connectionTimeoutMillis: 1500,
+      });
       try {
+        await c.connect();
+        await c.query("SELECT 1");
         await c.end();
-      } catch {}
-    }
-    if (!warned) {
-      console.log("Waiting for embedded Postgres to be ready...");
-      warned = true;
-    }
-    await Bun.sleep(500);
-  }
-  console.error(
-    `ERROR: embedded Postgres did not become ready within 60s (last: ${lastErr ?? "no response"}).`,
+        return true;
+      } catch (err) {
+        lastErr = err instanceof Error ? err.message : String(err);
+        try { await c.end(); } catch {}
+        if (attempt === 0) console.log("Waiting for embedded Postgres to be ready...");
+        return null;
+      }
+    },
+    {
+      delay: fixed(500),
+      deadline: 60_000,
+      onDeadline: () => {
+        console.error(
+          `ERROR: embedded Postgres did not become ready within 60s (last: ${lastErr ?? "no response"}).`,
+        );
+        console.error(`Check ${PG_LOG_FILE} for details.`);
+        process.exit(1);
+      },
+    },
   );
-  console.error(`Check ${PG_LOG_FILE} for details.`);
-  process.exit(1);
 }
 
 async function waitForDatabase(name: string): Promise<void> {
@@ -281,52 +283,58 @@ async function waitForDatabase(name: string): Promise<void> {
   // (see plugins/conversations/server/internal/lifecycle.ts). By the time the
   // user runs `./singularity build` in the new worktree the fork is usually
   // done, but poll for a short window to cover the race.
-  const deadline = Date.now() + 30_000;
-  let warned = false;
-  while (Date.now() < deadline) {
-    if (await databaseReady(name)) return;
-    if (!warned) {
-      console.log(`Waiting for DB fork "${name}" to complete...`);
-      warned = true;
-    }
-    await Bun.sleep(1_000);
-  }
-  console.error(
-    [
-      `ERROR: DB fork for "${name}" did not complete within 30s.`,
-      "",
-      "This likely means the fork was interrupted (e.g. the server restarted",
-      "mid-fork). Do NOT attempt to fix this yourself.",
-      "",
-      "Stop here and report the failure so it can be investigated.",
-      "Check server logs and the fork-error toast in the main app for details.",
-    ].join("\n"),
+  await retryUntil(
+    async (attempt) => {
+      if (await databaseReady(name)) return true;
+      if (attempt === 0) console.log(`Waiting for DB fork "${name}" to complete...`);
+      return null;
+    },
+    {
+      delay: fixed(1_000),
+      deadline: 30_000,
+      onDeadline: () => {
+        console.error(
+          [
+            `ERROR: DB fork for "${name}" did not complete within 30s.`,
+            "",
+            "This likely means the fork was interrupted (e.g. the server restarted",
+            "mid-fork). Do NOT attempt to fix this yourself.",
+            "",
+            "Stop here and report the failure so it can be investigated.",
+            "Check server logs and the fork-error toast in the main app for details.",
+          ].join("\n"),
+        );
+        process.exit(1);
+      },
+    },
   );
-  process.exit(1);
 }
 
 async function probeHealth(name: string): Promise<void> {
   console.log("Probing /api/health...");
   const url = `http://${name}.localhost:9000/api/health`;
-  const deadline = Date.now() + 10_000;
   let lastStatus: number | string = "no response";
-  while (Date.now() < deadline) {
-    try {
-      const resp = await fetch(url);
-      if (resp.ok) return;
-      lastStatus = resp.status;
-    } catch (err) {
-      lastStatus = err instanceof Error ? err.message : String(err);
-    }
-    await Bun.sleep(250);
-  }
-  console.error(
-    `Server failed to respond on /api/health within 10s (last: ${lastStatus}).`,
+  await retryUntil(
+    async () => {
+      try {
+        const resp = await fetch(url);
+        if (resp.ok) return true;
+        lastStatus = resp.status;
+      } catch (err) {
+        lastStatus = err instanceof Error ? err.message : String(err);
+      }
+      return null;
+    },
+    {
+      delay: fixed(250),
+      deadline: 10_000,
+      onDeadline: () => {
+        console.error(`Server failed to respond on /api/health within 10s (last: ${lastStatus}).`);
+        console.error("The build artifacts are valid but the server can't boot. Check server logs.");
+        process.exit(1);
+      },
+    },
   );
-  console.error(
-    "The build artifacts are valid but the server can't boot. Check server logs.",
-  );
-  process.exit(1);
 }
 
 // `/gateway/worktrees` is the gateway's own API and exists on every gateway
@@ -336,21 +344,28 @@ async function probeHealth(name: string): Promise<void> {
 async function probeGatewayHealth(): Promise<void> {
   console.log("Probing gateway /gateway/worktrees...");
   const url = "http://localhost:9000/gateway/worktrees";
-  const deadline = Date.now() + 10_000;
   let lastStatus: number | string = "no response";
-  while (Date.now() < deadline) {
-    try {
-      const resp = await fetch(url);
-      if (resp.ok) return;
-      lastStatus = resp.status;
-    } catch (err) {
-      lastStatus = err instanceof Error ? err.message : String(err);
-    }
-    await Bun.sleep(250);
-  }
-  console.warn(
-    `Gateway did not become healthy within 10s (last: ${lastStatus}). ` +
-      `Build artifacts are valid; gateway will retry on next request.`,
+  await retryUntil(
+    async () => {
+      try {
+        const resp = await fetch(url);
+        if (resp.ok) return true;
+        lastStatus = resp.status;
+      } catch (err) {
+        lastStatus = err instanceof Error ? err.message : String(err);
+      }
+      return null;
+    },
+    {
+      delay: fixed(250),
+      deadline: 10_000,
+      onDeadline: () => {
+        console.warn(
+          `Gateway did not become healthy within 10s (last: ${lastStatus}). ` +
+            `Build artifacts are valid; gateway will retry on next request.`,
+        );
+      },
+    },
   );
 }
 

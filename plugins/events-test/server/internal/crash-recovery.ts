@@ -1,6 +1,7 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { UNSAFE_sweepStuckLocks } from "@plugins/infra/plugins/jobs/server";
+import { retryUntil, fixed } from "@packages/retry";
 import { db } from "@server/db/client";
 import { logEntries, logPing, resetLog } from "./log-job";
 
@@ -56,16 +57,12 @@ export async function handleCrashRecovery(): Promise<Response> {
   await UNSAFE_sweepStuckLocks();
 
   // Worker polls every 2s by default; give it enough headroom.
-  const deadline = Date.now() + 8000;
-  while (Date.now() < deadline) {
-    if (logEntries.some((e) => e.label === label)) {
-      return Response.json({ ok: true, label });
-    }
-    await new Promise((r) => setTimeout(r, 100));
-  }
-
-  return Response.json(
-    { ok: false, error: "handler did not run within 8s", label },
-    { status: 504 },
+  return retryUntil(
+    async () => logEntries.some((e) => e.label === label) ? Response.json({ ok: true, label }) : null,
+    {
+      delay: fixed(100),
+      deadline: 8_000,
+      onDeadline: () => Response.json({ ok: false, error: "handler did not run within 8s", label }, { status: 504 }),
+    },
   );
 }

@@ -1,3 +1,4 @@
+import { retryUntil, fixed } from "@packages/retry";
 import type { HealthResponse } from "../../shared/protocol";
 
 export async function getHealth(signal?: AbortSignal): Promise<HealthResponse | null> {
@@ -16,11 +17,11 @@ export async function waitForRestart(
 ): Promise<boolean> {
   const timeoutMs = opts.timeoutMs ?? 60_000;
   const intervalMs = opts.intervalMs ?? 500;
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const h = await getHealth();
-    if (h && h.startedAt > previousStartedAt) return true;
-    await new Promise((r) => setTimeout(r, intervalMs));
-  }
-  return false;
+  return retryUntil(
+    async () => {
+      const h = await getHealth();
+      return h && h.startedAt > previousStartedAt ? true : null;
+    },
+    { delay: fixed(intervalMs), deadline: timeoutMs, onDeadline: () => false },
+  );
 }
