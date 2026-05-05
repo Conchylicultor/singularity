@@ -54,12 +54,6 @@ export function ToolCallCard({
             ))}
           </span>
         )}
-        {event.result && !hasError && (
-          <span className="text-[11px] text-green-600 dark:text-green-400">✓</span>
-        )}
-        {hasError && (
-          <span className="shrink-0 text-[11px] text-destructive">✗</span>
-        )}
         <span
           className={`flex shrink-0 items-center gap-2 ${summary ? "" : "ml-auto"}`}
         >
