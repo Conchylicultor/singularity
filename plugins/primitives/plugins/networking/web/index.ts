@@ -5,6 +5,8 @@ export type { ReconnectingWsOptions, ReconnectingWsHandle } from "./use-reconnec
 export { ReconnectingEventSource } from "./reconnecting-event-source";
 export type { ReconnectingEventSourceOptions } from "./reconnecting-event-source";
 export { SharedWebSocket } from "./shared-websocket";
+export { CrossTabElection } from "./cross-tab-election";
+export type { CrossTabElectionCallbacks } from "./cross-tab-election";
 export { fetchWithRetry } from "./fetch-with-retry";
 export type { FetchWithRetryOptions } from "./fetch-with-retry";
 export { publishWsStatus, subscribeWsStatus } from "./ws-status-bus";

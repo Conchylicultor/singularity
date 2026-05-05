@@ -905,8 +905,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `centralResourceDescriptor`, `resourceDescriptor`
     - **`networking`** — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
       - Exports (web):
-        - Types: `FetchWithRetryOptions`, `ReconnectingEventSourceOptions`, `ReconnectingWsHandle`, `ReconnectingWsOptions`, `WsStatus`, `WsStatusEvent`
-        - Values: `fetchWithRetry`, `publishWsStatus`, `ReconnectingEventSource`, `SharedWebSocket`, `subscribeWsStatus`, `useReconnectingWebSocket`
+        - Types: `CrossTabElectionCallbacks`, `FetchWithRetryOptions`, `ReconnectingEventSourceOptions`, `ReconnectingWsHandle`, `ReconnectingWsOptions`, `WsStatus`, `WsStatusEvent`
+        - Values: `CrossTabElection`, `fetchWithRetry`, `publishWsStatus`, `ReconnectingEventSource`, `SharedWebSocket`, `subscribeWsStatus`, `useReconnectingWebSocket`
     - **`pane`** — Unified pane primitive: Pane.define, <Outlet/>, <PaneRouter/>, and chrome components.
       - Defines:
         - Slots: `Pane.Register`

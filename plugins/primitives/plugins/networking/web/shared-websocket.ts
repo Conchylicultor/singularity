@@ -1,22 +1,19 @@
 import { publishWsStatus, type WsStatus } from "./ws-status-bus";
+import { CrossTabElection } from "./cross-tab-election";
 
 // Drop-in replacement for the string-message subset of the native WebSocket
-// API. A single tab per origin holds a Web Lock and owns the underlying
-// connection; other tabs route `send()` / `onmessage` through a
-// BroadcastChannel. When the leader tab dies, a new one is elected and opens
-// a fresh socket; `onopen` fires again on every (re)open of the real socket
-// in every tab, so consumers can replay server-side state the same way they
-// would with a plain reconnecting WebSocket. All cross-tab coordination is
-// private.
+// API, shared across all tabs of the same origin via CrossTabElection. One tab
+// is elected leader and owns the real socket; others send/receive through the
+// leader transparently. On leader failure (tab frozen/closed), a follower
+// takes over within ~12 seconds.
 
 const BACKOFF_MS = [500, 1000, 2000, 5000];
 
-type InternalMsg =
-  | { kind: "tx"; data: string }
+type WsRelayMsg =
   | { kind: "rx"; data: string }
+  | { kind: "tx"; data: string }
   | { kind: "open" }
-  | { kind: "close" }
-  | { kind: "hello" };
+  | { kind: "close" };
 
 export class SharedWebSocket {
   static readonly CONNECTING = 0;
@@ -32,57 +29,53 @@ export class SharedWebSocket {
   onclose: ((ev: CloseEvent) => void) | null = null;
   onerror: ((ev: Event) => void) | null = null;
 
-  private name: string;
-  private channel: BroadcastChannel | null = null;
+  private election: CrossTabElection<WsRelayMsg>;
   private ws: WebSocket | null = null;
-  private isLeader = false;
+  private queue: string[] = [];
+  private attempt = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private closed = false;
-  private outboundQueue: string[] = [];
-  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private reconnectAttempt = 0;
   private lastStatus: WsStatus | null = null;
 
   constructor(url: string | URL) {
     this.url = typeof url === "string" ? url : url.toString();
-    this.name = `singularity:shared-ws:${this.url}`;
+    const name = `singularity:shared-ws:${this.url}`;
 
-    const hasChannel = typeof BroadcastChannel !== "undefined";
-    const locks =
-      typeof navigator !== "undefined"
-        ? (navigator as Navigator & { locks?: LockManager }).locks
-        : undefined;
-
-    if (!hasChannel || !locks) {
-      // Fallback: no cross-tab coordination. Every tab is its own leader.
-      this.isLeader = true;
-      this.connectWs();
-      return;
-    }
-
-    this.channel = new BroadcastChannel(this.name);
-    this.channel.onmessage = this.onChannelMessage;
-
-    // Announce so the current leader (if any) can echo its status, which
-    // brings this follower to OPEN immediately instead of waiting for the
-    // next real-WS transition.
-    this.postChannel({ kind: "hello" });
-
-    void locks.request(this.name, { mode: "exclusive" }, () => {
-      if (this.closed) return;
-      this.becomeLeader();
-      // Hold for the lifetime of this tab. The promise never resolves, so
-      // the lock is only released when the tab (i.e. the agent running this
-      // worker) is torn down.
-      return new Promise<void>(() => {});
+    this.election = new CrossTabElection<WsRelayMsg>(name, {
+      onElected: () => this.startLeading(),
+      onFollowerMessage: (msg) => {
+        if (msg.kind === "tx") this.writeOrQueue(msg.data);
+      },
+      onLeaderMessage: (msg) => {
+        switch (msg.kind) {
+          case "rx":
+            this.dispatchMessage(msg.data);
+            break;
+          case "open":
+            this.readyState = SharedWebSocket.OPEN;
+            this.setStatus("open");
+            this.dispatchOpen();
+            break;
+          case "close":
+            this.readyState = SharedWebSocket.CONNECTING;
+            this.setStatus("reconnecting");
+            break;
+        }
+      },
+      onFollowerJoined: () => {
+        if (this.ws?.readyState === WebSocket.OPEN) {
+          this.election.broadcast({ kind: "open" });
+        }
+      },
     });
   }
 
   send(data: string): void {
     if (this.closed) return;
-    if (this.isLeader) {
+    if (this.election.isLeader) {
       this.writeOrQueue(data);
     } else {
-      this.postChannel({ kind: "tx", data });
+      this.election.sendToLeader({ kind: "tx", data });
     }
   }
 
@@ -90,44 +83,29 @@ export class SharedWebSocket {
     if (this.closed) return;
     this.closed = true;
     this.readyState = SharedWebSocket.CLOSED;
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
-    }
-    if (this.isLeader && this.ws) {
-      const ws = this.ws;
-      this.ws = null;
-      ws.onopen = null;
-      ws.onmessage = null;
-      ws.onerror = null;
-      ws.onclose = null;
-      try {
-        ws.close();
-      } catch {
-        // ignore
-      }
-    }
-    this.channel?.close();
-    this.channel = null;
-    this.dispatchClose(1000, "handle closed");
+    this.teardownWs();
+    this.election.close();
+    try {
+      this.onclose?.(new CloseEvent("close", { code: 1000, reason: "handle closed", wasClean: true }));
+    } catch { /* ignore */ }
   }
 
-  // --- leader path ---------------------------------------------------------
+  // --- leader: WebSocket management -----------------------------------------
 
-  private becomeLeader(): void {
+  private startLeading(): void {
     if (this.closed) return;
-    this.isLeader = true;
+    this.teardownWs();
+    this.attempt = 0;
+    this.setStatus("connecting");
     this.connectWs();
   }
 
   private connectWs = (): void => {
     if (this.closed) return;
-    if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = null;
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
     }
-
-    this.setStatus(this.reconnectAttempt === 0 ? "connecting" : "reconnecting");
 
     const proto =
       typeof location !== "undefined" && location.protocol === "https:" ? "wss" : "ws";
@@ -146,140 +124,78 @@ export class SharedWebSocket {
     this.ws = ws;
 
     ws.onopen = () => {
-      this.reconnectAttempt = 0;
+      this.attempt = 0;
       this.readyState = SharedWebSocket.OPEN;
-      while (this.outboundQueue.length > 0) {
-        const msg = this.outboundQueue.shift()!;
-        try {
-          ws.send(msg);
-        } catch {
-          // ignore
-        }
+      while (this.queue.length > 0) {
+        const msg = this.queue.shift()!;
+        try { ws.send(msg); } catch { /* ignore */ }
       }
       this.setStatus("open");
-      this.postChannel({ kind: "open" });
+      this.election.broadcast({ kind: "open" });
       this.dispatchOpen();
     };
 
     ws.onmessage = (ev) => {
       const data = typeof ev.data === "string" ? ev.data : "";
-      this.postChannel({ kind: "rx", data });
+      this.election.broadcast({ kind: "rx", data });
       this.dispatchMessage(data);
     };
 
     ws.onerror = () => {
-      this.dispatchError();
+      try { this.onerror?.(new Event("error")); } catch { /* ignore */ }
     };
 
     ws.onclose = () => {
       this.ws = null;
       if (this.closed) return;
       this.readyState = SharedWebSocket.CONNECTING;
-      this.postChannel({ kind: "close" });
+      this.setStatus("reconnecting");
+      this.election.broadcast({ kind: "close" });
       this.scheduleReconnect();
     };
   };
 
   private scheduleReconnect(): void {
-    const delay = BACKOFF_MS[Math.min(this.reconnectAttempt, BACKOFF_MS.length - 1)]!;
-    this.reconnectAttempt++;
-    this.setStatus("reconnecting");
-    this.reconnectTimer = setTimeout(this.connectWs, delay);
+    const delay = BACKOFF_MS[Math.min(this.attempt, BACKOFF_MS.length - 1)]!;
+    this.attempt++;
+    this.retryTimer = setTimeout(this.connectWs, delay);
   }
 
   private writeOrQueue(data: string): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      try {
-        this.ws.send(data);
-      } catch {
-        // ignore
-      }
+      try { this.ws.send(data); } catch { /* ignore */ }
     } else {
-      this.outboundQueue.push(data);
+      this.queue.push(data);
     }
   }
 
-  // --- channel listener ---------------------------------------------------
-
-  private onChannelMessage = (ev: MessageEvent<InternalMsg>): void => {
-    const msg = ev.data;
-    switch (msg.kind) {
-      case "tx":
-        if (this.isLeader) this.writeOrQueue(msg.data);
-        return;
-      case "rx":
-        if (!this.isLeader) this.dispatchMessage(msg.data);
-        return;
-      case "open":
-        if (!this.isLeader) {
-          this.readyState = SharedWebSocket.OPEN;
-          this.setStatus("open");
-          this.dispatchOpen();
-        }
-        return;
-      case "close":
-        if (!this.isLeader) {
-          this.readyState = SharedWebSocket.CONNECTING;
-          this.setStatus("reconnecting");
-        }
-        return;
-      case "hello":
-        if (
-          this.isLeader &&
-          this.ws &&
-          this.ws.readyState === WebSocket.OPEN
-        ) {
-          this.postChannel({ kind: "open" });
-        }
-        return;
+  private teardownWs(): void {
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = null;
     }
-  };
-
-  private postChannel(msg: InternalMsg): void {
-    if (this.channel && !this.closed) {
-      try {
-        this.channel.postMessage(msg);
-      } catch {
-        // ignore
-      }
+    if (this.ws) {
+      const ws = this.ws;
+      this.ws = null;
+      ws.onopen = null;
+      ws.onmessage = null;
+      ws.onerror = null;
+      ws.onclose = null;
+      try { ws.close(); } catch { /* ignore */ }
     }
   }
 
-  // --- dispatchers --------------------------------------------------------
+  // --- dispatchers ----------------------------------------------------------
 
   private dispatchOpen(): void {
-    try {
-      this.onopen?.(new Event("open"));
-    } catch {
-      // ignore
-    }
+    try { this.onopen?.(new Event("open")); } catch { /* ignore */ }
   }
 
   private dispatchMessage(data: string): void {
-    try {
-      this.onmessage?.(new MessageEvent("message", { data }));
-    } catch {
-      // ignore
-    }
+    try { this.onmessage?.(new MessageEvent("message", { data })); } catch { /* ignore */ }
   }
 
-  private dispatchError(): void {
-    try {
-      this.onerror?.(new Event("error"));
-    } catch {
-      // ignore
-    }
-  }
-
-  private dispatchClose(code: number, reason: string): void {
-    try {
-      this.onclose?.(new CloseEvent("close", { code, reason, wasClean: true }));
-    } catch {
-      // ignore
-    }
-  }
-
-  // --- status bus ---------------------------------------------------------
+  // --- status bus -----------------------------------------------------------
 
   private setStatus(status: WsStatus): void {
     if (this.lastStatus === status) return;
