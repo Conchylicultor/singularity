@@ -7,7 +7,7 @@ import { ConversationsView } from "../slots";
 const ACTIVE_VIEW_KEY = "conversations-view:active-view";
 
 function openConversation(name: string) {
-  conversationPane.open({ convId: name });
+  conversationPane.open({ convId: name }, { root: true });
 }
 
 function activeIdFromPath(pathname: string): string | null {

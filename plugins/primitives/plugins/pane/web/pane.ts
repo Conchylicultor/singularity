@@ -499,7 +499,7 @@ export interface PaneObject<
   Provider: ComponentType<{ value: Provides; children: ReactNode }>;
   useParams(): OwnParams;
   useData(): Provides;
-  open(params: FullParams & Record<string, string>): void;
+  open(params: FullParams & Record<string, string>, opts?: { root?: boolean }): void;
   close(): void;
   expand(): void;
   back(): void;
@@ -551,7 +551,10 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     return value;
   }
 
-  function open(params: Record<string, string>): void {
+  function open(
+    params: Record<string, string>,
+    opts?: { root?: boolean },
+  ): void {
     const replace = internal.chrome.enabled && !internal.chrome.history;
     const chain = getChain();
     const ownParams = extractOwnParams(internal, params ?? {});
@@ -571,43 +574,45 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
       return;
     }
 
-    // Try insertion into current chain
-    const positions = findValidPositions(internal, chain);
-    if (positions.length > 0) {
-      const ancestorParamKeys = Object.keys(params ?? {}).filter(
-        (k) => !(k in ownParams),
-      );
-      for (let p = positions.length - 1; p >= 0; p--) {
-        const pos = positions[p]!;
-        let paramsMatch = true;
-        if (ancestorParamKeys.length > 0) {
-          for (let j = 0; j < pos; j++) {
-            const entry = chain[j]!;
-            for (const key of ancestorParamKeys) {
-              if (
-                key in entry.params &&
-                entry.params[key] !== params[key]
-              ) {
-                paramsMatch = false;
-                break;
+    if (!opts?.root) {
+      // Try insertion into current chain
+      const positions = findValidPositions(internal, chain);
+      if (positions.length > 0) {
+        const ancestorParamKeys = Object.keys(params ?? {}).filter(
+          (k) => !(k in ownParams),
+        );
+        for (let p = positions.length - 1; p >= 0; p--) {
+          const pos = positions[p]!;
+          let paramsMatch = true;
+          if (ancestorParamKeys.length > 0) {
+            for (let j = 0; j < pos; j++) {
+              const entry = chain[j]!;
+              for (const key of ancestorParamKeys) {
+                if (
+                  key in entry.params &&
+                  entry.params[key] !== params[key]
+                ) {
+                  paramsMatch = false;
+                  break;
+                }
               }
+              if (!paramsMatch) break;
             }
-            if (!paramsMatch) break;
           }
-        }
-        if (paramsMatch) {
-          const newChain = [
-            ...chain.slice(0, pos),
-            { paneId: internal.id, params: ownParams },
-            ...chain.slice(pos),
-          ];
-          setChain(validateChain(newChain), replace);
-          return;
+          if (paramsMatch) {
+            const newChain = [
+              ...chain.slice(0, pos),
+              { paneId: internal.id, params: ownParams },
+              ...chain.slice(pos),
+            ];
+            setChain(validateChain(newChain), replace);
+            return;
+          }
         }
       }
     }
 
-    // No valid position with matching params — build fresh chain
+    // No valid position, root forced, or no matching params — build fresh chain
     setChain(buildFreshChain(internal, params ?? {}), replace);
   }
 
