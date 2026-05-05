@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from "fs";
+import { join } from "path";
 import type { Check } from "./types";
+import { buildPluginTree } from "@packages/plugin-tree";
 import {
-  buildPluginTree,
   pluginClaudeMdPath,
   pluginCompactDocPath,
   pluginDetailsDocPath,
@@ -75,7 +76,7 @@ export const pluginsDocInSync: Check = {
       };
     }
 
-    const tree = buildPluginTree(root);
+    const tree = buildPluginTree(join(root, "plugins"));
     for (const info of tree.byDir.values()) {
       const file = pluginClaudeMdPath(info);
       const existing = existsSync(file) ? readFileSync(file, "utf8") : null;

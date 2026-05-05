@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
-import { join, relative, resolve } from "path";
-import { findAllPluginDirs } from "./docgen";
+import { join, resolve } from "path";
+import { buildPluginTree } from "@packages/plugin-tree";
 
 export type Runtime = "web" | "server" | "central";
 
@@ -85,16 +85,15 @@ function hasDefaultExport(file: string): boolean {
 
 function collectEntries(root: string, runtime: Runtime): Entry[] {
   const pluginsRoot = resolve(root, "plugins");
-  const dirs = findAllPluginDirs(pluginsRoot);
+  const tree = buildPluginTree(pluginsRoot);
   const entries: Entry[] = [];
-  for (const dir of dirs) {
-    const indexFile = join(dir, runtime, "index.ts");
+  for (const node of tree.byDir.values()) {
+    const indexFile = join(node.dir, runtime, "index.ts");
     if (!existsSync(indexFile)) continue;
     if (!hasDefaultExport(indexFile)) continue;
-    const rel = relative(pluginsRoot, dir).split("\\").join("/");
     entries.push({
-      importName: importNameFor(rel),
-      importPath: `@plugins/${rel}/${runtime}`,
+      importName: importNameFor(node.path),
+      importPath: `@plugins/${node.path}/${runtime}`,
     });
   }
   entries.sort((a, b) => a.importPath.localeCompare(b.importPath));

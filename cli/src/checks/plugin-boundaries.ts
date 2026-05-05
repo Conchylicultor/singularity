@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
-import { basename, dirname, join, relative, resolve, sep } from "path";
+import { dirname, join, relative, resolve, sep } from "path";
+import { buildPluginTree } from "@packages/plugin-tree";
 import type { Check, CheckResult } from "./types";
 
 const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
@@ -70,7 +71,12 @@ export const pluginBoundaries: Check = {
     const pluginsRoot = join(root, "plugins");
     if (!existsSync(pluginsRoot)) return { ok: true };
 
-    const plugins = discoverPlugins(pluginsRoot);
+    const tree = buildPluginTree(pluginsRoot);
+    const plugins: PluginDir[] = Array.from(tree.byDir.values()).map((node) => ({
+      relPath: node.path,
+      absPath: node.dir,
+      name: node.name,
+    }));
     const pluginSet = new Set(plugins.map((p) => p.relPath));
     const skippedSet = new Set(SKIPPED_PLUGINS);
     const violations: Violation[] = [];
@@ -223,41 +229,6 @@ export const pluginBoundaries: Check = {
     };
   },
 };
-
-// ============================================================================
-// Plugin discovery
-// ============================================================================
-
-function discoverPlugins(pluginsRoot: string): PluginDir[] {
-  const out: PluginDir[] = [];
-  function walk(dir: string, depth: number) {
-    if (depth > 10) return;
-    const hasWeb = existsSync(join(dir, "web", "index.ts"));
-    const hasServer = existsSync(join(dir, "server", "index.ts"));
-    const hasCentral = existsSync(join(dir, "central", "index.ts"));
-    if ((hasWeb || hasServer || hasCentral) && dir !== pluginsRoot) {
-      const relPath = relative(pluginsRoot, dir).split(sep).join("/");
-      out.push({ relPath, absPath: dir, name: basename(dir) });
-    }
-    let entries;
-    try {
-      entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const e of entries) {
-      if (!e.isDirectory()) continue;
-      if (dir === pluginsRoot) walk(join(dir, e.name), depth + 1);
-      else if (e.name === "plugins") {
-        for (const c of readdirSync(join(dir, e.name), { withFileTypes: true })) {
-          if (c.isDirectory()) walk(join(dir, e.name, c.name), depth + 1);
-        }
-      }
-    }
-  }
-  walk(pluginsRoot, 0);
-  return out;
-}
 
 /** Return the runtime ("web" | "server" | "central" | "shared") of `relFile`, or null if unknown. */
 function runtimeForPath(

@@ -44,13 +44,13 @@ const CENTRAL_RUNTIME_ROUTES: ReadonlyArray<string> = [
 function collectCentralRoutes(root: string): string[] {
   const out = new Set<string>(CENTRAL_RUNTIME_ROUTES);
   for (const p of collectAllPlugins(root)) {
-    for (const route of p.centralHttpRoutes) {
+    for (const route of p.central.httpRoutes) {
       const space = route.indexOf(" ");
       const path = space >= 0 ? route.slice(space + 1) : route;
       const colon = path.indexOf("/:");
       out.add(colon >= 0 ? path.slice(0, colon + 1) : path);
     }
-    for (const route of p.centralWsRoutes) out.add(route);
+    for (const route of p.central.wsRoutes) out.add(route);
   }
   return Array.from(out).sort();
 }
