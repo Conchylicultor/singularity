@@ -415,7 +415,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `ToolCallRow`
                 - `JsonlViewer.RowAction` → `CopyToolResultAction`
-              - Slot contributors: `bash`, `edit`
+              - Slot contributors: `bash`, `edit`, `write`
               - Plugins:
                 - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
                   - Contributes:
@@ -424,6 +424,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - Contributes:
                     - `JsonlViewerTool.Renderer` → `EditView`
                     - `JsonlViewerTool.Renderer` → `MultiEditView`
+                - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
+                  - Contributes:
+                    - `JsonlViewerTool.Renderer` → `WriteToolView`
             - **`user-image`** — Renders inline image thumbnails for user-image events.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `UserImageRow`
