@@ -15,7 +15,7 @@ export {
   taskAttachments,
   conversationAttachments,
 } from "./internal/schema-attachments";
-export { _tasks, _conversations } from "./internal/tables";
+export { _tasks, _attempts, _conversations } from "./internal/tables";
 
 // Zod schemas and TS types
 export {
@@ -54,6 +54,7 @@ export {
   listTasks,
   getTask,
   hasBlockingDep,
+  listBlockingDepIds,
   findNextRankUnder,
   isDescendant,
   taskDependsOn,

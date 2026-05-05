@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, gt, lt, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, lt, ne } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/shared";
 import { db } from "@server/db/client";
-import { _conversations } from "@plugins/tasks-core/server";
+import { _conversations, _attempts } from "@plugins/tasks-core/server";
 import { conversationsQueue } from "./tables";
 
 const _conversationsExtQueue = conversationsQueue.table;
@@ -133,4 +133,44 @@ export async function rankAdjacentTo(
       .limit(1);
     return Rank.between(Rank.from(target.rank as string), succ?.rank ? Rank.from(succ.rank as string) : null);
   }
+}
+
+export async function rankAfterBlockers(
+  conversationId: string,
+  blockingTaskIds: string[],
+): Promise<Rank> {
+  if (blockingTaskIds.length === 0) return positionTwoRank();
+
+  const [last] = await db
+    .select({ rank: _conversationsExtQueue.rank })
+    .from(_conversationsExtQueue)
+    .innerJoin(_conversations, eq(_conversations.id, _conversationsExtQueue.parentId))
+    .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
+    .where(
+      and(
+        eq(_conversations.status, "waiting"),
+        ne(_conversationsExtQueue.parentId, conversationId),
+        inArray(_attempts.taskId, blockingTaskIds),
+      ),
+    )
+    .orderBy(desc(_conversationsExtQueue.rank))
+    .limit(1);
+
+  if (!last?.rank) return positionTwoRank();
+
+  const [succ] = await joinedWaiting()
+    .where(
+      and(
+        eq(_conversations.status, "waiting"),
+        ne(_conversationsExtQueue.parentId, conversationId),
+        gt(_conversationsExtQueue.rank, last.rank),
+      ),
+    )
+    .orderBy(asc(_conversationsExtQueue.rank))
+    .limit(1);
+
+  return Rank.between(
+    Rank.from(last.rank as string),
+    succ?.rank ? Rank.from(succ.rank as string) : null,
+  );
 }

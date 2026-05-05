@@ -286,7 +286,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` `conversation`
         - `Conversation.ActionBar` → `ExpandConversationButton`
-      - Slot contributors: `agents`, `attempt-view`, `code`, `commits-graph`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+      - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `code`, `commits-graph`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Exports (web):
@@ -297,6 +297,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `tasks-core.getConversation`
             - `GET /api/conversations/:id/allow-files`
+        - **`blocked-by`** — Prompt-bar button to mark this conversation's task as blocked by another conversation's task, creating a dependency and re-ordering the queue.
+          - Contributes:
+            - `Conversation.PromptBar` → `BlockedByButton`
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Defines:
             - Slots: `Code.ToolbarButton`
@@ -571,17 +574,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`
             - Entity extension of: `tasks-core` (table `conversations_ext_queue`)
           - Exports (server):
-            - Values: `conversationsQueue`, `endRank`, `positionTwoRank`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterN`, `rankForBottom`, `rankForTop`, `seedRankJob`
+            - Values: `conversationsQueue`, `endRank`, `positionTwoRank`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `seedRankJob`
           - Contributes:
             - `ConversationsView.View` "Queue" → `QueueView`
           - Server:
             - Register: `seedRankJob`
-            - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `tasks-core._conversations`, `tasks-core.getConversation`
+            - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`, `tasks-core.listBlockingDepIds`
             - Resources: `queue-ranks` (push)
             - `POST /api/conversations-queue/reorder`
             - `POST /api/conversations-queue/promote`
             - `POST /api/conversations-queue/demote`
             - `POST /api/conversations-queue/step-down`
+            - `POST /api/conversations-queue/rerank`
+          - Endpoint callers: `blocked-by`
     - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
       - Exports (shared):
         - Types: `ConversationModel`, `ModelMeta`
@@ -1124,7 +1129,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/tasks/:id/dependencies`
     - `DELETE /api/tasks/:id/dependencies/:depId`
     - `GET /api/repo-info`
-  - Endpoint callers: `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-header`, `task-list`
+  - Endpoint callers: `blocked-by`, `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-header`, `task-list`
   - Plugins:
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
       - Defines:
@@ -1208,7 +1213,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/tasks-core/server/internal/tables.ts`
   - Exports (server):
     - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskStatus`, `TaskStatusChangedPayload`, `UpdateConversationPatch`, `UpdateTaskPatch`
-    - Values: `_conversations`, `_pushLandedTriggers`, `_tasks`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `conversationAttachments`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteAttempt`, `deleteConversationRow`, `deleteTask`, `emitStatusChangeIfChanged`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listAttempts`, `listAttemptsForTask`, `listConversationsForDisplay`, `listConversationsForInfra`, `listGoneConversations`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskAttachments`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `updateConversation`, `updateConversationsTitleForTask`, `updateTask`, `updateTaskTitle`
+    - Values: `_attempts`, `_conversations`, `_pushLandedTriggers`, `_tasks`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `conversationAttachments`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteAttempt`, `deleteConversationRow`, `deleteTask`, `emitStatusChangeIfChanged`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listAttempts`, `listAttemptsForTask`, `listBlockingDepIds`, `listConversationsForDisplay`, `listConversationsForInfra`, `listGoneConversations`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskAttachments`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `updateConversation`, `updateConversationsTitleForTask`, `updateTask`, `updateTaskTitle`
   - Exports (shared):
     - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`

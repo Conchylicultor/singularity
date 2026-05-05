@@ -175,6 +175,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-allow-monitor",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/blocked-by": {
+      "name": "@singularity/plugin-conversations-conversation-view-blocked-by",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/code": {
       "name": "@singularity/plugin-conversations-conversation-view-code",
       "version": "0.0.1",
@@ -1341,6 +1345,8 @@
     "@singularity/plugin-conversations-conversation-view-action-bar": ["@singularity/plugin-conversations-conversation-view-action-bar@workspace:plugins/conversations/plugins/conversation-view/plugins/action-bar"],
 
     "@singularity/plugin-conversations-conversation-view-allow-monitor": ["@singularity/plugin-conversations-conversation-view-allow-monitor@workspace:plugins/conversations/plugins/conversation-view/plugins/allow-monitor"],
+
+    "@singularity/plugin-conversations-conversation-view-blocked-by": ["@singularity/plugin-conversations-conversation-view-blocked-by@workspace:plugins/conversations/plugins/conversation-view/plugins/blocked-by"],
 
     "@singularity/plugin-conversations-conversation-view-code": ["@singularity/plugin-conversations-conversation-view-code@workspace:plugins/conversations/plugins/conversation-view/plugins/code"],
 

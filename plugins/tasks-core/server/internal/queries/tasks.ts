@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { nextRankUnder, type RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import type { Rank } from "@plugins/primitives/plugins/rank/shared";
 import { db } from "@server/db/client";
@@ -74,6 +74,25 @@ export async function isDescendant(
     cur = byId.get(cur) ?? null;
   }
   return false;
+}
+
+export async function listBlockingDepIds(taskId: string): Promise<string[]> {
+  const rows = await db
+    .select({ depTaskId: _taskDependencies.dependsOnTaskId })
+    .from(_taskDependencies)
+    .innerJoin(_tasks, eq(_tasks.id, _taskDependencies.dependsOnTaskId))
+    .where(
+      and(
+        eq(_taskDependencies.taskId, taskId),
+        isNull(_tasks.droppedAt),
+        sql`NOT EXISTS (
+          SELECT 1 FROM ${attempts} a
+           WHERE a.task_id = ${_taskDependencies.dependsOnTaskId}
+             AND a.status = 'completed'
+        )`,
+      ),
+    );
+  return rows.map((r) => r.depTaskId);
 }
 
 // True if `start` (transitively) depends on `target`. Used to prevent

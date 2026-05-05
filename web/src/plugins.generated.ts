@@ -29,6 +29,7 @@ import conversationsConversationUiItemPlugin from "@plugins/conversations/plugin
 import conversationsConversationUiPlugin from "@plugins/conversations/plugins/conversation-ui/web";
 import conversationsConversationViewActionBarPlugin from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import conversationsConversationViewAllowMonitorPlugin from "@plugins/conversations/plugins/conversation-view/plugins/allow-monitor/web";
+import conversationsConversationViewBlockedByPlugin from "@plugins/conversations/plugins/conversation-view/plugins/blocked-by/web";
 import conversationsConversationViewCodeDocsButtonPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/docs-button/web";
 import conversationsConversationViewCodeFilePaneDiffPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import conversationsConversationViewCodeFilePaneImagePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/image/web";
@@ -160,6 +161,7 @@ export const plugins: PluginDefinition[] = [
   conversationsConversationUiPlugin,
   conversationsConversationViewActionBarPlugin,
   conversationsConversationViewAllowMonitorPlugin,
+  conversationsConversationViewBlockedByPlugin,
   conversationsConversationViewCodeDocsButtonPlugin,
   conversationsConversationViewCodeFilePaneDiffPlugin,
   conversationsConversationViewCodeFilePaneImagePlugin,

@@ -11,13 +11,14 @@ import { handleReorder } from "./internal/handle-reorder";
 import { handlePromote } from "./internal/handle-promote";
 import { handleDemote } from "./internal/handle-demote";
 import { handleStepDown } from "./internal/handle-step-down";
+import { handleRerank } from "./internal/handle-rerank";
 import { seedRankJob } from "./internal/seed-rank-job";
 import { queueRanksResource } from "./internal/resource";
 
 export { conversationsQueue } from "./internal/tables";
 export { queueRanksResource } from "./internal/resource";
 export { seedRankJob } from "./internal/seed-rank-job";
-export { rankForTop, rankForBottom, rankAfterN, rankAdjacentTo, endRank, positionTwoRank } from "./internal/queue-ranks";
+export { rankForTop, rankForBottom, rankAfterN, rankAdjacentTo, rankAfterBlockers, endRank, positionTwoRank } from "./internal/queue-ranks";
 
 export default {
   id: "conversations-queue",
@@ -31,6 +32,7 @@ export default {
     "POST /api/conversations-queue/promote": handlePromote,
     "POST /api/conversations-queue/demote": handleDemote,
     "POST /api/conversations-queue/step-down": handleStepDown,
+    "POST /api/conversations-queue/rerank": handleRerank,
   },
   onReady: async () => {
     await deleteTriggersFor(seedRankJob);
