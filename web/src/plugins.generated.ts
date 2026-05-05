@@ -47,6 +47,7 @@ import conversationsConversationViewJsonlViewerAssistantThinkingPlugin from "@pl
 import conversationsConversationViewJsonlViewerSummaryPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary/web";
 import conversationsConversationViewJsonlViewerSystemPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/system/web";
 import conversationsConversationViewJsonlViewerToolCallBashPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/bash/web";
+import conversationsConversationViewJsonlViewerToolCallEditPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/edit/web";
 import conversationsConversationViewJsonlViewerToolCallPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import conversationsConversationViewJsonlViewerUserImagePlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-image/web";
 import conversationsConversationViewJsonlViewerUserTextPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-text/web";
@@ -173,6 +174,7 @@ export const plugins: PluginDefinition[] = [
   conversationsConversationViewJsonlViewerSummaryPlugin,
   conversationsConversationViewJsonlViewerSystemPlugin,
   conversationsConversationViewJsonlViewerToolCallBashPlugin,
+  conversationsConversationViewJsonlViewerToolCallEditPlugin,
   conversationsConversationViewJsonlViewerToolCallPlugin,
   conversationsConversationViewJsonlViewerUserImagePlugin,
   conversationsConversationViewJsonlViewerUserTextPlugin,

@@ -3,8 +3,10 @@ import { FilePane } from "@plugins/conversations/plugins/conversation-view/plugi
 import { supportsDiff } from "./internal/supports";
 import { DiffOrImageView } from "./internal/diff-or-image-view";
 
-export { DiffView } from "./components/diff-view";
+export { DiffView, DiffRenderer } from "./components/diff-view";
 export { DiffOrImageView } from "./internal/diff-or-image-view";
+export type { DiffTokens, ShikiTokenNode } from "./use-diff-tokens";
+export { buildSideTokenMap } from "./use-diff-tokens";
 
 export default {
   id: "conversation-code-file-pane-diff",

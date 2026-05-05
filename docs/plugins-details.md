@@ -320,7 +320,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Plugins:
                 - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
                   - Exports (web):
-                    - Values: `DiffOrImageView`, `DiffView`
+                    - Types: `DiffTokens`, `ShikiTokenNode`
+                    - Values: `buildSideTokenMap`, `DiffOrImageView`, `DiffRenderer`, `DiffView`
                   - Contributes:
                     - `FilePane.Renderer` "Diff" → `DiffOrImageView`
                 - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
@@ -414,11 +415,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `ToolCallRow`
                 - `JsonlViewer.RowAction` → `CopyToolResultAction`
-              - Slot contributors: `bash`
+              - Slot contributors: `bash`, `edit`
               - Plugins:
                 - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
                   - Contributes:
                     - `JsonlViewerTool.Renderer` → `BashToolView`
+                - **`edit`** — Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
+                  - Contributes:
+                    - `JsonlViewerTool.Renderer` → `EditView`
+                    - `JsonlViewerTool.Renderer` → `MultiEditView`
             - **`user-image`** — Renders inline image thumbnails for user-image events.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `UserImageRow`

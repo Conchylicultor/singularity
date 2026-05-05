@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
 import {
   TokenBadge,
@@ -7,22 +8,19 @@ import { JsonlViewerTool } from "../slots";
 import type { ToolCallEvent } from "../../shared";
 import { GenericToolView } from "./generic-tool-view";
 
-function resolveRenderer(
+function resolveContribution(
   event: ToolCallEvent,
   contributions: ReturnType<typeof JsonlViewerTool.Renderer.useContributions>,
 ) {
-  // Tier 1: exact name match
   const exact = contributions.find((c) => c.name != null && c.name === event.name);
-  if (exact) return exact.component;
+  if (exact) return exact;
 
-  // Tier 2: first matching pattern
   const pattern = contributions.find(
     (c) => c.pattern != null && c.pattern.test(event.name),
   );
-  if (pattern) return pattern.component;
+  if (pattern) return pattern;
 
-  // Tier 3: built-in fallback
-  return GenericToolView;
+  return null;
 }
 
 function inputDescription(input: unknown): string {
@@ -34,18 +32,25 @@ function inputDescription(input: unknown): string {
 export function ToolCallRow({ event }: { event: JsonlEvent }) {
   const e = event as ToolCallEvent;
   const contributions = JsonlViewerTool.Renderer.useContributions();
-  const Renderer = resolveRenderer(e, contributions);
+  const contribution = resolveContribution(e, contributions);
+  const Renderer = contribution?.component ?? GenericToolView;
+  const Summary = contribution?.summary;
+
+  const [open, setOpen] = useState(contribution?.defaultOpen ?? false);
 
   const hasError = e.result?.isError;
   const isRunning = !e.result;
   const description = inputDescription(e.input);
-  const borderClass = hasError
-    ? "border-destructive/60"
-    : "border-border/60";
+  const hasInlineLabel = !!(Summary || description);
+  const borderClass = hasError ? "border-destructive/60" : "border-border/60";
   const bgClass = hasError ? "bg-destructive/5" : "bg-background";
 
   return (
-    <details className={`group rounded-md border ${borderClass} ${bgClass} px-3 py-2`}>
+    <details
+      className={`group rounded-md border ${borderClass} ${bgClass} px-3 py-2`}
+      open={open}
+      onToggle={(ev) => setOpen((ev.target as HTMLDetailsElement).open)}
+    >
       <summary className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
         <span
           className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] ${
@@ -56,9 +61,10 @@ export function ToolCallRow({ event }: { event: JsonlEvent }) {
         >
           {e.name || "tool_call"}
         </span>
-        {description && (
-          <span className="min-w-0 flex-1 truncate opacity-70">{description}</span>
-        )}
+        {Summary
+          ? <Summary event={e} />
+          : (description && <span className="min-w-0 flex-1 truncate opacity-70">{description}</span>)
+        }
         {isRunning && (
           <span className="flex shrink-0 items-center gap-1">
             {[0, 150, 300].map((delay) => (
@@ -70,10 +76,13 @@ export function ToolCallRow({ event }: { event: JsonlEvent }) {
             ))}
           </span>
         )}
-        {hasError && (
-          <span className="shrink-0 text-[11px] text-destructive">error</span>
+        {e.result && !hasError && (
+          <span className="text-[11px] text-green-600 dark:text-green-400">✓</span>
         )}
-        <span className={`flex shrink-0 items-center gap-2 ${description ? "" : "ml-auto"}`}>
+        {hasError && (
+          <span className="shrink-0 text-[11px] text-destructive">✗</span>
+        )}
+        <span className={`flex shrink-0 items-center gap-2 ${hasInlineLabel ? "" : "ml-auto"}`}>
           {e.usage ? <TokenBadge usage={e.usage} /> : null}
           <span className="tabular-nums">{formatTime(e.at)}</span>
         </span>

@@ -48,7 +48,7 @@ async function fetchFileContent(
   }
 }
 
-function buildSideTokenMap(
+export function buildSideTokenMap(
   hunks: HunkData[],
   side: "old" | "new",
   allLines: ShikiTokenNode[][],
