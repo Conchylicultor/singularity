@@ -20,11 +20,17 @@ export const reorderPrefsResource = defineResource<
       .select({
         contributionId: _reorderPrefs.contributionId,
         rank: _reorderPrefs.rank,
+        hidden: _reorderPrefs.hidden,
       })
       .from(_reorderPrefs)
       .where(eq(_reorderPrefs.slotId, slotId));
     const out: ReorderSlotPrefs = {};
-    for (const r of rows) out[r.contributionId] = { rank: r.rank as unknown as Rank };
+    for (const r of rows) {
+      out[r.contributionId] = {
+        rank: r.rank ? (r.rank as unknown as Rank) : undefined,
+        hidden: r.hidden || undefined,
+      };
+    }
     return out;
   },
 });

@@ -15,11 +15,16 @@ export async function handleGetSlot(
     .select({
       contributionId: _reorderPrefs.contributionId,
       rank: _reorderPrefs.rank,
+      hidden: _reorderPrefs.hidden,
     })
     .from(_reorderPrefs)
     .where(eq(_reorderPrefs.slotId, slotId));
-  const out: Record<string, { rank: string }> = {};
-  for (const r of rows) out[r.contributionId] = { rank: r.rank as string };
+  const out: Record<string, { rank?: string; hidden: boolean }> = {};
+  for (const r of rows)
+    out[r.contributionId] = {
+      rank: (r.rank as string) ?? undefined,
+      hidden: r.hidden,
+    };
   return Response.json(out);
 }
 
@@ -32,32 +37,62 @@ export async function handlePatchSlot(
     return Response.json({ error: "slotId required" }, { status: 400 });
   }
   const body = (await req.json().catch(() => null)) as
-    | { contributionId?: string; rank?: string }
+    | { contributionId?: string; rank?: string; hidden?: boolean }
     | null;
   if (
     !body ||
     typeof body.contributionId !== "string" ||
-    typeof body.rank !== "string" ||
-    body.contributionId.length === 0 ||
-    body.rank.length === 0
+    body.contributionId.length === 0
   ) {
     return Response.json(
-      { error: "body must be { contributionId: string; rank: string }" },
+      { error: "body.contributionId must be a non-empty string" },
       { status: 400 },
     );
   }
 
-  await db
-    .insert(_reorderPrefs)
-    .values({
-      slotId,
-      contributionId: body.contributionId,
-      rank: body.rank,
-    })
-    .onConflictDoUpdate({
-      target: [_reorderPrefs.slotId, _reorderPrefs.contributionId],
-      set: { rank: body.rank },
-    });
+  const hasRank = typeof body.rank === "string" && body.rank.length > 0;
+  const hasHidden = typeof body.hidden === "boolean";
+  if (!hasRank && !hasHidden) {
+    return Response.json(
+      { error: "body must include rank (string) and/or hidden (boolean)" },
+      { status: 400 },
+    );
+  }
+
+  if (hasRank && !hasHidden) {
+    await db
+      .insert(_reorderPrefs)
+      .values({ slotId, contributionId: body.contributionId, rank: body.rank })
+      .onConflictDoUpdate({
+        target: [_reorderPrefs.slotId, _reorderPrefs.contributionId],
+        set: { rank: body.rank },
+      });
+  } else if (hasHidden && !hasRank) {
+    await db
+      .insert(_reorderPrefs)
+      .values({
+        slotId,
+        contributionId: body.contributionId,
+        hidden: body.hidden,
+      })
+      .onConflictDoUpdate({
+        target: [_reorderPrefs.slotId, _reorderPrefs.contributionId],
+        set: { hidden: body.hidden },
+      });
+  } else {
+    await db
+      .insert(_reorderPrefs)
+      .values({
+        slotId,
+        contributionId: body.contributionId,
+        rank: body.rank,
+        hidden: body.hidden,
+      })
+      .onConflictDoUpdate({
+        target: [_reorderPrefs.slotId, _reorderPrefs.contributionId],
+        set: { rank: body.rank, hidden: body.hidden },
+      });
+  }
 
   reorderPrefsResource.notify({ slotId });
   return Response.json({ ok: true });

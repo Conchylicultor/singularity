@@ -1,7 +1,10 @@
 import {
+  createContext,
   useCallback,
+  useContext,
   useMemo,
   useRef,
+  useState,
   type ComponentType,
   type ReactNode,
 } from "react";
@@ -15,8 +18,14 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
+import { MdAdd, MdClose } from "react-icons/md";
 import { Rank } from "@plugins/primitives/plugins/rank/shared";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { reorderPrefsResource } from "../../shared/resource";
 import {
   lookupReorderConfig,
@@ -43,10 +52,22 @@ export type HostOverride<P extends BaseItem> = {
 
 export type UseAreaResult<P extends BaseItem> = {
   items: P[];
+  hiddenItems: P[];
   editMode: boolean;
   DndWrapper: ComponentType<{ children: ReactNode }>;
   ReorderItem: ComponentType<{ item: P; children: ReactNode }>;
 };
+
+// --- Area context (shared between DndWrapper, ReorderItem, RestoreButton) ---
+
+type ReorderAreaCtxValue = {
+  storageId: string;
+  hiddenItems: BaseItem[];
+  getLabel: (item: BaseItem) => string;
+};
+const ReorderAreaContext = createContext<ReorderAreaCtxValue | null>(null);
+
+// ---------------------------------------------------------------------------
 
 const warnedSlots = new Set<string>();
 
@@ -67,31 +88,49 @@ export function useArea<P extends BaseItem>(
   const filter = override?.filter;
   const storageId = override?.subId ? `${slot.id}:${override.subId}` : slot.id;
 
+  const slotGetLabel = slotCfg?.getLabel as
+    | ((item: P) => string)
+    | undefined;
+  const effectiveGetLabel = useCallback(
+    (item: BaseItem): string =>
+      slotGetLabel?.(item as P) ??
+      (item as Record<string, unknown>)._pluginName as string ??
+      item.id,
+    [slotGetLabel],
+  );
+
   const raw = slot.useContributions();
   const { data: rankMap } = useResource(reorderPrefsResource, {
     slotId: storageId,
   });
 
-  const items = useMemo<P[]>(() => {
+  const { items, hiddenItems } = useMemo(() => {
     const filtered = filter ? raw.filter(filter) : raw;
+
+    const visible: P[] = [];
+    const hidden: P[] = [];
+    for (const item of filtered) {
+      if (rankMap?.[item.id]?.hidden && !item.excludeFromReorder) {
+        hidden.push(item);
+      } else {
+        visible.push(item);
+      }
+    }
 
     // Group order is fixed by natural-order discovery (first appearance).
     const groupOrder: string[] = [];
     const groupOf = (it: P): string => (getGroup ? (getGroup(it) ?? "") : "");
-    for (const it of filtered) {
+    for (const it of visible) {
       const g = groupOf(it);
       if (!groupOrder.includes(g)) groupOrder.push(g);
     }
 
-    return filtered
+    const sorted = visible
       .map((item, naturalIdx) => ({ item, naturalIdx }))
       .sort((a, b) => {
         const ga = groupOrder.indexOf(groupOf(a.item));
         const gb = groupOrder.indexOf(groupOf(b.item));
         if (ga !== gb) return ga - gb;
-        // Excluded items are pinned to the tail of their group, in natural
-        // order. This keeps non-reorderable contributions (e.g. the pen button)
-        // at a predictable spot regardless of how their reorderable peers rank.
         const ax = !!a.item.excludeFromReorder;
         const bx = !!b.item.excludeFromReorder;
         if (ax !== bx) return ax ? 1 : -1;
@@ -104,18 +143,24 @@ export function useArea<P extends BaseItem>(
         return a.naturalIdx - b.naturalIdx;
       })
       .map((row) => row.item);
+
+    return { items: sorted, hiddenItems: hidden };
   }, [raw, rankMap, filter, getGroup]);
 
-  // Reads of `items` / `rankMap` / `getGroup` from inside onDrop go through
-  // refs so onDrop's identity stays stable across re-renders. That, plus
-  // DndWrapper being memoized with no deps, keeps DndContext + every
-  // ReorderItem mounted across drops and edit-mode toggles.
+  // Refs so closures (onDrop, DndWrapper, RestoreButton) see fresh values
+  // without re-creating their identities.
   const itemsRef = useRef<P[]>(items);
   itemsRef.current = items;
   const rankMapRef = useRef(rankMap);
   rankMapRef.current = rankMap;
   const getGroupRef = useRef(getGroup);
   getGroupRef.current = getGroup;
+  const hiddenItemsRef = useRef<P[]>(hiddenItems);
+  hiddenItemsRef.current = hiddenItems;
+  const getLabelRef = useRef(effectiveGetLabel);
+  getLabelRef.current = effectiveGetLabel;
+  const storageIdRef = useRef(storageId);
+  storageIdRef.current = storageId;
 
   const onDrop = useCallback(
     (draggedKey: string, overKey: string) => {
@@ -166,32 +211,40 @@ export function useArea<P extends BaseItem>(
     [storageId],
   );
 
-  // The host renders <area.DndWrapper> at a fixed JSX position. DndWrapper's
-  // identity is stable across the hook's lifetime so React keeps the inner
-  // DndContext (and every ReorderItem under it) mounted across drops and
-  // edit-mode toggles. The wrapper reads the latest onDrop via the ref.
   const onDropRef = useRef(onDrop);
   onDropRef.current = onDrop;
   const DndWrapper = useMemo(
     () =>
       function DndWrapperBound({ children }: { children: ReactNode }) {
+        const em = useEditMode();
         const sensors = useSensors(
           useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
         );
+        const ctxValue: ReorderAreaCtxValue = {
+          storageId: storageIdRef.current,
+          hiddenItems: hiddenItemsRef.current,
+          getLabel: getLabelRef.current,
+        };
         return (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={pointerWithin}
-            onDragEnd={(e: DragEndEvent) => {
-              const draggedKey = stripPrefix(DRAG_PREFIX, String(e.active.id));
-              const overKey = e.over
-                ? stripPrefix(DROP_PREFIX, String(e.over.id))
-                : null;
-              if (overKey) onDropRef.current(draggedKey, overKey);
-            }}
-          >
-            {children}
-          </DndContext>
+          <ReorderAreaContext.Provider value={ctxValue}>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={pointerWithin}
+              onDragEnd={(e: DragEndEvent) => {
+                const draggedKey = stripPrefix(
+                  DRAG_PREFIX,
+                  String(e.active.id),
+                );
+                const overKey = e.over
+                  ? stripPrefix(DROP_PREFIX, String(e.over.id))
+                  : null;
+                if (overKey) onDropRef.current(draggedKey, overKey);
+              }}
+            >
+              {children}
+              {em && hiddenItemsRef.current.length > 0 && <RestoreButton />}
+            </DndContext>
+          </ReorderAreaContext.Provider>
         );
       },
     [],
@@ -199,6 +252,7 @@ export function useArea<P extends BaseItem>(
 
   return {
     items,
+    hiddenItems,
     editMode,
     DndWrapper,
     ReorderItem: ReorderItem as ComponentType<{
@@ -234,20 +288,15 @@ function ReorderItemActive({
   item: BaseItem;
   children: ReactNode;
 }) {
+  const ctx = useContext(ReorderAreaContext);
   const draggable = useDraggable({ id: `${DRAG_PREFIX}${item.id}` });
   const droppable = useDroppable({ id: `${DROP_PREFIX}${item.id}` });
 
-  // Deterministic per-item delay so the wiggle doesn't sync across items.
-  const delay = useMemo(
-    () => (item.id.length * 37) % 200,
-    [item.id],
-  );
+  const delay = useMemo(() => (item.id.length * 37) % 200, [item.id]);
 
   const transform = draggable.transform;
   const isDragging = draggable.isDragging;
 
-  // While dragging, dnd-kit owns the transform (translate). The CSS wiggle
-  // animation also targets transform, so it must be suspended during a drag.
   const style: React.CSSProperties = isDragging
     ? {
         transform: transform
@@ -260,6 +309,16 @@ function ReorderItemActive({
         animationDelay: `-${delay}ms`,
         touchAction: "none",
       };
+
+  function handleHide(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!ctx) return;
+    void fetch(`/api/reorder/${ctx.storageId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contributionId: item.id, hidden: true }),
+    });
+  }
 
   return (
     <div
@@ -280,7 +339,57 @@ function ReorderItemActive({
         .filter(Boolean)
         .join(" ")}
     >
+      <button
+        className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={handleHide}
+        aria-label={`Hide ${item.id}`}
+      >
+        <MdClose className="size-2.5" />
+      </button>
       <div className="pointer-events-none">{children}</div>
     </div>
+  );
+}
+
+function RestoreButton() {
+  const ctx = useContext(ReorderAreaContext)!;
+  const [open, setOpen] = useState(false);
+
+  function handleRestore(contributionId: string) {
+    void fetch(`/api/reorder/${ctx.storageId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contributionId, hidden: false }),
+    });
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        className="mt-1 flex h-7 w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-muted-foreground/40 text-xs text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground transition-colors reorder-wiggle"
+        aria-label="Restore hidden items"
+      >
+        <MdAdd className="size-3.5" />
+        {ctx.hiddenItems.length === 1
+          ? "1 hidden"
+          : `${ctx.hiddenItems.length} hidden`}
+      </PopoverTrigger>
+      <PopoverContent className="w-48 p-1" align="start">
+        {ctx.hiddenItems.map((item) => (
+          <button
+            key={item.id}
+            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
+            onClick={() => {
+              handleRestore(item.id);
+              if (ctx.hiddenItems.length <= 1) setOpen(false);
+            }}
+          >
+            <MdAdd className="size-3.5 shrink-0 text-muted-foreground" />
+            {ctx.getLabel(item)}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
   );
 }

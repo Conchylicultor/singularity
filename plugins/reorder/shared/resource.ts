@@ -4,7 +4,7 @@ import { RankSchema } from "@plugins/primitives/plugins/rank/shared";
 
 export const ReorderSlotPrefsSchema = z.record(
   z.string(),
-  z.object({ rank: RankSchema }),
+  z.object({ rank: RankSchema.optional(), hidden: z.boolean().optional() }),
 );
 export type ReorderSlotPrefs = z.infer<typeof ReorderSlotPrefsSchema>;
 

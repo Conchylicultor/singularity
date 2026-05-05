@@ -4,6 +4,8 @@ export type ReorderConfig<P> = {
   /** Group accessor; returning the same string keeps items in the same group.
    *  null/undefined means "no grouping" — drag is unconstrained. */
   getGroup?: (item: P) => string | null;
+  /** Label accessor for the restore popover when an item is hidden. */
+  getLabel?: (item: P) => string;
 };
 
 declare const ReorderableTag: unique symbol;

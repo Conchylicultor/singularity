@@ -14,7 +14,7 @@ export const Shell = {
       /** When true, only the section label is pinned; the component renders in an independent scroll region. */
       scroll?: boolean;
     }>("shell.sidebar"),
-    { getGroup: (item) => item.group ?? null },
+    { getGroup: (item) => item.group ?? null, getLabel: (item) => item.title },
   ),
 
   Toolbar: Reorder.area(
@@ -25,6 +25,9 @@ export const Shell = {
       component?: ComponentType;
       group?: string;
     }>("shell.toolbar"),
-    { getGroup: (item) => item.group ?? null },
+    {
+      getGroup: (item) => item.group ?? null,
+      getLabel: (item) => item.label ?? item.id,
+    },
   ),
 };

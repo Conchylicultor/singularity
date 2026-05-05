@@ -1,4 +1,4 @@
-import { pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { boolean, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import { rankText } from "@server/db/types";
 
 export const _reorderPrefs = pgTable(
@@ -6,7 +6,8 @@ export const _reorderPrefs = pgTable(
   {
     slotId: text("slot_id").notNull(),
     contributionId: text("contribution_id").notNull(),
-    rank: rankText("rank").notNull(),
+    rank: rankText("rank"),
+    hidden: boolean("hidden").notNull().default(false),
   },
   (t) => [primaryKey({ columns: [t.slotId, t.contributionId] })],
 );

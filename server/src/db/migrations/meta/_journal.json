@@ -512,6 +512,13 @@
       "tag": "20260505_155854_b447e2cb__add_deploy_servers",
       "hash": "b447e2cb",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1778020303000,
+      "tag": "20260505_223143_21e4fc55__reorder_prefs_hidden",
+      "hash": "21e4fc55",
+      "breakpoints": true
     }
   ]
 }

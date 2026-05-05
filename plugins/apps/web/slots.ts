@@ -11,5 +11,6 @@ export const Apps = {
       isActive: (pathname: string) => boolean;
       onClick: () => void;
     }>("apps.app"),
+    { getLabel: (item) => item.tooltip },
   ),
 };
