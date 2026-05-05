@@ -19,8 +19,6 @@
   - `Pane.Register` `deploy-servers`
   - `Pane.Register` `deploy-add-server`
   - `Pane.Register` `deploy-server-detail`
-  - `Shell.Sidebar` "Deploy" (group `System`)
-  - `serversRootPane.open`
 - Server:
   - `GET /api/deploy/servers`
   - `POST /api/deploy/servers`

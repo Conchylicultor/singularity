@@ -434,6 +434,10 @@
       "name": "@singularity/plugin-deploy-servers",
       "version": "0.0.1",
     },
+    "plugins/deploy/plugins/shell": {
+      "name": "@singularity/plugin-deploy-shell",
+      "version": "0.0.1",
+    },
     "plugins/events-test": {
       "name": "@singularity/plugin-events-test",
       "version": "0.0.1",
@@ -623,6 +627,10 @@
       "dependencies": {
         "sonner": "^2.0.7",
       },
+    },
+    "plugins/shell/plugins/toaster": {
+      "name": "@singularity/plugin-shell-toaster",
+      "version": "0.0.1",
     },
     "plugins/stats": {
       "name": "@singularity/plugin-stats",
@@ -1494,6 +1502,8 @@
 
     "@singularity/plugin-deploy-servers": ["@singularity/plugin-deploy-servers@workspace:plugins/deploy/plugins/servers"],
 
+    "@singularity/plugin-deploy-shell": ["@singularity/plugin-deploy-shell@workspace:plugins/deploy/plugins/shell"],
+
     "@singularity/plugin-events-test": ["@singularity/plugin-events-test@workspace:plugins/events-test"],
 
     "@singularity/plugin-health": ["@singularity/plugin-health@workspace:plugins/health"],
@@ -1575,6 +1585,8 @@
     "@singularity/plugin-screenshot-draw-on-app": ["@singularity/plugin-screenshot-draw-on-app@workspace:plugins/screenshot/plugins/draw-on-app"],
 
     "@singularity/plugin-shell": ["@singularity/plugin-shell@workspace:plugins/shell"],
+
+    "@singularity/plugin-shell-toaster": ["@singularity/plugin-shell-toaster@workspace:plugins/shell/plugins/toaster"],
 
     "@singularity/plugin-stats": ["@singularity/plugin-stats@workspace:plugins/stats"],
 

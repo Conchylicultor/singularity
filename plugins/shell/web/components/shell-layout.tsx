@@ -1,7 +1,6 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { ComponentType } from "react";
 import { MdTune, MdChevronRight } from "react-icons/md";
-import { toast } from "sonner";
 
 const SIDEBAR_GROUPS: Record<
   string,
@@ -12,9 +11,7 @@ const SIDEBAR_GROUPS: Record<
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { Reorder } from "@plugins/reorder/web";
-import { Shell as ShellCommands } from "../commands";
 import { Shell } from "../slots";
-import { Toaster } from "./toaster";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -125,26 +122,6 @@ export function ShellLayout() {
   const visibleScrollPanes = scrollPanesArea.items.filter(
     (p) => !collapsed.has(p.title) && p.component,
   );
-
-  ShellCommands.Toast.useHandler(({ title, description, variant }) => {
-    const opts = { description: title ? description : undefined };
-    const message = title ?? description;
-    const fn = variant && variant !== "default" ? toast[variant] : toast;
-    fn(message, opts);
-  });
-
-  // Unhandled promise rejections are surfaced as toasts; without this they
-  // vanish into the devtools console and the UI silently stalls.
-  useEffect(() => {
-    const onRejection = (e: PromiseRejectionEvent) => {
-      const reason = e.reason;
-      const message =
-        reason instanceof Error ? reason.message : String(reason);
-      toast.error(message);
-    };
-    window.addEventListener("unhandledrejection", onRejection);
-    return () => window.removeEventListener("unhandledrejection", onRejection);
-  }, []);
 
   return (
     <>
@@ -300,7 +277,6 @@ export function ShellLayout() {
 
         </SidebarInset>
       </SidebarProvider>
-    <Toaster />
     </>
   );
 }

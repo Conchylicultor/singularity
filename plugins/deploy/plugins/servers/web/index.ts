@@ -1,7 +1,5 @@
 import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { Shell } from "@plugins/shell/web";
-import { MdCloud } from "react-icons/md";
 import { serversRootPane, addServerPane, serverDetailPane } from "./panes";
 
 export { serversRootPane, addServerPane, serverDetailPane } from "./panes";
@@ -16,12 +14,5 @@ export default {
     Pane.Register({ pane: serversRootPane }),
     Pane.Register({ pane: addServerPane }),
     Pane.Register({ pane: serverDetailPane }),
-    Shell.Sidebar({
-      id: "deploy",
-      title: "Deploy",
-      icon: MdCloud,
-      group: "System",
-      onClick: () => serversRootPane.open({}),
-    }),
   ],
 } satisfies PluginDefinition;

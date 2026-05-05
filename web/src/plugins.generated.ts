@@ -89,6 +89,7 @@ import debugQueuePlugin from "@plugins/debug/plugins/queue/web";
 import debugWorktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/web";
 import debugPlugin from "@plugins/debug/web";
 import deployServersPlugin from "@plugins/deploy/plugins/servers/web";
+import deployShellPlugin from "@plugins/deploy/plugins/shell/web";
 import deployPlugin from "@plugins/deploy/web";
 import eventsTestPlugin from "@plugins/events-test/web";
 import healthPlugin from "@plugins/health/web";
@@ -118,6 +119,7 @@ import reorderPlugin from "@plugins/reorder/web";
 import screenshotDrawCanvasPlugin from "@plugins/screenshot/plugins/draw-canvas/web";
 import screenshotDrawOnAppPlugin from "@plugins/screenshot/plugins/draw-on-app/web";
 import screenshotPlugin from "@plugins/screenshot/web";
+import shellToasterPlugin from "@plugins/shell/plugins/toaster/web";
 import shellPlugin from "@plugins/shell/web";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/web";
 import statsCostPlugin from "@plugins/stats/plugins/cost/web";
@@ -224,6 +226,7 @@ export const plugins: PluginDefinition[] = [
   debugWorktreeCleanupPlugin,
   debugPlugin,
   deployServersPlugin,
+  deployShellPlugin,
   deployPlugin,
   eventsTestPlugin,
   healthPlugin,
@@ -253,6 +256,7 @@ export const plugins: PluginDefinition[] = [
   screenshotDrawCanvasPlugin,
   screenshotDrawOnAppPlugin,
   screenshotPlugin,
+  shellToasterPlugin,
   shellPlugin,
   statsCommitsPlugin,
   statsCostPlugin,

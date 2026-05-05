@@ -8,19 +8,34 @@ function usePathname(): string {
   return useSyncExternalStore(
     (cb) => {
       window.addEventListener("popstate", cb);
-      return () => window.removeEventListener("popstate", cb);
+      window.addEventListener("shell:navigate", cb);
+      return () => {
+        window.removeEventListener("popstate", cb);
+        window.removeEventListener("shell:navigate", cb);
+      };
     },
     () => window.location.pathname,
     () => "/",
   );
 }
 
+function appMatchesPath(appPath: string, pathname: string): boolean {
+  if (appPath === "/") return true;
+  return pathname === appPath || pathname.startsWith(appPath + "/");
+}
+
 export function AppsLayout() {
   const appsArea = Reorder.useArea(Apps.App);
   const pathname = usePathname();
 
-  const activeApp =
-    appsArea.items.find((a) => a.isActive(pathname)) ?? appsArea.items[0];
+  const sorted = [...appsArea.items].sort(
+    (a, b) => b.path.length - a.path.length,
+  );
+  const activeApp = sorted.find((a) => appMatchesPath(a.path, pathname));
+
+  if (!activeApp) {
+    console.error(`No app matches pathname: ${pathname}`);
+  }
 
   return (
     <TooltipProvider>

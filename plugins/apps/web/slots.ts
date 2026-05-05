@@ -8,8 +8,8 @@ export const Apps = {
       icon: ComponentType<{ className?: string }>;
       tooltip: string;
       component: ComponentType;
-      isActive: (pathname: string) => boolean;
-      onClick: () => void;
+      path: string;
+      onClick?: () => void;
     }>("apps.app"),
     { getLabel: (item) => item.tooltip },
   ),

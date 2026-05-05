@@ -10,8 +10,15 @@ type AppItem = {
   id: string;
   icon: ComponentType<{ className?: string }>;
   tooltip: string;
-  onClick: () => void;
+  path: string;
+  onClick?: () => void;
 };
+
+function navigateToPath(path: string) {
+  if (window.location.pathname === path) return;
+  window.history.pushState({}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
 
 export function AppRail<T extends AppItem>({
   items,
@@ -33,7 +40,7 @@ export function AppRail<T extends AppItem>({
               <TooltipTrigger
                 render={
                   <button
-                    onClick={app.onClick}
+                    onClick={app.onClick ?? (() => navigateToPath(app.path))}
                     className={cn(
                       "flex size-8 items-center justify-center rounded-md text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                       app.id === activeAppId &&

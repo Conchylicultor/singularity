@@ -16,11 +16,7 @@ export default {
       icon: MdDashboard,
       tooltip: "Agent Manager",
       component: ShellLayout,
-      isActive: () => true,
-      onClick: () => {
-        history.pushState({}, "", "/");
-        window.dispatchEvent(new PopStateEvent("popstate"));
-      },
+      path: "/",
     }),
   ],
 } satisfies PluginDefinition;
