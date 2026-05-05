@@ -1,8 +1,8 @@
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { Fragment, useLayoutEffect, useRef, type ReactNode } from "react";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
+  PaneDepthContext,
   PaneMatchContext,
-  type PaneMatch,
   useMatchForPath,
   usePathname,
   useSyncPaneRegistry,
@@ -28,43 +28,34 @@ export function MillerColumns() {
 
   if (!match) return null;
 
-  const row = (
-    <div ref={ref} className="flex h-full overflow-x-auto">
-      {match.chain.map((entry, i) => (
-        <Column
-          key={entry.pane.id}
-          entry={entry}
-          depth={i}
-          isLast={i === match.chain.length - 1}
-        />
-      ))}
-    </div>
-  );
-
   return (
     <PaneMatchContext.Provider value={match}>
       <PluginErrorBoundary slot="layouts.miller" label={pathname}>
-        {wrapInProviders(match, row)}
+        <div ref={ref} className="flex h-full overflow-x-auto">
+          {match.chain.map((entry, i) => {
+            let column: ReactNode = (
+              <Column
+                entry={entry}
+                depth={i}
+                isLast={i === match.chain.length - 1}
+              />
+            );
+            // Wrap with providers from chain[0..i], innermost (i) wraps closest
+            for (let j = i; j >= 0; j--) {
+              const chainEntry = match.chain[j]!;
+              const Provide = chainEntry.pane.provide;
+              if (Provide) {
+                column = (
+                  <PaneDepthContext.Provider value={j}>
+                    <Provide>{column}</Provide>
+                  </PaneDepthContext.Provider>
+                );
+              }
+            }
+            return <Fragment key={`${entry.pane.id}-${i}`}>{column}</Fragment>;
+          })}
+        </div>
       </PluginErrorBoundary>
     </PaneMatchContext.Provider>
   );
-}
-
-/**
- * Compose every chain entry's `provide` component around `row`, outermost
- * first. The result is `<RootProvide><ChildProvide>{row}</ChildProvide></RootProvide>`,
- * so every column has access to every ancestor's provided data via
- * `pane.useData()`.
- *
- * `provide` components own data loading and may suspend the chain by
- * rendering a loading element instead of `<Provider>{children}</Provider>`.
- */
-function wrapInProviders(match: PaneMatch, row: ReactNode): ReactNode {
-  let body: ReactNode = row;
-  for (let i = match.chain.length - 1; i >= 0; i--) {
-    const entry = match.chain[i]!;
-    const Provide = entry.pane.provide;
-    if (Provide) body = <Provide>{body}</Provide>;
-  }
-  return body;
 }

@@ -10,7 +10,7 @@ import {
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { PaneMatchContext, type PaneObject } from "../pane";
+import { PaneDepthContext, PaneMatchContext, type PaneObject } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 
 interface PaneChromeProps {
@@ -51,9 +51,10 @@ export function PaneChrome({ pane, title, actions, hideRightActions, children }:
   const chrome = pane._internal.chrome;
   const fallbackTitle = useChromeTitle(pane);
   const layoutCtx = useContext(PaneLayoutContext);
+  const depth = useContext(PaneDepthContext);
   if (!chrome.enabled) return <>{children}</>;
   const resolvedTitle = title ?? fallbackTitle;
-  const showClose = chrome.close && pane._internal.parent != null;
+  const showClose = chrome.close && depth > 0;
   return (
     <div className="flex h-full flex-col">
       <div

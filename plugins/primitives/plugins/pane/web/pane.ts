@@ -27,6 +27,11 @@ type ExtractParams<Path extends string> = Path extends `${infer Seg}/${infer Res
 export type InferParams<Path extends string> =
   ExtractParams<Path> extends infer O ? { [K in keyof O]: O[K] } : never;
 
+export interface PaneSlot {
+  paneId: string;
+  params: Record<string, string>;
+}
+
 // ---------------------------------------------------------------------------
 // `type<T>()` — a phantom marker used to declare the `provides` shape at the
 // type level. The runtime value is irrelevant; only the generic parameter is
@@ -76,9 +81,16 @@ interface NormalizedChrome {
 
 export interface PaneInternal {
   id: string;
+  /** @deprecated Use `after` instead. Kept during migration. */
   parent: PaneInternal | null;
+  /** @deprecated Use `segment` instead. Kept during migration. */
   ownPath: string;
+  /** @deprecated Computed from parent chain. Kept during migration. */
   fullPath: string;
+  /** Valid predecessor pane IDs. `null` means the pane can appear at root (position 0). */
+  after: Set<string | null>;
+  /** Own URL segment (no leading slash). Used by the chain URL parser/builder. */
+  segment: string;
   component: ComponentType;
   chrome: NormalizedChrome;
   /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
@@ -228,6 +240,272 @@ function ownParamNames(ownPath: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
+// Chain-based URL parser + builder.
+// ---------------------------------------------------------------------------
+
+function segmentParamNames(segment: string): string[] {
+  if (!segment) return [];
+  return segment
+    .split("/")
+    .filter((seg) => seg.startsWith(":"))
+    .map((seg) => seg.slice(1).replace(/\*$/, ""));
+}
+
+function matchSegmentParts(
+  segment: string,
+  urlSegments: string[],
+  cursor: number,
+): { params: Record<string, string>; consumed: number } | null {
+  if (!segment || segment === "/" || segment === "") return null;
+
+  const segParts = segment.split("/").filter(Boolean);
+  if (segParts.length === 0) return null;
+
+  const params: Record<string, string> = {};
+  let consumed = 0;
+
+  for (let i = 0; i < segParts.length; i++) {
+    const pat = segParts[i]!;
+    const idx = cursor + consumed;
+
+    if (pat.startsWith(":") && pat.endsWith("*")) {
+      const name = pat.slice(1, -1);
+      const rest = urlSegments.slice(idx);
+      if (rest.length === 0) return null;
+      params[name] = rest.map((s) => decodeURIComponent(s)).join("/");
+      return { params, consumed: urlSegments.length - cursor };
+    }
+
+    if (idx >= urlSegments.length) return null;
+
+    if (pat.startsWith(":")) {
+      params[pat.slice(1)] = decodeURIComponent(urlSegments[idx]!);
+    } else if (pat !== urlSegments[idx]) {
+      return null;
+    }
+
+    consumed++;
+  }
+
+  return { params, consumed };
+}
+
+export function parseUrl(pathname: string): PaneSlot[] | null {
+  const normalized =
+    pathname === "/" ? "" : pathname.replace(/^\/+|\/+$/g, "");
+  const urlSegments = normalized ? normalized.split("/") : [];
+
+  let cursor = 0;
+  let predecessorId: string | null = null;
+  const chain: PaneSlot[] = [];
+
+  while (cursor < urlSegments.length) {
+    let bestMatch: {
+      pane: PaneInternal;
+      params: Record<string, string>;
+      consumed: number;
+    } | null = null;
+
+    for (const pane of registry.values()) {
+      if (predecessorId === null && !pane.after.has(null)) continue;
+      if (predecessorId !== null && !pane.after.has(predecessorId)) continue;
+
+      const result = matchSegmentParts(pane.segment, urlSegments, cursor);
+      if (!result) continue;
+      if (!bestMatch || result.consumed > bestMatch.consumed) {
+        bestMatch = { pane, params: result.params, consumed: result.consumed };
+      }
+    }
+
+    if (!bestMatch) return null;
+
+    chain.push({ paneId: bestMatch.pane.id, params: bestMatch.params });
+    cursor += bestMatch.consumed;
+    predecessorId = bestMatch.pane.id;
+  }
+
+  // Root URL ("/") — find panes with empty/root segment that can be root.
+  if (chain.length === 0) {
+    for (const pane of registry.values()) {
+      if (!pane.after.has(null)) continue;
+      if (!pane.segment || pane.segment === "/" || pane.segment === "") {
+        chain.push({ paneId: pane.id, params: {} });
+        break;
+      }
+    }
+  }
+
+  return chain.length > 0 ? chain : null;
+}
+
+export function buildChainUrl(chain: PaneSlot[]): string {
+  if (chain.length === 0) return "/";
+
+  const parts: string[] = [];
+  for (const slot of chain) {
+    const pane = registry.get(slot.paneId);
+    if (!pane) throw new Error(`Unknown pane: ${slot.paneId}`);
+    if (!pane.segment || pane.segment === "/" || pane.segment === "") continue;
+
+    const segParts = pane.segment.split("/").filter(Boolean);
+    for (const seg of segParts) {
+      if (!seg.startsWith(":")) {
+        parts.push(seg);
+      } else {
+        const wildcard = seg.endsWith("*");
+        const name = seg.slice(1).replace(/\*$/, "");
+        const val = slot.params[name];
+        if (val === undefined) {
+          throw new Error(
+            `Missing param "${name}" for pane "${pane.id}"`,
+          );
+        }
+        if (wildcard) {
+          parts.push(...val.split("/").map(encodeURIComponent));
+        } else {
+          parts.push(encodeURIComponent(val));
+        }
+      }
+    }
+  }
+
+  return "/" + parts.join("/") || "/";
+}
+
+// ---------------------------------------------------------------------------
+// Layout chain store — the primary source of truth for what's on screen.
+// ---------------------------------------------------------------------------
+
+let currentChain: PaneSlot[] = [];
+const chainListeners = new Set<() => void>();
+
+export function getChain(): PaneSlot[] {
+  return currentChain;
+}
+
+function notifyChainListeners(): void {
+  for (const fn of chainListeners) fn();
+}
+
+function setChain(chain: PaneSlot[], replace = false): void {
+  currentChain = chain;
+  const url = buildChainUrl(chain);
+  navigate(url, replace);
+}
+
+function chainsEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i]!.paneId !== b[i]!.paneId) return false;
+    const ak = Object.keys(a[i]!.params);
+    const bk = Object.keys(b[i]!.params);
+    if (ak.length !== bk.length) return false;
+    for (const k of ak) {
+      if (a[i]!.params[k] !== b[i]!.params[k]) return false;
+    }
+  }
+  return true;
+}
+
+export function syncChainFromUrl(pathname: string): void {
+  const parsed = parseUrl(pathname);
+  const newChain = parsed ?? [];
+  if (chainsEqual(currentChain, newChain)) return;
+  currentChain = newChain;
+  notifyChainListeners();
+}
+
+function resolveChain(chain: PaneSlot[]): PaneMatch | null {
+  if (chain.length === 0) return null;
+  const entries: MatchEntry[] = [];
+  const accumulated: Record<string, string> = {};
+  for (const slot of chain) {
+    const pane = registry.get(slot.paneId);
+    if (!pane) return null;
+    Object.assign(accumulated, slot.params);
+    entries.push({
+      pane,
+      params: { ...slot.params },
+      fullParams: { ...accumulated },
+    });
+  }
+  return { chain: entries };
+}
+
+function extractOwnParams(
+  pane: PaneInternal,
+  allParams: Record<string, string>,
+): Record<string, string> {
+  const names = segmentParamNames(pane.segment);
+  const own: Record<string, string> = {};
+  for (const name of names) {
+    if (name in allParams) own[name] = allParams[name]!;
+  }
+  return own;
+}
+
+function buildFreshChain(
+  target: PaneInternal,
+  params: Record<string, string>,
+): PaneSlot[] {
+  const path: PaneInternal[] = [target];
+  let current = target;
+  while (!current.after.has(null)) {
+    let found = false;
+    for (const predId of current.after) {
+      if (predId === null) continue;
+      const pred = registry.get(predId);
+      if (pred) {
+        path.unshift(pred);
+        current = pred;
+        found = true;
+        break;
+      }
+    }
+    if (!found) break;
+  }
+
+  return path.map((pane) => ({
+    paneId: pane.id,
+    params: extractOwnParams(pane, params),
+  }));
+}
+
+function findValidPositions(
+  target: PaneInternal,
+  chain: PaneSlot[],
+): number[] {
+  const positions: number[] = [];
+  for (let i = 0; i <= chain.length; i++) {
+    const leftOk =
+      i === 0
+        ? target.after.has(null)
+        : target.after.has(chain[i - 1]!.paneId);
+    const rightOk =
+      i === chain.length
+        ? true
+        : (registry.get(chain[i]!.paneId)?.after.has(target.id) ?? false);
+    if (leftOk && rightOk) positions.push(i);
+  }
+  return positions;
+}
+
+function validateChain(chain: PaneSlot[]): PaneSlot[] {
+  const result: PaneSlot[] = [];
+  for (let i = 0; i < chain.length; i++) {
+    const pane = registry.get(chain[i]!.paneId);
+    if (!pane) break;
+    if (i === 0) {
+      if (!pane.after.has(null)) break;
+    } else {
+      if (!pane.after.has(result[i - 1]!.paneId)) break;
+    }
+    result.push(chain[i]!);
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Router contexts.
 // ---------------------------------------------------------------------------
 
@@ -323,10 +601,15 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
 
   function useParams(): Record<string, string> {
     const match = useContext(PaneMatchContext);
+    const depth = useContext(PaneDepthContext);
     if (!match) {
       throw new Error(
         `Pane "${internal.id}".useParams() called outside <PaneRouter/>.`,
       );
+    }
+    // Prefer depth-based lookup (handles repeated pane IDs correctly)
+    if (depth >= 0 && match.chain[depth]?.pane === internal) {
+      return match.chain[depth]!.params;
     }
     const entry = match.chain.find((e) => e.pane === internal);
     if (!entry) {
@@ -349,31 +632,84 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
 
   function open(params: Record<string, string>): void {
     const replace = internal.chrome.enabled && !internal.chrome.history;
-    navigate(buildUrl(internal, params ?? {}), replace);
+    const chain = getChain();
+    const ownParams = extractOwnParams(internal, params ?? {});
+
+    // If already in chain, update params or no-op
+    const existingIdx = chain.findIndex((s) => s.paneId === internal.id);
+    if (existingIdx >= 0) {
+      const existing = chain[existingIdx]!.params;
+      const same =
+        Object.keys(ownParams).length === Object.keys(existing).length &&
+        Object.keys(ownParams).every((k) => ownParams[k] === existing[k]);
+      if (same) return;
+      // Different params — update in-place, truncate children
+      const newChain = chain.slice(0, existingIdx + 1);
+      newChain[existingIdx] = { paneId: internal.id, params: ownParams };
+      setChain(newChain, replace);
+      return;
+    }
+
+    // Try insertion into current chain
+    const positions = findValidPositions(internal, chain);
+    if (positions.length > 0) {
+      const ancestorParamKeys = Object.keys(params ?? {}).filter(
+        (k) => !(k in ownParams),
+      );
+      for (let p = positions.length - 1; p >= 0; p--) {
+        const pos = positions[p]!;
+        let paramsMatch = true;
+        if (ancestorParamKeys.length > 0) {
+          for (let j = 0; j < pos; j++) {
+            const entry = chain[j]!;
+            for (const key of ancestorParamKeys) {
+              if (
+                key in entry.params &&
+                entry.params[key] !== params[key]
+              ) {
+                paramsMatch = false;
+                break;
+              }
+            }
+            if (!paramsMatch) break;
+          }
+        }
+        if (paramsMatch) {
+          const newChain = [
+            ...chain.slice(0, pos),
+            { paneId: internal.id, params: ownParams },
+            ...chain.slice(pos),
+          ];
+          setChain(validateChain(newChain), replace);
+          return;
+        }
+      }
+    }
+
+    // No valid position with matching params — build fresh chain
+    setChain(buildFreshChain(internal, params ?? {}), replace);
   }
 
   function close(): void {
-    const parent = internal.parent;
-    if (!parent) return;
     if (typeof window === "undefined") return;
-    const match = matchRegistry(window.location.pathname);
-    const parentEntry = match?.chain.find((e) => e.pane === parent);
-    // Need fullParams here: buildUrl walks parent.fullPath and requires every
-    // `:name` along it, including ancestor-contributed ones.
-    const params = parentEntry?.fullParams ?? {};
+    const chain = getChain();
+    const idx = chain.findIndex((s) => s.paneId === internal.id);
+    if (idx <= 0) return;
+    const newChain = chain.slice(0, idx);
     const replace = internal.chrome.enabled && !internal.chrome.history;
-    navigate(buildUrl(parent, params), replace);
+    setChain(newChain, replace);
   }
 
   function expand(): void {
     if (typeof window === "undefined") return;
-    const match = matchRegistry(window.location.pathname);
-    const entry = match?.chain.find((e) => e.pane === internal);
-    if (!entry) return;
-    // chrome.expand receives the full resolved params (ancestor + own) so it
-    // can build URLs that reference ancestor params, e.g.
-    // `expand: ({ convId }) => \`/c/${convId}\``.
-    const target = internal.chrome.expand?.(entry.fullParams);
+    const chain = getChain();
+    const idx = chain.findIndex((s) => s.paneId === internal.id);
+    if (idx < 0) return;
+    const fullParams: Record<string, string> = {};
+    for (let i = 0; i <= idx; i++) {
+      Object.assign(fullParams, chain[i]!.params);
+    }
+    const target = internal.chrome.expand?.(fullParams);
     if (target) navigate(target);
   }
 
@@ -426,6 +762,15 @@ function normalizeChrome<Params>(
 // `Record<string, never>` as the default would clash with any own params.
 interface DefineArgs<Path extends string, Provides, ParentParams> {
   id: string;
+  /**
+   * Valid predecessors in the layout chain. `null` means the pane can appear
+   * at root (position 0). Accepts PaneObject references, string pane IDs
+   * (for forward references), or null. Mutually exclusive with `parent`.
+   */
+  after?: Array<PaneObject<any, any, any> | string | null>;
+  /** Own URL segment (no leading slash). Used with `after`. */
+  segment?: Path;
+  /** @deprecated Use `after`/`segment` instead. */
   parent?: PaneObject<ParentParams, any, any>;
   path?: Path;
   component: ComponentType;
@@ -464,6 +809,26 @@ function define<
   const parentInternal = args.parent?._internal ?? null;
   const fullPath = joinPath(parentInternal, args.path);
 
+  // Compute `after` and `segment` from either new API or legacy `parent`/`path`
+  let afterSet: Set<string | null>;
+  let segment: string;
+  if (args.after) {
+    afterSet = new Set(
+      args.after.map((p) => {
+        if (p === null) return null;
+        if (typeof p === "string") return p;
+        return p._internal.id;
+      }),
+    );
+    segment = ((args.segment ?? args.path) ?? "").replace(/^\/+/, "");
+  } else if (parentInternal) {
+    afterSet = new Set<string | null>([parentInternal.id]);
+    segment = (args.path ?? "").replace(/^\/+/, "");
+  } else {
+    afterSet = new Set<string | null>([null]);
+    segment = (args.path ?? "").replace(/^\/+/, "");
+  }
+
   const dataContext = createContext<unknown>(DATA_NOT_PROVIDED);
   dataContext.displayName = `PaneData(${args.id})`;
 
@@ -477,6 +842,8 @@ function define<
     parent: parentInternal,
     ownPath: args.path ?? "",
     fullPath,
+    after: afterSet,
+    segment,
     component: args.component,
     chrome: normalizeChrome(args.chrome),
     width: args.width,
@@ -523,5 +890,7 @@ export function useSyncPaneRegistry(): void {
 // ---------------------------------------------------------------------------
 
 export function useMatchForPath(pathname: string): PaneMatch | null {
-  return useMemo(() => matchRegistry(pathname), [pathname]);
+  syncChainFromUrl(pathname);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- currentChain is module-level, synced above
+  return useMemo(() => resolveChain(currentChain), [pathname]);
 }

@@ -10,6 +10,10 @@ export {
   useMatchForPath,
   usePathname,
   useSyncPaneRegistry,
+  parseUrl,
+  buildChainUrl,
+  getChain,
+  syncChainFromUrl,
 } from "./pane";
 export type {
   PaneObject,
@@ -19,6 +23,7 @@ export type {
   TypeMarker,
   InferParams,
   PaneInternal,
+  PaneSlot,
 } from "./pane";
 export { Outlet, PaneLevel } from "./components/outlet";
 export { PaneRouter } from "./components/pane-router";
