@@ -9,7 +9,10 @@
     "isolatedModules": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "types": ["@types/bun"]
+    "types": ["@types/bun"],
+    "paths": {
+      "@packages/*": ["../packages/*"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "../packages/*"]
 }

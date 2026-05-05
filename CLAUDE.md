@@ -49,6 +49,7 @@ Think carefully about the plugin's boundaries, APIs, etc. when designing plugins
 ### Folder Structure
 
 ```
+├── packages/         # Pure TS libraries shared across runtimes (see Packages below)
 ├── plugin-core/      # Plugin framework primitives (slots, contributions)
 ├── plugins/          # All features, each as a self-contained plugin
 │   └── {name}/
@@ -63,6 +64,32 @@ Think carefully about the plugin's boundaries, APIs, etc. when designing plugins
 ├── sidequests/       # Independent side projects (see Sidequests section below)
 └── research/         # Research docs and plans
 ```
+
+### Packages
+
+Pure TypeScript libraries with no framework awareness. Used for code shared across runtimes (CLI, server, plugins) that doesn't belong in a plugin.
+
+```
+packages/
+  {name}/
+    package.json    # { "name": "@singularity/<name>", "private": true }
+    index.ts        # Single barrel entry point
+```
+
+**Import alias:** `@packages/<name>` → `packages/<name>/index.ts`
+
+**Boundary rules** (enforced by `./singularity check --package-boundaries`):
+- Packages **cannot** import from `@plugins/*`, `@core/*`, `@server/*`, `@central/*`
+- Packages **cannot** import workspace names (`@singularity/plugin-*`, etc.)
+- Packages **cannot** relative-escape into non-package dirs
+- Packages **can** import from other packages and external deps
+- CLI, server, plugins **can** import from packages
+
+**When to use a package vs a plugin:**
+- Does it extend the running app (UI, endpoints, slots)? → Plugin
+- Is it a pure algorithm/utility multiple runtimes share? → Package
+- Does it need runtime discovery? → Plugin
+- Must it be framework-agnostic (no React, no definePlugin)? → Package
 
 ### Workspaces
 

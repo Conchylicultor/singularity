@@ -20,6 +20,7 @@
       "@/*": ["./src/*"],
       "@core": ["../plugin-core"],
       "@core/*": ["../plugin-core/*"],
+      "@packages/*": ["../packages/*"],
       "@plugins/*": ["../plugins/*"],
       "@server/*": ["../server/src/*"]
     }

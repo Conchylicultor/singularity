@@ -7,6 +7,7 @@ import { noRawEventSource } from "./no-raw-event-source";
 import { noRawSse } from "./no-raw-sse";
 import { noPluginImportsInCore } from "./no-plugin-imports-in-core";
 import { noPluginWorkspaceDeps } from "./no-plugin-workspace-deps";
+import { packageBoundaries } from "./package-boundaries";
 import { noRawWebsocket } from "./no-raw-websocket";
 import { noRelativeServerImports } from "./no-relative-server-imports";
 import { noUseResourceCast } from "./no-use-resource-cast";
@@ -33,6 +34,7 @@ export const CHECKS: Check[] = [
   noRawWebsocket,
   noRelativeServerImports,
   noUseResourceCast,
+  packageBoundaries,
   typescript,
   eslintCheck,
 ];
