@@ -6,18 +6,17 @@ import { readJsonlEvents } from "./parse-jsonl";
 import type { JsonlEvent } from "../../shared";
 
 const RECONCILE_MS = 30_000;
-const PATH_RETRY_MS = 1_000;
+const POLL_MS = 1_000;
 
 type Listener = (events: JsonlEvent[]) => void;
 
 interface Room {
   conversationId: string;
-  claudeSessionId: string | null;
   transcriptPath: string | null;
   lastMtimeMs: number;
   lastEvents: JsonlEvent[];
   subscribers: Set<Listener>;
-  pathRetryTimer: ReturnType<typeof setInterval> | null;
+  abort: AbortController;
 }
 
 const rooms = new Map<string, Room>();
@@ -26,6 +25,18 @@ const pathToConvId = new Map<string, string>();
 
 let subscription: parcel.AsyncSubscription | null = null;
 let reconcileTimer: ReturnType<typeof setInterval> | null = null;
+
+async function pollUntil<T>(
+  fn: () => Promise<T | null | undefined>,
+  opts: { intervalMs: number; signal: AbortSignal },
+): Promise<T> {
+  while (!opts.signal.aborted) {
+    const result = await fn();
+    if (result != null) return result;
+    await Bun.sleep(opts.intervalMs);
+  }
+  throw new DOMException("Aborted", "AbortError");
+}
 
 export async function startTranscriptWatcher(): Promise<void> {
   try {
@@ -62,7 +73,7 @@ export async function stopTranscriptWatcher(): Promise<void> {
     reconcileTimer = null;
   }
   for (const room of rooms.values()) {
-    if (room.pathRetryTimer) clearInterval(room.pathRetryTimer);
+    room.abort.abort();
   }
   rooms.clear();
   pathToConvId.clear();
@@ -82,15 +93,20 @@ export function watchTranscript(
   if (!room) {
     room = {
       conversationId,
-      claudeSessionId: null,
       transcriptPath: null,
       lastMtimeMs: 0,
       lastEvents: [],
       subscribers: new Set(),
-      pathRetryTimer: null,
+      abort: new AbortController(),
     };
     rooms.set(conversationId, room);
-    void seedRoom(room);
+    void resolveRoom(room).catch((err) => {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      console.error(
+        `[transcript-watcher] resolveRoom failed for ${conversationId}`,
+        err,
+      );
+    });
   } else if (room.lastEvents.length > 0) {
     // Late subscriber: deliver current snapshot immediately.
     const snapshot = room.lastEvents;
@@ -108,43 +124,21 @@ export function watchTranscript(
   };
 }
 
-async function seedRoom(room: Room): Promise<void> {
-  if (!rooms.has(room.conversationId)) return;
-  try {
-    if (!room.claudeSessionId) {
-      const sid = await getConversationClaudeSessionId(room.conversationId);
-      if (sid === undefined || !sid) return;
-      room.claudeSessionId = sid;
-    }
-    const path = await findTranscriptPath(room.claudeSessionId);
-    if (!path) {
-      // Transcript file not yet written — poll until it appears.
-      if (!room.pathRetryTimer) {
-        room.pathRetryTimer = setInterval(() => void retryPath(room), PATH_RETRY_MS);
-      }
-      return;
-    }
-    registerPath(room, path);
-    await processRoom(room);
-  } catch (err) {
-    console.error(`[transcript-watcher] seedRoom failed for ${room.conversationId}`, err);
-  }
-}
+async function resolveRoom(room: Room): Promise<void> {
+  const { signal } = room.abort;
 
-async function retryPath(room: Room): Promise<void> {
-  if (!rooms.has(room.conversationId) || !room.claudeSessionId) return;
-  try {
-    const path = await findTranscriptPath(room.claudeSessionId);
-    if (!path) return;
-    if (room.pathRetryTimer) {
-      clearInterval(room.pathRetryTimer);
-      room.pathRetryTimer = null;
-    }
-    registerPath(room, path);
-    await processRoom(room);
-  } catch (err) {
-    console.error(`[transcript-watcher] retryPath failed for ${room.conversationId}`, err);
-  }
+  const sessionId = await pollUntil(
+    () => getConversationClaudeSessionId(room.conversationId),
+    { intervalMs: POLL_MS, signal },
+  );
+
+  const path = await pollUntil(
+    () => findTranscriptPath(sessionId),
+    { intervalMs: POLL_MS, signal },
+  );
+
+  registerPath(room, path);
+  await processRoom(room);
 }
 
 function registerPath(room: Room, path: string): void {
@@ -179,10 +173,7 @@ function fanOut(room: Room, events: JsonlEvent[]): void {
 }
 
 function closeRoom(room: Room): void {
-  if (room.pathRetryTimer) {
-    clearInterval(room.pathRetryTimer);
-    room.pathRetryTimer = null;
-  }
+  room.abort.abort();
   if (room.transcriptPath) pathToConvId.delete(room.transcriptPath);
   rooms.delete(room.conversationId);
 }
