@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { WriteToolView, WriteSummaryHint } from "./components/write-tool-view";
+import { WriteToolView } from "./components/write-tool-view";
 
 export default {
   id: "conversation-jsonl-viewer-tool-call-write",
@@ -8,10 +8,6 @@ export default {
   description:
     "Renders Write tool calls with syntax-highlighted file content and clickable path affordances.",
   contributions: [
-    JsonlViewerTool.Renderer({
-      name: "Write",
-      summary: WriteSummaryHint,
-      component: WriteToolView,
-    }),
+    JsonlViewerTool.Renderer({ name: "Write", component: WriteToolView }),
   ],
 } satisfies PluginDefinition;

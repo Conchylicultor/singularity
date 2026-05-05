@@ -1,4 +1,6 @@
 import type { ToolRendererProps, ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/shared";
+import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { EditSummary } from "./edit-summary";
 import { InlineDiff } from "./inline-diff";
 
 type EditInput = { file_path: string; old_string: string; new_string: string };
@@ -15,9 +17,11 @@ function ResultDetail({ result }: { result: ToolCallEvent["result"] }) {
 export function EditView({ event }: ToolRendererProps) {
   const { file_path = "", old_string = "", new_string = "" } = (event.input ?? {}) as Partial<EditInput>;
   return (
-    <div className="mt-2 space-y-2">
-      <InlineDiff oldText={old_string} newText={new_string} path={file_path} />
-      <ResultDetail result={event.result} />
-    </div>
+    <ToolCallCard event={event} summary={<EditSummary event={event} />} defaultOpen>
+      <div className="mt-2 space-y-2">
+        <InlineDiff oldText={old_string} newText={new_string} path={file_path} />
+        <ResultDetail result={event.result} />
+      </div>
+    </ToolCallCard>
   );
 }

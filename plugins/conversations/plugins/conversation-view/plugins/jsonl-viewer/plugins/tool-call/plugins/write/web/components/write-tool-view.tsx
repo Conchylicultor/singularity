@@ -5,6 +5,7 @@ import {
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/shared";
+import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 
 type WriteInput = { file_path: string; content: string };
 
@@ -14,24 +15,7 @@ function toRelativePath(filePath: string, attemptId: string): string {
   return idx >= 0 ? filePath.slice(idx + marker.length) : filePath;
 }
 
-export function WriteToolView({ event }: ToolRendererProps) {
-  const { file_path, content } = event.input as WriteInput;
-
-  return (
-    <div className="mt-2">
-      <HighlightedCode
-        code={content}
-        lang={languageForPath(file_path)}
-        className="max-h-[280px] overflow-auto"
-      />
-      {event.result?.isError && (
-        <p className="mt-1 text-xs text-destructive">{event.result.content}</p>
-      )}
-    </div>
-  );
-}
-
-export function WriteSummaryHint({ event }: ToolRendererProps) {
+function WriteSummaryHint({ event }: ToolRendererProps) {
   const { conversation } = conversationPane.useData();
   const { file_path } = event.input as WriteInput;
   const relativePath = toRelativePath(file_path, conversation.attemptId);
@@ -56,5 +40,24 @@ export function WriteSummaryHint({ event }: ToolRendererProps) {
         {relativePath}
       </span>
     </button>
+  );
+}
+
+export function WriteToolView({ event }: ToolRendererProps) {
+  const { file_path, content } = event.input as WriteInput;
+
+  return (
+    <ToolCallCard event={event} summary={<WriteSummaryHint event={event} />}>
+      <div className="mt-2">
+        <HighlightedCode
+          code={content}
+          lang={languageForPath(file_path)}
+          className="max-h-[280px] overflow-auto"
+        />
+        {event.result?.isError && (
+          <p className="mt-1 text-xs text-destructive">{event.result.content}</p>
+        )}
+      </div>
+    </ToolCallCard>
   );
 }

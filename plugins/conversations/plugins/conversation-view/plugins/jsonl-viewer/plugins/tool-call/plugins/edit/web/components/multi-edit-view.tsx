@@ -1,4 +1,6 @@
 import type { ToolRendererProps, ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/shared";
+import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { EditSummary } from "./edit-summary";
 import { InlineDiff } from "./inline-diff";
 
 type MultiEditInput = {
@@ -19,23 +21,25 @@ export function MultiEditView({ event }: ToolRendererProps) {
   const { file_path = "", edits = [] } = (event.input ?? {}) as Partial<MultiEditInput>;
   const multi = edits.length > 1;
   return (
-    <div className="mt-2 space-y-3">
-      {edits.map((edit, i) => (
-        <div key={i}>
-          {multi && (
-            <div className="mb-1 flex items-center gap-2 text-[11px] text-muted-foreground">
-              <span>Edit {i + 1} / {edits.length}</span>
-              <hr className="flex-1 border-border/40" />
-            </div>
-          )}
-          <InlineDiff
-            oldText={edit.old_string ?? ""}
-            newText={edit.new_string ?? ""}
-            path={file_path}
-          />
-        </div>
-      ))}
-      <ResultDetail result={event.result} />
-    </div>
+    <ToolCallCard event={event} summary={<EditSummary event={event} />} defaultOpen>
+      <div className="mt-2 space-y-3">
+        {edits.map((edit, i) => (
+          <div key={i}>
+            {multi && (
+              <div className="mb-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+                <span>Edit {i + 1} / {edits.length}</span>
+                <hr className="flex-1 border-border/40" />
+              </div>
+            )}
+            <InlineDiff
+              oldText={edit.old_string ?? ""}
+              newText={edit.new_string ?? ""}
+              path={file_path}
+            />
+          </div>
+        ))}
+        <ResultDetail result={event.result} />
+      </div>
+    </ToolCallCard>
   );
 }
