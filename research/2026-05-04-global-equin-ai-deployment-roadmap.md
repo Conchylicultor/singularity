@@ -10,6 +10,8 @@ This is the foundational deployment story: every future equin product is a Singu
 
 ## Step 1 — Infrastructure
 
+> Setup tracker: [2026-05-05-equin-ai-infra-setup.md](./2026-05-05-equin-ai-infra-setup.md)
+
 **Goal:** A live Linux server reachable at equin.ai and *.equin.ai.
 
 - [ ] Provision a Hetzner CX32 (4 vCPU, 8GB RAM, ~€9/mo), Ubuntu 24.04 LTS
