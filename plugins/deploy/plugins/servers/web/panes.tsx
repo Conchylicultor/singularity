@@ -1,0 +1,71 @@
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
+import { Deploy } from "@plugins/deploy/web";
+import { serversResource, type Server } from "../shared";
+import { ServersList } from "./components/servers-list";
+import { ServerDetail } from "./components/server-detail";
+
+export const serversRootPane = Pane.define({
+  id: "deploy-servers",
+  path: "/deploy",
+  component: ServersRoot,
+  chrome: false,
+  width: 320,
+});
+
+export const serverDetailPane = Pane.define({
+  id: "deploy-server-detail",
+  parent: serversRootPane,
+  path: ":serverId",
+  component: ServerDetailBody,
+  provides: type<{ server: Server }>(),
+});
+
+function ServersRoot() {
+  return (
+    <div className="h-full overflow-auto">
+      <ServersList />
+    </div>
+  );
+}
+
+function ServerDetailBody() {
+  const { serverId } = serverDetailPane.useParams();
+  const { data } = useResource(serversResource);
+  const server = data?.find((s) => s.id === serverId) ?? null;
+
+  if (!server) {
+    return (
+      <PaneChrome pane={serverDetailPane} title="Server">
+        <div className="text-muted-foreground p-4 text-sm">Loading…</div>
+      </PaneChrome>
+    );
+  }
+
+  return (
+    <serverDetailPane.Provider value={{ server }}>
+      <PaneChrome pane={serverDetailPane} title={server.name}>
+        <ServerDetailContent serverId={serverId} />
+      </PaneChrome>
+    </serverDetailPane.Provider>
+  );
+}
+
+function ServerDetailContent({ serverId }: { serverId: string }) {
+  const sections = Deploy.Section.useContributions();
+  const sorted = [...sections].sort((a, b) => a.order - b.order);
+
+  return (
+    <div className="h-full overflow-auto">
+      <ServerDetail />
+      <div className="flex flex-col gap-4 p-4">
+        {sorted.map((s) => (
+          <section key={s.id} className="bg-card rounded-lg border p-4">
+            <h2 className="mb-3 text-sm font-medium">{s.title}</h2>
+            <s.component serverId={serverId} />
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}

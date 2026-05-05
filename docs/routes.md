@@ -114,6 +114,12 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
       - `/api/debug/worktrees/bulk-delete (POST)`
       - `/api/debug/worktrees/:id (DELETE)`
 
+- **`deploy`** — Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+  - Plugins:
+    - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
+      - `/api/deploy/servers (GET, POST)`
+      - `/api/deploy/servers/:id (GET, PATCH, DELETE)`
+
 - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
   - `/api/events-test/subscribe (POST)`
   - `/api/events-test/emit (POST)`

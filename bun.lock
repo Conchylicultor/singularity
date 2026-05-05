@@ -409,6 +409,14 @@
     "plugins/debug/plugins/worktree-cleanup": {
       "name": "@singularity/plugin-debug-worktree-cleanup",
     },
+    "plugins/deploy": {
+      "name": "@singularity/plugin-deploy",
+      "version": "0.0.1",
+    },
+    "plugins/deploy/plugins/servers": {
+      "name": "@singularity/plugin-deploy-servers",
+      "version": "0.0.1",
+    },
     "plugins/events-test": {
       "name": "@singularity/plugin-events-test",
       "version": "0.0.1",
@@ -1454,6 +1462,10 @@
     "@singularity/plugin-debug-queue": ["@singularity/plugin-debug-queue@workspace:plugins/debug/plugins/queue"],
 
     "@singularity/plugin-debug-worktree-cleanup": ["@singularity/plugin-debug-worktree-cleanup@workspace:plugins/debug/plugins/worktree-cleanup"],
+
+    "@singularity/plugin-deploy": ["@singularity/plugin-deploy@workspace:plugins/deploy"],
+
+    "@singularity/plugin-deploy-servers": ["@singularity/plugin-deploy-servers@workspace:plugins/deploy/plugins/servers"],
 
     "@singularity/plugin-events-test": ["@singularity/plugin-events-test@workspace:plugins/events-test"],
 

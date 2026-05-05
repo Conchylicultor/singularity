@@ -722,6 +722,35 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `POST /api/debug/worktrees/bulk-delete`
         - `DELETE /api/debug/worktrees/:id`
 
+- **`deploy`** — Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+  - Defines:
+    - Slots: `Deploy.Section`
+  - Exports (web):
+    - Values: `Deploy`
+  - Plugins:
+    - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
+      - Defines:
+        - DB schema: `plugins/deploy/plugins/servers/server/internal/tables.ts`
+      - Exports (web):
+        - Types: `Server`
+        - Values: `serverDetailPane`, `serversResource`, `serversRootPane`
+      - Exports (server):
+        - Values: `_deployServers`, `serversResource`
+      - Exports (shared):
+        - Types: `Server`, `ServerStatus`
+        - Values: `ServerSchema`, `serversResource`, `ServerStatusSchema`
+      - Contributes:
+        - `Pane.Register` `deploy-servers` (path `/deploy`)
+        - `Pane.Register` `deploy-server-detail` (path `:serverId`)
+        - `Shell.Sidebar` "Deploy" (group `System`)
+        - `serversRootPane.open`
+      - Server:
+        - `GET /api/deploy/servers`
+        - `POST /api/deploy/servers`
+        - `GET /api/deploy/servers/:id`
+        - `PATCH /api/deploy/servers/:id`
+        - `DELETE /api/deploy/servers/:id`
+
 - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
   - Defines:
     - DB schema: `plugins/events-test/server/internal/tables.ts`
@@ -921,7 +950,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneSlot`, `TypeMarker`
         - Values: `buildChainUrl`, `getChain`, `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneDepthContext`, `PaneHistoryButtons`, `PaneIconAction`, `PaneLayoutContext`, `PaneLevel`, `PaneMatchContext`, `PaneRouter`, `parseUrl`, `syncChainFromUrl`, `type`, `useCurrentPane`, `useMatchForPath`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `publish`, `queue`, `review`, `screenshot`, `setup-wizard`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `task-file-peek`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `task-file-peek`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
       - Exports (web):
         - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `PromptEditor`, `rewriteAttachmentMarkdown`

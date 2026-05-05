@@ -85,6 +85,8 @@ import debugMemoryPlugin from "@plugins/debug/plugins/memory/web";
 import debugQueuePlugin from "@plugins/debug/plugins/queue/web";
 import debugWorktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/web";
 import debugPlugin from "@plugins/debug/web";
+import deployServersPlugin from "@plugins/deploy/plugins/servers/web";
+import deployPlugin from "@plugins/deploy/web";
 import eventsTestPlugin from "@plugins/events-test/web";
 import healthPlugin from "@plugins/health/web";
 import improvePlugin from "@plugins/improve/web";
@@ -214,6 +216,8 @@ export const plugins: PluginDefinition[] = [
   debugQueuePlugin,
   debugWorktreeCleanupPlugin,
   debugPlugin,
+  deployServersPlugin,
+  deployPlugin,
   eventsTestPlugin,
   healthPlugin,
   improvePlugin,
