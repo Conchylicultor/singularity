@@ -94,6 +94,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Resources: `agent-auto-launch` (push)
             - `POST /api/agent-auto-launch/:agentId`
 
+- **`apps`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
+  - Exports (web):
+    - Values: `Apps`
+  - Contributes:
+    - `Core.Root` → `AppsLayout`
+
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - Exports (web):
     - Values: `attemptConversationPane`, `attemptPane`
@@ -1044,7 +1050,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `ToastArgs`, `ToastVariant`
     - Values: `Shell`, `ShellCommands`
   - Contributes:
-    - `Core.Root` → `ShellLayout`
+    - `Apps.App` → `ShellLayout`
+    - `history.pushState`
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Defines:

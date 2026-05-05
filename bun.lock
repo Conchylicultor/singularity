@@ -107,6 +107,9 @@
       "name": "@singularity/plugin-agents-auto-launch-toggle",
       "version": "0.0.1",
     },
+    "plugins/apps": {
+      "name": "@singularity/plugin-apps",
+    },
     "plugins/attempt-view": {
       "name": "@singularity/plugin-attempt-view",
       "version": "0.0.1",
@@ -1313,6 +1316,8 @@
     "@singularity/plugin-agents-auto-launch": ["@singularity/plugin-agents-auto-launch@workspace:plugins/agents/plugins/auto-launch"],
 
     "@singularity/plugin-agents-auto-launch-toggle": ["@singularity/plugin-agents-auto-launch-toggle@workspace:plugins/agents/plugins/auto-launch/plugins/toggle"],
+
+    "@singularity/plugin-apps": ["@singularity/plugin-apps@workspace:plugins/apps"],
 
     "@singularity/plugin-attempt-view": ["@singularity/plugin-attempt-view@workspace:plugins/attempt-view"],
 

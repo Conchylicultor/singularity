@@ -14,6 +14,7 @@ import activeDataPlugin from "@plugins/active-data/web";
 import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/plugins/toggle/web";
 import agentsAutoLaunchPlugin from "@plugins/agents/plugins/auto-launch/web";
 import agentsPlugin from "@plugins/agents/web";
+import appsPlugin from "@plugins/apps/web";
 import attemptViewPlugin from "@plugins/attempt-view/web";
 import authGoogleSetupWizardPlugin from "@plugins/auth/plugins/google/plugins/setup-wizard/web";
 import authGooglePlugin from "@plugins/auth/plugins/google/web";
@@ -146,6 +147,7 @@ export const plugins: PluginDefinition[] = [
   agentsAutoLaunchTogglePlugin,
   agentsAutoLaunchPlugin,
   agentsPlugin,
+  appsPlugin,
   attemptViewPlugin,
   authGoogleSetupWizardPlugin,
   authGooglePlugin,

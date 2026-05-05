@@ -31,7 +31,6 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { TooltipProvider } from "@/components/ui/tooltip";
 
 function ToolbarItem(item: {
   label?: string;
@@ -149,7 +148,6 @@ export function ShellLayout() {
 
   return (
     <>
-    <TooltipProvider>
       <SidebarProvider className="h-full min-h-0">
         <Sidebar>
           <SidebarHeader className="h-12 justify-center border-b px-4 py-0">
@@ -302,7 +300,6 @@ export function ShellLayout() {
 
         </SidebarInset>
       </SidebarProvider>
-    </TooltipProvider>
     <Toaster />
     </>
   );
