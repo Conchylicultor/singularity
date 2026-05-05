@@ -15,7 +15,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `_activeDataBindings`, `activeDataBindingsResource`
   - Exports (shared):
     - Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`
-    - Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`
+    - Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `inlineBoundary`
   - Server:
     - Uses: `tasks-core._conversations`
     - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`

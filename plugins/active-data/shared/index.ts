@@ -7,3 +7,4 @@ export type {
   ActiveDataBinding,
   ActiveDataBindingsPayload,
 } from "./resource";
+export { inlineBoundary } from "./inline-id-pattern";
