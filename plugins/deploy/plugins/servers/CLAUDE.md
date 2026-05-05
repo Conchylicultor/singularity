@@ -16,8 +16,8 @@
   - Types: `Server`, `ServerStatus`
   - Values: `ServerSchema`, `serversResource`, `ServerStatusSchema`
 - Contributes:
-  - `Pane.Register` `deploy-servers` (path `/deploy`)
-  - `Pane.Register` `deploy-server-detail` (path `:serverId`)
+  - `Pane.Register` `deploy-servers`
+  - `Pane.Register` `deploy-server-detail`
   - `Shell.Sidebar` "Deploy" (group `System`)
   - `serversRootPane.open`
 - Server:
