@@ -15,6 +15,7 @@ import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/pl
 import agentsAutoLaunchPlugin from "@plugins/agents/plugins/auto-launch/web";
 import agentsPlugin from "@plugins/agents/web";
 import attemptViewPlugin from "@plugins/attempt-view/web";
+import authGoogleSetupWizardPlugin from "@plugins/auth/plugins/google/plugins/setup-wizard/web";
 import authGooglePlugin from "@plugins/auth/plugins/google/web";
 import authNotionPlugin from "@plugins/auth/plugins/notion/web";
 import authPlugin from "@plugins/auth/web";
@@ -143,6 +144,7 @@ export const plugins: PluginDefinition[] = [
   agentsAutoLaunchPlugin,
   agentsPlugin,
   attemptViewPlugin,
+  authGoogleSetupWizardPlugin,
   authGooglePlugin,
   authNotionPlugin,
   authPlugin,

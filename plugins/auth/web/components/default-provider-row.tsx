@@ -115,7 +115,11 @@ export function DefaultProviderRow({ providerId }: Props) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => settingsPane.open({})}
+            onClick={() =>
+              provider.configureCredentials
+                ? provider.configureCredentials()
+                : settingsPane.open({})
+            }
           >
             Configure credentials
           </Button>

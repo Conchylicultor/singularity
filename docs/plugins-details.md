@@ -126,16 +126,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/auth/state`
   - Imported by: `google`, `notion`
   - Slot contributors: `google`, `notion`
+  - Endpoint callers: `setup-wizard`
   - Plugins:
     - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
       - Exports (shared):
         - Values: `GOOGLE_DEFAULT_SCOPES`, `googleAuthConfig`
       - Contributes:
         - `Auth.Provider`
+        - `googleSetupPane.open`
       - Central:
         - Register: `googleAuthRegistration`
         - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
         - Register: `googleAuthRegistration`
+      - Plugins:
+        - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
+          - Exports (web):
+            - Values: `googleSetupPane`
+          - Contributes:
+            - `Pane.Register` `google-setup` (path `google/setup`)
     - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
       - Exports (shared):
         - Values: `notionAuthConfig`
@@ -913,7 +921,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneSlot`, `TypeMarker`
         - Values: `buildChainUrl`, `getChain`, `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneDepthContext`, `PaneHistoryButtons`, `PaneIconAction`, `PaneLayoutContext`, `PaneLevel`, `PaneMatchContext`, `PaneRouter`, `parseUrl`, `syncChainFromUrl`, `type`, `useCurrentPane`, `useMatchForPath`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `publish`, `queue`, `review`, `screenshot`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `task-file-peek`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `publish`, `queue`, `review`, `screenshot`, `setup-wizard`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `task-file-peek`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
       - Exports (web):
         - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `PromptEditor`, `rewriteAttachmentMarkdown`

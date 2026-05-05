@@ -13,6 +13,8 @@ export interface AuthProviderContribution {
   rowComponent?: ComponentType<AuthProviderRowProps>;
   /** Optional setup help text shown when credentials are missing. */
   helpUrl?: string;
+  /** Optional callback to override the "Configure credentials" button action. */
+  configureCredentials?: () => void;
 }
 
 export const Auth = {

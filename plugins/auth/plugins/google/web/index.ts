@@ -3,6 +3,7 @@ import { Auth } from "@plugins/auth/web";
 import { Config } from "@plugins/config/web";
 import { SiGoogle } from "react-icons/si";
 import { googleAuthConfig } from "../shared";
+import { googleSetupPane } from "@plugins/auth/plugins/google/plugins/setup-wizard/web";
 
 export default {
   id: "auth-google",
@@ -15,6 +16,7 @@ export default {
       name: "Google",
       icon: SiGoogle,
       helpUrl: "https://console.cloud.google.com/apis/credentials",
+      configureCredentials: () => googleSetupPane.open({}),
     }),
     Config.Spec(googleAuthConfig),
   ],

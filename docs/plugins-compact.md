@@ -22,6 +22,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`auth`** [load-bearing] — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Plugins:
     - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
+      - Plugins:
+        - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
     - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
 
 - **`build`** — Trigger `./singularity build` from the toolbar.

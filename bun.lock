@@ -116,6 +116,10 @@
       "name": "@singularity/plugin-auth-google",
       "version": "0.0.1",
     },
+    "plugins/auth/plugins/google/plugins/setup-wizard": {
+      "name": "@singularity/plugin-auth-google-setup-wizard",
+      "version": "0.0.1",
+    },
     "plugins/auth/plugins/notion": {
       "name": "@singularity/plugin-auth-notion",
       "version": "0.0.1",
@@ -1300,6 +1304,8 @@
     "@singularity/plugin-auth": ["@singularity/plugin-auth@workspace:plugins/auth"],
 
     "@singularity/plugin-auth-google": ["@singularity/plugin-auth-google@workspace:plugins/auth/plugins/google"],
+
+    "@singularity/plugin-auth-google-setup-wizard": ["@singularity/plugin-auth-google-setup-wizard@workspace:plugins/auth/plugins/google/plugins/setup-wizard"],
 
     "@singularity/plugin-auth-notion": ["@singularity/plugin-auth-notion@workspace:plugins/auth/plugins/notion"],
 
