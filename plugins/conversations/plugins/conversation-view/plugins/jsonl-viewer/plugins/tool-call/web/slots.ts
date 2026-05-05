@@ -6,8 +6,6 @@ export interface ToolRendererContribution {
   name?: string;
   pattern?: RegExp;
   component: ComponentType<ToolRendererProps>;
-  summary?: ComponentType<ToolRendererProps>;
-  defaultOpen?: boolean;
 }
 
 export const JsonlViewerTool = {

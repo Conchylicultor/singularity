@@ -1,4 +1,5 @@
 import type { ToolRendererProps } from "../../shared";
+import { ToolCallCard } from "./tool-call-card";
 
 function formatJson(value: unknown): string {
   try {
@@ -8,9 +9,16 @@ function formatJson(value: unknown): string {
   }
 }
 
+function inputDescription(input: unknown): string | undefined {
+  if (typeof input !== "object" || input === null || !("description" in input))
+    return undefined;
+  const desc = (input as Record<string, unknown>).description;
+  return typeof desc === "string" ? desc : undefined;
+}
+
 export function GenericToolView({ event }: ToolRendererProps) {
   return (
-    <>
+    <ToolCallCard event={event} summary={inputDescription(event.input)}>
       {event.input != null && (
         <pre className="mt-2 max-h-96 overflow-auto rounded bg-muted/60 p-2 text-xs">
           {formatJson(event.input)}
@@ -27,6 +35,6 @@ export function GenericToolView({ event }: ToolRendererProps) {
           {event.result.content || "(empty)"}
         </pre>
       )}
-    </>
+    </ToolCallCard>
   );
 }

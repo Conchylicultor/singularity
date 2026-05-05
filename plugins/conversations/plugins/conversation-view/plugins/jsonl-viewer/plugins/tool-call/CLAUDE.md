@@ -9,7 +9,7 @@
   - Slots: `JsonlViewerTool.Renderer`
 - Exports (web):
   - Types: `ToolRendererContribution`
-  - Values: `JsonlViewerTool`
+  - Values: `JsonlViewerTool`, `ToolCallCard`
 - Exports (shared):
   - Types: `ToolCallEvent`, `ToolRendererProps`
 - Contributes:
