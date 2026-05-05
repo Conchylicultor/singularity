@@ -1,8 +1,8 @@
 import { useCallback } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Breadcrumb } from "@plugins/primitives/plugins/breadcrumb/web";
 import { FileContent } from "./components/file-content";
-import { FilePathLabel } from "./components/file-path-label";
 import { FileTabs } from "./components/file-tabs";
 import { useFileRenderers } from "./components/use-file-renderers";
 import { FileOpenProvider } from "./file-open-context";
@@ -34,7 +34,7 @@ function ConvFilePeekPaneBody() {
     <FileOpenProvider value={onFileOpen}>
       <PaneChrome
         pane={convFilePeekPane}
-        title={<FilePathLabel path={filePath} />}
+        title={<Breadcrumb path={filePath} />}
         actions={<FileTabs {...renderers} />}
       >
         <div className="h-full min-h-0 overflow-auto">

@@ -97,6 +97,7 @@ import infraAttachmentsPlugin from "@plugins/infra/plugins/attachments/web";
 import layoutsMillerPlugin from "@plugins/layouts/plugins/miller/web";
 import primitivesAutoScrollPlugin from "@plugins/primitives/plugins/auto-scroll/web";
 import primitivesAvatarPlugin from "@plugins/primitives/plugins/avatar/web";
+import primitivesBreadcrumbPlugin from "@plugins/primitives/plugins/breadcrumb/web";
 import primitivesEditableFieldPlugin from "@plugins/primitives/plugins/editable-field/web";
 import primitivesErrorBoundaryPlugin from "@plugins/primitives/plugins/error-boundary/web";
 import primitivesFileLinksPlugin from "@plugins/primitives/plugins/file-links/web";
@@ -231,6 +232,7 @@ export const plugins: PluginDefinition[] = [
   layoutsMillerPlugin,
   primitivesAutoScrollPlugin,
   primitivesAvatarPlugin,
+  primitivesBreadcrumbPlugin,
   primitivesEditableFieldPlugin,
   primitivesErrorBoundaryPlugin,
   primitivesFileLinksPlugin,

@@ -9,7 +9,7 @@
   - Slots: `FilePane.Renderer`
 - Exports (web):
   - Types: `FileContentState`, `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`
-  - Values: `convFilePeekPane`, `FileContent`, `FileOpenProvider`, `FilePane`, `FilePaneView`, `FilePathLabel`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileOpen`, `useFileRenderers`
+  - Values: `convFilePeekPane`, `FileContent`, `FileOpenProvider`, `FilePane`, `FilePaneView`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileOpen`, `useFileRenderers`
 - Contributes:
   - `Pane.Register` `conv-file-peek`
 - Slot contributors: `diff`, `image`, `markdown`, `raw`

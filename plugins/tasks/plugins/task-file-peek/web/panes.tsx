@@ -1,9 +1,9 @@
 import { useCallback } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { Breadcrumb } from "@plugins/primitives/plugins/breadcrumb/web";
 import {
   FileContent,
   FileOpenProvider,
-  FilePathLabel,
   FileTabs,
   useFileRenderers,
 } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
@@ -30,7 +30,7 @@ function TaskFilePeekBody() {
     <FileOpenProvider value={onFileOpen}>
       <PaneChrome
         pane={taskFilePeekPane}
-        title={<FilePathLabel path={filePath} />}
+        title={<Breadcrumb path={filePath} />}
         actions={<FileTabs {...renderers} />}
       >
         <div className="h-full min-h-0 overflow-auto">

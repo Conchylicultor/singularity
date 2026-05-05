@@ -330,7 +330,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Slots: `FilePane.Renderer`
               - Exports (web):
                 - Types: `FileContentState`, `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`
-                - Values: `convFilePeekPane`, `FileContent`, `FileOpenProvider`, `FilePane`, `FilePaneView`, `FilePathLabel`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileOpen`, `useFileRenderers`
+                - Values: `convFilePeekPane`, `FileContent`, `FileOpenProvider`, `FilePane`, `FilePaneView`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileOpen`, `useFileRenderers`
               - Contributes:
                 - `Pane.Register` `conv-file-peek`
               - Slot contributors: `diff`, `image`, `markdown`, `raw`
@@ -929,6 +929,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `AvatarColor`, `AvatarPickerProps`, `AvatarProps`, `AvatarSize`, `AvatarSpec`
         - Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `AVATAR_ICON_KEYS`, `AVATAR_ICONS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`, `resolveAvatarIcon`
+    - **`breadcrumb`** — File-path breadcrumb with per-segment clickable navigation. Exposes <Breadcrumb path={…} onNavigate={…} />.
+      - Exports (web):
+        - Types: `BreadcrumbProps`
+        - Values: `Breadcrumb`
     - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
       - Exports (web):
         - Types: `EditableField`, `UseEditableFieldOptions`

@@ -4,7 +4,6 @@ import { convFilePeekPane } from "./file-peek-pane";
 
 export { FilePaneView } from "./components/file-pane";
 export { FileContent } from "./components/file-content";
-export { FilePathLabel } from "./components/file-path-label";
 export { FileTabs } from "./components/file-tabs";
 export {
   useFileRenderers,
