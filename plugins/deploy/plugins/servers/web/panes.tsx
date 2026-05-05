@@ -7,7 +7,8 @@ import { ServerDetail } from "./components/server-detail";
 
 export const serversRootPane = Pane.define({
   id: "deploy-servers",
-  path: "/deploy",
+  after: [null],
+  segment: "deploy",
   component: ServersRoot,
   chrome: false,
   width: 320,
@@ -15,8 +16,8 @@ export const serversRootPane = Pane.define({
 
 export const serverDetailPane = Pane.define({
   id: "deploy-server-detail",
-  parent: serversRootPane,
-  path: ":serverId",
+  after: [serversRootPane],
+  segment: ":serverId",
   component: ServerDetailBody,
   provides: type<{ server: Server }>(),
 });
