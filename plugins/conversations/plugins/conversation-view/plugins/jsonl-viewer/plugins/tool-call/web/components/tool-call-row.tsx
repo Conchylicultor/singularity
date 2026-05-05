@@ -62,7 +62,11 @@ export function ToolCallRow({ event }: { event: JsonlEvent }) {
           {e.name || "tool_call"}
         </span>
         {Summary
-          ? <Summary event={e} />
+          ? (
+            <span className="flex-1 min-w-0 overflow-hidden">
+              <Summary event={e} />
+            </span>
+          )
           : (description && <span className="min-w-0 flex-1 truncate opacity-70">{description}</span>)
         }
         {isRunning && (
