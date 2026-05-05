@@ -757,14 +757,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Pane.Register` `deploy-servers`
         - `Pane.Register` `deploy-add-server`
         - `Pane.Register` `deploy-server-detail`
-        - `Shell.Sidebar` "Deploy" (group `System`)
-        - `serversRootPane.open`
       - Server:
         - `GET /api/deploy/servers`
         - `POST /api/deploy/servers`
         - `GET /api/deploy/servers/:id`
         - `PATCH /api/deploy/servers/:id`
         - `DELETE /api/deploy/servers/:id`
+    - **`shell`** — App shell for the deploy platform.
+      - Contributes:
+        - `Apps.App` → `DeployLayout`
+        - `serversRootPane.open`
 
 - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
   - Defines:
@@ -1058,7 +1060,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `Shell`, `ShellCommands`
   - Contributes:
     - `Apps.App` → `ShellLayout`
-    - `history.pushState`
+  - Plugins:
+    - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.
+      - Contributes:
+        - `Core.Root` → `ToasterRoot`
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Defines:

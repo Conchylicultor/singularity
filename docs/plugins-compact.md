@@ -121,6 +121,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`deploy`** — Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
   - Plugins:
     - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
+    - **`shell`** — App shell for the deploy platform.
 
 - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
 
@@ -175,6 +176,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`draw-on-app`** — Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.
 
 - **`shell`** [load-bearing] — Foundational app layout; defines the slots and commands most other plugins extend.
+  - Plugins:
+    - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Plugins:
