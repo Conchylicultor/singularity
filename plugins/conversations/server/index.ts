@@ -20,12 +20,6 @@ export { maybeLaunchTaskJob } from "./internal/auto-start-jobs";
 
 export { ConversationStatusSchema, isActiveStatus } from "./status";
 export type { ConversationStatus } from "./status";
-export {
-  ConversationSchema,
-  ConversationKindSchema,
-  recentConversationsResource,
-} from "@plugins/tasks-core/server";
-export type { Conversation, ConversationKind } from "@plugins/tasks-core/server";
 export { createConversation, deleteConversation, resumeConversation } from "./internal/lifecycle";
 export type { Turn } from "./internal/claude-transcript";
 export {

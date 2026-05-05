@@ -1,9 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
-import {
-  deleteConversation,
-  recentConversationsResource,
-} from "@plugins/conversations/server";
-import { getConversation } from "@plugins/tasks-core/server";
+import { deleteConversation } from "@plugins/conversations/server";
+import { getConversation, recentConversationsResource } from "@plugins/tasks-core/server";
 
 export default {
   id: "exit",

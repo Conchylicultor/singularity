@@ -16,7 +16,7 @@ import {
 } from "@plugins/tasks/plugins/task-title/server";
 import { Runtime } from "./runtime";
 import { DEFAULT_MODEL, type ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
-import type { Conversation, ConversationKind } from "../../shared";
+import type { Conversation, ConversationKind } from "@plugins/tasks-core/shared";
 import { forkDatabase } from "./db-fork";
 import { reportForkError } from "./fork-errors";
 import { setupWorktree, worktreePathFor } from "@plugins/infra/plugins/worktree/server";

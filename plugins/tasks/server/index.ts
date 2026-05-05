@@ -27,28 +27,6 @@ import { addTaskTool } from "./internal/mcp-tools";
 
 export { armTaskAutoStart } from "./internal/arm-auto-start";
 
-// Re-export public surface (Zod schemas, types, resources, helpers).
-// pgTable objects are NOT re-exported — they live only in tasks-core/internal.
-export {
-  TaskSchema,
-  TaskStatusSchema,
-  AttemptSchema,
-  AttemptStatusSchema,
-  PushSchema,
-  tasksResource,
-  attemptsResource,
-  pushesResource,
-  CONVERSATIONS_META_TASK_ID,
-  findNextRankUnder as nextRankUnder,
-} from "@plugins/tasks-core/server";
-export type {
-  Task,
-  TaskStatus,
-  Attempt,
-  AttemptStatus,
-  Push,
-} from "@plugins/tasks-core/server";
-
 export default {
   id: "tasks",
   name: "Tasks",

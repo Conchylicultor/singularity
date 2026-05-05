@@ -1,8 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
-import {
-  recentConversationsResource,
-  resumeConversation,
-} from "@plugins/conversations/server";
+import { resumeConversation } from "@plugins/conversations/server";
+import { recentConversationsResource } from "@plugins/tasks-core/server";
 
 export default {
   id: "resume",

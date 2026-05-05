@@ -1,7 +1,5 @@
-import {
-  recentConversationsResource,
-  resumeConversation,
-} from "@plugins/conversations/server";
+import { resumeConversation } from "@plugins/conversations/server";
+import { recentConversationsResource } from "@plugins/tasks-core/server";
 
 type RestoreResult = { id: string; ok: true } | { id: string; ok: false; error: string };
 

@@ -3,8 +3,8 @@ import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import {
   afterTurn,
   deleteConversation,
-  recentConversationsResource,
 } from "@plugins/conversations/server";
+import { recentConversationsResource } from "@plugins/tasks-core/server";
 
 const FINALIZE_TIMEOUT_MS = 60_000;
 

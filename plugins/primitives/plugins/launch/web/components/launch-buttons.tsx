@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MdAdd, MdPlayArrow } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { ConversationSchema, type Conversation } from "@plugins/conversations/shared";
+import { ConversationSchema, type Conversation } from "@plugins/tasks-core/shared";
 import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

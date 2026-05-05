@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { z } from "zod";
-import { ConversationSchema } from "../shared";
+import { ConversationSchema } from "@plugins/tasks-core/shared";
 import { recentConversationsResource, type ConversationEntry } from "../shared/resources";
 
 export const GonePageSchema = z.object({

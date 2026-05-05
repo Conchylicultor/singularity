@@ -93,7 +93,7 @@ export const pluginBoundaries: Check = {
       for (const runtime of ["web", "server", "central", "shared"] as const) {
         const barrel = join(p.absPath, runtime, "index.ts");
         if (!existsSync(barrel)) continue;
-        checkBarrelPurity(barrel, relative(root, barrel), violations);
+        checkBarrelPurity(barrel, relative(root, barrel), violations, p.relPath);
       }
     }
 
@@ -376,15 +376,38 @@ function checkPackageNaming(p: PluginDir, violations: Violation[]) {
  * top-level `await`, control flow) is a violation — it should live in a sibling file
  * (conventionally `internal/`).
  */
-function checkBarrelPurity(absPath: string, relPath: string, violations: Violation[]) {
+function checkBarrelPurity(absPath: string, relPath: string, violations: Violation[], pluginPath: string) {
   const raw = safeRead(absPath);
   if (!raw) return;
-  const stripped = stripCommentsAndStrings(raw);
+  // stripComments (not stripCommentsAndStrings) so `from` specifiers survive
+  // for the cross-plugin re-export check below.
+  const stripped = stripComments(raw);
   const stmts = splitTopLevelStatements(stripped);
   for (const { text, line } of stmts) {
     const trimmed = text.trim();
     if (!trimmed) continue;
-    if (isAllowedBarrelStatement(trimmed)) continue;
+    if (isAllowedBarrelStatement(trimmed)) {
+      if (trimmed.startsWith("export ")) {
+        const specifier = extractFromSpecifier(trimmed);
+        if (specifier?.startsWith("@plugins/")) {
+          const rest = specifier.slice("@plugins/".length);
+          const segments = rest.split("/");
+          const lastSeg = segments[segments.length - 1]!;
+          if (VALID_RUNTIMES.has(lastSeg)) {
+            const specPluginPath = segments.slice(0, -1).join("/");
+            if (specPluginPath !== pluginPath) {
+              violations.push({
+                rule: "cross-plugin-reexport",
+                file: `${relPath}:${line}`,
+                message: `barrel re-exports from another plugin: \`${specifier}\``,
+                fix: `import the source barrel directly — never proxy another plugin's symbols through your own barrel. Consumers should \`import { … } from "${specifier}"\` themselves.`,
+              });
+            }
+          }
+        }
+      }
+      continue;
+    }
     const head = trimmed.split(/\s+/).slice(0, 3).join(" ");
     if (isWildcardReexport(trimmed)) {
       violations.push({
@@ -402,6 +425,11 @@ function checkBarrelPurity(absPath: string, relPath: string, violations: Violati
       fix: "move this code into a sibling file (conventionally `internal/`). Barrels may only contain imports, re-exports, type aliases, and a single `export default`.",
     });
   }
+}
+
+function extractFromSpecifier(stmt: string): string | null {
+  const m = stmt.match(/from\s+["']([^"']+)["']\s*$/);
+  return m ? m[1]! : null;
 }
 
 function isWildcardReexport(s: string): boolean {
