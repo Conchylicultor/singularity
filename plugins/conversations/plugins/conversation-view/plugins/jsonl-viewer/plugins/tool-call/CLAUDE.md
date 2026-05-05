@@ -15,8 +15,9 @@
 - Contributes:
   - `JsonlViewer.EventRenderer` → `ToolCallRow`
   - `JsonlViewer.RowAction` → `CopyToolResultAction`
-- Slot contributors: `bash`, `edit`, `write`
+- Slot contributors: `add-task`, `bash`, `edit`, `write`
 - Sub-plugins:
+  - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
   - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
   - **`edit`** — Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
   - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
