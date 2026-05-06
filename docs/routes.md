@@ -69,6 +69,8 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
           - `/api/launch-prompts (GET, POST)`
           - `/api/launch-prompts/:id (PATCH, DELETE)`
+        - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
+          - `/api/conversation-notes/:conversationId (PUT, DELETE)`
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
           - `/api/conversations/:id/push-and-exit (POST, DELETE)`
         - **`quick-prompts`** — Named prompt chips in the conversation floating bar. Click to send a preset message to the active conversation. Named prompts that appear as chips in the conversation toolbar. Click to send a preset message.

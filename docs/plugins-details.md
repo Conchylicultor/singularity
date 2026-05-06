@@ -304,7 +304,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` `conversation`
         - `Conversation.ActionBar` → `ExpandConversationButton`
-      - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+      - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `notes`, `open-app`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Exports (web):
@@ -478,6 +478,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`new-child-task`** — Toolbar button that opens a popover to create a child task under the conversation's parent task.
           - Contributes:
             - `Conversation.ActionBar` → `NewChildTaskAction`
+        - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
+          - Defines:
+            - DB schema: `plugins/conversations/plugins/conversation-view/plugins/notes/server/internal/tables.ts`
+            - Entity extension of: `tasks-core` (table `conversations_ext_notes`)
+          - Exports (server):
+            - Values: `conversationNotes`, `conversationNotesResource`
+          - Exports (shared):
+            - Types: `ConversationNote`, `ConversationNotesPayload`
+            - Values: `ConversationNoteSchema`, `ConversationNotesPayloadSchema`, `conversationNotesResource`
+          - Contributes:
+            - `Conversation.AbovePromptInput` → `NotesArea`
+            - `Conversation.PromptBar` → `NotesToggleButton`
+          - Server:
+            - Uses: `tasks-core._conversations`
+            - `PUT /api/conversation-notes/:conversationId`
+            - `DELETE /api/conversation-notes/:conversationId`
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
           - Contributes:
             - `Conversation.ActionBar` → `OpenAppButton`
@@ -1271,8 +1287,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Register: `pushLanded`, `taskStatusChanged`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push)
-  - Imported by: `active-data`, `agents`, `allow-monitor`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `push-and-exit`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
-  - Extended by: `conversation-category` (table `conversations_ext_category`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`)
+  - Imported by: `active-data`, `agents`, `allow-monitor`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `push-and-exit`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
+  - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`)
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):

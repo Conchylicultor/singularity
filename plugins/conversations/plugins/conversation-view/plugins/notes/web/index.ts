@@ -1,0 +1,20 @@
+import type { PluginDefinition } from "@core";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
+import { NotesArea } from "./components/notes-area";
+import { NotesToggleButton } from "./components/notes-toggle-button";
+
+export default {
+  id: "conversation-notes",
+  name: "Conversation: Notes",
+  description:
+    "Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button.",
+  contributions: [
+    Conversation.AbovePromptInput({ id: "notes", component: NotesArea }),
+    Conversation.PromptBar({
+      id: "notes-toggle",
+      component: NotesToggleButton,
+      section: "Notes",
+      sectionOrder: -1,
+    }),
+  ],
+} satisfies PluginDefinition;

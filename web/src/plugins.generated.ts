@@ -63,6 +63,7 @@ import conversationsConversationViewJsonlViewerPlugin from "@plugins/conversatio
 import conversationsConversationViewLaunchPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/launch-prompts/web";
 import conversationsConversationViewModelPlugin from "@plugins/conversations/plugins/conversation-view/plugins/model/web";
 import conversationsConversationViewNewChildTaskPlugin from "@plugins/conversations/plugins/conversation-view/plugins/new-child-task/web";
+import conversationsConversationViewNotesPlugin from "@plugins/conversations/plugins/conversation-view/plugins/notes/web";
 import conversationsConversationViewOpenAppPlugin from "@plugins/conversations/plugins/conversation-view/plugins/open-app/web";
 import conversationsConversationViewPromptInputPlugin from "@plugins/conversations/plugins/conversation-view/plugins/prompt-input/web";
 import conversationsConversationViewPushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/web";
@@ -207,6 +208,7 @@ export const plugins: PluginDefinition[] = [
   conversationsConversationViewLaunchPromptsPlugin,
   conversationsConversationViewModelPlugin,
   conversationsConversationViewNewChildTaskPlugin,
+  conversationsConversationViewNotesPlugin,
   conversationsConversationViewOpenAppPlugin,
   conversationsConversationViewPromptInputPlugin,
   conversationsConversationViewPushAndExitPlugin,

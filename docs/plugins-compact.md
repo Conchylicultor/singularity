@@ -84,6 +84,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
         - **`new-child-task`** — Toolbar button that opens a popover to create a child task under the conversation's parent task.
+        - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
         - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.

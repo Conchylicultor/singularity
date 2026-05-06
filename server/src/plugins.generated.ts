@@ -26,6 +26,7 @@ import conversationsConversationViewExitPlugin from "@plugins/conversations/plug
 import conversationsConversationViewHoldAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/hold-and-exit/server";
 import conversationsConversationViewJsonlViewerPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/server";
 import conversationsConversationViewLaunchPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/launch-prompts/server";
+import conversationsConversationViewNotesPlugin from "@plugins/conversations/plugins/conversation-view/plugins/notes/server";
 import conversationsConversationViewPushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server";
 import conversationsConversationViewQuickPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server";
 import conversationsConversationViewResumePlugin from "@plugins/conversations/plugins/conversation-view/plugins/resume/server";
@@ -91,6 +92,7 @@ export const plugins: ServerPluginDefinition[] = [
   conversationsConversationViewHoldAndExitPlugin,
   conversationsConversationViewJsonlViewerPlugin,
   conversationsConversationViewLaunchPromptsPlugin,
+  conversationsConversationViewNotesPlugin,
   conversationsConversationViewPushAndExitPlugin,
   conversationsConversationViewQuickPromptsPlugin,
   conversationsConversationViewResumePlugin,
