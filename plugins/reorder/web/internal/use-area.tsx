@@ -293,7 +293,7 @@ function ReorderItemActive({
   const draggable = useDraggable({ id: `${DRAG_PREFIX}${item.id}` });
   const droppable = useDroppable({ id: `${DROP_PREFIX}${item.id}` });
 
-  const delay = useMemo(() => (item.id.length * 37) % 200, [item.id]);
+  const delay = useMemo(() => (item.id.length * 37) % 350, [item.id]);
 
   const transform = draggable.transform;
   const isDragging = draggable.isDragging;
