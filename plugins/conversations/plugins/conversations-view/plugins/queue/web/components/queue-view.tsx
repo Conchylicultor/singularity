@@ -18,6 +18,7 @@ import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui
 import type { Conversation } from "@plugins/tasks-core/shared";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { queueRanksResource } from "../../shared/resources";
+import { tasksResource } from "@plugins/tasks/shared";
 import { Rank } from "@plugins/primitives/plugins/rank/shared";
 import {
   SidebarMenu,
@@ -43,6 +44,7 @@ async function queuePost(path: string, body: Record<string, unknown>) {
 
 const WORKING_EXPANDED_KEY = "queue-view:working:expanded";
 const QUEUE_EXPANDED_KEY = "queue-view:queue:expanded";
+const BLOCKED_EXPANDED_KEY = "queue-view:blocked:expanded";
 const UNRANKED_EXPANDED_KEY = "queue-view:unranked:expanded";
 const GONE_EXPANDED_KEY = "queue-view:gone:expanded";
 
@@ -93,6 +95,7 @@ export function QueueView({
 }: ViewProps) {
   const { active, recentGone, isLoading } = useConversations();
   const { data: rankRows } = useResource(queueRanksResource);
+  const { data: taskRows } = useResource(tasksResource);
 
   const working = useMemo(
     () =>
@@ -106,24 +109,35 @@ export function QueueView({
   // conversation only appears in the deck once the seed-rank job has fired.
   // Uses code-point order (not localeCompare) to match Postgres COLLATE "C".
   // Waiting conversations with no rank entry yet go into `unranked`.
-  const { deck, unranked } = useMemo(() => {
+  // Blocked conversations (task.status === "blocked") are partitioned into a
+  // separate `blockedDeck` and always rendered after the main deck so they
+  // never occupy the top-of-queue "do next" slot.
+  const { deck, blockedDeck, unranked } = useMemo(() => {
     const ranks = new Map((rankRows ?? []).map((r) => [r.conversationId, r.rank]));
+    const taskStatusMap = new Map((taskRows ?? []).map((t) => [t.id, t.status]));
     const ranked: Array<Conversation & { rank: Rank }> = [];
+    const blocked: Array<Conversation & { rank: Rank }> = [];
     const noRank: Conversation[] = [];
     for (const c of active) {
       if (c.status !== "waiting") continue;
+      const isBlocked = c.taskId != null && taskStatusMap.get(c.taskId) === "blocked";
       const rank = ranks.get(c.id);
       if (rank) {
-        ranked.push({ ...c, rank });
+        if (isBlocked) {
+          blocked.push({ ...c, rank });
+        } else {
+          ranked.push({ ...c, rank });
+        }
       } else {
         noRank.push(c);
       }
     }
     return {
       deck: ranked.sort((a, b) => Rank.compare(a.rank, b.rank)),
+      blockedDeck: blocked.sort((a, b) => Rank.compare(a.rank, b.rank)),
       unranked: noRank,
     };
-  }, [active, rankRows]);
+  }, [active, rankRows, taskRows]);
 
   const [workingExpanded, setWorkingExpanded] = useState<boolean>(() => {
     try {
@@ -154,6 +168,23 @@ export function QueueView({
       const next = !prev;
       try {
         localStorage.setItem(QUEUE_EXPANDED_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const [blockedExpanded, setBlockedExpanded] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(BLOCKED_EXPANDED_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const toggleBlockedExpanded = useCallback(() => {
+    setBlockedExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(BLOCKED_EXPANDED_KEY, next ? "1" : "0");
       } catch {}
       return next;
     });
@@ -216,7 +247,7 @@ export function QueueView({
     await queuePost("reorder", { conversationId, targetId: drop.targetId, zone: drop.zone });
   }, []);
 
-  if (!isLoading && deck.length === 0 && working.length === 0 && unranked.length === 0 && recentGone.length === 0) {
+  if (!isLoading && deck.length === 0 && blockedDeck.length === 0 && working.length === 0 && unranked.length === 0 && recentGone.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-xs text-muted-foreground">
         All clear — no conversations are waiting on you.
@@ -274,6 +305,37 @@ export function QueueView({
           </DndContext>
         )}
       </SectionBox>
+      {blockedDeck.length > 0 && (
+        <SectionBox
+          title="Blocked"
+          count={blockedDeck.length}
+          expanded={blockedExpanded}
+          onToggleExpanded={toggleBlockedExpanded}
+        >
+          <SidebarMenu>
+            {blockedDeck.map((conv) => (
+              <li key={conv.id} className="group/menu-item relative list-none">
+                <SidebarMenuButton
+                  className="h-auto py-1.5 opacity-60"
+                  isActive={conv.id === activeId}
+                  onClick={() => onNavigate(conv.id)}
+                >
+                  <ConversationItem conv={conv} />
+                </SidebarMenuButton>
+                <SidebarMenuAction
+                  onClick={(e: React.MouseEvent) =>
+                    void onCloseConversation(conv.id, e)
+                  }
+                  className="opacity-0 group-hover/menu-item:opacity-100"
+                  aria-label="Close conversation"
+                >
+                  <MdClose className="size-3.5" />
+                </SidebarMenuAction>
+              </li>
+            ))}
+          </SidebarMenu>
+        </SectionBox>
+      )}
       <SectionBox
         title="Working"
         count={working.length}
