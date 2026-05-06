@@ -11,7 +11,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { MdChevronRight, MdClose, MdKeyboardDoubleArrowDown, MdVerticalAlignBottom, MdVerticalAlignTop } from "react-icons/md";
+import { MdChevronRight, MdClose, MdKeyboardDoubleArrowDown, MdOutlineQueue, MdVerticalAlignBottom, MdVerticalAlignTop } from "react-icons/md";
 import { useConversations } from "@plugins/conversations/web";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
@@ -388,15 +388,22 @@ export function QueueView({
                 >
                   <ConversationItem conv={conv} />
                 </SidebarMenuButton>
-                <SidebarMenuAction
-                  onClick={(e: React.MouseEvent) =>
-                    void onCloseConversation(conv.id, e)
-                  }
-                  className="opacity-0 group-hover/menu-item:opacity-100"
-                  aria-label="Close conversation"
-                >
-                  <MdClose className="size-3.5" />
-                </SidebarMenuAction>
+                <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 group-hover/menu-item:opacity-100">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); void queuePost("rerank", { conversationId: conv.id }); }}
+                    className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+                    aria-label="Add to queue"
+                  >
+                    <MdOutlineQueue className="size-3.5" />
+                  </button>
+                  <button
+                    onClick={(e: React.MouseEvent) => { e.stopPropagation(); void onCloseConversation(conv.id, e); }}
+                    className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+                    aria-label="Close conversation"
+                  >
+                    <MdClose className="size-3.5" />
+                  </button>
+                </div>
               </li>
             ))}
           </SidebarMenu>
