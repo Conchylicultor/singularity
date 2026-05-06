@@ -369,7 +369,7 @@ function RestoreButton() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        className="mt-1 flex h-7 w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-muted-foreground/40 text-xs text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground transition-colors reorder-wiggle"
+        className="mt-1 flex h-7 w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-muted-foreground/40 text-xs text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground transition-colors"
         aria-label="Add items"
       >
         <MdAdd className="size-3.5" />
