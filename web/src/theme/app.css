@@ -3,7 +3,7 @@
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/cascadia-code";
 
-@source "../../plugins/";
+@source "../../../plugins/";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -126,15 +126,4 @@
   html {
     @apply font-sans;
     }
-}
-
-@keyframes reorder-wiggle {
-  0%   { transform: rotate(-1deg); }
-  50%  { transform: rotate( 1deg); }
-  100% { transform: rotate(-1deg); }
-}
-.reorder-wiggle {
-  animation: reorder-wiggle 0.18s ease-in-out infinite;
-  transform-origin: center;
-  will-change: transform;
 }

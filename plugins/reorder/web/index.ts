@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@core";
+import "./styles.css";
 
 export { Reorder } from "./internal/reorder";
 export { setEditMode, useEditMode } from "./internal/edit-mode-store";

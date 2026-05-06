@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import "./app.css";
+import "./theme/app.css";
 import App from "./App";
 
 const host = window.location.hostname;
