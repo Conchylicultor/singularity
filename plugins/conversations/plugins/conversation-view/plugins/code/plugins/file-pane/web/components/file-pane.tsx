@@ -8,10 +8,12 @@ export function FilePaneView({
   worktree,
   path,
   status,
+  line,
 }: {
   worktree: string;
   path: string;
   status: EditedFileStatus;
+  line?: number;
 }) {
   const renderers = useFileRenderers({ path, status });
   return (
@@ -23,7 +25,7 @@ export function FilePaneView({
         <FileTabs {...renderers} />
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
-        <FileContent worktree={worktree} path={path} active={renderers.active} />
+        <FileContent worktree={worktree} path={path} line={line} active={renderers.active} />
       </div>
     </div>
   );
