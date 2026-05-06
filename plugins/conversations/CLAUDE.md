@@ -14,13 +14,8 @@
   - Types: `ConversationActionOpts`
   - Values: `GonePageSchema`, `useConversation`, `useConversationAction`, `useConversationById`, `useConversations`
 - Exports (server):
-<<<<<<< .merge_file_vFRpaZ
-  - Types: `ConversationCreatedPayload`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`
-  - Values: `afterTurn`, `conversationCreated`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`
-=======
-  - Types: `Conversation`, `ConversationCreatedPayload`, `ConversationKind`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`, `UserTurnSentPayload`
-  - Values: `afterTurn`, `conversationCreated`, `ConversationKindSchema`, `ConversationSchema`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `recentConversationsResource`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`, `userTurnSent`
->>>>>>> .merge_file_oUsgwT
+  - Types: `ConversationCreatedPayload`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`, `UserTurnSentPayload`
+  - Values: `afterTurn`, `conversationCreated`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`, `userTurnSent`
 - Exports (shared):
   - Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `ForkError`
   - Values: `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`

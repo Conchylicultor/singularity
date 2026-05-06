@@ -199,7 +199,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
-    - **`task-title`** — Haiku-backed task title generation. Synthesises an instant first-line fallback; upgrades asynchronously so task creation never blocks on the Claude CLI round-trip.
+    - **`task-title`** — Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip.
 
 - **`tasks-core`** [load-bearing] — Schema + repository layer for the tasks/attempts/conversations FK cluster.
 

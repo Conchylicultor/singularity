@@ -215,17 +215,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Defines:
     - DB schema: `plugins/conversations/server/internal/tables-created-event.ts`
     - DB schema: `plugins/conversations/server/internal/tables-turn-completed-event.ts`
+    - DB schema: `plugins/conversations/server/internal/tables-user-turn-sent-event.ts`
   - Exports (web):
     - Types: `ConversationActionOpts`
     - Values: `GonePageSchema`, `useConversation`, `useConversationAction`, `useConversationById`, `useConversations`
   - Exports (server):
-    - Types: `ConversationCreatedPayload`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`
-    - Values: `afterTurn`, `conversationCreated`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`
+    - Types: `ConversationCreatedPayload`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`, `UserTurnSentPayload`
+    - Values: `afterTurn`, `conversationCreated`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `getConversationRow`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`, `userTurnSent`
   - Exports (shared):
     - Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `ForkError`
     - Values: `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
   - Server:
-    - Register: `maybeLaunchTaskJob`, `conversationCreated`, `conversationTurnCompleted`
+    - Register: `maybeLaunchTaskJob`, `conversationCreated`, `conversationTurnCompleted`, `userTurnSent`
     - Uses: `crashes.recordCrash`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/gone`
@@ -236,7 +237,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/conversations/:id/stop`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
-  - Imported by: `agents`, `conversation-category`, `conversation-progress`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `push-and-exit`, `queue`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `tasks`, `turn-summary`
+  - Imported by: `agents`, `conversation-category`, `conversation-progress`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `push-and-exit`, `queue`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `task-title`, `tasks`, `turn-summary`
   - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `grouped`, `history`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `transcript-api`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
@@ -1216,11 +1217,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
       - Exports (web):
         - Values: `STATUS_META`, `StatusBadge`, `StatusIcon`
-    - **`task-title`** — Haiku-backed task title generation. Synthesises an instant first-line fallback; upgrades asynchronously so task creation never blocks on the Claude CLI round-trip.
+    - **`task-title`** — Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip.
       - Exports (server):
-        - Values: `generateTaskTitle`, `scheduleTaskTitleUpdate`, `synthesiseTitleFallback`
+        - Values: `generateTaskTitle`, `scheduleTaskTitleUpdate`, `scheduleTaskTitleUpgrade`, `synthesiseTitleFallback`
       - Server:
-        - Uses: `tasks-core.updateConversationsTitleForTask`, `tasks-core.updateTaskTitle`
+        - Register: `titleOnConversationCreatedJob`, `titleOnUserTurnSentJob`
+        - Uses: `conversations.conversationCreated`, `conversations.userTurnSent`, `tasks-core.getTask`, `tasks-core.updateConversationsTitleForTask`, `tasks-core.updateTaskTitle`
 
 - **`tasks-core`** — Schema + repository layer for the tasks/attempts/conversations FK cluster.
   - Defines:

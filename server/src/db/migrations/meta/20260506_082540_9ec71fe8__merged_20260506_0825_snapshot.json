@@ -1,6 +1,6 @@
 {
-  "id": "af86d57d-af88-446d-a0aa-4816afb44004",
-  "prevId": "e4664ff0-cfb0-411f-9264-58cd4d5a66ff",
+  "id": "d4333e6f-d3a6-43c6-b961-a63784be2d37",
+  "prevId": "a5a8fd43-0512-4981-8909-ed93a1db2870",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1725,7 +1725,14 @@
           "name": "rank",
           "type": "rank_text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "hidden": {
+          "name": "hidden",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {},
