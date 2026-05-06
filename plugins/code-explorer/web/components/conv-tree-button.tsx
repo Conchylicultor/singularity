@@ -1,14 +1,11 @@
 import { MdFolderOpen } from "react-icons/md";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@/components/ui/button";
 import { convFileTreePane } from "../panes";
 
-export function ConvTreeButton({
-  conversation,
-}: {
-  conversation: ConversationRecord;
-}) {
+export function ConvTreeButton() {
+  const { conversation } = conversationPane.useData();
   const match = usePaneMatch();
   const isOpen =
     match?.chain.some((e) => e.pane === convFileTreePane._internal) ?? false;

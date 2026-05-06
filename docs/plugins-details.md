@@ -184,7 +184,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Pane.Register` `conv-file-tree`
     - `Shell.Sidebar` "Explorer" (group `System`)
     - `globalFileTreePane.open`
-    - `Code.ToolbarButton` → `ConvTreeButton`
+    - `Conversation.ActionBar` → `ConvTreeButton`
   - Server:
     - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`
     - `GET /api/code/:worktree/tree`
@@ -301,7 +301,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` `conversation`
         - `Conversation.ActionBar` → `ExpandConversationButton`
-      - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `code`, `commits-graph`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+      - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `open-app`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Exports (web):
@@ -316,24 +316,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Conversation.PromptBar` → `BlockedByButton`
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
-          - Defines:
-            - Slots: `Code.ToolbarButton`
           - Exports (web):
-            - Values: `Code`, `useEditedFiles`
+            - Values: `useEditedFiles`
           - Exports (shared):
             - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`
             - Values: `editedFilesResource`
-          - Contributes:
-            - `Conversation.ActionBar` → `CodeToolbarSlot`
           - Server:
             - Uses: `tasks-core.getConversation`
             - Resources: `edited-files` (invalidate)
-          - Slot contributors: `code-explorer`, `docs-button`, `review`
           - Plugins:
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
               - Contributes:
                 - `Pane.Register` `conv-docs`
-                - `Code.ToolbarButton` → `DocsButton`
+                - `Conversation.ActionBar` → `DocsButton`
             - **`file-pane`** — Hosts the per-conversation file-peek pane and the FilePane.Renderer slot.
               - Defines:
                 - Slots: `FilePane.Renderer`
@@ -364,7 +359,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Values: `reviewConfig`
               - Contributes:
                 - `Pane.Register` `conv-review`
-                - `Code.ToolbarButton` → `ReviewButton`
+                - `Conversation.ActionBar` → `ReviewButton`
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
           - Exports (shared):
             - Types: `CommitDelta`, `CommitRow`, `CommitsGraph`

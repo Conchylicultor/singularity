@@ -1,13 +1,14 @@
 import { useMemo } from "react";
 import { MdArticle } from "react-icons/md";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { convDocsPane, isDocFile } from "../panes";
 import { usePushedDocFiles } from "../use-pushed-doc-files";
 
-export function DocsButton({ conversation }: { conversation: ConversationRecord }) {
+export function DocsButton() {
+  const { conversation } = conversationPane.useData();
   const { files } = useEditedFiles(conversation.id);
   const pushedDocs = usePushedDocFiles(conversation.attemptId);
   const match = usePaneMatch();

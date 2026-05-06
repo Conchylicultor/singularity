@@ -10,7 +10,7 @@
   - `Pane.Register` `conv-file-tree`
   - `Shell.Sidebar` "Explorer" (group `System`)
   - `globalFileTreePane.open`
-  - `Code.ToolbarButton` → `ConvTreeButton`
+  - `Conversation.ActionBar` → `ConvTreeButton`
 - Server:
   - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`
   - `GET /api/code/:worktree/tree`

@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@core";
 import { MdFolderOpen } from "react-icons/md";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
-import { Code } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { ConvTreeButton } from "./components/conv-tree-button";
 import { globalFileTreePane, convFileTreePane } from "./panes";
 
@@ -21,6 +21,6 @@ export default {
       group: "System",
       onClick: () => globalFileTreePane.open({ worktree: "main" }),
     }),
-    Code.ToolbarButton({ component: ConvTreeButton }),
+    Conversation.ActionBar({ id: "explorer", component: ConvTreeButton }),
   ],
 } satisfies PluginDefinition;

@@ -1,6 +1,6 @@
 import { MdRateReview, MdWarning } from "react-icons/md";
 import { useMemo } from "react";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { useConfigValues } from "@plugins/config/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -22,7 +22,8 @@ const WARNING_ICON_CLASS: Record<"careful" | "critical", string> = {
   critical: "size-3.5 text-red-500 dark:text-red-400",
 };
 
-export function ReviewButton({ conversation }: { conversation: ConversationRecord }) {
+export function ReviewButton() {
+  const { conversation } = conversationPane.useData();
   const { files } = useEditedFiles(conversation.id);
   const match = usePaneMatch();
   const isOpen =
