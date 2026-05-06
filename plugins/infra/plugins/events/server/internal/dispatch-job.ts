@@ -12,11 +12,11 @@ import { triggerTableRegistry } from "./registry";
 // `target.run({ input, event, ctx })`, and (for oneShot triggers) removes the
 // trigger row on success.
 //
-// Preservation policy lives here, not in the Layer-1 jobs worker: on unknown
-// target job or schema drift on either side, we log and return (the graphile
-// job completes without throwing, so it isn't retried forever; the trigger
-// row is preserved for later code fixes). Handler throws still bubble up so
-// Graphile retries up to `maxAttempts`. See docs/events.md §"Preservation".
+// Pre-run failures (unknown target, schema drift) throw so Graphile retries
+// and eventually marks the job as permanently failed — visible in the worker
+// queue rather than silently swallowed. The trigger row is preserved because
+// the throw happens before oneShot cleanup. Post-run failures (oneShot
+// cleanup) log at error level but don't throw to avoid re-running the target.
 export const eventsDispatchJob = defineJob({
   name: "events.dispatch",
   input: z.object({
@@ -33,18 +33,15 @@ export const eventsDispatchJob = defineJob({
   run: async ({ input: p, ctx }) => {
     const target = UNSAFE_getRegisteredJob(p.jobName);
     if (!target) {
-      console.warn(
-        `[events] unknown job "${p.jobName}" (event "${p.eventName}", trigger ${p.triggerId}); preserving row`,
+      throw new Error(
+        `[events] unknown job "${p.jobName}" (event "${p.eventName}", trigger ${p.triggerId})`,
       );
-      return;
     }
     const parsedInput = target.inputSchema.safeParse(p.jobWith);
     if (!parsedInput.success) {
-      console.warn(
-        `[events] input drift for job "${p.jobName}" (event "${p.eventName}", trigger ${p.triggerId}); preserving row:`,
-        parsedInput.error.issues,
+      throw new Error(
+        `[events] input drift for job "${p.jobName}" (event "${p.eventName}", trigger ${p.triggerId}): ${parsedInput.error.message}`,
       );
-      return;
     }
     // `event: z.never()` is the sentinel for "this job ignores events"; skip
     // the parse and pass undefined. Otherwise validate the payload too.
@@ -55,11 +52,9 @@ export const eventsDispatchJob = defineJob({
     if (!isNeverEvent) {
       const parsedEvent = target.eventSchema.safeParse(p.eventPayload);
       if (!parsedEvent.success) {
-        console.warn(
-          `[events] event drift for job "${p.jobName}" (event "${p.eventName}", trigger ${p.triggerId}); preserving row:`,
-          parsedEvent.error.issues,
+        throw new Error(
+          `[events] event drift for job "${p.jobName}" (event "${p.eventName}", trigger ${p.triggerId}): ${parsedEvent.error.message}`,
         );
-        return;
       }
       eventArg = parsedEvent.data;
     }
@@ -67,7 +62,7 @@ export const eventsDispatchJob = defineJob({
     if (p.oneShot) {
       const table = triggerTableRegistry.get(p.eventName);
       if (!table) {
-        console.warn(
+        console.error(
           `[events] unknown event "${p.eventName}" at dispatch (trigger ${p.triggerId}); skipping oneShot cleanup`,
         );
         return;
