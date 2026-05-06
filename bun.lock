@@ -115,6 +115,18 @@
       "name": "@singularity/plugin-apps-agent-manager-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy": {
+      "name": "@singularity/plugin-apps-deploy",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/servers": {
+      "name": "@singularity/plugin-apps-deploy-servers",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/shell": {
+      "name": "@singularity/plugin-apps-deploy-shell",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/file-explorer": {
       "name": "@singularity/plugin-apps-file-explorer",
       "version": "0.0.1",
@@ -439,18 +451,6 @@
     },
     "plugins/debug/plugins/worktree-cleanup": {
       "name": "@singularity/plugin-debug-worktree-cleanup",
-    },
-    "plugins/deploy": {
-      "name": "@singularity/plugin-deploy",
-      "version": "0.0.1",
-    },
-    "plugins/deploy/plugins/servers": {
-      "name": "@singularity/plugin-deploy-servers",
-      "version": "0.0.1",
-    },
-    "plugins/deploy/plugins/shell": {
-      "name": "@singularity/plugin-deploy-shell",
-      "version": "0.0.1",
     },
     "plugins/events-test": {
       "name": "@singularity/plugin-events-test",
@@ -1384,6 +1384,12 @@
 
     "@singularity/plugin-apps-agent-manager-shell": ["@singularity/plugin-apps-agent-manager-shell@workspace:plugins/apps/plugins/agent-manager/plugins/shell"],
 
+    "@singularity/plugin-apps-deploy": ["@singularity/plugin-apps-deploy@workspace:plugins/apps/plugins/deploy"],
+
+    "@singularity/plugin-apps-deploy-servers": ["@singularity/plugin-apps-deploy-servers@workspace:plugins/apps/plugins/deploy/plugins/servers"],
+
+    "@singularity/plugin-apps-deploy-shell": ["@singularity/plugin-apps-deploy-shell@workspace:plugins/apps/plugins/deploy/plugins/shell"],
+
     "@singularity/plugin-apps-file-explorer": ["@singularity/plugin-apps-file-explorer@workspace:plugins/apps/plugins/file-explorer"],
 
     "@singularity/plugin-apps-file-explorer-shell": ["@singularity/plugin-apps-file-explorer-shell@workspace:plugins/apps/plugins/file-explorer/plugins/shell"],
@@ -1549,12 +1555,6 @@
     "@singularity/plugin-debug-queue": ["@singularity/plugin-debug-queue@workspace:plugins/debug/plugins/queue"],
 
     "@singularity/plugin-debug-worktree-cleanup": ["@singularity/plugin-debug-worktree-cleanup@workspace:plugins/debug/plugins/worktree-cleanup"],
-
-    "@singularity/plugin-deploy": ["@singularity/plugin-deploy@workspace:plugins/deploy"],
-
-    "@singularity/plugin-deploy-servers": ["@singularity/plugin-deploy-servers@workspace:plugins/deploy/plugins/servers"],
-
-    "@singularity/plugin-deploy-shell": ["@singularity/plugin-deploy-shell@workspace:plugins/deploy/plugins/shell"],
 
     "@singularity/plugin-events-test": ["@singularity/plugin-events-test@workspace:plugins/events-test"],
 

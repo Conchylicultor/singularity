@@ -2,7 +2,8 @@ import type { PluginDefinition } from "@core";
 import { Apps } from "@plugins/apps/web";
 import { MdCloud } from "react-icons/md";
 import { DeployLayout } from "./components/deploy-layout";
-import { serversRootPane } from "@plugins/deploy/plugins/servers/web";
+
+export { Deploy } from "./slots";
 
 export default {
   id: "deploy-shell",
@@ -15,7 +16,6 @@ export default {
       tooltip: "Deploy",
       component: DeployLayout,
       path: "/deploy",
-      onClick: () => serversRootPane.open({}),
     }),
   ],
 } satisfies PluginDefinition;

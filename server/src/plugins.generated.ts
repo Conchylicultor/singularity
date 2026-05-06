@@ -9,6 +9,8 @@ import type { ServerPluginDefinition } from "./types";
 import activeDataPlugin from "@plugins/active-data/server";
 import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/plugins/toggle/server";
 import agentsPlugin from "@plugins/agents/server";
+import appsDeployServersPlugin from "@plugins/apps/plugins/deploy/plugins/servers/server";
+import appsDeployPlugin from "@plugins/apps/plugins/deploy/server";
 import authGooglePlugin from "@plugins/auth/plugins/google/server";
 import authNotionPlugin from "@plugins/auth/plugins/notion/server";
 import buildPlugin from "@plugins/build/server";
@@ -45,8 +47,6 @@ import debugDbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
 import debugLogsPlugin from "@plugins/debug/plugins/logs/server";
 import debugMemoryPlugin from "@plugins/debug/plugins/memory/server";
 import debugWorktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/server";
-import deployServersPlugin from "@plugins/deploy/plugins/servers/server";
-import deployPlugin from "@plugins/deploy/server";
 import eventsTestPlugin from "@plugins/events-test/server";
 import healthPlugin from "@plugins/health/server";
 import improvePlugin from "@plugins/improve/server";
@@ -75,6 +75,8 @@ export const plugins: ServerPluginDefinition[] = [
   activeDataPlugin,
   agentsAutoLaunchTogglePlugin,
   agentsPlugin,
+  appsDeployServersPlugin,
+  appsDeployPlugin,
   authGooglePlugin,
   authNotionPlugin,
   buildPlugin,
@@ -111,8 +113,6 @@ export const plugins: ServerPluginDefinition[] = [
   debugLogsPlugin,
   debugMemoryPlugin,
   debugWorktreeCleanupPlugin,
-  deployServersPlugin,
-  deployPlugin,
   eventsTestPlugin,
   healthPlugin,
   improvePlugin,

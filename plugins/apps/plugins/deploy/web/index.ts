@@ -1,7 +1,5 @@
 import type { PluginDefinition } from "@core";
 
-export { Deploy } from "./slots";
-
 export default {
   id: "deploy",
   name: "Deploy",

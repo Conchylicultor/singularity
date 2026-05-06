@@ -6,7 +6,7 @@
 
 - Description: Server registry for the deployment platform. Server registry for the deployment platform.
 - Defines:
-  - DB schema: `plugins/deploy/plugins/servers/server/internal/tables.ts`
+  - DB schema: `plugins/apps/plugins/deploy/plugins/servers/server/internal/tables.ts`
 - Exports (web):
   - Types: `Server`
   - Values: `addServerPane`, `serverDetailPane`, `serversResource`, `serversRootPane`

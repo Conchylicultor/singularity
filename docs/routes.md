@@ -18,6 +18,14 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
         - **`toggle`** — Toggle on/off to activate agent auto-launch. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive. Server side of the agent auto-launch toggle. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive.
           - `/api/agent-auto-launch/:agentId (POST)`
 
+- **`apps`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
+  - Plugins:
+    - **`deploy`** — Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+      - Plugins:
+        - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
+          - `/api/deploy/servers (GET, POST)`
+          - `/api/deploy/servers/:id (GET, PATCH, DELETE)`
+
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - `/api/auth/start/:provider (GET)` _(central)_
   - `/api/auth/callback/:provider (GET)` _(central)_
@@ -116,12 +124,6 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
       - `/api/debug/worktrees (GET)`
       - `/api/debug/worktrees/bulk-delete (POST)`
       - `/api/debug/worktrees/:id (DELETE)`
-
-- **`deploy`** — Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
-  - Plugins:
-    - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
-      - `/api/deploy/servers (GET, POST)`
-      - `/api/deploy/servers/:id (GET, PATCH, DELETE)`
 
 - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
   - `/api/events-test/subscribe (POST)`

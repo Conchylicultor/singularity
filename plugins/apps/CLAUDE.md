@@ -11,6 +11,7 @@
 - Contributes:
   - `Core.Root` → `AppsLayout`
 - Sub-plugins:
+  - **`deploy`** — Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
   - **`file-explorer`** — File explorer app.
   - **`shell`** — App shell for the agent manager. Registers the / app entry and renders the main Shell layout.
 

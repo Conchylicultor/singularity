@@ -15,6 +15,9 @@ import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/pl
 import agentsAutoLaunchPlugin from "@plugins/agents/plugins/auto-launch/web";
 import agentsPlugin from "@plugins/agents/web";
 import appsAgentManagerShellPlugin from "@plugins/apps/plugins/agent-manager/plugins/shell/web";
+import appsDeployServersPlugin from "@plugins/apps/plugins/deploy/plugins/servers/web";
+import appsDeployShellPlugin from "@plugins/apps/plugins/deploy/plugins/shell/web";
+import appsDeployPlugin from "@plugins/apps/plugins/deploy/web";
 import appsFileExplorerShellPlugin from "@plugins/apps/plugins/file-explorer/plugins/shell/web";
 import appsFileExplorerPlugin from "@plugins/apps/plugins/file-explorer/web";
 import appsPlugin from "@plugins/apps/web";
@@ -92,9 +95,6 @@ import debugMemoryPlugin from "@plugins/debug/plugins/memory/web";
 import debugQueuePlugin from "@plugins/debug/plugins/queue/web";
 import debugWorktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/web";
 import debugPlugin from "@plugins/debug/web";
-import deployServersPlugin from "@plugins/deploy/plugins/servers/web";
-import deployShellPlugin from "@plugins/deploy/plugins/shell/web";
-import deployPlugin from "@plugins/deploy/web";
 import eventsTestPlugin from "@plugins/events-test/web";
 import healthPlugin from "@plugins/health/web";
 import improvePlugin from "@plugins/improve/web";
@@ -160,6 +160,9 @@ export const plugins: PluginDefinition[] = [
   agentsAutoLaunchPlugin,
   agentsPlugin,
   appsAgentManagerShellPlugin,
+  appsDeployServersPlugin,
+  appsDeployShellPlugin,
+  appsDeployPlugin,
   appsFileExplorerShellPlugin,
   appsFileExplorerPlugin,
   appsPlugin,
@@ -237,9 +240,6 @@ export const plugins: PluginDefinition[] = [
   debugQueuePlugin,
   debugWorktreeCleanupPlugin,
   debugPlugin,
-  deployServersPlugin,
-  deployShellPlugin,
-  deployPlugin,
   eventsTestPlugin,
   healthPlugin,
   improvePlugin,
