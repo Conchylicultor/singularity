@@ -6,6 +6,7 @@ import { CopyToolResultAction } from "./components/copy-result-action";
 export { JsonlViewerTool } from "./slots";
 export type { ToolRendererContribution } from "./slots";
 export { ToolCallCard } from "./components/tool-call-card";
+export { ToolFilePath, toRelativePath } from "./components/tool-file-path";
 
 export default {
   id: "conversation-jsonl-viewer-tool-call",

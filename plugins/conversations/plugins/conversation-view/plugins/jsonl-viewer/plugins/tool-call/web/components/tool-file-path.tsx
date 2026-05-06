@@ -1,0 +1,41 @@
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+
+export function toRelativePath(filePath: string, attemptId: string): string {
+  const marker = `/${attemptId}/`;
+  const idx = filePath.indexOf(marker);
+  return idx >= 0 ? filePath.slice(idx + marker.length) : filePath;
+}
+
+interface ToolFilePathProps {
+  filePath: string;
+}
+
+export function ToolFilePath({ filePath }: ToolFilePathProps) {
+  const { conversation } = conversationPane.useData();
+  const relativePath = toRelativePath(filePath, conversation.attemptId);
+
+  if (!filePath) return null;
+
+  const openFile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    convFilePeekPane.open({
+      convId: conversation.id,
+      worktree: conversation.attemptId,
+      filePath,
+    });
+  };
+
+  return (
+    <button
+      onClick={openFile}
+      className="w-max max-w-full overflow-hidden whitespace-nowrap font-mono text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+      style={{ direction: "rtl", textOverflow: "ellipsis" }}
+      title={relativePath}
+    >
+      <span style={{ direction: "ltr", unicodeBidi: "embed" }}>
+        {relativePath}
+      </span>
+    </button>
+  );
+}

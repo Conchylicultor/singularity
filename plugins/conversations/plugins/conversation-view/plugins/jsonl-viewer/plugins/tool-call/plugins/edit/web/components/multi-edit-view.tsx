@@ -1,6 +1,5 @@
 import type { ToolRendererProps, ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/shared";
-import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { EditSummary } from "./edit-summary";
+import { ToolCallCard, ToolFilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { InlineDiff } from "./inline-diff";
 
 type MultiEditInput = {
@@ -21,7 +20,7 @@ export function MultiEditView({ event }: ToolRendererProps) {
   const { file_path = "", edits = [] } = (event.input ?? {}) as Partial<MultiEditInput>;
   const multi = edits.length > 1;
   return (
-    <ToolCallCard event={event} summary={<EditSummary event={event} />} defaultOpen>
+    <ToolCallCard event={event} summary={<ToolFilePath filePath={file_path} />} defaultOpen>
       <div className="mt-2 space-y-3">
         {edits.map((edit, i) => (
           <div key={i}>

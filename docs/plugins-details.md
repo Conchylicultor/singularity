@@ -433,7 +433,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Slots: `JsonlViewerTool.Renderer`
               - Exports (web):
                 - Types: `ToolRendererContribution`
-                - Values: `JsonlViewerTool`, `ToolCallCard`
+                - Values: `JsonlViewerTool`, `ToolCallCard`, `ToolFilePath`, `toRelativePath`
               - Exports (shared):
                 - Types: `ToolCallEvent`, `ToolRendererProps`
               - Contributes:
