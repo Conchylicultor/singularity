@@ -107,6 +107,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `FileExplorer`
           - Contributes:
             - `Apps.App` → `FileExplorerLayout`
+    - **`shell`** — App shell for the agent manager. Registers the / app entry and renders the main Shell layout.
+      - Contributes:
+        - `Apps.App` → `AgentManagerLayout`
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - Exports (web):
@@ -1076,8 +1079,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Types: `ToastArgs`, `ToastVariant`
     - Values: `Shell`, `ShellCommands`
-  - Contributes:
-    - `Apps.App` → `ShellLayout`
   - Plugins:
     - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.
       - Contributes:
