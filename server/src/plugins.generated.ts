@@ -57,8 +57,8 @@ import infraGitWatcherPlugin from "@plugins/infra/plugins/git-watcher/server";
 import infraJobsPlugin from "@plugins/infra/plugins/jobs/server";
 import infraMcpPlugin from "@plugins/infra/plugins/mcp/server";
 import infraPlugin from "@plugins/infra/server";
+import pluginMetaPluginViewPlugin from "@plugins/plugin-meta/plugins/plugin-view/server";
 import primitivesRankPlugin from "@plugins/primitives/plugins/rank/server";
-import publishPlugin from "@plugins/publish/server";
 import reorderPlugin from "@plugins/reorder/server";
 import screenshotPlugin from "@plugins/screenshot/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
@@ -122,8 +122,8 @@ export const plugins: ServerPluginDefinition[] = [
   infraJobsPlugin,
   infraMcpPlugin,
   infraPlugin,
+  pluginMetaPluginViewPlugin,
   primitivesRankPlugin,
-  publishPlugin,
   reorderPlugin,
   screenshotPlugin,
   statsCommitsPlugin,

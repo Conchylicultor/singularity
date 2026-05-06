@@ -4,13 +4,11 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
 import { publishPane } from "./panes";
 
-export { publishPane } from "./panes";
-
 export default {
   id: "publish",
   name: "Publish",
   description:
-    "Review the worktree's plugin tree before publishing to the marketplace.",
+    "Sidebar entry and filterable tree pane for pre-publish plugin review.",
   contributions: [
     Pane.Register({ pane: publishPane }),
     Shell.Sidebar({

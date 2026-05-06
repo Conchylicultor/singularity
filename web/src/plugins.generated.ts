@@ -14,9 +14,6 @@ import activeDataPlugin from "@plugins/active-data/web";
 import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/plugins/toggle/web";
 import agentsAutoLaunchPlugin from "@plugins/agents/plugins/auto-launch/web";
 import agentsPlugin from "@plugins/agents/web";
-import appsAgentManagerShellPlugin from "@plugins/apps/plugins/agent-manager/plugins/shell/web";
-import appsFileExplorerShellPlugin from "@plugins/apps/plugins/file-explorer/plugins/shell/web";
-import appsFileExplorerPlugin from "@plugins/apps/plugins/file-explorer/web";
 import appsPlugin from "@plugins/apps/web";
 import attemptViewPlugin from "@plugins/attempt-view/web";
 import authGoogleSetupWizardPlugin from "@plugins/auth/plugins/google/plugins/setup-wizard/web";
@@ -99,7 +96,9 @@ import healthPlugin from "@plugins/health/web";
 import improvePlugin from "@plugins/improve/web";
 import infraAttachmentsPlugin from "@plugins/infra/plugins/attachments/web";
 import layoutsMillerPlugin from "@plugins/layouts/plugins/miller/web";
-import primitivesAppShellPlugin from "@plugins/primitives/plugins/app-shell/web";
+import pluginMetaPluginViewPlugin from "@plugins/plugin-meta/plugins/plugin-view/web";
+import pluginMetaPublishPlugin from "@plugins/plugin-meta/plugins/publish/web";
+import pluginMetaPlugin from "@plugins/plugin-meta/web";
 import primitivesAutoScrollPlugin from "@plugins/primitives/plugins/auto-scroll/web";
 import primitivesAvatarPlugin from "@plugins/primitives/plugins/avatar/web";
 import primitivesBreadcrumbPlugin from "@plugins/primitives/plugins/breadcrumb/web";
@@ -117,7 +116,6 @@ import primitivesRelativeTimePlugin from "@plugins/primitives/plugins/relative-t
 import primitivesSyntaxHighlightPlugin from "@plugins/primitives/plugins/syntax-highlight/web";
 import primitivesTreePlugin from "@plugins/primitives/plugins/tree/web";
 import primitivesPlugin from "@plugins/primitives/web";
-import publishPlugin from "@plugins/publish/web";
 import reorderEditModePlugin from "@plugins/reorder/plugins/edit-mode/web";
 import reorderPlugin from "@plugins/reorder/web";
 import screenshotDrawCanvasPlugin from "@plugins/screenshot/plugins/draw-canvas/web";
@@ -155,9 +153,6 @@ export const plugins: PluginDefinition[] = [
   agentsAutoLaunchTogglePlugin,
   agentsAutoLaunchPlugin,
   agentsPlugin,
-  appsAgentManagerShellPlugin,
-  appsFileExplorerShellPlugin,
-  appsFileExplorerPlugin,
   appsPlugin,
   attemptViewPlugin,
   authGoogleSetupWizardPlugin,
@@ -240,7 +235,9 @@ export const plugins: PluginDefinition[] = [
   improvePlugin,
   infraAttachmentsPlugin,
   layoutsMillerPlugin,
-  primitivesAppShellPlugin,
+  pluginMetaPluginViewPlugin,
+  pluginMetaPublishPlugin,
+  pluginMetaPlugin,
   primitivesAutoScrollPlugin,
   primitivesAvatarPlugin,
   primitivesBreadcrumbPlugin,
@@ -258,7 +255,6 @@ export const plugins: PluginDefinition[] = [
   primitivesSyntaxHighlightPlugin,
   primitivesTreePlugin,
   primitivesPlugin,
-  publishPlugin,
   reorderEditModePlugin,
   reorderPlugin,
   screenshotDrawCanvasPlugin,

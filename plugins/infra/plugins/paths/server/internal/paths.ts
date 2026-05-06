@@ -1,5 +1,8 @@
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+
+export const REPO_ROOT           = resolve(import.meta.dir, "..", "..", "..", "..", "..", "..");
+export const PLUGINS_DIR         = join(REPO_ROOT, "plugins");
 
 export const MAIN_WORKTREE_NAME  = "singularity";
 

@@ -1,4 +1,4 @@
-const repoRoot = import.meta.dir + "/../../../..";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 
 // Local-main only: the git-watcher plugin guarantees that any movement of
 // `refs/heads/main` triggers a refAdvanced emit, which both fans out to the
@@ -9,11 +9,11 @@ const repoRoot = import.meta.dir + "/../../../..";
 export async function getMainAheadCount(): Promise<number> {
   let base = "HEAD";
   try {
-    const stored = (await Bun.file(`${repoRoot}/web/dist/.build-commit`).text()).trim();
+    const stored = (await Bun.file(`${REPO_ROOT}/web/dist/.build-commit`).text()).trim();
     if (stored) base = stored;
   } catch {}
   const proc = Bun.spawnSync(["git", "log", `${base}..refs/heads/main`, "--oneline"], {
-    cwd: repoRoot,
+    cwd: REPO_ROOT,
   });
   if (proc.exitCode !== 0) return 0;
   const output = proc.stdout.toString().trim();

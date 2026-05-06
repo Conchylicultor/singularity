@@ -6,6 +6,8 @@ export const publishPane = Pane.define({
   after: [null],
   segment: "publish",
   component: PublishBody,
+  chrome: false,
+  width: 360,
 });
 
 function PublishBody() {

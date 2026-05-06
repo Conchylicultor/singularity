@@ -159,8 +159,10 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
       - `/api/secrets/meta (POST)` _(central)_
       - `/api/secrets/list (POST)` _(central)_
 
-- **`publish`** — Review the worktree's plugin tree before publishing to the marketplace. Read-only review surface for the marketplace publish flow. Walks the worktree's plugin tree and exposes it as a flat tree.
-  - `/api/publish/tree (GET)`
+- **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
+  - Plugins:
+    - **`plugin-view`** — Reusable detail pane for inspecting a single plugin — runtimes, sub-plugins, source path. Serves the plugin tree data for the plugin-view pane.
+      - `/api/plugin-view/tree (GET)`
 
 - **`reorder`** — Generic reorder primitive. Slot owners opt in via Reorder.area; hosts render with Reorder.useArea. Generic reorder primitive: per-worktree storage of slot contribution ranks.
   - `/api/reorder/:slotId (GET, PATCH)`

@@ -1,8 +1,6 @@
-import { resolve } from "path";
 import { buildPluginTree, type PluginNode as TreePluginNode } from "@plugins/packages/plugins/plugin-tree/shared";
-import type { PluginNode, PublishTreePayload } from "../../shared/types";
-
-const PLUGINS_ROOT = resolve(import.meta.dir, "..", "..", "..");
+import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
+import type { PluginNode, PluginTreePayload } from "../../shared/types";
 
 function toApiNode(node: TreePluginNode): PluginNode {
   return {
@@ -27,12 +25,12 @@ function tally(
 }
 
 export function handleTree(): Response {
-  const tree = buildPluginTree(PLUGINS_ROOT);
+  const tree = buildPluginTree(PLUGINS_DIR);
   const plugins = tree.roots.map(toApiNode);
 
   const totals = { plugins: 0, loadBearing: 0, umbrellas: 0 };
   for (const p of plugins) tally(p, totals);
 
-  const payload: PublishTreePayload = { plugins, totals };
+  const payload: PluginTreePayload = { plugins, totals };
   return Response.json(payload);
 }

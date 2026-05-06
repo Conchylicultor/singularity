@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { MdBolt, MdChevronRight, MdExpandMore } from "react-icons/md";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import type { PluginNode } from "../../shared/types";
+import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/shared";
 
 interface PluginTreeProps {
   plugins: PluginNode[];

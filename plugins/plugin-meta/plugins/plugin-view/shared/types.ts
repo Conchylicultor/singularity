@@ -11,7 +11,7 @@ export interface PluginNode {
   children: PluginNode[];
 }
 
-export interface PublishTreePayload {
+export interface PluginTreePayload {
   plugins: PluginNode[];
   totals: {
     plugins: number;

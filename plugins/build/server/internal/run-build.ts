@@ -1,4 +1,5 @@
 import { Log } from "@plugins/debug/plugins/logs/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 
 const buildLog = Log.channel("build");
 
@@ -25,7 +26,7 @@ async function doRunBuild(): Promise<number> {
   // doesn't kill the build mid-flight. The CLI itself uses a filesystem lock
   // and atomic-rename publish, so even across restarts web/dist stays whole.
   const proc = Bun.spawn(["./singularity", "build", "--no-restart", "--allow-main"], {
-    cwd: import.meta.dir + "/../../../..",
+    cwd: REPO_ROOT,
     stdout: "pipe",
     stderr: "pipe",
     detached: true,
