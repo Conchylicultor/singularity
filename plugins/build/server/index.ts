@@ -1,6 +1,7 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { deleteTriggersFor, trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
+import { isMain } from "@plugins/infra/plugins/paths/server";
 import { readConfig } from "@plugins/config/server";
 import { handleBuild } from "./internal/handle-build";
 import { handleBuildStatus } from "./internal/handle-build-status";
@@ -20,10 +21,10 @@ export default {
   },
   register: [buildRunJob],
   onReady: async () => {
-    // Idempotent re-subscribe: remove any stale git.refAdvanced → buildRunJob
-    // trigger rows (from a prior server incarnation), then insert a single
-    // persistent (oneShot:false) trigger so every refAdvanced for
-    // refs/heads/main enqueues a build.
+    // Auto-build only on main — all worktrees share .git/refs, so every
+    // server sees refAdvanced and would each spawn its own build.
+    if (!isMain()) return;
+
     await deleteTriggersFor(buildRunJob);
     await trigger({
       on: refAdvanced.where({ refName: "refs/heads/main" }),
@@ -32,10 +33,6 @@ export default {
       oneShot: false,
     });
 
-    // Catch-up: ref advances that landed while the server was down don't
-    // re-emit on restart, so enqueue once if main is ahead of the last
-    // build. The job itself rechecks the autoBuild config — this pre-check
-    // avoids touching git on every start when auto-build is disabled.
     const { autoBuild } = await readConfig(buildConfig);
     if (autoBuild) {
       const aheadCount = await getMainAheadCount();
