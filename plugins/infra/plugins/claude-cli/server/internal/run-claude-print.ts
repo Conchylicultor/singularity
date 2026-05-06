@@ -1,6 +1,14 @@
 import { CLAUDE as CLAUDE_BIN } from "@plugins/infra/plugins/paths/server";
 import { recordClaudeCliCall } from "./record-call";
 
+// Strip inherited Claude Code env vars so one-shot `claude --print` calls
+// don't inherit the parent session's settings (e.g. CLAUDE_CODE_EXTRA_BODY
+// with adaptive thinking, which Haiku doesn't support).
+const cleanEnv: Record<string, string> = {};
+for (const [k, v] of Object.entries(process.env)) {
+  if (v !== undefined && !k.startsWith("CLAUDE_CODE_")) cleanEnv[k] = v;
+}
+
 const MODEL_IDS: Record<ClaudePrintModel, string> = {
   haiku: "claude-haiku-4-5",
   sonnet: "claude-sonnet-4-6",
@@ -58,6 +66,7 @@ export async function runClaudePrint(input: RunClaudePrintInput): Promise<string
       stdin: "pipe",
       stdout: "pipe",
       stderr: "pipe",
+      env: cleanEnv,
     });
     proc.stdin.write(input.prompt);
     await proc.stdin.end();
@@ -70,8 +79,9 @@ export async function runClaudePrint(input: RunClaudePrintInput): Promise<string
         proc.exited,
       ]);
       if (exit !== 0) {
+        const detail = stderr.trim() || stdout.trim() || "<no output>";
         throw new ClaudeCliError(
-          `claude --print exited ${exit}: ${stderr.trim() || "<no stderr>"}`,
+          `claude --print exited ${exit}: ${detail}`,
         );
       }
       output = stdout;
