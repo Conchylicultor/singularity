@@ -121,6 +121,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
 
+- **`database`**
+  - Plugins:
+    - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
+
 - **`debug`** — Debug tools sidebar group.
   - Plugins:
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.

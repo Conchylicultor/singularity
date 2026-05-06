@@ -425,6 +425,14 @@
       "name": "@singularity/plugin-crashes-launch-fix",
       "version": "0.0.1",
     },
+    "plugins/database": {
+      "name": "@singularity/plugin-database",
+      "version": "0.0.1",
+    },
+    "plugins/database/plugins/query": {
+      "name": "@singularity/plugin-database-query",
+      "version": "0.0.1",
+    },
     "plugins/debug": {
       "name": "@singularity/plugin-debug",
       "version": "0.0.1",
@@ -1541,6 +1549,10 @@
     "@singularity/plugin-crashes": ["@singularity/plugin-crashes@workspace:plugins/crashes"],
 
     "@singularity/plugin-crashes-launch-fix": ["@singularity/plugin-crashes-launch-fix@workspace:plugins/crashes/plugins/launch-fix"],
+
+    "@singularity/plugin-database": ["@singularity/plugin-database@workspace:plugins/database"],
+
+    "@singularity/plugin-database-query": ["@singularity/plugin-database-query@workspace:plugins/database/plugins/query"],
 
     "@singularity/plugin-debug": ["@singularity/plugin-debug@workspace:plugins/debug"],
 

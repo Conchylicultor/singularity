@@ -1,0 +1,79 @@
+import { z } from "zod";
+import { basename } from "path";
+import { Mcp } from "@plugins/infra/plugins/mcp/server";
+import { getConversation } from "@plugins/tasks-core/server";
+import { openShortLivedClient } from "@server/db/client";
+import { databaseExists } from "@plugins/infra/plugins/database/server";
+
+const MAX_ROWS = 200;
+
+export const queryDbTool = Mcp.tool({
+  name: "query_db",
+  description: `Execute a read-only SQL query against a worktree's PostgreSQL database.
+For debugging and inspection only. All queries run in a READ ONLY transaction.
+Returns up to ${MAX_ROWS} rows.
+
+Default: queries the current conversation's worktree database.
+Pass \`database\` to target a different worktree (e.g. "att-1778089188-7uvf" or "singularity" for main).`,
+  inputSchema: {
+    sql: z.string().min(1).describe("SQL query to execute (read-only)."),
+    database: z
+      .string()
+      .optional()
+      .describe(
+        "Target database name (worktree name). Defaults to the conversation's own worktree DB.",
+      ),
+  },
+  async handler({ sql, database }, { conversationId }) {
+    let dbName: string;
+    if (database) {
+      dbName = database;
+    } else {
+      const conv = await getConversation(conversationId);
+      if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);
+      dbName = basename(conv.worktreePath);
+    }
+
+    if (!/^[a-zA-Z0-9_-]+$/.test(dbName)) {
+      throw new Error(`Unsafe database name: "${dbName}"`);
+    }
+    if (!(await databaseExists(dbName))) {
+      throw new Error(`Database not found: "${dbName}"`);
+    }
+
+    const pool = openShortLivedClient(dbName);
+    try {
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN TRANSACTION READ ONLY");
+        await client.query("SET LOCAL statement_timeout = '5000'");
+        let result;
+        try {
+          result = await client.query(sql);
+        } finally {
+          await client.query("ROLLBACK");
+        }
+        const rows = result.rows.slice(0, MAX_ROWS);
+        const columns = result.fields.map((f: { name: string }) => f.name);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({
+                database: dbName,
+                columns,
+                rows,
+                rowCount: result.rowCount,
+                truncated: (result.rowCount ?? 0) > MAX_ROWS,
+              }),
+            },
+          ],
+        };
+      } finally {
+        client.release();
+      }
+    } finally {
+      await pool.end();
+    }
+  },
+});

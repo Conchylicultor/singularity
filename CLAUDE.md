@@ -25,6 +25,12 @@ RULES:
 - NEVER commit files yourself (this will create branch conflicts). Always use `./singularity push -m "commit message"`
 - NEVER run `drizzle-kit generate` or `bun src/db/migrate.ts` manually — always go through `./singularity build`.
 
+### MCP Tools
+
+Agents have access to MCP tools provided by the Singularity server. Key tools:
+
+- `query_db` — Read-only SQL query against the worktree's PostgreSQL database. For **debugging and inspection only** — mutations are rejected at the DB level. Defaults to the agent's own worktree DB; pass `database` to query another worktree or `"singularity"` for main.
+
 ## Architecture
 
 Every feature is a **plugin**. The core app is thin plumbing that connects plugins together via a slot-based extension system.
