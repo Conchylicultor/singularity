@@ -14,6 +14,8 @@ import activeDataPlugin from "@plugins/active-data/web";
 import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/plugins/toggle/web";
 import agentsAutoLaunchPlugin from "@plugins/agents/plugins/auto-launch/web";
 import agentsPlugin from "@plugins/agents/web";
+import appsFileExplorerShellPlugin from "@plugins/apps/plugins/file-explorer/plugins/shell/web";
+import appsFileExplorerPlugin from "@plugins/apps/plugins/file-explorer/web";
 import appsPlugin from "@plugins/apps/web";
 import attemptViewPlugin from "@plugins/attempt-view/web";
 import authGoogleSetupWizardPlugin from "@plugins/auth/plugins/google/plugins/setup-wizard/web";
@@ -96,6 +98,7 @@ import healthPlugin from "@plugins/health/web";
 import improvePlugin from "@plugins/improve/web";
 import infraAttachmentsPlugin from "@plugins/infra/plugins/attachments/web";
 import layoutsMillerPlugin from "@plugins/layouts/plugins/miller/web";
+import primitivesAppShellPlugin from "@plugins/primitives/plugins/app-shell/web";
 import primitivesAutoScrollPlugin from "@plugins/primitives/plugins/auto-scroll/web";
 import primitivesAvatarPlugin from "@plugins/primitives/plugins/avatar/web";
 import primitivesBreadcrumbPlugin from "@plugins/primitives/plugins/breadcrumb/web";
@@ -151,6 +154,8 @@ export const plugins: PluginDefinition[] = [
   agentsAutoLaunchTogglePlugin,
   agentsAutoLaunchPlugin,
   agentsPlugin,
+  appsFileExplorerShellPlugin,
+  appsFileExplorerPlugin,
   appsPlugin,
   attemptViewPlugin,
   authGoogleSetupWizardPlugin,
@@ -233,6 +238,7 @@ export const plugins: PluginDefinition[] = [
   improvePlugin,
   infraAttachmentsPlugin,
   layoutsMillerPlugin,
+  primitivesAppShellPlugin,
   primitivesAutoScrollPlugin,
   primitivesAvatarPlugin,
   primitivesBreadcrumbPlugin,

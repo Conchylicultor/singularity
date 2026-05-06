@@ -107,6 +107,14 @@
     "plugins/apps": {
       "name": "@singularity/plugin-apps",
     },
+    "plugins/apps/plugins/file-explorer": {
+      "name": "@singularity/plugin-apps-file-explorer",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/file-explorer/plugins/shell": {
+      "name": "@singularity/plugin-apps-file-explorer-shell",
+      "version": "0.0.1",
+    },
     "plugins/attempt-view": {
       "name": "@singularity/plugin-attempt-view",
       "version": "0.0.1",
@@ -527,6 +535,10 @@
     },
     "plugins/primitives": {
       "name": "@singularity/plugin-primitives",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/app-shell": {
+      "name": "@singularity/plugin-primitives-app-shell",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/auto-scroll": {
@@ -1344,6 +1356,10 @@
 
     "@singularity/plugin-apps": ["@singularity/plugin-apps@workspace:plugins/apps"],
 
+    "@singularity/plugin-apps-file-explorer": ["@singularity/plugin-apps-file-explorer@workspace:plugins/apps/plugins/file-explorer"],
+
+    "@singularity/plugin-apps-file-explorer-shell": ["@singularity/plugin-apps-file-explorer-shell@workspace:plugins/apps/plugins/file-explorer/plugins/shell"],
+
     "@singularity/plugin-attempt-view": ["@singularity/plugin-attempt-view@workspace:plugins/attempt-view"],
 
     "@singularity/plugin-auth": ["@singularity/plugin-auth@workspace:plugins/auth"],
@@ -1551,6 +1567,8 @@
     "@singularity/plugin-packages-retry": ["@singularity/plugin-packages-retry@workspace:plugins/packages/plugins/retry"],
 
     "@singularity/plugin-primitives": ["@singularity/plugin-primitives@workspace:plugins/primitives"],
+
+    "@singularity/plugin-primitives-app-shell": ["@singularity/plugin-primitives-app-shell@workspace:plugins/primitives/plugins/app-shell"],
 
     "@singularity/plugin-primitives-auto-scroll": ["@singularity/plugin-primitives-auto-scroll@workspace:plugins/primitives/plugins/auto-scroll"],
 
