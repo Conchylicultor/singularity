@@ -1,6 +1,8 @@
 import { existsSync } from "fs";
 import { join, sep } from "path";
 import { buildPluginTree } from "@plugins/packages/plugins/plugin-tree/shared";
+import { createBoundaryCheck } from "../boundaries/check";
+import boundaryConfig from "../../../boundary.config";
 import { conversationTrailer } from "./conversation-trailer";
 import { eslintCheck } from "./eslint";
 import { migrationsInSync } from "./migrations-in-sync";
@@ -19,6 +21,8 @@ import { pluginsRegistryInSync } from "./plugins-registry-in-sync";
 import { snapshotChainIntact } from "./snapshot-chain-intact";
 import type { Check } from "./types";
 
+const boundaryRules = createBoundaryCheck(boundaryConfig);
+
 export const CHECKS: Check[] = [
   conversationTrailer,
   migrationsInSync,
@@ -27,6 +31,7 @@ export const CHECKS: Check[] = [
   pluginsRegistryInSync,
   pluginsHaveClaudeMd,
   pluginBoundaries,
+  boundaryRules,
   noPluginImportsInCore,
   noPluginWorkspaceDeps,
   noRawEventSource,
