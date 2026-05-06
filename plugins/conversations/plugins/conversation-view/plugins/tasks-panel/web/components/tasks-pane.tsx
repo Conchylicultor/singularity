@@ -4,7 +4,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { TasksList } from "@plugins/tasks/plugins/task-list/web";
-import { TaskDetail, TaskFileOpenProvider } from "@plugins/tasks/plugins/task-detail/web";
+import { TaskDetail, TaskDetailSlots, TaskFileOpenProvider } from "@plugins/tasks/plugins/task-detail/web";
 import { tasksResource } from "@plugins/tasks/shared";
 import { convTasksPane } from "../panes";
 import { TasksPaneContext } from "./tasks-pane-context";
@@ -16,6 +16,12 @@ export function TasksPane() {
   const [selectedId, setSelectedId] = useState<string>(convRootId);
 
   useResource(tasksResource);
+
+  const aboveBands = TaskDetailSlots.Above.useContributions();
+  const orderedAbove = useMemo(
+    () => [...aboveBands].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [aboveBands],
+  );
 
   const ctx = useMemo(
     () => ({ viewRootId, selectedId, setViewRootId, setSelectedId }),
@@ -33,6 +39,9 @@ export function TasksPane() {
               onSelect={setSelectedId}
             />
           </div>
+          {orderedAbove.map((band) => (
+            <band.component key={band.id} taskId={selectedId} />
+          ))}
           <div className="min-h-0 flex-1 overflow-auto">
             <TaskFileOpenProvider
               value={(path) =>
