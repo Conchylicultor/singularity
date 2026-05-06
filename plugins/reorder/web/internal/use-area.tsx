@@ -18,7 +18,8 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { MdAdd, MdClose } from "react-icons/md";
+import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
+import { Input } from "@/components/ui/input";
 import { Rank } from "@plugins/primitives/plugins/rank/shared";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -242,7 +243,7 @@ export function useArea<P extends BaseItem>(
               }}
             >
               {children}
-              {em && hiddenItemsRef.current.length > 0 && <RestoreButton />}
+              {em && <RestoreButton />}
             </DndContext>
           </ReorderAreaContext.Provider>
         );
@@ -355,6 +356,7 @@ function ReorderItemActive({
 function RestoreButton() {
   const ctx = useContext(ReorderAreaContext)!;
   const [open, setOpen] = useState(false);
+  const hasHidden = ctx.hiddenItems.length > 0;
 
   function handleRestore(contributionId: string) {
     void fetch(`/api/reorder/${ctx.storageId}`, {
@@ -368,27 +370,61 @@ function RestoreButton() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className="mt-1 flex h-7 w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-muted-foreground/40 text-xs text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground transition-colors reorder-wiggle"
-        aria-label="Restore hidden items"
+        aria-label="Add items"
       >
         <MdAdd className="size-3.5" />
-        {ctx.hiddenItems.length === 1
-          ? "1 hidden"
-          : `${ctx.hiddenItems.length} hidden`}
+        {hasHidden
+          ? ctx.hiddenItems.length === 1
+            ? "1 hidden"
+            : `${ctx.hiddenItems.length} hidden`
+          : "Add"}
       </PopoverTrigger>
-      <PopoverContent className="w-48 p-1" align="start">
-        {ctx.hiddenItems.map((item) => (
+      <PopoverContent className="w-56 p-0" align="start">
+        {hasHidden && (
+          <div className="p-1">
+            {ctx.hiddenItems.map((item) => (
+              <button
+                key={item.id}
+                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
+                onClick={() => {
+                  handleRestore(item.id);
+                  if (ctx.hiddenItems.length <= 1) setOpen(false);
+                }}
+              >
+                <MdAdd className="size-3.5 shrink-0 text-muted-foreground" />
+                {ctx.getLabel(item)}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="border-t border-border px-2.5 py-2">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1.5">
+            <MdStorefront className="size-3.5" />
+            Marketplace
+          </div>
+          <div className="relative">
+            <MdSearch className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search..."
+              className="h-7 pl-7 text-xs"
+              disabled
+            />
+          </div>
+          <p className="mt-1.5 text-center text-xs text-muted-foreground/60">
+            No items
+          </p>
+        </div>
+
+        <div className="border-t border-border p-1">
           <button
-            key={item.id}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
-            onClick={() => {
-              handleRestore(item.id);
-              if (ctx.hiddenItems.length <= 1) setOpen(false);
-            }}
+            disabled
+            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-muted-foreground/50 cursor-not-allowed"
           >
-            <MdAdd className="size-3.5 shrink-0 text-muted-foreground" />
-            {ctx.getLabel(item)}
+            <MdAdd className="size-3.5 shrink-0" />
+            Create custom plugin
           </button>
-        ))}
+        </div>
       </PopoverContent>
     </Popover>
   );
