@@ -1,10 +1,12 @@
-import { useEffect, useMemo } from "react";
-import { MdDeleteForever, MdRocketLaunch } from "react-icons/md";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MdDeleteForever, MdRocketLaunch, MdSend } from "react-icons/md";
 import { LogOut, Play } from "lucide-react";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import { isDraftEmpty } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, useConversation } from "@plugins/conversations/web";
 import { isActiveStatus } from "@plugins/conversations/shared";
 import { ShellCommands as Shell } from "@plugins/shell/web";
+import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pushesResource } from "@plugins/tasks/shared";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
@@ -22,7 +24,7 @@ import {
   type JobState,
 } from "../../shared/resources";
 
-type Mode = "push-and-exit" | "exit" | "drop-and-exit" | "go";
+type Mode = "send" | "push-and-exit" | "exit" | "drop-and-exit" | "go";
 
 export function PushAndExitButton({
   conversation,
@@ -34,11 +36,17 @@ export function PushAndExitButton({
   const job = jobs?.[conversation.id] as JobState | undefined;
   const busy = job?.status === "running";
 
+  const [draft, , clearDraft] = useDraft("conversation:prompt", "", { scope: conversation.id });
+  const [sending, setSending] = useState(false);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+
   const { files } = useEditedFiles(conversation.id);
   const { data: pushes } = useResource(pushesResource);
   const { active, isLoading: conversationsLoading } = useConversations();
 
   const mode: Mode = useMemo(() => {
+    if (!isDraftEmpty(draft)) return "send";
     // Until every input has loaded, default to "push-and-exit" — the safe
     // assumption (treat the conversation as if it has unpushed work) and
     // prevents the label from flickering through "Drop & Exit" / "Exit"
@@ -59,7 +67,7 @@ export function PushAndExitButton({
         isActiveStatus(c.status),
     );
     return hasOtherActiveInWorktree ? "exit" : "drop-and-exit";
-  }, [files, pushes, active, conversationsLoading, conversation.attemptId, conversation.id, conversation.worktreePath]);
+  }, [draft, files, pushes, active, conversationsLoading, conversation.attemptId, conversation.id, conversation.worktreePath]);
 
   useEffect(() => {
     if (!busy) return;
@@ -92,11 +100,34 @@ export function PushAndExitButton({
     ).catch(() => {});
   }, [job?.status]);
 
-  const disabled = busy || live.status === "gone" || live.status === "starting";
+  const disabled = busy || sending || live.status === "gone" || live.status === "starting";
 
   async function onClick() {
     if (disabled) return;
-    if (mode === "go") {
+    if (mode === "send") {
+      const current = draftRef.current;
+      if (isDraftEmpty(current)) return;
+      setSending(true);
+      try {
+        const res = await fetch(
+          `/api/conversations/${encodeURIComponent(conversation.id)}/turn`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ text: current }),
+          },
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        clearDraft();
+      } catch (err) {
+        Shell.Toast({
+          description: `Failed to send: ${err instanceof Error ? err.message : String(err)}`,
+          variant: "error",
+        });
+      } finally {
+        setSending(false);
+      }
+    } else if (mode === "go") {
       try {
         const res = await fetch(
           `/api/conversations/${encodeURIComponent(conversation.id)}/turn`,
@@ -195,24 +226,30 @@ export function PushAndExitButton({
       : undefined;
 
   const label =
-    mode === "go"
-      ? "Go"
-      : mode === "push-and-exit"
-        ? busy
-          ? "Pushing…"
-          : "Push & Exit"
-        : mode === "exit"
-          ? "Exit"
-          : "Drop & Exit";
+    mode === "send"
+      ? sending
+        ? "Sending…"
+        : "Send"
+      : mode === "go"
+        ? "Go"
+        : mode === "push-and-exit"
+          ? busy
+            ? "Pushing…"
+            : "Push & Exit"
+          : mode === "exit"
+            ? "Exit"
+            : "Drop & Exit";
 
   const Icon =
-    mode === "go"
-      ? Play
-      : mode === "push-and-exit"
-        ? MdRocketLaunch
-        : mode === "exit"
-          ? LogOut
-          : MdDeleteForever;
+    mode === "send"
+      ? MdSend
+      : mode === "go"
+        ? Play
+        : mode === "push-and-exit"
+          ? MdRocketLaunch
+          : mode === "exit"
+            ? LogOut
+            : MdDeleteForever;
 
   const buttonClass =
     mode === "go"
