@@ -26,54 +26,10 @@ for (const p of ordered) {
 await awaitPgReady();
 await runMigrations();
 
-// Phase 2 — onReady: parallel. Background work that needs the DB / a fully
-// populated registry. Running this from a plugin's module body would race
-// both phases above.
-await Promise.all(
-  ordered.map((p) =>
-    Promise.resolve()
-      .then(() => p.onReady?.())
-      .catch((err) => {
-        console.error(`[plugin.${p.id}] onReady failed`, err);
-        if (p.loadBearing) throw err;
-      }),
-  ),
-);
-
-// Graceful shutdown: drain workers, flush state, release DB connections.
-// Guarded against double-entry so both SIGTERM and a follow-up SIGINT can't
-// run shutdown twice while the first pass is still draining.
-let shuttingDown = false;
-async function shutdown(signal: string): Promise<void> {
-  if (shuttingDown) return;
-  shuttingDown = true;
-  console.log(`[server] ${signal} received; shutting down`);
-  await Promise.all(
-    ordered.map((p) =>
-      Promise.resolve()
-        .then(() => p.onShutdown?.())
-        .catch((err) =>
-          console.error(`[plugin.${p.id}] onShutdown failed`, err),
-        ),
-    ),
-  );
-  process.exit(0);
-}
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
-
-// Exit when orphaned (parent gateway died and we were reparented to init).
-// macOS has no PR_SET_PDEATHSIG equivalent, so poll. Without this, old
-// backends survive gateway crashes, leak PTYs, and hold onto ports.
-if (process.ppid !== 1) {
-  setInterval(() => {
-    if (process.ppid === 1) process.exit(0);
-  }, 2000).unref();
-}
-
-// Flatten plugin routes into lookup tables.
-// Literal routes go in an O(1) map; routes with :param segments are matched
-// linearly in registration order.
+// ── Route tables ────────────────────────────────────────────────
+// Flatten plugin routes into lookup tables. Literal routes go in an O(1)
+// map; routes with :param segments are matched linearly in registration
+// order.
 interface ParamRoute<H> {
   segments: Array<{ literal: string } | { param: string }>;
   handler: H;
@@ -147,6 +103,12 @@ for (const plugin of ordered) {
 wsRoutes["/ws/notifications"] = notificationsWsHandler;
 registerHttpRoute("GET /api/resources/:key", handleResourceHttp);
 
+// ── Bind socket ─────────────────────────────────────────────────
+// Bind immediately after migrations so the gateway detects readiness and
+// starts proxying. onReady hooks run background work (graphile-worker DDL,
+// git-log reconcile, file watchers, trigger setup) that isn't needed for
+// serving HTTP/WS. Without this, the frontend loads instantly (static files)
+// but stays stuck on "Server: Reconnecting" for the entire onReady phase.
 const socketPath = Bun.env.SOCKET_PATH;
 if (!socketPath) throw new Error("SOCKET_PATH env var is required");
 
@@ -191,3 +153,49 @@ Bun.serve<WsData>({
 });
 
 console.log(`Server listening on ${socketPath}`);
+
+// ── onReady ─────────────────────────────────────────────────────
+// Phase 2 — onReady: parallel. Background work that needs the DB / a fully
+// populated registry. Runs after the socket is bound so the server is
+// already serving requests during this phase.
+await Promise.all(
+  ordered.map((p) =>
+    Promise.resolve()
+      .then(() => p.onReady?.())
+      .catch((err) => {
+        console.error(`[plugin.${p.id}] onReady failed`, err);
+        if (p.loadBearing) throw err;
+      }),
+  ),
+);
+
+// Graceful shutdown: drain workers, flush state, release DB connections.
+// Guarded against double-entry so both SIGTERM and a follow-up SIGINT can't
+// run shutdown twice while the first pass is still draining.
+let shuttingDown = false;
+async function shutdown(signal: string): Promise<void> {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[server] ${signal} received; shutting down`);
+  await Promise.all(
+    ordered.map((p) =>
+      Promise.resolve()
+        .then(() => p.onShutdown?.())
+        .catch((err) =>
+          console.error(`[plugin.${p.id}] onShutdown failed`, err),
+        ),
+    ),
+  );
+  process.exit(0);
+}
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+// Exit when orphaned (parent gateway died and we were reparented to init).
+// macOS has no PR_SET_PDEATHSIG equivalent, so poll. Without this, old
+// backends survive gateway crashes, leak PTYs, and hold onto ports.
+if (process.ppid !== 1) {
+  setInterval(() => {
+    if (process.ppid === 1) process.exit(0);
+  }, 2000).unref();
+}
