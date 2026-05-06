@@ -1,6 +1,6 @@
 import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
 import { FileContent } from "./file-content";
-import { Breadcrumb } from "@plugins/primitives/plugins/breadcrumb/web";
+import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
 import { FileTabs } from "./file-tabs";
 import { useFileRenderers } from "./use-file-renderers";
 
@@ -18,7 +18,7 @@ export function FilePaneView({
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2 border-b px-2 py-1.5 text-sm">
         <div className="min-w-0 flex-1">
-          <Breadcrumb path={path} />
+          <FilepathBreadcrumb path={path} />
         </div>
         <FileTabs {...renderers} />
       </div>

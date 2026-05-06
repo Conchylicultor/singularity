@@ -585,6 +585,10 @@
       "name": "@singularity/plugin-primitives-file-links",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/filepath-breadcrumb": {
+      "name": "@singularity/plugin-primitives-filepath-breadcrumb",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/launch": {
       "name": "@singularity/plugin-primitives-launch",
       "version": "0.0.1",
@@ -1607,6 +1611,8 @@
     "@singularity/plugin-primitives-error-boundary": ["@singularity/plugin-primitives-error-boundary@workspace:plugins/primitives/plugins/error-boundary"],
 
     "@singularity/plugin-primitives-file-links": ["@singularity/plugin-primitives-file-links@workspace:plugins/primitives/plugins/file-links"],
+
+    "@singularity/plugin-primitives-filepath-breadcrumb": ["@singularity/plugin-primitives-filepath-breadcrumb@workspace:plugins/primitives/plugins/filepath-breadcrumb"],
 
     "@singularity/plugin-primitives-launch": ["@singularity/plugin-primitives-launch@workspace:plugins/primitives/plugins/launch"],
 

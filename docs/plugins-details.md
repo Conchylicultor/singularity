@@ -966,9 +966,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `AvatarColor`, `AvatarPickerProps`, `AvatarProps`, `AvatarSize`, `AvatarSpec`
         - Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `AVATAR_ICON_KEYS`, `AVATAR_ICONS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`, `resolveAvatarIcon`
-    - **`breadcrumb`** — File-path breadcrumb with per-segment clickable navigation. Exposes <Breadcrumb path={…} onNavigate={…} />.
+    - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
       - Exports (web):
-        - Types: `BreadcrumbProps`
+        - Types: `BreadcrumbProps`, `BreadcrumbSegment`
         - Values: `Breadcrumb`
     - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
       - Exports (web):
@@ -985,6 +985,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `FileLinkSegment`, `FileLinkTextProps`
         - Values: `FILE_PATH_RE`, `FileLinkText`, `linkifyChildren`, `parseFileLinks`, `URL_RE`
+    - **`filepath-breadcrumb`** — File-path breadcrumb with copy-to-clipboard and directory navigation. Wraps the generic Breadcrumb with filepath-specific behavior.
+      - Exports (web):
+        - Types: `FilepathBreadcrumbProps`
+        - Values: `FilepathBreadcrumb`
     - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
       - Exports (web):
         - Types: `LaunchButtonsProps`, `LaunchRequest`

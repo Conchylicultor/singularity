@@ -1,11 +1,15 @@
 import type { PluginDefinition } from "@core";
 
-export { Breadcrumb, type BreadcrumbProps } from "./internal/breadcrumb";
+export {
+  Breadcrumb,
+  type BreadcrumbProps,
+  type BreadcrumbSegment,
+} from "./internal/breadcrumb";
 
 export default {
   id: "breadcrumb",
   name: "Breadcrumb",
   description:
-    "File-path breadcrumb with per-segment clickable navigation. Exposes <Breadcrumb path={…} onNavigate={…} />.",
+    "Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.",
   contributions: [],
 } satisfies PluginDefinition;

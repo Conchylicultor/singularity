@@ -109,6 +109,7 @@ import primitivesBreadcrumbPlugin from "@plugins/primitives/plugins/breadcrumb/w
 import primitivesEditableFieldPlugin from "@plugins/primitives/plugins/editable-field/web";
 import primitivesErrorBoundaryPlugin from "@plugins/primitives/plugins/error-boundary/web";
 import primitivesFileLinksPlugin from "@plugins/primitives/plugins/file-links/web";
+import primitivesFilepathBreadcrumbPlugin from "@plugins/primitives/plugins/filepath-breadcrumb/web";
 import primitivesLaunchPlugin from "@plugins/primitives/plugins/launch/web";
 import primitivesLiveStatePlugin from "@plugins/primitives/plugins/live-state/web";
 import primitivesNetworkingPlugin from "@plugins/primitives/plugins/networking/web";
@@ -252,6 +253,7 @@ export const plugins: PluginDefinition[] = [
   primitivesEditableFieldPlugin,
   primitivesErrorBoundaryPlugin,
   primitivesFileLinksPlugin,
+  primitivesFilepathBreadcrumbPlugin,
   primitivesLaunchPlugin,
   primitivesLiveStatePlugin,
   primitivesNetworkingPlugin,
