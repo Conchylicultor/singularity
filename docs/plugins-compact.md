@@ -19,6 +19,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`apps`** [load-bearing] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Plugins:
+    - **`agent-manager`**
+      - Plugins:
+        - **`shell`** — App shell for the agent manager. Registers the / app entry and renders the main Shell layout.
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -26,7 +29,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`file-explorer`** — File explorer app.
       - Plugins:
         - **`shell`** — App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.
-    - **`shell`** — App shell for the agent manager. Registers the / app entry and renders the main Shell layout.
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
 
@@ -148,14 +150,19 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`secrets`** [load-bearing] — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
     - **`worktree`**
 
-- **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
+- **`layouts`**
+  - Plugins:
+    - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
+
+- **`packages`**
+  - Plugins:
+    - **`plugin-tree`**
+    - **`retry`**
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin — runtimes, sub-plugins, source path. Serves the plugin tree data for the plugin-view pane.
     - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
-
-- **`plugin-tree`**
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
@@ -181,8 +188,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`reorder`** [load-bearing] — Generic reorder primitive. Slot owners opt in via Reorder.area; hosts render with Reorder.useArea. Generic reorder primitive: per-worktree storage of slot contribution ranks.
   - Plugins:
     - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
-
-- **`retry`**
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Plugins:

@@ -100,6 +100,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Core.Root` → `AppsLayout`
   - Plugins:
+    - **`agent-manager`**
+      - Plugins:
+        - **`shell`** — App shell for the agent manager. Registers the / app entry and renders the main Shell layout.
+          - Contributes:
+            - `Apps.App` → `AgentManagerLayout`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -137,9 +142,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `FileExplorer`
           - Contributes:
             - `Apps.App` → `FileExplorerLayout`
-    - **`shell`** — App shell for the agent manager. Registers the / app entry and renders the main Shell layout.
-      - Contributes:
-        - `Apps.App` → `AgentManagerLayout`
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - Exports (web):
@@ -938,9 +940,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Values: `ensureMainWorktreeRoot`, `removeWorktree`, `setupWorktree`, `worktreePathFor`
 
-- **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
-  - Exports (web):
-    - Values: `MillerColumns`
+- **`layouts`**
+  - Plugins:
+    - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
+      - Exports (web):
+        - Values: `MillerColumns`
+
+- **`packages`**
+  - Plugins:
+    - **`plugin-tree`**
+      - Exports (shared):
+        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`
+        - Values: `buildPluginTree`
+    - **`retry`**
+      - Exports (shared):
+        - Types: `DelayStrategy`
+        - Values: `exponential`, `fixed`, `RetryDeadlineError`, `retryUntil`, `withJitter`
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
@@ -960,11 +975,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Pane.Register` `publish`
         - `Shell.Sidebar` "Publish" (group `System`)
         - `publishPane.open`
-
-- **`plugin-tree`**
-  - Exports (shared):
-    - Types: `BarrelExport`, `CommandDef`, `Contribution`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`
-    - Values: `buildPluginTree`
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
@@ -1075,11 +1085,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Shell.Toolbar` (group `actions`) → `PenButton`
         - `Core.Root` → `EscHandler`
-
-- **`retry`**
-  - Exports (shared):
-    - Types: `DelayStrategy`
-    - Values: `exponential`, `fixed`, `RetryDeadlineError`, `retryUntil`, `withJitter`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Exports (web):
