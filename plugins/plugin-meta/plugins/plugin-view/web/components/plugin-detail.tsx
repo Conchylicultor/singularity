@@ -1,5 +1,6 @@
 import { MdBolt } from "react-icons/md";
 import { cn } from "@/lib/utils";
+import { Breadcrumb } from "@plugins/primitives/plugins/breadcrumb/web";
 import type { PluginNode } from "../../shared/types";
 
 interface PluginDetailProps {
@@ -25,26 +26,21 @@ export function PluginDetail({ node }: PluginDetailProps) {
     <div className="h-full overflow-y-auto">
       <div className="mx-auto flex max-w-3xl flex-col gap-8 px-8 py-8">
         <header className="flex flex-col gap-3">
-          {trail.length > 1 && (
-            <div className="flex flex-wrap items-center gap-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
-              {trail.slice(0, -1).map((seg, i) => (
-                <span key={i} className="flex items-center gap-1">
-                  <span>{seg}</span>
-                  <span className="text-muted-foreground/40">/</span>
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              {node.name}
-            </h1>
-            {node.loadBearing && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
-                <MdBolt className="size-3" />
-                Load-bearing
-              </span>
-            )}
+          <div className="flex items-baseline gap-3 text-2xl font-semibold tracking-tight">
+            <Breadcrumb
+              segments={trail.map((seg, i) => ({
+                key: String(i),
+                label: seg,
+              }))}
+              actions={
+                node.loadBearing ? (
+                  <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                    <MdBolt className="size-3" />
+                    Load-bearing
+                  </span>
+                ) : undefined
+              }
+            />
           </div>
           {node.description && (
             <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">
