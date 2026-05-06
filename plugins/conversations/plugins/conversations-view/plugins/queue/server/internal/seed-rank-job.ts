@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConversation, hasBlockingDep, listBlockingDepIds } from "@plugins/tasks-core/server";
-import { positionTwoRank, rankAfterBlockers } from "./queue-ranks";
+import { lockDeck, positionTwoRank, rankAfterBlockers } from "./queue-ranks";
 import { conversationsQueue } from "./tables";
 import { queueRanksResource } from "./resource";
+import { db } from "@server/db/client";
 
 // Bound to both `conversationCreated` and `conversationTurnCompleted`. Every
 // fire seeds the conversation at "position 2" (one slot below the current
@@ -15,6 +16,9 @@ import { queueRanksResource } from "./resource";
 // conversation drives `gone → working → waiting` without producing a
 // `conversationTurnCompleted`, so the original rank is preserved by
 // construction.
+//
+// The rank read + write runs inside a transaction with FOR UPDATE on the
+// deck rows so concurrent seeders serialize instead of producing collisions.
 export const seedRankJob = defineJob({
   name: "queue.seed-rank",
   input: z.object({}).passthrough(),
@@ -25,15 +29,28 @@ export const seedRankJob = defineJob({
     if (!conversationId) return;
 
     const conv = await getConversation(conversationId);
-    let rank;
-    if (conv?.taskId && (await hasBlockingDep(conv.taskId))) {
-      const blockingTaskIds = await listBlockingDepIds(conv.taskId);
-      rank = await rankAfterBlockers(conversationId, blockingTaskIds);
-    } else {
-      rank = await positionTwoRank();
-    }
 
-    await conversationsQueue.upsert(conversationId, { rank: rank.toJSON() });
+    await db.transaction(async (tx) => {
+      await lockDeck(tx);
+
+      let rank;
+      if (conv?.taskId && (await hasBlockingDep(conv.taskId))) {
+        const blockingTaskIds = await listBlockingDepIds(conv.taskId);
+        rank = await rankAfterBlockers(conversationId, blockingTaskIds, tx);
+      } else {
+        rank = await positionTwoRank(conversationId, tx);
+      }
+
+      const now = new Date();
+      await tx
+        .insert(conversationsQueue.table)
+        .values({ parentId: conversationId, rank: rank.toJSON(), updatedAt: now })
+        .onConflictDoUpdate({
+          target: conversationsQueue.table.parentId,
+          set: { rank: rank.toJSON(), updatedAt: now },
+        });
+    });
+
     queueRanksResource.notify();
   },
 });

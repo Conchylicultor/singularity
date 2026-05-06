@@ -9,7 +9,7 @@
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`
   - Entity extension of: `tasks-core` (table `conversations_ext_queue`)
 - Exports (server):
-  - Values: `conversationsQueue`, `endRank`, `positionTwoRank`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `seedRankJob`
+  - Values: `conversationsQueue`, `endRank`, `lockDeck`, `positionTwoRank`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `seedRankJob`
 - Contributes:
   - `ConversationsView.View` "Queue" → `QueueView`
 - Server:
