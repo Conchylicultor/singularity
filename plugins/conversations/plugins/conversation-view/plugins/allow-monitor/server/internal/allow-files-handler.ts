@@ -1,7 +1,7 @@
 import { join } from "path";
 import { getConversation } from "@plugins/tasks-core/server";
 
-const ALLOW_FILES = [".allow-main", ".allow-migrations"] as const;
+const ALLOW_FILES = [".allow-main", ".allow-migrations", ".allow-postgres"] as const;
 
 export async function handleGetAllowFiles(
   _req: Request,
