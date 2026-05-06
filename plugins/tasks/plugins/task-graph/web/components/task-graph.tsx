@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import dagre from "dagre";
 import {
   Background,
@@ -16,7 +16,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { tasksResource, type Task } from "@plugins/tasks/shared";
-import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
+import { taskDetailPane, useTaskNavigate } from "@plugins/tasks/plugins/task-detail/web";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 import { cn } from "@/lib/utils";
 
@@ -163,10 +163,12 @@ function TaskGraphInner({
   taskId,
   nodes,
   edges,
+  onNavigate,
 }: {
   taskId: string;
   nodes: TaskFlowNode[];
   edges: Edge[];
+  onNavigate: (taskId: string) => void;
 }) {
   const { fitView } = useReactFlow();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -206,7 +208,7 @@ function TaskGraphInner({
         zoomOnScroll
         zoomOnPinch
         zoomOnDoubleClick={false}
-        onNodeClick={(_, node) => taskDetailPane.open({ taskId: node.id })}
+        onNodeClick={(_, node) => onNavigate(node.id)}
         proOptions={{ hideAttribution: true }}
         connectionLineType={ConnectionLineType.SmoothStep}
         minZoom={0.5}
@@ -226,12 +228,20 @@ export function TaskGraph({ taskId }: { taskId: string }) {
     () => layoutDag(closure, taskId),
     [closure, taskId],
   );
+  const ctxNavigate = useTaskNavigate();
+  const onNavigate = useCallback(
+    (id: string) => {
+      if (ctxNavigate) ctxNavigate(id);
+      else taskDetailPane.open({ taskId: id });
+    },
+    [ctxNavigate],
+  );
 
   if (closure.length <= 1) return null;
 
   return (
     <ReactFlowProvider>
-      <TaskGraphInner taskId={taskId} nodes={nodes} edges={edges} />
+      <TaskGraphInner taskId={taskId} nodes={nodes} edges={edges} onNavigate={onNavigate} />
     </ReactFlowProvider>
   );
 }

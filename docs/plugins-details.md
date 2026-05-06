@@ -1234,7 +1234,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Defines:
         - Slots: `TaskDetail.Above`, `TaskDetail.Section`
       - Exports (web):
-        - Values: `taskConversationPane`, `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskFileOpenProvider`, `tasksRootPane`, `useFlushAll`, `useRegisterFlush`, `useTaskFileOpen`
+        - Values: `taskConversationPane`, `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskFileOpenProvider`, `TaskNavigateProvider`, `tasksRootPane`, `useFlushAll`, `useRegisterFlush`, `useTaskFileOpen`, `useTaskNavigate`
       - Contributes:
         - `Pane.Register` `tasks-root`
         - `Pane.Register` `task-detail`
