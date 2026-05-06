@@ -559,9 +559,9 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     const chain = getChain();
     const ownParams = extractOwnParams(internal, params ?? {});
 
-    // If already in chain, update params or no-op
+    // If already in chain, update params or no-op (unless root is forced)
     const existingIdx = chain.findIndex((s) => s.paneId === internal.id);
-    if (existingIdx >= 0) {
+    if (existingIdx >= 0 && !opts?.root) {
       const existing = chain[existingIdx]!.params;
       const same =
         Object.keys(ownParams).length === Object.keys(existing).length &&
