@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { attemptsResource, tasksResource } from "@plugins/tasks/shared";
 
 const currentWorktree = (() => {
@@ -23,9 +24,16 @@ export function WorktreeDropdown() {
   }, [attempts, tasks]);
 
   return (
-    <span className="flex items-center gap-1.5 px-2 py-1 text-sm text-muted-foreground">
-      <span className="size-1.5 rounded-full bg-primary shrink-0" />
-      {taskTitle ?? currentWorktree}
-    </span>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span className="flex items-center gap-1.5 px-2 py-1 text-sm text-muted-foreground cursor-default">
+            <span className="size-1.5 rounded-full bg-primary shrink-0" />
+            {taskTitle ?? currentWorktree}
+          </span>
+        }
+      />
+      <TooltipContent>Current worktree: {currentWorktree}</TooltipContent>
+    </Tooltip>
   );
 }

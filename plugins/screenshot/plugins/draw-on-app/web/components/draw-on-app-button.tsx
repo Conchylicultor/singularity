@@ -4,6 +4,7 @@ import { flushSync } from "react-dom";
 import { MdGesture } from "react-icons/md";
 import { captureApp } from "@plugins/screenshot/web";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShellCommands } from "@plugins/shell/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { attachmentMarkdown } from "@plugins/primitives/plugins/paste-images/web";
@@ -65,16 +66,22 @@ export function DrawOnAppButton() {
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="icon"
-        title="Draw on app"
-        aria-label="Draw on app"
-        disabled={active}
-        onClick={() => setActive(true)}
-      >
-        <MdGesture className="size-4" />
-      </Button>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Draw on app"
+              disabled={active}
+              onClick={() => setActive(true)}
+            >
+              <MdGesture className="size-4" />
+            </Button>
+          }
+        />
+        <TooltipContent>Draw on app</TooltipContent>
+      </Tooltip>
       {active &&
         createPortal(
           <LiveDrawOverlay

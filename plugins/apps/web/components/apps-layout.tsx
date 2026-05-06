@@ -38,7 +38,7 @@ export function AppsLayout() {
   }
 
   return (
-    <TooltipProvider>
+    <TooltipProvider delay={300}>
       <div
         className="flex h-full min-h-0"
         style={{ "--app-rail-width": "2.5rem" } as React.CSSProperties}

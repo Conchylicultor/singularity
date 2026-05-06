@@ -28,6 +28,7 @@ export function ImproveButton() {
         </>
       }
       triggerClassName={buttonVariants({ variant: "outline", size: "sm" })}
+      tooltip="Improve"
       target={{ kind: "metaTask", metaTaskId: IMPROVEMENTS_META_TASK_ID }}
       captures={["url", "screenshot"]}
       initialText={initialText}

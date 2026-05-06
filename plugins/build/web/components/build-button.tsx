@@ -69,67 +69,71 @@ export function BuildButton() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  async function handleBuild() {
+    setBuilding(true);
+    try {
+      const before = await getHealth();
+      if (!before) {
+        Shell.Toast({ description: "Server unreachable", variant: "error" });
+        return;
+      }
+
+      fetch("/api/build", { method: "POST" }).catch(() => {});
+
+      const restarted = await waitForRestart(before.startedAt);
+      if (restarted) {
+        Shell.Toast({ description: "Build succeeded", variant: "success" });
+      } else {
+        Shell.Toast({ description: "Build timed out", variant: "error" });
+      }
+
+      const status = await getBuildStatus();
+      if (status) applyStatus(status);
+    } finally {
+      setBuilding(false);
+    }
+  }
+
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      disabled={building}
-      onClick={async () => {
-        setBuilding(true);
-        try {
-          const before = await getHealth();
-          if (!before) {
-            Shell.Toast({ description: "Server unreachable", variant: "error" });
-            return;
-          }
-
-          fetch("/api/build", { method: "POST" }).catch(() => {});
-
-          const restarted = await waitForRestart(before.startedAt);
-          if (restarted) {
-            Shell.Toast({ description: "Build succeeded", variant: "success" });
-          } else {
-            Shell.Toast({ description: "Build timed out", variant: "error" });
-          }
-
-          const status = await getBuildStatus();
-          if (status) applyStatus(status);
-        } finally {
-          setBuilding(false);
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button variant="outline" size="sm" disabled={building} onClick={handleBuild}>
+            <MdRefresh className={`size-4 ${building || autoBuilding ? "animate-spin" : ""}`} />
+            Build
+            {mainAheadCount > 0 ? (
+              <Tooltip>
+                <TooltipTrigger render={<span className="block size-2 rounded-full bg-amber-400" />} />
+                <TooltipContent>
+                  main is {mainAheadCount} commit{mainAheadCount !== 1 ? "s" : ""} ahead of this worktree
+                </TooltipContent>
+              </Tooltip>
+            ) : loaded && !staleTab ? (
+              <Tooltip>
+                <TooltipTrigger render={<span className="block size-2 rounded-full bg-zinc-400" />} />
+                <TooltipContent>Synced to HEAD</TooltipContent>
+              </Tooltip>
+            ) : null}
+            {staleTab && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      className="block size-2 rounded-full bg-sky-400 hover:bg-sky-500"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.reload();
+                      }}
+                    />
+                  }
+                />
+                <TooltipContent>Server was rebuilt — click to reload this tab</TooltipContent>
+              </Tooltip>
+            )}
+          </Button>
         }
-      }}
-    >
-      <MdRefresh className={`size-4 ${building || autoBuilding ? "animate-spin" : ""}`} />
-      Build
-      {mainAheadCount > 0 ? (
-        <Tooltip>
-          <TooltipTrigger render={<span className="block size-2 rounded-full bg-amber-400" />} />
-          <TooltipContent>
-            main is {mainAheadCount} commit{mainAheadCount !== 1 ? "s" : ""} ahead of this worktree
-          </TooltipContent>
-        </Tooltip>
-      ) : loaded && !staleTab ? (
-        <Tooltip>
-          <TooltipTrigger render={<span className="block size-2 rounded-full bg-zinc-400" />} />
-          <TooltipContent>Synced to HEAD</TooltipContent>
-        </Tooltip>
-      ) : null}
-      {staleTab && (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <button
-                className="block size-2 rounded-full bg-sky-400 hover:bg-sky-500"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.reload();
-                }}
-              />
-            }
-          />
-          <TooltipContent>Server was rebuilt — click to reload this tab</TooltipContent>
-        </Tooltip>
-      )}
-    </Button>
+      />
+      <TooltipContent>Build project</TooltipContent>
+    </Tooltip>
   );
 }

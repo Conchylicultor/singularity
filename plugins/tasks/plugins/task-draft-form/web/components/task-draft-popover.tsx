@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
@@ -42,6 +43,7 @@ export interface TaskDraftPopoverProps {
   trigger: ReactNode;
   triggerClassName?: string;
   triggerTitle?: string;
+  tooltip?: ReactNode;
   target: TaskChainTarget;
   captures?: CaptureKind[];
   relate?: TaskDraftRelate;
@@ -58,6 +60,7 @@ export function TaskDraftPopover({
   trigger,
   triggerClassName,
   triggerTitle,
+  tooltip,
   target,
   captures = ["url"],
   relate,
@@ -167,9 +170,22 @@ export function TaskDraftPopover({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className={triggerClassName} title={triggerTitle} aria-label={triggerTitle}>
-        {trigger}
-      </PopoverTrigger>
+      {tooltip ? (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <PopoverTrigger className={triggerClassName} title={triggerTitle} aria-label={triggerTitle}>
+                {trigger}
+              </PopoverTrigger>
+            }
+          />
+          <TooltipContent>{tooltip}</TooltipContent>
+        </Tooltip>
+      ) : (
+        <PopoverTrigger className={triggerClassName} title={triggerTitle} aria-label={triggerTitle}>
+          {trigger}
+        </PopoverTrigger>
+      )}
       <PopoverContent>
         <TaskDraftForm
           cards={cards}
