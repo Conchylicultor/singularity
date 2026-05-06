@@ -16,7 +16,6 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
 import {
-  TokenBadge,
   formatTime,
   useRowMarkdown,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
@@ -228,7 +227,6 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
         <span>Assistant</span>
         <span className="tabular-nums">{formatTime(e.at)}</span>
         <div className="ml-auto flex items-center gap-2">
-          {e.usage ? <TokenBadge usage={e.usage} /> : null}
           {e.stopReason ? (
             <span className="text-muted-foreground/70">{e.stopReason}</span>
           ) : null}
