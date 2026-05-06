@@ -7,3 +7,23 @@
   animation: reorder-wiggle 0.35s ease-in-out infinite;
   will-change: transform;
 }
+.reorder-drop-indicator {
+  position: relative;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 1px;
+  pointer-events: none;
+  box-shadow: 0 0 4px 1px color-mix(in oklch, var(--primary) 50%, transparent);
+}
+.reorder-drop-indicator::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 4px 1px color-mix(in oklch, var(--primary) 50%, transparent);
+}

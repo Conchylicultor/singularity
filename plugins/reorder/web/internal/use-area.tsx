@@ -61,10 +61,16 @@ export type UseAreaResult<P extends BaseItem> = {
 
 // --- Area context (shared between DndWrapper, ReorderItem, RestoreButton) ---
 
+type InsertionIndicator = {
+  itemId: string;
+  position: "before" | "after";
+} | null;
+
 type ReorderAreaCtxValue = {
   storageId: string;
   hiddenItems: BaseItem[];
   getLabel: (item: BaseItem) => string;
+  insertionIndicator: InsertionIndicator;
 };
 const ReorderAreaContext = createContext<ReorderAreaCtxValue | null>(null);
 
@@ -221,16 +227,45 @@ export function useArea<P extends BaseItem>(
         const sensors = useSensors(
           useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
         );
+        const [activeId, setActiveId] = useState<string | null>(null);
+        const [overId, setOverId] = useState<string | null>(null);
+
+        let insertionIndicator: InsertionIndicator = null;
+        if (activeId && overId && activeId !== overId) {
+          const list = itemsRef.current;
+          const draggedIdx = list.findIndex((x) => x.id === activeId);
+          const overIdx = list.findIndex((x) => x.id === overId);
+          if (draggedIdx >= 0 && overIdx >= 0) {
+            insertionIndicator = {
+              itemId: overId,
+              position: draggedIdx < overIdx ? "after" : "before",
+            };
+          }
+        }
+
         const ctxValue: ReorderAreaCtxValue = {
           storageId: storageIdRef.current,
           hiddenItems: hiddenItemsRef.current,
           getLabel: getLabelRef.current,
+          insertionIndicator,
         };
         return (
           <ReorderAreaContext.Provider value={ctxValue}>
             <DndContext
               sensors={sensors}
               collisionDetection={pointerWithin}
+              onDragStart={(e) => {
+                setActiveId(
+                  stripPrefix(DRAG_PREFIX, String(e.active.id)),
+                );
+              }}
+              onDragOver={(e) => {
+                setOverId(
+                  e.over
+                    ? stripPrefix(DROP_PREFIX, String(e.over.id))
+                    : null,
+                );
+              }}
               onDragEnd={(e: DragEndEvent) => {
                 const draggedKey = stripPrefix(
                   DRAG_PREFIX,
@@ -240,6 +275,12 @@ export function useArea<P extends BaseItem>(
                   ? stripPrefix(DROP_PREFIX, String(e.over.id))
                   : null;
                 if (overKey) onDropRef.current(draggedKey, overKey);
+                setActiveId(null);
+                setOverId(null);
+              }}
+              onDragCancel={() => {
+                setActiveId(null);
+                setOverId(null);
               }}
             >
               {children}
@@ -321,35 +362,42 @@ function ReorderItemActive({
     });
   }
 
+  const indicator = ctx?.insertionIndicator;
+  const showBefore =
+    indicator?.itemId === item.id && indicator.position === "before";
+  const showAfter =
+    indicator?.itemId === item.id && indicator.position === "after";
+
   return (
-    <div
-      ref={(node) => {
-        draggable.setNodeRef(node);
-        droppable.setNodeRef(node);
-      }}
-      {...draggable.attributes}
-      {...draggable.listeners}
-      style={style}
-      className={[
-        "relative cursor-grab",
-        isDragging ? "opacity-40" : "reorder-wiggle",
-        droppable.isOver && !isDragging
-          ? "ring-2 ring-primary/60 rounded-md"
-          : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      <button
-        className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={handleHide}
-        aria-label={`Hide ${item.id}`}
+    <>
+      {showBefore && <div className="reorder-drop-indicator" />}
+      <div
+        ref={(node) => {
+          draggable.setNodeRef(node);
+          droppable.setNodeRef(node);
+        }}
+        {...draggable.attributes}
+        {...draggable.listeners}
+        style={style}
+        className={[
+          "relative cursor-grab",
+          isDragging ? "opacity-40" : "reorder-wiggle",
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
-        <MdClose className="size-2.5" />
-      </button>
-      <div className="pointer-events-none">{children}</div>
-    </div>
+        <button
+          className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={handleHide}
+          aria-label={`Hide ${item.id}`}
+        >
+          <MdClose className="size-2.5" />
+        </button>
+        <div className="pointer-events-none">{children}</div>
+      </div>
+      {showAfter && <div className="reorder-drop-indicator" />}
+    </>
   );
 }
 
