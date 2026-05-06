@@ -124,7 +124,7 @@ export function BlockedByButton({
           </span>
         )}
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-2" align="end">
+      <PopoverContent className="w-96 p-2" align="end">
         <div className="mb-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
           Blocked by
         </div>
@@ -184,7 +184,7 @@ export function BlockedByButton({
             No conversations found
           </div>
         ) : (
-          <ul className="max-h-48 space-y-px overflow-y-auto">
+          <ul className="max-h-64 space-y-px overflow-y-auto">
             {availableConvs.map((c) => (
               <li key={c.taskId}>
                 <button
