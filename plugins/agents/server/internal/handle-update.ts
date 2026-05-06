@@ -14,7 +14,6 @@ export async function handleUpdate(
   if (!id) return new Response("Missing id", { status: 400 });
   const body = (await req.json().catch(() => ({}))) as {
     name?: string;
-    description?: string | null;
     prompt?: string | null;
     model?: string | null;
     icon?: string | null;
@@ -25,9 +24,6 @@ export async function handleUpdate(
   };
   const patch: Record<string, unknown> = { updatedAt: new Date() };
   if (typeof body.name === "string") patch.name = body.name;
-  if (body.description === null || typeof body.description === "string") {
-    patch.description = body.description;
-  }
   if (body.prompt === null || typeof body.prompt === "string") {
     patch.prompt = body.prompt;
   }
@@ -68,24 +64,13 @@ export async function handleUpdate(
       .where(eq(_agents.id, body.parentId));
   }
 
-  // Reconcile attachment links from whichever text fields just changed.
-  // Description + prompt are both authored as markdown; we union their refs
-  // so removing an image from one doesn't unlink a copy still in the other.
-  const descChanged =
-    body.description === null || typeof body.description === "string";
-  const promptChanged =
-    body.prompt === null || typeof body.prompt === "string";
-  if (descChanged || promptChanged) {
-    const [{ description, prompt } = { description: null, prompt: null }] = await db
-      .select({ description: _agents.description, prompt: _agents.prompt })
+  if (body.prompt === null || typeof body.prompt === "string") {
+    const [{ prompt } = { prompt: null }] = await db
+      .select({ prompt: _agents.prompt })
       .from(_agents)
       .where(eq(_agents.id, id))
       .limit(1);
-    const ids = new Set<string>([
-      ...extractAttachmentIds(description ?? ""),
-      ...extractAttachmentIds(prompt ?? ""),
-    ]);
-    await agentAttachments.set(id, Array.from(ids));
+    await agentAttachments.set(id, Array.from(extractAttachmentIds(prompt ?? "")));
   }
 
   const [row] = await db.select().from(agents).where(eq(agents.id, id)).limit(1);

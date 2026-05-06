@@ -10,7 +10,6 @@ export const AgentSchema = z.object({
   id: z.string(),
   parentId: z.string().nullable(),
   name: z.string(),
-  description: z.string().nullable(),
   prompt: z.string().nullable(),
   model: z.string().nullable(),
   icon: z.string().nullable(),

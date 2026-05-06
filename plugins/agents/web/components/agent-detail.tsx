@@ -16,7 +16,6 @@ import { AgentLaunches } from "./agent-launches";
 
 type Patch = Partial<{
   name: string;
-  description: string | null;
   prompt: string | null;
   model: string | null;
   icon: string | null;
@@ -67,10 +66,6 @@ export function AgentDetail({ agentId }: { agentId: string }) {
   const nameField = useEditableField({
     value: agent?.name ?? "",
     onSave: (v) => save({ name: v.trim() || "Untitled" }),
-  });
-  const descField = useEditableField({
-    value: agent?.description ?? "",
-    onSave: (v) => save({ description: v }),
   });
   const promptField = useEditableField({
     value: agent?.prompt ?? "",
@@ -136,21 +131,6 @@ export function AgentDetail({ agentId }: { agentId: string }) {
           onBlur={nameField.onBlur}
           placeholder="Untitled"
           className="placeholder:text-muted-foreground flex-1 bg-transparent text-xl font-semibold outline-none focus:ring-0"
-        />
-      </div>
-      <div
-        onFocus={descField.onFocus}
-        onBlur={(e) => {
-          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-          descField.onBlur();
-        }}
-      >
-        <PromptEditor
-          value={descField.value}
-          onChange={descField.onChange}
-          placeholder="Describe what this agent does…"
-          minRows={2}
-          namespace={`agent-description-${agentId}`}
         />
       </div>
       <div className="flex flex-col gap-1">

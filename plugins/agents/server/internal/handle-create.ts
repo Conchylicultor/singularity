@@ -8,7 +8,6 @@ export async function handleCreate(req: Request): Promise<Response> {
   const body = (await req.json().catch(() => ({}))) as {
     parentId?: string | null;
     name?: string;
-    description?: string | null;
     prompt?: string | null;
     model?: string | null;
     icon?: string | null;
@@ -23,7 +22,6 @@ export async function handleCreate(req: Request): Promise<Response> {
       id,
       parentId,
       name: body.name ?? "Untitled",
-      description: body.description ?? null,
       prompt: body.prompt ?? null,
       model: body.model ?? null,
       icon: body.icon ?? null,

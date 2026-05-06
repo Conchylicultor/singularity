@@ -3,7 +3,6 @@ import type { ComponentType } from "react";
 export interface SystemAgentDescriptor {
   id: string;
   name: string;
-  description?: string;
   icon?: ComponentType<{ className?: string }>;
   component?: ComponentType<{ descriptor: SystemAgentDescriptor }>;
 }

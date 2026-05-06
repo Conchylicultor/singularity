@@ -19,7 +19,6 @@ export const _agents = pgTable(
       onDelete: "cascade",
     }),
     name: text("name").notNull(),
-    description: text("description"),
     // NULL prompt → folder/category node (no launch button). Non-null →
     // launchable agent whose prompt is fed to the spawned conversation.
     prompt: text("prompt"),
