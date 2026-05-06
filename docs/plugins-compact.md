@@ -18,6 +18,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`toggle`** — Toggle on/off to activate agent auto-launch. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive. Server side of the agent auto-launch toggle. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive.
 
 - **`apps`** [load-bearing] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
+  - Plugins:
+    - **`file-explorer`** — File explorer app.
+      - Plugins:
+        - **`shell`** — App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
 
@@ -149,6 +153,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
+    - **`app-shell`** — Reusable sidebar + toolbar + miller-columns layout. Apps instantiate with their own slot set.
     - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
     - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
     - **`breadcrumb`** — File-path breadcrumb with per-segment clickable navigation. Exposes <Breadcrumb path={…} onNavigate={…} />.

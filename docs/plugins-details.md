@@ -99,6 +99,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `Apps`
   - Contributes:
     - `Core.Root` → `AppsLayout`
+  - Plugins:
+    - **`file-explorer`** — File explorer app.
+      - Plugins:
+        - **`shell`** — App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.
+          - Exports (web):
+            - Values: `FileExplorer`
+          - Contributes:
+            - `Apps.App` → `FileExplorerLayout`
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - Exports (web):
@@ -929,6 +937,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
+    - **`app-shell`** — Reusable sidebar + toolbar + miller-columns layout. Apps instantiate with their own slot set.
+      - Exports (web):
+        - Types: `AppShellSidebarItem`, `AppShellToolbarItem`
+        - Values: `AppShellLayout`
     - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
       - Exports (web):
         - Types: `JumpToBottomButtonProps`, `StickyScrollHandle`, `UseStickyScrollOptions`
