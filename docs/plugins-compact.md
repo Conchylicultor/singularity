@@ -156,11 +156,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`packages`**
   - Plugins:
-    - **`plugin-tree`**
     - **`retry`**
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
+    - **`plugin-tree`**
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin — runtimes, sub-plugins, source path. Serves the plugin tree data for the plugin-view pane.
     - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
 

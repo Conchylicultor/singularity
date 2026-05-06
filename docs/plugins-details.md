@@ -948,10 +948,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`packages`**
   - Plugins:
-    - **`plugin-tree`**
-      - Exports (shared):
-        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`
-        - Values: `buildPluginTree`
     - **`retry`**
       - Exports (shared):
         - Types: `DelayStrategy`
@@ -959,6 +955,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
+    - **`plugin-tree`**
+      - Exports (shared):
+        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`
+        - Values: `buildPluginTree`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin — runtimes, sub-plugins, source path. Serves the plugin tree data for the plugin-view pane.
       - Exports (web):
         - Types: `PluginNode`, `PluginTreePayload`
