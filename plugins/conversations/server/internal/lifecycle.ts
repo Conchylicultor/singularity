@@ -1,7 +1,6 @@
 import {
   CONVERSATIONS_META_TASK_ID,
   createTask,
-  updateTaskTitle,
   createAttempt,
   deleteAttempt,
   getAttempt,
@@ -10,10 +9,6 @@ import {
   getConversationRuntime,
   updateConversation,
 } from "@plugins/tasks-core/server";
-import {
-  scheduleTaskTitleUpdate,
-  synthesiseTitleFallback,
-} from "@plugins/tasks/plugins/task-title/server";
 import { Runtime } from "./runtime";
 import { DEFAULT_MODEL, type ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
 import type { Conversation, ConversationKind } from "@plugins/tasks-core/shared";
@@ -35,14 +30,6 @@ const newId = (prefix: string) => {
   const suffix = Math.random().toString(36).slice(2, 6);
   return `${prefix}-${Math.floor(Date.now() / 1000)}-${suffix}`;
 };
-
-function synthesiseTitle(prompt: string | undefined): string {
-  const trimmed = (prompt ?? "").trim();
-  if (!trimmed) return "Untitled";
-  return synthesiseTitleFallback(trimmed);
-}
-
-const UNINFORMATIVE_TITLES = ["Untitled", "Untitled conversation"];
 
 export async function createConversation(
   opts: {
@@ -102,29 +89,15 @@ export async function createConversation(
     conversationId = newId(CONVERSATION_PREFIX);
   } else {
     let taskId = opts.taskId;
-    const fallbackTitle = synthesiseTitle(opts.prompt);
-    let titleIsUpgradeable: boolean;
     if (!taskId) {
       const parentId =
         opts.kind === "system" ? SYSTEM_META_TASK_ID : CONVERSATIONS_META_TASK_ID;
       const task = await createTask({
         parentId,
-        title: fallbackTitle,
+        title: "Untitled",
         author: spawnedBy,
       });
       taskId = task.id;
-      titleIsUpgradeable = true;
-    } else {
-      // Only schedule a Haiku upgrade if the task title was actually uninformative
-      // and got replaced with the fallback. If the task already has a meaningful
-      // title, don't overwrite it — the CAS guard in scheduleTaskTitleUpdate uses
-      // [fallbackTitle], which would match when buildTaskPrompt's first line equals
-      // the existing title.
-      titleIsUpgradeable = await updateTaskTitle(taskId, fallbackTitle, UNINFORMATIVE_TITLES);
-    }
-    const prompt = opts.prompt?.trim() ?? "";
-    if (titleIsUpgradeable && prompt && opts.kind !== "system") {
-      scheduleTaskTitleUpdate(taskId, prompt, fallbackTitle);
     }
 
     newAttemptId = newId(ATTEMPT_PREFIX);
@@ -200,6 +173,8 @@ export async function createConversation(
     model: conv.model,
     spawnedBy: conv.spawnedBy!,
     createdAt: conv.createdAt.toISOString(),
+    prompt: opts.prompt?.trim() || undefined,
+    kind: conv.kind,
   });
 
   return conv;

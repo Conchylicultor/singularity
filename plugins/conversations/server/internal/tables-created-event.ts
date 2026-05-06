@@ -8,6 +8,8 @@ export interface ConversationCreatedPayload {
   model: ConversationModel;
   spawnedBy: string;
   createdAt: string;
+  prompt?: string;
+  kind?: string;
   [key: string]: unknown;
 }
 

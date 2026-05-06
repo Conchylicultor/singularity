@@ -15,6 +15,7 @@ import { ensureSystemMeta } from "./internal/meta-system";
 import { maybeLaunchTaskJob } from "./internal/auto-start-jobs";
 import { conversationCreated } from "./internal/tables-created-event";
 import { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
+import { userTurnSent } from "./internal/tables-user-turn-sent-event";
 
 export { maybeLaunchTaskJob } from "./internal/auto-start-jobs";
 
@@ -35,6 +36,8 @@ export type { ConversationTurnCompletedPayload } from "./internal/tables-turn-co
 export { afterTurn } from "./internal/after-turn";
 export { conversationCreated } from "./internal/tables-created-event";
 export type { ConversationCreatedPayload } from "./internal/tables-created-event";
+export { userTurnSent } from "./internal/tables-user-turn-sent-event";
+export type { UserTurnSentPayload } from "./internal/tables-user-turn-sent-event";
 export { SYSTEM_META_TASK_ID } from "./internal/meta-system";
 
 export default {
@@ -56,7 +59,7 @@ export default {
   },
   // recentConversationsResource is now mounted on tasks-core; only fork-errors stays here.
   resources: [forkErrorsResource],
-  register: [maybeLaunchTaskJob, conversationCreated, conversationTurnCompleted],
+  register: [maybeLaunchTaskJob, conversationCreated, conversationTurnCompleted, userTurnSent],
   onReady: async () => {
     await ensureSystemMeta();
     startPoller();
