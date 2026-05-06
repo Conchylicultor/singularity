@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
-import { buildPluginTree } from "@packages/plugin-tree";
+import { buildPluginTree } from "@plugins/packages/plugins/plugin-tree/shared";
 
 export type Runtime = "web" | "server" | "central";
 

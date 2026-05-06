@@ -1,7 +1,7 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { UNSAFE_sweepStuckLocks } from "@plugins/infra/plugins/jobs/server";
-import { retryUntil, fixed } from "@packages/retry";
+import { retryUntil, fixed } from "@plugins/packages/plugins/retry/shared";
 import { db } from "@server/db/client";
 import { logEntries, logPing, resetLog } from "./log-job";
 

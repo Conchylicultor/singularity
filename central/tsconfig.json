@@ -12,14 +12,12 @@
     "types": ["@types/bun"],
     "paths": {
       "@plugins/*": ["../plugins/*"],
-      "@packages/*": ["../packages/*"],
       "@central/*": ["./src/*"],
       "@core/*": ["../plugin-core/*"]
     }
   },
   "include": [
     "src",
-    "../packages/*",
     "../plugin-core/shared",
     "../plugins/*/central",
     "../plugins/*/plugins/*/central",

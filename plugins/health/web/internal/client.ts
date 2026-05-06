@@ -1,4 +1,4 @@
-import { retryUntil, fixed } from "@packages/retry";
+import { retryUntil, fixed } from "@plugins/packages/plugins/retry/shared";
 import type { HealthResponse } from "../../shared/protocol";
 
 export async function getHealth(signal?: AbortSignal): Promise<HealthResponse | null> {

@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { retryUntil, exponential } from "@packages/retry";
+import { retryUntil, exponential } from "@plugins/packages/plugins/retry/shared";
 import {
   EMBEDDED_PG_PORT,
   EMBEDDED_PG_SOCKET_DIR,

@@ -922,6 +922,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `MillerColumns`
 
+- **`plugin-tree`**
+  - Exports (shared):
+    - Types: `BarrelExport`, `CommandDef`, `Contribution`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`
+    - Values: `buildPluginTree`
+
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
     - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
@@ -1033,6 +1038,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Shell.Toolbar` (group `actions`) → `PenButton`
         - `Core.Root` → `EscHandler`
+
+- **`retry`**
+  - Exports (shared):
+    - Types: `DelayStrategy`
+    - Values: `exponential`, `fixed`, `RetryDeadlineError`, `retryUntil`, `withJitter`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Exports (web):

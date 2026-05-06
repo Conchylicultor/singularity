@@ -65,12 +65,6 @@
         "typescript": "~5.8.3",
       },
     },
-    "packages/plugin-tree": {
-      "name": "@singularity/plugin-tree",
-    },
-    "packages/retry": {
-      "name": "@singularity/retry",
-    },
     "plugin-core": {
       "name": "@singularity/plugin-core",
       "version": "0.0.1",
@@ -517,6 +511,18 @@
     },
     "plugins/layouts/plugins/miller": {
       "name": "@singularity/plugin-layouts-miller",
+      "version": "0.0.1",
+    },
+    "plugins/packages": {
+      "name": "@singularity/plugin-packages",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/plugin-tree": {
+      "name": "@singularity/plugin-packages-plugin-tree",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/retry": {
+      "name": "@singularity/plugin-packages-retry",
       "version": "0.0.1",
     },
     "plugins/primitives": {
@@ -1538,6 +1544,12 @@
 
     "@singularity/plugin-layouts-miller": ["@singularity/plugin-layouts-miller@workspace:plugins/layouts/plugins/miller"],
 
+    "@singularity/plugin-packages": ["@singularity/plugin-packages@workspace:plugins/packages"],
+
+    "@singularity/plugin-packages-plugin-tree": ["@singularity/plugin-packages-plugin-tree@workspace:plugins/packages/plugins/plugin-tree"],
+
+    "@singularity/plugin-packages-retry": ["@singularity/plugin-packages-retry@workspace:plugins/packages/plugins/retry"],
+
     "@singularity/plugin-primitives": ["@singularity/plugin-primitives@workspace:plugins/primitives"],
 
     "@singularity/plugin-primitives-auto-scroll": ["@singularity/plugin-primitives-auto-scroll@workspace:plugins/primitives/plugins/auto-scroll"],
@@ -1630,13 +1642,9 @@
 
     "@singularity/plugin-theme": ["@singularity/plugin-theme@workspace:plugins/theme"],
 
-    "@singularity/plugin-tree": ["@singularity/plugin-tree@workspace:packages/plugin-tree"],
-
     "@singularity/plugin-welcome": ["@singularity/plugin-welcome@workspace:plugins/welcome"],
 
     "@singularity/plugin-worktree-switcher": ["@singularity/plugin-worktree-switcher@workspace:plugins/worktree-switcher"],
-
-    "@singularity/retry": ["@singularity/retry@workspace:packages/retry"],
 
     "@singularity/server": ["@singularity/server@workspace:server"],
 

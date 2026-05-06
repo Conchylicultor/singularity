@@ -1,6 +1,6 @@
 import parcel from "@parcel/watcher";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
-import { retryUntil, fixed } from "@packages/retry";
+import { retryUntil, fixed } from "@plugins/packages/plugins/retry/shared";
 import { getConversationClaudeSessionId } from "@plugins/tasks-core/server";
 import { findTranscriptPath } from "./find-transcript-path";
 import { readJsonlEvents } from "./parse-jsonl";

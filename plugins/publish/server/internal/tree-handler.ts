@@ -1,5 +1,5 @@
 import { resolve } from "path";
-import { buildPluginTree, type PluginNode as TreePluginNode } from "@packages/plugin-tree";
+import { buildPluginTree, type PluginNode as TreePluginNode } from "@plugins/packages/plugins/plugin-tree/shared";
 import type { PluginNode, PublishTreePayload } from "../../shared/types";
 
 const PLUGINS_ROOT = resolve(import.meta.dir, "..", "..", "..");

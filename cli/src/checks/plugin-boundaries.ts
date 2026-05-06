@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { dirname, join, relative, resolve, sep } from "path";
-import { buildPluginTree } from "@packages/plugin-tree";
+import { buildPluginTree } from "@plugins/packages/plugins/plugin-tree/shared";
 import type { Check, CheckResult } from "./types";
 
 const SKIPPED_PLUGINS: ReadonlyArray<string> = [];

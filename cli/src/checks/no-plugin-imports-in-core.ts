@@ -12,6 +12,10 @@ async function getRoot(): Promise<string> {
 const PLUGIN_IMPORT_RE =
   /(?:from|require|export\s+\*\s+from)\s+['"][^'"]*(?:\/plugins\/|@singularity\/plugin-|@plugins\/)/;
 
+// Imports from @plugins/packages/ are allowed everywhere — the packages umbrella
+// is pure utility code (equivalent to the old packages/ directory), not plugin code.
+const ALLOWED_PLUGIN_IMPORT_RE = /@plugins\/packages\//;
+
 // Only plugins/ itself and the composition roots may import from plugins/
 const ALLOWED_DIRS = ["plugins/"];
 const COMPOSITION_ROOTS = [
@@ -49,7 +53,8 @@ export const noPluginImportsInCore: Check = {
       .split("\n")
       .filter((line) => !ALLOWED_DIRS.some((dir) => line.startsWith(dir)))
       .filter((line) => !COMPOSITION_ROOTS.some((f) => line.startsWith(f + ":")))
-      .filter((line) => PLUGIN_IMPORT_RE.test(line));
+      .filter((line) => PLUGIN_IMPORT_RE.test(line))
+      .filter((line) => !ALLOWED_PLUGIN_IMPORT_RE.test(line));
 
     if (offenders.length === 0) return { ok: true };
 

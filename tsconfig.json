@@ -2,7 +2,6 @@
   "compilerOptions": {
     "paths": {
       "@plugins/*": ["./plugins/*"],
-      "@packages/*": ["./packages/*"],
       "@server/*": ["./server/src/*"],
       "@central/*": ["./central/src/*"],
       "@core/*": ["./plugin-core/*"]

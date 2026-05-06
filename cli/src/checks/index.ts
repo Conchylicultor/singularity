@@ -1,6 +1,6 @@
 import { existsSync } from "fs";
 import { join, sep } from "path";
-import { buildPluginTree } from "@packages/plugin-tree";
+import { buildPluginTree } from "@plugins/packages/plugins/plugin-tree/shared";
 import { conversationTrailer } from "./conversation-trailer";
 import { eslintCheck } from "./eslint";
 import { migrationsInSync } from "./migrations-in-sync";
@@ -8,7 +8,6 @@ import { noRawEventSource } from "./no-raw-event-source";
 import { noRawSse } from "./no-raw-sse";
 import { noPluginImportsInCore } from "./no-plugin-imports-in-core";
 import { noPluginWorkspaceDeps } from "./no-plugin-workspace-deps";
-import { packageBoundaries } from "./package-boundaries";
 import { noRawWebsocket } from "./no-raw-websocket";
 import { noRelativeServerImports } from "./no-relative-server-imports";
 import { noUseResourceCast } from "./no-use-resource-cast";
@@ -35,7 +34,6 @@ export const CHECKS: Check[] = [
   noRawWebsocket,
   noRelativeServerImports,
   noUseResourceCast,
-  packageBoundaries,
   typescript,
   eslintCheck,
 ];
