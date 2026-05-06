@@ -24,7 +24,7 @@
       "@server/*": ["../server/src/*"]
     }
   },
-  "exclude": ["../plugins/packages/plugins/plugin-tree/**"],
+  "exclude": ["../plugins/plugin-meta/plugins/plugin-tree/**"],
   "include": [
     "src",
     "../plugin-core",

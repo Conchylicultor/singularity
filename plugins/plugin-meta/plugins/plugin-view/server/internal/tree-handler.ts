@@ -1,4 +1,4 @@
-import { buildPluginTree, type PluginNode as TreePluginNode } from "@plugins/packages/plugins/plugin-tree/shared";
+import { buildPluginTree, type PluginNode as TreePluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/shared";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
 import type { PluginNode, PluginTreePayload } from "../../shared/types";
 

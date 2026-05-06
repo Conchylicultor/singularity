@@ -25,7 +25,7 @@ export default defineBoundaries({
   // Layer 2: Zone DAG (first-match, default-deny)
   edges: [
     // packages/ umbrella children are utility code, globally accessible
-    allow("** -> plugin.packages.plugin-tree"),
+    allow("** -> plugin.plugin-meta.plugin-tree"),
     allow("** -> plugin.packages.retry"),
 
     // Top-level packages can import core

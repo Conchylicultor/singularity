@@ -5,6 +5,7 @@ and publishing plugins. The umbrella has no contributions of its own; all
 functionality lives in sub-plugins.
 
 Sub-plugins:
+- **plugin-tree** — Builds the full plugin tree from disk (shared-only utility; no web/server runtime).
 - **plugin-view** — Reusable detail pane for a single plugin (runtimes, sub-plugins, source path).
 - **publish** — Sidebar entry + filterable tree for pre-publish review.
 
@@ -14,6 +15,7 @@ Sub-plugins:
 
 - Description: Plugins about the plugin system itself — browsing, inspecting, and publishing.
 - Sub-plugins:
+  - **`plugin-tree`**
   - **`plugin-view`** — Reusable detail pane for inspecting a single plugin — runtimes, sub-plugins, source path. Serves the plugin tree data for the plugin-view pane.
   - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
 

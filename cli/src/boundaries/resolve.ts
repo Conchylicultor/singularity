@@ -1,6 +1,6 @@
 import { existsSync } from "fs";
 import { join, relative, sep } from "path";
-import type { PluginTree } from "@plugins/packages/plugins/plugin-tree/shared";
+import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/shared";
 import type { ZoneDefinition } from "./types";
 
 const RUNTIMES = new Set(["web", "server", "central", "shared"]);

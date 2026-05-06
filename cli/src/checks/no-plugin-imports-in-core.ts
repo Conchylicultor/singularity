@@ -14,7 +14,7 @@ const PLUGIN_IMPORT_RE =
 
 // Imports from @plugins/packages/ are allowed everywhere — the packages umbrella
 // is pure utility code (equivalent to the old packages/ directory), not plugin code.
-const ALLOWED_PLUGIN_IMPORT_RE = /@plugins\/packages\//;
+const ALLOWED_PLUGIN_IMPORT_RE = /@plugins\/packages\/|@plugins\/plugin-meta\/plugins\/plugin-tree\//;
 
 // Only plugins/ itself and the composition roots may import from plugins/
 const ALLOWED_DIRS = ["plugins/"];

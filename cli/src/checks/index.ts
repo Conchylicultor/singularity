@@ -1,6 +1,6 @@
 import { existsSync } from "fs";
 import { join, sep } from "path";
-import { buildPluginTree } from "@plugins/packages/plugins/plugin-tree/shared";
+import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/shared";
 import { createBoundaryCheck } from "../boundaries/check";
 import boundaryConfig from "../../../boundary.config";
 import { conversationTrailer } from "./conversation-trailer";
