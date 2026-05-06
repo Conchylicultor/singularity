@@ -19,6 +19,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`apps`** [load-bearing] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Plugins:
+    - **`deploy`** — Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+      - Plugins:
+        - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
+        - **`shell`** — App shell for the deploy platform.
     - **`file-explorer`** — File explorer app.
       - Plugins:
         - **`shell`** — App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.
@@ -123,11 +127,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
     - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
-
-- **`deploy`** — Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
-  - Plugins:
-    - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
-    - **`shell`** — App shell for the deploy platform.
 
 - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
 

@@ -100,6 +100,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Core.Root` → `AppsLayout`
   - Plugins:
+    - **`deploy`** — Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+      - Plugins:
+        - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
+          - Defines:
+            - DB schema: `plugins/apps/plugins/deploy/plugins/servers/server/internal/tables.ts`
+          - Exports (web):
+            - Types: `Server`
+            - Values: `addServerPane`, `serverDetailPane`, `serversResource`, `serversRootPane`
+          - Exports (server):
+            - Values: `_deployServers`, `serversResource`
+          - Exports (shared):
+            - Types: `Server`, `ServerStatus`
+            - Values: `ServerSchema`, `serversResource`, `ServerStatusSchema`
+          - Contributes:
+            - `Pane.Register` `deploy-servers`
+            - `Pane.Register` `deploy-add-server`
+            - `Pane.Register` `deploy-server-detail`
+          - Server:
+            - `GET /api/deploy/servers`
+            - `POST /api/deploy/servers`
+            - `GET /api/deploy/servers/:id`
+            - `PATCH /api/deploy/servers/:id`
+            - `DELETE /api/deploy/servers/:id`
+        - **`shell`** — App shell for the deploy platform.
+          - Defines:
+            - Slots: `Deploy.Section`
+          - Exports (web):
+            - Values: `Deploy`
+          - Contributes:
+            - `Apps.App` → `DeployLayout`
     - **`file-explorer`** — File explorer app.
       - Plugins:
         - **`shell`** — App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.
@@ -758,38 +788,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `GET /api/debug/worktrees`
         - `POST /api/debug/worktrees/bulk-delete`
         - `DELETE /api/debug/worktrees/:id`
-
-- **`deploy`** — Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
-  - Defines:
-    - Slots: `Deploy.Section`
-  - Exports (web):
-    - Values: `Deploy`
-  - Plugins:
-    - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
-      - Defines:
-        - DB schema: `plugins/deploy/plugins/servers/server/internal/tables.ts`
-      - Exports (web):
-        - Types: `Server`
-        - Values: `addServerPane`, `serverDetailPane`, `serversResource`, `serversRootPane`
-      - Exports (server):
-        - Values: `_deployServers`, `serversResource`
-      - Exports (shared):
-        - Types: `Server`, `ServerStatus`
-        - Values: `ServerSchema`, `serversResource`, `ServerStatusSchema`
-      - Contributes:
-        - `Pane.Register` `deploy-servers`
-        - `Pane.Register` `deploy-add-server`
-        - `Pane.Register` `deploy-server-detail`
-      - Server:
-        - `GET /api/deploy/servers`
-        - `POST /api/deploy/servers`
-        - `GET /api/deploy/servers/:id`
-        - `PATCH /api/deploy/servers/:id`
-        - `DELETE /api/deploy/servers/:id`
-    - **`shell`** — App shell for the deploy platform.
-      - Contributes:
-        - `Apps.App` → `DeployLayout`
-        - `serversRootPane.open`
 
 - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
   - Defines:
