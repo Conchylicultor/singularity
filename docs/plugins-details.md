@@ -902,7 +902,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `POST /api/mcp/:conversationId`
     - **`paths`**
       - Exports (server):
-        - Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `CRASHES_DIR`, `GIT`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PGREP`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`
+        - Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `CRASHES_DIR`, `GIT`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PGREP`, `PLUGINS_DIR`, `REPO_ROOT`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`
     - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
       - Exports (server):
         - Types: `SecretMetadata`, `SecretRef`
@@ -927,6 +927,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
   - Exports (web):
     - Values: `MillerColumns`
+
+- **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
+  - Plugins:
+    - **`plugin-view`** — Reusable detail pane for inspecting a single plugin — runtimes, sub-plugins, source path. Serves the plugin tree data for the plugin-view pane.
+      - Exports (web):
+        - Types: `PluginNode`, `PluginTreePayload`
+        - Values: `pluginViewPane`
+      - Exports (shared):
+        - Types: `PluginNode`, `PluginTreePayload`
+      - Contributes:
+        - `Pane.Register` `plugin-view`
+      - Server:
+        - `GET /api/plugin-view/tree`
+      - Endpoint callers: `publish`
+    - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
+      - Contributes:
+        - `Pane.Register` `publish`
+        - `Shell.Sidebar` "Publish" (group `System`)
+        - `publishPane.open`
 
 - **`plugin-tree`**
   - Exports (shared):
@@ -987,7 +1006,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneSlot`, `TypeMarker`
         - Values: `buildChainUrl`, `getChain`, `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneDepthContext`, `PaneHistoryButtons`, `PaneIconAction`, `PaneLayoutContext`, `PaneLevel`, `PaneMatchContext`, `PaneRouter`, `parseUrl`, `syncChainFromUrl`, `type`, `useCurrentPane`, `useMatchForPath`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `task-file-peek`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-view`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `task-file-peek`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
       - Exports (web):
         - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `PromptEditor`, `rewriteAttachmentMarkdown`
@@ -1017,16 +1036,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (shared):
         - Types: `DropZone`, `TreeNode`
         - Values: `buildTree`, `computeDrop`, `isDescendant`
-
-- **`publish`** — Review the worktree's plugin tree before publishing to the marketplace. Read-only review surface for the marketplace publish flow. Walks the worktree's plugin tree and exposes it as a flat tree.
-  - Exports (web):
-    - Values: `publishPane`
-  - Contributes:
-    - `Pane.Register` `publish`
-    - `Shell.Sidebar` "Publish" (group `System`)
-    - `publishPane.open`
-  - Server:
-    - `GET /api/publish/tree`
 
 - **`reorder`** — Generic reorder primitive. Slot owners opt in via Reorder.area; hosts render with Reorder.useArea. Generic reorder primitive: per-worktree storage of slot contribution ranks.
   - Defines:

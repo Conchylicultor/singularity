@@ -65,12 +65,6 @@
         "typescript": "~5.8.3",
       },
     },
-    "packages/plugin-tree": {
-      "name": "@singularity/plugin-tree",
-    },
-    "packages/retry": {
-      "name": "@singularity/retry",
-    },
     "plugin-core": {
       "name": "@singularity/plugin-core",
       "version": "0.0.1",
@@ -112,6 +106,22 @@
     },
     "plugins/apps": {
       "name": "@singularity/plugin-apps",
+    },
+    "plugins/apps/plugins/agent-manager": {
+      "name": "@singularity/plugin-apps-agent-manager",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/agent-manager/plugins/shell": {
+      "name": "@singularity/plugin-apps-agent-manager-shell",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/file-explorer": {
+      "name": "@singularity/plugin-apps-file-explorer",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/file-explorer/plugins/shell": {
+      "name": "@singularity/plugin-apps-file-explorer-shell",
+      "version": "0.0.1",
     },
     "plugins/attempt-view": {
       "name": "@singularity/plugin-attempt-view",
@@ -519,6 +529,18 @@
       "name": "@singularity/plugin-layouts-miller",
       "version": "0.0.1",
     },
+    "plugins/packages": {
+      "name": "@singularity/plugin-packages",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/plugin-tree": {
+      "name": "@singularity/plugin-packages-plugin-tree",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/retry": {
+      "name": "@singularity/plugin-packages-retry",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta": {
       "name": "@singularity/plugin-plugin-meta",
       "version": "0.0.1",
@@ -533,6 +555,10 @@
     },
     "plugins/primitives": {
       "name": "@singularity/plugin-primitives",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/app-shell": {
+      "name": "@singularity/plugin-primitives-app-shell",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/auto-scroll": {
@@ -1346,6 +1372,14 @@
 
     "@singularity/plugin-apps": ["@singularity/plugin-apps@workspace:plugins/apps"],
 
+    "@singularity/plugin-apps-agent-manager": ["@singularity/plugin-apps-agent-manager@workspace:plugins/apps/plugins/agent-manager"],
+
+    "@singularity/plugin-apps-agent-manager-shell": ["@singularity/plugin-apps-agent-manager-shell@workspace:plugins/apps/plugins/agent-manager/plugins/shell"],
+
+    "@singularity/plugin-apps-file-explorer": ["@singularity/plugin-apps-file-explorer@workspace:plugins/apps/plugins/file-explorer"],
+
+    "@singularity/plugin-apps-file-explorer-shell": ["@singularity/plugin-apps-file-explorer-shell@workspace:plugins/apps/plugins/file-explorer/plugins/shell"],
+
     "@singularity/plugin-attempt-view": ["@singularity/plugin-attempt-view@workspace:plugins/attempt-view"],
 
     "@singularity/plugin-auth": ["@singularity/plugin-auth@workspace:plugins/auth"],
@@ -1546,6 +1580,12 @@
 
     "@singularity/plugin-layouts-miller": ["@singularity/plugin-layouts-miller@workspace:plugins/layouts/plugins/miller"],
 
+    "@singularity/plugin-packages": ["@singularity/plugin-packages@workspace:plugins/packages"],
+
+    "@singularity/plugin-packages-plugin-tree": ["@singularity/plugin-packages-plugin-tree@workspace:plugins/packages/plugins/plugin-tree"],
+
+    "@singularity/plugin-packages-retry": ["@singularity/plugin-packages-retry@workspace:plugins/packages/plugins/retry"],
+
     "@singularity/plugin-plugin-meta": ["@singularity/plugin-plugin-meta@workspace:plugins/plugin-meta"],
 
     "@singularity/plugin-plugin-meta-plugin-view": ["@singularity/plugin-plugin-meta-plugin-view@workspace:plugins/plugin-meta/plugins/plugin-view"],
@@ -1553,6 +1593,8 @@
     "@singularity/plugin-plugin-meta-publish": ["@singularity/plugin-plugin-meta-publish@workspace:plugins/plugin-meta/plugins/publish"],
 
     "@singularity/plugin-primitives": ["@singularity/plugin-primitives@workspace:plugins/primitives"],
+
+    "@singularity/plugin-primitives-app-shell": ["@singularity/plugin-primitives-app-shell@workspace:plugins/primitives/plugins/app-shell"],
 
     "@singularity/plugin-primitives-auto-scroll": ["@singularity/plugin-primitives-auto-scroll@workspace:plugins/primitives/plugins/auto-scroll"],
 
@@ -1642,13 +1684,9 @@
 
     "@singularity/plugin-theme": ["@singularity/plugin-theme@workspace:plugins/theme"],
 
-    "@singularity/plugin-tree": ["@singularity/plugin-tree@workspace:packages/plugin-tree"],
-
     "@singularity/plugin-welcome": ["@singularity/plugin-welcome@workspace:plugins/welcome"],
 
     "@singularity/plugin-worktree-switcher": ["@singularity/plugin-worktree-switcher@workspace:plugins/worktree-switcher"],
-
-    "@singularity/retry": ["@singularity/retry@workspace:packages/retry"],
 
     "@singularity/server": ["@singularity/server@workspace:server"],
 

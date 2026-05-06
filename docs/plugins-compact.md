@@ -150,6 +150,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
 
+- **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
+  - Plugins:
+    - **`plugin-view`** — Reusable detail pane for inspecting a single plugin — runtimes, sub-plugins, source path. Serves the plugin tree data for the plugin-view pane.
+    - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
+
 - **`plugin-tree`**
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
@@ -171,8 +176,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
     - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
-
-- **`publish`** — Review the worktree's plugin tree before publishing to the marketplace. Read-only review surface for the marketplace publish flow. Walks the worktree's plugin tree and exposes it as a flat tree.
 
 - **`reorder`** [load-bearing] — Generic reorder primitive. Slot owners opt in via Reorder.area; hosts render with Reorder.useArea. Generic reorder primitive: per-worktree storage of slot contribution ranks.
   - Plugins:
