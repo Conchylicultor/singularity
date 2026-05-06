@@ -1,11 +1,11 @@
 import { MdTune } from "react-icons/md";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
-import { Shell } from "../slots";
+import { Shell } from "@plugins/shell/web";
 
 const DEFAULT_COLLAPSED = new Set(["Debug"]);
 const SIDEBAR_GROUP_ICONS = { System: MdTune };
 
-export function ShellLayout() {
+export function AgentManagerLayout() {
   return (
     <AppShellLayout
       sidebarSlot={Shell.Sidebar}

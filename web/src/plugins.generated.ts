@@ -14,6 +14,7 @@ import activeDataPlugin from "@plugins/active-data/web";
 import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/plugins/toggle/web";
 import agentsAutoLaunchPlugin from "@plugins/agents/plugins/auto-launch/web";
 import agentsPlugin from "@plugins/agents/web";
+import appsAgentManagerShellPlugin from "@plugins/apps/plugins/agent-manager/plugins/shell/web";
 import appsFileExplorerShellPlugin from "@plugins/apps/plugins/file-explorer/plugins/shell/web";
 import appsFileExplorerPlugin from "@plugins/apps/plugins/file-explorer/web";
 import appsPlugin from "@plugins/apps/web";
@@ -154,6 +155,7 @@ export const plugins: PluginDefinition[] = [
   agentsAutoLaunchTogglePlugin,
   agentsAutoLaunchPlugin,
   agentsPlugin,
+  appsAgentManagerShellPlugin,
   appsFileExplorerShellPlugin,
   appsFileExplorerPlugin,
   appsPlugin,

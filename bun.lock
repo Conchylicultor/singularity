@@ -107,6 +107,14 @@
     "plugins/apps": {
       "name": "@singularity/plugin-apps",
     },
+    "plugins/apps/plugins/agent-manager": {
+      "name": "@singularity/plugin-apps-agent-manager",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/agent-manager/plugins/shell": {
+      "name": "@singularity/plugin-apps-agent-manager-shell",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/file-explorer": {
       "name": "@singularity/plugin-apps-file-explorer",
       "version": "0.0.1",
@@ -1355,6 +1363,10 @@
     "@singularity/plugin-agents-auto-launch-toggle": ["@singularity/plugin-agents-auto-launch-toggle@workspace:plugins/agents/plugins/auto-launch/plugins/toggle"],
 
     "@singularity/plugin-apps": ["@singularity/plugin-apps@workspace:plugins/apps"],
+
+    "@singularity/plugin-apps-agent-manager": ["@singularity/plugin-apps-agent-manager@workspace:plugins/apps/plugins/agent-manager"],
+
+    "@singularity/plugin-apps-agent-manager-shell": ["@singularity/plugin-apps-agent-manager-shell@workspace:plugins/apps/plugins/agent-manager/plugins/shell"],
 
     "@singularity/plugin-apps-file-explorer": ["@singularity/plugin-apps-file-explorer@workspace:plugins/apps/plugins/file-explorer"],
 

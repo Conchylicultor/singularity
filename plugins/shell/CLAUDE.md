@@ -11,8 +11,6 @@
 - Exports (web):
   - Types: `ToastArgs`, `ToastVariant`
   - Values: `Shell`, `ShellCommands`
-- Contributes:
-  - `Apps.App` → `ShellLayout`
 - Sub-plugins:
   - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.
 
