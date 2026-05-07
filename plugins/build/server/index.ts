@@ -8,13 +8,14 @@ import { handleBuildStatus } from "./internal/handle-build-status";
 import { buildRunJob } from "./internal/build-run-job";
 import { getMainAheadCount } from "./internal/git-status";
 import { mainAheadCountResource } from "./internal/main-ahead-resource";
+import { buildHistoryResource } from "./internal/build-history-resource";
 import { buildConfig } from "../shared/config";
 
 export default {
   id: "build",
   name: "Build",
   config: buildConfig,
-  resources: [mainAheadCountResource],
+  resources: [mainAheadCountResource, buildHistoryResource],
   httpRoutes: {
     "POST /api/build": handleBuild,
     "GET /api/build/status": handleBuildStatus,

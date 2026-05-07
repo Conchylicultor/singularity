@@ -1,5 +1,9 @@
+import { eq } from "drizzle-orm";
+import { db } from "@plugins/database/server";
 import { Log } from "@plugins/debug/plugins/logs/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { _buildRuns } from "./tables";
+import { buildHistoryResource } from "./build-history-resource";
 
 const buildLog = Log.channel("build");
 
@@ -13,15 +17,27 @@ export function isBuildInflight(): boolean {
   return inflight !== null;
 }
 
-export function runBuild(): Promise<number> {
+export function runBuild(trigger: "manual" | "auto" = "auto"): Promise<number> {
   if (inflight) return inflight;
-  inflight = doRunBuild().finally(() => {
+  inflight = doRunBuild(trigger).finally(() => {
     inflight = null;
   });
   return inflight;
 }
 
-async function doRunBuild(): Promise<number> {
+function getHeadCommit(): string | null {
+  const proc = Bun.spawnSync(["git", "rev-parse", "--short", "HEAD"], { cwd: REPO_ROOT });
+  if (proc.exitCode !== 0) return null;
+  return proc.stdout.toString().trim() || null;
+}
+
+async function doRunBuild(trigger: "manual" | "auto"): Promise<number> {
+  const buildId = `build-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const commitHash = getHeadCommit();
+
+  await db.insert(_buildRuns).values({ id: buildId, trigger, commitHash });
+  buildHistoryResource.notify();
+
   // Detach into a new session so gateway's process-group SIGKILL on idle-sweep
   // doesn't kill the build mid-flight. The CLI itself uses a filesystem lock
   // and atomic-rename publish, so even across restarts web/dist stays whole.
@@ -53,6 +69,12 @@ async function doRunBuild(): Promise<number> {
 
   const exitCode = await proc.exited;
   buildLog.publish(exitCode === 0 ? "Build succeeded" : `Build failed (exit ${exitCode})`);
+
+  await db
+    .update(_buildRuns)
+    .set({ finishedAt: new Date(), exitCode })
+    .where(eq(_buildRuns.id, buildId));
+  buildHistoryResource.notify();
 
   if (exitCode === 0) {
     const worktree = process.env.SINGULARITY_WORKTREE;

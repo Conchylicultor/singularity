@@ -5,12 +5,15 @@
 ## Plugin reference
 
 - Description: Trigger `./singularity build` from the toolbar.
+- Defines:
+  - DB schema: `plugins/build/server/internal/tables.ts`
 - Contributes:
   - `Shell.Toolbar` (group `actions`) → `BuildButton`
+  - `Pane.Register` `build`
 - Server:
   - Register: `buildRunJob`
   - Uses: `config.readConfig`
-  - Resources: `build.mainAheadCount` (push)
+  - Resources: `build.history` (push), `build.mainAheadCount` (push)
   - `POST /api/build`
   - `GET /api/build/status`
 

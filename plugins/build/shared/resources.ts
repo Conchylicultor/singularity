@@ -11,3 +11,19 @@ export const mainAheadCountResource = resourceDescriptor<MainAheadCount>(
   "build.mainAheadCount",
   MainAheadCountSchema,
 );
+
+export const BuildRunSchema = z.object({
+  id: z.string(),
+  trigger: z.enum(["manual", "auto"]),
+  commitHash: z.string().nullable(),
+  startedAt: z.coerce.date(),
+  finishedAt: z.coerce.date().nullable(),
+  exitCode: z.number().int().nullable(),
+});
+
+export type BuildRun = z.infer<typeof BuildRunSchema>;
+
+export const buildHistoryResource = resourceDescriptor<BuildRun[]>(
+  "build.history",
+  z.array(BuildRunSchema),
+);

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
-import { lastAutoBuildAt } from "./build-run-job";
+import { getLastAutoBuildAt } from "./auto-build-tracker";
 
 export interface BuildStatusResponse {
   frontendHash: string;
@@ -9,7 +9,7 @@ export interface BuildStatusResponse {
 
 export async function handleBuildStatus(_req: Request): Promise<Response> {
   const frontendHash = await getFrontendHash();
-  return Response.json({ frontendHash, autoBuildAt: lastAutoBuildAt } satisfies BuildStatusResponse);
+  return Response.json({ frontendHash, autoBuildAt: getLastAutoBuildAt() } satisfies BuildStatusResponse);
 }
 
 async function getFrontendHash(): Promise<string> {

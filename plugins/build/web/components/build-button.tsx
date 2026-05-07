@@ -2,10 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { getHealth, waitForRestart } from "@plugins/health/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { MdRefresh } from "react-icons/md";
+import { MdRefresh, MdOpenInFull } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { mainAheadCountResource } from "../../shared/resources";
+import { BuildPopoverContent } from "./build-popover-content";
+import { buildPane } from "../panes";
 
 interface BuildStatus {
   frontendHash: string;
@@ -23,7 +26,7 @@ async function getBuildStatus(): Promise<BuildStatus | null> {
 }
 
 export function BuildButton() {
-  const [building, setBuilding] = useState(false);
+  const [open, setOpen] = useState(false);
   const [autoBuilding, setAutoBuilding] = useState(false);
   const [staleTab, setStaleTab] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -69,57 +72,52 @@ export function BuildButton() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleBuild() {
-    setBuilding(true);
-    try {
-      const before = await getHealth();
-      if (!before) {
-        Shell.Toast({ description: "Server unreachable", variant: "error" });
-        return;
-      }
-
-      fetch("/api/build", { method: "POST" }).catch(() => {});
-
-      const restarted = await waitForRestart(before.startedAt);
-      if (restarted) {
-        Shell.Toast({ description: "Build succeeded", variant: "success" });
-      } else {
-        Shell.Toast({ description: "Build timed out", variant: "error" });
-      }
-
-      const status = await getBuildStatus();
-      if (status) applyStatus(status);
-    } finally {
-      setBuilding(false);
-    }
-  }
-
   return (
-    <WithTooltip content="Build project">
-      <Button variant="outline" size="sm" disabled={building} onClick={handleBuild}>
-        <MdRefresh className={`size-4 ${building || autoBuilding ? "animate-spin" : ""}`} />
-        Build
-        {mainAheadCount > 0 ? (
-          <WithTooltip content={`main is ${mainAheadCount} commit${mainAheadCount !== 1 ? "s" : ""} ahead of this worktree`}>
-            <span className="block size-2 rounded-full bg-amber-400" />
-          </WithTooltip>
-        ) : loaded && !staleTab ? (
-          <WithTooltip content="Synced to HEAD">
-            <span className="block size-2 rounded-full bg-zinc-400" />
-          </WithTooltip>
-        ) : null}
-        {staleTab && (
-          <WithTooltip content="Server was rebuilt — click to reload this tab">
-            <button
-              className="block size-2 rounded-full bg-sky-400 hover:bg-sky-500"
-              onClick={(e) => {
-                e.stopPropagation();
-                window.location.reload();
-              }}
-            />
-          </WithTooltip>
-        )}
-      </Button>
-    </WithTooltip>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground"
+      >
+          <MdRefresh className={`size-4 ${autoBuilding ? "animate-spin" : ""}`} />
+          Build
+          {mainAheadCount > 0 ? (
+            <WithTooltip content={`main is ${mainAheadCount} commit${mainAheadCount !== 1 ? "s" : ""} ahead of this worktree`}>
+              <span className="block size-2 rounded-full bg-amber-400" />
+            </WithTooltip>
+          ) : loaded && !staleTab ? (
+            <WithTooltip content="Synced to HEAD">
+              <span className="block size-2 rounded-full bg-zinc-400" />
+            </WithTooltip>
+          ) : null}
+          {staleTab && (
+            <WithTooltip content="Server was rebuilt — click to reload this tab">
+              <button
+                className="block size-2 rounded-full bg-sky-400 hover:bg-sky-500"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.location.reload();
+                }}
+              />
+            </WithTooltip>
+          )}
+      </PopoverTrigger>
+      <PopoverContent className="w-[480px] p-0" align="end">
+        <div className="flex items-center justify-between border-b px-3 py-2">
+          <span className="text-sm font-medium">Build</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6"
+            onClick={() => {
+              setOpen(false);
+              buildPane.open({});
+            }}
+            aria-label="Open in pane"
+          >
+            <MdOpenInFull className="size-3" />
+          </Button>
+        </div>
+        <BuildPopoverContent variant="popover" />
+      </PopoverContent>
+    </Popover>
   );
 }
