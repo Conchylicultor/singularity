@@ -1,6 +1,6 @@
 {
-  "id": "82f8e1ca-f0c8-4684-b9b2-981c353c2148",
-  "prevId": "dcdfdc59-afef-4306-8731-f3e64be7f27a",
+  "id": "5d70034a-8064-47d9-8c1a-59b986f328de",
+  "prevId": "39f1ef79-57fd-4b8e-a84c-e4c16ccc8639",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1802,6 +1802,113 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.notifications": {
+      "name": "notifications",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "variant": {
+          "name": "variant",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dismissed": {
+          "name": "dismissed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "read": {
+          "name": "read",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "link_to": {
+          "name": "link_to",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "notifications_dismissed_idx": {
+          "name": "notifications_dismissed_idx",
+          "columns": [
+            {
+              "expression": "dismissed",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "notifications_created_at_idx": {
+          "name": "notifications_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.reorder_prefs": {
       "name": "reorder_prefs",
       "schema": "",
@@ -1992,6 +2099,12 @@
         },
         "claude_session_id": {
           "name": "claude_session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "waiting_for": {
+          "name": "waiting_for",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -3409,6 +3522,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "waiting_for": {
+          "name": "waiting_for",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "spawned_by": {
           "name": "spawned_by",
           "type": "text",
@@ -3448,7 +3567,7 @@
           "notNull": true
         }
       },
-      "definition": "select \"conversations\".\"id\", \"conversations\".\"attempt_id\", \"conversations\".\"title\", \"conversations\".\"status\", \"conversations\".\"runtime\", \"conversations\".\"model\", \"conversations\".\"kind\", \"conversations\".\"claude_session_id\", \"conversations\".\"spawned_by\", \"conversations\".\"created_at\", \"conversations\".\"updated_at\", \"conversations\".\"ended_at\", \"attempts\".\"worktree_path\", \"attempts\".\"task_id\", (\"conversations\".\"status\" <> 'gone') as \"active\" from \"conversations\" inner join \"attempts\" on \"attempts\".\"id\" = \"conversations\".\"attempt_id\"",
+      "definition": "select \"conversations\".\"id\", \"conversations\".\"attempt_id\", \"conversations\".\"title\", \"conversations\".\"status\", \"conversations\".\"runtime\", \"conversations\".\"model\", \"conversations\".\"kind\", \"conversations\".\"claude_session_id\", \"conversations\".\"waiting_for\", \"conversations\".\"spawned_by\", \"conversations\".\"created_at\", \"conversations\".\"updated_at\", \"conversations\".\"ended_at\", \"attempts\".\"worktree_path\", \"attempts\".\"task_id\", (\"conversations\".\"status\" <> 'gone') as \"active\" from \"conversations\" inner join \"attempts\" on \"attempts\".\"id\" = \"conversations\".\"attempt_id\"",
       "name": "conversations_v",
       "schema": "public",
       "isExisting": false,
@@ -3526,7 +3645,7 @@
           "default": "now()"
         }
       },
-      "definition": "with \"task_facts\" as (select \"id\", EXISTS (\n          SELECT 1 FROM \"attempts\" a WHERE a.task_id = \"tasks\".\"id\"\n        ) as \"has_attempt\", EXISTS (\n          SELECT 1 FROM \"attempts_v\" a\n           WHERE a.task_id = \"tasks\".\"id\" AND a.status = 'completed'\n        ) as \"has_completed\", EXISTS (\n          SELECT 1 FROM \"attempts_v\" a\n           WHERE a.task_id = \"tasks\".\"id\" AND a.active\n        ) as \"has_active\", EXISTS (\n          SELECT 1 FROM \"conversations\" c\n            JOIN \"attempts\" a ON a.id = c.attempt_id\n           WHERE a.task_id = \"tasks\".\"id\" AND c.status = 'waiting'\n        ) as \"has_waiting\", (\n          SELECT MIN(p.created_at)\n            FROM \"pushes\" p\n            JOIN \"attempts\" a ON a.id = p.attempt_id\n           WHERE a.task_id = \"tasks\".\"id\"\n        ) as \"min_completed_push_at\", EXISTS (\n          SELECT 1 FROM \"task_dependencies\" td\n            JOIN \"tasks\" dep ON dep.id = td.depends_on_task_id\n           WHERE td.task_id = \"tasks\".\"id\"\n             AND dep.dropped_at IS NULL\n             AND NOT EXISTS (\n               SELECT 1 FROM \"attempts_v\" a\n                WHERE a.task_id = dep.id AND a.status = 'completed'\n             )\n        ) as \"has_blocking_dep\" from \"tasks\") select \"tasks\".\"id\", \"tasks\".\"parent_id\", \"tasks\".\"title\", \"tasks\".\"description\", \"tasks\".\"author\", \"tasks\".\"dropped_at\", \"tasks\".\"held_at\", \"tasks\".\"expanded\", \"tasks\".\"rank\", \"tasks\".\"created_at\", \"tasks\".\"updated_at\", \n        CASE\n          WHEN \"tasks\".\"dropped_at\" IS NOT NULL              THEN 'dropped'\n          WHEN \"tasks\".\"held_at\"    IS NOT NULL              THEN 'held'\n          WHEN \"has_completed\"                        THEN 'done'\n          WHEN \"has_blocking_dep\"                      THEN 'blocked'\n          WHEN \"has_active\" AND \"has_waiting\"   THEN 'need_action'\n          WHEN \"has_active\"                           THEN 'in_progress'\n          WHEN \"has_attempt\"                          THEN 'attempted'\n          ELSE                                                   'new'\n        END\n       as \"status\", (\n        \"tasks\".\"dropped_at\" IS NULL\n        AND \"tasks\".\"held_at\" IS NULL\n        AND NOT \"has_completed\"\n        AND NOT \"has_blocking_dep\"\n        AND \"has_active\"\n      ) as \"active\", \n        CASE\n          WHEN \"tasks\".\"dropped_at\" IS NOT NULL   THEN \"tasks\".\"dropped_at\"\n          WHEN \"has_completed\"             THEN \"min_completed_push_at\"\n          ELSE                                        NULL\n        END\n       as \"finished_at\", COALESCE(ARRAY(\n        SELECT td.depends_on_task_id FROM \"task_dependencies\" td\n         WHERE td.task_id = \"tasks\".\"id\"\n         ORDER BY td.created_at\n      ), ARRAY[]::text[]) as \"dependencies\" from \"tasks\" inner join \"task_facts\" on \"task_facts\".\"id\" = \"tasks\".\"id\"",
+      "definition": "with \"task_facts\" as (select \"id\", EXISTS (\n          SELECT 1 FROM \"attempts\" a WHERE a.task_id = \"tasks\".\"id\"\n        ) as \"has_attempt\", EXISTS (\n          SELECT 1 FROM \"attempts_v\" a\n           WHERE a.task_id = \"tasks\".\"id\" AND a.status = 'completed'\n        ) as \"has_completed\", EXISTS (\n          SELECT 1 FROM \"attempts_v\" a\n           WHERE a.task_id = \"tasks\".\"id\" AND a.active\n        ) as \"has_active\", EXISTS (\n          SELECT 1 FROM \"conversations\" c\n            JOIN \"attempts\" a ON a.id = c.attempt_id\n           WHERE a.task_id = \"tasks\".\"id\" AND c.status = 'waiting'\n        ) as \"has_waiting\", (\n          SELECT MIN(p.created_at)\n            FROM \"pushes\" p\n            JOIN \"attempts\" a ON a.id = p.attempt_id\n           WHERE a.task_id = \"tasks\".\"id\"\n        ) as \"min_completed_push_at\", EXISTS (\n          SELECT 1 FROM \"task_dependencies\" td\n            JOIN \"tasks\" dep ON dep.id = td.depends_on_task_id\n           WHERE td.task_id = \"tasks\".\"id\"\n             AND dep.dropped_at IS NULL\n             AND NOT EXISTS (\n               SELECT 1 FROM \"attempts_v\" a\n                WHERE a.task_id = dep.id AND a.status = 'completed'\n             )\n        ) as \"has_blocking_dep\" from \"tasks\") select \"tasks\".\"id\", \"tasks\".\"parent_id\", \"tasks\".\"title\", \"tasks\".\"description\", \"tasks\".\"author\", \"tasks\".\"dropped_at\", \"tasks\".\"held_at\", \"tasks\".\"expanded\", \"tasks\".\"rank\", \"tasks\".\"created_at\", \"tasks\".\"updated_at\", \n        CASE\n          WHEN \"has_completed\"                        THEN 'done'\n          WHEN \"tasks\".\"dropped_at\" IS NOT NULL              THEN 'dropped'\n          WHEN \"tasks\".\"held_at\"    IS NOT NULL              THEN 'held'\n          WHEN \"has_blocking_dep\"                      THEN 'blocked'\n          WHEN \"has_active\" AND \"has_waiting\"   THEN 'need_action'\n          WHEN \"has_active\"                           THEN 'in_progress'\n          WHEN \"has_attempt\"                          THEN 'attempted'\n          ELSE                                                   'new'\n        END\n       as \"status\", (\n        \"tasks\".\"dropped_at\" IS NULL\n        AND \"tasks\".\"held_at\" IS NULL\n        AND NOT \"has_completed\"\n        AND NOT \"has_blocking_dep\"\n        AND \"has_active\"\n      ) as \"active\", \n        CASE\n          WHEN \"has_completed\"             THEN \"min_completed_push_at\"\n          WHEN \"tasks\".\"dropped_at\" IS NOT NULL   THEN \"tasks\".\"dropped_at\"\n          ELSE                                        NULL\n        END\n       as \"finished_at\", COALESCE(ARRAY(\n        SELECT td.depends_on_task_id FROM \"task_dependencies\" td\n         WHERE td.task_id = \"tasks\".\"id\"\n         ORDER BY td.created_at\n      ), ARRAY[]::text[]) as \"dependencies\" from \"tasks\" inner join \"task_facts\" on \"task_facts\".\"id\" = \"tasks\".\"id\"",
       "name": "tasks_v",
       "schema": "public",
       "isExisting": false,
