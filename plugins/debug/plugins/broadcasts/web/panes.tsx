@@ -1,0 +1,17 @@
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { BroadcastsPanel } from "./components/broadcasts-panel";
+
+export const broadcastsPane = Pane.define({
+  id: "debug-broadcasts",
+  after: [null],
+  segment: "debug/broadcasts",
+  component: BroadcastsBody,
+});
+
+function BroadcastsBody() {
+  return (
+    <PaneChrome pane={broadcastsPane} title="Broadcasts">
+      <BroadcastsPanel />
+    </PaneChrome>
+  );
+}

@@ -44,6 +44,7 @@ import conversationsTranscriptWatcherPlugin from "@plugins/conversations/plugins
 import conversationsPlugin from "@plugins/conversations/server";
 import crashesPlugin from "@plugins/crashes/server";
 import databaseQueryPlugin from "@plugins/database/plugins/query/server";
+import debugBroadcastsPlugin from "@plugins/debug/plugins/broadcasts/server";
 import debugDbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
 import debugLogsPlugin from "@plugins/debug/plugins/logs/server";
 import debugMemoryPlugin from "@plugins/debug/plugins/memory/server";
@@ -157,6 +158,7 @@ export const plugins: ServerPluginDefinition[] = [
   conversationsPlugin,
   crashesPlugin,
   databaseQueryPlugin,
+  debugBroadcastsPlugin,
   debugDbBackupPlugin,
   debugLogsPlugin,
   debugMemoryPlugin,

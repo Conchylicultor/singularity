@@ -462,6 +462,10 @@
       "name": "@singularity/plugin-debug",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/broadcasts": {
+      "name": "@singularity/plugin-debug-broadcasts",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/claude-cli-calls": {
       "name": "@singularity/plugin-debug-claude-cli-calls",
       "version": "0.0.1",
@@ -1598,6 +1602,8 @@
     "@singularity/plugin-database-query": ["@singularity/plugin-database-query@workspace:plugins/database/plugins/query"],
 
     "@singularity/plugin-debug": ["@singularity/plugin-debug@workspace:plugins/debug"],
+
+    "@singularity/plugin-debug-broadcasts": ["@singularity/plugin-debug-broadcasts@workspace:plugins/debug/plugins/broadcasts"],
 
     "@singularity/plugin-debug-claude-cli-calls": ["@singularity/plugin-debug-claude-cli-calls@workspace:plugins/debug/plugins/claude-cli-calls"],
 

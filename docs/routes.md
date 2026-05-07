@@ -115,6 +115,8 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
 
 - **`debug`** — Debug tools sidebar group.
   - Plugins:
+    - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
+      - `/api/debug/broadcasts (GET, PUT)`
     - **`db-backup`** — Backup non-worktree Postgres databases to ~/.backups/singularity/. Backup non-worktree Postgres databases to ~/.backups/singularity/.
       - `/api/debug/backup-db (GET, POST)`
     - **`logs`** — System logs pane, opened from the Debug sidebar.

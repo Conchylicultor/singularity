@@ -86,6 +86,7 @@ import conversationsModelProviderPlugin from "@plugins/conversations/plugins/mod
 import conversationsSummaryPlugin from "@plugins/conversations/plugins/summary/web";
 import crashesLaunchFixPlugin from "@plugins/crashes/plugins/launch-fix/web";
 import crashesPlugin from "@plugins/crashes/web";
+import debugBroadcastsPlugin from "@plugins/debug/plugins/broadcasts/web";
 import debugClaudeCliCallsPlugin from "@plugins/debug/plugins/claude-cli-calls/web";
 import debugDbBackupPlugin from "@plugins/debug/plugins/db-backup/web";
 import debugLogsPlugin from "@plugins/debug/plugins/logs/web";
@@ -231,6 +232,7 @@ export const plugins: PluginDefinition[] = [
   conversationsSummaryPlugin,
   crashesLaunchFixPlugin,
   crashesPlugin,
+  debugBroadcastsPlugin,
   debugClaudeCliCallsPlugin,
   debugDbBackupPlugin,
   debugLogsPlugin,
