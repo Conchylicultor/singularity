@@ -12,7 +12,7 @@
   - `Pane.Register` `build`
 - Server:
   - Register: `buildRunJob`
-  - Uses: `config.readConfig`
+  - Uses: `config.readConfig`, `database.db`
   - Resources: `build.history` (push), `build.mainAheadCount` (push)
   - `POST /api/build`
   - `GET /api/build/status`
