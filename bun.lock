@@ -279,6 +279,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-thinking",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/message-toc": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-message-toc",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary",
       "version": "0.0.1",
@@ -1495,6 +1499,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-text": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-text@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-thinking": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-thinking@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-thinking"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-message-toc": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-message-toc@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/message-toc"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary"],
 

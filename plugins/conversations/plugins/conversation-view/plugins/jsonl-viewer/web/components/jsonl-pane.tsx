@@ -11,6 +11,7 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
+import { JsonlViewer } from "../slots";
 
 interface UsageTotals {
   output: number;
@@ -111,6 +112,8 @@ export function JsonlPane({
   }
   const workingStartAt = workingStartAtRef.current ?? Date.now();
 
+  const overlays = JsonlViewer.Overlay.useContributions();
+
   const sticky = useStickyScroll({
     resetKey: conversation.id,
     forceScrollKey: isWorking ? 1 : 0,
@@ -150,6 +153,7 @@ export function JsonlPane({
                     <EventRow
                       key={event.kind === "tool-call" ? event.toolUseId : i}
                       event={event}
+                      index={i}
                     />
                   ))}
                   {isWorking && <WorkingIndicator startAt={workingStartAt} />}
@@ -166,6 +170,7 @@ export function JsonlPane({
             {formatTokenCount(totals.latestContext)} ctx · {formatTokenCount(totals.output)} out
           </div>
         )}
+        {overlays.map((o) => <o.component key={o.id} />)}
         <JumpToBottomButton
           handle={sticky}
           className="absolute bottom-12 right-4"

@@ -15,11 +15,19 @@ export interface RowActionContribution {
   component: ComponentType<{ event: JsonlEvent }>;
 }
 
+export interface OverlayContribution {
+  id: string;
+  component: ComponentType;
+}
+
 export const JsonlViewer = {
   EventRenderer: defineSlot<EventRendererContribution>(
     "conversation.jsonl-viewer.event-renderer",
   ),
   RowAction: defineSlot<RowActionContribution>(
     "conversation.jsonl-viewer.row-action",
+  ),
+  Overlay: defineSlot<OverlayContribution>(
+    "conversation.jsonl-viewer.overlay",
   ),
 };

@@ -79,6 +79,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
           - Plugins:
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
             - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
+            - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
             - **`summary`** — Renders summary separator events in the JSONL viewer.
             - **`system`** — Renders system events in the JSONL viewer.
             - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.

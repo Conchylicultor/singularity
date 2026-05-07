@@ -3,7 +3,7 @@ import { JsonlViewer } from "./slots";
 import { RawJsonAction } from "./components/raw-json-button";
 
 export { JsonlViewer } from "./slots";
-export type { EventRendererContribution, RowActionContribution } from "./slots";
+export type { EventRendererContribution, OverlayContribution, RowActionContribution } from "./slots";
 export { JsonlPane } from "./components/jsonl-pane";
 export { useRowMarkdown } from "./components/row-markdown-context";
 export { useLastAssistantEvent } from "./components/last-assistant-context";

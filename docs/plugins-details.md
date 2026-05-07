@@ -443,9 +443,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `POST /api/conversations/:id/hold-and-exit`
         - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
           - Defines:
-            - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.RowAction`
+            - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.RowAction`, `JsonlViewer.Overlay`
           - Exports (web):
-            - Types: `EventRendererContribution`, `RowActionContribution`
+            - Types: `EventRendererContribution`, `OverlayContribution`, `RowActionContribution`
             - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`
           - Exports (shared):
             - Types: `JsonlEventsResponse`
@@ -455,7 +455,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
-          - Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `summary`, `system`, `tool-call`, `user-image`, `user-text`
+          - Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `tool-call`, `user-image`, `user-text`
           - Plugins:
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Contributes:
@@ -465,6 +465,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `AssistantThinkingRow`
+            - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
+              - Contributes:
+                - `JsonlViewer.Overlay` → `MessageToc`
             - **`summary`** — Renders summary separator events in the JSONL viewer.
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `SummaryRow`

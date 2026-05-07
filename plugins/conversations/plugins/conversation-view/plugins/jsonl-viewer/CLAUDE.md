@@ -6,9 +6,9 @@
 
 - Description: Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
 - Defines:
-  - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.RowAction`
+  - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.RowAction`, `JsonlViewer.Overlay`
 - Exports (web):
-  - Types: `EventRendererContribution`, `RowActionContribution`
+  - Types: `EventRendererContribution`, `OverlayContribution`, `RowActionContribution`
   - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`
 - Exports (shared):
   - Types: `JsonlEventsResponse`
@@ -18,10 +18,11 @@
 - Server:
   - Uses: `tasks-core.getConversationClaudeSessionId`
   - Resources: `jsonl-events` (push)
-- Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `summary`, `system`, `tool-call`, `user-image`, `user-text`
+- Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `tool-call`, `user-image`, `user-text`
 - Sub-plugins:
   - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
   - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
+  - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
   - **`summary`** — Renders summary separator events in the JSONL viewer.
   - **`system`** — Renders system events in the JSONL viewer.
   - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.

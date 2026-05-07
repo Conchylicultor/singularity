@@ -50,6 +50,7 @@ import conversationsConversationViewForkSessionPlugin from "@plugins/conversatio
 import conversationsConversationViewHoldAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/hold-and-exit/web";
 import conversationsConversationViewJsonlViewerAssistantTextPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text/web";
 import conversationsConversationViewJsonlViewerAssistantThinkingPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-thinking/web";
+import conversationsConversationViewJsonlViewerMessageTocPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/message-toc/web";
 import conversationsConversationViewJsonlViewerSummaryPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary/web";
 import conversationsConversationViewJsonlViewerSystemPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/system/web";
 import conversationsConversationViewJsonlViewerToolCallAddTaskPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/add-task/web";
@@ -194,6 +195,7 @@ export const plugins: PluginDefinition[] = [
   conversationsConversationViewHoldAndExitPlugin,
   conversationsConversationViewJsonlViewerAssistantTextPlugin,
   conversationsConversationViewJsonlViewerAssistantThinkingPlugin,
+  conversationsConversationViewJsonlViewerMessageTocPlugin,
   conversationsConversationViewJsonlViewerSummaryPlugin,
   conversationsConversationViewJsonlViewerSystemPlugin,
   conversationsConversationViewJsonlViewerToolCallAddTaskPlugin,

@@ -23,12 +23,12 @@ function RowActions({ event }: { event: JsonlEvent }) {
   );
 }
 
-export function EventRow({ event }: { event: JsonlEvent }) {
+export function EventRow({ event, index }: { event: JsonlEvent; index: number }) {
   const renderers = JsonlViewer.EventRenderer.useContributions();
   const match = renderers.find((c) => c.kind === event.kind);
   return (
     <RowMarkdownProvider>
-      <div className="group/row relative">
+      <div className="group/row relative" data-event-index={index}>
         {match ? (
           <match.component event={event} />
         ) : (
