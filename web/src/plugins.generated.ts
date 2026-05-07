@@ -115,6 +115,7 @@ import primitivesFilepathBreadcrumbPlugin from "@plugins/primitives/plugins/file
 import primitivesIconButtonPlugin from "@plugins/primitives/plugins/icon-button/web";
 import primitivesLaunchPlugin from "@plugins/primitives/plugins/launch/web";
 import primitivesLiveStatePlugin from "@plugins/primitives/plugins/live-state/web";
+import primitivesMarkdownPlugin from "@plugins/primitives/plugins/markdown/web";
 import primitivesNetworkingPlugin from "@plugins/primitives/plugins/networking/web";
 import primitivesPanePlugin from "@plugins/primitives/plugins/pane/web";
 import primitivesPasteImagesPlugin from "@plugins/primitives/plugins/paste-images/web";
@@ -265,6 +266,7 @@ export const plugins: PluginDefinition[] = [
   primitivesIconButtonPlugin,
   primitivesLaunchPlugin,
   primitivesLiveStatePlugin,
+  primitivesMarkdownPlugin,
   primitivesNetworkingPlugin,
   primitivesPanePlugin,
   primitivesPasteImagesPlugin,

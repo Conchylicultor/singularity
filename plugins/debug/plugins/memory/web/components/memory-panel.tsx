@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import type { Components } from "react-markdown";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { MdRefresh } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { MarkdownContent } from "@plugins/primitives/plugins/markdown/web";
 
 type MemoryFile = {
   name: string;
@@ -21,37 +19,6 @@ const TYPE_BADGE: Record<MemoryFile["type"], { label: string; classes: string }>
   user: { label: "user", classes: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" },
   reference: { label: "ref", classes: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" },
   other: { label: "other", classes: "bg-muted text-muted-foreground" },
-};
-
-const REMARK_PLUGINS = [remarkGfm];
-
-const MD_COMPONENTS: Components = {
-  h1: ({ children, ...p }) => <h1 className="mt-4 mb-2 text-xl font-semibold" {...p}>{children}</h1>,
-  h2: ({ children, ...p }) => <h2 className="mt-4 mb-2 text-lg font-semibold" {...p}>{children}</h2>,
-  h3: ({ children, ...p }) => <h3 className="mt-3 mb-1.5 font-semibold" {...p}>{children}</h3>,
-  p: (p) => <p className="my-2" {...p} />,
-  a: ({ href, ...p }) => (
-    <a
-      className="text-primary underline"
-      href={href}
-      target={href?.startsWith("http") ? "_blank" : undefined}
-      rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
-      {...p}
-    />
-  ),
-  ul: (p) => <ul className="my-2 list-disc pl-6" {...p} />,
-  ol: (p) => <ol className="my-2 list-decimal pl-6" {...p} />,
-  li: (p) => <li className="my-0.5" {...p} />,
-  blockquote: (p) => (
-    <blockquote className="my-2 border-l-2 border-muted-foreground/30 pl-3 text-muted-foreground" {...p} />
-  ),
-  hr: (p) => <hr className="my-4 border-border" {...p} />,
-  code: ({ className, children, ...rest }) => {
-    const isBlock = /language-/.test(className ?? "");
-    if (isBlock) return <code className={`${className ?? ""} font-mono text-xs`} {...rest}>{children}</code>;
-    return <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs" {...rest}>{children}</code>;
-  },
-  pre: (p) => <pre className="my-2 overflow-auto rounded bg-muted p-3 font-mono text-xs" {...p} />,
 };
 
 function displayName(name: string): string {
@@ -189,11 +156,7 @@ export function MemoryPanel() {
             {error}
           </div>
         ) : content !== null ? (
-          <div className="px-6 py-4 text-sm leading-6">
-            <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={MD_COMPONENTS}>
-              {content}
-            </ReactMarkdown>
-          </div>
+          <MarkdownContent text={content} className="px-6 py-4 text-sm leading-6" />
         ) : null}
       </div>
     </div>

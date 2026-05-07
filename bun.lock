@@ -644,6 +644,10 @@
       "name": "@singularity/plugin-primitives-live-state",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/markdown": {
+      "name": "@singularity/plugin-primitives-markdown",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/networking": {
       "name": "@singularity/plugin-primitives-networking",
       "version": "0.0.1",
@@ -1706,6 +1710,8 @@
     "@singularity/plugin-primitives-launch": ["@singularity/plugin-primitives-launch@workspace:plugins/primitives/plugins/launch"],
 
     "@singularity/plugin-primitives-live-state": ["@singularity/plugin-primitives-live-state@workspace:plugins/primitives/plugins/live-state"],
+
+    "@singularity/plugin-primitives-markdown": ["@singularity/plugin-primitives-markdown@workspace:plugins/primitives/plugins/markdown"],
 
     "@singularity/plugin-primitives-networking": ["@singularity/plugin-primitives-networking@workspace:plugins/primitives/plugins/networking"],
 

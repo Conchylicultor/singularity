@@ -76,6 +76,8 @@ Behavior:
 - Exports (shared):
   - Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`
   - Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `inlineBoundary`
+- Contributes:
+  - `Markdown.Extension`
 - Server:
   - Uses: `database.db`, `tasks-core._conversations`
   - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`

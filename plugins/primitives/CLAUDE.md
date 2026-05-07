@@ -17,6 +17,7 @@
   - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
   - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
   - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
+  - **`markdown`** — Unified markdown renderer. Extensions contribute syntax highlighting, file links, active data, and image proxy via Markdown.Extension slot.
   - **`networking`** — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
   - **`pane`** — Unified pane primitive: Pane.define, <Outlet/>, <PaneRouter/>, and chrome components.
   - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
