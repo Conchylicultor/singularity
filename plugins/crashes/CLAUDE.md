@@ -16,11 +16,7 @@
 - Contributes:
   - `Core.Root` → `CrashReporter`
 - Server:
-<<<<<<< .merge_file_0yaUtv
-  - Uses: `database.db`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
-=======
-  - Uses: `notifications.recordNotification`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
->>>>>>> .merge_file_n7TLv3
+  - Uses: `database.db`, `notifications.recordNotification`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
   - Resources: `crashes` (push)
   - `POST /api/crashes`
 - Imported by: `conversations`

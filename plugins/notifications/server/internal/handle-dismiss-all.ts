@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import type { HttpHandler } from "@server/types";
 import { _notifications } from "./tables";
 import { notificationsResource } from "./resources";

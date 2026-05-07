@@ -13,6 +13,7 @@
 - Contributes:
   - `Shell.Toolbar` (group `actions`) → `BellButton`
 - Server:
+  - Uses: `database.db`
   - Resources: `notifications` (push)
   - `POST /api/notifications/dismiss-all`
   - `POST /api/notifications/mark-all-read`

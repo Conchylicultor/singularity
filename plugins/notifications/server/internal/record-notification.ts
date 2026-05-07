@@ -1,4 +1,4 @@
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { _notifications } from "./tables";
 import { notificationsResource } from "./resources";
 import type { NotificationVariant } from "../../shared/schema";

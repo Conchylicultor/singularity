@@ -731,7 +731,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Core.Root` → `CrashReporter`
   - Server:
-    - Uses: `database.db`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
+    - Uses: `database.db`, `notifications.recordNotification`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
     - Resources: `crashes` (push)
     - `POST /api/crashes`
   - Imported by: `conversations`
@@ -746,7 +746,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (shared):
     - Types: `DatabaseConfig`
     - Values: `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `db-backup`, `entity-extensions`, `events`, `events-test`, `grouped`, `improve`, `jobs`, `launch-prompts`, `notes`, `push-and-exit`, `query`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `db-backup`, `entity-extensions`, `events`, `events-test`, `grouped`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `push-and-exit`, `query`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`embedded`**
       - Exports (server):
@@ -1008,6 +1008,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
       - Exports (web):
         - Values: `MillerColumns`
+
+- **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
+  - Defines:
+    - DB schema: `plugins/notifications/server/internal/tables.ts`
+  - Exports (server):
+    - Types: `RecordNotificationInput`
+    - Values: `_notifications`, `notificationsResource`, `recordNotification`
+  - Contributes:
+    - `Shell.Toolbar` (group `actions`) → `BellButton`
+  - Server:
+    - Uses: `database.db`
+    - Resources: `notifications` (push)
+    - `POST /api/notifications/dismiss-all`
+    - `POST /api/notifications/mark-all-read`
+    - `POST /api/notifications/:id/dismiss`
+  - Imported by: `crashes`
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
