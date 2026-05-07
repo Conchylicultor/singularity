@@ -745,7 +745,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `Debug`
   - Contributes:
     - `Shell.Sidebar` "Debug" → `DebugSidebar`
-  - Slot contributors: `claude-cli-calls`, `conversations-recover`, `db-backup`, `events-test`, `logs`, `memory`, `queue`, `worktree-cleanup`
+  - Slot contributors: `claude-cli-calls`, `conversations-recover`, `db-backup`, `events-test`, `logs`, `memory`, `profiling`, `queue`, `worktree-cleanup`
   - Plugins:
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
       - Exports (web):
@@ -788,7 +788,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - `GET /api/debug/memory`
         - `GET /api/debug/memory/:name`
-      - Endpoint callers: `db-backup`, `worktree-cleanup`
+      - Endpoint callers: `db-backup`, `profiling`, `worktree-cleanup`
+    - **`profiling`** — Gantt chart of server startup phases and plugin spans. Startup profiling spans for the Gantt debug pane.
+      - Exports (web):
+        - Values: `profilingPane`
+      - Contributes:
+        - `Pane.Register` `debug-profiling`
+        - `Debug.Item` "Boot Profiling"
+        - `profilingPane.open`
+      - Server:
+        - `GET /api/debug/profiling`
     - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
       - Exports (web):
         - Values: `queuePane`
@@ -1052,7 +1061,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneSlot`, `TypeMarker`
         - Values: `buildChainUrl`, `getChain`, `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneDepthContext`, `PaneHistoryButtons`, `PaneIconAction`, `PaneLayoutContext`, `PaneLevel`, `PaneMatchContext`, `PaneRouter`, `parseUrl`, `syncChainFromUrl`, `type`, `useCurrentPane`, `useMatchForPath`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-view`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
       - Exports (web):
         - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `PromptEditor`, `rewriteAttachmentMarkdown`
