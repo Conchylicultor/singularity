@@ -156,9 +156,8 @@ export function AppShellLayout({
         )}
         <div className="flex shrink-0 flex-col">
           <sidebarButtonsArea.DndWrapper>
-            {Array.from(buttonGroups.entries()).map(([groupName, btns], gi) => (
+            {Array.from(buttonGroups.entries()).map(([groupName, btns]) => (
               <Fragment key={`btn-group-${groupName}`}>
-                {gi > 0 && <Separator className="mx-2 w-auto bg-sidebar-border" />}
                 <SidebarGroup>
                   {groupName && (() => {
                     const GroupIcon = sidebarGroupIcons?.[groupName];
@@ -206,11 +205,8 @@ export function AppShellLayout({
           </sidebarButtonsArea.DndWrapper>
 
           <pinnedPanesArea.DndWrapper>
-            {pinnedPanesArea.items.map((pane, i) => (
+            {pinnedPanesArea.items.map((pane) => (
               <Fragment key={pane.id}>
-                {(i > 0 || buttonGroups.size > 0) && (
-                  <Separator className="mx-2 w-auto bg-sidebar-border" />
-                )}
                 <pinnedPanesArea.ReorderItem item={pane}>
                   <PluginErrorBoundary slot={sidebarSlotId} label={pane.title}>
                     <SidebarGroup>
@@ -232,11 +228,8 @@ export function AppShellLayout({
           </pinnedPanesArea.DndWrapper>
 
           <scrollPanesArea.DndWrapper>
-            {scrollPanesArea.items.map((pane, i) => (
+            {scrollPanesArea.items.map((pane) => (
               <Fragment key={pane.id}>
-                {(i > 0 || buttonGroups.size > 0 || pinnedPanesArea.items.length > 0) && (
-                  <Separator className="mx-2 w-auto bg-sidebar-border" />
-                )}
                 <scrollPanesArea.ReorderItem item={pane}>
                   <PluginErrorBoundary slot={sidebarSlotId} label={pane.title}>
                     <SidebarGroup className="pb-0">
