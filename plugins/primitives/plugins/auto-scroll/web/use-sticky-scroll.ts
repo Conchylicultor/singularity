@@ -91,7 +91,7 @@ export function useStickyScroll(
     const content = contentRef.current;
     if (!viewport || !content) return;
     let lastHeight = content.getBoundingClientRect().height;
-    const observer = new ResizeObserver((entries) => {
+    const contentObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
       const newHeight = entry.contentRect.height;
@@ -106,8 +106,26 @@ export function useStickyScroll(
         setHasUnread(true);
       }
     });
-    observer.observe(content);
-    return () => observer.disconnect();
+    contentObserver.observe(content);
+
+    // Watch viewport width so side-pane open/close doesn't jump content.
+    // Pinned: re-pin to bottom after the reflow.
+    // Unpinned: overflow-anchor:auto handles it natively.
+    let lastWidth = viewport.clientWidth;
+    const viewportObserver = new ResizeObserver(() => {
+      const newWidth = viewport.clientWidth;
+      if (newWidth === lastWidth) return;
+      lastWidth = newWidth;
+      if (isPinnedRef.current) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
+    });
+    viewportObserver.observe(viewport);
+
+    return () => {
+      contentObserver.disconnect();
+      viewportObserver.disconnect();
+    };
   }, []);
 
   const jumpToBottom = useCallback(() => {
