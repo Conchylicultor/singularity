@@ -170,6 +170,11 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
       - `/api/secrets/meta (POST)` _(central)_
       - `/api/secrets/list (POST)` _(central)_
 
+- **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
+  - `/api/notifications/dismiss-all (POST)`
+  - `/api/notifications/mark-all-read (POST)`
+  - `/api/notifications/:id/dismiss (POST)`
+
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin — runtimes, sub-plugins, source path. Serves the plugin tree data for the plugin-view pane.

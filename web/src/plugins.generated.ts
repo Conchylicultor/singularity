@@ -101,6 +101,7 @@ import healthPlugin from "@plugins/health/web";
 import improvePlugin from "@plugins/improve/web";
 import infraAttachmentsPlugin from "@plugins/infra/plugins/attachments/web";
 import layoutsMillerPlugin from "@plugins/layouts/plugins/miller/web";
+import notificationsPlugin from "@plugins/notifications/web";
 import pluginMetaPluginViewPlugin from "@plugins/plugin-meta/plugins/plugin-view/web";
 import pluginMetaPublishPlugin from "@plugins/plugin-meta/plugins/publish/web";
 import primitivesAppShellPlugin from "@plugins/primitives/plugins/app-shell/web";
@@ -250,6 +251,7 @@ export const plugins: PluginDefinition[] = [
   improvePlugin,
   infraAttachmentsPlugin,
   layoutsMillerPlugin,
+  notificationsPlugin,
   pluginMetaPluginViewPlugin,
   pluginMetaPublishPlugin,
   primitivesAppShellPlugin,

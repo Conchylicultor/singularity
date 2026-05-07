@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { createTask, getTask } from "@plugins/tasks-core/server";
+import { recordNotification } from "@plugins/notifications/server";
 import { _crashes } from "./tables";
 import { crashesResource } from "./resources";
 import { bumpWindowAndCheck } from "./velocity";
@@ -67,6 +68,22 @@ export async function recordCrash(
 
   const outcome = await ensureTaskForCrash(row.id, `${fp}|${worktree}`);
   crashesResource.notify();
+  const desc = row.errorType
+    ? `${row.errorType}: ${row.message}`
+    : row.message;
+  void recordNotification({
+    type: "crash",
+    title: "Crash recorded",
+    description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
+    variant: "error",
+    linkTo: outcome.taskId,
+    metadata: {
+      crashId: row.id,
+      taskId: outcome.taskId,
+      source: row.source,
+      fingerprint: fp,
+    },
+  }).catch(() => {});
   return { ...outcome, crashLoop: false };
 }
 

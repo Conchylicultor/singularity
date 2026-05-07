@@ -60,6 +60,7 @@ import infraEventsPlugin from "@plugins/infra/plugins/events/server";
 import infraGitWatcherPlugin from "@plugins/infra/plugins/git-watcher/server";
 import infraJobsPlugin from "@plugins/infra/plugins/jobs/server";
 import infraMcpPlugin from "@plugins/infra/plugins/mcp/server";
+import notificationsPlugin from "@plugins/notifications/server";
 import pluginMetaPluginViewPlugin from "@plugins/plugin-meta/plugins/plugin-view/server";
 import primitivesRankPlugin from "@plugins/primitives/plugins/rank/server";
 import reorderPlugin from "@plugins/reorder/server";
@@ -104,7 +105,7 @@ import uiSegmentedProgressBarPlugin from "@plugins/ui/plugins/segmented-progress
 (conversationsTranscriptApiPlugin as ServerPluginDefinition).dependsOn = [conversationsTranscriptWatcherPlugin, tasksCorePlugin];
 (conversationsTranscriptWatcherPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
 (conversationsPlugin as ServerPluginDefinition).dependsOn = [conversationsTranscriptWatcherPlugin, crashesPlugin, infraAttachmentsPlugin, infraEventsPlugin, infraJobsPlugin, tasksAutoStartPlugin, tasksCorePlugin];
-(crashesPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
+(crashesPlugin as ServerPluginDefinition).dependsOn = [notificationsPlugin, tasksCorePlugin];
 (databaseQueryPlugin as ServerPluginDefinition).dependsOn = [infraMcpPlugin, tasksCorePlugin];
 (debugWorktreeCleanupPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
 (eventsTestPlugin as ServerPluginDefinition).dependsOn = [infraEventsPlugin, infraJobsPlugin];
@@ -174,6 +175,7 @@ export const plugins: ServerPluginDefinition[] = [
   infraGitWatcherPlugin,
   infraJobsPlugin,
   infraMcpPlugin,
+  notificationsPlugin,
   pluginMetaPluginViewPlugin,
   primitivesRankPlugin,
   reorderPlugin,

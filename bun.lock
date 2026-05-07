@@ -568,6 +568,10 @@
       "name": "@singularity/plugin-layouts-miller",
       "version": "0.0.1",
     },
+    "plugins/notifications": {
+      "name": "@singularity/plugin-notifications",
+      "version": "0.0.1",
+    },
     "plugins/packages": {
       "name": "@singularity/plugin-packages",
       "version": "0.0.1",
@@ -1664,6 +1668,8 @@
     "@singularity/plugin-layouts": ["@singularity/plugin-layouts@workspace:plugins/layouts"],
 
     "@singularity/plugin-layouts-miller": ["@singularity/plugin-layouts-miller@workspace:plugins/layouts/plugins/miller"],
+
+    "@singularity/plugin-notifications": ["@singularity/plugin-notifications@workspace:plugins/notifications"],
 
     "@singularity/plugin-packages": ["@singularity/plugin-packages@workspace:plugins/packages"],
 
