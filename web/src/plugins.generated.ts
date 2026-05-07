@@ -27,6 +27,7 @@ import authGooglePlugin from "@plugins/auth/plugins/google/web";
 import authNotionPlugin from "@plugins/auth/plugins/notion/web";
 import authPlugin from "@plugins/auth/web";
 import buildPlugin from "@plugins/build/web";
+import codeExplorerFileResolvePlugin from "@plugins/code-explorer/plugins/file-resolve/web";
 import codeExplorerPlugin from "@plugins/code-explorer/web";
 import configPlugin from "@plugins/config/web";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/web";
@@ -177,6 +178,7 @@ export const plugins: PluginDefinition[] = [
   authNotionPlugin,
   authPlugin,
   buildPlugin,
+  codeExplorerFileResolvePlugin,
   codeExplorerPlugin,
   configPlugin,
   conversationsRecoverPlugin,

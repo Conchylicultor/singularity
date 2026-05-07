@@ -44,6 +44,9 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
   - `/api/code/:worktree/image (GET)`
   - `/api/code/:worktree/push (GET)`
   - `/api/code/:worktree/commit (GET)`
+  - Plugins:
+    - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
+      - `/api/code/:worktree/resolve (GET)`
 
 - **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
   - `/api/config (GET, PATCH)`

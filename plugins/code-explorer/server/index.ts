@@ -6,6 +6,8 @@ import { handleImageContent } from "./internal/image-handler";
 import { handlePushFiles } from "./internal/push-handler";
 import { handleTree } from "./internal/tree-handler";
 
+export { resolveWorktreePath } from "./internal/resolve-worktree-path";
+
 export default {
   id: "code-explorer",
   name: "Code Explorer",

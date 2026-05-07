@@ -163,6 +163,10 @@
       "name": "@singularity/plugin-code-explorer",
       "version": "0.0.1",
     },
+    "plugins/code-explorer/plugins/file-resolve": {
+      "name": "@singularity/plugin-code-explorer-file-resolve",
+      "version": "0.0.1",
+    },
     "plugins/config": {
       "name": "@singularity/plugin-config",
       "version": "0.0.1",
@@ -1435,6 +1439,8 @@
     "@singularity/plugin-build": ["@singularity/plugin-build@workspace:plugins/build"],
 
     "@singularity/plugin-code-explorer": ["@singularity/plugin-code-explorer@workspace:plugins/code-explorer"],
+
+    "@singularity/plugin-code-explorer-file-resolve": ["@singularity/plugin-code-explorer-file-resolve@workspace:plugins/code-explorer/plugins/file-resolve"],
 
     "@singularity/plugin-config": ["@singularity/plugin-config@workspace:plugins/config"],
 

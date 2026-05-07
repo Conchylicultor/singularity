@@ -214,6 +214,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/build/status`
 
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
+  - Exports (server):
+    - Values: `resolveWorktreePath`
   - Contributes:
     - `Pane.Register` `global-file-tree`
     - `Pane.Register` `conv-file-tree`
@@ -228,7 +230,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/code/:worktree/image`
     - `GET /api/code/:worktree/push`
     - `GET /api/code/:worktree/commit`
-  - Endpoint callers: `assistant-text`, `commits-graph`, `diff`, `docs-button`, `file-pane`, `image`, `review`
+  - Imported by: `file-resolve`
+  - Endpoint callers: `assistant-text`, `commits-graph`, `diff`, `docs-button`, `file-pane`, `file-resolve`, `image`, `review`
+  - Plugins:
+    - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
+      - Exports (web):
+        - Types: `ResolvedFileState`
+        - Values: `FileDisambiguation`, `useResolvedFile`
+      - Server:
+        - Uses: `code-explorer.resolveWorktreePath`
+        - `GET /api/code/:worktree/resolve`
 
 - **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
   - Defines:

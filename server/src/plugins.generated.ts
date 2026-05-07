@@ -14,6 +14,7 @@ import appsDeployPlugin from "@plugins/apps/plugins/deploy/server";
 import authGooglePlugin from "@plugins/auth/plugins/google/server";
 import authNotionPlugin from "@plugins/auth/plugins/notion/server";
 import buildPlugin from "@plugins/build/server";
+import codeExplorerFileResolvePlugin from "@plugins/code-explorer/plugins/file-resolve/server";
 import codeExplorerPlugin from "@plugins/code-explorer/server";
 import configPlugin from "@plugins/config/server";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
@@ -82,6 +83,7 @@ export const plugins: ServerPluginDefinition[] = [
   authGooglePlugin,
   authNotionPlugin,
   buildPlugin,
+  codeExplorerFileResolvePlugin,
   codeExplorerPlugin,
   configPlugin,
   conversationsRecoverPlugin,
