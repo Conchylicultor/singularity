@@ -554,6 +554,13 @@
       "tag": "20260507_132407_86aa7566__add_waiting_for",
       "hash": "86aa7566",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1778185438000,
+      "tag": "20260507_202358_da11cc6d__add_notifications_table",
+      "hash": "da11cc6d",
+      "breakpoints": true
     }
   ]
 }
