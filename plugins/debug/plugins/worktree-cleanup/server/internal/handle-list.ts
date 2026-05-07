@@ -45,7 +45,7 @@ async function getGitHygiene(
 ): Promise<{ unpushedCount: number; isDirty: boolean }> {
   try {
     const p = Bun.spawn(
-      [GIT, "-C", wtPath, "status", "--porcelain=v2", "--branch"],
+      [GIT, "--no-optional-locks", "-C", wtPath, "status", "--porcelain=v2", "--branch"],
       { stdout: "pipe", stderr: "pipe" },
     );
     await p.exited;

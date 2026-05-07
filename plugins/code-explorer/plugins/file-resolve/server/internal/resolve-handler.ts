@@ -43,7 +43,7 @@ export async function handleResolve(
   }
 
   const proc = Bun.spawn(
-    [GIT, "-C", wtPath, "ls-files", "--cached", "--others", "--exclude-standard"],
+    [GIT, "--no-optional-locks", "-C", wtPath, "ls-files", "--cached", "--others", "--exclude-standard"],
     { stdout: "pipe", stderr: "pipe" },
   );
   const [out, code] = await Promise.all([

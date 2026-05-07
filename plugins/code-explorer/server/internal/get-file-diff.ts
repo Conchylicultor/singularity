@@ -18,7 +18,7 @@ async function runGit(
   cwd: string,
   tolerateExit1 = false,
 ): Promise<string | null> {
-  const proc = Bun.spawn([GIT, "-C", cwd, ...args], {
+  const proc = Bun.spawn([GIT, "--no-optional-locks", "-C", cwd, ...args], {
     stdout: "pipe",
     stderr: "pipe",
   });

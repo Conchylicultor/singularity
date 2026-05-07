@@ -13,7 +13,7 @@ export async function handleTree(
   if (!wtPath) return new Response("Not found", { status: 404 });
 
   const proc = Bun.spawn(
-    [GIT, "-C", wtPath, "ls-files", "--cached", "--others", "--exclude-standard"],
+    [GIT, "--no-optional-locks", "-C", wtPath, "ls-files", "--cached", "--others", "--exclude-standard"],
     { stdout: "pipe", stderr: "pipe" },
   );
   const [out, code] = await Promise.all([

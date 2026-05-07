@@ -67,7 +67,7 @@ export async function handleImageContent(
     if (!ALLOWED_REFS.has(ref)) return new Response("Invalid ref", { status: 400 });
     const resolvedRef = await resolveRef(wtPath, ref);
     const proc = Bun.spawn(
-      [GIT, "-C", absRoot, "show", `${resolvedRef}:${path}`],
+      [GIT, "--no-optional-locks", "-C", absRoot, "show", `${resolvedRef}:${path}`],
       { stdout: "pipe", stderr: "pipe" },
     );
     const [buf, code] = await Promise.all([

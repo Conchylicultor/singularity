@@ -22,7 +22,7 @@ export async function resolveRef(
 ): Promise<string> {
   if (ref !== "main") return ref;
   const proc = Bun.spawn(
-    [GIT, "-C", worktreePath, "merge-base", "main", "HEAD"],
+    [GIT, "--no-optional-locks", "-C", worktreePath, "merge-base", "main", "HEAD"],
     { stdout: "pipe", stderr: "pipe" },
   );
   const [out, code] = await Promise.all([

@@ -34,7 +34,7 @@ export async function getFileContentAtRef(
   const absTarget = resolve(absRoot, relPath);
   if (!isPathInside(absRoot, absTarget)) return { kind: "invalid-path" };
 
-  const proc = Bun.spawn([GIT, "-C", absRoot, "show", `${ref}:${relPath}`], {
+  const proc = Bun.spawn([GIT, "--no-optional-locks", "-C", absRoot, "show", `${ref}:${relPath}`], {
     stdout: "pipe",
     stderr: "pipe",
   });
