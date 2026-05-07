@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-infra-database",
+  "name": "@singularity/plugin-database-embedded",
   "private": true,
   "version": "0.0.1",
   "optionalDependencies": {

@@ -1,6 +1,6 @@
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { JOB_TASK } from "./constants";
 import {
   defineJob,

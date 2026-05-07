@@ -12,7 +12,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 
 type ParentTable = PgTable & { id: AnyPgColumn };
 type UserColumns = Record<string, PgColumnBuilderBase>;

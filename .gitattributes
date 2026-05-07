@@ -4,6 +4,6 @@
 docs/plugins-compact.md                       merge=regen-docs
 docs/plugins-details.md                       merge=regen-docs
 plugins/**/CLAUDE.md                          merge=regen-claudemd
-server/src/db/migrations/*.sql                merge=regen-migrations
-server/src/db/migrations/meta/_journal.json   merge=regen-migrations
-server/src/db/migrations/meta/*_snapshot.json merge=regen-migrations
+plugins/database/plugins/migrations/data/*.sql                merge=regen-migrations
+plugins/database/plugins/migrations/data/meta/_journal.json   merge=regen-migrations
+plugins/database/plugins/migrations/data/meta/*_snapshot.json merge=regen-migrations

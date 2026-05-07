@@ -11,7 +11,7 @@
   - `Conversation.PromptBar` → `PushAndExitButton`
 - Server:
   - Register: `pushAndExitJob`, `exitCleanFinalizeJob`, `exitCleanTool`, `flagRaiseTool`
-  - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.sendTurn`, `tasks-core.recentConversationsResource`
+  - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.sendTurn`, `database.db`, `tasks-core.recentConversationsResource`
   - Resources: `push-and-exit` (push)
   - `POST /api/conversations/:id/push-and-exit`
   - `DELETE /api/conversations/:id/push-and-exit`

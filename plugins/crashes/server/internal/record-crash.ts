@@ -1,5 +1,5 @@
 import { eq, sql } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { createTask, getTask } from "@plugins/tasks-core/server";
 import { _crashes } from "./tables";
 import { crashesResource } from "./resources";

@@ -11,7 +11,7 @@ import {
   type EnqueueTx,
   UNSAFE_getRegisteredJob,
 } from "@plugins/infra/plugins/jobs/server";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import type { Registration } from "@server/types";
 import { eventTriggerColumns } from "./base-columns";
 import { eventsDispatchJob } from "./dispatch-job";

@@ -51,7 +51,7 @@ Worktree backends connect via `server/src/db/client.ts`:
 ## Plugin reference
 
 - Exports (server):
-  - Values: `databaseExists`, `dropDatabase`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
+  - Values: `databaseExists`, `dropDatabase`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `setAdminPool`
 - Exports (shared):
   - Values: `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `useSystemPg`
 

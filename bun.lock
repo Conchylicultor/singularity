@@ -437,6 +437,23 @@
       "name": "@singularity/plugin-database",
       "version": "0.0.1",
     },
+    "plugins/database/plugins/embedded": {
+      "name": "@singularity/plugin-database-embedded",
+      "version": "0.0.1",
+      "optionalDependencies": {
+        "@embedded-postgres/darwin-arm64": "18.3.0-beta.17",
+        "@embedded-postgres/darwin-x64": "18.3.0-beta.17",
+        "@embedded-postgres/linux-arm64": "18.3.0-beta.17",
+        "@embedded-postgres/linux-x64": "18.3.0-beta.17",
+      },
+    },
+    "plugins/database/plugins/migrations": {
+      "name": "@singularity/plugin-database-migrations",
+      "version": "0.0.1",
+      "dependencies": {
+        "drizzle-kit": "^0.28.0",
+      },
+    },
     "plugins/database/plugins/query": {
       "name": "@singularity/plugin-database-query",
       "version": "0.0.1",
@@ -495,16 +512,6 @@
     "plugins/infra/plugins/claude-cli": {
       "name": "@singularity/plugin-infra-claude-cli",
       "version": "0.0.1",
-    },
-    "plugins/infra/plugins/database": {
-      "name": "@singularity/plugin-infra-database",
-      "version": "0.0.1",
-      "optionalDependencies": {
-        "@embedded-postgres/darwin-arm64": "18.3.0-beta.17",
-        "@embedded-postgres/darwin-x64": "18.3.0-beta.17",
-        "@embedded-postgres/linux-arm64": "18.3.0-beta.17",
-        "@embedded-postgres/linux-x64": "18.3.0-beta.17",
-      },
     },
     "plugins/infra/plugins/entity-extensions": {
       "name": "@singularity/plugin-infra-entity-extensions",
@@ -1584,6 +1591,10 @@
 
     "@singularity/plugin-database": ["@singularity/plugin-database@workspace:plugins/database"],
 
+    "@singularity/plugin-database-embedded": ["@singularity/plugin-database-embedded@workspace:plugins/database/plugins/embedded"],
+
+    "@singularity/plugin-database-migrations": ["@singularity/plugin-database-migrations@workspace:plugins/database/plugins/migrations"],
+
     "@singularity/plugin-database-query": ["@singularity/plugin-database-query@workspace:plugins/database/plugins/query"],
 
     "@singularity/plugin-debug": ["@singularity/plugin-debug@workspace:plugins/debug"],
@@ -1613,8 +1624,6 @@
     "@singularity/plugin-infra-attachments": ["@singularity/plugin-infra-attachments@workspace:plugins/infra/plugins/attachments"],
 
     "@singularity/plugin-infra-claude-cli": ["@singularity/plugin-infra-claude-cli@workspace:plugins/infra/plugins/claude-cli"],
-
-    "@singularity/plugin-infra-database": ["@singularity/plugin-infra-database@workspace:plugins/infra/plugins/database"],
 
     "@singularity/plugin-infra-entity-extensions": ["@singularity/plugin-infra-entity-extensions@workspace:plugins/infra/plugins/entity-extensions"],
 

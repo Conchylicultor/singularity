@@ -1,5 +1,5 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { _attempts, _conversations } from "../tables";
 import { conversations } from "../schema";
 import { recentConversationsResource } from "../resources";

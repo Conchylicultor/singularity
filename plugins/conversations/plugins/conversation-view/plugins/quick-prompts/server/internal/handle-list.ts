@@ -1,5 +1,5 @@
 import { asc } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { quickPromptsTable } from "./tables";
 
 export async function handleList(): Promise<Response> {

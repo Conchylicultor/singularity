@@ -3,8 +3,8 @@ import type { ServerPluginDefinition } from "@server/types";
 export { nextRankIn, nextRankUnder } from "./internal/helpers";
 export type { RankExecutor } from "./internal/helpers";
 // Re-exported so agents implementing a ranked table find both the column type
-// and the helpers in one place. Canonical source stays @server/db/types.
-export { rankText } from "@server/db/types";
+// and the helpers in one place.
+export { rankText } from "@plugins/primitives/plugins/rank/shared";
 
 export default {
   id: "rank",

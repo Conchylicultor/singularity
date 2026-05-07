@@ -2,7 +2,7 @@ import { readdir } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { isNotNull } from "drizzle-orm";
 import { loadDailyUsageData, type DailyUsage } from "ccusage/data-loader";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { _conversations } from "@plugins/tasks-core/server";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";

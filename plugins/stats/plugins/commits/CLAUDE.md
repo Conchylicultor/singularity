@@ -14,7 +14,7 @@
   - `Stats.Chart` "Lines changed" → `LinesChartsSection`
   - `Config.Section` "Excluded path toggles" → `ExcludedPathToggles`
 - Server:
-  - Uses: `config.readConfig`
+  - Uses: `config.readConfig`, `database.db`
   - `GET /api/stats/commits/cumulative`
   - `GET /api/stats/commits/rate`
   - `GET /api/stats/commits/lines/cumulative`

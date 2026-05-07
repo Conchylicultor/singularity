@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import type { Registration } from "@server/types";
 import { _jobSteps, _jobWaits } from "./tables";
 

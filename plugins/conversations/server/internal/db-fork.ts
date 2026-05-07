@@ -1,4 +1,4 @@
-import { adminPool, libpqSubprocessEnv, openShortLivedClient } from "@server/db/client";
+import { adminPool, libpqSubprocessEnv, openShortLivedClient } from "@plugins/database/server";
 
 function assertSafeName(name: string): void {
   if (!/^[a-zA-Z0-9_-]+$/.test(name)) {

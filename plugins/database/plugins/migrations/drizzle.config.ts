@@ -10,7 +10,7 @@ const user = process.env.PGUSER ?? process.env.USER ?? "postgres";
 
 // libpq treats hosts starting with "/" as a Unix-socket directory; encoded
 // as `?host=…&port=…` query params on the URL form. Embedded PG always
-// hands us a Unix socket (see plugins/infra/plugins/database/), so the CLI
+// hands us a Unix socket (see plugins/database/plugins/embedded/), so the CLI
 // passes PGHOST=/<…>/socket via libpqEnv().
 const url = host.startsWith("/")
   ? `postgres://${user}@/${worktree}?host=${encodeURIComponent(host)}&port=${port}`
@@ -24,11 +24,11 @@ export default defineConfig({
   // going through plugin index.ts files would pull in handlers that import
   // `bun`, `bun-pty`, etc. and fail to resolve.
   schema: [
-    "../plugins/**/server/**/internal/tables.ts",
-    "../plugins/**/server/**/internal/tables-*.ts",
-    "../plugins/**/server/**/internal/schema.ts",
-    "../plugins/**/server/**/internal/schema-*.ts",
+    "../../../../plugins/**/server/**/internal/tables.ts",
+    "../../../../plugins/**/server/**/internal/tables-*.ts",
+    "../../../../plugins/**/server/**/internal/schema.ts",
+    "../../../../plugins/**/server/**/internal/schema-*.ts",
   ],
-  out: "./src/db/migrations",
+  out: "./data",
   dbCredentials: { url },
 });

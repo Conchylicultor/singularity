@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { asc, desc } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
 import { _conversationSummaries } from "./tables";
 import {

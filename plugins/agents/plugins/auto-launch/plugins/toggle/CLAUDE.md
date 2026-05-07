@@ -13,7 +13,7 @@
 - Contributes:
   - `Agents.AgentActions` → `AutoLaunchToggle`
 - Server:
-  - Uses: `agents._agents`
+  - Uses: `agents._agents`, `database.db`
   - Resources: `agent-auto-launch` (push)
   - `POST /api/agent-auto-launch/:agentId`
 

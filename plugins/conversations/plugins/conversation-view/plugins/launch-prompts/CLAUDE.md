@@ -12,6 +12,7 @@
   - `Conversation.PromptBar` → `LaunchPromptsButton`
   - `Config.Section` "Launch Prompts" → `LaunchPromptsSettings`
 - Server:
+  - Uses: `database.db`
   - `GET /api/launch-prompts`
   - `POST /api/launch-prompts`
   - `PATCH /api/launch-prompts/:id`

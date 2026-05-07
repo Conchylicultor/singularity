@@ -1,4 +1,4 @@
-import { rankText } from "@server/db/types";
+import { rankText } from "@plugins/primitives/plugins/rank/shared";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { _conversations } from "@plugins/tasks-core/server";
 

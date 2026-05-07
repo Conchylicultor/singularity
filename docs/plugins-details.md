@@ -17,7 +17,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`
     - Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `inlineBoundary`
   - Server:
-    - Uses: `tasks-core._conversations`
+    - Uses: `database.db`, `tasks-core._conversations`
     - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
     - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
   - Slot contributors: `attempt`, `conv`, `task`, `task-link`
@@ -66,7 +66,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Agents.AgentActions` → `ExpandCollapseAllAction`
     - `Agents.AgentActions` → `DeleteAgentAction`
   - Server:
-    - Uses: `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
+    - Uses: `conversations.createConversation`, `database.db`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
     - Resources: `agent-launches` (push)
     - `GET /api/agents`
     - `POST /api/agents`
@@ -90,7 +90,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Agents.AgentActions` → `AutoLaunchToggle`
           - Server:
-            - Uses: `agents._agents`
+            - Uses: `agents._agents`, `database.db`
             - Resources: `agent-auto-launch` (push)
             - `POST /api/agent-auto-launch/:agentId`
 
@@ -123,6 +123,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Pane.Register` `deploy-add-server`
             - `Pane.Register` `deploy-server-detail`
           - Server:
+            - Uses: `database.db`
             - `GET /api/deploy/servers`
             - `POST /api/deploy/servers`
             - `GET /api/deploy/servers/:id`
@@ -258,6 +259,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Sidebar` "Settings" (group `System`)
     - `settingsPane.open`
   - Server:
+    - Uses: `database.db`
     - `GET /api/config`
     - `GET /api/config/specs`
     - `PATCH /api/config`
@@ -281,7 +283,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ConversationStatusSchema`, `forkErrorsResource`, `isActiveStatus`, `recentConversationsResource`
   - Server:
     - Register: `maybeLaunchTaskJob`, `conversationCreated`, `conversationTurnCompleted`, `userTurnSent`
-    - Uses: `crashes.recordCrash`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
+    - Uses: `crashes.recordCrash`, `database.adminPool`, `database.db`, `database.isTransientPgError`, `database.libpqSubprocessEnv`, `database.openShortLivedClient`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/gone`
     - `GET /api/conversations/:id`
@@ -310,7 +312,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Config.Section` "Category colors" → `CategoryColorSettings`
       - Server:
         - Register: `classifyConversationJob`
-        - Uses: `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `tasks-core._conversations`, `tasks-core.getConversation`
+        - Uses: `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
         - `POST /api/conversation-category/:conversationId/classify`
         - `POST /api/conversation-category/:conversationId`
         - `DELETE /api/conversation-category/:conversationId`
@@ -328,7 +330,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Item.Chips` → `ProgressBarRow`
       - Server:
         - Register: `classifyProgressJob`, `markProgressPushedJob`
-        - Uses: `conversations.conversationTurnCompleted`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.pushLanded`
+        - Uses: `conversations.conversationTurnCompleted`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.pushLanded`
     - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
       - Plugins:
         - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
@@ -514,6 +516,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Conversation.PromptBar` → `LaunchPromptsButton`
             - `Config.Section` "Launch Prompts" → `LaunchPromptsSettings`
           - Server:
+            - Uses: `database.db`
             - `GET /api/launch-prompts`
             - `POST /api/launch-prompts`
             - `PATCH /api/launch-prompts/:id`
@@ -537,7 +540,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Conversation.AbovePromptInput` → `NotesArea`
             - `Conversation.PromptBar` → `NotesToggleButton`
           - Server:
-            - Uses: `tasks-core._conversations`
+            - Uses: `database.db`, `tasks-core._conversations`
             - `PUT /api/conversation-notes/:conversationId`
             - `DELETE /api/conversation-notes/:conversationId`
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
@@ -553,7 +556,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Conversation.PromptBar` → `PushAndExitButton`
           - Server:
             - Register: `pushAndExitJob`, `exitCleanFinalizeJob`, `exitCleanTool`, `flagRaiseTool`
-            - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.sendTurn`, `tasks-core.recentConversationsResource`
+            - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.sendTurn`, `database.db`, `tasks-core.recentConversationsResource`
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
             - `DELETE /api/conversations/:id/push-and-exit`
@@ -565,6 +568,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Conversation.AbovePromptInput` → `QuickPromptChips`
             - `Config.Section` "Quick Prompts" → `QuickPromptsSettings`
           - Server:
+            - Uses: `database.db`
             - `GET /api/quick-prompts`
             - `POST /api/quick-prompts`
             - `PATCH /api/quick-prompts/:id`
@@ -611,7 +615,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Conversation.AbovePromptInput` → `TurnSummaryCard`
           - Server:
             - Register: `generateTurnSummaryJob`
-            - Uses: `config.readConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `tasks-core._conversations`, `tasks-core.getConversation`
+            - Uses: `config.readConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:
             - `Conversation.ActionBar` → `VscodeButton`
@@ -638,7 +642,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `ConversationsView.View` "Grouped" → `GroupedView`
           - Server:
-            - Uses: `tasks-core._conversations`
+            - Uses: `database.db`, `tasks-core._conversations`
             - `POST /api/conversation-groups`
             - `PATCH /api/conversation-groups/:id`
             - `DELETE /api/conversation-groups/:id`
@@ -657,7 +661,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `ConversationsView.View` "Queue" → `QueueView`
           - Server:
             - Register: `seedRankJob`
-            - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`, `tasks-core.listBlockingDepIds`
+            - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`, `tasks-core.listBlockingDepIds`
             - Resources: `queue-ranks` (push)
             - `POST /api/conversations-queue/reorder`
             - `POST /api/conversations-queue/promote`
@@ -686,7 +690,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Pane.Register` `conv-summary`
       - Server:
         - Register: `submitConversationSummaryTool`
-        - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `tasks-core.getConversation`, `tasks-core.getTask`
+        - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `database.db`, `tasks-core.getConversation`, `tasks-core.getTask`
         - Resources: `conversation-summaries` (push)
         - `POST /api/conversation-summary/:conversationId/generate`
     - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the on-disk JSONL path for a conversation's full raw Claude session transcript.
@@ -725,7 +729,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Core.Root` → `CrashReporter`
   - Server:
-    - Uses: `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
+    - Uses: `database.db`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
     - Resources: `crashes` (push)
     - `POST /api/crashes`
   - Imported by: `conversations`
@@ -735,11 +739,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `ErrorBoundary.Action` → `LaunchFixButton`
 
 - **`database`** — Umbrella for database tooling exposed to agents.
+  - Exports (server):
+    - Values: `adminPool`, `awaitPgReady`, `connectionString`, `db`, `isTransientPgError`, `libpqSubprocessEnv`, `openShortLivedClient`, `pool`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `db-backup`, `entity-extensions`, `events`, `events-test`, `grouped`, `improve`, `jobs`, `launch-prompts`, `notes`, `push-and-exit`, `query`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
+    - **`embedded`**
+      - Exports (server):
+        - Values: `databaseExists`, `dropDatabase`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `setAdminPool`
+      - Exports (shared):
+        - Values: `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `useSystemPg`
+    - **`migrations`**
+      - Exports (server):
+        - Values: `runMigrations`
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
       - Server:
         - Register: `queryDbTool`
-        - Uses: `tasks-core.getConversation`
+        - Uses: `database.openShortLivedClient`, `tasks-core.getConversation`
 
 - **`debug`** — Debug tools sidebar group.
   - Defines:
@@ -765,6 +780,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Debug.Item` "DB Backup"
         - `dbBackupPane.open`
       - Server:
+        - Uses: `database.adminPool`
         - `GET /api/debug/backup-db`
         - `POST /api/debug/backup-db`
     - **`logs`** — System logs pane, opened from the Debug sidebar.
@@ -832,6 +848,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `eventsTestPane.open`
   - Server:
     - Register: `logPing`, `pinged`
+    - Uses: `database.db`
     - `POST /api/events-test/subscribe`
     - `POST /api/events-test/emit`
     - `POST /api/events-test/direct-enqueue`
@@ -865,7 +882,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Toolbar` (group `actions`) → `ImproveButton`
   - Server:
     - Register: `applyGroupJob`
-    - Uses: `conversations.conversationCreated`, `tasks-core.ensureMetaTask`
+    - Uses: `conversations.conversationCreated`, `database.db`, `tasks-core.ensureMetaTask`
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:
@@ -880,6 +897,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `AttachmentLink`
         - Values: `_attachments`, `Attachments`, `deleteAttachment`, `getAttachment`
       - Server:
+        - Uses: `database.db`
         - `POST /api/attachments`
         - `GET /api/attachments/:id`
         - `DELETE /api/attachments/:id`
@@ -894,18 +912,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `ClaudeCliCall`
         - Values: `ClaudeCliCallSchema`, `claudeCliCallsResource`
       - Server:
+        - Uses: `database.db`
         - Resources: `claude-cli-calls` (push)
-    - **`database`**
-      - Exports (server):
-        - Values: `databaseExists`, `dropDatabase`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
-      - Exports (shared):
-        - Values: `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `useSystemPg`
     - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
       - Defines:
         - DB schema: `plugins/infra/plugins/entity-extensions/server/internal/define-extension.ts`
       - Exports (server):
         - Types: `EntityExtension`
         - Values: `defineExtension`, `EntityExtensions`
+      - Server:
+        - Uses: `database.db`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
       - Defines:
         - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`
@@ -915,6 +931,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
       - Server:
         - Register: `eventsDispatchJob`, `jobsHooksRegistration`
+        - Uses: `database.db`
         - `GET /api/events/emissions`
         - `GET /api/events/triggers`
         - `DELETE /api/events/triggers/:id`
@@ -936,6 +953,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `isSuspendSignal`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
       - Server:
         - Register: `jobsResumeJob`
+        - Uses: `database.connectionString`, `database.db`
         - `GET /api/jobs`
         - `POST /api/jobs/:id/retry`
         - `DELETE /api/jobs/:id`
@@ -1080,7 +1098,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `RankExecutor`
         - Values: `nextRankIn`, `nextRankUnder`, `rankText`
       - Exports (shared):
-        - Values: `Rank`, `RankSchema`
+        - Values: `Rank`, `RankSchema`, `rankText`
+      - Server:
+        - Uses: `database.db`
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
       - Exports (web):
         - Values: `formatRelativeTime`, `RelativeTime`
@@ -1108,6 +1128,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `ReorderSlotPrefs`
     - Values: `reorderPrefsResource`, `ReorderSlotPrefsSchema`
   - Server:
+    - Uses: `database.db`
     - `GET /api/reorder/:slotId`
     - `PATCH /api/reorder/:slotId`
   - Plugins:
@@ -1167,7 +1188,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Stats.Chart` "Lines changed" → `LinesChartsSection`
         - `Config.Section` "Excluded path toggles" → `ExcludedPathToggles`
       - Server:
-        - Uses: `config.readConfig`
+        - Uses: `config.readConfig`, `database.db`
         - `GET /api/stats/commits/cumulative`
         - `GET /api/stats/commits/rate`
         - `GET /api/stats/commits/lines/cumulative`
@@ -1187,7 +1208,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Stats.Chart` "Cost distribution per conversation" → `CostDistributionChart`
         - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
       - Server:
-        - Uses: `tasks-core._conversations`
+        - Uses: `database.db`, `tasks-core._conversations`
         - `GET /api/stats/cost/daily`
         - `GET /api/stats/cost/daily-by-family`
         - `GET /api/stats/cost/cumulative`
@@ -1242,7 +1263,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `TaskAutoStartRow`
         - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`
       - Server:
-        - Uses: `tasks-core._tasks`
+        - Uses: `database.db`, `tasks-core._tasks`
         - Resources: `tasks-auto-start` (push)
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
       - Contributes:
@@ -1314,6 +1335,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
     - Register: `pushLanded`, `taskStatusChanged`
+    - Uses: `database.db`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push)
   - Imported by: `active-data`, `agents`, `allow-monitor`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
   - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`)

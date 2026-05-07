@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
 import { excludedPathState } from "./tables";
 

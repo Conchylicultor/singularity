@@ -13,7 +13,7 @@
   - `Pane.Register` `conv-summary`
 - Server:
   - Register: `submitConversationSummaryTool`
-  - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `tasks-core.getConversation`, `tasks-core.getTask`
+  - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `database.db`, `tasks-core.getConversation`, `tasks-core.getTask`
   - Resources: `conversation-summaries` (push)
   - `POST /api/conversation-summary/:conversationId/generate`
 

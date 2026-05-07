@@ -1,6 +1,6 @@
 import { and, lt, not, or, sql } from "drizzle-orm";
 import { unlink } from "node:fs/promises";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { _attachments } from "./tables";
 import { getRegisteredLinks } from "./define-link";
 

@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { BACKUPS_DIR } from "@plugins/infra/plugins/paths/server";
-import { adminPool } from "@server/db/client";
+import { adminPool } from "@plugins/database/server";
 
 export async function handleBackup(): Promise<Response> {
   const user = process.env.PGUSER ?? process.env.USER ?? "postgres";

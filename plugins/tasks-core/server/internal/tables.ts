@@ -9,7 +9,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-import { rankText } from "@server/db/types";
+import { rankText } from "@plugins/primitives/plugins/rank/shared";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
 
 // Physical tables only. This file is a load-order leaf: it must NOT import

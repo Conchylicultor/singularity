@@ -1,4 +1,4 @@
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
 import { z } from "zod";
 import { _conversationCategoryColors } from "./tables-colors";

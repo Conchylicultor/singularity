@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
-import { db } from "./client";
 
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 
@@ -16,11 +16,11 @@ function loadMigrations(dir: string): Migration[] {
   const files = readdirSync(dir).filter((f) => MIGRATION_RE.test(f));
   const migrations: Migration[] = files.map((f) => {
     const m = MIGRATION_RE.exec(f)!;
-    const [, date, time, hash] = m;
+    const [, date, time, hash] = m as RegExpExecArray;
     return {
       file: f,
-      hash,
-      sortKey: `${date}${time}`,
+      hash: hash!,
+      sortKey: `${date!}${time!}`,
       sqlText: readFileSync(join(dir, f), "utf8"),
     };
   });
@@ -28,8 +28,8 @@ function loadMigrations(dir: string): Migration[] {
   return migrations;
 }
 
-export async function runMigrations(): Promise<void> {
-  const dir = join(import.meta.dir, "migrations");
+export async function runMigrations(db: NodePgDatabase): Promise<void> {
+  const dir = join(import.meta.dir, "..", "..", "data");
   const migrations = loadMigrations(dir);
 
   await db.execute(drizzleSql`
@@ -67,10 +67,4 @@ export async function runMigrations(): Promise<void> {
       );
     });
   }
-}
-
-if (import.meta.main) {
-  await runMigrations();
-  console.log("Migrations applied");
-  process.exit(0);
 }

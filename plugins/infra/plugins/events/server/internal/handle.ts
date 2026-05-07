@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { triggerTableRegistry } from "./registry";
 import { _event_emissions } from "./tables";
 import { deleteTrigger } from "./trigger";

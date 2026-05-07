@@ -12,6 +12,7 @@
   - `Debug.Item` "DB Backup"
   - `dbBackupPane.open`
 - Server:
+  - Uses: `database.adminPool`
   - `GET /api/debug/backup-db`
   - `POST /api/debug/backup-db`
 

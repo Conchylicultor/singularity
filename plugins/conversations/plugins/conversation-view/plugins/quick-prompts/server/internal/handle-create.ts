@@ -1,4 +1,4 @@
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/shared";
 import { quickPromptsTable } from "./tables";
 import { quickPromptAttachments } from "./tables-attachments";

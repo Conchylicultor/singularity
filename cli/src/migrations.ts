@@ -22,13 +22,13 @@ const MIGRATION_NAME_REGEX = /^[a-z0-9_]+$/;
  * format and regenerate the journal. Exits the process on error.
  */
 export async function generateMigration(opts: {
-  serverDir: string;
+  root: string;
   worktreeName: string;
   migrationName?: string;
   resetMigration?: boolean;
   customMigration?: boolean;
 }): Promise<void> {
-  const { serverDir, worktreeName, migrationName, resetMigration, customMigration } = opts;
+  const { root, worktreeName, migrationName, resetMigration, customMigration } = opts;
 
   if (migrationName && !MIGRATION_NAME_REGEX.test(migrationName)) {
     console.error(
@@ -37,10 +37,10 @@ export async function generateMigration(opts: {
     process.exit(1);
   }
 
-  const migrationsDir = resolve(serverDir, "src/db/migrations");
+  const migrationsDir = resolve(root, "plugins/database/plugins/migrations/data");
 
   if (resetMigration) {
-    await resetBranchLocalMigrations(serverDir, migrationsDir);
+    await resetBranchLocalMigrations(root, migrationsDir);
   }
 
   const before = new Set(readdirSync(migrationsDir));
@@ -55,7 +55,7 @@ export async function generateMigration(opts: {
   if (migrationName) cmd.push("--name", migrationName);
 
   const proc = Bun.spawn(cmd, {
-    cwd: serverDir,
+    cwd: resolve(root, "plugins/database/plugins/migrations"),
     // "inherit" would break non-TTY environments: @clack/prompts checks
     // isTTY and aborts when stdin is a pipe, so any interactive "rename
     // table?" prompt drizzle-kit shows would silently exit without generating.
@@ -154,10 +154,10 @@ export async function generateMigration(opts: {
  * drizzle-kit's "latest snapshot" lookup matches what's left on disk.
  */
 async function resetBranchLocalMigrations(
-  serverDir: string,
+  root: string,
   migrationsDir: string,
 ): Promise<void> {
-  const ref = await resolveRef(serverDir);
+  const ref = await resolveRef(root);
   if (!ref) {
     console.error(
       "--reset-migration needs `origin/main` or `main` to compare against; run `git fetch origin main` first.",
@@ -165,7 +165,7 @@ async function resetBranchLocalMigrations(
     process.exit(1);
   }
 
-  const tracked = await listTrackedMigrationBasenames(serverDir, ref);
+  const tracked = await listTrackedMigrationBasenames(root, ref);
   const metaDir = join(migrationsDir, "meta");
 
   const removed: string[] = [];
@@ -197,10 +197,10 @@ async function resetBranchLocalMigrations(
   regenerateJournal(migrationsDir);
 }
 
-async function resolveRef(serverDir: string): Promise<string | null> {
+async function resolveRef(root: string): Promise<string | null> {
   for (const ref of ["origin/main", "main"]) {
     const proc = Bun.spawn(["git", "rev-parse", "--verify", ref], {
-      cwd: serverDir,
+      cwd: root,
       stdout: "pipe",
       stderr: "pipe",
     });
@@ -209,12 +209,12 @@ async function resolveRef(serverDir: string): Promise<string | null> {
   return null;
 }
 
-export async function resolveMainRef(serverDir: string): Promise<string | null> {
-  return resolveRef(serverDir);
+export async function resolveMainRef(root: string): Promise<string | null> {
+  return resolveRef(root);
 }
 
 export async function listTrackedMigrationBasenames(
-  serverDir: string,
+  root: string,
   ref: string,
 ): Promise<Set<string>> {
   const proc = Bun.spawn(
@@ -225,9 +225,9 @@ export async function listTrackedMigrationBasenames(
       "--name-only",
       ref,
       "--",
-      "src/db/migrations",
+      "plugins/database/plugins/migrations/data",
     ],
-    { cwd: serverDir, stdout: "pipe", stderr: "pipe" },
+    { cwd: root, stdout: "pipe", stderr: "pipe" },
   );
   const out = await new Response(proc.stdout).text();
   if ((await proc.exited) !== 0) return new Set();

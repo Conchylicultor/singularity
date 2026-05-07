@@ -17,7 +17,7 @@
   - `Conversation.AbovePromptInput` → `NotesArea`
   - `Conversation.PromptBar` → `NotesToggleButton`
 - Server:
-  - Uses: `tasks-core._conversations`
+  - Uses: `database.db`, `tasks-core._conversations`
   - `PUT /api/conversation-notes/:conversationId`
   - `DELETE /api/conversation-notes/:conversationId`
 

@@ -76,6 +76,7 @@ If you're tempted to store `{ [item]: { enabled: boolean, … } }` as a JSON blo
   - `Shell.Sidebar` "Settings" (group `System`)
   - `settingsPane.open`
 - Server:
+  - Uses: `database.db`
   - `GET /api/config`
   - `GET /api/config/specs`
   - `PATCH /api/config`

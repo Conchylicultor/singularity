@@ -1,5 +1,5 @@
 import { asc, desc } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
 import { pushes } from "./tables";
 import { attempts, tasks } from "./schema";

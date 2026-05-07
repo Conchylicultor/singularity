@@ -3,7 +3,7 @@ import { getConversation, hasBlockingDep, listBlockingDepIds } from "@plugins/ta
 import { lockDeck, positionTwoRank, rankAfterBlockers } from "./queue-ranks";
 import { conversationsQueue } from "./tables";
 import { queueRanksResource } from "./resource";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 
 const Body = z.object({ conversationId: z.string().min(1) });
 

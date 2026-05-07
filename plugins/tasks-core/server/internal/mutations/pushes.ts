@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { _attempts, pushes } from "../tables";
 import { pushLanded } from "../tables-events";
 import { pushesResource, attemptsResource } from "../resources";

@@ -33,7 +33,7 @@ export const snapshotChainIntact: Check = {
   description: "drizzle migration snapshots form a single linear chain",
   async run() {
     const root = await getRoot();
-    const metaDir = resolve(root, "server/src/db/migrations/meta");
+    const metaDir = resolve(root, "plugins/database/plugins/migrations/data/meta");
 
     const snapshots = readSnapshots(metaDir);
     if (snapshots.length === 0) return { ok: true };

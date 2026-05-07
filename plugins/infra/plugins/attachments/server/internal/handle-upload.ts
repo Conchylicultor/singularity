@@ -1,4 +1,4 @@
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { _attachments } from "./tables";
 import { diskPathFor, ensureAttachmentsRoot } from "./paths";
 

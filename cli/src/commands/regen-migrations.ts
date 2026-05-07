@@ -25,16 +25,16 @@ async function getWorktreeRoot(): Promise<string> {
 // (see renameMigrations in migrations.ts). If the on-disk content of a
 // branch-local migration no longer matches the embedded prefix, the agent
 // hand-edited it — and auto-regen would silently discard those edits.
-async function assertNoHandEditedBranchLocalMigrations(serverDir: string): Promise<void> {
-  const migrationsDir = resolve(serverDir, "src/db/migrations");
-  const ref = await resolveMainRef(serverDir);
+async function assertNoHandEditedBranchLocalMigrations(root: string): Promise<void> {
+  const migrationsDir = resolve(root, "plugins/database/plugins/migrations/data");
+  const ref = await resolveMainRef(root);
   if (!ref) {
     console.error(
       "regen-migrations needs `origin/main` or `main` to compare against; run `git fetch origin main` first.",
     );
     process.exit(1);
   }
-  const tracked = await listTrackedMigrationBasenames(serverDir, ref);
+  const tracked = await listTrackedMigrationBasenames(root, ref);
   const offenders: { file: string; expected: string; actual: string }[] = [];
   for (const f of readdirSync(migrationsDir)) {
     if (!f.endsWith(".sql")) continue;
@@ -80,10 +80,9 @@ export function registerRegenMigrations(program: Command) {
     .option("--name <slug>", "Slug for the regenerated migration (default: merged_YYYYMMDD_HHMM)")
     .action(async (opts: { name?: string }) => {
       const root = await getWorktreeRoot();
-      const serverDir = resolve(root, "server");
-      await assertNoHandEditedBranchLocalMigrations(serverDir);
+      await assertNoHandEditedBranchLocalMigrations(root);
       await generateMigration({
-        serverDir,
+        root,
         worktreeName: basename(root),
         migrationName: opts.name ?? deriveMigrationName(),
         resetMigration: true,

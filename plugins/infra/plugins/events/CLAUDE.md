@@ -14,6 +14,7 @@
   - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
 - Server:
   - Register: `eventsDispatchJob`, `jobsHooksRegistration`
+  - Uses: `database.db`
   - `GET /api/events/emissions`
   - `GET /api/events/triggers`
   - `DELETE /api/events/triggers/:id`

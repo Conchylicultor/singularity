@@ -45,6 +45,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
   - Types: `AttachmentLink`
   - Values: `_attachments`, `Attachments`, `deleteAttachment`, `getAttachment`
 - Server:
+  - Uses: `database.db`
   - `POST /api/attachments`
   - `GET /api/attachments/:id`
   - `DELETE /api/attachments/:id`

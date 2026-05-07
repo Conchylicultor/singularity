@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/shared";
 import { _agents } from "./tables";
 import { agentAttachments } from "./tables-attachments";

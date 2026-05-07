@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { nextRankUnder, type RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import type { Rank } from "@plugins/primitives/plugins/rank/shared";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { _taskDependencies, _tasks } from "../tables";
 import { attempts, tasks } from "../schema";
 import type { Task } from "../schema";

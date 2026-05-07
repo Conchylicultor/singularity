@@ -1,4 +1,4 @@
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { _attempts } from "../tables";
 import { attempts } from "../schema";
 import { attemptsResource } from "../resources";

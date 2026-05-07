@@ -15,6 +15,7 @@
   - `eventsTestPane.open`
 - Server:
   - Register: `logPing`, `pinged`
+  - Uses: `database.db`
   - `POST /api/events-test/subscribe`
   - `POST /api/events-test/emit`
   - `POST /api/events-test/direct-enqueue`

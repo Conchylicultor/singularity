@@ -1,7 +1,7 @@
 import { desc, eq, isNull } from "drizzle-orm";
 import { type AnyPgColumn, type PgTable } from "drizzle-orm/pg-core";
 import { Rank } from "@plugins/primitives/plugins/rank/shared";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 
 export type RankExecutor =
   | typeof db

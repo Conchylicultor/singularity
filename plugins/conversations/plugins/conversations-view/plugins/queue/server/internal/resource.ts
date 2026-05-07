@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
 import { QueueRankRowSchema, type QueueRankRow } from "../../shared/resources";
 import { conversationsQueue } from "./tables";

@@ -2,10 +2,10 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/shared";
 import {
-  EMBEDDED_PG_PORT,
-  EMBEDDED_PG_SOCKET_DIR,
-  EMBEDDED_PG_USER,
-} from "../embedded-pg-defaults";
+  PG_PORT,
+  PG_SOCKET_DIR,
+  PG_USER,
+} from "@plugins/database/plugins/embedded/shared";
 
 const worktree = process.env.SINGULARITY_WORKTREE;
 if (!worktree) {
@@ -13,20 +13,20 @@ if (!worktree) {
 }
 
 // Default: connect to the embedded Postgres cluster managed by central
-// (see `plugins/infra/plugins/database/`). Escape hatch: setting
+// (see `plugins/database/plugins/embedded/`). Escape hatch: setting
 // `SINGULARITY_USE_SYSTEM_PG=1` reverts to the previous PGHOST/PGPORT
 // behavior so users can keep their own system Postgres.
 const useSystemPg = process.env.SINGULARITY_USE_SYSTEM_PG === "1";
 
 const host = useSystemPg
   ? (process.env.PGHOST ?? "localhost")
-  : (process.env.PGHOST ?? EMBEDDED_PG_SOCKET_DIR);
+  : (process.env.PGHOST ?? PG_SOCKET_DIR);
 const port = useSystemPg
   ? (process.env.PGPORT ?? "5432")
-  : (process.env.PGPORT ?? EMBEDDED_PG_PORT);
+  : (process.env.PGPORT ?? String(PG_PORT));
 const user = useSystemPg
   ? (process.env.PGUSER ?? process.env.USER ?? "postgres")
-  : (process.env.PGUSER ?? EMBEDDED_PG_USER);
+  : (process.env.PGUSER ?? PG_USER);
 
 // libpq treats hosts starting with "/" as a Unix socket directory and
 // ignores the `port` for the TCP sense — but the port still selects which

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { readConversationTurns } from "@plugins/conversations/server";
 import { getConversation } from "@plugins/tasks-core/server";

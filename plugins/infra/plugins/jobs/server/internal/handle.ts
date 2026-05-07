@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { JOB_TASK } from "./constants";
 import { getWorkerUtils } from "./worker";
 

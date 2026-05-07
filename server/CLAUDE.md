@@ -146,9 +146,9 @@ Server-side plugin dependencies (like `bun-pty`) are declared in the plugin's ow
 Drizzle ORM + Postgres, one DB per worktree (`SINGULARITY_WORKTREE` env var picks the database name).
 
 - Each plugin defines its tables in `plugins/{name}/server/internal/tables.ts` and any derived views/Zod schemas in `plugins/{name}/server/internal/schema.ts`.
-- `drizzle.config.ts` discovers plugin schemas via glob (`plugins/**/server/**/internal/{tables,schema}.ts`) — there is **no central aggregator file**. Adding a new plugin's tables requires no edits outside that plugin.
-- `server/src/db/client.ts` exports `db = drizzle(sql)` without a schema object — the codebase uses the SQL builder API (`db.select().from(...)`), not drizzle's relational query API (`db.query.<table>`), so no runtime schema aggregation is needed.
-- Migrations live in `server/src/db/migrations/` (committed to git).
+- `plugins/database/plugins/migrations/drizzle.config.ts` discovers plugin schemas via glob (`plugins/**/server/**/internal/{tables,schema}.ts`) — there is **no central aggregator file**. Adding a new plugin's tables requires no edits outside that plugin.
+- `@plugins/database/server` exports `db = drizzle(pool)` without a schema object — the codebase uses the SQL builder API (`db.select().from(...)`), not drizzle's relational query API (`db.query.<table>`), so no runtime schema aggregation is needed.
+- Migrations live in `plugins/database/plugins/migrations/data/` (committed to git).
 
 ### Schema change workflow
 
@@ -156,7 +156,7 @@ Edit `plugins/{name}/server/internal/tables.ts` (or `schema.ts` for views) → r
 
 ### Migration runner
 
-`server/src/db/migrate.ts` runs on every server start. The algorithm is deliberately simple:
+`plugins/database/plugins/migrations/server/` runs via the database plugin's `onReady` hook on every server start. The algorithm is deliberately simple:
 
 1. Ensure `__singularity_migrations (hash PRIMARY KEY, file, applied_at)` exists.
 2. Read applied hashes from that table.

@@ -77,7 +77,7 @@ Behavior:
   - Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`
   - Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `inlineBoundary`
 - Server:
-  - Uses: `tasks-core._conversations`
+  - Uses: `database.db`, `tasks-core._conversations`
   - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
   - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
 - Slot contributors: `attempt`, `conv`, `task`, `task-link`

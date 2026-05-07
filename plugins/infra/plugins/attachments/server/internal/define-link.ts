@@ -7,7 +7,7 @@ import {
   type AnyPgColumn,
   type PgTable,
 } from "drizzle-orm/pg-core";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import type { Attachment } from "../../shared/types";
 import { _attachments } from "./tables";
 

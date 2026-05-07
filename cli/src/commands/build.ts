@@ -473,7 +473,7 @@ export function registerBuild(program: Command) {
       // 3. Regenerate DB migrations from plugin schema files
       console.log("Generating DB migrations...");
       await generateMigration({
-        serverDir: resolve(root, "server"),
+        root,
         worktreeName: name,
         migrationName: opts.migrationName,
         resetMigration: opts.resetMigration,

@@ -20,6 +20,7 @@
   - `Pane.Register` `deploy-add-server`
   - `Pane.Register` `deploy-server-detail`
 - Server:
+  - Uses: `database.db`
   - `GET /api/deploy/servers`
   - `POST /api/deploy/servers`
   - `GET /api/deploy/servers/:id`

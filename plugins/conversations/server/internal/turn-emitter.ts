@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { isActiveStatus } from "../../shared";
 import { listConversationsForInfra } from "@plugins/tasks-core/server";
-import { db, isTransientPgError } from "@server/db/client";
+import { db, isTransientPgError } from "@plugins/database/server";
 import { watchTranscript } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
 import {

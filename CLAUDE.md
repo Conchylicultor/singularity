@@ -23,7 +23,7 @@ RULES:
 
 - NEVER run `./singularity push` unless instructed to. The user needs to review your code first.
 - NEVER commit files yourself (this will create branch conflicts). Always use `./singularity push -m "commit message"`
-- NEVER run `drizzle-kit generate` or `bun src/db/migrate.ts` manually — always go through `./singularity build`.
+- NEVER run `drizzle-kit generate` or the migration runner manually — always go through `./singularity build`.
 
 ### MCP Tools
 
@@ -120,7 +120,7 @@ Plugins can also contribute their own checks (no codegen, no registry edits — 
 
 Available built-in checks:
 
-- `migrations-in-sync` — fails if `server/src/db/schema.ts` would generate a new migration not yet committed. Fix by running `./singularity build` and committing the generated file.
+- `migrations-in-sync` — fails if plugin `tables.ts` / `schema.ts` changes would generate a new migration not yet committed. Fix by running `./singularity build` and committing the generated file.
 - `eslint` — runs `bunx eslint .` if `eslint.config.ts` exists. Plugin-contributed rules in `plugins/<name>/lint/` are auto-registered.
 
 ### Push

@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { _conversationCategoryColors } from "./tables-colors";
 import { categoryColorsResource } from "./colors-resource";
 

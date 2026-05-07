@@ -4,7 +4,7 @@ import { getConversation, hasBlockingDep, listBlockingDepIds } from "@plugins/ta
 import { lockDeck, positionTwoRank, rankAfterBlockers } from "./queue-ranks";
 import { conversationsQueue } from "./tables";
 import { queueRanksResource } from "./resource";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 
 // Bound to both `conversationCreated` and `conversationTurnCompleted`. Every
 // fire seeds the conversation at "position 2" (one slot below the current

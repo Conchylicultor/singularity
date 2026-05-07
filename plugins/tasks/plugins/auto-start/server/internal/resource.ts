@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
 import { TaskAutoStartRowSchema, type TaskAutoStartRow } from "../../shared/resources";
 import { _tasksAutoStartExt } from "./tables";

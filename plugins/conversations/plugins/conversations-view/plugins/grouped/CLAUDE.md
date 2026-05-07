@@ -15,7 +15,7 @@
 - Contributes:
   - `ConversationsView.View` "Grouped" → `GroupedView`
 - Server:
-  - Uses: `tasks-core._conversations`
+  - Uses: `database.db`, `tasks-core._conversations`
   - `POST /api/conversation-groups`
   - `PATCH /api/conversation-groups/:id`
   - `DELETE /api/conversation-groups/:id`

@@ -29,7 +29,7 @@
   - `Agents.AgentActions` → `ExpandCollapseAllAction`
   - `Agents.AgentActions` → `DeleteAgentAction`
 - Server:
-  - Uses: `conversations.createConversation`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
+  - Uses: `conversations.createConversation`, `database.db`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
   - Resources: `agent-launches` (push)
   - `GET /api/agents`
   - `POST /api/agents`

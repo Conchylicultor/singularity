@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { quickPromptsTable } from "./tables";
 import { quickPromptsServerResource } from "./resources";
 

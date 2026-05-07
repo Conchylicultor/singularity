@@ -1,8 +1,6 @@
 import { profilerStart } from "./profiler";
 import type { WsData, HttpHandler, WsHandler } from "./types";
 import { plugins } from "./plugins";
-import { awaitPgReady } from "./db/client";
-import { runMigrations } from "./db/migrate";
 import { notificationsWsHandler, handleResourceHttp } from "./resources";
 import { topoSortPlugins } from "./topo";
 
@@ -25,17 +23,6 @@ for (const p of ordered) {
       end();
     }
   }
-}
-
-{
-  const end = profilerStart("awaitPgReady", "awaitPgReady", "Await PG Ready");
-  await awaitPgReady();
-  end();
-}
-{
-  const end = profilerStart("runMigrations", "runMigrations", "Run Migrations");
-  await runMigrations();
-  end();
 }
 
 // ── Route tables ────────────────────────────────────────────────

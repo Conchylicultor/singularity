@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { _tasks } from "@plugins/tasks-core/server";
 import { tasksAutoStartResource } from "./resource";
 import { _tasksAutoStartExt } from "./tables";

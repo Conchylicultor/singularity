@@ -1,6 +1,6 @@
 import { stat } from "node:fs/promises";
 import { getAttempt } from "@plugins/tasks-core/server";
-import { dropDatabase } from "@plugins/infra/plugins/database/server";
+import { dropDatabase } from "@plugins/database/plugins/embedded/server";
 import { removeWorktree } from "@plugins/infra/plugins/worktree/server";
 
 const CONCURRENCY = 4;

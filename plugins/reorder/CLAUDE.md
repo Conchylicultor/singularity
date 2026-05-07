@@ -56,6 +56,7 @@ Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The
   - Types: `ReorderSlotPrefs`
   - Values: `reorderPrefsResource`, `ReorderSlotPrefsSchema`
 - Server:
+  - Uses: `database.db`
   - `GET /api/reorder/:slotId`
   - `PATCH /api/reorder/:slotId`
 - Sub-plugins:

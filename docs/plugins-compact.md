@@ -126,6 +126,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`database`** — Umbrella for database tooling exposed to agents.
   - Plugins:
+    - **`embedded`**
+    - **`migrations`**
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
 
 - **`debug`** — Debug tools sidebar group.
@@ -148,7 +150,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`attachments`** [load-bearing] — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
     - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
-    - **`database`**
     - **`entity-extensions`** [load-bearing] — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
     - **`events`** [load-bearing] — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
     - **`git-watcher`** [load-bearing] — Watches local git refs (refs/heads/main by default) via @parcel/watcher. Emits the git.refAdvanced trigger event and notifies the refHeadResource live-state resource on every advance.

@@ -1,5 +1,5 @@
 import { asc } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
 import { quickPromptsTable } from "./tables";
 import type { QuickPrompt } from "../../shared/resources";

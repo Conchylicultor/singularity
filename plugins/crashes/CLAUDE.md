@@ -16,7 +16,7 @@
 - Contributes:
   - `Core.Root` → `CrashReporter`
 - Server:
-  - Uses: `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
+  - Uses: `database.db`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
   - Resources: `crashes` (push)
   - `POST /api/crashes`
 - Imported by: `conversations`

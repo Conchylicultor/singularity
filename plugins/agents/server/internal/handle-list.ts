@@ -1,5 +1,5 @@
 import { asc } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { agents } from "./schema";
 
 export async function handleList(_req: Request): Promise<Response> {

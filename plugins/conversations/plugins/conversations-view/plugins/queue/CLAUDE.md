@@ -14,7 +14,7 @@
   - `ConversationsView.View` "Queue" → `QueueView`
 - Server:
   - Register: `seedRankJob`
-  - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`, `tasks-core.listBlockingDepIds`
+  - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`, `tasks-core.listBlockingDepIds`
   - Resources: `queue-ranks` (push)
   - `POST /api/conversations-queue/reorder`
   - `POST /api/conversations-queue/promote`

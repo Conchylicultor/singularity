@@ -1,4 +1,4 @@
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { setSecret } from "@plugins/infra/plugins/secrets/server";
 import { _deployServers } from "./tables";
 import { serversResource } from "./resources";

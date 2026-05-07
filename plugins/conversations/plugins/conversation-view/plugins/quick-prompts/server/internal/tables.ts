@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { rankText } from "@server/db/types";
+import { rankText } from "@plugins/primitives/plugins/rank/shared";
 
 export const quickPromptsTable = pgTable("quick_prompts", {
   id:        text("id").primaryKey(),

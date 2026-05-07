@@ -5,7 +5,7 @@ import {
   type Runner,
   type WorkerUtils,
 } from "graphile-worker";
-import { connectionString, db } from "@server/db/client";
+import { connectionString, db } from "@plugins/database/server";
 import { JOB_TASK } from "./constants";
 import {
   UNSAFE_getRegisteredJob,

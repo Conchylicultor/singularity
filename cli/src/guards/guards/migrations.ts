@@ -12,7 +12,7 @@ export const migrationsGuard = defineGuard<BashInput>({
     const { calls } = parseShell(cmd);
     for (const call of calls) {
       if (call.name !== "rm") continue;
-      if (call.args.some((a) => a.includes("db/migrations/"))) {
+      if (call.args.some((a) => a.includes("migrations/data/"))) {
         return {
           blocked: "Refusing to delete migration files directly.",
           why: "Migration SQL files and snapshots are managed exclusively by `./singularity build` — never by hand. Deleting them manually breaks the snapshot chain for every downstream agent and leaves the DB schema in an inconsistent state.",

@@ -12,6 +12,7 @@
   - `Conversation.AbovePromptInput` → `QuickPromptChips`
   - `Config.Section` "Quick Prompts" → `QuickPromptsSettings`
 - Server:
+  - Uses: `database.db`
   - `GET /api/quick-prompts`
   - `POST /api/quick-prompts`
   - `PATCH /api/quick-prompts/:id`

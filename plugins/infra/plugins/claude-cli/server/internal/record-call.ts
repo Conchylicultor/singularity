@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { _claudeCliCalls } from "./tables";
 import { claudeCliCallsResource, RECENT_CALLS_LIMIT } from "./resources";
 

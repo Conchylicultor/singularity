@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { db } from "@server/db/client";
+import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { addMemberToGroup } from "@plugins/conversations/plugins/conversations-view/plugins/grouped/server";
 import { _improvePendingGroups } from "./tables";
