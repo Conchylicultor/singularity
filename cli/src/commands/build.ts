@@ -6,6 +6,7 @@ import { basename, join, resolve } from "path";
 import { generateMigration } from "../migrations";
 import { generatePluginDocs, collectAllPlugins } from "../docgen";
 import { generatePluginRegistry } from "../plugin-registry-gen";
+import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot } from "../git/main-repo-root";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
 import { runChecks } from "../checks";
@@ -415,6 +416,8 @@ export function registerBuild(program: Command) {
         );
         process.exit(1);
       }
+
+      await checkBroadcasts("build");
 
       const root = await getWorktreeRoot();
       const name = basename(root);

@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import { checkBroadcasts } from "../broadcasts";
 import { CHECKS, listAllChecks, runChecks } from "../checks";
 
 export function registerCheck(program: Command) {
@@ -17,6 +18,7 @@ export function registerCheck(program: Command) {
       for (const c of all) console.log(`  ${c.id} — ${c.description}`);
       return;
     }
+    await checkBroadcasts("check");
     const selected = CHECKS.map((c) => c.id).filter((id) => opts[camel(id)]);
     const ok = await runChecks(selected.length > 0 ? selected : undefined);
     if (!ok) process.exit(1);

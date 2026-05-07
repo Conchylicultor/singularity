@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { existsSync, readdirSync, readFileSync, rmSync, statSync } from "fs";
 import { join } from "path";
+import { checkBroadcasts } from "../broadcasts";
 import { runChecks } from "../checks";
 
 async function run(
@@ -196,6 +197,8 @@ export function registerPush(program: Command) {
     }) => {
       const branch = await getCurrentBranch();
       const onMain = branch === "main";
+
+      await checkBroadcasts("push");
 
       // Clear stale merge-driver markers from any previous failed push.
       const root0 = await getWorktreeRoot();
