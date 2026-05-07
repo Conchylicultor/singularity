@@ -1,5 +1,5 @@
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 
 export function toRelativePath(filePath: string, attemptId: string): string {
   const marker = `/${attemptId}/`;
@@ -19,8 +19,7 @@ export function ToolFilePath({ filePath }: ToolFilePathProps) {
 
   const openFile = (e: React.MouseEvent) => {
     e.stopPropagation();
-    convFilePeekPane.open({
-      convId: conversation.id,
+    filePeekPane.open({
       worktree: conversation.attemptId,
       filePath,
     });

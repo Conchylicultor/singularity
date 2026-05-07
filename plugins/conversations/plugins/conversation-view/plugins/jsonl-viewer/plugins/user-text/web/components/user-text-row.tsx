@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/shared";
 import { formatTime } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
@@ -76,8 +76,7 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
   const showCollapsed = collapsible && !expanded;
 
   const onFileOpen = (path: string) =>
-    convFilePeekPane.open({
-      convId: conversation.id,
+    filePeekPane.open({
       worktree: conversation.attemptId,
       filePath: path,
     });

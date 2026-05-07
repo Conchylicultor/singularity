@@ -4,14 +4,14 @@
 
 ## Plugin reference
 
-- Description: Hosts the per-conversation file-peek pane and the FilePane.Renderer slot.
+- Description: Hosts the file-peek pane and the FilePane.Renderer slot.
 - Defines:
   - Slots: `FilePane.Renderer`
 - Exports (web):
   - Types: `FileContentState`, `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`
-  - Values: `convFilePeekPane`, `FileContent`, `FileOpenProvider`, `FilePane`, `FilePaneView`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileOpen`, `useFileRenderers`
+  - Values: `FileContent`, `FilePane`, `FilePaneView`, `filePeekPane`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileRenderers`
 - Contributes:
-  - `Pane.Register` `conv-file-peek`
+  - `Pane.Register` `file-peek`
 - Slot contributors: `diff`, `image`, `markdown`, `raw`
 - Sub-plugins:
   - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.

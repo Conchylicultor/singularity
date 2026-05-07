@@ -3,7 +3,6 @@ import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { TaskTreeDetail } from "@plugins/tasks/plugins/task-detail/web";
 import { useTask } from "@plugins/tasks/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { taskSidePane } from "../panes";
 
 export function SideTaskBody() {
@@ -22,13 +21,6 @@ export function SideTaskBody() {
         rootTaskId={taskId}
         selectedId={taskId}
         onSelect={navigate}
-        onFileOpen={(path) =>
-          convFilePeekPane.open({
-            convId: conversation.id,
-            worktree: "main",
-            filePath: path,
-          })
-        }
       />
     </PaneChrome>
   );

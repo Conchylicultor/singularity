@@ -13,7 +13,7 @@ import {
   useActiveDataLinkify,
 } from "@plugins/active-data/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
 import {
   formatTime,
@@ -210,8 +210,7 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
   const segments = useActiveDataSegments(e.text);
   const activeDataLinkify = useActiveDataLinkify();
   const onFileOpen = (path: string, line?: number) =>
-    convFilePeekPane.open({
-      convId: conversation.id,
+    filePeekPane.open({
       worktree: conversation.attemptId,
       filePath: line != null ? `${path}:${line}` : path,
     });

@@ -15,7 +15,6 @@ type FlushRegistry = {
   flushAll: () => Promise<void>;
 };
 
-type FileOpenHandler = (path: string) => void;
 type TaskNavigateHandler = (taskId: string) => void;
 
 const NOOP_FLUSH: FlushRegistry = {
@@ -24,7 +23,6 @@ const NOOP_FLUSH: FlushRegistry = {
 };
 
 const TaskDetailFlushCtx = createContext<FlushRegistry>(NOOP_FLUSH);
-const TaskFileOpenCtx = createContext<FileOpenHandler | undefined>(undefined);
 const TaskNavigateCtx = createContext<TaskNavigateHandler | undefined>(undefined);
 
 export function TaskDetailFlushProvider({ children }: { children: ReactNode }) {
@@ -58,12 +56,6 @@ export function useRegisterFlush(fn: FlushFn) {
   const { register } = useContext(TaskDetailFlushCtx);
   const stable = useCallback(fn, [fn]);
   useEffect(() => register(stable), [register, stable]);
-}
-
-export const TaskFileOpenProvider = TaskFileOpenCtx.Provider;
-
-export function useTaskFileOpen(): FileOpenHandler | undefined {
-  return useContext(TaskFileOpenCtx);
 }
 
 export const TaskNavigateProvider = TaskNavigateCtx.Provider;

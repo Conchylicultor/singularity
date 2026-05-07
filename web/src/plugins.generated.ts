@@ -135,7 +135,6 @@ import tasksTaskDescriptionPlugin from "@plugins/tasks/plugins/task-description/
 import tasksTaskDetailPlugin from "@plugins/tasks/plugins/task-detail/web";
 import tasksTaskDraftFormPlugin from "@plugins/tasks/plugins/task-draft-form/web";
 import tasksTaskEventsPlugin from "@plugins/tasks/plugins/task-events/web";
-import tasksTaskFilePeekPlugin from "@plugins/tasks/plugins/task-file-peek/web";
 import tasksTaskGraphPlugin from "@plugins/tasks/plugins/task-graph/web";
 import tasksTaskHeaderPlugin from "@plugins/tasks/plugins/task-header/web";
 import tasksTaskListPlugin from "@plugins/tasks/plugins/task-list/web";
@@ -279,7 +278,6 @@ export const plugins: PluginDefinition[] = [
   tasksTaskDetailPlugin,
   tasksTaskDraftFormPlugin,
   tasksTaskEventsPlugin,
-  tasksTaskFilePeekPlugin,
   tasksTaskGraphPlugin,
   tasksTaskHeaderPlugin,
   tasksTaskListPlugin,

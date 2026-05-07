@@ -8,7 +8,7 @@
 - Defines:
   - Slots: `TaskDetail.Above`, `TaskDetail.Section`
 - Exports (web):
-  - Values: `taskConversationPane`, `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskFileOpenProvider`, `TaskNavigateProvider`, `tasksRootPane`, `TaskTreeDetail`, `useFlushAll`, `useRegisterFlush`, `useTaskFileOpen`, `useTaskNavigate`
+  - Values: `taskConversationPane`, `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskNavigateProvider`, `tasksRootPane`, `TaskTreeDetail`, `useFlushAll`, `useRegisterFlush`, `useTaskNavigate`
 - Contributes:
   - `Pane.Register` `tasks-root`
   - `Pane.Register` `task-detail`

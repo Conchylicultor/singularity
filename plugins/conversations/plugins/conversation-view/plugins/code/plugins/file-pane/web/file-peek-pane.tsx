@@ -1,7 +1,8 @@
-import { useCallback, useEffect } from "react";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { useEffect } from "react";
+import { Pane, PaneChrome, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
+import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
 import {
   useResolvedFile,
@@ -10,20 +11,24 @@ import {
 import { FileContent } from "./components/file-content";
 import { FileTabs } from "./components/file-tabs";
 import { useFileRenderers } from "./components/use-file-renderers";
-import { FileOpenProvider } from "./file-open-context";
 
-export const convFilePeekPane = Pane.define({
-  id: "conv-file-peek",
-  after: [conversationPane],
+export const filePeekPane = Pane.define({
+  id: "file-peek",
+  after: [conversationPane, taskDetailPane],
   segment: "file/:worktree/:filePath*",
-  component: ConvFilePeekPaneBody,
+  component: FilePeekPaneBody,
   chrome: { history: false },
   width: 600,
 });
 
-function ConvFilePeekPaneBody() {
-  const { convId } = conversationPane.useParams();
-  const { worktree, filePath: rawFilePath } = convFilePeekPane.useParams();
+function FilePeekPaneBody() {
+  const match = usePaneMatch();
+  const convEntry = match?.chain.find(
+    (e) => e.pane === conversationPane._internal,
+  );
+  const convId = convEntry?.params.convId as string | undefined;
+
+  const { worktree, filePath: rawFilePath } = filePeekPane.useParams();
 
   const lineMatch = rawFilePath.match(/:(\d+)$/);
   const line = lineMatch ? parseInt(lineMatch[1]!, 10) : undefined;
@@ -34,27 +39,21 @@ function ConvFilePeekPaneBody() {
   useEffect(() => {
     if (resolved.status === "resolved") {
       const fp = resolved.path;
-      convFilePeekPane.open({
-        convId,
+      filePeekPane.open({
         worktree,
         filePath: line != null ? `${fp}:${line}` : fp,
       });
     }
-  }, [resolved, convId, worktree, line]);
+  }, [resolved, worktree, line]);
 
-  const onFileOpen = useCallback(
-    (fp: string, ln?: number) =>
-      convFilePeekPane.open({ convId, worktree, filePath: ln != null ? `${fp}:${ln}` : fp }),
-    [convId, worktree],
-  );
-  const { files } = useEditedFiles(convId);
+  const { files } = useEditedFiles(convId ?? "");
   const status = files?.find((f) => f.path === filePath)?.status ?? "clean";
   const renderers = useFileRenderers({ path: filePath, status });
 
   if (resolved.status === "loading") {
     return (
       <PaneChrome
-        pane={convFilePeekPane}
+        pane={filePeekPane}
         title={<FilepathBreadcrumb path={filePath} />}
         hideRightActions
       >
@@ -68,7 +67,7 @@ function ConvFilePeekPaneBody() {
   if (resolved.status === "ambiguous") {
     return (
       <PaneChrome
-        pane={convFilePeekPane}
+        pane={filePeekPane}
         title={<FilepathBreadcrumb path={filePath} />}
         hideRightActions
       >
@@ -76,8 +75,7 @@ function ConvFilePeekPaneBody() {
           query={filePath}
           matches={resolved.matches}
           onSelect={(fp) =>
-            convFilePeekPane.open({
-              convId,
+            filePeekPane.open({
               worktree,
               filePath: line != null ? `${fp}:${line}` : fp,
             })
@@ -97,17 +95,15 @@ function ConvFilePeekPaneBody() {
   );
 
   return (
-    <FileOpenProvider value={onFileOpen}>
-      <PaneChrome pane={convFilePeekPane} title={title} hideRightActions>
-        <div className="h-full min-h-0 overflow-auto">
-          <FileContent
-            worktree={worktree}
-            path={filePath}
-            line={line}
-            active={renderers.active}
-          />
-        </div>
-      </PaneChrome>
-    </FileOpenProvider>
+    <PaneChrome pane={filePeekPane} title={title} hideRightActions>
+      <div className="h-full min-h-0 overflow-auto">
+        <FileContent
+          worktree={worktree}
+          path={filePath}
+          line={line}
+          active={renderers.active}
+        />
+      </div>
+    </PaneChrome>
   );
 }

@@ -747,10 +747,6 @@
       "name": "@singularity/plugin-tasks-task-events",
       "version": "0.0.1",
     },
-    "plugins/tasks/plugins/task-file-peek": {
-      "name": "@singularity/plugin-tasks-task-file-peek",
-      "version": "0.0.1",
-    },
     "plugins/tasks/plugins/task-graph": {
       "name": "@singularity/plugin-tasks-task-graph",
       "version": "0.0.1",
@@ -1717,8 +1713,6 @@
     "@singularity/plugin-tasks-task-draft-form": ["@singularity/plugin-tasks-task-draft-form@workspace:plugins/tasks/plugins/task-draft-form"],
 
     "@singularity/plugin-tasks-task-events": ["@singularity/plugin-tasks-task-events@workspace:plugins/tasks/plugins/task-events"],
-
-    "@singularity/plugin-tasks-task-file-peek": ["@singularity/plugin-tasks-task-file-peek@workspace:plugins/tasks/plugins/task-file-peek"],
 
     "@singularity/plugin-tasks-task-graph": ["@singularity/plugin-tasks-task-graph@workspace:plugins/tasks/plugins/task-graph"],
 

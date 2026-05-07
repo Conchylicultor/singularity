@@ -1,19 +1,17 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { TasksList } from "@plugins/tasks/plugins/task-list/web";
 import { tasksResource } from "@plugins/tasks/shared";
-import { TaskFileOpenProvider, TaskNavigateProvider } from "../context";
+import { TaskNavigateProvider } from "../context";
 import { TaskDetail } from "./task-detail";
 
 export function TaskTreeDetail({
   rootTaskId,
   selectedId,
   onSelect,
-  onFileOpen,
 }: {
   rootTaskId: string;
   selectedId: string;
   onSelect: (id: string) => void;
-  onFileOpen?: (path: string) => void;
 }) {
   useResource(tasksResource);
 
@@ -28,9 +26,7 @@ export function TaskTreeDetail({
           />
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
-          <TaskFileOpenProvider value={onFileOpen}>
-            <TaskDetail key={selectedId} taskId={selectedId} />
-          </TaskFileOpenProvider>
+          <TaskDetail key={selectedId} taskId={selectedId} />
         </div>
       </div>
     </TaskNavigateProvider>

@@ -1,13 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
-import {
-  convFilePeekPane,
-  FileOpenProvider,
-  FilePaneView,
-} from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import { FilePaneView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { convDocsPane, isDocFile } from "../panes";
 import { usePushedDocFiles } from "../use-pushed-doc-files";
 import { DocRow } from "./doc-row";
@@ -47,18 +43,6 @@ export function DocsPane() {
 
   const selected = docs?.find((f) => f.path === selectedPath) ?? null;
 
-  const onFileOpen = useCallback(
-    (fp: string) => {
-      const docWorktree = docs?.find((d) => d.path === fp)?.worktree ?? conversation.attemptId;
-      convFilePeekPane.open({
-        convId: conversation.id,
-        worktree: docWorktree,
-        filePath: fp,
-      });
-    },
-    [conversation.id, conversation.attemptId, docs],
-  );
-
   const title = (
     <span className="flex items-center gap-2">
       <span>Docs</span>
@@ -96,13 +80,11 @@ export function DocsPane() {
         )}
         <div className="min-h-0 flex-1 overflow-hidden">
           {selected ? (
-            <FileOpenProvider value={onFileOpen}>
               <FilePaneView
                 worktree={selected.worktree}
                 path={selected.path}
                 status={selected.status}
               />
-            </FileOpenProvider>
           ) : (
             <div className="px-3 py-2 text-sm text-muted-foreground">
               Select a document above.

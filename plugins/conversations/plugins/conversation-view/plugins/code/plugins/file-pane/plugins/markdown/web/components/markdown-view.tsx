@@ -1,9 +1,9 @@
-import { useMemo, type ReactNode } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 import type { Components } from "react-markdown";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { linkifyChildren } from "@plugins/primitives/plugins/file-links/web";
-import { useFileContent, useFileOpen } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import { useFileContent, filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 
 const REMARK_PLUGINS = [remarkGfm];
 
@@ -113,7 +113,11 @@ export function MarkdownView({
   path: string;
 }) {
   const state = useFileContent(worktree, path);
-  const onFileOpen = useFileOpen();
+  const onFileOpen = useCallback(
+    (fp: string, ln?: number) =>
+      filePeekPane.open({ worktree, filePath: ln != null ? `${fp}:${ln}` : fp }),
+    [worktree],
+  );
   const components = useMemo(() => buildComponents(onFileOpen), [onFileOpen]);
 
   if (state.kind === "loading") {

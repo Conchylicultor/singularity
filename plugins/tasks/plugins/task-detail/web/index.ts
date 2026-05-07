@@ -10,9 +10,7 @@ import {
 
 export { TaskDetail as TaskDetailSlots } from "./slots";
 export {
-  TaskFileOpenProvider,
   TaskNavigateProvider,
-  useTaskFileOpen,
   useTaskNavigate,
   useFlushAll,
   useRegisterFlush,
