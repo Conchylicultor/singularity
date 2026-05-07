@@ -18,6 +18,6 @@ export const GUARDS: Guard<any>[] = [
   agentModelGuard,
 ];
 
-export type { Guard, GuardContext, Verdict, ToolMatcher } from "./types";
+export type { Guard, GuardContext, Verdict, ToolMatcher, FileHint } from "./types";
 export { parseShell } from "./parse-shell";
 export { createContext } from "./context";

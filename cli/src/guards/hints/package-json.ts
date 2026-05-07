@@ -1,0 +1,8 @@
+import type { FileHint } from "../types";
+
+export const packageJsonHint: FileHint = {
+  name: "package-json-singularity-ns",
+  match: (p) => p.endsWith("/package.json"),
+  message:
+    'Reminder: Singularity metadata goes under the "singularity" key, not at the root level.',
+};

@@ -1,6 +1,6 @@
 export type Verdict = { kind: "allow" } | { kind: "deny"; reason: string };
 
-export type ToolMatcher = "Bash" | "Write" | "Edit" | "NotebookEdit" | "Agent";
+export type ToolMatcher = "Bash" | "Write" | "Edit" | "Read" | "NotebookEdit" | "Agent";
 
 export interface GuardContext {
   cwd: string;
@@ -17,4 +17,10 @@ export interface Guard<I = unknown> {
   name: string;
   matcher: ToolMatcher | ToolMatcher[];
   check(input: I, ctx: GuardContext): Verdict | Promise<Verdict>;
+}
+
+export interface FileHint {
+  name: string;
+  match(filePath: string): boolean;
+  message: string;
 }
