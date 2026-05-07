@@ -387,10 +387,20 @@ function buildFreshChain(
     if (!found) break;
   }
 
-  return path.map((pane) => ({
-    paneId: pane.id,
-    params: extractOwnParams(pane, params),
-  }));
+  const chain = getChain();
+  return path.map((pane) => {
+    const own = extractOwnParams(pane, params);
+    // Inherit missing params from the current chain for ancestor panes
+    const existing = chain.find((s) => s.paneId === pane.id);
+    if (existing) {
+      for (const name of segmentParamNames(pane.segment)) {
+        if (!(name in own) && name in existing.params) {
+          own[name] = existing.params[name]!;
+        }
+      }
+    }
+    return { paneId: pane.id, params: own };
+  });
 }
 
 function findValidPositions(
