@@ -153,6 +153,10 @@ import uiSegmentedProgressBarDotsPlugin from "@plugins/ui/plugins/segmented-prog
 import uiSegmentedProgressBarSegmentedPlugin from "@plugins/ui/plugins/segmented-progress-bar/plugins/segmented/web";
 import uiSegmentedProgressBarPlugin from "@plugins/ui/plugins/segmented-progress-bar/web";
 import uiThemeEnginePlugin from "@plugins/ui/plugins/theme-engine/web";
+import uiTokensColorPalettePlugin from "@plugins/ui/plugins/tokens/plugins/color-palette/web";
+import uiTokensShapePlugin from "@plugins/ui/plugins/tokens/plugins/shape/web";
+import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sidebar-palette/web";
+import uiTokensPlugin from "@plugins/ui/plugins/tokens/web";
 import welcomePlugin from "@plugins/welcome/web";
 import worktreeSwitcherPlugin from "@plugins/worktree-switcher/web";
 
@@ -304,6 +308,10 @@ export const plugins: PluginDefinition[] = [
   uiSegmentedProgressBarSegmentedPlugin,
   uiSegmentedProgressBarPlugin,
   uiThemeEnginePlugin,
+  uiTokensColorPalettePlugin,
+  uiTokensShapePlugin,
+  uiTokensSidebarPalettePlugin,
+  uiTokensPlugin,
   welcomePlugin,
   worktreeSwitcherPlugin,
 ];

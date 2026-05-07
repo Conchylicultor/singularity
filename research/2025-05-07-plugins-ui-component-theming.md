@@ -19,9 +19,9 @@ We want a plugin-based UI component system where visual components (segmented pr
 ### Layers
 
 ```
-Layer 3 (future): Theme presets — named bundles that batch-set all variants
-Layer 2 (future): Token customization — CSS vars overridden per variant
-Layer 1 (this PR): Variant selection — pick which renderer draws the component
+Layer 3 (future): Per-token fine-grained overrides (color pickers, radius sliders)
+Layer 2 (done): Token customization — CSS vars overridden via token group presets
+Layer 1 (done): Variant selection — pick which renderer draws the component
 ```
 
 ### Dependency graph
@@ -257,3 +257,387 @@ Minimal server barrel — just registers the config field so the PATCH endpoint 
 5. Reload the page — selection persists
 6. `./singularity check` passes (plugin boundaries, eslint)
 7. Type-check: passing an invalid `activeStep` string produces a compile error
+
+---
+
+## Level 2: CSS Token Groups
+
+### What this layer adds
+
+Level 1 selected *which renderer* draws a component. Level 2 controls *which values* the renderer uses — border radius, colors, spacing — via CSS custom properties. The result is global theming (switch "ocean" for the whole app) and per-app scoping (the Deploy app always looks "corporate" regardless of the global setting).
+
+### The constraint, reframed
+
+`web/src/theme/CLAUDE.md` says: plugins consume tokens, never define them. Only `web/src/theme/app.css` may declare CSS custom properties.
+
+Level 2 extends this rule, not breaks it: **`app.css` remains the static default layer; the theme-engine plugin is the sole authorized runtime injector.** It owns a single `<style id="theme-engine">` element in `<head>`. No other plugin injects CSS vars. Individual token-group plugins declare their variables and preset values to the theme-engine, which resolves and injects everything in one place.
+
+### Key concepts
+
+| Concept | Definition |
+|---|---|
+| **Token group** | A named set of CSS custom properties with a shared semantic concern (e.g. `color-palette` owns `--primary`, `--background`, `--muted`, …) |
+| **Token group preset** | A named set of concrete values for all variables in a group (e.g. `ocean`: `--primary: oklch(0.55 0.18 230)`) |
+| **Global theme preset** | A bundle that selects one preset per token group atomically (e.g. `minimal`: `{ color-palette: "slate", shape: "flat" }`) |
+| **Theme scope** | A React subtree where specific token groups are overridden — used by app shells to pin a visual identity independent of the global setting |
+| **`defineTokenGroup`** | Framework primitive (lives in `theme-engine/shared`) that declares a group's variable schema; returns a typed descriptor and contributes the group to the theme-engine |
+
+### Token group examples (mapping to the existing shadcn tokens in `app.css`)
+
+The 20+ existing custom properties in `app.css` map naturally to three groups:
+
+**`color-palette`** — semantic palette: `--primary`, `--primary-foreground`, `--secondary`, `--secondary-foreground`, `--muted`, `--muted-foreground`, `--accent`, `--accent-foreground`, `--background`, `--foreground`, `--card`, `--card-foreground`, `--popover`, `--popover-foreground`, `--border`, `--input`, `--ring`, `--destructive`
+
+**`shape`** — geometry: `--radius` (all Tailwind radius variants derive from this via `calc()`)
+
+**`sidebar-palette`** — sidebar-specific: `--sidebar`, `--sidebar-foreground`, `--sidebar-border`, `--sidebar-accent`, `--sidebar-accent-foreground`, `--sidebar-ring`
+
+Tailwind utility classes (`bg-primary`, `text-muted-foreground`, `rounded-md`) reference these custom properties via the `@theme inline` block in `app.css`. Updating the CSS vars at runtime is picked up automatically by those classes.
+
+### `defineTokenGroup` primitive
+
+Lives in `plugins/ui/plugins/theme-engine/shared/index.ts` alongside the ThemeEngine slot types. Token-group plugins import from `@plugins/ui/plugins/theme-engine/shared`.
+
+```ts
+// theme-engine/shared/index.ts
+export interface TokenGroupField {
+  default: string;    // initial value (matches app.css :root baseline)
+  label?: string;     // shown in fine-grained override UI (v3)
+}
+
+export type TokenGroupSchema = Record<string, TokenGroupField>;
+
+export interface TokenGroupDescriptor<T extends TokenGroupSchema> {
+  id: string;
+  schema: T;
+  vars: { [K in keyof T]: string };  // field → CSS var name, e.g. vars.primary === "--primary"
+}
+
+export function defineTokenGroup<T extends TokenGroupSchema>(
+  id: string,
+  schema: T,
+): TokenGroupDescriptor<T>;
+```
+
+Example — color-palette group:
+
+```ts
+// plugins/ui/plugins/tokens/plugins/color-palette/shared/index.ts
+import { defineTokenGroup } from "@plugins/ui/plugins/theme-engine/shared";
+
+export const colorPaletteGroup = defineTokenGroup("color-palette", {
+  primary:            { default: "oklch(0.44 0.09 240)", label: "Primary" },
+  primaryForeground:  { default: "oklch(0.985 0 0)",     label: "On primary" },
+  background:         { default: "oklch(1 0 0)",          label: "Background" },
+  foreground:         { default: "oklch(0.145 0 0)",      label: "Text" },
+  muted:              { default: "oklch(0.97 0 0)",       label: "Muted surface" },
+  mutedForeground:    { default: "oklch(0.556 0 0)",      label: "Muted text" },
+  border:             { default: "oklch(0.922 0 0)",      label: "Border" },
+  // … remaining shadcn tokens
+});
+
+// colorPaletteGroup.vars.primary === "--primary"
+// colorPaletteGroup.vars.mutedForeground === "--muted-foreground"
+// (camelCase field → kebab-case CSS var, prefixed with --)
+```
+
+Components consume via CSS (no JS import needed):
+```css
+.button { background-color: var(--primary); color: var(--primary-foreground); }
+```
+
+Or via the typed helper to avoid typos:
+```tsx
+style={{ color: colorPaletteGroup.vars.mutedForeground }}  // "var(--muted-foreground)"
+```
+
+### Token group plugin structure
+
+Each group is a plugin under `plugins/ui/plugins/tokens/plugins/<group-name>/`. The canonical example is `color-palette`:
+
+```
+plugins/ui/plugins/tokens/plugins/color-palette/
+  shared/
+    index.ts        # colorPaletteGroup descriptor, ColorPalettePreset type
+  web/
+    index.ts        # plugin def — contributes ThemeEngine.TokenGroup + ThemeEngine.VariantGroup
+    slots.ts        # ColorPalette.Preset slot
+    internal/
+      config.ts     # defineConfig({ preset: "default" })
+    components/
+      color-palette-picker.tsx   # select + preview for ThemeEngine.VariantGroup
+    presets.ts      # built-in presets contributed to ColorPalette.Preset
+```
+
+`slots.ts`:
+```ts
+import { defineSlot } from "@core";
+import type { ColorPaletteTokenValues } from "../shared";
+
+export interface ColorPalettePreset {
+  id: string;
+  label: string;
+  light: ColorPaletteTokenValues;   // values for :root (light mode)
+  dark: ColorPaletteTokenValues;    // values for .dark scope
+}
+
+export const ColorPalette = {
+  Preset: defineSlot<ColorPalettePreset>("ui.color-palette.preset"),
+};
+```
+
+`presets.ts` (built-in presets, contributed directly in the plugin):
+```ts
+import { ColorPalette } from "./slots";
+
+ColorPalette.Preset.contribute({
+  id: "default",   label: "Default",
+  light: { primary: "oklch(0.44 0.09 240)", /* … */ },
+  dark:  { primary: "oklch(0.65 0.12 240)", /* … */ },
+});
+ColorPalette.Preset.contribute({
+  id: "ocean",  label: "Ocean",
+  light: { primary: "oklch(0.55 0.18 230)", /* … */ },
+  dark:  { primary: "oklch(0.70 0.18 230)", /* … */ },
+});
+```
+
+`web/index.ts` contributes to two theme-engine slots:
+```ts
+// Registers group with the injector
+ThemeEngine.TokenGroup.contribute({
+  id: "color-palette",
+  label: "Color Palette",
+  descriptor: colorPaletteGroup,
+  getPresetsHook: () => ColorPalette.Preset.useContributions(),
+  configDescriptor: colorPaletteConfig,
+  pluginId: "ui-color-palette",
+});
+
+// Registers a picker in the Settings pane
+ThemeEngine.VariantGroup.contribute({
+  componentId: "color-palette",
+  componentLabel: "Color Palette",
+  component: ColorPalettePicker,
+});
+```
+
+### Preset extensibility: slots, not sub-plugins
+
+Third-party plugins extend the preset list by contributing to the `ColorPalette.Preset` slot — no new directories needed:
+
+```ts
+// In any plugin's index.ts:
+import { ColorPalette } from "@plugins/ui/plugins/tokens/plugins/color-palette/web";
+
+ColorPalette.Preset.contribute({
+  id: "brand-blue",
+  label: "Brand Blue",
+  light: { primary: "oklch(0.48 0.21 262)", primaryForeground: "oklch(0.98 0 0)", /* … */ },
+  dark:  { primary: "oklch(0.62 0.21 262)", /* … */ },
+});
+```
+
+Sub-plugins would be overkill here — a preset is pure data (no React components, no logic). The slot contribution pattern handles this cleanly and keeps `plugins/ui/plugins/tokens/plugins/color-palette/presets/` from becoming an unbounded flat list.
+
+### Global theme presets (bundles)
+
+The theme-engine exposes a `ThemeEngine.GlobalPreset` slot for full-app theme bundles:
+
+```ts
+export interface GlobalThemePreset {
+  id: string;
+  label: string;
+  groups: Partial<Record<string, string>>;  // groupId → presetId
+}
+```
+
+Example contributions (from within theme-engine or a companion plugin):
+```ts
+ThemeEngine.GlobalPreset.contribute({
+  id: "default",   label: "Default",
+  groups: { "color-palette": "default", "shape": "default" },
+});
+ThemeEngine.GlobalPreset.contribute({
+  id: "ocean",     label: "Ocean",
+  groups: { "color-palette": "ocean", "shape": "rounded" },
+});
+ThemeEngine.GlobalPreset.contribute({
+  id: "minimal",   label: "Minimal",
+  groups: { "color-palette": "slate", "shape": "sharp" },
+});
+```
+
+Selecting a global preset atomically sets all per-group preset config values. Per-group pickers still override the bundle's selection.
+
+### CSS injection architecture
+
+Theme-engine renders one `ThemeInjector` component at the app root. It:
+
+1. Reads all `ThemeEngine.TokenGroup` contributions
+2. For each group, reads the active preset id from config (`useConfigValues`)
+3. Reads the matching preset from the group's preset slot contributions
+4. Merges all groups into two CSS variable maps: `{ light, dark }`
+5. Renders a single `<style>` element with `:root { … }` and `.dark { … }` blocks
+
+```tsx
+// theme-engine/web/components/theme-injector.tsx
+function ThemeInjector() {
+  const groups = ThemeEngine.TokenGroup.useContributions();
+  const css = useResolvedCSS(groups);   // hooks into config + presets per group
+  return <style id="theme-engine">{css}</style>;
+}
+```
+
+Generated output:
+```css
+:root {
+  --primary: oklch(0.55 0.18 230);         /* ocean preset */
+  --primary-foreground: oklch(0.98 0 0);
+  --radius: 0.5rem;                        /* sharp shape preset */
+  /* … */
+}
+.dark {
+  --primary: oklch(0.70 0.18 230);
+  /* … */
+}
+```
+
+This `<style>` tag has higher specificity-position than `app.css` (injected later in `<head>`) so it overrides the static defaults. The static defaults in `app.css` serve as the fallback if the theme-engine hasn't hydrated yet.
+
+### Per-app theme scoping
+
+Apps override token groups for their own subtree via a `<ThemeScope>` component exported from `@plugins/ui/plugins/theme-engine/web`:
+
+```tsx
+// plugins/apps/deploy/plugins/shell/web/components/deploy-shell-root.tsx
+import { ThemeScope } from "@plugins/ui/plugins/theme-engine/web";
+
+export function DeployShellRoot({ children }) {
+  return (
+    <ThemeScope presets={{ "color-palette": "corporate" }}>
+      {children}
+    </ThemeScope>
+  );
+}
+```
+
+`ThemeScope` resolves the named presets to concrete CSS var values and renders a `<div style={cssVars}>` wrapper. CSS variable inheritance does the rest — all descendants inside the scope use the overridden values, while components outside are unaffected.
+
+```tsx
+// theme-engine/web/components/theme-scope.tsx
+export function ThemeScope({
+  presets,
+  overrides,
+  children,
+}: {
+  presets?: Partial<Record<string, string>>;   // groupId → presetId
+  overrides?: Record<string, string>;          // "--css-var" → value
+  children: ReactNode;
+}) {
+  const cssVars = useResolvedScopeVars(presets, overrides);
+  return <div style={cssVars as CSSProperties}>{children}</div>;
+}
+```
+
+App shells declare their theme statically — no config needed for per-app identity. The global preset picker in Settings only affects components outside any `ThemeScope`.
+
+### Settings UI additions
+
+The theme-engine Settings section is extended to three levels:
+
+```
+Settings → UI Themes
+  ┌─────────────────────────────────────────────────┐
+  │ Theme                                           │
+  │  ┌────────────────────────────────────────┐    │
+  │  │ Default ▾  (GlobalPreset slot picker)  │    │
+  │  └────────────────────────────────────────┘    │
+  │                                                 │
+  │ Color Palette      [Default ▾]  ← VariantGroup  │
+  │ Shape              [Default ▾]  ← VariantGroup  │
+  │ Sidebar Palette    [Default ▾]  ← VariantGroup  │
+  │                                                 │
+  │ Progress Bar style [Dots ▾]     ← Level 1       │
+  └─────────────────────────────────────────────────┘
+```
+
+The global preset picker calls `setConfigValue` for all group keys atomically when changed. Per-group pickers update their own key only, breaking out of the bundle.
+
+Per-token fine-grained overrides (color pickers, radius sliders) are Layer 3 — deferred.
+
+### Cross-component token dependencies
+
+Components declare CSS var dependencies implicitly through their stylesheets. The token group division acts as a contract:
+
+| Token group | Used by |
+|---|---|
+| `color-palette` | Buttons, badges, inputs, progress bars — anything with color |
+| `shape` | Buttons, cards, dialogs, badges — anything rounded |
+| `sidebar-palette` | Sidebar items, sidebar header, nav groups |
+
+No JS-level import is required between, say, `Button` and `color-palette`. The CSS var names (`--primary`, `--radius`) are the interface. The token group plugin just injects the values; the Button component reads them via `var(--primary)` in its CSS.
+
+If a plugin needs TypeScript-safe access to a CSS var name (to avoid typos in `style` props):
+```ts
+import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-palette/shared";
+// colorPaletteGroup.vars.primary === "var(--primary)"
+```
+
+### Folder structure additions
+
+```
+plugins/ui/
+  plugins/
+    theme-engine/                         # extended from Level 1
+      shared/
+        index.ts                          # NEW: defineTokenGroup, TokenGroupDescriptor, ThemeEngine slot types
+      web/
+        index.ts                          # extended: also contributes ThemeRoot to app layout
+        slots.ts                          # extended: + TokenGroup slot, GlobalPreset slot
+        components/
+          theme-injector.tsx              # NEW: renders <style id="theme-engine"> in <head>
+          theme-scope.tsx                 # NEW: <ThemeScope> per-app override wrapper
+          global-preset-picker.tsx        # NEW: top-level bundle dropdown
+          variant-settings.tsx            # extended: adds global picker above per-group pickers
+    tokens/                               # NEW umbrella
+      web/
+        index.ts                          # umbrella plugin def (label only)
+      plugins/
+        color-palette/
+          shared/index.ts                 # colorPaletteGroup descriptor, ColorPalettePreset type
+          web/
+            index.ts                      # contributes ThemeEngine.TokenGroup + ThemeEngine.VariantGroup
+            slots.ts                      # ColorPalette.Preset slot
+            internal/config.ts            # defineConfig({ preset: "default" })
+            components/
+              color-palette-picker.tsx    # preset select with color swatches preview
+            presets.ts                    # default, ocean, slate, warm built-in presets
+        shape/
+          shared/index.ts                 # shapeGroup descriptor (just --radius)
+          web/
+            index.ts
+            slots.ts                      # Shape.Preset slot
+            internal/config.ts
+            components/shape-picker.tsx   # visual radius preview
+            presets.ts                    # sharp, default, rounded, pill
+        sidebar-palette/
+          shared/index.ts
+          web/
+            index.ts
+            slots.ts                      # SidebarPalette.Preset slot
+            internal/config.ts
+            components/sidebar-palette-picker.tsx
+            presets.ts
+```
+
+### Open questions
+
+| Question | Options | Recommendation |
+|---|---|---|
+| **Dark mode per preset** | (a) Each preset ships `{ light, dark }` — two value sets / (b) dark mode is a separate overlay layer that the user can also theme | (a) for v1 — simplest; each preset author knows their intended dark values. Dark overlay adds complexity for marginal gain. |
+| **Config scope** | Per-worktree (existing config plugin) vs user-level (same user, all worktrees) | Per-worktree for v1 — consistent with all other config. A future user-level config primitive can upgrade this. |
+| **Flash of default theme** | The static `app.css` defaults show until `ThemeInjector` hydrates | Mitigate: `ThemeInjector` reads config synchronously if config is already cached (live-state TanStack Query). Acceptable for v1; CSS `@starting-style` or SSR would be the full fix. |
+| **`app.css` baseline drift** | If defaults in `app.css` diverge from preset `default` values, the FODT flash is visible | Keep `app.css` in sync with the `default` preset's light values. Add a CI check (`./singularity check --tokens-in-sync`) that compares them. |
+| **App scope declaration** | (a) Wrap in `<ThemeScope>` in the shell component (code) / (b) Contribute to `ThemeEngine.AppScope` slot (data) | (a) for v1 — simpler, no extra slot, more explicit. (b) useful only if we need the theme-engine to enumerate all app scopes, e.g., for a preview thumbnail. |
+| **Token group boundary** | Some tokens like `--card` overlap color and surface concerns | Accept fuzzy boundaries for v1 — group tokens by how they're *overridden together* (a palette swap changes all colors), not by their semantic role. |

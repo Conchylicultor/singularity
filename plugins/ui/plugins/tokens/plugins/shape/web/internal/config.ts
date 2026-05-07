@@ -1,0 +1,1 @@
+export { shapeConfig } from "../../shared";

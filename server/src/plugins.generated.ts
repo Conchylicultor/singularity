@@ -74,6 +74,10 @@ import tasksTaskTitlePlugin from "@plugins/tasks/plugins/task-title/server";
 import tasksPlugin from "@plugins/tasks/server";
 import terminalPlugin from "@plugins/terminal/server";
 import uiSegmentedProgressBarPlugin from "@plugins/ui/plugins/segmented-progress-bar/server";
+import uiThemeEnginePlugin from "@plugins/ui/plugins/theme-engine/server";
+import uiTokensColorPalettePlugin from "@plugins/ui/plugins/tokens/plugins/color-palette/server";
+import uiTokensShapePlugin from "@plugins/ui/plugins/tokens/plugins/shape/server";
+import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sidebar-palette/server";
 
 (activeDataPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
 (agentsAutoLaunchTogglePlugin as ServerPluginDefinition).dependsOn = [agentsPlugin, infraEntityExtensionsPlugin];
@@ -189,4 +193,8 @@ export const plugins: ServerPluginDefinition[] = [
   tasksPlugin,
   terminalPlugin,
   uiSegmentedProgressBarPlugin,
+  uiThemeEnginePlugin,
+  uiTokensColorPalettePlugin,
+  uiTokensShapePlugin,
+  uiTokensSidebarPalettePlugin,
 ];

@@ -248,6 +248,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
         - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.
     - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
+    - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
+      - Plugins:
+        - **`color-palette`** — Color palette token group with switchable presets.
+        - **`shape`** — Shape token group (border-radius) with switchable presets.
+        - **`sidebar-palette`** — Sidebar palette token group with switchable presets.
 
 - **`welcome`** — Landing pane shown at `/`.
 

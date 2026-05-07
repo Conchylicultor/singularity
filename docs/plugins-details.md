@@ -1428,13 +1428,59 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `SegmentedProgressBarSlots.Variant` "Segmented" → `SegmentedRenderer`
     - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
       - Defines:
-        - Slots: `ThemeEngine.VariantGroup`
+        - Slots: `ThemeEngine.VariantGroup`, `ThemeEngine.TokenGroup`, `ThemeEngine.GlobalPreset`
       - Exports (web):
-        - Types: `VariantGroupContribution`
-        - Values: `ThemeEngine`
+        - Types: `GlobalPresetContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`
+        - Values: `ThemeEngine`, `ThemeScope`
+      - Exports (shared):
+        - Types: `TokenGroupDescriptor`, `TokenGroupField`, `TokenGroupSchema`
+        - Values: `defineTokenGroup`, `themeEngineConfig`
       - Contributes:
-        - `Config.Section` "UI component variants" → `VariantSettings`
-      - Slot contributors: `segmented-progress-bar`
+        - `Core.Root` → `ThemeInjector`
+        - `Config.Section` "UI Themes" → `VariantSettings`
+      - Slot contributors: `color-palette`, `segmented-progress-bar`, `shape`, `sidebar-palette`, `tokens`
+    - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
+      - Contributes:
+        - `ThemeEngine.GlobalPreset` "Default"
+        - `ThemeEngine.GlobalPreset` "Ocean"
+        - `ThemeEngine.GlobalPreset` "Warm"
+      - Plugins:
+        - **`color-palette`** — Color palette token group with switchable presets.
+          - Defines:
+            - Slots: `ColorPalette.Preset`
+          - Exports (web):
+            - Types: `ColorPalettePresetContribution`
+            - Values: `ColorPalette`
+          - Exports (shared):
+            - Types: `ColorPaletteTokenValues`
+            - Values: `colorPaletteConfig`, `colorPaletteGroup`
+          - Contributes:
+            - `ThemeEngine.TokenGroup` "Color Palette"
+            - `ThemeEngine.VariantGroup` → `ColorPalettePicker`
+        - **`shape`** — Shape token group (border-radius) with switchable presets.
+          - Defines:
+            - Slots: `Shape.Preset`
+          - Exports (web):
+            - Types: `ShapePresetContribution`
+            - Values: `Shape`
+          - Exports (shared):
+            - Types: `ShapeTokenValues`
+            - Values: `shapeConfig`, `shapeGroup`
+          - Contributes:
+            - `ThemeEngine.TokenGroup` "Shape"
+            - `ThemeEngine.VariantGroup` → `ShapePicker`
+        - **`sidebar-palette`** — Sidebar palette token group with switchable presets.
+          - Defines:
+            - Slots: `SidebarPalette.Preset`
+          - Exports (web):
+            - Types: `SidebarPalettePresetContribution`
+            - Values: `SidebarPalette`
+          - Exports (shared):
+            - Types: `SidebarPaletteTokenValues`
+            - Values: `sidebarPaletteConfig`, `sidebarPaletteGroup`
+          - Contributes:
+            - `ThemeEngine.TokenGroup` "Sidebar Palette"
+            - `ThemeEngine.VariantGroup` → `SidebarPalettePicker`
 
 - **`welcome`** — Landing pane shown at `/`.
   - Exports (web):
