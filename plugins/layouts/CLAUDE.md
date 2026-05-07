@@ -20,6 +20,7 @@ mounting it in place of `<PaneRouter/>`.
 
 ## Plugin reference
 
+- Description: Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
 - Sub-plugins:
   - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
 

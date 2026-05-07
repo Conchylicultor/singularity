@@ -4,6 +4,7 @@
 
 ## Plugin reference
 
+- Description: Agent manager app shell and layout.
 - Sub-plugins:
   - **`shell`** — App shell for the agent manager. Registers the / app entry and renders the main Shell layout.
 

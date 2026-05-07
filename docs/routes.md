@@ -20,7 +20,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
 
 - **`apps`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Plugins:
-    - **`deploy`** — Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+    - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
           - `/api/deploy/servers (GET, POST)`

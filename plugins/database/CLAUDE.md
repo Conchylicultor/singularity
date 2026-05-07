@@ -4,6 +4,7 @@
 
 ## Plugin reference
 
+- Description: Umbrella for database tooling exposed to agents.
 - Sub-plugins:
   - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
 

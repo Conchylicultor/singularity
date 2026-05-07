@@ -12,14 +12,11 @@ import activeDataTaskLinkPlugin from "@plugins/active-data/plugins/task-link/web
 import activeDataTaskPlugin from "@plugins/active-data/plugins/task/web";
 import activeDataPlugin from "@plugins/active-data/web";
 import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/plugins/toggle/web";
-import agentsAutoLaunchPlugin from "@plugins/agents/plugins/auto-launch/web";
 import agentsPlugin from "@plugins/agents/web";
 import appsAgentManagerShellPlugin from "@plugins/apps/plugins/agent-manager/plugins/shell/web";
 import appsDeployServersPlugin from "@plugins/apps/plugins/deploy/plugins/servers/web";
 import appsDeployShellPlugin from "@plugins/apps/plugins/deploy/plugins/shell/web";
-import appsDeployPlugin from "@plugins/apps/plugins/deploy/web";
 import appsFileExplorerShellPlugin from "@plugins/apps/plugins/file-explorer/plugins/shell/web";
-import appsFileExplorerPlugin from "@plugins/apps/plugins/file-explorer/web";
 import appsPlugin from "@plugins/apps/web";
 import attemptViewPlugin from "@plugins/attempt-view/web";
 import authGoogleSetupWizardPlugin from "@plugins/auth/plugins/google/plugins/setup-wizard/web";
@@ -34,7 +31,6 @@ import conversationsRecoverPlugin from "@plugins/conversations-recover/web";
 import conversationsConversationCategoryPlugin from "@plugins/conversations/plugins/conversation-category/web";
 import conversationsConversationProgressPlugin from "@plugins/conversations/plugins/conversation-progress/web";
 import conversationsConversationUiItemPlugin from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import conversationsConversationUiPlugin from "@plugins/conversations/plugins/conversation-ui/web";
 import conversationsConversationViewActionBarPlugin from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import conversationsConversationViewAllowMonitorPlugin from "@plugins/conversations/plugins/conversation-view/plugins/allow-monitor/web";
 import conversationsConversationViewBlockedByPlugin from "@plugins/conversations/plugins/conversation-view/plugins/blocked-by/web";
@@ -103,7 +99,6 @@ import infraAttachmentsPlugin from "@plugins/infra/plugins/attachments/web";
 import layoutsMillerPlugin from "@plugins/layouts/plugins/miller/web";
 import pluginMetaPluginViewPlugin from "@plugins/plugin-meta/plugins/plugin-view/web";
 import pluginMetaPublishPlugin from "@plugins/plugin-meta/plugins/publish/web";
-import pluginMetaPlugin from "@plugins/plugin-meta/web";
 import primitivesAppShellPlugin from "@plugins/primitives/plugins/app-shell/web";
 import primitivesAutoScrollPlugin from "@plugins/primitives/plugins/auto-scroll/web";
 import primitivesAvatarPlugin from "@plugins/primitives/plugins/avatar/web";
@@ -122,7 +117,6 @@ import primitivesRankPlugin from "@plugins/primitives/plugins/rank/web";
 import primitivesRelativeTimePlugin from "@plugins/primitives/plugins/relative-time/web";
 import primitivesSyntaxHighlightPlugin from "@plugins/primitives/plugins/syntax-highlight/web";
 import primitivesTreePlugin from "@plugins/primitives/plugins/tree/web";
-import primitivesPlugin from "@plugins/primitives/web";
 import reorderEditModePlugin from "@plugins/reorder/plugins/edit-mode/web";
 import reorderPlugin from "@plugins/reorder/web";
 import screenshotDrawCanvasPlugin from "@plugins/screenshot/plugins/draw-canvas/web";
@@ -152,7 +146,6 @@ import uiSegmentedProgressBarDotsPlugin from "@plugins/ui/plugins/segmented-prog
 import uiSegmentedProgressBarSegmentedPlugin from "@plugins/ui/plugins/segmented-progress-bar/plugins/segmented/web";
 import uiSegmentedProgressBarPlugin from "@plugins/ui/plugins/segmented-progress-bar/web";
 import uiThemeEnginePlugin from "@plugins/ui/plugins/theme-engine/web";
-import uiPlugin from "@plugins/ui/web";
 import welcomePlugin from "@plugins/welcome/web";
 import worktreeSwitcherPlugin from "@plugins/worktree-switcher/web";
 
@@ -163,14 +156,11 @@ export const plugins: PluginDefinition[] = [
   activeDataTaskPlugin,
   activeDataPlugin,
   agentsAutoLaunchTogglePlugin,
-  agentsAutoLaunchPlugin,
   agentsPlugin,
   appsAgentManagerShellPlugin,
   appsDeployServersPlugin,
   appsDeployShellPlugin,
-  appsDeployPlugin,
   appsFileExplorerShellPlugin,
-  appsFileExplorerPlugin,
   appsPlugin,
   attemptViewPlugin,
   authGoogleSetupWizardPlugin,
@@ -185,7 +175,6 @@ export const plugins: PluginDefinition[] = [
   conversationsConversationCategoryPlugin,
   conversationsConversationProgressPlugin,
   conversationsConversationUiItemPlugin,
-  conversationsConversationUiPlugin,
   conversationsConversationViewActionBarPlugin,
   conversationsConversationViewAllowMonitorPlugin,
   conversationsConversationViewBlockedByPlugin,
@@ -254,7 +243,6 @@ export const plugins: PluginDefinition[] = [
   layoutsMillerPlugin,
   pluginMetaPluginViewPlugin,
   pluginMetaPublishPlugin,
-  pluginMetaPlugin,
   primitivesAppShellPlugin,
   primitivesAutoScrollPlugin,
   primitivesAvatarPlugin,
@@ -273,7 +261,6 @@ export const plugins: PluginDefinition[] = [
   primitivesRelativeTimePlugin,
   primitivesSyntaxHighlightPlugin,
   primitivesTreePlugin,
-  primitivesPlugin,
   reorderEditModePlugin,
   reorderPlugin,
   screenshotDrawCanvasPlugin,
@@ -303,7 +290,6 @@ export const plugins: PluginDefinition[] = [
   uiSegmentedProgressBarSegmentedPlugin,
   uiSegmentedProgressBarPlugin,
   uiThemeEnginePlugin,
-  uiPlugin,
   welcomePlugin,
   worktreeSwitcherPlugin,
 ];

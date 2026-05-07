@@ -1,5 +1,6 @@
 {
   "name": "@singularity/plugin-database",
+  "description": "Umbrella for database tooling exposed to agents.",
   "private": true,
   "version": "0.0.1"
 }

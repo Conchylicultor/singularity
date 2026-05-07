@@ -1,5 +1,6 @@
 {
   "name": "@singularity/plugin-agents-auto-launch",
+  "description": "Umbrella plugin for agent auto-launch. Sub-plugins contribute row actions and settings.",
   "private": true,
   "version": "0.0.1"
 }

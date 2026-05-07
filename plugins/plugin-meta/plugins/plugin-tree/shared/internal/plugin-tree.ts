@@ -604,7 +604,16 @@ function collectPlugin(dir: string, pluginsRoot: string): CollectedPlugin {
   if (webDesc) descriptions.web = webDesc;
   if (serverDesc) descriptions.server = serverDesc;
   if (centralDesc) descriptions.central = centralDesc;
-  const description = webDesc ?? serverDesc ?? centralDesc;
+  let description = webDesc ?? serverDesc ?? centralDesc;
+  if (!description) {
+    const pkgSrc = readIfExists(join(dir, "package.json"));
+    if (pkgSrc) {
+      try {
+        const pkg = JSON.parse(pkgSrc);
+        if (typeof pkg.description === "string" && pkg.description) description = pkg.description;
+      } catch {}
+    }
+  }
 
   const loadBearing =
     (webSrc ? parseBoolField(webSrc, "loadBearing") : false) ||

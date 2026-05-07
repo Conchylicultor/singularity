@@ -4,6 +4,7 @@
 
 ## Plugin reference
 
+- Description: Umbrella for package management utilities.
 - Sub-plugins:
   - **`retry`**
 

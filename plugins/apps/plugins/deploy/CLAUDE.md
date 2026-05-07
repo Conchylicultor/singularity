@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+- Description: Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
 - Sub-plugins:
   - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
   - **`shell`** — App shell for the deploy platform.

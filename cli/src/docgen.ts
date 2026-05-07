@@ -42,7 +42,7 @@ function renderContribution(c: Contribution): string {
 
 function pluginDescription(p: PluginNode): string | undefined {
   const parts = [p.descriptions.web, p.descriptions.server, p.descriptions.central].filter(Boolean);
-  return parts.length > 0 ? parts.join(" ") : undefined;
+  return parts.length > 0 ? parts.join(" ") : p.description;
 }
 
 function renderPluginBody(

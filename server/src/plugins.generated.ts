@@ -10,7 +10,6 @@ import activeDataPlugin from "@plugins/active-data/server";
 import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/plugins/toggle/server";
 import agentsPlugin from "@plugins/agents/server";
 import appsDeployServersPlugin from "@plugins/apps/plugins/deploy/plugins/servers/server";
-import appsDeployPlugin from "@plugins/apps/plugins/deploy/server";
 import authGooglePlugin from "@plugins/auth/plugins/google/server";
 import authNotionPlugin from "@plugins/auth/plugins/notion/server";
 import buildPlugin from "@plugins/build/server";
@@ -59,7 +58,6 @@ import infraEventsPlugin from "@plugins/infra/plugins/events/server";
 import infraGitWatcherPlugin from "@plugins/infra/plugins/git-watcher/server";
 import infraJobsPlugin from "@plugins/infra/plugins/jobs/server";
 import infraMcpPlugin from "@plugins/infra/plugins/mcp/server";
-import infraPlugin from "@plugins/infra/server";
 import pluginMetaPluginViewPlugin from "@plugins/plugin-meta/plugins/plugin-view/server";
 import primitivesRankPlugin from "@plugins/primitives/plugins/rank/server";
 import reorderPlugin from "@plugins/reorder/server";
@@ -124,7 +122,6 @@ export const plugins: ServerPluginDefinition[] = [
   agentsAutoLaunchTogglePlugin,
   agentsPlugin,
   appsDeployServersPlugin,
-  appsDeployPlugin,
   authGooglePlugin,
   authNotionPlugin,
   buildPlugin,
@@ -173,7 +170,6 @@ export const plugins: ServerPluginDefinition[] = [
   infraGitWatcherPlugin,
   infraJobsPlugin,
   infraMcpPlugin,
-  infraPlugin,
   pluginMetaPluginViewPlugin,
   primitivesRankPlugin,
   reorderPlugin,

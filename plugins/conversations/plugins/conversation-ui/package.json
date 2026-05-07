@@ -1,5 +1,6 @@
 {
   "name": "@singularity/plugin-conversations-conversation-ui",
+  "description": "Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).",
   "private": true,
   "version": "0.0.1"
 }

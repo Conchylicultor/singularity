@@ -100,12 +100,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Core.Root` → `AppsLayout`
   - Plugins:
-    - **`agent-manager`**
+    - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
         - **`shell`** — App shell for the agent manager. Registers the / app entry and renders the main Shell layout.
           - Contributes:
             - `Apps.App` → `AgentManagerLayout`
-    - **`deploy`** — Self-hosted deployment platform. Manages remote servers from the UI. Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
+    - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
           - Defines:
@@ -731,7 +731,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `ErrorBoundary.Action` → `LaunchFixButton`
 
-- **`database`**
+- **`database`** — Umbrella for database tooling exposed to agents.
   - Plugins:
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
       - Server:
@@ -958,13 +958,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Values: `ensureMainWorktreeRoot`, `removeWorktree`, `setupWorktree`, `worktreePathFor`
 
-- **`layouts`**
+- **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
       - Exports (web):
         - Values: `MillerColumns`
 
-- **`packages`**
+- **`packages`** — Umbrella for package management utilities.
   - Plugins:
     - **`retry`**
       - Exports (shared):
