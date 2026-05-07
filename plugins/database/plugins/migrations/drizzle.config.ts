@@ -1,20 +1,20 @@
 import { defineConfig } from "drizzle-kit";
+import {
+  readDatabaseConfig,
+  buildConnectionString,
+} from "@plugins/database/shared";
 
 const worktree = process.env.SINGULARITY_WORKTREE;
 if (!worktree) {
   throw new Error("SINGULARITY_WORKTREE env var is required");
 }
-const host = process.env.PGHOST ?? "localhost";
-const port = process.env.PGPORT ?? "5432";
-const user = process.env.PGUSER ?? process.env.USER ?? "postgres";
 
-// libpq treats hosts starting with "/" as a Unix-socket directory; encoded
-// as `?host=…&port=…` query params on the URL form. Embedded PG always
-// hands us a Unix socket (see plugins/database/plugins/embedded/), so the CLI
-// passes PGHOST=/<…>/socket via libpqEnv().
-const url = host.startsWith("/")
-  ? `postgres://${user}@/${worktree}?host=${encodeURIComponent(host)}&port=${port}`
-  : `postgres://${user}@${host}:${port}/${worktree}`;
+const config = readDatabaseConfig();
+const conn = {
+  host: process.env.PGHOST ?? config.connection.host,
+  port: Number(process.env.PGPORT ?? config.connection.port),
+  user: process.env.PGUSER ?? config.connection.user,
+};
 
 export default defineConfig({
   dialect: "postgresql",
@@ -30,5 +30,5 @@ export default defineConfig({
     "../../../../plugins/**/server/**/internal/schema-*.ts",
   ],
   out: "./data",
-  dbCredentials: { url },
+  dbCredentials: { url: buildConnectionString(conn, worktree) },
 });

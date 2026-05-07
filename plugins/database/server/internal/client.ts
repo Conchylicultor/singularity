@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/shared";
-import { readDatabaseConfig } from "@plugins/database/shared";
+import { readDatabaseConfig, buildConnectionString } from "@plugins/database/shared";
 
 const worktree = process.env.SINGULARITY_WORKTREE;
 if (!worktree) {
@@ -9,21 +9,13 @@ if (!worktree) {
 }
 
 const config = readDatabaseConfig();
-const host = process.env.PGHOST ?? config.connection.host;
-const port = process.env.PGPORT ?? String(config.connection.port);
-const user = process.env.PGUSER ?? config.connection.user;
+const conn = {
+  host: process.env.PGHOST ?? config.connection.host,
+  port: Number(process.env.PGPORT ?? config.connection.port),
+  user: process.env.PGUSER ?? config.connection.user,
+};
 
-// libpq treats hosts starting with "/" as a Unix socket directory and
-// ignores the `port` for the TCP sense — but the port still selects which
-// `.s.PGSQL.<port>` socket file to open in that directory.
-function buildConnString(database: string): string {
-  if (host.startsWith("/")) {
-    return `postgres://${user}@/${database}?host=${encodeURIComponent(host)}&port=${port}`;
-  }
-  return `postgres://${user}@${host}:${port}/${database}`;
-}
-
-export const connectionString = buildConnString(worktree);
+export const connectionString = buildConnectionString(conn, worktree);
 
 export const pool = new Pool({
   connectionString,
@@ -33,7 +25,7 @@ export const pool = new Pool({
 export const db = drizzle(pool);
 
 export const adminPool = new Pool({
-  connectionString: buildConnString("postgres"),
+  connectionString: buildConnectionString(conn, "postgres"),
   max: 1,
   idleTimeoutMillis: 20_000,
 });
@@ -43,7 +35,7 @@ export const adminPool = new Pool({
 // long-lived, per-worktree `pool`.
 export function openShortLivedClient(dbName: string): Pool {
   return new Pool({
-    connectionString: buildConnString(dbName),
+    connectionString: buildConnectionString(conn, dbName),
     max: 1,
     idleTimeoutMillis: 1_000,
   });
@@ -56,9 +48,9 @@ export function openShortLivedClient(dbName: string): Pool {
  * elsewhere.
  */
 export const libpqSubprocessEnv: Record<string, string> = {
-  PGHOST: host,
-  PGPORT: port,
-  PGUSER: user,
+  PGHOST: conn.host,
+  PGPORT: String(conn.port),
+  PGUSER: conn.user,
 };
 
 // Errors that mean "PG isn't reachable yet; retry shortly":

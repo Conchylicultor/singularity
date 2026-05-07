@@ -1,5 +1,6 @@
 export {
   readDatabaseConfig,
+  buildConnectionString,
   DATABASE_CONFIG_PATH,
 } from "./internal/config";
-export type { DatabaseConfig } from "./internal/config";
+export type { DatabaseConfig, DatabaseProvider } from "./internal/config";

@@ -12,7 +12,7 @@
   - `Debug.Item` "DB Backup"
   - `dbBackupPane.open`
 - Server:
-  - Uses: `database.adminPool`
+  - Uses: `database.adminPool`, `database.libpqSubprocessEnv`
   - `GET /api/debug/backup-db`
   - `POST /api/debug/backup-db`
 

@@ -14,6 +14,7 @@ export const PG_LOG_FILE = join(PG_DIR, "postgres.log");
 export const DATABASE_CONFIG_PATH = join(SINGULARITY_DIR, "database.json");
 
 interface DatabaseConfig {
+  provider?: "embedded" | "system";
   connection: { host: string; port: number; user: string };
   services: Array<{ name: string }>;
 }

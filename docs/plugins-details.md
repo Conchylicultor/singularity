@@ -749,8 +749,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (server):
     - Values: `adminPool`, `awaitPgReady`, `connectionString`, `db`, `isTransientPgError`, `libpqSubprocessEnv`, `openShortLivedClient`, `pool`
   - Exports (shared):
-    - Types: `DatabaseConfig`
-    - Values: `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
+    - Types: `DatabaseConfig`, `DatabaseProvider`
+    - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `db-backup`, `entity-extensions`, `events`, `events-test`, `grouped`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `push-and-exit`, `query`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`embedded`**
@@ -801,7 +801,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Debug.Item` "DB Backup"
         - `dbBackupPane.open`
       - Server:
-        - Uses: `database.adminPool`
+        - Uses: `database.adminPool`, `database.libpqSubprocessEnv`
         - `GET /api/debug/backup-db`
         - `POST /api/debug/backup-db`
     - **`logs`** — System logs pane, opened from the Debug sidebar.

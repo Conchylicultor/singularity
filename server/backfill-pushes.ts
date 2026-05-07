@@ -143,10 +143,24 @@ if (!worktree) {
   process.exit(1);
 }
 
-const user = process.env.PGUSER ?? process.env.USER ?? "postgres";
-const host = process.env.PGHOST ?? "localhost";
-const port = process.env.PGPORT ?? "5432";
-const connectionString = `postgres://${user}@${host}:${port}/${worktree}`;
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
+const dbConfigPath = join(homedir(), ".singularity", "database.json");
+let host = "localhost", port = "5432", user = process.env.USER ?? "postgres";
+try {
+  const cfg = JSON.parse(readFileSync(dbConfigPath, "utf-8"));
+  host = cfg.connection?.host ?? host;
+  port = String(cfg.connection?.port ?? port);
+  user = cfg.connection?.user ?? user;
+} catch {}
+host = process.env.PGHOST ?? host;
+port = process.env.PGPORT ?? port;
+user = process.env.PGUSER ?? user;
+const connectionString = host.startsWith("/")
+  ? `postgres://${user}@/${worktree}?host=${encodeURIComponent(host)}&port=${port}`
+  : `postgres://${user}@${host}:${port}/${worktree}`;
 
 console.log(`DB:   ${connectionString}`);
 console.log(`Mode: ${DRY_RUN ? "DRY RUN (pass --write to apply)" : "WRITE"}\n`);

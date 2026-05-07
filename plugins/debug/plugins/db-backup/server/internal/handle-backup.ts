@@ -1,11 +1,8 @@
 import { mkdir } from "node:fs/promises";
 import { BACKUPS_DIR } from "@plugins/infra/plugins/paths/server";
-import { adminPool } from "@plugins/database/server";
+import { adminPool, libpqSubprocessEnv } from "@plugins/database/server";
 
 export async function handleBackup(): Promise<Response> {
-  const user = process.env.PGUSER ?? process.env.USER ?? "postgres";
-  const host = process.env.PGHOST ?? "localhost";
-  const port = process.env.PGPORT ?? "5432";
 
   const timestamp = new Date()
     .toISOString()
@@ -28,8 +25,8 @@ export async function handleBackup(): Promise<Response> {
   for (const { datname } of result.rows) {
     const file = `${outDir}/${datname}.dump`;
     const proc = Bun.spawn(
-      ["pg_dump", "-h", host, "-p", port, "-U", user, "-Fc", datname],
-      { stdout: Bun.file(file), stderr: "pipe" },
+      ["pg_dump", "-Fc", datname],
+      { stdout: Bun.file(file), stderr: "pipe", env: { ...process.env, ...libpqSubprocessEnv } },
     );
     const code = await proc.exited;
     if (code !== 0) {

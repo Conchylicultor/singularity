@@ -57,6 +57,7 @@ function ensureDatabaseConfig(repoRoot: string): void {
 
   const config = hasEmbedded
     ? {
+        provider: "embedded" as const,
         connection: {
           host: EMBEDDED_PG_SOCKET_DIR,
           port: EMBEDDED_PG_PORT,
@@ -74,6 +75,7 @@ function ensureDatabaseConfig(repoRoot: string): void {
         ],
       }
     : {
+        provider: "system" as const,
         connection: {
           host: "localhost",
           port: 5432,
