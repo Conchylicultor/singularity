@@ -239,7 +239,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
 
-- **`theme`** — Toolbar toggles for light/dark mode and a distinct theme on non-main worktrees.
+- **`theme`** — Toolbar toggle for light/dark mode.
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:

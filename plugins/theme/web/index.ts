@@ -1,13 +1,12 @@
 import type { PluginDefinition } from "@core";
 import { Shell } from "@plugins/shell/web";
-import { ThemeToggle, ExperimentalToggle } from "./components/theme-toggle";
+import { ThemeToggle } from "./components/theme-toggle";
 
 export default {
   id: "theme",
   name: "Theme",
-  description: "Toolbar toggles for light/dark mode and a distinct theme on non-main worktrees.",
+  description: "Toolbar toggle for light/dark mode.",
   contributions: [
-    Shell.Toolbar({ id: "theme-experimental", component: ExperimentalToggle, group: "actions" }),
     Shell.Toolbar({ id: "theme-light-dark", component: ThemeToggle, group: "actions" }),
   ],
 } satisfies PluginDefinition;

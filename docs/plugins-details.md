@@ -1402,9 +1402,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - `WS /ws/terminal`
 
-- **`theme`** — Toolbar toggles for light/dark mode and a distinct theme on non-main worktrees.
+- **`theme`** — Toolbar toggle for light/dark mode.
   - Contributes:
-    - `Shell.Toolbar` (group `actions`) → `ExperimentalToggle`
     - `Shell.Toolbar` (group `actions`) → `ThemeToggle`
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
