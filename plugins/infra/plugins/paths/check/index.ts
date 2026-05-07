@@ -19,10 +19,11 @@ const ALLOWED_PATHS = [
   "cli/src/paths.ts",
   // Standalone script that intentionally avoids importing server internals.
   "server/backfill-pushes.ts",
-  // Database plugin owns its own embedded-PG path constants. Lives in
-  // shared/ so server, central, and CLI can all import from a sanctioned
-  // location.
+  // Database plugin owns its own embedded-PG path constants and config
+  // reader. Lives in shared/ so server, central, and CLI can all import
+  // from a sanctioned location.
   "plugins/database/plugins/embedded/shared/internal/paths.ts",
+  "plugins/database/shared/internal/config.ts",
   // Display-only strings (JSX text, plugin description metadata, log messages).
   "plugins/auth/web/components/accounts-pane.tsx",
   "plugins/infra/plugins/attachments/server/index.ts",
