@@ -457,6 +457,10 @@
       "name": "@singularity/plugin-debug-memory",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/profiling": {
+      "name": "@singularity/plugin-debug-profiling",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/queue": {
       "name": "@singularity/plugin-debug-queue",
       "version": "0.0.1",
@@ -1585,6 +1589,8 @@
     "@singularity/plugin-debug-logs": ["@singularity/plugin-debug-logs@workspace:plugins/debug/plugins/logs"],
 
     "@singularity/plugin-debug-memory": ["@singularity/plugin-debug-memory@workspace:plugins/debug/plugins/memory"],
+
+    "@singularity/plugin-debug-profiling": ["@singularity/plugin-debug-profiling@workspace:plugins/debug/plugins/profiling"],
 
     "@singularity/plugin-debug-queue": ["@singularity/plugin-debug-queue@workspace:plugins/debug/plugins/queue"],
 

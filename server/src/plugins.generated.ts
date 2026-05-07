@@ -47,6 +47,7 @@ import databaseQueryPlugin from "@plugins/database/plugins/query/server";
 import debugDbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
 import debugLogsPlugin from "@plugins/debug/plugins/logs/server";
 import debugMemoryPlugin from "@plugins/debug/plugins/memory/server";
+import debugProfilingPlugin from "@plugins/debug/plugins/profiling/server";
 import debugWorktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/server";
 import eventsTestPlugin from "@plugins/events-test/server";
 import healthPlugin from "@plugins/health/server";
@@ -159,6 +160,7 @@ export const plugins: ServerPluginDefinition[] = [
   debugDbBackupPlugin,
   debugLogsPlugin,
   debugMemoryPlugin,
+  debugProfilingPlugin,
   debugWorktreeCleanupPlugin,
   eventsTestPlugin,
   healthPlugin,

@@ -1,3 +1,4 @@
+import { profilerStart } from "./profiler";
 import type { WsData, HttpHandler, WsHandler } from "./types";
 import { plugins } from "./plugins";
 import { awaitPgReady } from "./db/client";
@@ -14,17 +15,28 @@ import { topoSortPlugins } from "./topo";
 const ordered = topoSortPlugins(plugins);
 for (const p of ordered) {
   for (const r of p.register ?? []) {
+    const end = profilerStart(`register:${p.id}`, "register", p.id, p.id);
     try {
       await r.register();
     } catch (err) {
       console.error(`[plugin.${p.id}] register failed`, err);
       throw err;
+    } finally {
+      end();
     }
   }
 }
 
-await awaitPgReady();
-await runMigrations();
+{
+  const end = profilerStart("awaitPgReady", "awaitPgReady", "Await PG Ready");
+  await awaitPgReady();
+  end();
+}
+{
+  const end = profilerStart("runMigrations", "runMigrations", "Run Migrations");
+  await runMigrations();
+  end();
+}
 
 // ── Route tables ────────────────────────────────────────────────
 // Flatten plugin routes into lookup tables. Literal routes go in an O(1)
@@ -87,16 +99,17 @@ function matchSegments<H>(
   return null;
 }
 
-for (const plugin of ordered) {
-  if (plugin.httpRoutes) {
-    for (const [key, handler] of Object.entries(plugin.httpRoutes)) {
-      registerHttpRoute(key, handler);
+{
+  const end = profilerStart("routePopulation", "routePopulation", "Route Population");
+  for (const plugin of ordered) {
+    if (plugin.httpRoutes) {
+      for (const [key, handler] of Object.entries(plugin.httpRoutes)) {
+        registerHttpRoute(key, handler);
+      }
     }
+    if (plugin.wsRoutes) Object.assign(wsRoutes, plugin.wsRoutes);
   }
-  if (plugin.wsRoutes) Object.assign(wsRoutes, plugin.wsRoutes);
-  // `plugin.resources` is just a declaration — defineResource() already
-  // registered them in the global registry at import time. The field exists
-  // for documentation / future introspection.
+  end();
 }
 
 // Core-owned routes for the live-state primitive.
@@ -112,6 +125,7 @@ registerHttpRoute("GET /api/resources/:key", handleResourceHttp);
 const socketPath = Bun.env.SOCKET_PATH;
 if (!socketPath) throw new Error("SOCKET_PATH env var is required");
 
+const endSocketBind = profilerStart("socketBind", "socketBind", "Socket Bind");
 Bun.serve<WsData>({
   unix: socketPath,
   fetch(req, server) {
@@ -152,6 +166,7 @@ Bun.serve<WsData>({
   },
 });
 
+endSocketBind();
 console.log(`Server listening on ${socketPath}`);
 
 // ── onReady ─────────────────────────────────────────────────────
@@ -166,11 +181,14 @@ console.log(`Server listening on ${socketPath}`);
     const deps = (p.dependsOn ?? []).map((d) => resolved.get(d.id)!);
     const ready = Promise.all(deps).then(async () => {
       if (p.onReady) {
+        const end = profilerStart(`onReady:${p.id}`, "onReady", p.id, p.id);
         try {
           await p.onReady();
         } catch (err) {
           console.error(`[plugin.${p.id}] onReady failed`, err);
           if (p.loadBearing) throw err;
+        } finally {
+          end();
         }
       }
     });
