@@ -40,8 +40,9 @@ export interface TaskDraftFormProps {
   captures: CaptureKind[];
   parentTaskPreview?: ParentTaskPreview | null;
   // Head-card relate toggle (only rendered when both are supplied).
-  relateMode?: TaskChainRelateMode;
-  onRelateModeChange?: (next: TaskChainRelateMode) => void;
+  relateMode?: TaskChainRelateMode | undefined;
+  onRelateModeChange?: (next: TaskChainRelateMode | undefined) => void;
+  showIndependentRelate?: boolean;
   heading?: string;
   footerStart?: ReactNode;
 }
@@ -71,6 +72,7 @@ export function TaskDraftForm({
   parentTaskPreview,
   relateMode,
   onRelateModeChange,
+  showIndependentRelate,
   heading,
   footerStart,
 }: TaskDraftFormProps) {
@@ -199,6 +201,7 @@ export function TaskDraftForm({
                     parentTaskPreview={isHead ? parentTaskPreview : null}
                     relateMode={isHead ? relateMode : undefined}
                     onRelateModeChange={isHead ? onRelateModeChange : undefined}
+                    showIndependentRelate={isHead ? showIndependentRelate : undefined}
                   />
                 </Fragment>
               );

@@ -38,8 +38,9 @@ export interface TaskDraftCardProps {
   parentTaskPreview?: ParentTaskPreview | null;
 
   // Head-card-only relate toggle.
-  relateMode?: TaskChainRelateMode;
-  onRelateModeChange?: (next: TaskChainRelateMode) => void;
+  relateMode?: TaskChainRelateMode | undefined;
+  onRelateModeChange?: (next: TaskChainRelateMode | undefined) => void;
+  showIndependentRelate?: boolean;
 }
 
 function ContextRow({
@@ -132,6 +133,7 @@ export function TaskDraftCard({
   parentTaskPreview,
   relateMode,
   onRelateModeChange,
+  showIndependentRelate,
 }: TaskDraftCardProps) {
   const {
     attributes,
@@ -147,7 +149,7 @@ export function TaskDraftCard({
     transition,
   };
 
-  const showRelate = isHead && relateMode !== undefined && !!onRelateModeChange;
+  const showRelate = isHead && !!onRelateModeChange;
 
   return (
     <div
@@ -181,8 +183,9 @@ export function TaskDraftCard({
           <ModelChip value={model} onChange={onModelChange} disabled={disabled} />
           {showRelate && (
             <RelateModeChip
-              value={relateMode!}
+              value={relateMode}
               onChange={onRelateModeChange!}
+              showIndependent={showIndependentRelate}
               disabled={disabled}
             />
           )}

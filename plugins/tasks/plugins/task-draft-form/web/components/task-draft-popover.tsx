@@ -21,6 +21,7 @@ import type {
   TaskChainRelateMode,
   TaskChainTarget,
 } from "../../shared/types";
+import { useActiveRelateContext } from "../active-relate-context";
 
 const HEAD_DEFAULT_MODEL: ChainModel = "sonnet";
 
@@ -87,6 +88,12 @@ export function TaskDraftPopover({
     relate?.defaultMode,
   );
 
+  const activeRelate = useActiveRelateContext();
+  const hasAmbientRelate = !relate && activeRelate !== null;
+  const [ambientRelateMode, setAmbientRelateMode] = useState<
+    TaskChainRelateMode | undefined
+  >(undefined);
+
   // Resolve the parent task for "child" target so we can render the preview
   // ("Will include: <title>") next to the parent-task toggle.
   const parentTaskId = target.kind === "child" ? target.parentTaskId : null;
@@ -131,19 +138,24 @@ export function TaskDraftPopover({
     clearCards();
     seenIdsRef.current = new Set();
     setRelateMode(relate?.defaultMode);
+    setAmbientRelateMode(undefined);
   };
 
   const submit = async () => {
     if (submitting) return;
     setSubmitting(true);
     try {
+      const effectiveRelate =
+        relate && relateMode
+          ? { taskId: relate.taskId, mode: relateMode }
+          : hasAmbientRelate && ambientRelateMode && activeRelate
+            ? { taskId: activeRelate.taskId, mode: ambientRelateMode }
+            : undefined;
+
       const outcome = await submitChain({
         cards,
         target,
-        relate:
-          relate && relateMode
-            ? { taskId: relate.taskId, mode: relateMode }
-            : undefined,
+        relate: effectiveRelate,
         url,
         beforeScreenshot: () => setOpen(false),
       });
@@ -194,8 +206,17 @@ export function TaskDraftPopover({
           parentTaskPreview={
             parentTask ? { id: parentTask.id, title: parentTask.title } : null
           }
-          relateMode={relate ? relateMode : undefined}
-          onRelateModeChange={relate ? setRelateMode : undefined}
+          relateMode={
+            relate ? relateMode : hasAmbientRelate ? ambientRelateMode : undefined
+          }
+          onRelateModeChange={
+            relate
+              ? setRelateMode
+              : hasAmbientRelate
+                ? setAmbientRelateMode
+                : undefined
+          }
+          showIndependentRelate={hasAmbientRelate}
           heading={heading}
           footerStart={footerStart}
         />

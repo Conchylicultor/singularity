@@ -3,6 +3,7 @@ import { Pane, type } from "@plugins/primitives/plugins/pane/web";
 import { useConversation, useConversationById } from "@plugins/conversations/web";
 import type { ConversationRecord } from "./slots";
 import { ConversationView } from "./components/conversation-view";
+import { ActiveRelateSync } from "./components/active-relate-sync";
 
 export const conversationPane = Pane.define({
   id: "conversation",
@@ -51,5 +52,10 @@ export function ConversationProvide({
 
 function ConversationPaneProvide({ children }: { children: ReactNode }) {
   const { convId } = conversationPane.useParams();
-  return <ConversationProvide convId={convId}>{children}</ConversationProvide>;
+  return (
+    <ConversationProvide convId={convId}>
+      <ActiveRelateSync />
+      {children}
+    </ConversationProvide>
+  );
 }

@@ -1,7 +1,14 @@
 import { cn } from "@/lib/utils";
 import type { TaskChainRelateMode } from "../../shared/types";
 
-const MODES: { value: TaskChainRelateMode; label: string; title: string }[] = [
+type ModeValue = TaskChainRelateMode | "independent";
+
+const RELATE_MODES: { value: ModeValue; label: string; title: string }[] = [
+  {
+    value: "independent",
+    label: "Independent",
+    title: "Create a standalone task with no relation",
+  },
   {
     value: "followup",
     label: "Follow-up",
@@ -15,12 +22,22 @@ const MODES: { value: TaskChainRelateMode; label: string; title: string }[] = [
 ];
 
 export interface RelateModeChipProps {
-  value: TaskChainRelateMode;
-  onChange: (next: TaskChainRelateMode) => void;
+  value: TaskChainRelateMode | undefined;
+  onChange: (next: TaskChainRelateMode | undefined) => void;
+  showIndependent?: boolean;
   disabled?: boolean;
 }
 
-export function RelateModeChip({ value, onChange, disabled }: RelateModeChipProps) {
+export function RelateModeChip({
+  value,
+  onChange,
+  showIndependent,
+  disabled,
+}: RelateModeChipProps) {
+  const modes = showIndependent
+    ? RELATE_MODES
+    : RELATE_MODES.filter((m) => m.value !== "independent");
+
   return (
     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
       <span>Mode</span>
@@ -29,8 +46,9 @@ export function RelateModeChip({ value, onChange, disabled }: RelateModeChipProp
         aria-label="Relation to current task"
         className="border-border bg-muted/40 inline-flex items-center rounded-md border p-0.5"
       >
-        {MODES.map((m) => {
-          const selected = m.value === value;
+        {modes.map((m) => {
+          const effective = m.value === "independent" ? undefined : m.value;
+          const selected = effective === value;
           return (
             <button
               key={m.value}
@@ -41,7 +59,7 @@ export function RelateModeChip({ value, onChange, disabled }: RelateModeChipProp
               title={m.title}
               onClick={(e) => {
                 e.stopPropagation();
-                onChange(m.value);
+                onChange(effective);
               }}
               className={cn(
                 "rounded px-1.5 py-0.5 transition-colors",

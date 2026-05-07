@@ -356,7 +356,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` `conversation`
         - `Conversation.ActionBar` → `ExpandConversationButton`
-      - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `new-child-task`, `notes`, `open-app`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+      - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Exports (web):
@@ -534,9 +534,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Contributes:
             - `conversationPane.Actions` → `ModelBadge`
-        - **`new-child-task`** — Toolbar button that opens a popover to create a child task under the conversation's parent task.
-          - Contributes:
-            - `Conversation.ActionBar` → `NewChildTaskAction`
+        - **`new-child-task`** — Deprecated — functionality merged into the Improve button via ambient relate context.
         - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/notes/server/internal/tables.ts`
@@ -1345,8 +1343,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `tasksRootPane.open`
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Exports (web):
-        - Types: `CaptureKind`, `CardDraft`, `ChainModel`, `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelateMode`, `TaskChainRelateSpec`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`, `TaskDraftPopoverProps`, `TaskDraftRelate`
-        - Values: `TaskDraftPopover`
+        - Types: `ActiveRelateContext`, `CaptureKind`, `CardDraft`, `ChainModel`, `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelateMode`, `TaskChainRelateSpec`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`, `TaskDraftPopoverProps`, `TaskDraftRelate`
+        - Values: `setActiveRelateContext`, `TaskDraftPopover`, `useActiveRelateContext`
       - Exports (shared):
         - Types: `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelate`, `TaskChainRelateMode`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`
         - Values: `TaskChainCardSchema`, `TaskChainLaunchSchema`, `TaskChainRelateModeSchema`, `TaskChainRelateSchema`, `TaskChainSubmitBodySchema`, `TaskChainSubmitResponseSchema`, `TaskChainTargetSchema`

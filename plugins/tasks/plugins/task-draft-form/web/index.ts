@@ -21,6 +21,12 @@ export type {
   TaskChainTarget,
 } from "../shared/types";
 
+export {
+  setActiveRelateContext,
+  useActiveRelateContext,
+} from "./active-relate-context";
+export type { ActiveRelateContext } from "./active-relate-context";
+
 export default {
   id: "task-draft-form",
   name: "Task Draft Form",
