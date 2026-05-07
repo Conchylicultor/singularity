@@ -19,6 +19,7 @@ export interface RuntimeInfo {
   dead: boolean;
   claudeSessionId: string | null;
   worktreePath: string;
+  waitingFor: string | null;
 }
 
 export interface ConversationRuntime {

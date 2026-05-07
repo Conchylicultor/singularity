@@ -9,13 +9,43 @@ const SESSIONS_DIR = CLAUDE_SESSIONS_DIR;
 // would pin `claudeSessionId` to NULL for the life of the pane.
 const pidCache = new Map<number, string>();
 
-async function readSessionId(pid: number): Promise<string | null> {
+// Claude CLI session status values (undocumented internal state from
+// ~/.claude/sessions/<pid>.json). Exhaustive as of CLI v2.1.132.
+// Hard error on unknown values so new CLI statuses surface immediately.
+type CliSessionStatus = "busy" | "idle" | "waiting";
+
+const KNOWN_STATUSES = new Set<string>(["busy", "idle", "waiting"]);
+
+export interface SessionState {
+  sessionId: string | null;
+  status: CliSessionStatus | null;
+  waitingFor: string | null;
+}
+
+const NULL_STATE: SessionState = { sessionId: null, status: null, waitingFor: null };
+
+async function readSessionState(pid: number): Promise<SessionState> {
   try {
     const raw = await readFile(`${SESSIONS_DIR}/${pid}.json`, "utf8");
     const parsed = JSON.parse(raw);
-    return typeof parsed.sessionId === "string" ? parsed.sessionId : null;
-  } catch {
-    return null;
+    let status: CliSessionStatus | null = null;
+    if (typeof parsed.status === "string") {
+      if (!KNOWN_STATUSES.has(parsed.status)) {
+        throw new Error(
+          `Unknown Claude CLI session status "${parsed.status}" in ${SESSIONS_DIR}/${pid}.json — update the status map`,
+        );
+      }
+      status = parsed.status as CliSessionStatus;
+    }
+    return {
+      sessionId: typeof parsed.sessionId === "string" ? parsed.sessionId : null,
+      status,
+      waitingFor: typeof parsed.waitingFor === "string" ? parsed.waitingFor : null,
+    };
+  } catch (err) {
+    // Re-throw unknown-status errors; swallow ENOENT / parse failures.
+    if (err instanceof Error && err.message.startsWith("Unknown Claude CLI")) throw err;
+    return NULL_STATE;
   }
 }
 
@@ -34,7 +64,7 @@ async function pgrepChildren(pid: number): Promise<number[]> {
 }
 
 /**
- * Resolve the Claude session id for a tmux pane.
+ * Resolve session state (sessionId + status + waitingFor) for a tmux pane.
  *
  * The pane's root process is typically `zsh -l -c 'claude'`, which execs into
  * `claude` directly — so `pane_pid` itself usually IS the claude process. If
@@ -42,21 +72,41 @@ async function pgrepChildren(pid: number): Promise<number[]> {
  * children (handles configurations where an extra shell layer sits between
  * tmux and claude).
  */
+export async function resolveSessionState(
+  panePid: number,
+): Promise<SessionState> {
+  const cached = pidCache.get(panePid);
+  if (cached) {
+    // sessionId is cached; still need fresh status/waitingFor.
+    const state = await readSessionState(panePid);
+    if (state.sessionId) return state;
+    for (const child of await pgrepChildren(panePid)) {
+      const childState = await readSessionState(child);
+      if (childState.sessionId) return childState;
+    }
+    // Cache hit but file disappeared — return cached sessionId with null state.
+    return { sessionId: cached, status: null, waitingFor: null };
+  }
+
+  let state = await readSessionState(panePid);
+  if (state.sessionId == null) {
+    for (const child of await pgrepChildren(panePid)) {
+      state = await readSessionState(child);
+      if (state.sessionId) break;
+    }
+  }
+  if (state.sessionId) pidCache.set(panePid, state.sessionId);
+  return state;
+}
+
+/**
+ * Resolve only the Claude session id for a tmux pane.
+ * Thin wrapper over resolveSessionState for callers that only need the id.
+ */
 export async function resolveClaudeSessionId(
   panePid: number,
 ): Promise<string | null> {
-  const cached = pidCache.get(panePid);
-  if (cached) return cached;
-
-  let sessionId = await readSessionId(panePid);
-  if (sessionId == null) {
-    for (const child of await pgrepChildren(panePid)) {
-      sessionId = await readSessionId(child);
-      if (sessionId) break;
-    }
-  }
-  if (sessionId) pidCache.set(panePid, sessionId);
-  return sessionId;
+  return (await resolveSessionState(panePid)).sessionId;
 }
 
 export function forgetPid(pid: number): void {

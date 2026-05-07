@@ -114,6 +114,7 @@ export const _conversations = pgTable(
     model: text("model").$type<ConversationModel>().notNull().default("opus"),
     kind: text("kind").$type<ConversationKind>().notNull().default("user"),
     claudeSessionId: text("claude_session_id"),
+    waitingFor: text("waiting_for"),
     spawnedBy: text("spawned_by"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

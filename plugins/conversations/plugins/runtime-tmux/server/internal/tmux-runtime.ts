@@ -4,33 +4,23 @@ import type {
 } from "@plugins/conversations/server";
 import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
 import { CLAUDE, TMUX } from "@plugins/infra/plugins/paths/server";
-import { resolveClaudeSessionId } from "./claude-session";
+import { resolveSessionState } from "./claude-session";
 // Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename
 // legacy prefix kept so zombie sessions still get picked up by the poller.
 const SESSION_NAME_RE = /^(conv|claude)-\d+(-[a-z0-9]+)?$/;
 
-const SPINNER_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈]\s*/;
-const READY_RE = /^✳\s*/;
+const STATUS_PREFIX_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈✳]\s*/;
 
-function cleanPaneTitle(raw: string): { title: string; working: boolean } {
+function cleanPaneTitle(raw: string): string {
   const trimmed = raw.replace(/^_ /, "").trim();
-
-  // Prefix convention from Claude Code's tmux title:
-  //   spinner glyph (⠋⠙…) → actively processing
-  //   ✳                   → finished, waiting for user input
-  //   anything else       → default pane state
-  const working = SPINNER_RE.test(trimmed);
-  const title = trimmed.replace(SPINNER_RE, "").replace(READY_RE, "").trim();
+  const title = trimmed.replace(STATUS_PREFIX_RE, "").trim();
 
   const isDefault =
     !title ||
     /^[a-zA-Z0-9-]+\.(local|internal|lan)$/.test(title) ||
     SESSION_NAME_RE.test(title);
 
-  return {
-    title: isDefault ? "" : title,
-    working,
-  };
+  return isDefault ? "" : title;
 }
 
 // Field separator: tab (not present in pane paths or titles) keeps splits
@@ -97,19 +87,25 @@ export const tmuxRuntime: ConversationRuntime = {
   async list(): Promise<Map<string, RuntimeInfo>> {
     const panes = await listPanes();
     const ids = Array.from(panes.keys());
-    const sessionIds = await Promise.all(
-      ids.map((id) => resolveClaudeSessionId(panes.get(id)!.panePid)),
+    const states = await Promise.all(
+      ids.map((id) => resolveSessionState(panes.get(id)!.panePid)),
     );
     const out = new Map<string, RuntimeInfo>();
     ids.forEach((id, i) => {
       const { rawTitle, dead, worktreePath } = panes.get(id)!;
-      const { title, working } = cleanPaneTitle(rawTitle ?? "");
+      const title = cleanPaneTitle(rawTitle ?? "");
+      const state = states[i]!;
+      // Session file is authoritative for status.
+      // null = file not written yet (startup race) — treat as working
+      // (the conversation was just created, Claude is booting).
+      const working = state.status == null || state.status === "busy";
       out.set(id, {
         title,
         working: working && !dead,
         dead,
-        claudeSessionId: sessionIds[i] ?? null,
+        claudeSessionId: state.sessionId ?? null,
         worktreePath,
+        waitingFor: dead ? null : state.waitingFor,
       });
     });
     return out;

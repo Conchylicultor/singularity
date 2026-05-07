@@ -20,6 +20,7 @@ export interface UpdateConversationPatch {
   status?: "starting" | "working" | "waiting" | "gone";
   title?: string | null;
   claudeSessionId?: string | null;
+  waitingFor?: string | null;
   endedAt?: Date | null;
   updatedAt?: Date;
 }
@@ -101,6 +102,7 @@ export async function updateConversation(
   if (patch.status !== undefined) dbPatch.status = patch.status;
   if (patch.title !== undefined) dbPatch.title = patch.title;
   if (patch.claudeSessionId !== undefined) dbPatch.claudeSessionId = patch.claudeSessionId;
+  if (patch.waitingFor !== undefined) dbPatch.waitingFor = patch.waitingFor;
   if (patch.endedAt !== undefined) dbPatch.endedAt = patch.endedAt;
 
   await db.update(_conversations).set(dbPatch).where(eq(_conversations.id, id));

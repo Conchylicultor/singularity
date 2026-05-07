@@ -72,6 +72,16 @@ function WorkingIndicator({ startAt }: { startAt: number }) {
   );
 }
 
+function PendingContentIndicator() {
+  return (
+    <div className="flex items-center gap-2 px-1 py-1">
+      <span className="text-xs text-amber-500/70">
+        Content pending in terminal — waiting for your input
+      </span>
+    </div>
+  );
+}
+
 export function JsonlPane({
   conversation,
   actions,
@@ -157,6 +167,7 @@ export function JsonlPane({
                     />
                   ))}
                   {isWorking && <WorkingIndicator startAt={workingStartAt} />}
+                  {!isWorking && !!conversation.waitingFor && <PendingContentIndicator />}
                 </div>
               </LastAssistantProvider>
             )}

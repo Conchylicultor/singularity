@@ -110,7 +110,7 @@ async function tick(): Promise<void> {
 
     if (info.dead) {
       if (dbRow.status === "gone") continue;
-      await updateConversation(id, { status: "gone", endedAt: new Date() });
+      await updateConversation(id, { status: "gone", endedAt: new Date(), waitingFor: null });
       changed = true;
       continue;
     }
@@ -134,13 +134,16 @@ async function tick(): Promise<void> {
         : dbRow.claudeSessionId;
     const sessionChanged = sessionCandidate !== dbRow.claudeSessionId;
     const statusChanged = desiredStatus !== dbRow.status;
-    if (!titleChanged && !sessionChanged && !statusChanged) continue;
+    const desiredWaitingFor = desiredStatus === "waiting" ? (info.waitingFor ?? null) : null;
+    const waitingForChanged = (desiredWaitingFor ?? null) !== (dbRow.waitingFor ?? null);
+    if (!titleChanged && !sessionChanged && !statusChanged && !waitingForChanged) continue;
 
     const resurrecting = dbRow.status === "gone" && desiredStatus !== "gone";
     const patch: Parameters<typeof updateConversation>[1] = {};
     if (titleChanged) patch.title = desiredTitle;
     if (sessionChanged) patch.claudeSessionId = sessionCandidate;
     if (statusChanged) patch.status = desiredStatus;
+    if (waitingForChanged) patch.waitingFor = desiredWaitingFor;
     if (resurrecting) patch.endedAt = null;
     await updateConversation(id, patch);
 
@@ -178,7 +181,7 @@ async function tick(): Promise<void> {
         console.error("[conversations.poller] recordCrash failed", e);
       });
     }
-    await updateConversation(id, { status: "gone", endedAt: new Date() });
+    await updateConversation(id, { status: "gone", endedAt: new Date(), waitingFor: null });
     changed = true;
   }
 
