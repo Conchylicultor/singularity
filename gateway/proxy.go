@@ -19,11 +19,11 @@ import (
 type Proxy struct {
 	reg    *Registry
 	routes *CentralRoutesStore
-	pg     *PgSupervisor
+	sup    *Supervisor
 }
 
-func NewProxy(reg *Registry, routes *CentralRoutesStore, pg *PgSupervisor) *Proxy {
-	return &Proxy{reg: reg, routes: routes, pg: pg}
+func NewProxy(reg *Registry, routes *CentralRoutesStore, sup *Supervisor) *Proxy {
+	return &Proxy{reg: reg, routes: routes, sup: sup}
 }
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -32,15 +32,6 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// /gateway/* is reserved on every host, including the no-subdomain root.
 	if strings.HasPrefix(r.URL.Path, "/gateway/") {
 		p.handleGatewayAPI(w, r)
-		return
-	}
-
-	// /api/database/status is owned by the gateway: PG is supervised here, not
-	// in central. Intercept before the central-routes lookup so this answer is
-	// authoritative even if a stale manifest still routes the path elsewhere.
-	if r.URL.Path == "/api/database/status" && r.Method == http.MethodGet {
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(p.pg.Status())
 		return
 	}
 
@@ -183,6 +174,26 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Work
 
 // handleGatewayAPI serves /gateway/* endpoints.
 func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/gateway/services" && r.Method == http.MethodGet {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(p.sup.List())
+		return
+	}
+
+	const servicesPrefix = "/gateway/services/"
+	if strings.HasPrefix(r.URL.Path, servicesPrefix) && r.Method == http.MethodGet {
+		name := strings.TrimPrefix(r.URL.Path, servicesPrefix)
+		name = strings.TrimSuffix(name, "/status")
+		snap := p.sup.Get(name)
+		if snap == nil {
+			http.Error(w, "unknown service: "+name, http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(snap)
+		return
+	}
+
 	if r.URL.Path == "/gateway/worktrees" && r.Method == http.MethodGet {
 		list := p.reg.List()
 		out := make([]WorktreeStatus, 0, len(list))

@@ -1,11 +1,16 @@
 import type { Command } from "commander";
-import { closeSync, mkdirSync, openSync, readFileSync, writeFileSync } from "fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { getMainRepoRoot } from "../git/main-repo-root";
-import { SINGULARITY_DIR } from "../paths";
+import { SINGULARITY_DIR, DATABASE_CONFIG_PATH, PG_DIR } from "../paths";
 const LOGS_DIR = join(SINGULARITY_DIR, "logs");
 const GATEWAY_LOG = join(LOGS_DIR, "gateway.log");
 const PID_FILE = join(SINGULARITY_DIR, "gateway.pid");
+
+// Embedded PG defaults (mirrors plugins/database/plugins/embedded/shared).
+const EMBEDDED_PG_PORT = 5433;
+const EMBEDDED_PG_USER = "singularity";
+const EMBEDDED_PG_SOCKET_DIR = join(PG_DIR, "socket");
 
 function readPid(): number | null {
   try {
@@ -34,6 +39,56 @@ async function isGatewayListening(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function ensureDatabaseConfig(repoRoot: string): void {
+  if (existsSync(DATABASE_CONFIG_PATH)) return;
+
+  const embeddedPkgDir = join(
+    repoRoot,
+    "plugins/database/plugins/embedded/node_modules/@embedded-postgres",
+  );
+  const hasEmbedded = existsSync(embeddedPkgDir);
+
+  const startScript = join(
+    repoRoot,
+    "plugins/database/plugins/embedded/scripts/start.ts",
+  );
+
+  const config = hasEmbedded
+    ? {
+        connection: {
+          host: EMBEDDED_PG_SOCKET_DIR,
+          port: EMBEDDED_PG_PORT,
+          user: EMBEDDED_PG_USER,
+        },
+        services: [
+          {
+            name: "postgres",
+            start: ["bun", "run", startScript],
+            ready: {
+              unix: join(EMBEDDED_PG_SOCKET_DIR, `.s.PGSQL.${EMBEDDED_PG_PORT}`),
+            },
+            watchdog: { intervalSec: 2 },
+          },
+        ],
+      }
+    : {
+        connection: {
+          host: "localhost",
+          port: 5432,
+          user: process.env.USER ?? "postgres",
+        },
+        services: [],
+      };
+
+  mkdirSync(SINGULARITY_DIR, { recursive: true });
+  writeFileSync(DATABASE_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
+  console.log(
+    hasEmbedded
+      ? "Generated database config (embedded Postgres)"
+      : "Generated database config (system Postgres)",
+  );
 }
 
 export function registerStart(program: Command) {
@@ -86,11 +141,13 @@ export function registerStart(program: Command) {
         process.exit(1);
       }
 
+      ensureDatabaseConfig(repoRoot);
+
       mkdirSync(LOGS_DIR, { recursive: true });
       const logFd = openSync(GATEWAY_LOG, "a");
 
       const gw = Bun.spawn(
-        [gatewayBin, "-log-level", opts.logLevel, "-repo-root", repoRoot],
+        [gatewayBin, "-log-level", opts.logLevel],
         {
           cwd: gatewayDir,
           stdout: logFd,

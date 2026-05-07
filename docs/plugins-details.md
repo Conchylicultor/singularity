@@ -744,13 +744,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`database`** — Umbrella for database tooling exposed to agents.
   - Exports (server):
     - Values: `adminPool`, `awaitPgReady`, `connectionString`, `db`, `isTransientPgError`, `libpqSubprocessEnv`, `openShortLivedClient`, `pool`
+  - Exports (shared):
+    - Types: `DatabaseConfig`
+    - Values: `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `db-backup`, `entity-extensions`, `events`, `events-test`, `grouped`, `improve`, `jobs`, `launch-prompts`, `notes`, `push-and-exit`, `query`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`embedded`**
       - Exports (server):
         - Values: `databaseExists`, `dropDatabase`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `setAdminPool`
       - Exports (shared):
-        - Values: `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `useSystemPg`
+        - Values: `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
     - **`migrations`**
       - Exports (server):
         - Values: `runMigrations`

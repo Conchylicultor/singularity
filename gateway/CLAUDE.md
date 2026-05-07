@@ -12,7 +12,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 - Hands each backend a Unix domain socket at `~/.singularity/sockets/<name>.sock`; backends read `SOCKET_PATH` from env. Gateway dials the socket directly — no TCP between gateway and backend.
 - Discovers worktrees from `~/.singularity/worktrees/<name>.json`
 - Exposes `/gateway/*` on every host as an API for apps to query gateway state
-- **Supervises the embedded Postgres cluster** (one daemon per host, shared by every worktree). See "Postgres supervision" below.
+- **Supervises configured services** (e.g. embedded Postgres) via a generic process supervisor. See "Service supervision" below.
 
 ## Key Design Decisions
 
@@ -52,14 +52,14 @@ Flat single-package layout:
 
 ```
 gateway/
-├── main.go        # Flags, wiring, signal handling, sockets-dir setup, PG bring-up
+├── main.go        # Flags, wiring, signal handling, sockets-dir setup, service bring-up
 ├── worktree.go    # Worktree state machine (Idle→Starting→Running→Restarting→Stopping), spawn, lifecycle
 ├── registry.go    # Map of worktrees, fsnotify file watcher, idle sweeper, stale-socket sweep
-├── postgres.go    # Embedded Postgres supervisor: initdb, pg_ctl, watchdog, status
+├── supervisor.go  # Generic service supervisor: start commands, readiness probes, watchdog
 └── proxy.go       # http.Handler: routing, static serving, HTTP/WS proxy, /gateway API
 ```
 
-Logic belongs with the data it operates on: spawn/stop/readiness are methods on `Worktree`, discovery/sweeping are methods on `Registry`, all request handling is in `Proxy.ServeHTTP`, PG lifecycle is on `PgSupervisor`.
+Logic belongs with the data it operates on: spawn/stop/readiness are methods on `Worktree`, discovery/sweeping are methods on `Registry`, all request handling is in `Proxy.ServeHTTP`, service lifecycle is on `Supervisor`.
 
 ## Zero-downtime restart
 
@@ -71,24 +71,33 @@ If the new backend fails to start (bad code, broken migration), the old backend 
 
 State machine during restart: `Running → Restarting → Running`. During `Restarting`, `Ensure()` returns the old proxy immediately (no blocking, no 502). The idle sweeper skips worktrees in `Restarting` state. `Stop()` waits for an in-flight restart to settle before proceeding.
 
-## Postgres supervision
+## Service supervision
 
-The embedded Postgres cluster is a host-level singleton, owned by the gateway. Bootstrap order on a cold gateway start:
+The gateway includes a generic service supervisor (`supervisor.go`) that manages long-lived daemons defined in `~/.singularity/database.json`. The gateway knows nothing about what services are — it just executes start commands, probes readiness, and runs watchdogs.
 
-1. HTTP server binds (`:9000`) — `/api/database/status` immediately answers `{"pg":"stopped"}` while PG comes up.
-2. `PgSupervisor.Start(ctx)` runs synchronously in main:
-   - Resolves the platform's `embedded-postgres` binary dir under `<repoRoot>/plugins/infra/plugins/database/node_modules/@embedded-postgres/<plat>/native/bin/` (`-repo-root` flag).
-   - Recreates the dylib alias symlinks listed in `pg-symlinks.json` (npm doesn't preserve symlinks).
-   - If `~/.singularity/postgres/data-pg18/postmaster.pid` exists and the socket dials, reattaches without spawning (PG outlived a prior gateway instance).
-   - Otherwise: `initdb` if needed, then `pg_ctl start -w` which daemonizes PG and exits.
-   - Arms a 2s watchdog that dials the PG socket; on failure, attempts one re-spawn; if that also fails, marks state Crashed and stops watching.
-3. `central` worktree is eagerly spawned in a goroutine — by this point PG is ready, so central plugins can connect immediately.
+### Config file: `~/.singularity/database.json`
 
-PG runs entirely outside the gateway's process group (orphan reparented to init). Killing the gateway leaves PG alive — `./singularity start --force` rebuilds and relaunches the gateway, but worktree backends keep their pools open across the gateway blip.
+Auto-generated on first `./singularity start`. Contains two sections:
+- `connection` — database host/port/user, read by the server and CLI (not by the gateway)
+- `services` — array of processes the gateway should supervise
 
-`SINGULARITY_USE_SYSTEM_PG=1` skips the supervisor entirely; `/api/database/status` returns `{"pg":"running","useSystemPg":true}` and the gateway never touches `pg_ctl`.
+Each service has a `start` command (executed synchronously), a `ready` probe (`{"unix": "<path>"}` or `{"tcp": "<host:port>"}`), and an optional `watchdog` interval.
 
-`/api/database/status` is intercepted in `proxy.ServeHTTP` *before* the central-routes lookup, so the gateway's answer is authoritative even if a stale `central-routes.json` still lists it.
+### Bootstrap order on a cold gateway start:
+
+1. `Supervisor.StartAll(ctx)` runs synchronously in main — for each service, executes the start command, waits for the readiness probe to succeed, then arms the watchdog goroutine.
+2. `central` worktree is eagerly spawned in a goroutine — by this point services are ready, so central plugins can connect immediately.
+
+### Watchdog
+
+Each service's watchdog dials its readiness probe every N seconds (default 2). On failure, attempts one re-execution of the start command. If that also fails, marks the service Crashed and stops watching.
+
+### API
+
+- `GET /gateway/services` — JSON array of all services with their states
+- `GET /gateway/services/<name>/status` — JSON object for one service
+
+If `database.json` is missing or has an empty `services` array, the supervisor does nothing (equivalent to using an externally managed database).
 
 ## Build & Run
 

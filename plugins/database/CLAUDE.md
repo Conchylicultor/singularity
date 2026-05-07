@@ -33,6 +33,9 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
 - Description: Umbrella for database tooling exposed to agents.
 - Exports (server):
   - Values: `adminPool`, `awaitPgReady`, `connectionString`, `db`, `isTransientPgError`, `libpqSubprocessEnv`, `openShortLivedClient`, `pool`
+- Exports (shared):
+  - Types: `DatabaseConfig`
+  - Values: `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
 - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `db-backup`, `entity-extensions`, `events`, `events-test`, `grouped`, `improve`, `jobs`, `launch-prompts`, `notes`, `push-and-exit`, `query`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
 - Sub-plugins:
   - **`embedded`**

@@ -12,6 +12,7 @@ import { registerMergeDrivers } from "../git/register-merge-drivers";
 import { runChecks } from "../checks";
 import {
   libpqEnv,
+  readDatabaseConfig,
   PG_LOG_FILE,
   SINGULARITY_DIR,
 } from "../paths";
@@ -233,14 +234,12 @@ async function databaseReady(name: string): Promise<boolean> {
 }
 
 /**
- * Wait for the gateway-supervised embedded Postgres cluster to be ready.
- * Probes the cluster directly via libpq to the embedded socket — this is the
- * same ground truth the gateway's supervisor uses, and it avoids any
- * dependency on a particular gateway binary version. Skipped when the user
- * has opted into system PG.
+ * Wait for the database to be reachable. Skipped when no managed services
+ * are configured (externally managed DB, assumed ready).
  */
 async function waitForPg(): Promise<void> {
-  if (process.env.SINGULARITY_USE_SYSTEM_PG === "1") return;
+  const config = readDatabaseConfig();
+  if (config.services.length === 0) return;
   const env = libpqEnv();
   const { Client } = await import("pg");
   let lastErr: string | null = null;

@@ -24,13 +24,22 @@ If you already have a system Postgres install with a `singularity` database (the
 
 If migration fails partway, the sentinel file `~/.singularity/postgres/.migrating` blocks subsequent starts so you can inspect logs (`~/.singularity/postgres/postgres.log`). To retry, remove the sentinel and the half-populated `data-pg18/` directory.
 
-### Escape hatch: keep using system PG
+### Using system PG instead of embedded
 
-Set `SINGULARITY_USE_SYSTEM_PG=1` in the environment that runs `./singularity start`. This:
+Edit `~/.singularity/database.json` (auto-generated on first `./singularity start`):
 
-- Disables the embedded-PG supervisor in the central runtime.
-- Reverts `server/src/db/client.ts` to the previous `PGHOST`/`PGPORT`/`PGUSER` semantics (defaults `localhost:5432`).
-- Skips the auto-migration check.
+```json
+{
+  "connection": {
+    "host": "localhost",
+    "port": 5432,
+    "user": "your-username"
+  },
+  "services": []
+}
+```
+
+An empty `services` array disables the gateway's embedded-PG supervisor. The `connection` block tells the server and CLI how to reach your system PG. Then restart the gateway with `./singularity start --force`.
 
 In this mode you're responsible for `brew install postgresql@18 && brew services start postgresql@18 && createdb singularity` as before.
 

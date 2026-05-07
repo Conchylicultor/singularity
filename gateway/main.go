@@ -26,7 +26,6 @@ type Config struct {
 	RegistryDir       string
 	SocketsDir        string
 	CentralRoutesFile string
-	RepoRoot          string
 }
 
 func parseFlags() Config {
@@ -48,7 +47,6 @@ func parseFlags() Config {
 	flag.StringVar(&cfg.SocketsDir, "sockets-dir", defaultSockets, "directory for per-worktree Unix sockets")
 	defaultCentralRoutes := filepath.Join(home, ".singularity", "central-routes.json")
 	flag.StringVar(&cfg.CentralRoutesFile, "central-routes-file", defaultCentralRoutes, "path to the central routing manifest")
-	flag.StringVar(&cfg.RepoRoot, "repo-root", "", "main repo root for resolving embedded Postgres binaries")
 
 	flag.Parse()
 	return cfg
@@ -92,7 +90,13 @@ func main() {
 	sweepStaleSockets(cfg.SocketsDir, reg)
 
 	routes := NewCentralRoutesStore(cfg.CentralRoutesFile)
-	pgSup := NewPgSupervisor(cfg.RepoRoot)
+	home, _ := os.UserHomeDir()
+	dbConfigPath := filepath.Join(home, ".singularity", "database.json")
+	sup, err := NewSupervisor(dbConfigPath)
+	if err != nil {
+		slog.Error("supervisor: failed to load config; continuing without services", "err", err)
+		sup = &Supervisor{}
+	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -109,13 +113,12 @@ func main() {
 	}()
 	go reg.Sweep(ctx)
 
-	// Bring up the embedded PG cluster before central. Worktree backends and
-	// central all assume PG is reachable; with the gateway as the supervisor,
-	// PG must be ready before any backend is asked to start. If it fails, log
-	// loudly but keep serving — /api/database/status will show "stopped" or
-	// "crashed" so build.ts and operators can tell.
-	if err := pgSup.Start(ctx); err != nil {
-		slog.Error("pg: supervisor start failed; continuing without embedded PG", "err", err)
+	// Start supervised services (e.g. embedded Postgres) before backends.
+	// Backends assume services are reachable; the supervisor must bring them
+	// up first. If a service fails, log loudly but keep serving —
+	// /gateway/services will show the failure so operators can tell.
+	if err := sup.StartAll(ctx); err != nil {
+		slog.Error("supervisor: start failed; continuing without managed services", "err", err)
 	}
 
 	// Eagerly spawn `central` so plugins that load on boot (auth, secrets) are
@@ -131,7 +134,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              cfg.Listen,
-		Handler:           NewProxy(reg, routes, pgSup),
+		Handler:           NewProxy(reg, routes, sup),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -144,8 +147,8 @@ func main() {
 		defer shutCancel()
 		_ = srv.Shutdown(shutCtx)
 		_ = reg.StopAll(shutCtx)
-		// Clears the watchdog only; PG itself keeps running as a daemon.
-		pgSup.Stop()
+		// Clears watchdog goroutines; services keep running as daemons.
+		sup.StopAll()
 	}()
 
 	slog.Info("gateway listening", "addr", cfg.Listen, "registry-dir", cfg.RegistryDir, "sockets-dir", cfg.SocketsDir)
