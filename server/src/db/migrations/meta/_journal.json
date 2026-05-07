@@ -540,6 +540,13 @@
       "tag": "20260506_150843_d44d9969__merged_20260506_1508",
       "hash": "d44d9969",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1778141505000,
+      "tag": "20260507_081145_d24f17b4__completed_takes_precedence_over_dropped",
+      "hash": "d24f17b4",
+      "breakpoints": true
     }
   ]
 }
