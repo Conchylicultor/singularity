@@ -1,4 +1,4 @@
-import { type ReactElement, useMemo } from "react";
+import { type ReactElement } from "react";
 import { Pane, PaneChrome, type, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import {
   ConversationProvide,
@@ -10,7 +10,6 @@ import {
 } from "@plugins/tasks/plugins/task-list/web";
 import { type Task } from "@plugins/tasks/shared";
 import { useTask } from "@plugins/tasks/web";
-import { TaskDetail as TaskDetailSlots } from "./slots";
 import { TaskDetailFlushProvider } from "./context";
 import { TaskDetail } from "./components/task-detail";
 
@@ -73,20 +72,10 @@ function TasksRoot(): ReactElement {
 function TaskDetailBody(): ReactElement {
   const { taskId } = taskDetailPane.useParams();
   const task = useTask(taskId);
-  const aboveBands = TaskDetailSlots.Above.useContributions();
-  const orderedAbove = useMemo(
-    () => [...aboveBands].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-    [aboveBands],
-  );
 
   const body = (
-    <div className="flex h-full flex-col overflow-hidden">
-      {orderedAbove.map((band) => (
-        <band.component key={band.id} taskId={taskId} />
-      ))}
-      <div className="min-h-0 flex-1 overflow-auto">
-        <TaskDetail key={taskId} taskId={taskId} />
-      </div>
+    <div className="h-full overflow-auto">
+      <TaskDetail key={taskId} taskId={taskId} />
     </div>
   );
 

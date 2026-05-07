@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { TaskDetail, TaskFileOpenProvider, TaskNavigateProvider } from "@plugins/tasks/plugins/task-detail/web";
+import { TaskTreeDetail } from "@plugins/tasks/plugins/task-detail/web";
 import { useTask } from "@plugins/tasks/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { convFilePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
@@ -17,21 +17,19 @@ export function SideTaskBody() {
 
   return (
     <PaneChrome pane={taskSidePane} title={task?.title ?? "Task"}>
-      <div className="h-full min-h-0 overflow-auto">
-        <TaskNavigateProvider value={navigate}>
-          <TaskFileOpenProvider
-            value={(path) =>
-              convFilePeekPane.open({
-                convId: conversation.id,
-                worktree: "main",
-                filePath: path,
-              })
-            }
-          >
-            <TaskDetail key={taskId} taskId={taskId} />
-          </TaskFileOpenProvider>
-        </TaskNavigateProvider>
-      </div>
+      <TaskTreeDetail
+        key={taskId}
+        rootTaskId={taskId}
+        selectedId={taskId}
+        onSelect={navigate}
+        onFileOpen={(path) =>
+          convFilePeekPane.open({
+            convId: conversation.id,
+            worktree: "main",
+            filePath: path,
+          })
+        }
+      />
     </PaneChrome>
   );
 }

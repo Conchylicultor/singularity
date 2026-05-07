@@ -18,6 +18,7 @@ export {
   useRegisterFlush,
 } from "./context";
 export { TaskDetail } from "./components/task-detail";
+export { TaskTreeDetail } from "./components/task-tree-detail";
 export { tasksRootPane, taskDetailPane, taskConversationPane } from "./panes";
 
 export default {
