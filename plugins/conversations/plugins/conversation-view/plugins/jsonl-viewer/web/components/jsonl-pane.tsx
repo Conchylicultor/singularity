@@ -184,7 +184,7 @@ export function JsonlPane({
         {overlays.map((o) => <o.component key={o.id} />)}
         <JumpToBottomButton
           handle={sticky}
-          className="absolute bottom-12 right-4"
+          className="absolute bottom-12 right-4 z-20"
         />
       </div>
       {children}
