@@ -628,6 +628,10 @@
       "name": "@singularity/plugin-primitives-filepath-breadcrumb",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/icon-button": {
+      "name": "@singularity/plugin-primitives-icon-button",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/launch": {
       "name": "@singularity/plugin-primitives-launch",
       "version": "0.0.1",
@@ -666,6 +670,10 @@
     },
     "plugins/primitives/plugins/syntax-highlight": {
       "name": "@singularity/plugin-primitives-syntax-highlight",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/tooltip": {
+      "name": "@singularity/plugin-primitives-tooltip",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/tree": {
@@ -1687,6 +1695,8 @@
 
     "@singularity/plugin-primitives-filepath-breadcrumb": ["@singularity/plugin-primitives-filepath-breadcrumb@workspace:plugins/primitives/plugins/filepath-breadcrumb"],
 
+    "@singularity/plugin-primitives-icon-button": ["@singularity/plugin-primitives-icon-button@workspace:plugins/primitives/plugins/icon-button"],
+
     "@singularity/plugin-primitives-launch": ["@singularity/plugin-primitives-launch@workspace:plugins/primitives/plugins/launch"],
 
     "@singularity/plugin-primitives-live-state": ["@singularity/plugin-primitives-live-state@workspace:plugins/primitives/plugins/live-state"],
@@ -1704,6 +1714,8 @@
     "@singularity/plugin-primitives-relative-time": ["@singularity/plugin-primitives-relative-time@workspace:plugins/primitives/plugins/relative-time"],
 
     "@singularity/plugin-primitives-syntax-highlight": ["@singularity/plugin-primitives-syntax-highlight@workspace:plugins/primitives/plugins/syntax-highlight"],
+
+    "@singularity/plugin-primitives-tooltip": ["@singularity/plugin-primitives-tooltip@workspace:plugins/primitives/plugins/tooltip"],
 
     "@singularity/plugin-primitives-tree": ["@singularity/plugin-primitives-tree@workspace:plugins/primitives/plugins/tree"],
 

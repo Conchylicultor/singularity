@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { Reorder } from "@plugins/reorder/web";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@plugins/primitives/plugins/tooltip/web";
 import { Apps } from "../slots";
 import { AppRail } from "./app-rail";
 

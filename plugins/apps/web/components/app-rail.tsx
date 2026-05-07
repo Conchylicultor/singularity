@@ -1,9 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
+import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { cn } from "@/lib/utils";
 
 type AppItem = {
@@ -36,23 +32,18 @@ export function AppRail<T extends AppItem>({
       <DndWrapper>
         {items.map((app) => (
           <ReorderItem key={app.id} item={app}>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <button
-                    onClick={app.onClick ?? (() => navigateToPath(app.path))}
-                    className={cn(
-                      "flex size-8 items-center justify-center rounded-md text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      app.id === activeAppId &&
-                        "bg-sidebar-accent text-sidebar-accent-foreground",
-                    )}
-                  >
-                    <app.icon className="size-4" />
-                  </button>
-                }
-              />
-              <TooltipContent side="right">{app.tooltip}</TooltipContent>
-            </Tooltip>
+            <WithTooltip content={app.tooltip} side="right">
+              <button
+                onClick={app.onClick ?? (() => navigateToPath(app.path))}
+                className={cn(
+                  "flex size-8 items-center justify-center rounded-md text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  app.id === activeAppId &&
+                    "bg-sidebar-accent text-sidebar-accent-foreground",
+                )}
+              >
+                <app.icon className="size-4" />
+              </button>
+            </WithTooltip>
           </ReorderItem>
         ))}
       </DndWrapper>

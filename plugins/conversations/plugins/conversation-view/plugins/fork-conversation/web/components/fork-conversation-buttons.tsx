@@ -5,11 +5,7 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 
 export function ForkConversationButtons({
   conversation,
@@ -21,27 +17,21 @@ export function ForkConversationButtons({
   });
   const plainPrompt = draftToPlainText(draft);
   return (
-    <Tooltip>
-      <TooltipTrigger>
-        <div className="flex items-center gap-1">
-          <GitFork className="size-3.5 text-muted-foreground" />
-          <LaunchButtons
-            size="sm"
-            variant="outline"
-            getRequest={() => ({
-              attemptId: conversation.attemptId,
-              ...(plainPrompt ? { prompt: plainPrompt } : {}),
-            })}
-            onLaunched={clearDraft}
-          />
-        </div>
-      </TooltipTrigger>
-      <TooltipContent side="top">
-        <p>
-          New conversation in this worktree
-          {plainPrompt ? " — sends typed message" : ""}
-        </p>
-      </TooltipContent>
-    </Tooltip>
+    <WithTooltip
+      content={`New conversation in this worktree${plainPrompt ? " — sends typed message" : ""}`}
+    >
+      <div className="flex items-center gap-1">
+        <GitFork className="size-3.5 text-muted-foreground" />
+        <LaunchButtons
+          size="sm"
+          variant="outline"
+          getRequest={() => ({
+            attemptId: conversation.attemptId,
+            ...(plainPrompt ? { prompt: plainPrompt } : {}),
+          })}
+          onLaunched={clearDraft}
+        />
+      </div>
+    </WithTooltip>
   );
 }

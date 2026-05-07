@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
@@ -171,16 +171,11 @@ export function TaskDraftPopover({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       {tooltip ? (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <PopoverTrigger className={triggerClassName} title={triggerTitle} aria-label={triggerTitle}>
-                {trigger}
-              </PopoverTrigger>
-            }
-          />
-          <TooltipContent>{tooltip}</TooltipContent>
-        </Tooltip>
+        <WithTooltip content={tooltip}>
+          <PopoverTrigger className={triggerClassName} title={triggerTitle} aria-label={triggerTitle}>
+            {trigger}
+          </PopoverTrigger>
+        </WithTooltip>
       ) : (
         <PopoverTrigger className={triggerClassName} title={triggerTitle} aria-label={triggerTitle}>
           {trigger}

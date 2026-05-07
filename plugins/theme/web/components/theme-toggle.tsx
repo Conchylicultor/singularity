@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react";
 import { MdLightMode, MdDarkMode, MdScience, MdOutlineScience } from "react-icons/md";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 
 export function ThemeToggle() {
   const [dark, setDark] = useState(() =>
@@ -17,22 +12,11 @@ export function ThemeToggle() {
   }, [dark]);
 
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setDark((d) => !d)}
-          >
-            {dark ? <MdLightMode className="size-4" /> : <MdDarkMode className="size-4" />}
-          </Button>
-        }
-      />
-      <TooltipContent>
-        {dark ? "Switch to light mode" : "Switch to dark mode"}
-      </TooltipContent>
-    </Tooltip>
+    <IconButton
+      icon={dark ? MdLightMode : MdDarkMode}
+      label={dark ? "Switch to light mode" : "Switch to dark mode"}
+      onClick={() => setDark((d) => !d)}
+    />
   );
 }
 
@@ -46,21 +30,10 @@ export function ExperimentalToggle() {
   }, [experimental]);
 
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setExperimental((e) => !e)}
-          >
-            {experimental ? <MdScience className="size-4" /> : <MdOutlineScience className="size-4" />}
-          </Button>
-        }
-      />
-      <TooltipContent>
-        {experimental ? "Disable experimental theme" : "Enable experimental theme"}
-      </TooltipContent>
-    </Tooltip>
+    <IconButton
+      icon={experimental ? MdScience : MdOutlineScience}
+      label={experimental ? "Disable experimental theme" : "Enable experimental theme"}
+      onClick={() => setExperimental((e) => !e)}
+    />
   );
 }

@@ -111,6 +111,7 @@ import primitivesEditableFieldPlugin from "@plugins/primitives/plugins/editable-
 import primitivesErrorBoundaryPlugin from "@plugins/primitives/plugins/error-boundary/web";
 import primitivesFileLinksPlugin from "@plugins/primitives/plugins/file-links/web";
 import primitivesFilepathBreadcrumbPlugin from "@plugins/primitives/plugins/filepath-breadcrumb/web";
+import primitivesIconButtonPlugin from "@plugins/primitives/plugins/icon-button/web";
 import primitivesLaunchPlugin from "@plugins/primitives/plugins/launch/web";
 import primitivesLiveStatePlugin from "@plugins/primitives/plugins/live-state/web";
 import primitivesNetworkingPlugin from "@plugins/primitives/plugins/networking/web";
@@ -120,6 +121,7 @@ import primitivesPersistentDraftPlugin from "@plugins/primitives/plugins/persist
 import primitivesRankPlugin from "@plugins/primitives/plugins/rank/web";
 import primitivesRelativeTimePlugin from "@plugins/primitives/plugins/relative-time/web";
 import primitivesSyntaxHighlightPlugin from "@plugins/primitives/plugins/syntax-highlight/web";
+import primitivesTooltipPlugin from "@plugins/primitives/plugins/tooltip/web";
 import primitivesTreePlugin from "@plugins/primitives/plugins/tree/web";
 import reorderEditModePlugin from "@plugins/reorder/plugins/edit-mode/web";
 import reorderPlugin from "@plugins/reorder/web";
@@ -258,6 +260,7 @@ export const plugins: PluginDefinition[] = [
   primitivesErrorBoundaryPlugin,
   primitivesFileLinksPlugin,
   primitivesFilepathBreadcrumbPlugin,
+  primitivesIconButtonPlugin,
   primitivesLaunchPlugin,
   primitivesLiveStatePlugin,
   primitivesNetworkingPlugin,
@@ -267,6 +270,7 @@ export const plugins: PluginDefinition[] = [
   primitivesRankPlugin,
   primitivesRelativeTimePlugin,
   primitivesSyntaxHighlightPlugin,
+  primitivesTooltipPlugin,
   primitivesTreePlugin,
   reorderEditModePlugin,
   reorderPlugin,

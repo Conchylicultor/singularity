@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { flushSync } from "react-dom";
 import { MdPhotoCamera } from "react-icons/md";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { captureApp } from "../capture";
 
@@ -57,22 +56,12 @@ export function ScreenshotButton() {
   }
 
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Screenshot"
-            disabled={busy}
-            onClick={handleClick}
-          >
-            <MdPhotoCamera className="size-4" />
-          </Button>
-        }
-      />
-      <TooltipContent>Screenshot</TooltipContent>
-    </Tooltip>
+    <IconButton
+      icon={MdPhotoCamera}
+      label="Screenshot"
+      disabled={busy}
+      onClick={handleClick}
+    />
   );
 }
 

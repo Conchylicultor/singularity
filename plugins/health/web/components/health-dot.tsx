@@ -1,10 +1,6 @@
 import { useNotificationsChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 
 const STATUS_CLASS: Record<WsStatus, string> = {
   connecting: "bg-yellow-400 animate-pulse",
@@ -42,13 +38,10 @@ export function HealthDot() {
   const aggregate = aggregateStatus(worktree, central);
 
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={<div className="flex items-center justify-center size-8 cursor-default" />}
-      >
+    <WithTooltip content={tooltipLabel(worktree, central)}>
+      <div className="flex items-center justify-center size-8 cursor-default">
         <div className={`size-2 rounded-full ${STATUS_CLASS[aggregate]}`} />
-      </TooltipTrigger>
-      <TooltipContent>{tooltipLabel(worktree, central)}</TooltipContent>
-    </Tooltip>
+      </div>
+    </WithTooltip>
   );
 }

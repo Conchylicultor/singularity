@@ -1,8 +1,4 @@
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import type { SegmentedProgressBarProps } from "@plugins/ui/plugins/segmented-progress-bar/shared";
 
 export function DotsRenderer({
@@ -28,10 +24,9 @@ export function DotsRenderer({
     return (
       <span className="inline-flex items-center gap-0.5">
         {dots.map(({ step, dotClass }) => (
-          <Tooltip key={step.id}>
-            <TooltipTrigger render={<span className={dotClass} />} />
-            <TooltipContent>{step.label}</TooltipContent>
-          </Tooltip>
+          <WithTooltip key={step.id} content={step.label}>
+            <span className={dotClass} />
+          </WithTooltip>
         ))}
       </span>
     );
@@ -43,10 +38,9 @@ export function DotsRenderer({
     <span className="inline-flex items-center gap-1">
       {dots.map(({ step, i, dotClass }) => (
         <span key={step.id} className="inline-flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger render={<span className={dotClass} />} />
-            <TooltipContent>{step.label}</TooltipContent>
-          </Tooltip>
+          <WithTooltip content={step.label}>
+            <span className={dotClass} />
+          </WithTooltip>
           {i < steps.length - 1 && (
             <span className="h-px w-3 shrink-0 bg-muted-foreground/30" />
           )}

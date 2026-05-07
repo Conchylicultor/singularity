@@ -1,5 +1,7 @@
 import { forwardRef, type ComponentType, type ReactNode } from "react";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Button } from "@/components/ui/button";
+import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 
 interface PaneIconActionProps {
   label: string;
@@ -8,26 +10,24 @@ interface PaneIconActionProps {
   children?: ReactNode;
 }
 
-/**
- * Standard ghost icon button for `pane.Actions` contributions. Wraps a
- * `<Button variant="ghost" size="icon">` and renders `icon` (or
- * `children`) sized to fit the chrome bar. Forwards refs so it composes
- * with components that need a button ref (tooltips, dropdowns, etc.).
- */
 export const PaneIconAction = forwardRef<
   HTMLButtonElement,
   PaneIconActionProps
 >(function PaneIconAction({ label, icon: Icon, onClick, children }, ref) {
-  return (
-    <Button
-      ref={ref}
-      variant="ghost"
-      size="icon"
-      title={label}
-      aria-label={label}
-      onClick={onClick}
-    >
-      {children ?? (Icon ? <Icon className="size-4" /> : null)}
-    </Button>
-  );
+  if (children && !Icon) {
+    return (
+      <WithTooltip content={label}>
+        <Button
+          ref={ref}
+          variant="ghost"
+          size="icon"
+          aria-label={label}
+          onClick={onClick}
+        >
+          {children}
+        </Button>
+      </WithTooltip>
+    );
+  }
+  return <IconButton ref={ref} icon={Icon!} label={label} onClick={onClick} />;
 });
