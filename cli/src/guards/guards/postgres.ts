@@ -1,5 +1,6 @@
+import { defineGuard } from "../define-guard";
 import { parseShell } from "../parse-shell";
-import type { BashInput, Guard } from "../types";
+import type { BashInput } from "../types";
 
 const POSTGRES_COMMANDS = new Set([
   "psql",
@@ -20,22 +21,20 @@ const POSTGRES_COMMANDS = new Set([
   "clusterdb",
 ]);
 
-const MESSAGE =
-  "Direct PostgreSQL CLI commands are forbidden. Use the `query_db` MCP tool for database inspection and debugging — it runs read-only queries against the worktree's database safely.\n\nBlocked commands: psql, pg_dump, pg_restore, createdb, dropdb, and other pg_* utilities.\n\nDatabase mutations are managed by the server (migrations via `./singularity build`). If you need to inspect data, use the `query_db` MCP tool. If you believe this block is a false positive and the call was legitimate: STOP immediately, report the blocked command and your reasoning to the user, and wait for instructions. If the user explicitly approves, they will tell you to create $PWD/.allow-postgres to bypass.";
-
-export const postgresGuard: Guard<BashInput> = {
+export const postgresGuard = defineGuard<BashInput>({
   name: "postgres",
   matcher: "Bash",
-  check(input, ctx) {
-    if (ctx.hasBypass(".allow-postgres")) return ctx.allow();
+  bypassToken: ".allow-postgres",
+  check(input) {
     const cmd = input.command;
-    if (!cmd) return ctx.allow();
+    if (!cmd) return null;
     const { calls } = parseShell(cmd);
-    for (const call of calls) {
-      if (POSTGRES_COMMANDS.has(call.name)) {
-        return ctx.deny(MESSAGE);
-      }
-    }
-    return ctx.allow();
+    const blocked = calls.find((c) => POSTGRES_COMMANDS.has(c.name));
+    if (!blocked) return null;
+    return {
+      blocked: `Direct PostgreSQL CLI command blocked: ${blocked.name}.`,
+      why: "Blocked commands: psql, pg_dump, pg_restore, createdb, dropdb, and other pg_* utilities.",
+      hint: "Use the `query_db` MCP tool for database inspection and debugging — it runs read-only queries against the worktree's database safely. Database mutations are managed by the server (migrations via `./singularity build`).",
+    };
   },
-};
+});
