@@ -87,6 +87,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
                 - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
                 - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
                 - **`edit`** — Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
+                - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
             - **`user-image`** — Renders inline image thumbnails for user-image events.
             - **`user-text`** — Renders user text events in the JSONL viewer.

@@ -307,6 +307,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-edit",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/read": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-read",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/write": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-write",
       "version": "0.0.1",
@@ -1524,6 +1528,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-bash": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-bash@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/bash"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-edit": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-edit@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/edit"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-read": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-read@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/read"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-write": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-write@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/write"],
 

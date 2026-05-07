@@ -232,7 +232,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/code/:worktree/push`
     - `GET /api/code/:worktree/commit`
   - Imported by: `file-resolve`
-  - Endpoint callers: `assistant-text`, `commits-graph`, `diff`, `docs-button`, `file-pane`, `file-resolve`, `image`, `review`
+  - Endpoint callers: `assistant-text`, `commits-graph`, `diff`, `docs-button`, `file-pane`, `file-resolve`, `image`, `read`, `review`
   - Plugins:
     - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
       - Exports (web):
@@ -487,7 +487,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `ToolCallRow`
                 - `JsonlViewer.RowAction` → `CopyToolResultAction`
-              - Slot contributors: `add-task`, `bash`, `edit`, `write`
+              - Slot contributors: `add-task`, `bash`, `edit`, `read`, `write`
               - Plugins:
                 - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
                   - Contributes:
@@ -499,6 +499,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - Contributes:
                     - `JsonlViewerTool.Renderer` → `EditView`
                     - `JsonlViewerTool.Renderer` → `MultiEditView`
+                - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
+                  - Contributes:
+                    - `JsonlViewerTool.Renderer` → `ReadToolView`
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
                   - Contributes:
                     - `JsonlViewerTool.Renderer` → `WriteToolView`
