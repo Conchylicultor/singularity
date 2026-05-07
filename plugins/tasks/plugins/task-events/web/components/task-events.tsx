@@ -3,6 +3,8 @@ import { MdOpenInNew } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { convSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-conversation/web";
 import {
   attemptsResource,
   pushesResource,
@@ -65,9 +67,14 @@ export function TaskEvents({ taskId }: { taskId: string }) {
   const pushesQ = useResource(pushesResource);
   const githubBase = useGithubBase();
   const match = usePaneMatch();
-  const activeConvId = match?.chain.find(
-    (e) => e.pane === taskConversationPane._internal,
-  )?.params.convId;
+  const isInsideConversation = match?.chain.some(
+    (e) => e.pane === conversationPane._internal,
+  ) ?? false;
+  const activeConvId = isInsideConversation
+    ? match?.chain.find((e) => e.pane === convSidePane._internal)?.params
+        .sideConvId
+    : match?.chain.find((e) => e.pane === taskConversationPane._internal)
+        ?.params.convId;
 
   const attempts = useMemo(() => {
     const rows = attemptsQ.data ?? [];
@@ -182,7 +189,15 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                               type="button"
                               onClick={() => {
                                 if (activeConvId === c.id) {
-                                  taskConversationPane.close();
+                                  if (isInsideConversation) {
+                                    convSidePane.close();
+                                  } else {
+                                    taskConversationPane.close();
+                                  }
+                                } else if (isInsideConversation) {
+                                  convSidePane.open({
+                                    sideConvId: c.id,
+                                  });
                                 } else {
                                   taskConversationPane.open({
                                     taskId,
