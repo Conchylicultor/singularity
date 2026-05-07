@@ -53,17 +53,22 @@ function SectionBox({
   count,
   expanded,
   onToggleExpanded,
+  stickyHeader,
   children,
 }: {
   title: string;
   count: number;
   expanded: boolean;
   onToggleExpanded: () => void;
+  stickyHeader?: boolean;
   children: ReactNode;
 }) {
   return (
     <div className="group/box rounded-md transition-colors hover:bg-muted/30">
-      <div className="group/header flex items-center gap-0.5 rounded-md px-1 py-1">
+      <div className={cn(
+        "group/header flex items-center gap-0.5 rounded-md px-1 py-1",
+        stickyHeader && "sticky top-0 z-20 bg-sidebar",
+      )}>
         <button
           type="button"
           onClick={onToggleExpanded}
@@ -264,6 +269,7 @@ export function QueueView({
         count={deck.length}
         expanded={queueExpanded}
         onToggleExpanded={toggleQueueExpanded}
+        stickyHeader
       >
         {deck.length === 0 ? (
           <div className="px-2 py-1 text-[11px] italic text-muted-foreground">
@@ -474,7 +480,7 @@ function QueueRow({
   });
 
   return (
-    <li className="group/menu-item relative list-none">
+    <li className={cn("group/menu-item relative list-none", isTop && "sticky top-[30px] z-10 pb-1")}>
       <div
         ref={beforeDrop.setNodeRef}
         className={cn(
@@ -486,12 +492,16 @@ function QueueRow({
         ref={draggable.setNodeRef}
         {...draggable.attributes}
         {...draggable.listeners}
-        className={cn("relative", draggable.isDragging && "opacity-40")}
+        className={cn(
+          "relative",
+          draggable.isDragging && "opacity-40",
+          isTop && "rounded-md ring-1 ring-border/80 shadow-[0_6px_16px_rgba(0,0,0,0.45),0_2px_4px_rgba(0,0,0,0.25)] -translate-y-px bg-sidebar",
+        )}
       >
         <SidebarMenuButton
           className={cn(
             "h-auto py-1.5",
-            isTop && "border-l-2 border-primary/60",
+            isTop && "",
           )}
           isActive={isActive}
           onClick={() => onNavigate(conv.id)}
