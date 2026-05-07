@@ -11,6 +11,10 @@ import authGooglePlugin from "@plugins/auth/plugins/google/central";
 import authNotionPlugin from "@plugins/auth/plugins/notion/central";
 import infraSecretsPlugin from "@plugins/infra/plugins/secrets/central";
 
+(authPlugin as CentralPluginDefinition).dependsOn = [infraSecretsPlugin];
+(authGooglePlugin as CentralPluginDefinition).dependsOn = [authPlugin];
+(authNotionPlugin as CentralPluginDefinition).dependsOn = [authPlugin];
+
 export const plugins: CentralPluginDefinition[] = [
   authPlugin,
   authGooglePlugin,

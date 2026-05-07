@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/shared";
 
@@ -100,6 +100,79 @@ function collectEntries(root: string, runtime: Runtime): Entry[] {
   return entries;
 }
 
+// ── Server dependency graph ─────────────────────────────────────────
+
+function walkTsFiles(dir: string, out: string[]): void {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const e of entries) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) {
+      if (e.name === "node_modules" || e.name === "plugins") continue;
+      walkTsFiles(p, out);
+    } else if (e.isFile() && /\.tsx?$/.test(e.name)) {
+      out.push(p);
+    }
+  }
+}
+
+const IMPORT_FROM_RE = /from\s*["']([^"']+)["']/g;
+
+function collectServerImportPaths(pluginDir: string, runtime: string): Set<string> {
+  const serverDir = join(pluginDir, runtime);
+  const files: string[] = [];
+  walkTsFiles(serverDir, files);
+  const paths = new Set<string>();
+  for (const f of files) {
+    const src = readFileSync(f, "utf8");
+    let m: RegExpExecArray | null;
+    IMPORT_FROM_RE.lastIndex = 0;
+    while ((m = IMPORT_FROM_RE.exec(src))) {
+      const mod = m[1]!;
+      if (mod.startsWith("@plugins/") && mod.endsWith(`/${runtime}`)) {
+        paths.add(mod);
+      }
+    }
+  }
+  return paths;
+}
+
+/**
+ * Build a map from importName → list of importNames it depends on, derived
+ * from cross-plugin server/central import edges. Only includes entries with
+ * at least one dependency.
+ */
+function buildDependsOn(
+  root: string,
+  entries: Entry[],
+  runtime: "server" | "central",
+): Map<string, string[]> {
+  const importPathToName = new Map<string, string>();
+  for (const e of entries) importPathToName.set(e.importPath, e.importName);
+
+  const pluginsRoot = resolve(root, "plugins");
+  const result = new Map<string, string[]>();
+
+  for (const e of entries) {
+    const pluginDir = join(pluginsRoot, e.importPath.replace(`@plugins/`, "").replace(`/${runtime}`, ""));
+    const importPaths = collectServerImportPaths(pluginDir, runtime);
+    const deps: string[] = [];
+    for (const imp of importPaths) {
+      const depName = importPathToName.get(imp);
+      if (depName && depName !== e.importName) deps.push(depName);
+    }
+    if (deps.length > 0) {
+      deps.sort();
+      result.set(e.importName, deps);
+    }
+  }
+  return result;
+}
+
 export function renderPluginRegistry(opts: { root: string; runtime: Runtime }): string {
   const cfg = RUNTIMES[opts.runtime];
   const entries = collectEntries(opts.root, opts.runtime);
@@ -110,6 +183,20 @@ export function renderPluginRegistry(opts: { root: string; runtime: Runtime }): 
   for (const e of entries) {
     lines.push(`import ${e.importName} from "${e.importPath}";`);
   }
+
+  if (opts.runtime === "server" || opts.runtime === "central") {
+    const deps = buildDependsOn(opts.root, entries, opts.runtime);
+    if (deps.size > 0) {
+      lines.push("");
+      const cast = `as ${cfg.typeName}`;
+      for (const e of entries) {
+        const d = deps.get(e.importName);
+        if (!d) continue;
+        lines.push(`(${e.importName} ${cast}).dependsOn = [${d.join(", ")}];`);
+      }
+    }
+  }
+
   lines.push("");
   lines.push(`export const plugins: ${cfg.typeName}[] = [`);
   for (const e of entries) {

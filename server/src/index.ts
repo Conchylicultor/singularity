@@ -155,19 +155,29 @@ Bun.serve<WsData>({
 console.log(`Server listening on ${socketPath}`);
 
 // ── onReady ─────────────────────────────────────────────────────
-// Phase 2 — onReady: parallel. Background work that needs the DB / a fully
-// populated registry. Runs after the socket is bound so the server is
-// already serving requests during this phase.
-await Promise.all(
-  ordered.map((p) =>
-    Promise.resolve()
-      .then(() => p.onReady?.())
-      .catch((err) => {
-        console.error(`[plugin.${p.id}] onReady failed`, err);
-        if (p.loadBearing) throw err;
-      }),
-  ),
-);
+// Phase 2 — onReady: eager graph-driven. Each plugin fires as soon as all
+// its `dependsOn` parents have resolved — no artificial layer barriers.
+// Plugins with no dependencies start immediately. `topoSortPlugins`
+// guarantees every plugin appears after its deps in `ordered`, so
+// `resolved.get(d.id)` is always defined when we reach a dependent.
+{
+  const resolved = new Map<string, Promise<void>>();
+  for (const p of ordered) {
+    const deps = (p.dependsOn ?? []).map((d) => resolved.get(d.id)!);
+    const ready = Promise.all(deps).then(async () => {
+      if (p.onReady) {
+        try {
+          await p.onReady();
+        } catch (err) {
+          console.error(`[plugin.${p.id}] onReady failed`, err);
+          if (p.loadBearing) throw err;
+        }
+      }
+    });
+    resolved.set(p.id, ready);
+  }
+  await Promise.all(resolved.values());
+}
 
 // Graceful shutdown: drain workers, flush state, release DB connections.
 // Guarded against double-entry so both SIGTERM and a follow-up SIGINT can't
