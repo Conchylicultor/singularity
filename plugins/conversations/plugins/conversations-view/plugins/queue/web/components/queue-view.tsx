@@ -357,7 +357,7 @@ export function QueueView({
                 {blockedDeck.map((conv) => (
                   <li key={conv.id} className="group/menu-item relative list-none">
                     <SidebarMenuButton
-                      className="h-auto py-1.5 opacity-60"
+                      className="h-auto py-2 opacity-60"
                       isActive={conv.id === activeId}
                       onClick={() => onNavigate(conv.id)}
                     >
@@ -393,7 +393,7 @@ export function QueueView({
               {working.map((conv) => (
                 <li key={conv.id} className="group/menu-item relative list-none">
                   <SidebarMenuButton
-                    className="h-auto py-1.5"
+                    className="h-auto py-2"
                     isActive={conv.id === activeId}
                     onClick={() => onNavigate(conv.id)}
                   >
@@ -425,7 +425,7 @@ export function QueueView({
                 {unranked.map((conv) => (
                   <li key={conv.id} className="group/menu-item relative list-none">
                     <SidebarMenuButton
-                      className="h-auto py-1.5"
+                      className="h-auto py-2"
                       isActive={conv.id === activeId}
                       onClick={() => onNavigate(conv.id)}
                     >
@@ -465,7 +465,7 @@ export function QueueView({
                 {recentGone.map((conv) => (
                   <li key={conv.id} className="group/menu-item relative list-none">
                     <SidebarMenuButton
-                      className="h-auto py-1.5 opacity-60"
+                      className="h-auto py-2 opacity-60"
                       isActive={conv.id === activeId}
                       onClick={() => onNavigate(conv.id)}
                     >
@@ -541,7 +541,7 @@ function QueueRow({
       >
         <SidebarMenuButton
           className={cn(
-            "h-auto py-1.5",
+            "h-auto py-2",
             isTop && "",
           )}
           isActive={isActive}

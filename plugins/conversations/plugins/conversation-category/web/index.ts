@@ -1,9 +1,7 @@
 import type { PluginDefinition } from "@core";
 import { Config } from "@plugins/config/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationCategoryConfig } from "../shared";
-import { CategoryChipRow } from "./components/category-chip-row";
 import { CategoryChipToolbar } from "./components/category-chip-toolbar";
 import { CategoryColorSettings } from "./components/category-color-settings";
 
@@ -17,7 +15,6 @@ export default {
       component: CategoryChipToolbar,
       position: "left",
     }),
-    Item.Chips({ component: CategoryChipRow }),
     Config.Spec(conversationCategoryConfig),
     Config.Section({
       id: "category-colors",

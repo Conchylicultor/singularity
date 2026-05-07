@@ -371,7 +371,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
       row={
         <>
           <SidebarMenuButton
-            className={cn("h-auto py-1.5", rowTint(conv))}
+            className={cn("h-auto py-2", rowTint(conv))}
             isActive={conv.id === activeId}
             onClick={() => onNavigate(conv.id)}
           >
@@ -560,7 +560,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
                   {recentGone.map((conv) => (
                     <SidebarMenuItem key={conv.id}>
                       <SidebarMenuButton
-                        className={cn("h-auto py-1.5", rowTint(conv))}
+                        className={cn("h-auto py-2", rowTint(conv))}
                         isActive={conv.id === activeId}
                         onClick={() => onNavigate(conv.id)}
                       >
@@ -577,7 +577,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
                   {paginatedItems.map((conv) => (
                     <SidebarMenuItem key={conv.id}>
                       <SidebarMenuButton
-                        className={cn("h-auto py-1.5", rowTint(conv))}
+                        className={cn("h-auto py-2", rowTint(conv))}
                         isActive={conv.id === activeId}
                         onClick={() => onNavigate(conv.id)}
                       >

@@ -48,7 +48,6 @@ unless the user clicks "Re-classify with Haiku".
   - Values: `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`
 - Contributes:
   - `conversationPane.Actions` → `CategoryChipToolbar`
-  - `Item.Chips` → `CategoryChipRow`
   - `Config.Section` "Category colors" → `CategoryColorSettings`
 - Server:
   - Register: `classifyConversationJob`

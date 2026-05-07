@@ -85,7 +85,7 @@ export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
   return (
     <span
       className={cn(
-        "truncate text-xs",
+        "min-w-0 flex-1 truncate text-xs",
         muted && "text-muted-foreground",
       )}
     >
@@ -98,7 +98,7 @@ export function ConvRelativeTime({ conv }: { conv: ConversationItemConv }) {
   const isSystem = conv.kind === "system";
   const time = formatRelativeTime(conv.createdAt);
   return (
-    <span className="truncate text-[10px] tabular-nums text-muted-foreground">
+    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/60">
       {isSystem && conv.spawnedBy ? `${conv.spawnedBy} · ${time}` : time}
     </span>
   );
@@ -120,18 +120,20 @@ export function ConversationItem({
     );
   }
   return (
-    <div className={cn("flex items-start gap-2 overflow-hidden", active && "opacity-60")}>
+    <div className={cn("flex w-full items-start gap-2 overflow-hidden", active && "opacity-60")}>
       <span className="mt-0.5">
         <AvatarSlot conv={conv} size="sm" />
       </span>
-      <div className="flex flex-col gap-0.5 overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-center gap-1.5 overflow-hidden">
           <ConvTitle conv={conv} />
           <ConvSysBadge conv={conv} />
         </div>
-        <div className="flex items-center gap-1.5 overflow-hidden">
-          <ConvRelativeTime conv={conv} />
+        <div className="flex items-center gap-1.5">
           <ChipsSlot conv={conv} />
+          <span className="ml-auto">
+            <ConvRelativeTime conv={conv} />
+          </span>
         </div>
       </div>
     </div>

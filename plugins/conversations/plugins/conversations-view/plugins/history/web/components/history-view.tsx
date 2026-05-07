@@ -94,7 +94,7 @@ export function HistoryView({
     <SidebarMenuItem key={conv.id}>
       <SidebarMenuButton
         className={cn(
-          "h-auto py-1.5",
+          "h-auto py-2",
           conv.kind === "system" && "bg-muted/30",
         )}
         isActive={conv.id === activeId}
