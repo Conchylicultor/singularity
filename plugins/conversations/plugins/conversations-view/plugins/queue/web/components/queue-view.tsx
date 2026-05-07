@@ -48,47 +48,44 @@ const BLOCKED_EXPANDED_KEY = "queue-view:blocked:expanded";
 const UNRANKED_EXPANDED_KEY = "queue-view:unranked:expanded";
 const GONE_EXPANDED_KEY = "queue-view:gone:expanded";
 
-function SectionBox({
+const SECTION_H = 28;
+
+function SectionHeader({
   title,
   count,
   expanded,
   onToggleExpanded,
-  stickyHeader,
-  children,
+  stickyTop,
 }: {
   title: string;
   count: number;
   expanded: boolean;
   onToggleExpanded: () => void;
-  stickyHeader?: boolean;
-  children: ReactNode;
+  stickyTop: number;
 }) {
   return (
-    <div className="group/box rounded-md transition-colors hover:bg-muted/30">
-      <div className={cn(
-        "group/header flex items-center gap-0.5 rounded-md px-1 py-1",
-        stickyHeader && "sticky top-0 z-20 bg-sidebar",
-      )}>
-        <button
-          type="button"
-          onClick={onToggleExpanded}
-          aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
-          className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent"
-        >
-          <MdChevronRight
-            className={cn("size-4 transition-transform", expanded && "rotate-90")}
-          />
-        </button>
-        <div className="min-w-0 flex-1 truncate px-1 py-0.5 text-xs font-semibold text-muted-foreground">
-          {title}
-        </div>
-        {count > 0 && (
-          <span className="shrink-0 rounded px-1 py-0.5 text-[10px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover/header:opacity-100">
-            {count}
-          </span>
-        )}
+    <div
+      className="group/header sticky z-20 flex items-center gap-0.5 rounded-md bg-sidebar px-1 py-1"
+      style={{ top: stickyTop }}
+    >
+      <button
+        type="button"
+        onClick={onToggleExpanded}
+        aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
+        className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent"
+      >
+        <MdChevronRight
+          className={cn("size-4 transition-transform", expanded && "rotate-90")}
+        />
+      </button>
+      <div className="min-w-0 flex-1 truncate px-1 py-0.5 text-xs font-semibold text-muted-foreground">
+        {title}
       </div>
-      {expanded && <div className="mt-0.5 pl-1">{children}</div>}
+      {count > 0 && (
+        <span className="shrink-0 rounded px-1 py-0.5 text-[10px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover/header:opacity-100">
+          {count}
+        </span>
+      )}
     </div>
   );
 }
@@ -262,180 +259,224 @@ export function QueueView({
 
   const dragInProgress = draggingId !== null;
 
+  // Compute cumulative sticky tops so headers stack when scrolled
+  let nextTop = 0;
+
+  const queueTop = nextTop;
+  nextTop += SECTION_H;
+
+  const hasTopItem = queueExpanded && deck.length > 0;
+  const topItemTop = nextTop;
+  if (hasTopItem) nextTop += SECTION_H + 8; // top item row height + padding
+
+  const blockedTop = nextTop;
+  if (blockedDeck.length > 0) nextTop += SECTION_H;
+
+  const workingTop = nextTop;
+  nextTop += SECTION_H;
+
+  const unrankedTop = nextTop;
+  if (unranked.length > 0) nextTop += SECTION_H;
+
+  const goneTop = nextTop;
+
   return (
-    <div className="flex flex-col gap-1.5">
-      <SectionBox
-        title="Queue"
-        count={deck.length}
-        expanded={queueExpanded}
-        onToggleExpanded={toggleQueueExpanded}
-        stickyHeader
-      >
-        {deck.length === 0 ? (
-          <div className="px-2 py-1 text-[11px] italic text-muted-foreground">
-            No conversations waiting
-          </div>
-        ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={pointerWithin}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
-            onDragCancel={() => setDraggingId(null)}
-          >
-            <SidebarMenu>
-              {deck.map((conv, idx) => (
-                <QueueRow
-                  key={conv.id}
-                  conv={conv}
-                  isTop={idx === 0}
-                  isBottom={idx === deck.length - 1}
-                  canStepDown={idx < deck.length - 1}
-                  isActive={conv.id === activeId}
-                  dragInProgress={dragInProgress}
-                  onNavigate={onNavigate}
-                  onClose={onCloseConversation}
-                  onPromoteToTop={(id) => queuePost("promote", { conversationId: id })}
-                  onSendToBottom={(id) => queuePost("demote", { conversationId: id })}
-                  onStepDown={(id) => queuePost("step-down", { conversationId: id, steps: 5 })}
-                />
-              ))}
-            </SidebarMenu>
-            <DragOverlay dropAnimation={null}>
-              {draggingConv ? (
-                <div className="flex items-center rounded border border-accent bg-background/90 px-2 py-1.5 text-sm shadow-md">
-                  <ConversationItem conv={draggingConv} />
-                </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
-        )}
-      </SectionBox>
-      {blockedDeck.length > 0 && (
-        <SectionBox
-          title="Blocked"
-          count={blockedDeck.length}
-          expanded={blockedExpanded}
-          onToggleExpanded={toggleBlockedExpanded}
-        >
-          <SidebarMenu>
-            {blockedDeck.map((conv) => (
-              <li key={conv.id} className="group/menu-item relative list-none">
-                <SidebarMenuButton
-                  className="h-auto py-1.5 opacity-60"
-                  isActive={conv.id === activeId}
-                  onClick={() => onNavigate(conv.id)}
-                >
-                  <ConversationItem conv={conv} />
-                </SidebarMenuButton>
-                <SidebarMenuAction
-                  onClick={(e: React.MouseEvent) =>
-                    void onCloseConversation(conv.id, e)
-                  }
-                  className="opacity-0 group-hover/menu-item:opacity-100"
-                  aria-label="Close conversation"
-                >
-                  <MdClose className="size-3.5" />
-                </SidebarMenuAction>
-              </li>
-            ))}
-          </SidebarMenu>
-        </SectionBox>
+    <div className="flex flex-col">
+      {/* Queue */}
+      <SectionHeader title="Queue" count={deck.length} expanded={queueExpanded} onToggleExpanded={toggleQueueExpanded} stickyTop={queueTop} />
+      {queueExpanded && deck.length === 0 && (
+        <div className="px-2 py-1 pl-2 text-[11px] italic text-muted-foreground">
+          No conversations waiting
+        </div>
       )}
-      <SectionBox
-        title="Working"
-        count={working.length}
-        expanded={workingExpanded}
-        onToggleExpanded={toggleWorkingExpanded}
-      >
-        {working.length === 0 ? (
-          <div className="px-2 py-1 text-[11px] italic text-muted-foreground">
-            No agents working
-          </div>
-        ) : (
-          <SidebarMenu>
-            {working.map((conv) => (
-              <li key={conv.id} className="group/menu-item relative list-none">
-                <SidebarMenuButton
-                  className="h-auto py-1.5"
-                  isActive={conv.id === activeId}
-                  onClick={() => onNavigate(conv.id)}
-                >
-                  <ConversationItem conv={conv} />
-                </SidebarMenuButton>
-                <SidebarMenuAction
-                  onClick={(e: React.MouseEvent) =>
-                    void onCloseConversation(conv.id, e)
-                  }
-                  className="opacity-0 group-hover/menu-item:opacity-100"
-                  aria-label="Close conversation"
-                >
-                  <MdClose className="size-3.5" />
-                </SidebarMenuAction>
-              </li>
-            ))}
-          </SidebarMenu>
-        )}
-      </SectionBox>
-      {unranked.length > 0 && (
-        <SectionBox
-          title="Unranked"
-          count={unranked.length}
-          expanded={unrankedExpanded}
-          onToggleExpanded={toggleUnrankedExpanded}
+      {queueExpanded && deck.length > 0 && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={pointerWithin}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onDragCancel={() => setDraggingId(null)}
         >
-          <SidebarMenu>
-            {unranked.map((conv) => (
-              <li key={conv.id} className="group/menu-item relative list-none">
-                <SidebarMenuButton
-                  className="h-auto py-1.5"
-                  isActive={conv.id === activeId}
-                  onClick={() => onNavigate(conv.id)}
-                >
-                  <ConversationItem conv={conv} />
-                </SidebarMenuButton>
-                <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 group-hover/menu-item:opacity-100">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); void queuePost("rerank", { conversationId: conv.id }); }}
-                    className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
-                    aria-label="Add to queue"
+          {/* Top item: direct child of root div so sticky spans all sections */}
+          <div className="sticky z-10 bg-sidebar pt-px pb-1 pl-1" style={{ top: topItemTop }}>
+            <SidebarMenu>
+              <QueueRow
+                conv={deck[0]!}
+                isTop
+                isBottom={deck.length === 1}
+                canStepDown={deck.length > 1}
+                isActive={deck[0]!.id === activeId}
+                dragInProgress={dragInProgress}
+                onNavigate={onNavigate}
+                onClose={onCloseConversation}
+                onPromoteToTop={(id) => queuePost("promote", { conversationId: id })}
+                onSendToBottom={(id) => queuePost("demote", { conversationId: id })}
+                onStepDown={(id) => queuePost("step-down", { conversationId: id, steps: 5 })}
+              />
+            </SidebarMenu>
+          </div>
+          {deck.length > 1 && (
+            <div className="pl-1">
+              <SidebarMenu>
+                {deck.slice(1).map((conv, idx) => (
+                  <QueueRow
+                    key={conv.id}
+                    conv={conv}
+                    isTop={false}
+                    isBottom={idx === deck.length - 2}
+                    canStepDown={idx < deck.length - 2}
+                    isActive={conv.id === activeId}
+                    dragInProgress={dragInProgress}
+                    onNavigate={onNavigate}
+                    onClose={onCloseConversation}
+                    onPromoteToTop={(id) => queuePost("promote", { conversationId: id })}
+                    onSendToBottom={(id) => queuePost("demote", { conversationId: id })}
+                    onStepDown={(id) => queuePost("step-down", { conversationId: id, steps: 5 })}
+                  />
+                ))}
+              </SidebarMenu>
+            </div>
+          )}
+          <DragOverlay dropAnimation={null}>
+            {draggingConv ? (
+              <div className="flex items-center rounded border border-accent bg-background/90 px-2 py-1.5 text-sm shadow-md">
+                <ConversationItem conv={draggingConv} />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {/* Blocked */}
+      {blockedDeck.length > 0 && (
+        <>
+          <SectionHeader title="Blocked" count={blockedDeck.length} expanded={blockedExpanded} onToggleExpanded={toggleBlockedExpanded} stickyTop={blockedTop} />
+          {blockedExpanded && (
+            <div className="mt-0.5 pl-1">
+              <SidebarMenu>
+                {blockedDeck.map((conv) => (
+                  <li key={conv.id} className="group/menu-item relative list-none">
+                    <SidebarMenuButton
+                      className="h-auto py-1.5 opacity-60"
+                      isActive={conv.id === activeId}
+                      onClick={() => onNavigate(conv.id)}
+                    >
+                      <ConversationItem conv={conv} />
+                    </SidebarMenuButton>
+                    <SidebarMenuAction
+                      onClick={(e: React.MouseEvent) =>
+                        void onCloseConversation(conv.id, e)
+                      }
+                      className="opacity-0 group-hover/menu-item:opacity-100"
+                      aria-label="Close conversation"
+                    >
+                      <MdClose className="size-3.5" />
+                    </SidebarMenuAction>
+                  </li>
+                ))}
+              </SidebarMenu>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Working */}
+      <SectionHeader title="Working" count={working.length} expanded={workingExpanded} onToggleExpanded={toggleWorkingExpanded} stickyTop={workingTop} />
+      {workingExpanded && (
+        <div className="mt-0.5 pl-1">
+          {working.length === 0 ? (
+            <div className="px-2 py-1 text-[11px] italic text-muted-foreground">
+              No agents working
+            </div>
+          ) : (
+            <SidebarMenu>
+              {working.map((conv) => (
+                <li key={conv.id} className="group/menu-item relative list-none">
+                  <SidebarMenuButton
+                    className="h-auto py-1.5"
+                    isActive={conv.id === activeId}
+                    onClick={() => onNavigate(conv.id)}
                   >
-                    <MdOutlineQueue className="size-3.5" />
-                  </button>
-                  <button
-                    onClick={(e: React.MouseEvent) => { e.stopPropagation(); void onCloseConversation(conv.id, e); }}
-                    className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+                    <ConversationItem conv={conv} />
+                  </SidebarMenuButton>
+                  <SidebarMenuAction
+                    onClick={(e: React.MouseEvent) =>
+                      void onCloseConversation(conv.id, e)
+                    }
+                    className="opacity-0 group-hover/menu-item:opacity-100"
                     aria-label="Close conversation"
                   >
                     <MdClose className="size-3.5" />
-                  </button>
-                </div>
-              </li>
-            ))}
-          </SidebarMenu>
-        </SectionBox>
+                  </SidebarMenuAction>
+                </li>
+              ))}
+            </SidebarMenu>
+          )}
+        </div>
       )}
+
+      {/* Unranked */}
+      {unranked.length > 0 && (
+        <>
+          <SectionHeader title="Unranked" count={unranked.length} expanded={unrankedExpanded} onToggleExpanded={toggleUnrankedExpanded} stickyTop={unrankedTop} />
+          {unrankedExpanded && (
+            <div className="mt-0.5 pl-1">
+              <SidebarMenu>
+                {unranked.map((conv) => (
+                  <li key={conv.id} className="group/menu-item relative list-none">
+                    <SidebarMenuButton
+                      className="h-auto py-1.5"
+                      isActive={conv.id === activeId}
+                      onClick={() => onNavigate(conv.id)}
+                    >
+                      <ConversationItem conv={conv} />
+                    </SidebarMenuButton>
+                    <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 group-hover/menu-item:opacity-100">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); void queuePost("rerank", { conversationId: conv.id }); }}
+                        className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+                        aria-label="Add to queue"
+                      >
+                        <MdOutlineQueue className="size-3.5" />
+                      </button>
+                      <button
+                        onClick={(e: React.MouseEvent) => { e.stopPropagation(); void onCloseConversation(conv.id, e); }}
+                        className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+                        aria-label="Close conversation"
+                      >
+                        <MdClose className="size-3.5" />
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </SidebarMenu>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Recently gone */}
       {recentGone.length > 0 && (
-        <SectionBox
-          title="Recently gone"
-          count={recentGone.length}
-          expanded={goneExpanded}
-          onToggleExpanded={toggleGoneExpanded}
-        >
-          <SidebarMenu>
-            {recentGone.map((conv) => (
-              <li key={conv.id} className="group/menu-item relative list-none">
-                <SidebarMenuButton
-                  className="h-auto py-1.5 opacity-60"
-                  isActive={conv.id === activeId}
-                  onClick={() => onNavigate(conv.id)}
-                >
-                  <ConversationItem conv={conv} />
-                </SidebarMenuButton>
-              </li>
-            ))}
-          </SidebarMenu>
-        </SectionBox>
+        <>
+          <SectionHeader title="Recently gone" count={recentGone.length} expanded={goneExpanded} onToggleExpanded={toggleGoneExpanded} stickyTop={goneTop} />
+          {goneExpanded && (
+            <div className="mt-0.5 pl-1">
+              <SidebarMenu>
+                {recentGone.map((conv) => (
+                  <li key={conv.id} className="group/menu-item relative list-none">
+                    <SidebarMenuButton
+                      className="h-auto py-1.5 opacity-60"
+                      isActive={conv.id === activeId}
+                      onClick={() => onNavigate(conv.id)}
+                    >
+                      <ConversationItem conv={conv} />
+                    </SidebarMenuButton>
+                  </li>
+                ))}
+              </SidebarMenu>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -480,7 +521,7 @@ function QueueRow({
   });
 
   return (
-    <li className={cn("group/menu-item relative list-none", isTop && "sticky top-[30px] z-10 pb-1")}>
+    <li className="group/menu-item relative list-none">
       <div
         ref={beforeDrop.setNodeRef}
         className={cn(

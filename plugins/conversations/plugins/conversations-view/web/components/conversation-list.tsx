@@ -67,8 +67,8 @@ export function ConversationList() {
   const ActiveComponent = activeView?.component ?? null;
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="sticky top-0 z-10 flex flex-col gap-1 bg-sidebar px-2 pb-1 pt-0">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 flex-col gap-1 px-2 pb-1">
         <LaunchButtons variant="outline" size="sm" className="w-full" />
         {ordered.length > 1 && (
           <div className="flex items-center gap-0.5 rounded-md border bg-background p-0.5">
@@ -97,13 +97,15 @@ export function ConversationList() {
           </div>
         )}
       </div>
-      {ActiveComponent && (
-        <ActiveComponent
-          activeId={activeId}
-          onNavigate={navigate}
-          onCloseConversation={closeConversation}
-        />
-      )}
+      <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
+        {ActiveComponent && (
+          <ActiveComponent
+            activeId={activeId}
+            onNavigate={navigate}
+            onCloseConversation={closeConversation}
+          />
+        )}
+      </div>
     </div>
   );
 }
