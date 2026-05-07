@@ -78,6 +78,7 @@ import uiSegmentedProgressBarPlugin from "@plugins/ui/plugins/segmented-progress
 (agentsAutoLaunchTogglePlugin as ServerPluginDefinition).dependsOn = [agentsPlugin, infraEntityExtensionsPlugin];
 (agentsPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraAttachmentsPlugin, primitivesRankPlugin, tasksCorePlugin];
 (buildPlugin as ServerPluginDefinition).dependsOn = [configPlugin, debugLogsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin];
+(codeExplorerFileResolvePlugin as ServerPluginDefinition).dependsOn = [codeExplorerPlugin];
 (codeExplorerPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
 (conversationsRecoverPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, tasksCorePlugin];
 (conversationsConversationCategoryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, infraClaudeCliPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
