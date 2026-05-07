@@ -1076,6 +1076,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `FilepathBreadcrumbProps`
         - Values: `FilepathBreadcrumb`
+    - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
+      - Exports (web):
+        - Types: `IconButtonProps`
+        - Values: `IconButton`
     - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
       - Exports (web):
         - Types: `LaunchButtonsProps`, `LaunchRequest`
@@ -1122,6 +1126,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
       - Exports (web):
         - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
+    - **`tooltip`** — WithTooltip wrapper, TooltipProvider, and <Kbd> keyboard shortcut badge.
+      - Exports (web):
+        - Types: `KbdProps`, `WithTooltipProps`
+        - Values: `Kbd`, `TooltipProvider`, `WithTooltip`
     - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
       - Exports (web):
         - Types: `RenameInputProps`, `RowChromeMenuHelpers`, `RowChromeProps`, `RowControls`, `RowMenuItem`, `TreeItem`, `TreeListContextValue`, `TreeListProps`
