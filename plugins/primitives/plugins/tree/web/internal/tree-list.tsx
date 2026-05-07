@@ -238,7 +238,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       <TreeListProvider value={ctxValue}>
         <div className="flex flex-col gap-0.5">
           {hasToolbar && (
-            <div className="mb-1 flex items-center gap-1">
+            <div className="sticky top-0 z-10 bg-background mb-1 flex items-center gap-1">
               <div className="flex items-center gap-1">{toolbar?.start}</div>
               <div className="ml-auto flex items-center gap-1">
                 {showExpandAll && (
