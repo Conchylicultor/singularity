@@ -781,6 +781,26 @@
       "name": "@singularity/plugin-theme",
       "version": "0.0.1",
     },
+    "plugins/ui": {
+      "name": "@singularity/plugin-ui",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/segmented-progress-bar": {
+      "name": "@singularity/plugin-ui-segmented-progress-bar",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/segmented-progress-bar/plugins/dots": {
+      "name": "@singularity/plugin-ui-segmented-progress-bar-dots",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/segmented-progress-bar/plugins/segmented": {
+      "name": "@singularity/plugin-ui-segmented-progress-bar-segmented",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/theme-engine": {
+      "name": "@singularity/plugin-ui-theme-engine",
+      "version": "0.0.1",
+    },
     "plugins/welcome": {
       "name": "@singularity/plugin-welcome",
       "version": "0.0.1",
@@ -1707,6 +1727,16 @@
     "@singularity/plugin-terminal": ["@singularity/plugin-terminal@workspace:plugins/terminal"],
 
     "@singularity/plugin-theme": ["@singularity/plugin-theme@workspace:plugins/theme"],
+
+    "@singularity/plugin-ui": ["@singularity/plugin-ui@workspace:plugins/ui"],
+
+    "@singularity/plugin-ui-segmented-progress-bar": ["@singularity/plugin-ui-segmented-progress-bar@workspace:plugins/ui/plugins/segmented-progress-bar"],
+
+    "@singularity/plugin-ui-segmented-progress-bar-dots": ["@singularity/plugin-ui-segmented-progress-bar-dots@workspace:plugins/ui/plugins/segmented-progress-bar/plugins/dots"],
+
+    "@singularity/plugin-ui-segmented-progress-bar-segmented": ["@singularity/plugin-ui-segmented-progress-bar-segmented@workspace:plugins/ui/plugins/segmented-progress-bar/plugins/segmented"],
+
+    "@singularity/plugin-ui-theme-engine": ["@singularity/plugin-ui-theme-engine@workspace:plugins/ui/plugins/theme-engine"],
 
     "@singularity/plugin-welcome": ["@singularity/plugin-welcome@workspace:plugins/welcome"],
 

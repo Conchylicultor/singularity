@@ -1,15 +1,18 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { PHASE_ORDER, PHASE_LABELS, type ConversationPhase } from "../../shared/schemas";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import type { SegmentedProgressBarProps } from "@plugins/ui/plugins/segmented-progress-bar/shared";
 
-interface ProgressDotsProps {
-  phase: ConversationPhase;
-  compact?: boolean;
-}
+export function DotsRenderer({
+  steps,
+  activeStep,
+  compact = false,
+}: SegmentedProgressBarProps) {
+  const currentIndex = steps.findIndex((s) => s.id === activeStep);
 
-export function ProgressDots({ phase, compact = false }: ProgressDotsProps) {
-  const currentIndex = PHASE_ORDER.indexOf(phase);
-
-  const dots = PHASE_ORDER.map((p, i) => {
+  const dots = steps.map((step, i) => {
     const isPast = i < currentIndex;
     const isActive = i === currentIndex;
 
@@ -18,37 +21,39 @@ export function ProgressDots({ phase, compact = false }: ProgressDotsProps) {
     else if (isActive) dotClass += "bg-primary";
     else dotClass += "border border-muted-foreground/40";
 
-    return { p, i, isPast, isActive, dotClass };
+    return { step, i, dotClass };
   });
 
   if (compact) {
     return (
       <span className="inline-flex items-center gap-0.5">
-        {dots.map(({ p, dotClass }) => (
-          <Tooltip key={p}>
+        {dots.map(({ step, dotClass }) => (
+          <Tooltip key={step.id}>
             <TooltipTrigger render={<span className={dotClass} />} />
-            <TooltipContent>{PHASE_LABELS[p]}</TooltipContent>
+            <TooltipContent>{step.label}</TooltipContent>
           </Tooltip>
         ))}
       </span>
     );
   }
 
+  const activeLabel = steps[currentIndex]?.label ?? activeStep;
+
   return (
     <span className="inline-flex items-center gap-1">
-      {dots.map(({ p, i, dotClass }) => (
-        <span key={p} className="inline-flex items-center gap-1">
+      {dots.map(({ step, i, dotClass }) => (
+        <span key={step.id} className="inline-flex items-center gap-1">
           <Tooltip>
             <TooltipTrigger render={<span className={dotClass} />} />
-            <TooltipContent>{PHASE_LABELS[p]}</TooltipContent>
+            <TooltipContent>{step.label}</TooltipContent>
           </Tooltip>
-          {i < PHASE_ORDER.length - 1 && (
+          {i < steps.length - 1 && (
             <span className="h-px w-3 shrink-0 bg-muted-foreground/30" />
           )}
         </span>
       ))}
       <span className="ml-0.5 text-xs text-muted-foreground">
-        {PHASE_LABELS[phase]}
+        {activeLabel}
       </span>
     </span>
   );

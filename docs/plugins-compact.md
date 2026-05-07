@@ -230,6 +230,14 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`theme`** — Toolbar toggles for light/dark mode and a distinct theme on non-main worktrees.
 
+- **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
+  - Plugins:
+    - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
+      - Plugins:
+        - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
+        - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.
+    - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
+
 - **`welcome`** — Landing pane shown at `/`.
 
 - **`worktree-switcher`** — Toolbar dropdown to switch the active worktree namespace.

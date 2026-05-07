@@ -147,6 +147,11 @@ import tasksTaskListPlugin from "@plugins/tasks/plugins/task-list/web";
 import tasksTaskStatusPlugin from "@plugins/tasks/plugins/task-status/web";
 import terminalPlugin from "@plugins/terminal/web";
 import themePlugin from "@plugins/theme/web";
+import uiSegmentedProgressBarDotsPlugin from "@plugins/ui/plugins/segmented-progress-bar/plugins/dots/web";
+import uiSegmentedProgressBarSegmentedPlugin from "@plugins/ui/plugins/segmented-progress-bar/plugins/segmented/web";
+import uiSegmentedProgressBarPlugin from "@plugins/ui/plugins/segmented-progress-bar/web";
+import uiThemeEnginePlugin from "@plugins/ui/plugins/theme-engine/web";
+import uiPlugin from "@plugins/ui/web";
 import welcomePlugin from "@plugins/welcome/web";
 import worktreeSwitcherPlugin from "@plugins/worktree-switcher/web";
 
@@ -292,6 +297,11 @@ export const plugins: PluginDefinition[] = [
   tasksTaskStatusPlugin,
   terminalPlugin,
   themePlugin,
+  uiSegmentedProgressBarDotsPlugin,
+  uiSegmentedProgressBarSegmentedPlugin,
+  uiSegmentedProgressBarPlugin,
+  uiThemeEnginePlugin,
+  uiPlugin,
   welcomePlugin,
   worktreeSwitcherPlugin,
 ];

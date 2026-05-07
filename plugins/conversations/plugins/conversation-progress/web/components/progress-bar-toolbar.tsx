@@ -1,6 +1,9 @@
+import { SegmentedProgressBar } from "@plugins/ui/plugins/segmented-progress-bar/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { PHASE_ORDER, PHASE_LABELS } from "../../shared/schemas";
 import { useProgressFor } from "../internal/use-progress";
-import { ProgressDots } from "./progress-dots";
+
+const STEPS = PHASE_ORDER.map((p) => ({ id: p, label: PHASE_LABELS[p] }));
 
 export function ProgressBarToolbar() {
   const { conversation } = conversationPane.useData();
@@ -9,7 +12,7 @@ export function ProgressBarToolbar() {
   if (!progress) return null;
   return (
     <span className="inline-flex items-center">
-      <ProgressDots phase={progress.phase} />
+      <SegmentedProgressBar steps={STEPS} activeStep={progress.phase} />
     </span>
   );
 }

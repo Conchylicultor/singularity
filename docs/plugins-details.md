@@ -252,7 +252,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
   - Imported by: `build`, `commits`, `conversation-category`, `turn-summary`
-  - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `quick-prompts`
+  - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `quick-prompts`, `theme-engine`
 
 - **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:
@@ -1310,6 +1310,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Shell.Toolbar` (group `actions`) → `ExperimentalToggle`
     - `Shell.Toolbar` (group `actions`) → `ThemeToggle`
+
+- **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
+  - Plugins:
+    - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
+      - Defines:
+        - Slots: `SegmentedProgressBar.Variant`
+      - Exports (web):
+        - Types: `SegmentedProgressBarProps`, `SegmentedProgressBarVariantContribution`, `Step`
+        - Values: `SegmentedProgressBar`, `SegmentedProgressBarSlots`
+      - Exports (shared):
+        - Types: `SegmentedProgressBarProps`, `Step`
+        - Values: `segmentedProgressBarConfig`
+      - Contributes:
+        - `ThemeEngine.VariantGroup` → `VariantPicker`
+      - Plugins:
+        - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
+          - Contributes:
+            - `SegmentedProgressBarSlots.Variant` "Dots" → `DotsRenderer`
+        - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.
+          - Contributes:
+            - `SegmentedProgressBarSlots.Variant` "Segmented" → `SegmentedRenderer`
+    - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
+      - Defines:
+        - Slots: `ThemeEngine.VariantGroup`
+      - Exports (web):
+        - Types: `VariantGroupContribution`
+        - Values: `ThemeEngine`
+      - Contributes:
+        - `Config.Section` "UI component variants" → `VariantSettings`
+      - Slot contributors: `segmented-progress-bar`
 
 - **`welcome`** — Landing pane shown at `/`.
   - Exports (web):

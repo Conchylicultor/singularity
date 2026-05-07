@@ -71,6 +71,7 @@ import tasksAutoStartPlugin from "@plugins/tasks/plugins/auto-start/server";
 import tasksTaskTitlePlugin from "@plugins/tasks/plugins/task-title/server";
 import tasksPlugin from "@plugins/tasks/server";
 import terminalPlugin from "@plugins/terminal/server";
+import uiSegmentedProgressBarPlugin from "@plugins/ui/plugins/segmented-progress-bar/server";
 
 export const plugins: ServerPluginDefinition[] = [
   activeDataPlugin,
@@ -138,4 +139,5 @@ export const plugins: ServerPluginDefinition[] = [
   tasksTaskTitlePlugin,
   tasksPlugin,
   terminalPlugin,
+  uiSegmentedProgressBarPlugin,
 ];
