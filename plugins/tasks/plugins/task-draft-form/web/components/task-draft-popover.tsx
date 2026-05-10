@@ -152,9 +152,14 @@ export function TaskDraftPopover({
             ? { taskId: activeRelate.taskId, mode: ambientRelateMode }
             : undefined;
 
+      const effectiveTarget: TaskChainTarget =
+        hasAmbientRelate && ambientRelateMode && activeRelate
+          ? { kind: "child", parentTaskId: activeRelate.taskId }
+          : target;
+
       const outcome = await submitChain({
         cards,
-        target,
+        target: effectiveTarget,
         relate: effectiveRelate,
         url,
         beforeScreenshot: () => setOpen(false),
