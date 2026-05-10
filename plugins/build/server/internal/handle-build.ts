@@ -1,6 +1,6 @@
-import { runBuild } from "./run-build";
+import { triggerBuild } from "./run-build";
 
 export function handleBuild(_req: Request): Response {
-  runBuild("manual").catch(() => {});
+  triggerBuild("manual");
   return Response.json({ ok: true });
 }

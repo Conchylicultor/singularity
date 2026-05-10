@@ -7,22 +7,18 @@ import { buildHistoryResource } from "./build-history-resource";
 
 const buildLog = Log.channel("build");
 
-// In-process mutex. Coalesces overlapping runBuild() calls onto a single
-// `./singularity build` invocation. Every call site (build.run job,
-// POST /api/build) goes through this, so none of them can spawn a second
-// vite run in parallel with an in-flight one.
-let inflight: Promise<number> | null = null;
+let inflight = false;
 
 export function isBuildInflight(): boolean {
-  return inflight !== null;
+  return inflight;
 }
 
-export function runBuild(trigger: "manual" | "auto" = "auto"): Promise<number> {
-  if (inflight) return inflight;
-  inflight = doRunBuild(trigger).finally(() => {
-    inflight = null;
+export function triggerBuild(trigger: "manual" | "auto"): void {
+  if (inflight) return;
+  inflight = true;
+  doRunBuild(trigger).finally(() => {
+    inflight = false;
   });
-  return inflight;
 }
 
 function getHeadCommit(): string | null {
@@ -31,17 +27,14 @@ function getHeadCommit(): string | null {
   return proc.stdout.toString().trim() || null;
 }
 
-async function doRunBuild(trigger: "manual" | "auto"): Promise<number> {
+async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
   const buildId = `build-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const commitHash = getHeadCommit();
 
   await db.insert(_buildRuns).values({ id: buildId, trigger, commitHash });
   buildHistoryResource.notify();
 
-  // Detach into a new session so gateway's process-group SIGKILL on idle-sweep
-  // doesn't kill the build mid-flight. The CLI itself uses a filesystem lock
-  // and atomic-rename publish, so even across restarts web/dist stays whole.
-  const proc = Bun.spawn(["./singularity", "build", "--no-restart", "--allow-main"], {
+  const proc = Bun.spawn(["./singularity", "build", "--allow-main"], {
     cwd: REPO_ROOT,
     stdout: "pipe",
     stderr: "pipe",
@@ -62,10 +55,8 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<number> {
     }
   }
 
-  await Promise.all([
-    streamLines(proc.stdout, "stdout"),
-    streamLines(proc.stderr, "stderr"),
-  ]);
+  streamLines(proc.stdout, "stdout").catch(() => {});
+  streamLines(proc.stderr, "stderr").catch(() => {});
 
   const exitCode = await proc.exited;
   buildLog.publish(exitCode === 0 ? "Build succeeded" : `Build failed (exit ${exitCode})`);
@@ -75,16 +66,4 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<number> {
     .set({ finishedAt: new Date(), exitCode })
     .where(eq(_buildRuns.id, buildId));
   buildHistoryResource.notify();
-
-  if (exitCode === 0) {
-    const worktree = process.env.SINGULARITY_WORKTREE;
-    if (worktree) {
-      buildLog.publish("Restarting backend...");
-      fetch(`http://localhost:9000/gateway/worktrees/${worktree}/restart`, {
-        method: "POST",
-      }).catch(() => {});
-    }
-  }
-
-  return exitCode;
 }

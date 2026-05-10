@@ -2,7 +2,7 @@ import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { readConfig } from "@plugins/config/server";
 import { buildConfig } from "../../shared/config";
-import { isBuildInflight, runBuild } from "./run-build";
+import { isBuildInflight, triggerBuild } from "./run-build";
 import { setLastAutoBuildAt } from "./auto-build-tracker";
 
 export const buildRunJob = defineJob({
@@ -14,6 +14,6 @@ export const buildRunJob = defineJob({
     const { autoBuild } = await readConfig(buildConfig);
     if (!autoBuild) return;
     setLastAutoBuildAt(new Date().toISOString());
-    await runBuild("auto");
+    triggerBuild("auto");
   },
 });
