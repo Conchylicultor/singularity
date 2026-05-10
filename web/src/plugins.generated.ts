@@ -63,6 +63,7 @@ import conversationsConversationViewJsonlViewerUserImagePlugin from "@plugins/co
 import conversationsConversationViewJsonlViewerUserTextPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-text/web";
 import conversationsConversationViewJsonlViewerPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import conversationsConversationViewLaunchPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/launch-prompts/web";
+import conversationsConversationViewMarkdownExtensionsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/markdown-extensions/web";
 import conversationsConversationViewModelPlugin from "@plugins/conversations/plugins/conversation-view/plugins/model/web";
 import conversationsConversationViewNewChildTaskPlugin from "@plugins/conversations/plugins/conversation-view/plugins/new-child-task/web";
 import conversationsConversationViewNotesPlugin from "@plugins/conversations/plugins/conversation-view/plugins/notes/web";
@@ -218,6 +219,7 @@ export const plugins: PluginDefinition[] = [
   conversationsConversationViewJsonlViewerUserTextPlugin,
   conversationsConversationViewJsonlViewerPlugin,
   conversationsConversationViewLaunchPromptsPlugin,
+  conversationsConversationViewMarkdownExtensionsPlugin,
   conversationsConversationViewModelPlugin,
   conversationsConversationViewNewChildTaskPlugin,
   conversationsConversationViewNotesPlugin,

@@ -1,13 +1,17 @@
 import type { PluginDefinition } from "@core";
 
-export { Markdown } from "./slots";
-export type { MarkdownExtension, CodeHandler } from "./internal/types";
-export { MarkdownContent } from "./internal/markdown";
+export { Markdown, MarkdownEnhancerSlot } from "./internal/markdown";
+export {
+  MarkdownEnhancementContext,
+  useMarkdownEnhancement,
+} from "./internal/enhancement-context";
+export type { MarkdownEnhancement } from "./internal/enhancement-context";
+export { langFromClassName, nodeToText } from "./internal/helpers";
 
 export default {
   id: "markdown",
   name: "Markdown",
   description:
-    "Unified markdown renderer. Extensions contribute syntax highlighting, file links, active data, and image proxy via Markdown.Extension slot.",
+    "Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.",
   contributions: [],
 } satisfies PluginDefinition;

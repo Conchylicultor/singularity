@@ -1,7 +1,6 @@
-import { useCallback } from "react";
-import { FileOpenContext } from "@plugins/primitives/plugins/file-links/web";
-import { MarkdownContent } from "@plugins/primitives/plugins/markdown/web";
-import { useFileContent, filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import type React from "react";
+import { useFileContent } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 
 export function MarkdownView({
   worktree,
@@ -11,11 +10,6 @@ export function MarkdownView({
   path: string;
 }) {
   const state = useFileContent(worktree, path);
-  const onFileOpen = useCallback(
-    (fp: string, ln?: number) =>
-      filePeekPane.open({ worktree, filePath: ln != null ? `${fp}:${ln}` : fp }),
-    [worktree],
-  );
 
   if (state.kind === "loading") {
     return <Placeholder>Loading…</Placeholder>;
@@ -33,9 +27,9 @@ export function MarkdownView({
   }
 
   return (
-    <FileOpenContext.Provider value={onFileOpen}>
-      <MarkdownContent text={state.content} className="px-4 py-3 text-sm leading-6" />
-    </FileOpenContext.Provider>
+    <div className="px-4 py-3 text-sm leading-6">
+      <Markdown>{state.content}</Markdown>
+    </div>
   );
 }
 

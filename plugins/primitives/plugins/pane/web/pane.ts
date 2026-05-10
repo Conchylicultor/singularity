@@ -509,6 +509,7 @@ export interface PaneObject<
   Provider: ComponentType<{ value: Provides; children: ReactNode }>;
   useParams(): OwnParams;
   useData(): Provides;
+  useDataMaybe(): Provides | null;
   open(params: FullParams & Record<string, string>, opts?: { root?: boolean }): void;
   close(): void;
   expand(): void;
@@ -559,6 +560,11 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
       );
     }
     return value;
+  }
+
+  function useDataMaybe(): unknown {
+    const value = useContext(dataContext);
+    return value === DATA_NOT_PROVIDED ? null : value;
   }
 
   function open(
@@ -662,6 +668,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     Provider: Provider as ComponentType<{ value: unknown; children: ReactNode }>,
     useParams,
     useData,
+    useDataMaybe,
     open,
     close,
     expand,

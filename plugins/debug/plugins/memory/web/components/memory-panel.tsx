@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { MdRefresh } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { MarkdownContent } from "@plugins/primitives/plugins/markdown/web";
+import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 
 type MemoryFile = {
   name: string;
@@ -156,7 +156,9 @@ export function MemoryPanel() {
             {error}
           </div>
         ) : content !== null ? (
-          <MarkdownContent text={content} className="px-6 py-4 text-sm leading-6" />
+          <div className="px-6 py-4 text-sm leading-6">
+            <Markdown>{content}</Markdown>
+          </div>
         ) : null}
       </div>
     </div>

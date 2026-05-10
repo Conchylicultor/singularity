@@ -25,7 +25,11 @@
   - `GET /api/code/:worktree/push`
   - `GET /api/code/:worktree/commit`
 - Imported by: `file-resolve`
+<<<<<<< .merge_file_jx21sE
 - Endpoint callers: `commits-graph`, `diff`, `docs-button`, `file-pane`, `file-resolve`, `image`, `read`, `review`
+=======
+- Endpoint callers: `commits-graph`, `diff`, `docs-button`, `file-pane`, `file-resolve`, `image`, `markdown-extensions`, `review`
+>>>>>>> .merge_file_mYlZ9c
 - Sub-plugins:
   - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
 

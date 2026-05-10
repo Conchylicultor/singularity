@@ -1,9 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { Markdown } from "@plugins/primitives/plugins/markdown/web";
-import {
-  useActiveDataTransform,
-  useActiveDataCodeHandler,
-} from "./internal/md-extension";
+import { MarkdownEnhancerSlot } from "@plugins/primitives/plugins/markdown/web";
 
 export { ActiveData } from "./slots";
 export type { ActiveDataContribution, ActiveDataBlockContribution, ActiveDataInlineContribution } from "./slots";
@@ -18,17 +14,18 @@ export type { ActiveDataIdentity } from "./internal/identity-context";
 export { useActiveDataBinding } from "./internal/use-active-data-binding";
 export type { ActiveDataBindingHandle } from "./internal/use-active-data-binding";
 
+import { ActiveDataMarkdownEnhancer } from "./internal/markdown-enhancer";
+
 export default {
   id: "active-data",
   name: "Active Data",
   description:
     "Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify().",
   contributions: [
-    Markdown.Extension({
-      id: "active-data-inline",
-      priority: 100,
-      useTransform: useActiveDataTransform,
-      useCodeHandler: useActiveDataCodeHandler,
+    MarkdownEnhancerSlot({
+      id: "active-data",
+      order: 0,
+      Component: ActiveDataMarkdownEnhancer,
     }),
   ],
 } satisfies PluginDefinition;

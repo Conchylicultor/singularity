@@ -327,6 +327,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-launch-prompts",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/markdown-extensions": {
+      "name": "@singularity/plugin-conversations-conversation-view-markdown-extensions",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/model": {
       "name": "@singularity/plugin-conversations-conversation-view-model",
       "version": "0.0.1",
@@ -1570,6 +1574,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-user-text": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-user-text@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/user-text"],
 
     "@singularity/plugin-conversations-conversation-view-launch-prompts": ["@singularity/plugin-conversations-conversation-view-launch-prompts@workspace:plugins/conversations/plugins/conversation-view/plugins/launch-prompts"],
+
+    "@singularity/plugin-conversations-conversation-view-markdown-extensions": ["@singularity/plugin-conversations-conversation-view-markdown-extensions@workspace:plugins/conversations/plugins/conversation-view/plugins/markdown-extensions"],
 
     "@singularity/plugin-conversations-conversation-view-model": ["@singularity/plugin-conversations-conversation-view-model@workspace:plugins/conversations/plugins/conversation-view/plugins/model"],
 

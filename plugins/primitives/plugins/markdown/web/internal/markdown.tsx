@@ -1,73 +1,62 @@
-import { useMemo } from "react";
-import type { Components } from "react-markdown";
-import ReactMarkdown from "react-markdown";
+import { useContext, useMemo, type ReactNode } from "react";
+import ReactMarkdownLib from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { ReactNode } from "react";
-import { Markdown } from "../slots";
-import type { CodeHandler, MarkdownExtension } from "./types";
+import { defineSlot, type Slot } from "@core";
+import type { ComponentType } from "react";
+import { MarkdownEnhancementContext } from "./enhancement-context";
 import { buildBaseComponents } from "./base-components";
 
 const REMARK_PLUGINS = [remarkGfm];
 
-function useCollectedExtensions(extensions: MarkdownExtension[]) {
-  const transforms: Array<(children: ReactNode) => ReactNode> = [];
-  const blockCodeHandlers: Array<NonNullable<CodeHandler["block"]>> = [];
-  const inlineCodeHandlers: Array<NonNullable<CodeHandler["inline"]>> = [];
-  const componentMaps: Array<Partial<Components>> = [];
+export const MarkdownEnhancerSlot: Slot<{
+  id: string;
+  order: number;
+  Component: ComponentType<{ children: ReactNode }>;
+}> = defineSlot("markdown.enhancer");
 
-  for (const ext of extensions) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks -- extensions are static (registered at boot); count never changes
-    const transform = ext.useTransform?.() ?? null;
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const codeHandler = ext.useCodeHandler?.() ?? null;
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const components = ext.useComponents?.() ?? {};
-
-    if (transform) transforms.push(transform);
-    if (codeHandler?.block) blockCodeHandlers.push(codeHandler.block);
-    if (codeHandler?.inline) inlineCodeHandlers.push(codeHandler.inline);
-    componentMaps.push(components);
-  }
-
-  return { transforms, blockCodeHandlers, inlineCodeHandlers, componentMaps };
-}
-
-export function MarkdownContent({
-  text,
-  className,
-}: {
-  text: string;
-  className?: string;
-}) {
-  const raw = Markdown.Extension.useContributions();
-  const sorted = useMemo(
-    () => [...raw].sort((a, b) => (a.priority ?? 100) - (b.priority ?? 100)),
-    [raw],
+function MarkdownRenderer({ children }: { children: string }) {
+  const { transforms, components: overrides, inlineCodeHandlers } = useContext(
+    MarkdownEnhancementContext,
   );
 
-  const { transforms, blockCodeHandlers, inlineCodeHandlers, componentMaps } =
-    useCollectedExtensions(sorted);
-
-  const chainedTransform = useMemo(() => {
-    if (transforms.length === 0) return (c: ReactNode) => c;
-    return (children: ReactNode) =>
-      transforms.reduce((acc, t) => t(acc), children);
-  }, [transforms]);
-
   const components = useMemo(() => {
-    const base = buildBaseComponents(
-      chainedTransform,
-      blockCodeHandlers,
-      inlineCodeHandlers,
-    );
-    return Object.assign(base, ...componentMaps) as Components;
-  }, [chainedTransform, blockCodeHandlers, inlineCodeHandlers, componentMaps]);
+    const transform = (c: ReactNode) =>
+      transforms.reduce((acc, fn) => fn(acc), c);
+    const base = buildBaseComponents(transform, inlineCodeHandlers);
+    return { ...base, ...overrides };
+  }, [transforms, overrides, inlineCodeHandlers]);
 
   return (
-    <div className={className}>
-      <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={components}>
-        {text}
-      </ReactMarkdown>
-    </div>
+    <ReactMarkdownLib remarkPlugins={REMARK_PLUGINS} components={components}>
+      {children}
+    </ReactMarkdownLib>
+  );
+}
+
+export function Markdown({
+  children,
+  className,
+}: {
+  children: string;
+  className?: string;
+}) {
+  const enhancers = MarkdownEnhancerSlot.useContributions();
+
+  const sorted = useMemo(
+    () => [...enhancers].sort((a, b) => a.order - b.order),
+    [enhancers],
+  );
+
+  let content: ReactNode = <MarkdownRenderer>{children}</MarkdownRenderer>;
+
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const { Component } = sorted[i]!;
+    content = <Component>{content}</Component>;
+  }
+
+  return className ? (
+    <div className={className}>{content}</div>
+  ) : (
+    <>{content}</>
   );
 }

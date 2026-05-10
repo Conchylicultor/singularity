@@ -27,6 +27,7 @@
   - **`hold-and-exit`** — Toolbar button that marks the task as held and closes the conversation.
   - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
   - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
+  - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, inline code enhancements, and image proxying.
   - **`model`** — Displays the conversation model as a colored chip in the toolbar.
   - **`new-child-task`** — Deprecated — functionality merged into the Improve button via ambient relate context.
   - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
