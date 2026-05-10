@@ -177,7 +177,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
-    - **`plugin-view`** — Reusable detail pane for inspecting a single plugin — runtimes, sub-plugins, source path. Serves the plugin tree data for the plugin-view pane.
+    - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - `/api/plugin-view/tree (GET)`
 
 - **`reorder`** — Generic reorder primitive. Slot owners opt in via Reorder.area; hosts render with Reorder.useArea. Generic reorder primitive: per-worktree storage of slot contribution ranks.

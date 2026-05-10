@@ -1049,10 +1049,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (shared):
         - Types: `BarrelExport`, `CommandDef`, `Contribution`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`
         - Values: `buildPluginTree`
-    - **`plugin-view`** — Reusable detail pane for inspecting a single plugin — runtimes, sub-plugins, source path. Serves the plugin tree data for the plugin-view pane.
+    - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
+      - Defines:
+        - Slots: `PluginView.Section`
       - Exports (web):
         - Types: `PluginNode`, `PluginTreePayload`
-        - Values: `PluginDetail`, `pluginViewPane`
+        - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
       - Exports (shared):
         - Types: `PluginNode`, `PluginTreePayload`
       - Contributes:
@@ -1060,6 +1062,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - `GET /api/plugin-view/tree`
       - Endpoint callers: `plugin-link`, `publish`
+      - Plugins:
+        - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
+          - Contributes:
+            - `PluginViewSlots.Section` → `RuntimesSection`
+        - **`source-path`** — Displays the plugin's source path in the plugin detail pane.
+          - Contributes:
+            - `PluginViewSlots.Section` → `SourcePathSection`
+        - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.
+          - Contributes:
+            - `PluginViewSlots.Section` → `SubPluginsSection`
     - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
       - Contributes:
         - `Pane.Register` `publish`

@@ -104,6 +104,9 @@ import improvePlugin from "@plugins/improve/web";
 import infraAttachmentsPlugin from "@plugins/infra/plugins/attachments/web";
 import layoutsMillerPlugin from "@plugins/layouts/plugins/miller/web";
 import notificationsPlugin from "@plugins/notifications/web";
+import pluginMetaPluginViewRuntimesPlugin from "@plugins/plugin-meta/plugins/plugin-view/plugins/runtimes/web";
+import pluginMetaPluginViewSourcePathPlugin from "@plugins/plugin-meta/plugins/plugin-view/plugins/source-path/web";
+import pluginMetaPluginViewSubPluginsPlugin from "@plugins/plugin-meta/plugins/plugin-view/plugins/sub-plugins/web";
 import pluginMetaPluginViewPlugin from "@plugins/plugin-meta/plugins/plugin-view/web";
 import pluginMetaPublishPlugin from "@plugins/plugin-meta/plugins/publish/web";
 import primitivesAppShellPlugin from "@plugins/primitives/plugins/app-shell/web";
@@ -261,6 +264,9 @@ export const plugins: PluginDefinition[] = [
   infraAttachmentsPlugin,
   layoutsMillerPlugin,
   notificationsPlugin,
+  pluginMetaPluginViewRuntimesPlugin,
+  pluginMetaPluginViewSourcePathPlugin,
+  pluginMetaPluginViewSubPluginsPlugin,
   pluginMetaPluginViewPlugin,
   pluginMetaPublishPlugin,
   primitivesAppShellPlugin,

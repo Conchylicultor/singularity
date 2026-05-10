@@ -1,13 +1,20 @@
+import { useMemo } from "react";
 import { MdBolt } from "react-icons/md";
-import { cn } from "@/lib/utils";
 import { Breadcrumb } from "@plugins/primitives/plugins/breadcrumb/web";
 import type { PluginNode } from "../../shared/types";
+import { PluginView } from "../slots";
 
 interface PluginDetailProps {
   node: PluginNode | null;
 }
 
 export function PluginDetail({ node }: PluginDetailProps) {
+  const sections = PluginView.Section.useContributions();
+  const ordered = useMemo(
+    () => [...sections].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [sections],
+  );
+
   if (!node) {
     return (
       <div className="flex h-full items-center justify-center p-12 text-center">
@@ -19,8 +26,6 @@ export function PluginDetail({ node }: PluginDetailProps) {
   }
 
   const trail = node.hierarchyId.split(".");
-  const directChildren = node.children;
-  const totalDescendants = countDescendants(node);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -49,91 +54,10 @@ export function PluginDetail({ node }: PluginDetailProps) {
           )}
         </header>
 
-        <Section title="Runtimes">
-          <div className="flex flex-wrap gap-1.5">
-            {node.runtimes.web && <RuntimePill kind="web" />}
-            {node.runtimes.server && <RuntimePill kind="server" />}
-            {node.runtimes.central && <RuntimePill kind="central" />}
-          </div>
-        </Section>
-
-        {directChildren.length > 0 && (
-          <Section
-            title="Sub-plugins"
-            count={
-              totalDescendants > directChildren.length
-                ? `${directChildren.length} direct · ${totalDescendants} total`
-                : `${directChildren.length}`
-            }
-          >
-            <div className="flex flex-wrap gap-1.5">
-              {directChildren.map((c) => (
-                <span
-                  key={c.hierarchyId}
-                  className="inline-flex items-center gap-1 rounded-md border bg-card px-2 py-1 text-xs text-foreground"
-                >
-                  {c.name}
-                  {c.loadBearing && (
-                    <MdBolt className="size-3 text-amber-500/90" />
-                  )}
-                </span>
-              ))}
-            </div>
-          </Section>
-        )}
-
-        <Section title="Source path">
-          <code className="rounded-md bg-muted px-2 py-1 font-mono text-[11px] text-muted-foreground">
-            plugins/{node.path}
-          </code>
-        </Section>
+        {ordered.map((s) => (
+          <s.component key={s.id} node={node} />
+        ))}
       </div>
     </div>
   );
-}
-
-interface SectionProps {
-  title: string;
-  count?: string;
-  children: React.ReactNode;
-}
-
-function Section({ title, count, children }: SectionProps) {
-  return (
-    <section className="flex flex-col gap-2.5">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-          {title}
-        </h2>
-        {count && (
-          <span className="text-[11px] text-muted-foreground/60">{count}</span>
-        )}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function RuntimePill({ kind }: { kind: "web" | "server" | "central" }) {
-  const styles = {
-    web: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
-    server: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-    central: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
-  } as const;
-  return (
-    <span
-      className={cn(
-        "rounded-md px-2 py-0.5 font-mono text-[11px] font-medium uppercase tracking-wide",
-        styles[kind],
-      )}
-    >
-      {kind}
-    </span>
-  );
-}
-
-function countDescendants(node: PluginNode): number {
-  let count = 0;
-  for (const c of node.children) count += 1 + countDescendants(c);
-  return count;
 }

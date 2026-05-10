@@ -177,7 +177,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
     - **`plugin-tree`**
-    - **`plugin-view`** — Reusable detail pane for inspecting a single plugin — runtimes, sub-plugins, source path. Serves the plugin tree data for the plugin-view pane.
+    - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
+      - Plugins:
+        - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
+        - **`source-path`** — Displays the plugin's source path in the plugin detail pane.
+        - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.
     - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
