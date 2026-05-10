@@ -7,7 +7,7 @@ import {
 } from "@plugins/tasks-core/server";
 import { recordCrash } from "@plugins/crashes/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
-import { isTransientPgError } from "@plugins/database/server";
+import { isTransientDbError } from "@plugins/database/server";
 import { Runtime, type RuntimeInfo } from "./runtime";
 import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { ConversationStatus } from "../../shared";
@@ -191,7 +191,7 @@ async function tick(): Promise<void> {
 function logTickError(label: string, err: unknown): void {
   // Transient = central is restarting / catching up. Next tick will pick up
   // naturally; logging would just spam the recovery window.
-  if (isTransientPgError(err)) return;
+  if (isTransientDbError(err)) return;
   console.error(`[conversations.poller] ${label} failed`, err);
 }
 

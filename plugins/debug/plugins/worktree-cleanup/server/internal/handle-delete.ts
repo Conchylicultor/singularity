@@ -1,6 +1,6 @@
 import { stat } from "node:fs/promises";
 import { getAttempt } from "@plugins/tasks-core/server";
-import { dropDatabase } from "@plugins/database/plugins/embedded/server";
+import { dropDatabase } from "@plugins/database/plugins/admin/server";
 import { removeWorktree } from "@plugins/infra/plugins/worktree/server";
 
 export async function handleDelete(

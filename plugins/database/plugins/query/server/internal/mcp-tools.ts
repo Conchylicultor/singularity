@@ -2,8 +2,7 @@ import { z } from "zod";
 import { basename } from "path";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { getConversation } from "@plugins/tasks-core/server";
-import { openShortLivedClient } from "@plugins/database/server";
-import { databaseExists } from "@plugins/database/plugins/embedded/server";
+import { openShortLivedClient, databaseExists } from "@plugins/database/plugins/admin/server";
 
 const MAX_ROWS = 200;
 

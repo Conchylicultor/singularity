@@ -48,7 +48,7 @@ Worktree backends read connection params from `~/.singularity/database.json` (au
 ## Plugin reference
 
 - Exports (server):
-  - Values: `databaseExists`, `dropDatabase`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `setAdminPool`
+  - Values: `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
 - Exports (shared):
   - Values: `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
 

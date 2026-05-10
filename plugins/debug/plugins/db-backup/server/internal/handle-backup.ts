@@ -1,9 +1,9 @@
 import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
 import { BACKUPS_DIR } from "@plugins/infra/plugins/paths/server";
-import { adminPool, libpqSubprocessEnv } from "@plugins/database/server";
+import { listDatabases, backupDatabase } from "@plugins/database/plugins/admin/server";
 
 export async function handleBackup(): Promise<Response> {
-
   const timestamp = new Date()
     .toISOString()
     .replace(/T/, "_")
@@ -12,27 +12,20 @@ export async function handleBackup(): Promise<Response> {
   const outDir = `${BACKUPS_DIR}/${timestamp}`;
   await mkdir(outDir, { recursive: true });
 
-  const result = await adminPool.query<{ datname: string }>(
-    `SELECT datname FROM pg_database
-     WHERE datname NOT IN ('template0', 'template1', 'postgres')
-       AND datname NOT LIKE 'claude-%'
-       AND datname NOT LIKE 'att-%'
-     ORDER BY datname`,
+  const allDbs = await listDatabases();
+  const targetDbs = allDbs.filter(
+    (name) => !name.startsWith("claude-") && !name.startsWith("att-"),
   );
 
   const results: { name: string; file: string }[] = [];
 
-  for (const { datname } of result.rows) {
-    const file = `${outDir}/${datname}.dump`;
-    const proc = Bun.spawn(
-      ["pg_dump", "-Fc", datname],
-      { stdout: Bun.file(file), stderr: "pipe", env: { ...process.env, ...libpqSubprocessEnv } },
-    );
-    const code = await proc.exited;
-    if (code !== 0) {
-      const stderr = await new Response(proc.stderr).text();
+  for (const datname of targetDbs) {
+    const file = join(outDir, `${datname}.dump`);
+    try {
+      await backupDatabase(datname, file);
+    } catch (err) {
       return Response.json(
-        { ok: false, error: `pg_dump failed for ${datname}: ${stderr}` },
+        { ok: false, error: String(err) },
         { status: 500 },
       );
     }

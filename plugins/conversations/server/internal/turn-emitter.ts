@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { isActiveStatus } from "../../shared";
 import { listConversationsForInfra } from "@plugins/tasks-core/server";
-import { db, isTransientPgError } from "@plugins/database/server";
+import { db, isTransientDbError } from "@plugins/database/server";
 import { watchTranscript } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
 import {
@@ -38,7 +38,7 @@ async function tick(): Promise<void> {
   try {
     convs = await listConversationsForInfra();
   } catch (err) {
-    if (!isTransientPgError(err)) {
+    if (!isTransientDbError(err)) {
       console.error("[conversations.turn-emitter] listConversationsForInfra failed", err);
     }
     return;

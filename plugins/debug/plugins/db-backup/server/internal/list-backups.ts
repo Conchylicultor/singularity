@@ -1,95 +1,14 @@
-import { readdir, stat } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { BACKUPS_DIR } from "@plugins/infra/plugins/paths/server";
-
-export type TableStat = {
-  name: string;
-  rowCount: number;
-};
-
-export type DumpStats = {
-  name: string;
-  sizeBytes: number;
-  tables: TableStat[];
-};
+import { inspectBackup, type BackupInfo } from "@plugins/database/plugins/admin/server";
 
 export type BackupEntry = {
   id: string;
   dir: string;
-  databases: DumpStats[];
+  databases: BackupInfo[];
   totalSizeBytes: number;
 };
-
-async function getTableNames(file: string): Promise<string[]> {
-  try {
-    const proc = Bun.spawn(["pg_restore", "--list", file], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    await proc.exited;
-    const output = await new Response(proc.stdout).text();
-    return output
-      .split("\n")
-      .flatMap((line) => {
-        if (line.startsWith(";") || !line.trim()) return [];
-        const parts = line.trim().split(/\s+/);
-        // Format: id; oid1 oid2 TABLE schema tablename owner
-        if (parts[3] === "TABLE" && parts[4] !== "DATA") return [parts[5] ?? ""];
-        return [];
-      })
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
-}
-
-async function getRowCounts(file: string): Promise<Record<string, number>> {
-  const counts: Record<string, number> = {};
-  try {
-    const proc = Bun.spawn(["pg_restore", "--data-only", "-f", "-", file], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    await proc.exited;
-    const output = await new Response(proc.stdout).text();
-
-    let currentTable: string | null = null;
-    let count = 0;
-
-    for (const line of output.split("\n")) {
-      if (line.startsWith("COPY ")) {
-        // "COPY schema.tablename (...) FROM stdin;" — extract last component before " ("
-        const parenIdx = line.indexOf(" (");
-        const tableSpec = line.slice(5, parenIdx);
-        const dotIdx = tableSpec.lastIndexOf(".");
-        const raw = dotIdx >= 0 ? tableSpec.slice(dotIdx + 1) : tableSpec;
-        currentTable = raw.replace(/^"|"$/g, "");
-        count = 0;
-      } else if (line === "\\.") {
-        if (currentTable !== null) counts[currentTable] = count;
-        currentTable = null;
-      } else if (currentTable !== null && line !== "") {
-        count++;
-      }
-    }
-  } catch {
-    // noop
-  }
-  return counts;
-}
-
-async function getDumpStats(file: string, name: string): Promise<DumpStats> {
-  const [fileStat, tableNames, rowCounts] = await Promise.all([
-    stat(file),
-    getTableNames(file),
-    getRowCounts(file),
-  ]);
-  const tables: TableStat[] = tableNames.map((tableName) => ({
-    name: tableName,
-    rowCount: rowCounts[tableName] ?? 0,
-  }));
-  return { name, sizeBytes: fileStat.size, tables };
-}
 
 export async function listBackups(): Promise<Response> {
   const baseDir = BACKUPS_DIR;
@@ -116,7 +35,9 @@ export async function listBackups(): Promise<Response> {
         dumpFiles = [];
       }
       const databases = await Promise.all(
-        dumpFiles.map((f: string) => getDumpStats(join(dir, f), f.replace(/\.dump$/, ""))),
+        dumpFiles.map((f: string) =>
+          inspectBackup(join(dir, f), f.replace(/\.dump$/, "")),
+        ),
       );
       const totalSizeBytes = databases.reduce((sum, d) => sum + d.sizeBytes, 0);
       return { id, dir, databases, totalSizeBytes };

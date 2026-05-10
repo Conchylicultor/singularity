@@ -1,11 +1,2 @@
-export {
-  db,
-  pool,
-  adminPool,
-  openShortLivedClient,
-  connectionString,
-  libpqSubprocessEnv,
-  isTransientPgError,
-  awaitPgReady,
-} from "./internal/client";
+export { db, awaitDbReady, isTransientDbError } from "./internal/client";
 export { default } from "./internal/plugin";

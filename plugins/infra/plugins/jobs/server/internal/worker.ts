@@ -5,7 +5,8 @@ import {
   type Runner,
   type WorkerUtils,
 } from "graphile-worker";
-import { connectionString, db } from "@plugins/database/server";
+import { db } from "@plugins/database/server";
+import { connectionString } from "@plugins/database/plugins/admin/server";
 import { reportServerError } from "@server/error-reporter";
 import { JOB_TASK } from "./constants";
 import {

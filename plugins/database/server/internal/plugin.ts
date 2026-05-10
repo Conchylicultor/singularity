@@ -1,17 +1,15 @@
 import type { ServerPluginDefinition } from "@server/types";
-import { adminPool, awaitPgReady, db } from "./client";
+import { awaitDbReady, db } from "./client";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
-import { setAdminPool } from "@plugins/database/plugins/embedded/server";
 
 const plugin: ServerPluginDefinition = {
   id: "database",
   name: "Database",
   description:
-    "Core database infrastructure. Connection pooling and PG readiness.",
+    "Core database infrastructure. Connection pooling and DB readiness.",
   loadBearing: true,
   async onReady() {
-    await awaitPgReady();
-    setAdminPool(adminPool);
+    await awaitDbReady();
     await runMigrations(db);
   },
 };

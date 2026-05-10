@@ -12,7 +12,7 @@ import {
 import { Runtime } from "./runtime";
 import { DEFAULT_MODEL, type ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
 import type { Conversation, ConversationKind } from "@plugins/tasks-core/shared";
-import { forkDatabase } from "./db-fork";
+import { forkDatabase } from "@plugins/database/plugins/admin/server";
 import { reportForkError } from "./fork-errors";
 import { setupWorktree, worktreePathFor } from "@plugins/infra/plugins/worktree/server";
 import { conversationCreated } from "./tables-created-event";
@@ -105,7 +105,7 @@ export async function createConversation(
     attemptId = thisAttemptId;
     worktreePath = await worktreePathFor(thisAttemptId);
     await setupWorktree(thisAttemptId, worktreePath);
-    void forkDatabase(thisAttemptId).catch((err) => {
+    void forkDatabase("singularity", thisAttemptId).catch((err) => {
       console.error(`[conversations] db fork failed for ${thisAttemptId}`, err);
       reportForkError(thisAttemptId, err);
     });

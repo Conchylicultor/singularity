@@ -15,52 +15,14 @@ const conn = {
   user: process.env.PGUSER ?? config.connection.user,
 };
 
-export const connectionString = buildConnectionString(conn, worktree);
-
-export const pool = new Pool({
-  connectionString,
+const pool = new Pool({
+  connectionString: buildConnectionString(conn, worktree),
   max: 5,
   idleTimeoutMillis: 20_000,
 });
 export const db = drizzle(pool);
 
-export const adminPool = new Pool({
-  connectionString: buildConnectionString(conn, "postgres"),
-  max: 1,
-  idleTimeoutMillis: 20_000,
-});
-
-// Short-lived pool against a named database. Used by db-fork to run
-// per-db cleanup (e.g. dropping a schema) without going through the
-// long-lived, per-worktree `pool`.
-export function openShortLivedClient(dbName: string): Pool {
-  return new Pool({
-    connectionString: buildConnectionString(conn, dbName),
-    max: 1,
-    idleTimeoutMillis: 1_000,
-  });
-}
-
-/**
- * Env block to pass to libpq subprocesses (`pg_dump`, `pg_restore`, `psql`)
- * so they connect to the same instance the pools point at. Always sets
- * absolute values so subprocesses don't inherit a stray PGHOST that points
- * elsewhere.
- */
-export const libpqSubprocessEnv: Record<string, string> = {
-  PGHOST: conn.host,
-  PGPORT: String(conn.port),
-  PGUSER: conn.user,
-};
-
-// Errors that mean "PG isn't reachable yet; retry shortly":
-//  - 57P03 — SQLSTATE "the database system is starting up", emitted while
-//    the cluster is in WAL recovery or just after central re-spawned PG.
-//  - ENOENT — Unix socket file doesn't exist yet (central hasn't bound it).
-//  - ECONNREFUSED — TCP listener not up yet (system-PG escape hatch).
-// Everything else (auth failure, syntax error, …) bubbles up so we don't
-// mask real bugs.
-export function isTransientPgError(err: unknown): boolean {
+export function isTransientDbError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const e = err as { code?: string; errno?: string };
   const code = e.code ?? e.errno;
@@ -70,12 +32,7 @@ export function isTransientPgError(err: unknown): boolean {
 const PG_READY_TIMEOUT_MS = 30_000;
 let readyPromise: Promise<void> | null = null;
 
-// Wait for PG to be reachable before issuing the first real query. Per-worktree
-// backends spawn in parallel with central at gateway startup, so the first
-// connect can race PG's bind; central can also be unhealthy / mid-restart when
-// a backend boots. Without this loop, the backend hard-crashes with ENOENT or
-// ECONNREFUSED instead of waiting the few hundred ms for central to come up.
-export async function awaitPgReady(): Promise<void> {
+export async function awaitDbReady(): Promise<void> {
   if (readyPromise) return readyPromise;
   readyPromise = (async () => {
     let lastErr: unknown = null;
@@ -90,7 +47,7 @@ export async function awaitPgReady(): Promise<void> {
             client.release();
           }
         } catch (err) {
-          if (!isTransientPgError(err)) throw err;
+          if (!isTransientDbError(err)) throw err;
           lastErr = err;
           return null;
         }
@@ -100,7 +57,7 @@ export async function awaitPgReady(): Promise<void> {
         deadline: PG_READY_TIMEOUT_MS,
         onDeadline: () => {
           throw new Error(
-            `Postgres did not become reachable within ${PG_READY_TIMEOUT_MS}ms`,
+            `Database did not become reachable within ${PG_READY_TIMEOUT_MS}ms`,
             { cause: lastErr },
           );
         },
