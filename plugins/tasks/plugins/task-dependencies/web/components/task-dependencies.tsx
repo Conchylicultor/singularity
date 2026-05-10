@@ -5,8 +5,19 @@ import { Button } from "@/components/ui/button";
 import { tasksResource, type Task } from "@plugins/tasks/shared";
 import { useTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
+import {
+  TaskDraftPopover,
+  type TaskChainTarget,
+} from "@plugins/tasks/plugins/task-draft-form/web";
 
 const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
+
+function targetForSibling(task: Task): TaskChainTarget {
+  if (task.parentId) {
+    return { kind: "child", parentTaskId: task.parentId };
+  }
+  return { kind: "metaTask", metaTaskId: CONVERSATIONS_META_TASK_ID };
+}
 
 export function TaskDependencies({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
@@ -33,17 +44,37 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
 
   if (!task) return null;
 
+  const target = targetForSibling(task);
+
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <h3 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
           Dependencies
         </h3>
-        {parentCandidate && (
-          <Button size="xs" variant="outline" onClick={addParentAsDep}>
-            Add parent as dep
-          </Button>
-        )}
+        <div className="flex items-center gap-1">
+          {parentCandidate && (
+            <Button size="xs" variant="outline" onClick={addParentAsDep}>
+              Add parent as dep
+            </Button>
+          )}
+          <TaskDraftPopover
+            trigger="+ Prerequisite"
+            triggerClassName="text-xs px-2 py-0.5 rounded border hover:bg-muted cursor-pointer"
+            target={target}
+            relate={{ taskId, defaultMode: "prerequisite" }}
+            captures={["parentTask"]}
+            heading="Add prerequisite"
+          />
+          <TaskDraftPopover
+            trigger="+ Follow-up"
+            triggerClassName="text-xs px-2 py-0.5 rounded border hover:bg-muted cursor-pointer"
+            target={target}
+            relate={{ taskId, defaultMode: "followup" }}
+            captures={["parentTask"]}
+            heading="Add follow-up"
+          />
+        </div>
       </div>
       {deps.length === 0 ? (
         <p className="text-muted-foreground text-sm">No dependencies.</p>
