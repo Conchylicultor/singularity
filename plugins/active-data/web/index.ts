@@ -2,10 +2,12 @@ import type { PluginDefinition } from "@core";
 import { MarkdownEnhancerSlot } from "@plugins/primitives/plugins/markdown/web";
 
 export { ActiveData } from "./slots";
-export type { ActiveDataContribution, ActiveDataBlockContribution, ActiveDataInlineContribution } from "./slots";
+export type { ActiveDataContribution, ActiveDataBlockContribution, ActiveDataInlineContribution, ActiveDataCodeContribution } from "./slots";
 export { useActiveDataSegments } from "./internal/segment-active-data";
 export type { ActiveDataSegment } from "./internal/segment-active-data";
 export { useActiveDataLinkify } from "./internal/linkify-active-data";
+export { useActiveDataCodeReplace } from "./internal/use-code-replace";
+export type { CodeReplaceContrib } from "./internal/use-code-replace";
 export {
   ActiveDataIdentityProvider,
   useActiveDataIdentity,

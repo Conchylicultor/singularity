@@ -9,8 +9,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots: `ActiveData.Tag`
     - DB schema: `plugins/active-data/server/internal/tables.ts`
   - Exports (web):
-    - Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`
-    - Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
+    - Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataCodeContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`, `CodeReplaceContrib`
+    - Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
   - Exports (server):
     - Values: `_activeDataBindings`, `activeDataBindingsResource`
   - Exports (shared):
@@ -20,7 +20,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `database.db`, `tasks-core._conversations`
     - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
     - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
-  - Slot contributors: `attempt`, `conv`, `task`, `task-link`
+  - Slot contributors: `attempt`, `conv`, `plugin-link`, `task`, `task-link`
   - Plugins:
     - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed.
       - Exports (web):
@@ -32,6 +32,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `ConvChip`
       - Contributes:
         - `ActiveData.Tag` `CONV_ID_RE` → `ConvChip`
+    - **`plugin-link`** — Renders plugin hierarchy IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's hierarchyId (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
+      - Exports (web):
+        - Values: `PluginLinkChip`
+      - Contributes:
+        - `ActiveData.Tag` `PLUGIN_NAME_RE` → `PluginLinkChip`
+        - `Pane.Register` `plugin-conv-side`
     - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
       - Contributes:
         - `ActiveData.Tag` → `TaskCard`
@@ -235,7 +241,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/code/:worktree/push`
     - `GET /api/code/:worktree/commit`
   - Imported by: `file-resolve`
-  - Endpoint callers: `commits-graph`, `diff`, `docs-button`, `file-pane`, `file-resolve`, `image`, `markdown-extensions`, `read`, `review`
+  - Endpoint callers: `assistant-text`, `commits-graph`, `diff`, `docs-button`, `file-pane`, `file-resolve`, `image`, `markdown-extensions`, `read`, `review`
   - Plugins:
     - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
       - Exports (web):
@@ -1043,14 +1049,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin — runtimes, sub-plugins, source path. Serves the plugin tree data for the plugin-view pane.
       - Exports (web):
         - Types: `PluginNode`, `PluginTreePayload`
-        - Values: `pluginViewPane`
+        - Values: `PluginDetail`, `pluginViewPane`
       - Exports (shared):
         - Types: `PluginNode`, `PluginTreePayload`
       - Contributes:
         - `Pane.Register` `plugin-view`
       - Server:
         - `GET /api/plugin-view/tree`
-      - Endpoint callers: `publish`
+      - Endpoint callers: `plugin-link`, `publish`
     - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
       - Contributes:
         - `Pane.Register` `publish`
@@ -1125,7 +1131,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneSlot`, `TypeMarker`
         - Values: `buildChainUrl`, `getChain`, `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneDepthContext`, `PaneHistoryButtons`, `PaneIconAction`, `PaneLayoutContext`, `PaneLevel`, `PaneMatchContext`, `PaneRouter`, `parseUrl`, `syncChainFromUrl`, `type`, `useCurrentPane`, `useMatchForPath`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `broadcasts`, `build`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `broadcasts`, `build`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
       - Exports (web):
         - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `PromptEditor`, `rewriteAttachmentMarkdown`

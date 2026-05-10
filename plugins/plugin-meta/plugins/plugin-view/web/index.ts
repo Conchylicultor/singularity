@@ -3,6 +3,7 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { pluginViewPane } from "./panes";
 
 export { pluginViewPane } from "./panes";
+export { PluginDetail } from "./components/plugin-detail";
 export type { PluginNode, PluginTreePayload } from "../shared/types";
 
 export default {

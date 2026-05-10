@@ -84,6 +84,10 @@
       "name": "@singularity/plugin-active-data-conv",
       "version": "0.0.1",
     },
+    "plugins/active-data/plugins/plugin-link": {
+      "name": "@singularity/plugin-active-data-plugin-link",
+      "version": "0.0.1",
+    },
     "plugins/active-data/plugins/task": {
       "name": "@singularity/plugin-active-data-task",
       "version": "0.0.1",
@@ -1454,6 +1458,8 @@
     "@singularity/plugin-active-data-attempt": ["@singularity/plugin-active-data-attempt@workspace:plugins/active-data/plugins/attempt"],
 
     "@singularity/plugin-active-data-conv": ["@singularity/plugin-active-data-conv@workspace:plugins/active-data/plugins/conv"],
+
+    "@singularity/plugin-active-data-plugin-link": ["@singularity/plugin-active-data-plugin-link@workspace:plugins/active-data/plugins/plugin-link"],
 
     "@singularity/plugin-active-data-task": ["@singularity/plugin-active-data-task@workspace:plugins/active-data/plugins/task"],
 

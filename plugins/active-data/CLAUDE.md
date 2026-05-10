@@ -69,8 +69,8 @@ Behavior:
   - Slots: `ActiveData.Tag`
   - DB schema: `plugins/active-data/server/internal/tables.ts`
 - Exports (web):
-  - Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`
-  - Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
+  - Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataCodeContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`, `CodeReplaceContrib`
+  - Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
 - Exports (server):
   - Values: `_activeDataBindings`, `activeDataBindingsResource`
 - Exports (shared):
@@ -80,10 +80,11 @@ Behavior:
   - Uses: `database.db`, `tasks-core._conversations`
   - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
   - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
-- Slot contributors: `attempt`, `conv`, `task`, `task-link`
+- Slot contributors: `attempt`, `conv`, `plugin-link`, `task`, `task-link`
 - Sub-plugins:
   - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed.
   - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.
+  - **`plugin-link`** — Renders plugin hierarchy IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's hierarchyId (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
   - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
   - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed.
 
