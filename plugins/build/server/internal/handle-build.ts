@@ -1,6 +1,6 @@
 import { runBuild } from "./run-build";
 
-export async function handleBuild(_req: Request): Promise<Response> {
-  const exitCode = await runBuild("manual");
-  return Response.json({ exitCode });
+export function handleBuild(_req: Request): Response {
+  runBuild("manual").catch(() => {});
+  return Response.json({ ok: true });
 }

@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { MdContentCopy, MdPlayArrow } from "react-icons/md";
 import { ShellCommands as Shell } from "@plugins/shell/web";
-import { getHealth, waitForRestart } from "@plugins/health/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { useStickyScroll, JumpToBottomButton } from "@plugins/primitives/plugins/auto-scroll/web";
@@ -195,25 +194,39 @@ function BuildHistoryList({ variant }: { variant: "popover" | "pane" }) {
 }
 
 export function BuildPopoverContent({ variant }: { variant: "popover" | "pane" }) {
-  const [building, setBuilding] = useState(false);
+  const { data: historyData } = useResource(buildHistoryResource);
+  const runs = historyData ?? [];
+  const latestRun = runs[0];
+  const building = latestRun?.finishedAt === null;
 
-  const handleBuild = useCallback(async () => {
-    setBuilding(true);
-    try {
-      const before = await getHealth();
-      if (!before) {
-        Shell.Toast({ description: "Server unreachable", variant: "error" });
-        return;
-      }
-      fetch("/api/build", { method: "POST" }).catch(() => {});
-      const restarted = await waitForRestart(before.startedAt);
-      if (restarted) {
+  const trackedBuildRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!latestRun) return;
+
+    if (latestRun.finishedAt === null) {
+      trackedBuildRef.current = latestRun.id;
+      return;
+    }
+
+    if (trackedBuildRef.current === latestRun.id) {
+      trackedBuildRef.current = null;
+      if (latestRun.exitCode === 0) {
         Shell.Toast({ description: "Build succeeded", variant: "success" });
       } else {
-        Shell.Toast({ description: "Build timed out", variant: "error" });
+        Shell.Toast({ description: `Build failed (exit ${latestRun.exitCode})`, variant: "error" });
       }
-    } finally {
-      setBuilding(false);
+    }
+  }, [latestRun?.id, latestRun?.finishedAt]);
+
+  const handleBuild = useCallback(async () => {
+    try {
+      const res = await fetch("/api/build", { method: "POST" });
+      if (!res.ok) {
+        Shell.Toast({ description: "Failed to start build", variant: "error" });
+      }
+    } catch {
+      Shell.Toast({ description: "Server unreachable", variant: "error" });
     }
   }, []);
 
