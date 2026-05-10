@@ -94,7 +94,7 @@ export const pushes = pgTable(
 
 // ConversationModel is imported from model-provider (zero-dep plugin, no cycle).
 // ConversationStatus and ConversationKind remain local — they have no shared registry.
-type ConversationStatus = "starting" | "working" | "waiting" | "gone";
+type ConversationStatus = "starting" | "working" | "waiting" | "gone" | "done";
 // "user"   = manually created via the UI / default path
 // "agent"  = launched via the agents plugin (saved prompt + button click)
 // "system" = code-spawned by a job/trigger — hidden from user-facing

@@ -100,7 +100,7 @@ export function PushAndExitButton({
     ).catch(() => {});
   }, [job?.status]);
 
-  const disabled = busy || sending || live.status === "gone" || live.status === "starting";
+  const disabled = busy || sending || live.status === "gone" || live.status === "done" || live.status === "starting";
 
   async function onClick() {
     if (disabled) return;

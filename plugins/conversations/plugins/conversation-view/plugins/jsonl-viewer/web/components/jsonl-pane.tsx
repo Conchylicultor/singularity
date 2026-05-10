@@ -92,7 +92,7 @@ export function JsonlPane({
   children?: ReactNode;
 }) {
   const isWorking = conversation.status === "working" || conversation.status === "starting";
-  const isGone = conversation.status === "gone";
+  const isGone = conversation.status === "gone" || conversation.status === "done";
   const { data, error, isLoading } = useResource(jsonlEventsResource, {
     id: conversation.id,
   });

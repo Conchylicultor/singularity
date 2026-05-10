@@ -109,7 +109,7 @@ async function tick(): Promise<void> {
     if (!dbRow) continue;
 
     if (info.dead) {
-      if (dbRow.status === "gone") continue;
+      if (dbRow.status === "gone" || dbRow.status === "done") continue;
       await updateConversation(id, { status: "gone", endedAt: new Date(), waitingFor: null });
       changed = true;
       continue;
@@ -156,7 +156,7 @@ async function tick(): Promise<void> {
   const now = Date.now();
   for (const [id, dbRow] of dbById) {
     if (next.has(id)) continue;
-    if (dbRow.status === "gone") continue;
+    if (dbRow.status === "gone" || dbRow.status === "done") continue;
     // Runtime list failed (e.g. tmux unreachable under FD pressure). We
     // can't tell whether the session is alive, so leave status alone and
     // wait for a tick where the runtime answers — better than declaring

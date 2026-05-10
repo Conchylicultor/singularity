@@ -5,11 +5,16 @@ const STATUS_CLASSES: Record<ConversationStatus, string> = {
   starting: "bg-muted text-muted-foreground",
   working: "bg-muted text-muted-foreground",
   waiting: "bg-muted text-muted-foreground",
-  gone: "bg-muted text-muted-foreground/60 italic",
+  gone: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
+  done: "bg-muted text-muted-foreground/60 italic",
+};
+
+const STATUS_LABELS: Partial<Record<ConversationStatus, string>> = {
+  gone: "disconnected",
 };
 
 function prettify(status: ConversationStatus): string {
-  return status.replace(/_/g, " ");
+  return STATUS_LABELS[status] ?? status.replace(/_/g, " ");
 }
 
 export function StatusBadge() {

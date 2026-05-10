@@ -4,7 +4,7 @@ import {
   afterTurn,
   deleteConversation,
 } from "@plugins/conversations/server";
-import { recentConversationsResource } from "@plugins/tasks-core/server";
+import { markConversationClosed, recentConversationsResource } from "@plugins/tasks-core/server";
 
 const FINALIZE_TIMEOUT_MS = 60_000;
 
@@ -22,7 +22,8 @@ export const exitCleanFinalizeJob = defineJob({
   maxAttempts: 3,
   run: async ({ input: { conversationId }, ctx }) => {
     await afterTurn(ctx, conversationId, { timeoutMs: FINALIZE_TIMEOUT_MS });
-    await ctx.step("delete-conversation", async () => {
+    await ctx.step("close-conversation", async () => {
+      await markConversationClosed(conversationId);
       await deleteConversation(conversationId);
       recentConversationsResource.notify();
     });

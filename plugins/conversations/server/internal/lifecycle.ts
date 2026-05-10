@@ -189,8 +189,8 @@ export async function deleteConversation(id: string): Promise<void> {
 export async function resumeConversation(id: string): Promise<Conversation> {
   const row = await getConversation(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
-  if (row.status !== "gone") {
-    throw new Error(`Conversation ${id} is not gone (status: ${row.status})`);
+  if (row.status !== "gone" && row.status !== "done") {
+    throw new Error(`Cannot resume conversation ${id} (status: ${row.status})`);
   }
   if (!row.claudeSessionId) {
     throw new Error(`Conversation ${id} has no saved Claude session to resume`);

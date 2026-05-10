@@ -11,7 +11,7 @@ export interface AdoptOrphanInput {
   id: string;
   worktreePath: string;
   runtimeId: string;
-  status: "starting" | "working" | "waiting" | "gone";
+  status: "starting" | "working" | "waiting" | "gone" | "done";
   title?: string | null;
 }
 

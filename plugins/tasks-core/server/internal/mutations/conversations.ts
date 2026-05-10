@@ -12,12 +12,12 @@ export interface InsertConversationInput {
   model: "opus" | "sonnet";
   spawnedBy: string;
   kind?: "user" | "agent" | "system";
-  status?: "starting" | "working" | "waiting" | "gone";
+  status?: "starting" | "working" | "waiting" | "gone" | "done";
   title?: string | null;
 }
 
 export interface UpdateConversationPatch {
-  status?: "starting" | "working" | "waiting" | "gone";
+  status?: "starting" | "working" | "waiting" | "gone" | "done";
   title?: string | null;
   claudeSessionId?: string | null;
   waitingFor?: string | null;
@@ -70,7 +70,7 @@ export async function insertConversation(input: InsertConversationInput) {
 }
 
 export async function insertConversationOnConflictDoNothing(
-  input: InsertConversationInput & { status: "starting" | "working" | "waiting" | "gone" },
+  input: InsertConversationInput & { status: "starting" | "working" | "waiting" | "gone" | "done" },
 ) {
   const taskId = await taskIdForAttempt(input.attemptId);
   const before = taskId ? await readTaskStatus(taskId) : null;
@@ -145,7 +145,7 @@ export async function markConversationClosed(
   const before = taskId ? await readTaskStatus(taskId) : null;
   await db
     .update(_conversations)
-    .set({ status: "gone", endedAt, updatedAt: new Date() })
+    .set({ status: "done", endedAt, updatedAt: new Date() })
     .where(eq(_conversations.id, id));
   if (taskId) await emitStatusChangeIfChanged(taskId, before);
 }

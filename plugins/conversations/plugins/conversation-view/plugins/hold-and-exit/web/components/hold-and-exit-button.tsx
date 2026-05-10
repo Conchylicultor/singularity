@@ -14,7 +14,7 @@ export function HoldAndExitButton({
     errorMessage: "Hold & Exit failed",
   });
 
-  const disabled = busy || live.status === "gone" || live.status === "starting";
+  const disabled = busy || live.status === "gone" || live.status === "done" || live.status === "starting";
 
   return (
     <Button

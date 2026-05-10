@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { deleteConversation } from "@plugins/conversations/server";
-import { getConversation, recentConversationsResource } from "@plugins/tasks-core/server";
+import { getConversation, markConversationClosed, recentConversationsResource } from "@plugins/tasks-core/server";
 
 export default {
   id: "exit",
@@ -14,6 +14,7 @@ export default {
         return new Response("Conversation not found", { status: 404 });
       }
 
+      await markConversationClosed(id);
       await deleteConversation(id);
       recentConversationsResource.notify();
 

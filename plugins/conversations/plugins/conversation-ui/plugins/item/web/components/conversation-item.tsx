@@ -37,7 +37,8 @@ export const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
   starting: "bg-muted-foreground/60",
   working: "bg-[oklch(0.58_0.1_240)]",
   waiting: "bg-amber-500",
-  gone: "bg-muted-foreground/40",
+  gone: "bg-amber-500/40",
+  done: "bg-muted-foreground/40",
 };
 
 // Structural prop type — accepts both the full `Conversation` and the
@@ -81,7 +82,7 @@ export function ConvSysBadge({ conv }: { conv: ConversationItemConv }) {
 }
 
 export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
-  const muted = conv.status === "gone";
+  const muted = conv.status === "gone" || conv.status === "done";
   return (
     <span
       className={cn(

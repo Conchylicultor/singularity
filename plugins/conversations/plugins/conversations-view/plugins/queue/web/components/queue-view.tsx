@@ -46,6 +46,7 @@ const WORKING_EXPANDED_KEY = "queue-view:working:expanded";
 const QUEUE_EXPANDED_KEY = "queue-view:queue:expanded";
 const BLOCKED_EXPANDED_KEY = "queue-view:blocked:expanded";
 const UNRANKED_EXPANDED_KEY = "queue-view:unranked:expanded";
+const DISCONNECTED_EXPANDED_KEY = "queue-view:disconnected:expanded";
 const GONE_EXPANDED_KEY = "queue-view:gone:expanded";
 
 const SECTION_H = 28;
@@ -102,6 +103,11 @@ export function QueueView({
   const working = useMemo(
     () =>
       active.filter((c) => c.status === "working" || c.status === "starting"),
+    [active],
+  );
+
+  const disconnected = useMemo(
+    () => active.filter((c) => c.status === "gone"),
     [active],
   );
 
@@ -209,6 +215,23 @@ export function QueueView({
     });
   }, []);
 
+  const [disconnectedExpanded, setDisconnectedExpanded] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(DISCONNECTED_EXPANDED_KEY) !== "0";
+    } catch {
+      return true;
+    }
+  });
+  const toggleDisconnectedExpanded = useCallback(() => {
+    setDisconnectedExpanded((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(DISCONNECTED_EXPANDED_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  }, []);
+
   const [goneExpanded, setGoneExpanded] = useState<boolean>(() => {
     try {
       return localStorage.getItem(GONE_EXPANDED_KEY) !== "0";
@@ -249,7 +272,7 @@ export function QueueView({
     await queuePost("reorder", { conversationId, targetId: drop.targetId, zone: drop.zone });
   }, []);
 
-  if (!isLoading && deck.length === 0 && blockedDeck.length === 0 && working.length === 0 && unranked.length === 0 && recentGone.length === 0) {
+  if (!isLoading && deck.length === 0 && blockedDeck.length === 0 && working.length === 0 && unranked.length === 0 && disconnected.length === 0 && recentGone.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-xs text-muted-foreground">
         All clear — no conversations are waiting on you.
@@ -277,6 +300,9 @@ export function QueueView({
 
   const unrankedTop = nextTop;
   if (unranked.length > 0) nextTop += SECTION_H;
+
+  const disconnectedTop = nextTop;
+  if (disconnected.length > 0) nextTop += SECTION_H;
 
   const goneTop = nextTop;
 
@@ -455,10 +481,43 @@ export function QueueView({
         </>
       )}
 
-      {/* Recently gone */}
+      {/* Disconnected */}
+      {disconnected.length > 0 && (
+        <>
+          <SectionHeader title="Disconnected" count={disconnected.length} expanded={disconnectedExpanded} onToggleExpanded={toggleDisconnectedExpanded} stickyTop={disconnectedTop} />
+          {disconnectedExpanded && (
+            <div className="mt-0.5 pl-1">
+              <SidebarMenu>
+                {disconnected.map((conv) => (
+                  <li key={conv.id} className="group/menu-item relative list-none">
+                    <SidebarMenuButton
+                      className="h-auto py-2 opacity-60"
+                      isActive={conv.id === activeId}
+                      onClick={() => onNavigate(conv.id)}
+                    >
+                      <ConversationItem conv={conv} />
+                    </SidebarMenuButton>
+                    <SidebarMenuAction
+                      onClick={(e: React.MouseEvent) =>
+                        void onCloseConversation(conv.id, e)
+                      }
+                      className="opacity-0 group-hover/menu-item:opacity-100"
+                      aria-label="Close conversation"
+                    >
+                      <MdClose className="size-3.5" />
+                    </SidebarMenuAction>
+                  </li>
+                ))}
+              </SidebarMenu>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Done */}
       {recentGone.length > 0 && (
         <>
-          <SectionHeader title="Recently gone" count={recentGone.length} expanded={goneExpanded} onToggleExpanded={toggleGoneExpanded} stickyTop={goneTop} />
+          <SectionHeader title="Done" count={recentGone.length} expanded={goneExpanded} onToggleExpanded={toggleGoneExpanded} stickyTop={goneTop} />
           {goneExpanded && (
             <div className="mt-0.5 pl-1">
               <SidebarMenu>

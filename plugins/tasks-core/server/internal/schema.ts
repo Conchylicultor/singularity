@@ -21,7 +21,7 @@ export const attempts = pgView("attempts_v").as((qb) => {
         )`.as("has_conv"),
         hasLiveConv: sql<boolean>`EXISTS (
           SELECT 1 FROM ${_conversations} c
-           WHERE c.attempt_id = ${sql.raw('"attempts"."id"')} AND c.status <> 'gone'
+           WHERE c.attempt_id = ${sql.raw('"attempts"."id"')} AND c.status NOT IN ('gone', 'done')
         )`.as("has_live_conv"),
         hasPush: sql<boolean>`EXISTS (
           SELECT 1 FROM ${pushes} p WHERE p.attempt_id = ${sql.raw('"attempts"."id"')}
@@ -159,7 +159,7 @@ export const conversations = pgView("conversations_v").as((qb) =>
       ...getTableColumns(_conversations),
       worktreePath: _attempts.worktreePath,
       taskId: _attempts.taskId,
-      active: sql<boolean>`(${_conversations.status} <> 'gone')`.as("active"),
+      active: sql<boolean>`(${_conversations.status} <> 'done')`.as("active"),
     })
     .from(_conversations)
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId)),
@@ -186,7 +186,7 @@ export const AttemptStatusSchema = z.enum([
 ]);
 export type AttemptStatus = z.infer<typeof AttemptStatusSchema>;
 
-const ConversationStatusSchema = z.enum(["starting", "working", "waiting", "gone"]);
+const ConversationStatusSchema = z.enum(["starting", "working", "waiting", "gone", "done"]);
 export const ConversationKindSchema = z.enum(["user", "agent", "system"]);
 export type ConversationKind = z.infer<typeof ConversationKindSchema>;
 

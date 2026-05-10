@@ -27,7 +27,7 @@ export function DropAndExitButton({
     errorMessage: `${hasPush ? "Complete" : "Drop"} & Exit failed`,
   });
 
-  const disabled = busy || live.status === "gone" || live.status === "starting";
+  const disabled = busy || live.status === "gone" || live.status === "done" || live.status === "starting";
 
   if (hasPush) {
     return (

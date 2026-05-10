@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { deleteConversation } from "@plugins/conversations/server";
-import { getConversation, recentConversationsResource, updateTask } from "@plugins/tasks-core/server";
+import { getConversation, markConversationClosed, recentConversationsResource, updateTask } from "@plugins/tasks-core/server";
 
 export default {
   id: "hold-and-exit",
@@ -16,6 +16,7 @@ export default {
 
       await updateTask(conversation.taskId, { hold: true });
 
+      await markConversationClosed(id);
       await deleteConversation(id);
       recentConversationsResource.notify();
 

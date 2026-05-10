@@ -3,6 +3,7 @@ import { deleteConversation } from "@plugins/conversations/server";
 import {
   getConversation,
   listPushesForAttempt,
+  markConversationClosed,
   recentConversationsResource,
   updateTask,
 } from "@plugins/tasks-core/server";
@@ -28,6 +29,7 @@ export default {
         await updateTask(conversation.taskId, { drop: true });
       }
 
+      await markConversationClosed(id);
       await deleteConversation(id);
       recentConversationsResource.notify();
 

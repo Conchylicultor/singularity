@@ -13,12 +13,12 @@ export function ResumeButton({
   const live = useConversation(conversation.id) ?? conversation;
   const [busy, setBusy] = useState(false);
 
-  const isGone = live.status === "gone";
+  const isNotRunning = live.status === "gone" || live.status === "done";
   const hasSession = !!live.claudeSessionId;
-  const canResume = isGone && hasSession;
+  const canResume = isNotRunning && hasSession;
   const disabled = busy || !canResume;
 
-  const tooltip = !isGone
+  const tooltip = !isNotRunning
     ? "Resume is available once the session has exited"
     : !hasSession
       ? "No saved Claude session to resume"

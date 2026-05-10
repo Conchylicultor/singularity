@@ -21,13 +21,14 @@ export function TerminalPaneBody() {
   // the conversation transitions from gone to live so the TerminalComponent
   // remounts and reattaches.
   const [reattachKey, setReattachKey] = useState(0);
-  const wasGoneRef = useRef(conversation.status === "gone");
+  const wasDisconnected = conversation.status === "gone" || conversation.status === "done";
+  const wasDisconnectedRef = useRef(wasDisconnected);
   useEffect(() => {
-    if (wasGoneRef.current && conversation.status !== "gone") {
+    if (wasDisconnectedRef.current && !wasDisconnected) {
       setReattachKey((k) => k + 1);
     }
-    wasGoneRef.current = conversation.status === "gone";
-  }, [conversation.status]);
+    wasDisconnectedRef.current = wasDisconnected;
+  }, [wasDisconnected]);
 
   return (
     <div className="h-full min-h-0 overflow-hidden">
