@@ -1,7 +1,13 @@
 import { resolve, sep } from "node:path";
 
-import { GIT } from "@plugins/infra/plugins/paths/server";
+import { GIT, HOME_DIR } from "@plugins/infra/plugins/paths/server";
 const MAX_BYTES = 2 * 1024 * 1024;
+
+function expandTilde(path: string): string {
+  if (path === "~") return HOME_DIR;
+  if (path.startsWith("~/")) return resolve(HOME_DIR, path.slice(2));
+  return path;
+}
 
 export type FileReadResult =
   | { kind: "ok"; content: string }
@@ -54,9 +60,10 @@ export async function getFileContent(
 ): Promise<FileReadResult> {
   if (!relPath || relPath.includes("\0")) return { kind: "invalid-path" };
 
+  const expanded = expandTilde(relPath);
   const absRoot = resolve(worktreePath);
-  const absTarget = resolve(absRoot, relPath);
-  if (!isPathInside(absRoot, absTarget)) return { kind: "invalid-path" };
+  const absTarget = expanded.startsWith("/") ? resolve(expanded) : resolve(absRoot, expanded);
+  if (!expanded.startsWith("/") && !isPathInside(absRoot, absTarget)) return { kind: "invalid-path" };
 
   const file = Bun.file(absTarget);
   if (!(await file.exists())) return { kind: "not-found" };

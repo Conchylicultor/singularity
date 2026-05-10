@@ -1,6 +1,12 @@
 import { resolve } from "node:path";
 import { resolveWorktreePath } from "@plugins/code-explorer/server";
-import { GIT } from "@plugins/infra/plugins/paths/server";
+import { GIT, HOME_DIR } from "@plugins/infra/plugins/paths/server";
+
+function expandTilde(path: string): string {
+  if (path === "~") return HOME_DIR;
+  if (path.startsWith("~/")) return resolve(HOME_DIR, path.slice(2));
+  return path;
+}
 
 function isSubsequence(query: string[], file: string[]): boolean {
   let qi = 0;
@@ -34,13 +40,16 @@ export async function handleResolve(
   const wtPath = await resolveWorktreePath(worktree);
   if (!wtPath) return new Response("Not found", { status: 404 });
 
-  const cleaned = rawPath.replace(/^\.\//, "");
+  const cleaned = expandTilde(rawPath.replace(/^\.\//, ""));
   if (!cleaned) return Response.json({ kind: "not-found" });
 
-  const absTarget = resolve(wtPath, cleaned);
+  const absTarget = cleaned.startsWith("/") ? resolve(cleaned) : resolve(wtPath, cleaned);
   if (await Bun.file(absTarget).exists()) {
     return Response.json({ kind: "exact" });
   }
+
+  // ~-rooted and absolute paths are not in the git tree; skip ls-files
+  if (cleaned.startsWith("/")) return Response.json({ kind: "not-found" });
 
   const proc = Bun.spawn(
     [GIT, "--no-optional-locks", "-C", wtPath, "ls-files", "--cached", "--others", "--exclude-standard"],
