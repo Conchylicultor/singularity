@@ -748,7 +748,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `ErrorBoundary.Action` → `LaunchFixButton`
 
-- **`database`** — Umbrella for database tooling exposed to agents.
+- **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Exports (server):
     - Values: `awaitDbReady`, `db`, `isTransientDbError`
   - Exports (shared):
@@ -760,12 +760,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Types: `BackupInfo`, `TableStat`
         - Values: `backupDatabase`, `connectionString`, `databaseExists`, `dropDatabase`, `forkDatabase`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
-    - **`embedded`**
+    - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
       - Exports (server):
         - Values: `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
       - Exports (shared):
         - Values: `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
-    - **`migrations`**
+    - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Exports (server):
         - Values: `runMigrations`
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.

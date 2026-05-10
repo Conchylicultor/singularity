@@ -127,11 +127,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
 
-- **`database`** — Umbrella for database tooling exposed to agents.
+- **`database`** [load-bearing] — Core database infrastructure. Connection pooling and DB readiness.
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
-    - **`embedded`**
-    - **`migrations`**
+    - **`embedded`** [load-bearing] — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
+    - **`migrations`** — DDL lifecycle: migration runner and SQL files.
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
 
 - **`debug`** — Debug tools sidebar group.
