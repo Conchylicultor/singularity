@@ -1,6 +1,8 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { setErrorReporter } from "@server/error-reporter";
 import { handleReport } from "./internal/handle-report";
 import { crashesResource } from "./internal/resources";
+import { recordCrash } from "./internal/record-crash";
 import { ensureCrashesMetaTask } from "./internal/meta-crashes";
 import { flushBufferedCrashes, installProcessHooks } from "./internal/process-hooks";
 
@@ -19,6 +21,14 @@ export default {
   resources: [crashesResource],
   onReady: async () => {
     installProcessHooks();
+    setErrorReporter((report) => {
+      void recordCrash({
+        source: "server-caught",
+        message: report.message,
+        stack: report.stack,
+        errorType: report.errorType,
+      });
+    });
     await ensureCrashesMetaTask();
     await flushBufferedCrashes();
   },

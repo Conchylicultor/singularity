@@ -3,6 +3,7 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { defineJob, UNSAFE_getRegisteredJob } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
+import { reportServerError } from "@server/error-reporter";
 import { triggerTableRegistry } from "./registry";
 
 // The events plugin's dispatcher is itself a registered job. `emit()` enqueues
@@ -33,15 +34,19 @@ export const eventsDispatchJob = defineJob({
   run: async ({ input: p, ctx }) => {
     const target = UNSAFE_getRegisteredJob(p.jobName);
     if (!target) {
-      throw new Error(
+      const err = new Error(
         `[events] unknown job "${p.jobName}" (event "${p.eventName}", trigger ${p.triggerId})`,
       );
+      reportServerError({ message: err.message, stack: err.stack ?? null });
+      throw err;
     }
     const parsedInput = target.inputSchema.safeParse(p.jobWith);
     if (!parsedInput.success) {
-      throw new Error(
+      const err = new Error(
         `[events] input drift for job "${p.jobName}" (event "${p.eventName}", trigger ${p.triggerId}): ${parsedInput.error.message}`,
       );
+      reportServerError({ message: err.message, stack: err.stack ?? null });
+      throw err;
     }
     // `event: z.never()` is the sentinel for "this job ignores events"; skip
     // the parse and pass undefined. Otherwise validate the payload too.
@@ -52,9 +57,11 @@ export const eventsDispatchJob = defineJob({
     if (!isNeverEvent) {
       const parsedEvent = target.eventSchema.safeParse(p.eventPayload);
       if (!parsedEvent.success) {
-        throw new Error(
+        const err = new Error(
           `[events] event drift for job "${p.jobName}" (event "${p.eventName}", trigger ${p.triggerId}): ${parsedEvent.error.message}`,
         );
+        reportServerError({ message: err.message, stack: err.stack ?? null });
+        throw err;
       }
       eventArg = parsedEvent.data;
     }
@@ -62,9 +69,9 @@ export const eventsDispatchJob = defineJob({
     if (p.oneShot) {
       const table = triggerTableRegistry.get(p.eventName);
       if (!table) {
-        console.error(
-          `[events] unknown event "${p.eventName}" at dispatch (trigger ${p.triggerId}); skipping oneShot cleanup`,
-        );
+        const msg = `[events] unknown event "${p.eventName}" at dispatch (trigger ${p.triggerId}); skipping oneShot cleanup`;
+        console.error(msg);
+        reportServerError({ message: msg });
         return;
       }
       await db

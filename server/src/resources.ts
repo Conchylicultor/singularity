@@ -1,5 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import type { ZodType } from "zod";
+import { reportServerError } from "./error-reporter";
 import type { WsData, WsHandler } from "./types";
 
 // Live-state primitive. See
@@ -274,6 +275,7 @@ async function flushNotifies(): Promise<void> {
           valueComputed = true;
         } catch (err) {
           console.error(`[resources] loader failed for ${entry.key}`, err);
+          reportServerError(errorReport(`loader failed for ${entry.key}`, err));
           // Skip sending and cascading on loader failure — otherwise we'd
           // invalidate downstream state based on a torn read.
           continue;
@@ -301,6 +303,9 @@ async function flushNotifies(): Promise<void> {
             console.error(
               `[resources] dependsOn map failed (${entry.key} → ${edge.downstreamKey})`,
               err,
+            );
+            reportServerError(
+              errorReport(`dependsOn map failed (${entry.key} → ${edge.downstreamKey})`, err),
             );
             continue;
           }
@@ -394,6 +399,7 @@ async function handleSub(
         await entry.onFirstSubscribe(params);
       } catch (err) {
         console.error(`[resources] onFirstSubscribe failed for ${key}`, err);
+        reportServerError(errorReport(`onFirstSubscribe failed for ${key}`, err));
       }
     }
   }
@@ -403,6 +409,7 @@ async function handleSub(
     value = await entry.loader(params);
   } catch (err) {
     console.error(`[resources] loader failed for ${key}`, err);
+    reportServerError(errorReport(`loader failed for ${key}`, err));
     sendJson(state.ws, { kind: "sub-error", id, key, reason: "loader-failed" });
     return;
   }
@@ -439,6 +446,7 @@ function releaseSubRefcount(key: string, pk: string, params: ResourceParams): vo
         entry.onLastUnsubscribe(params);
       } catch (err) {
         console.error(`[resources] onLastUnsubscribe failed for ${key}`, err);
+        reportServerError(errorReport(`onLastUnsubscribe failed for ${key}`, err));
       }
     }
   } else {
@@ -468,6 +476,7 @@ export async function handleResourceHttp(
     value = await entry.loader(resourceParams);
   } catch (err) {
     console.error(`[resources] loader failed for ${key}`, err);
+    reportServerError(errorReport(`loader failed for ${key}`, err));
     return new Response("Loader failed", { status: 500 });
   }
   const pk = paramsKey(resourceParams);
@@ -475,6 +484,15 @@ export async function handleResourceHttp(
   return new Response(JSON.stringify({ value, version }), {
     headers: { "content-type": "application/json" },
   });
+}
+
+function errorReport(context: string, err: unknown) {
+  const e = err instanceof Error ? err : new Error(String(err));
+  return {
+    message: `[resources] ${context}: ${e.message}`,
+    stack: e.stack ?? null,
+    errorType: e.constructor.name !== "Error" ? e.constructor.name : null,
+  };
 }
 
 function handleResourcesDebug(): Response {

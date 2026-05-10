@@ -6,6 +6,7 @@ import {
   type WorkerUtils,
 } from "graphile-worker";
 import { connectionString, db } from "@plugins/database/server";
+import { reportServerError } from "@server/error-reporter";
 import { JOB_TASK } from "./constants";
 import {
   UNSAFE_getRegisteredJob,
@@ -79,7 +80,9 @@ async function dispatch(
 ): Promise<void> {
   const job = UNSAFE_getRegisteredJob(payload.jobName);
   if (!job) {
-    throw new Error(`[jobs] unknown job "${payload.jobName}"`);
+    const err = new Error(`[jobs] unknown job "${payload.jobName}"`);
+    reportServerError({ message: err.message, stack: err.stack ?? null });
+    throw err;
   }
   // Validation only — DO NOT use `parsed.data` for the handler. The stored
   // payload was already transformed at enqueue time; re-using `parsed.data`
@@ -90,9 +93,11 @@ async function dispatch(
   // re-validates only to catch schema drift after a redeploy.
   const validation = job.inputSchema.safeParse(payload.input);
   if (!validation.success) {
-    throw new Error(
+    const err = new Error(
       `[jobs] input schema drift for "${payload.jobName}": ${validation.error.message}`,
     );
+    reportServerError({ message: err.message, stack: err.stack ?? null });
+    throw err;
   }
 
   const workflowRunId =
