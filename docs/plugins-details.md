@@ -292,7 +292,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ConversationStatusSchema`, `forkErrorsResource`, `hasLiveProcess`, `isActiveStatus`, `recentConversationsResource`
   - Server:
     - Register: `maybeLaunchTaskJob`, `conversationCreated`, `conversationTurnCompleted`, `userTurnSent`
-    - Uses: `crashes.recordCrash`, `database.adminPool`, `database.db`, `database.isTransientPgError`, `database.libpqSubprocessEnv`, `database.openShortLivedClient`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
+    - Uses: `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/gone`
     - `GET /api/conversations/:id`
@@ -750,15 +750,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Umbrella for database tooling exposed to agents.
   - Exports (server):
-    - Values: `adminPool`, `awaitPgReady`, `connectionString`, `db`, `isTransientPgError`, `libpqSubprocessEnv`, `openShortLivedClient`, `pool`
+    - Values: `awaitDbReady`, `db`, `isTransientDbError`
   - Exports (shared):
     - Types: `DatabaseConfig`, `DatabaseProvider`
     - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `db-backup`, `entity-extensions`, `events`, `events-test`, `grouped`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `push-and-exit`, `query`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `grouped`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
+    - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
+      - Exports (server):
+        - Types: `BackupInfo`, `TableStat`
+        - Values: `backupDatabase`, `connectionString`, `databaseExists`, `dropDatabase`, `forkDatabase`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
     - **`embedded`**
       - Exports (server):
-        - Values: `databaseExists`, `dropDatabase`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `setAdminPool`
+        - Values: `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
       - Exports (shared):
         - Values: `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
     - **`migrations`**
@@ -767,7 +771,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
       - Server:
         - Register: `queryDbTool`
-        - Uses: `database.openShortLivedClient`, `tasks-core.getConversation`
+        - Uses: `tasks-core.getConversation`
 
 - **`debug`** — Debug tools sidebar group.
   - Defines:
@@ -804,7 +808,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Debug.Item` "DB Backup"
         - `dbBackupPane.open`
       - Server:
-        - Uses: `database.adminPool`, `database.libpqSubprocessEnv`
         - `GET /api/debug/backup-db`
         - `POST /api/debug/backup-db`
     - **`logs`** — System logs pane, opened from the Debug sidebar.
@@ -976,7 +979,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `isSuspendSignal`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
       - Server:
         - Register: `jobsResumeJob`
-        - Uses: `database.connectionString`, `database.db`
+        - Uses: `database.db`
         - `GET /api/jobs`
         - `POST /api/jobs/:id/retry`
         - `DELETE /api/jobs/:id`

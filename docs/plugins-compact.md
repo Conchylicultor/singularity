@@ -129,6 +129,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`database`** — Umbrella for database tooling exposed to agents.
   - Plugins:
+    - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
     - **`embedded`**
     - **`migrations`**
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.

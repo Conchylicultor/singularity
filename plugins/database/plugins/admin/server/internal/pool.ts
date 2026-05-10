@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 import { Pool } from "pg";
+import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 
 const worktree = process.env.SINGULARITY_WORKTREE;
 if (!worktree) {
@@ -15,7 +15,7 @@ interface ConnConfig {
 }
 
 function readConn(): ConnConfig {
-  const configPath = join(homedir(), ".singularity", "database.json");
+  const configPath = join(SINGULARITY_DIR, "database.json");
   try {
     const raw = JSON.parse(readFileSync(configPath, "utf-8"));
     return {
