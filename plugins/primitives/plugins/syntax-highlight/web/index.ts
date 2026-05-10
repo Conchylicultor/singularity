@@ -1,6 +1,4 @@
 import type { PluginDefinition } from "@core";
-import { Markdown } from "@plugins/primitives/plugins/markdown/web";
-import { useSyntaxHighlightCodeHandler } from "./internal/md-extension";
 
 export { getHighlighter, themeForMode } from "./internal/highlighter";
 export { SHIKI_LANGS, languageForPath, resolveLang } from "./internal/lang";
@@ -12,11 +10,5 @@ export default {
   name: "Syntax Highlight",
   description:
     "Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.",
-  contributions: [
-    Markdown.Extension({
-      id: "syntax-highlight",
-      priority: 50,
-      useCodeHandler: useSyntaxHighlightCodeHandler,
-    }),
-  ],
+  contributions: [],
 } satisfies PluginDefinition;

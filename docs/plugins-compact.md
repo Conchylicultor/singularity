@@ -92,6 +92,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`user-image`** — Renders inline image thumbnails for user-image events.
             - **`user-text`** — Renders user text events in the JSONL viewer.
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
+        - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, inline code enhancements, and image proxying.
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
         - **`new-child-task`** — Deprecated — functionality merged into the Improve button via ambient relate context.
         - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
@@ -190,7 +191,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
     - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
     - **`live-state`** [load-bearing] — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
-    - **`markdown`** — Unified markdown renderer. Extensions contribute syntax highlighting, file links, active data, and image proxy via Markdown.Extension slot.
+    - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
     - **`networking`** [load-bearing] — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
     - **`pane`** [load-bearing] — Unified pane primitive: Pane.define, <Outlet/>, <PaneRouter/>, and chrome components.
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.

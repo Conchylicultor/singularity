@@ -16,8 +16,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (shared):
     - Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`
     - Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `inlineBoundary`
-  - Contributes:
-    - `Markdown.Extension`
   - Server:
     - Uses: `database.db`, `tasks-core._conversations`
     - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
@@ -220,8 +218,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/build/status`
 
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
-  - Exports (web):
-    - Values: `useWorktreeContext`, `WorktreeContext`
   - Exports (server):
     - Values: `resolveWorktreePath`
   - Contributes:
@@ -230,7 +226,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Sidebar` "Explorer" (group `System`)
     - `globalFileTreePane.open`
     - `Conversation.ActionBar` → `ConvTreeButton`
-    - `Markdown.Extension`
   - Server:
     - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`
     - `GET /api/code/:worktree/tree`
@@ -240,7 +235,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/code/:worktree/push`
     - `GET /api/code/:worktree/commit`
   - Imported by: `file-resolve`
-  - Endpoint callers: `commits-graph`, `diff`, `docs-button`, `file-pane`, `file-resolve`, `image`, `read`, `review`
+  - Endpoint callers: `commits-graph`, `diff`, `docs-button`, `file-pane`, `file-resolve`, `image`, `markdown-extensions`, `read`, `review`
   - Plugins:
     - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
       - Exports (web):
@@ -531,6 +526,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `POST /api/launch-prompts`
             - `PATCH /api/launch-prompts/:id`
             - `DELETE /api/launch-prompts/:id`
+        - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, inline code enhancements, and image proxying.
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Contributes:
             - `conversationPane.Actions` → `ModelBadge`
@@ -1093,9 +1089,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable buttons that fire onFileOpen. Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides.
       - Exports (web):
         - Types: `FileLinkSegment`, `FileLinkTextProps`
-        - Values: `FILE_PATH_RE`, `FileLinkText`, `FileOpenContext`, `linkifyChildren`, `parseFileLinks`, `URL_RE`, `useFileOpen`
-      - Contributes:
-        - `Markdown.Extension`
+        - Values: `FILE_PATH_RE`, `FileLinkText`, `linkifyChildren`, `parseFileLinks`, `URL_RE`
     - **`filepath-breadcrumb`** — File-path breadcrumb with copy-to-clipboard and directory navigation. Wraps the generic Breadcrumb with filepath-specific behavior.
       - Exports (web):
         - Types: `FilepathBreadcrumbProps`
@@ -1115,13 +1109,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (shared):
         - Types: `ResourceDescriptor`, `ResourceOrigin`
         - Values: `centralResourceDescriptor`, `resourceDescriptor`
-    - **`markdown`** — Unified markdown renderer. Extensions contribute syntax highlighting, file links, active data, and image proxy via Markdown.Extension slot.
+    - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Defines:
         - Slots: `Markdown.Extension`
       - Exports (web):
-        - Types: `CodeHandler`, `MarkdownExtension`
-        - Values: `Markdown`, `MarkdownContent`
-      - Slot contributors: `active-data`, `code-explorer`, `file-links`, `syntax-highlight`
+        - Types: `MarkdownEnhancement`
+        - Values: `langFromClassName`, `Markdown`, `MarkdownEnhancementContext`, `MarkdownEnhancerSlot`, `nodeToText`, `useMarkdownEnhancement`
     - **`networking`** — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
       - Exports (web):
         - Types: `CrossTabElectionCallbacks`, `FetchWithRetryOptions`, `ReconnectingEventSourceOptions`, `ReconnectingWsHandle`, `ReconnectingWsOptions`, `WsStatus`, `WsStatusEvent`
@@ -1157,8 +1150,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
       - Exports (web):
         - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
-      - Contributes:
-        - `Markdown.Extension`
     - **`tooltip`** — WithTooltip wrapper, TooltipProvider, and <Kbd> keyboard shortcut badge.
       - Exports (web):
         - Types: `KbdProps`, `WithTooltipProps`
