@@ -4,6 +4,7 @@
 
 ## Plugin reference
 
+- Description: DDL lifecycle: migration runner and SQL files.
 - Exports (server):
   - Values: `runMigrations`
 

@@ -47,6 +47,8 @@ Worktree backends read connection params from `~/.singularity/database.json` (au
 
 ## Plugin reference
 
+- Description: Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
+- Load-bearing: yes
 - Exports (server):
   - Values: `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
 - Exports (shared):

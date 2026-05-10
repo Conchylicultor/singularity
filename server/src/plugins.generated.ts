@@ -43,7 +43,10 @@ import conversationsTranscriptApiPlugin from "@plugins/conversations/plugins/tra
 import conversationsTranscriptWatcherPlugin from "@plugins/conversations/plugins/transcript-watcher/server";
 import conversationsPlugin from "@plugins/conversations/server";
 import crashesPlugin from "@plugins/crashes/server";
+import databaseEmbeddedPlugin from "@plugins/database/plugins/embedded/server";
+import databaseMigrationsPlugin from "@plugins/database/plugins/migrations/server";
 import databaseQueryPlugin from "@plugins/database/plugins/query/server";
+import databasePlugin from "@plugins/database/server";
 import debugBroadcastsPlugin from "@plugins/debug/plugins/broadcasts/server";
 import debugDbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
 import debugLogsPlugin from "@plugins/debug/plugins/logs/server";
@@ -79,15 +82,16 @@ import uiTokensColorPalettePlugin from "@plugins/ui/plugins/tokens/plugins/color
 import uiTokensShapePlugin from "@plugins/ui/plugins/tokens/plugins/shape/server";
 import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sidebar-palette/server";
 
-(activeDataPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
-(agentsAutoLaunchTogglePlugin as ServerPluginDefinition).dependsOn = [agentsPlugin, infraEntityExtensionsPlugin];
-(agentsPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraAttachmentsPlugin, primitivesRankPlugin, tasksCorePlugin];
-(buildPlugin as ServerPluginDefinition).dependsOn = [configPlugin, debugLogsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin];
+(activeDataPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, tasksCorePlugin];
+(agentsAutoLaunchTogglePlugin as ServerPluginDefinition).dependsOn = [agentsPlugin, databasePlugin, infraEntityExtensionsPlugin];
+(agentsPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraAttachmentsPlugin, primitivesRankPlugin, tasksCorePlugin];
+(buildPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, debugLogsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin];
 (codeExplorerFileResolvePlugin as ServerPluginDefinition).dependsOn = [codeExplorerPlugin];
 (codeExplorerPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
+(configPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (conversationsRecoverPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, tasksCorePlugin];
-(conversationsConversationCategoryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, infraClaudeCliPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
-(conversationsConversationProgressPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
+(conversationsConversationCategoryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, databasePlugin, infraClaudeCliPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
+(conversationsConversationProgressPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
 (conversationsConversationViewAllowMonitorPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
 (conversationsConversationViewCodePlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
 (conversationsConversationViewCommitsGraphPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
@@ -95,32 +99,41 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (conversationsConversationViewExitPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, tasksCorePlugin];
 (conversationsConversationViewHoldAndExitPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, tasksCorePlugin];
 (conversationsConversationViewJsonlViewerPlugin as ServerPluginDefinition).dependsOn = [conversationsTranscriptWatcherPlugin, tasksCorePlugin];
-(conversationsConversationViewLaunchPromptsPlugin as ServerPluginDefinition).dependsOn = [infraAttachmentsPlugin, primitivesRankPlugin];
-(conversationsConversationViewNotesPlugin as ServerPluginDefinition).dependsOn = [infraEntityExtensionsPlugin, tasksCorePlugin];
-(conversationsConversationViewPushAndExitPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraJobsPlugin, infraMcpPlugin, tasksCorePlugin];
-(conversationsConversationViewQuickPromptsPlugin as ServerPluginDefinition).dependsOn = [infraAttachmentsPlugin, primitivesRankPlugin];
+(conversationsConversationViewLaunchPromptsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraAttachmentsPlugin, primitivesRankPlugin];
+(conversationsConversationViewNotesPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEntityExtensionsPlugin, tasksCorePlugin];
+(conversationsConversationViewPushAndExitPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraJobsPlugin, infraMcpPlugin, tasksCorePlugin];
+(conversationsConversationViewQuickPromptsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraAttachmentsPlugin, primitivesRankPlugin];
 (conversationsConversationViewResumePlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, tasksCorePlugin];
-(conversationsConversationViewTurnSummaryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, infraClaudeCliPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
-(conversationsConversationsViewGroupedPlugin as ServerPluginDefinition).dependsOn = [primitivesRankPlugin, tasksCorePlugin];
-(conversationsConversationsViewQueuePlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, primitivesRankPlugin, tasksCorePlugin];
+(conversationsConversationViewTurnSummaryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, databasePlugin, infraClaudeCliPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
+(conversationsConversationsViewGroupedPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, primitivesRankPlugin, tasksCorePlugin];
+(conversationsConversationsViewQueuePlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, primitivesRankPlugin, tasksCorePlugin];
 (conversationsRuntimeApiPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin];
 (conversationsRuntimeTmuxPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin];
-(conversationsSummaryPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraMcpPlugin, tasksCorePlugin];
+(conversationsSummaryPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraMcpPlugin, tasksCorePlugin];
 (conversationsTranscriptApiPlugin as ServerPluginDefinition).dependsOn = [conversationsTranscriptWatcherPlugin, tasksCorePlugin];
 (conversationsTranscriptWatcherPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
-(conversationsPlugin as ServerPluginDefinition).dependsOn = [conversationsTranscriptWatcherPlugin, crashesPlugin, infraAttachmentsPlugin, infraEventsPlugin, infraJobsPlugin, tasksAutoStartPlugin, tasksCorePlugin];
-(crashesPlugin as ServerPluginDefinition).dependsOn = [notificationsPlugin, tasksCorePlugin];
-(databaseQueryPlugin as ServerPluginDefinition).dependsOn = [infraMcpPlugin, tasksCorePlugin];
-(debugWorktreeCleanupPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
-(eventsTestPlugin as ServerPluginDefinition).dependsOn = [infraEventsPlugin, infraJobsPlugin];
-(improvePlugin as ServerPluginDefinition).dependsOn = [conversationsConversationsViewGroupedPlugin, conversationsPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
-(infraEventsPlugin as ServerPluginDefinition).dependsOn = [infraJobsPlugin];
+(conversationsPlugin as ServerPluginDefinition).dependsOn = [conversationsTranscriptWatcherPlugin, crashesPlugin, databasePlugin, infraAttachmentsPlugin, infraEventsPlugin, infraJobsPlugin, tasksAutoStartPlugin, tasksCorePlugin];
+(crashesPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, notificationsPlugin, tasksCorePlugin];
+(databaseQueryPlugin as ServerPluginDefinition).dependsOn = [databaseEmbeddedPlugin, databasePlugin, infraMcpPlugin, tasksCorePlugin];
+(databasePlugin as ServerPluginDefinition).dependsOn = [databaseEmbeddedPlugin, databaseMigrationsPlugin];
+(debugDbBackupPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(debugWorktreeCleanupPlugin as ServerPluginDefinition).dependsOn = [databaseEmbeddedPlugin, tasksCorePlugin];
+(eventsTestPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEventsPlugin, infraJobsPlugin];
+(improvePlugin as ServerPluginDefinition).dependsOn = [conversationsConversationsViewGroupedPlugin, conversationsPlugin, databasePlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
+(infraAttachmentsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(infraClaudeCliPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(infraEntityExtensionsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(infraEventsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraJobsPlugin];
 (infraGitWatcherPlugin as ServerPluginDefinition).dependsOn = [infraEventsPlugin];
-(statsCommitsPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
-(statsCostPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
+(infraJobsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(notificationsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(primitivesRankPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(reorderPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(statsCommitsPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin];
+(statsCostPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, tasksCorePlugin];
 (statsTasksPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
-(tasksCorePlugin as ServerPluginDefinition).dependsOn = [infraAttachmentsPlugin, infraEventsPlugin, primitivesRankPlugin];
-(tasksAutoStartPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
+(tasksCorePlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraAttachmentsPlugin, infraEventsPlugin, primitivesRankPlugin];
+(tasksAutoStartPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, tasksCorePlugin];
 (tasksTaskTitlePlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraClaudeCliPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
 (tasksPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraAttachmentsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin, infraMcpPlugin, tasksAutoStartPlugin, tasksCorePlugin, tasksTaskTitlePlugin];
 
@@ -162,7 +175,10 @@ export const plugins: ServerPluginDefinition[] = [
   conversationsTranscriptWatcherPlugin,
   conversationsPlugin,
   crashesPlugin,
+  databaseEmbeddedPlugin,
+  databaseMigrationsPlugin,
   databaseQueryPlugin,
+  databasePlugin,
   debugBroadcastsPlugin,
   debugDbBackupPlugin,
   debugLogsPlugin,
