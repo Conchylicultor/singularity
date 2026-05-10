@@ -80,7 +80,10 @@ interface Entry {
  */
 function hasDefaultExport(file: string): boolean {
   const src = readFileSync(file, "utf8");
-  return /(^|\n)\s*export\s+default\b/.test(src);
+  return (
+    /(^|\n)\s*export\s+default\b/.test(src) ||
+    /(^|\n)\s*export\s*\{[^}]*\bdefault\b[^}]*\}/.test(src)
+  );
 }
 
 function collectEntries(root: string, runtime: Runtime): Entry[] {
