@@ -10,7 +10,7 @@ export default {
   contributions: [
     PluginViewSlots.Section({
       id: "public-api",
-      order: 15,
+      label: "Public API",
       component: PublicApiSection,
     }),
   ],

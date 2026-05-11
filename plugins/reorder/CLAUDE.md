@@ -59,12 +59,9 @@ Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The
   - Uses: `database.db`
   - `GET /api/reorder/:slotId`
   - `PATCH /api/reorder/:slotId`
-<<<<<<< .merge_file_INrhdj
   - `DELETE /api/reorder/:slotId/:contributionId`
+- Imported by: `action-bar`, `app-shell`, `apps`, `conversation-view`, `detail-sections`, `edit-mode`, `shell`
 - Endpoint callers: `groups`
-=======
-- Imported by: `action-bar`, `app-shell`, `apps`, `conversation-view`, `edit-mode`, `shell`
->>>>>>> .merge_file_2brJw1
 - Sub-plugins:
   - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
   - **`groups`** — User-created groups within reorderable areas. Drag items onto each other to form groups.

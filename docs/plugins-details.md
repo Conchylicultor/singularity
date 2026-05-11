@@ -20,6 +20,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `database.db`, `tasks-core._conversations`
     - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
     - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
+  - Imported by: `assistant-text`, `attempt`, `conv`, `plugin-link`, `task`, `task-link`
   - Slot contributors: `attempt`, `conv`, `plugin-link`, `task`, `task-link`
   - Plugins:
     - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed.
@@ -105,6 +106,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `Apps`
   - Contributes:
     - `Core.Root` → `AppsLayout`
+  - Imported by: `shell`
   - Plugins:
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
@@ -149,6 +151,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `FileExplorer`
           - Contributes:
             - `Apps.App` → `FileExplorerLayout`
+          - Imported by: `agents`, `auth`, `blocked-by`, `build`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `debug`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `publish`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - Exports (web):
@@ -157,6 +160,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Pane.Register` `attempt`
     - `Pane.Register` `attempt-conversation`
     - `Conversation.ActionBar` → `AttemptSwitchButton`
+  - Imported by: `attempt`
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Defines:
@@ -180,7 +184,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/auth/disconnect/:provider`
     - `POST /api/auth/api-key/:provider`
     - `GET /api/auth/state`
-  - Imported by: `google`, `notion`
+  - Imported by: `google`, `notion`, `setup-wizard`
   - Slot contributors: `google`, `notion`
   - Endpoint callers: `setup-wizard`
   - Plugins:
@@ -277,7 +281,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/config/specs`
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
-  - Imported by: `build`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `notion`, `review`, `segmented-progress-bar`, `shape`, `sidebar-palette`, `theme-engine`, `turn-summary`
+  - Imported by: `auth`, `build`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `launch-prompts`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shape`, `sidebar-palette`, `theme-engine`, `turn-summary`
   - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `theme-engine`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
@@ -306,7 +310,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/conversations/:id/stop`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
-  - Imported by: `agents`, `conversation-category`, `conversation-progress`, `conversations-recover`, `drop-and-exit`, `exit`, `hold-and-exit`, `improve`, `push-and-exit`, `queue`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `task-title`, `tasks`, `turn-summary`
+  - Imported by: `agents`, `blocked-by`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `grouped`, `history`, `hold-and-exit`, `improve`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `runtime-api`, `runtime-tmux`, `side-conversation`, `summary`, `task-header`, `task-title`, `tasks`, `turn-summary`, `welcome`
   - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `grouped`, `history`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `transcript-api`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
@@ -799,6 +803,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `Debug`
   - Contributes:
     - `Shell.Sidebar` "Debug" → `DebugSidebar`
+  - Imported by: `broadcasts`, `claude-cli-calls`, `conversations-recover`, `db-backup`, `events-test`, `logs`, `memory`, `profiling`, `queue`, `worktree-cleanup`
   - Slot contributors: `broadcasts`, `claude-cli-calls`, `conversations-recover`, `db-backup`, `events-test`, `logs`, `memory`, `profiling`, `queue`, `worktree-cleanup`
   - Plugins:
     - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
@@ -926,6 +931,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Toolbar` (group `actions`) → `HealthDot`
   - Server:
     - `GET /api/health`
+  - Imported by: `build`
 
 - **`improve`**
   - Defines:
@@ -941,6 +947,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Register: `applyGroupJob`
     - Uses: `conversations.conversationCreated`, `database.db`, `tasks-core.ensureMetaTask`
+  - Imported by: `draw-on-app`
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:
@@ -1094,13 +1101,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `PluginNode`, `PluginTreePayload`
         - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
       - Exports (shared):
-        - Types: `PluginNode`, `PluginTreePayload`
+        - Types: `BarrelExport`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`
       - Contributes:
         - `Pane.Register` `plugin-view`
       - Server:
         - `GET /api/plugin-view/tree`
       - Endpoint callers: `plugin-link`, `publish`
       - Plugins:
+        - **`public-api`** — Displays the plugin's public exports, slots, routes, and consumer relationships.
+          - Contributes:
+            - `PluginViewSlots.Section` "Public API" → `PublicApiSection`
         - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
           - Contributes:
             - `PluginViewSlots.Section` "Runtimes" → `RuntimesSection`
@@ -1242,6 +1252,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/reorder/:slotId`
     - `PATCH /api/reorder/:slotId`
     - `DELETE /api/reorder/:slotId/:contributionId`
+  - Imported by: `action-bar`, `app-shell`, `apps`, `conversation-view`, `detail-sections`, `edit-mode`, `shell`
   - Endpoint callers: `groups`
   - Plugins:
     - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
@@ -1275,6 +1286,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/screenshots/:id`
     - `GET /api/screenshots/:id`
     - `POST /api/screenshots/:id/file`
+  - Imported by: `draw-on-app`
   - Plugins:
     - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.
       - Exports (web):
@@ -1304,6 +1316,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Pane.Register` `stats`
     - `Shell.Sidebar` "Stats" (group `System`)
     - `statsPane.open`
+  - Imported by: `commits`, `cost`, `tasks`
   - Slot contributors: `commits`, `cost`, `tasks`
   - Plugins:
     - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
@@ -1352,6 +1365,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.listTasks`
         - `GET /api/stats/tasks/cumulative`
         - `GET /api/stats/tasks/daily`
+      - Imported by: `blocked-by`, `side-task`, `task-dependencies`, `task-description`, `task-detail`, `task-header`, `task-list`, `tasks-panel`
 
 - **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
   - Exports (web):
@@ -1471,6 +1485,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `terminalPane`
   - Server:
     - `WS /ws/terminal`
+  - Imported by: `terminal-pane`
 
 - **`theme`** — Toolbar toggle for light/dark mode.
   - Contributes:
