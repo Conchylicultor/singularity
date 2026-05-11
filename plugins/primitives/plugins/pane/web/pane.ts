@@ -813,5 +813,6 @@ export function useSyncPaneRegistry(): void {
 
 export function useMatchForPath(pathname: string): PaneMatch | null {
   syncChainFromUrl(pathname);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- syncChainFromUrl mutates currentChain; pathname is the change signal
   return useMemo(() => resolveChain(currentChain), [pathname]);
 }

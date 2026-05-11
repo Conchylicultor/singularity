@@ -36,7 +36,7 @@ function PromptBar({
       map.set(item.section, entry);
     }
     return [...map.entries()].sort(([, a], [, b]) => a.order - b.order);
-  }, [area.items]);
+  }, [area]);
 
   return (
     <area.DndWrapper>

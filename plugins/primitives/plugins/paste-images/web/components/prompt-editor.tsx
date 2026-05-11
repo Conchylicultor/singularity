@@ -109,6 +109,7 @@ function EditorShell({
 
   useEffect(() => {
     if (autoFocus && !disabled) editor.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: focus once on initial render
   }, []);
 
   const minHeight = `${Math.max(minRows, 1) * 1.5}rem`;

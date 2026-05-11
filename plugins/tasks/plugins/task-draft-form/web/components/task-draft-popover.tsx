@@ -110,7 +110,7 @@ export function TaskDraftPopover({
     }
     seenIdsRef.current = new Set(cards.map((c) => c.localId));
     if (newest) setAutoFocusId(newest);
-  }, [cards]);
+  }, [cards, setCards]);
 
   // When initialText arrives (draw-on-app screenshot), seed the head card so
   // the image appears inline in the editor via the paste-images machinery.
@@ -119,7 +119,7 @@ export function TaskDraftPopover({
     setUrl(window.location.href);
     setCards((prev) => [{ ...prev[0]!, text: initialText }, ...prev.slice(1)]);
     seenIdsRef.current = new Set();
-  }, [initialText]);
+  }, [initialText, setCards]);
 
   const setOpen = (next: boolean) => {
     if (next) {

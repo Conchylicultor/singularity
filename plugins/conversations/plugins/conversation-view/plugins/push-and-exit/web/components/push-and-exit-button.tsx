@@ -85,7 +85,7 @@ export function PushAndExitButton({
       `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
       { method: "DELETE" },
     );
-  }, [job?.status]);
+  }, [job?.status, conversation.id]);
 
   useEffect(() => {
     if (job?.status !== "error") return;
@@ -98,7 +98,7 @@ export function PushAndExitButton({
       `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
       { method: "DELETE" },
     );
-  }, [job?.status]);
+  }, [job, conversation.id]);
 
   const disabled = busy || sending || live.status === "gone" || live.status === "done" || live.status === "starting";
 

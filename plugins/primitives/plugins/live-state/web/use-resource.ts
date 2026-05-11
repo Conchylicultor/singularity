@@ -95,8 +95,7 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
   useEffect(() => {
     notifications.observe(key, p, origin, schema);
     return () => notifications.unobserve(key, p, origin);
-    // Stringify params for stable dependency; callers are expected to pass
-    // stable shapes (small flat objects of strings).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; callers pass small flat objects
   }, [notifications, key, origin, schema, JSON.stringify(p)]);
 
   return useQuery({

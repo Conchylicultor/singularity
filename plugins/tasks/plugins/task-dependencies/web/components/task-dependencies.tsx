@@ -23,7 +23,7 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
   const { data: tasks } = useResource(tasksResource);
 
-  const deps = task?.dependencies ?? [];
+  const deps = useMemo(() => task?.dependencies ?? [], [task?.dependencies]);
 
   const parentCandidate = useMemo(() => {
     if (!task?.parentId) return null;

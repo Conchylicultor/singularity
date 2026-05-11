@@ -67,7 +67,7 @@ export function RecoveryView() {
     void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
   }, [resource.dataUpdatedAt, queryClient]);
 
-  const items = q.data ?? [];
+  const items = useMemo(() => q.data ?? [], [q.data]);
   const isLoading = q.isLoading;
 
   const [pending, setPending] = useState<Set<string>>(new Set());

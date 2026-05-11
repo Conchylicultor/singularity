@@ -128,7 +128,7 @@ export function AppShellLayout({
       map.set(key, list);
     }
     return map;
-  }, [sidebarButtonsArea.items]);
+  }, [sidebarButtonsArea]);
 
   const [collapsed, setCollapsed] = useState<Set<string>>(defaultCollapsed);
   const toggleSection = (key: string) =>

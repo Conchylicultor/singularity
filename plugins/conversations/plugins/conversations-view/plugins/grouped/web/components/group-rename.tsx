@@ -31,7 +31,7 @@ export function GroupRename({
       inputRef.current.select();
       onFocused?.();
     }
-    // We intentionally only fire when autoFocus flips to true.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fire once when autoFocus flips to true; onFocused is a notification, not a dep
   }, [autoFocus]);
 
   return (

@@ -34,7 +34,7 @@ export function SummaryPane() {
       setPendingSince(null);
       Shell.Toast({ description: "Summary ready", variant: "success" });
     }
-  }, [latest?.id, pendingSince]);
+  }, [latest, pendingSince]);
 
   // Timeout fallback so a stuck spawn surfaces.
   useEffect(() => {
