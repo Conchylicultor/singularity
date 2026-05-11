@@ -114,6 +114,7 @@ import primitivesAppShellPlugin from "@plugins/primitives/plugins/app-shell/web"
 import primitivesAutoScrollPlugin from "@plugins/primitives/plugins/auto-scroll/web";
 import primitivesAvatarPlugin from "@plugins/primitives/plugins/avatar/web";
 import primitivesBreadcrumbPlugin from "@plugins/primitives/plugins/breadcrumb/web";
+import primitivesDetailSectionsPlugin from "@plugins/primitives/plugins/detail-sections/web";
 import primitivesEditableFieldPlugin from "@plugins/primitives/plugins/editable-field/web";
 import primitivesErrorBoundaryPlugin from "@plugins/primitives/plugins/error-boundary/web";
 import primitivesFileLinksPlugin from "@plugins/primitives/plugins/file-links/web";
@@ -276,6 +277,7 @@ export const plugins: PluginDefinition[] = [
   primitivesAutoScrollPlugin,
   primitivesAvatarPlugin,
   primitivesBreadcrumbPlugin,
+  primitivesDetailSectionsPlugin,
   primitivesEditableFieldPlugin,
   primitivesErrorBoundaryPlugin,
   primitivesFileLinksPlugin,
