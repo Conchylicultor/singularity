@@ -41,7 +41,10 @@ export function formatDuration(ms: number): string {
 function formatTickMs(ms: number): string {
   if (ms === 0) return "0";
   if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(0)}s`;
+  if (ms < 60_000) return `${(ms / 1000).toFixed(0)}s`;
+  const minutes = Math.floor(ms / 60_000);
+  const seconds = Math.round((ms % 60_000) / 1000);
+  return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
 }
 
 export function groupByPhase(spans: Span[]): {
