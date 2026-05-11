@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { promptTemplatesServerResource } from "./internal/resources";
 import { handleList }   from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";
@@ -16,5 +17,5 @@ export default {
     "PATCH /api/prompt-templates/:id":  handleUpdate,
     "DELETE /api/prompt-templates/:id": handleDelete,
   },
-  resources: [promptTemplatesServerResource],
+  contributions: [Resource.Declare(promptTemplatesServerResource)],
 } satisfies ServerPluginDefinition;

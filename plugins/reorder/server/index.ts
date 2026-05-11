@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { reorderPrefsResource } from "./internal/resource";
 import {
   handleDeleteContribution,
@@ -15,7 +16,7 @@ export default {
   description:
     "Generic reorder primitive: per-worktree storage of slot contribution ranks.",
   loadBearing: true,
-  resources: [reorderPrefsResource],
+  contributions: [Resource.Declare(reorderPrefsResource)],
   httpRoutes: {
     "GET /api/reorder/:slotId": handleGetSlot,
     "PATCH /api/reorder/:slotId": handlePatchSlot,

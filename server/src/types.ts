@@ -15,11 +15,6 @@ export type HttpHandler = (
   params: Record<string, string>,
 ) => Response | Promise<Response>;
 
-// Opaque handle for a resource defined via `defineResource`. The concrete
-// `Resource<T, P>` type lives in ./resources; kept minimal here to avoid a
-// circular import.
-export type ResourceLike = { key: string };
-
 /**
  * A lazy registry write. Returned by helpers like `Mcp.tool`, `Runtime.define`,
  * `defineJob`, `defineTriggerEvent`, and `UNSAFE_installDurableHooks`. The
@@ -48,8 +43,6 @@ export interface ServerPluginDefinition {
   loadBearing?: boolean;
   httpRoutes?: Record<string, HttpHandler>;
   wsRoutes?: Record<string, WsHandler>;
-  /** Live-state resources declared via `defineResource`. */
-  resources?: ResourceLike[];
   /**
    * Plugins this plugin's `register` array must run after. Most plugins need
    * this empty: phase ordering (all `register` writes before any `onReady`)

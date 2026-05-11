@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { conversationNotesResource } from "./internal/resource";
 import { handleUpsertNote, handleDeleteNote } from "./internal/routes";
 
@@ -10,7 +11,7 @@ export default {
   name: "Conversation: Notes",
   description:
     "Per-conversation free-form notes, auto-saved to the server.",
-  resources: [conversationNotesResource],
+  contributions: [Resource.Declare(conversationNotesResource)],
   httpRoutes: {
     "PUT /api/conversation-notes/:conversationId": handleUpsertNote,
     "DELETE /api/conversation-notes/:conversationId": handleDeleteNote,

@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { activeDataBindingsResource } from "./internal/resource";
 import { handleDeleteBinding, handlePutBinding } from "./internal/routes";
 
@@ -10,7 +11,7 @@ export default {
   name: "Active Data",
   description:
     "Persistent state for inline interactive widgets — table + resource keyed by (conversationId, messageId, tag, occurrenceIndex).",
-  resources: [activeDataBindingsResource],
+  contributions: [Resource.Declare(activeDataBindingsResource)],
   httpRoutes: {
     "PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex":
       handlePutBinding,

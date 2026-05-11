@@ -1,7 +1,14 @@
 import type { ServerWebSocket } from "bun";
 import type { ZodType } from "zod";
+import { defineServerContribution } from "./contributions";
 import { reportServerError } from "./error-reporter";
 import type { WsData, WsHandler } from "./types";
+
+export const Resource = {
+  Declare: defineServerContribution<{ key: string; mode: ResourceMode }>(
+    "resource.declare",
+  ),
+};
 
 // Live-state primitive. See
 // research/2026-04-15-global-sse-lifecycle-mental-model-v3.md
@@ -497,9 +504,16 @@ function errorReport(context: string, err: unknown) {
 
 function handleResourcesDebug(): Response {
   rebuildDag();
+  const contributions = Resource.Declare.getContributions();
+  const ownerByKey = new Map<string, { pluginId?: string; pluginName?: string }>();
+  for (const c of contributions) {
+    ownerByKey.set(c.key, { pluginId: c._pluginId, pluginName: c._pluginName });
+  }
   const out: Array<{
     key: string;
     mode: ResourceMode;
+    pluginId?: string;
+    pluginName?: string;
     subscribers: number;
     versions: Record<string, number>;
     dependsOn: string[];
@@ -511,9 +525,12 @@ function handleResourcesDebug(): Response {
       const inner = st.subs.get(entry.key);
       if (inner) subscribers += inner.size;
     }
+    const owner = ownerByKey.get(entry.key);
     out.push({
       key: entry.key,
       mode: entry.mode,
+      pluginId: owner?.pluginId,
+      pluginName: owner?.pluginName,
       subscribers,
       versions: Object.fromEntries(entry.versions),
       dependsOn: entry.upstreamKeys,

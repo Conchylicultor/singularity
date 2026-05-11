@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { quickPromptsServerResource } from "./internal/resources";
 import { handleList }   from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";
@@ -16,5 +17,5 @@ export default {
     "PATCH /api/quick-prompts/:id": handleUpdate,
     "DELETE /api/quick-prompts/:id": handleDelete,
   },
-  resources: [quickPromptsServerResource],
+  contributions: [Resource.Declare(quickPromptsServerResource)],
 } satisfies ServerPluginDefinition;

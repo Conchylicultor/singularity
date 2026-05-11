@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { claudeCliCallsResource } from "./internal/resources";
 
 export { runClaudePrint, ClaudeCliError } from "./internal/run-claude-print";
@@ -11,5 +12,5 @@ export default {
   name: "Claude CLI",
   description:
     "One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.",
-  resources: [claudeCliCallsResource],
+  contributions: [Resource.Declare(claudeCliCallsResource)],
 } satisfies ServerPluginDefinition;

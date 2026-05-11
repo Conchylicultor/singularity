@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { isNull } from "drizzle-orm";
 import { deleteTriggersFor, trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
@@ -17,8 +18,7 @@ import { buildConfig } from "../shared/config";
 export default {
   id: "build",
   name: "Build",
-  contributions: [Config.Field(buildConfig)],
-  resources: [mainAheadCountResource, buildHistoryResource],
+  contributions: [Config.Field(buildConfig), Resource.Declare(mainAheadCountResource), Resource.Declare(buildHistoryResource)],
   httpRoutes: {
     "POST /api/build": handleBuild,
     "GET /api/build/status": handleBuildStatus,

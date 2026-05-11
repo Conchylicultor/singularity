@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { exitCleanFinalizeJob } from "./internal/exit-clean-finalize-job";
 import { exitCleanTool, flagRaiseTool } from "./internal/mcp-tools";
 import { pushAndExitJob } from "./internal/push-and-exit-job";
@@ -10,7 +11,7 @@ import { _pushAndExitJobs } from "./internal/tables";
 export default {
   id: "push-and-exit",
   name: "Push and Exit",
-  resources: [pushAndExitResource],
+  contributions: [Resource.Declare(pushAndExitResource)],
   httpRoutes: {
     "POST /api/conversations/:id/push-and-exit": async (_req, { id }) => {
       const existing = await db

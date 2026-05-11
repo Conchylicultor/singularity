@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { notificationsResource } from "./internal/resources";
 import { handleDismiss } from "./internal/handle-dismiss";
 import { handleDismissAll } from "./internal/handle-dismiss-all";
@@ -13,7 +14,7 @@ export default {
   id: "notifications",
   name: "Notifications",
   description: "Persistent bell-button notifications backed by the DB.",
-  resources: [notificationsResource],
+  contributions: [Resource.Declare(notificationsResource)],
   httpRoutes: {
     "POST /api/notifications/dismiss-all": handleDismissAll,
     "POST /api/notifications/mark-all-read": handleMarkAllRead,

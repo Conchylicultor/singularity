@@ -45,8 +45,6 @@ export default {
     "DELETE /api/tasks/:id/dependencies/:depId": handleRemoveDependency,
     "GET /api/repo-info": handleRepoInfo,
   },
-  // Resources are now mounted on tasks-core; tasks plugin owns no resources.
-  resources: [],
   register: [addTaskTool, pushIngestJob],
   onReady: async () => {
     const created = await ensureConversationsMetaTask();

@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { setErrorReporter } from "@server/error-reporter";
 import { handleReport } from "./internal/handle-report";
 import { crashesResource } from "./internal/resources";
@@ -18,7 +19,7 @@ export default {
   httpRoutes: {
     "POST /api/crashes": handleReport,
   },
-  resources: [crashesResource],
+  contributions: [Resource.Declare(crashesResource)],
   onReady: async () => {
     installProcessHooks();
     setErrorReporter((report) => {

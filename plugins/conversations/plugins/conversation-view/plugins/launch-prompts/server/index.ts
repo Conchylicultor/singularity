@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { launchPromptsServerResource } from "./internal/resources";
 import { handleList }   from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";
@@ -16,5 +17,5 @@ export default {
     "PATCH /api/launch-prompts/:id":  handleUpdate,
     "DELETE /api/launch-prompts/:id": handleDelete,
   },
-  resources: [launchPromptsServerResource],
+  contributions: [Resource.Declare(launchPromptsServerResource)],
 } satisfies ServerPluginDefinition;

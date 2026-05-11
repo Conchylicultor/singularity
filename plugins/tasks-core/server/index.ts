@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import {
   tasksResource,
   attemptsResource,
@@ -151,7 +152,7 @@ export default {
   description:
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,
-  resources: [tasksResource, attemptsResource, pushesResource, recentConversationsResource],
+  contributions: [Resource.Declare(tasksResource), Resource.Declare(attemptsResource), Resource.Declare(pushesResource), Resource.Declare(recentConversationsResource)],
   register: [pushLanded, taskStatusChanged],
   onReady: sweepOrphanedAttempts,
 } satisfies ServerPluginDefinition;

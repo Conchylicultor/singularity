@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { editedFilesResource } from "./internal/edited-files-resource";
 
 export default {
@@ -6,5 +7,5 @@ export default {
   name: "Conversation: Code",
   description:
     "Tracks edited files in the conversation's worktree via the live-state primitive.",
-  resources: [editedFilesResource],
+  contributions: [Resource.Declare(editedFilesResource)],
 } satisfies ServerPluginDefinition;

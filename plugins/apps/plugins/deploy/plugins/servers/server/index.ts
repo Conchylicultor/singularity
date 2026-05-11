@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { handleList } from "./internal/handle-list";
 import { handleGet } from "./internal/handle-get";
 import { handleCreate } from "./internal/handle-create";
@@ -20,5 +21,5 @@ export default {
     "PATCH /api/deploy/servers/:id": handleUpdate,
     "DELETE /api/deploy/servers/:id": handleDelete,
   },
-  resources: [serversResource],
+  contributions: [Resource.Declare(serversResource)],
 } satisfies ServerPluginDefinition;

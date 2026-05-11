@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { refAdvanced } from "./internal/tables-ref-advanced";
 import { refHeadResource } from "./internal/ref-head-resource";
 import { startGitWatcher, stopGitWatcher } from "./internal/watcher";
@@ -14,7 +15,7 @@ export default {
   description:
     "Watches local git refs (refs/heads/main by default) via @parcel/watcher. Emits the git.refAdvanced trigger event and notifies the refHeadResource live-state resource on every advance.",
   loadBearing: true,
-  resources: [refHeadResource],
+  contributions: [Resource.Declare(refHeadResource)],
   register: [refAdvanced],
   onReady: async () => {
     await startGitWatcher();

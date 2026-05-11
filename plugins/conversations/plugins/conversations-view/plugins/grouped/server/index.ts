@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { conversationGroupsResource } from "./internal/resource";
 import {
   handleAddMember,
@@ -24,5 +25,5 @@ export default {
     "POST /api/conversation-groups/:id/members": handleAddMember,
     "DELETE /api/conversation-groups/members/:conversationId": handleRemoveMember,
   },
-  resources: [conversationGroupsResource],
+  contributions: [Resource.Declare(conversationGroupsResource)],
 } satisfies ServerPluginDefinition;

@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { Config } from "@plugins/config/server";
 import { handleCumulative, handleLinesCumulative } from "./internal/handle-cumulative";
 import { handleLinesRate, handleRate } from "./internal/handle-rate";
@@ -14,7 +15,7 @@ export default {
   id: "stats-commits",
   name: "Stats: Commits",
   description: "Commit-based stats: commits and lines of change over time.",
-  contributions: [Config.Field(commitsConfig)],
+  contributions: [Config.Field(commitsConfig), Resource.Declare(excludedPathStateResource)],
   httpRoutes: {
     "GET /api/stats/commits/cumulative": handleCumulative,
     "GET /api/stats/commits/rate": handleRate,
@@ -24,5 +25,4 @@ export default {
     "PATCH /api/stats/commits/excluded-path-state": handlePatchState,
     "DELETE /api/stats/commits/excluded-path-state/:path": handleDeleteState,
   },
-  resources: [excludedPathStateResource],
 } satisfies ServerPluginDefinition;

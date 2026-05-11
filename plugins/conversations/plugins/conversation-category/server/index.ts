@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { Config } from "@plugins/config/server";
 import {
   deleteTriggersFor,
@@ -31,8 +32,7 @@ export default {
   name: "Conversation: Category",
   description:
     "Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.",
-  contributions: [Config.Field(conversationCategoryConfig)],
-  resources: [conversationCategoriesResource, categoryColorsResource],
+  contributions: [Config.Field(conversationCategoryConfig), Resource.Declare(conversationCategoriesResource), Resource.Declare(categoryColorsResource)],
   httpRoutes: {
     "POST /api/conversation-category/:conversationId/classify": handleClassify,
     "POST /api/conversation-category/:conversationId": handleSetCategory,

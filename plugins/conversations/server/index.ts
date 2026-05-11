@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { handleClose } from "./internal/handle-close";
 import { handleList } from "./internal/handle-list";
 import { handleListGone } from "./internal/handle-list-gone";
@@ -58,7 +59,7 @@ export default {
     "POST /api/conversations/:id/close": handleClose,
   },
   // recentConversationsResource is now mounted on tasks-core; only fork-errors stays here.
-  resources: [forkErrorsResource],
+  contributions: [Resource.Declare(forkErrorsResource)],
   register: [maybeLaunchTaskJob, conversationCreated, conversationTurnCompleted, userTurnSent],
   onReady: async () => {
     await ensureSystemMeta();

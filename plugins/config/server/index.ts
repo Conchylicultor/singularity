@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { ready as secretsReady } from "@plugins/infra/plugins/secrets/server";
 import { configResource } from "./internal/resource";
 import { configSecretsResource } from "./internal/secrets-resource";
@@ -28,7 +29,7 @@ export default {
     "PATCH /api/config": handlePatch,
     "DELETE /api/config/:key": handleDelete,
   },
-  resources: [configResource, configSecretsResource],
+  contributions: [Resource.Declare(configResource), Resource.Declare(configSecretsResource)],
   async onReady() {
     buildRegistry();
     // Plaintext→secrets migration is main-only: the secrets store is

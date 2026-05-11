@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import {
   deleteTriggersFor,
   trigger,
@@ -25,7 +26,7 @@ export default {
   name: "Conversations Queue",
   description:
     "Server side of the global Anki-style conversations queue. Owns the conversations_ext_queue side-table via the entity-extensions primitive and seeds rank on conversationCreated + conversationTurnCompleted.",
-  resources: [queueRanksResource],
+  contributions: [Resource.Declare(queueRanksResource)],
   register: [seedRankJob],
   httpRoutes: {
     "POST /api/conversations-queue/reorder": handleReorder,
