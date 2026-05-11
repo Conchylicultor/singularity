@@ -199,31 +199,13 @@ export function BuildPopoverContent({ variant }: { variant: "popover" | "pane" }
   const latestRun = runs[0];
   const building = latestRun?.finishedAt === null;
 
-  const trackedBuildRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!latestRun) return;
-
-    if (latestRun.finishedAt === null) {
-      trackedBuildRef.current = latestRun.id;
-      return;
-    }
-
-    if (trackedBuildRef.current === latestRun.id) {
-      trackedBuildRef.current = null;
-      if (latestRun.exitCode === 0) {
-        Shell.Toast({ description: "Build succeeded", variant: "success" });
-      } else {
-        Shell.Toast({ description: `Build failed (exit ${latestRun.exitCode})`, variant: "error" });
-      }
-    }
-  }, [latestRun?.id, latestRun?.finishedAt]);
-
   const handleBuild = useCallback(async () => {
     try {
       const res = await fetch("/api/build", { method: "POST" });
       if (!res.ok) {
         Shell.Toast({ description: "Failed to start build", variant: "error" });
+      } else {
+        Shell.Toast({ description: "Build started", variant: "info" });
       }
     } catch {
       Shell.Toast({ description: "Server unreachable", variant: "error" });

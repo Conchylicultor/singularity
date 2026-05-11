@@ -6,7 +6,7 @@ import { MdRefresh, MdOpenInFull } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { mainAheadCountResource } from "../../shared/resources";
+import { mainAheadCountResource, buildHistoryResource } from "../../shared/resources";
 import { BuildPopoverContent } from "./build-popover-content";
 import { buildPane } from "../panes";
 
@@ -35,6 +35,29 @@ export function BuildButton() {
 
   const { data: aheadData } = useResource(mainAheadCountResource);
   const mainAheadCount = aheadData?.count ?? 0;
+
+  const { data: historyData } = useResource(buildHistoryResource);
+  const latestRun = (historyData ?? [])[0];
+  const building = latestRun?.finishedAt === null;
+  const trackedBuildRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!latestRun) return;
+
+    if (latestRun.finishedAt === null) {
+      trackedBuildRef.current = latestRun.id;
+      return;
+    }
+
+    if (trackedBuildRef.current === latestRun.id) {
+      trackedBuildRef.current = null;
+      if (latestRun.exitCode === 0) {
+        Shell.Toast({ description: "Build succeeded", variant: "success" });
+      } else {
+        Shell.Toast({ description: `Build failed (exit ${latestRun.exitCode})`, variant: "error" });
+      }
+    }
+  }, [latestRun?.id, latestRun?.finishedAt]);
 
   function applyStatus(status: BuildStatus) {
     if (initialHashRef.current === null) {
@@ -72,13 +95,15 @@ export function BuildButton() {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const spinning = building || autoBuilding;
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground"
       >
-          <MdRefresh className={`size-4 ${autoBuilding ? "animate-spin" : ""}`} />
-          Build
+          <MdRefresh className={`size-4 ${spinning ? "animate-spin" : ""}`} />
+          {spinning ? "Building…" : "Build"}
           {mainAheadCount > 0 ? (
             <WithTooltip content={`main is ${mainAheadCount} commit${mainAheadCount !== 1 ? "s" : ""} ahead of this worktree`}>
               <span className="block size-2 rounded-full bg-amber-400" />

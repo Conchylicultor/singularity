@@ -16,9 +16,13 @@ export function isBuildInflight(): boolean {
 export function triggerBuild(trigger: "manual" | "auto"): void {
   if (inflight) return;
   inflight = true;
-  doRunBuild(trigger).finally(() => {
-    inflight = false;
-  });
+  doRunBuild(trigger)
+    .catch((err) => {
+      buildLog.publish(`Build error: ${err?.message ?? err}`, "stderr");
+    })
+    .finally(() => {
+      inflight = false;
+    });
 }
 
 function getHeadCommit(): string | null {
