@@ -2,7 +2,6 @@ import type { Command } from "commander";
 import { existsSync, readdirSync, readFileSync, rmSync, statSync } from "fs";
 import { join } from "path";
 import { checkBroadcasts } from "../broadcasts";
-import { runChecks } from "../checks";
 
 async function run(
   cmd: string[],
@@ -28,6 +27,17 @@ async function exec(cmd: string[], cwd?: string): Promise<void> {
   if (exitCode !== 0) {
     process.exit(1);
   }
+}
+
+// Spawns a fresh process so checks see the post-rebase code on disk,
+// not the stale module cache from process start.
+async function runChecksSubprocess(root: string): Promise<boolean> {
+  const proc = Bun.spawn(["bun", "cli/src/index.ts", "check"], {
+    cwd: root,
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  return (await proc.exited) === 0;
 }
 
 async function getWorktreeRoot(): Promise<string> {
@@ -253,9 +263,10 @@ export function registerPush(program: Command) {
           "--exec",
           `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
         ]);
-        await postRebaseNormalize(await getWorktreeRoot(), pushId);
+        const fromMainRoot = await getWorktreeRoot();
+        await postRebaseNormalize(fromMainRoot, pushId);
         console.log("Running checks...");
-        const ok = await runChecks();
+        const ok = await runChecksSubprocess(fromMainRoot);
         if (!ok) {
           console.error(
             "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
@@ -320,8 +331,11 @@ export function registerPush(program: Command) {
       await postRebaseNormalize(await getWorktreeRoot(), pushId);
 
       // 4. Run checks on the rebased tree — this is exactly what will land on main.
+      //    Spawned as a subprocess so the check code comes from the rebased
+      //    tree, not the (potentially stale) module cache of this process.
       console.log("Running checks...");
-      const ok = await runChecks();
+      const root = await getWorktreeRoot();
+      const ok = await runChecksSubprocess(root);
       if (!ok) {
         console.error(
           `Checks failed after rebasing ${branch} onto main. ` +
