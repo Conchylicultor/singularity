@@ -27,6 +27,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  reorderGroupsResource,
+  type ReorderGroup,
+} from "@plugins/reorder/plugins/groups/shared";
 import { reorderPrefsResource } from "../../shared/resource";
 import {
   lookupReorderConfig,
@@ -34,6 +38,7 @@ import {
   type ReorderConfig,
 } from "./area";
 import { useEditMode } from "./edit-mode-store";
+import { ReorderGroupBox } from "./group-box";
 
 type BaseItem = { id: string; excludeFromReorder?: boolean };
 
@@ -47,31 +52,46 @@ export function isSpacer(item: { id: string }): item is SpacerItem {
   return item.id.startsWith(SPACER_PREFIX);
 }
 
+// --- Group types ------------------------------------------------------------
+
+export type { ReorderGroup } from "@plugins/reorder/plugins/groups/shared";
+
+export type GroupEntry<P> = {
+  kind: "group";
+  group: ReorderGroup;
+  members: (P | SpacerItem)[];
+};
+
+export type TopLevelEntry<P> = P | SpacerItem | GroupEntry<P>;
+
+export function isGroupEntry<P>(
+  entry: TopLevelEntry<P>,
+): entry is GroupEntry<P> {
+  return (
+    typeof entry === "object" &&
+    entry !== null &&
+    "kind" in entry &&
+    (entry as GroupEntry<P>).kind === "group"
+  );
+}
+
 // -----------------------------------------------------------------------------
 
 export type HostOverride<P extends BaseItem> = {
-  /** Per-host filter (e.g. Shell.Sidebar's three sub-lists each pick a subset). */
   filter?: (item: P) => boolean;
-  /** Override the slot-level getGroup for this host. */
   getGroup?: (item: P) => string | null;
-  /**
-   * Sub-namespace, required when one slot is rendered as multiple disjoint host
-   * areas (e.g. Shell.Sidebar split into buttons / pinned-panes / scroll-panes).
-   * Ranks are stored under `${slot.id}:${subId}` so contributions in different
-   * sub-areas can share an `id` without colliding on the rank row.
-   */
   subId?: string;
 };
 
 export type UseAreaResult<P extends BaseItem> = {
-  /** Contributions only (no spacers). Backward-compatible with existing hosts. */
   items: P[];
-  /** Full ordered list including spacer items. Use this when rendering spacers. */
   entries: (P | SpacerItem)[];
   hiddenItems: P[];
   editMode: boolean;
   DndWrapper: ComponentType<{ children: ReactNode }>;
   ReorderItem: ComponentType<{ item: P | SpacerItem; children: ReactNode }>;
+  groupedEntries: TopLevelEntry<P>[];
+  GroupBox: ComponentType<{ group: ReorderGroup; children: ReactNode }>;
 };
 
 // --- Area context (shared between DndWrapper, ReorderItem, RestoreButton) ---
@@ -81,12 +101,20 @@ type InsertionIndicator = {
   position: "before" | "after";
 } | null;
 
+type GroupingIndicator = {
+  targetId: string;
+} | null;
+
 type ReorderAreaCtxValue = {
   storageId: string;
   hiddenItems: BaseItem[];
   getLabel: (item: BaseItem) => string;
   insertionIndicator: InsertionIndicator;
+  groupingIndicator: GroupingIndicator;
   addSpacer: () => void;
+  addGroup: (() => void) | null;
+  dragInProgress: boolean;
+  enableGroups: boolean;
 };
 const ReorderAreaContext = createContext<ReorderAreaCtxValue | null>(null);
 
@@ -110,6 +138,7 @@ export function useArea<P extends BaseItem>(
   const getGroup = override?.getGroup ?? slotCfg?.getGroup;
   const filter = override?.filter;
   const storageId = override?.subId ? `${slot.id}:${override.subId}` : slot.id;
+  const enableGroups = slotCfg?.enableGroups ?? false;
 
   const slotGetLabel = slotCfg?.getLabel as
     | ((item: P) => string)
@@ -127,8 +156,11 @@ export function useArea<P extends BaseItem>(
   const { data: rankMap } = useResource(reorderPrefsResource, {
     slotId: storageId,
   });
+  const { data: groupsData } = useResource(reorderGroupsResource, {
+    slotId: storageId,
+  });
 
-  const { items, entries, hiddenItems } = useMemo(() => {
+  const { items, entries, hiddenItems, membershipMap } = useMemo(() => {
     const filtered = filter ? raw.filter(filter) : raw;
 
     const visible: (P | SpacerItem)[] = [];
@@ -179,10 +211,92 @@ export function useArea<P extends BaseItem>(
       })
       .map((row) => row.item);
 
+    // Build membership map from groups data
+    const mMap = new Map<string, { groupId: string; rank: Rank }>();
+    if (groupsData) {
+      for (const m of groupsData.members) {
+        mMap.set(m.contributionId, { groupId: m.groupId, rank: m.rank });
+      }
+    }
+
     const entries = sorted;
     const items = sorted.filter((x): x is P => !isSpacer(x));
-    return { items, entries, hiddenItems: hidden };
-  }, [raw, rankMap, filter, getGroup]);
+    return { items, entries, hiddenItems: hidden, membershipMap: mMap };
+  }, [raw, rankMap, filter, getGroup, groupsData]);
+
+  // Compute groupedEntries: groups and ungrouped items interleaved by rank
+  const groupedEntries = useMemo((): TopLevelEntry<P>[] => {
+    if (!enableGroups || !groupsData || groupsData.groups.length === 0) {
+      return entries as TopLevelEntry<P>[];
+    }
+
+    // Collect group members from the visible entries
+    const groupMembersMap = new Map<string, (P | SpacerItem)[]>();
+    for (const g of groupsData.groups) {
+      groupMembersMap.set(g.id, []);
+    }
+
+    const ungrouped: (P | SpacerItem)[] = [];
+    for (const item of entries) {
+      if (!isSpacer(item) && item.excludeFromReorder) {
+        ungrouped.push(item);
+        continue;
+      }
+      const membership = membershipMap.get(item.id);
+      if (membership && groupMembersMap.has(membership.groupId)) {
+        groupMembersMap.get(membership.groupId)!.push(item);
+      } else {
+        ungrouped.push(item);
+      }
+    }
+
+    // Sort members within each group by member rank
+    for (const [, members] of groupMembersMap) {
+      members.sort((a, b) => {
+        const aM = membershipMap.get(a.id);
+        const bM = membershipMap.get(b.id);
+        if (aM && bM) return Rank.compare(aM.rank, bM.rank);
+        return 0;
+      });
+    }
+
+    // Build interleaved top-level list
+    type Ranked = { rank: Rank | null; naturalIdx: number; entry: TopLevelEntry<P> };
+    const topLevel: Ranked[] = [];
+
+    for (const g of groupsData.groups) {
+      topLevel.push({
+        rank: g.rank,
+        naturalIdx: Infinity,
+        entry: {
+          kind: "group",
+          group: g,
+          members: groupMembersMap.get(g.id) ?? [],
+        },
+      });
+    }
+
+    for (let i = 0; i < ungrouped.length; i++) {
+      const item = ungrouped[i]!;
+      const r = rankMap?.[item.id]?.rank ?? null;
+      topLevel.push({ rank: r, naturalIdx: i, entry: item });
+    }
+
+    topLevel.sort((a, b) => {
+      // excludeFromReorder items always go last
+      const aExcl =
+        !isGroupEntry(a.entry) && !isSpacer(a.entry) && !!a.entry.excludeFromReorder;
+      const bExcl =
+        !isGroupEntry(b.entry) && !isSpacer(b.entry) && !!b.entry.excludeFromReorder;
+      if (aExcl !== bExcl) return aExcl ? 1 : -1;
+      if (a.rank && b.rank) return Rank.compare(a.rank, b.rank);
+      if (a.rank) return -1;
+      if (b.rank) return 1;
+      return a.naturalIdx - b.naturalIdx;
+    });
+
+    return topLevel.map((t) => t.entry);
+  }, [entries, groupsData, membershipMap, rankMap, enableGroups]);
 
   const itemsRef = useRef<(P | SpacerItem)[]>(entries);
   itemsRef.current = entries;
@@ -196,6 +310,12 @@ export function useArea<P extends BaseItem>(
   getLabelRef.current = effectiveGetLabel;
   const storageIdRef = useRef(storageId);
   storageIdRef.current = storageId;
+  const membershipMapRef = useRef(membershipMap);
+  membershipMapRef.current = membershipMap;
+  const groupsDataRef = useRef(groupsData);
+  groupsDataRef.current = groupsData;
+  const groupedEntriesRef = useRef(groupedEntries);
+  groupedEntriesRef.current = groupedEntries;
 
   const onDrop = useCallback(
     (draggedKey: string, overKey: string) => {
@@ -244,6 +364,15 @@ export function useArea<P extends BaseItem>(
         return;
       }
 
+      // If item was in a group, remove it first
+      const membership = membershipMapRef.current.get(draggedKey);
+      if (membership) {
+        void fetch(
+          `/api/reorder/${storageIdRef.current}/groups/members/${draggedKey}`,
+          { method: "DELETE" },
+        );
+      }
+
       void fetch(`/api/reorder/${storageId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -253,8 +382,171 @@ export function useArea<P extends BaseItem>(
     [storageId],
   );
 
+  const onGroupCreate = useCallback(
+    (draggedKey: string, targetKey: string) => {
+      const list = itemsRef.current;
+      const dragged = list.find((x) => x.id === draggedKey);
+      const target = list.find((x) => x.id === targetKey);
+      if (!dragged || !target) return;
+      if (isSpacer(dragged) || isSpacer(target)) return;
+      if (dragged.excludeFromReorder || target.excludeFromReorder) return;
+
+      // Static group constraint
+      const gg = getGroupRef.current;
+      if (gg && gg(dragged) !== gg(target)) return;
+
+      // Check if target is already in a group → join that group
+      const targetMembership = membershipMapRef.current.get(targetKey);
+      if (targetMembership) {
+        void fetch(`/api/reorder/groups/${targetMembership.groupId}/members`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            slotId: storageIdRef.current,
+            contributionIds: [draggedKey],
+          }),
+        });
+        return;
+      }
+
+      // Create a new group with both items
+      void fetch(`/api/reorder/${storageIdRef.current}/groups`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contributionIds: [targetKey, draggedKey] }),
+      });
+    },
+    [],
+  );
+
+  const onGroupJoin = useCallback(
+    (draggedKey: string, groupId: string) => {
+      const list = itemsRef.current;
+      const dragged = list.find((x) => x.id === draggedKey);
+      if (!dragged || isSpacer(dragged) || dragged.excludeFromReorder) return;
+
+      // Static group constraint: check first member of group
+      const gg = getGroupRef.current;
+      if (gg) {
+        const gd = groupsDataRef.current;
+        if (gd) {
+          const firstMemberId = gd.members.find(
+            (m) => m.groupId === groupId,
+          )?.contributionId;
+          if (firstMemberId) {
+            const firstMember = list.find((x) => x.id === firstMemberId);
+            if (firstMember && !isSpacer(firstMember)) {
+              if (gg(dragged) !== gg(firstMember)) return;
+            }
+          }
+        }
+      }
+
+      void fetch(`/api/reorder/groups/${groupId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slotId: storageIdRef.current,
+          contributionIds: [draggedKey],
+        }),
+      });
+    },
+    [],
+  );
+
+  const onGroupReorder = useCallback(
+    (groupId: string, overData: Record<string, unknown>) => {
+      const gd = groupsDataRef.current;
+      if (!gd) return;
+
+      // Find the group being dragged
+      const groups = gd.groups;
+      const draggedIdx = groups.findIndex((g) => g.id === groupId);
+      if (draggedIdx < 0) return;
+
+      // For group reorder, we need to find the target in groupedEntries
+      const ge = groupedEntriesRef.current;
+      const zone = overData.zone as string | undefined;
+      const targetId = overData.targetId as string | undefined;
+      const targetGroupId = overData.groupId as string | undefined;
+
+      let prevRank: Rank | null = null;
+      let nextRank: Rank | null = null;
+
+      if (zone === "before" || zone === "after") {
+        // Dropped before/after a specific item or group in the top-level list
+        const topLevelIdx = ge.findIndex((e) => {
+          if (isGroupEntry(e)) return e.group.id === targetId;
+          return e.id === targetId;
+        });
+        if (topLevelIdx < 0) return;
+
+        if (zone === "before") {
+          const prev = topLevelIdx > 0 ? ge[topLevelIdx - 1] : null;
+          const next = ge[topLevelIdx];
+          prevRank = prev
+            ? isGroupEntry(prev)
+              ? prev.group.rank
+              : (rankMapRef.current?.[prev.id]?.rank ?? null)
+            : null;
+          nextRank = next
+            ? isGroupEntry(next)
+              ? next.group.rank
+              : (rankMapRef.current?.[next.id]?.rank ?? null)
+            : null;
+        } else {
+          const prev = ge[topLevelIdx];
+          const next =
+            topLevelIdx + 1 < ge.length ? ge[topLevelIdx + 1] : null;
+          prevRank = prev
+            ? isGroupEntry(prev)
+              ? prev.group.rank
+              : (rankMapRef.current?.[prev.id]?.rank ?? null)
+            : null;
+          nextRank = next
+            ? isGroupEntry(next)
+              ? next.group.rank
+              : (rankMapRef.current?.[next.id]?.rank ?? null)
+            : null;
+        }
+      } else if (targetGroupId) {
+        // Dropped on a group-join zone — treat as "after that group"
+        const targetGroup = groups.find((g) => g.id === targetGroupId);
+        if (!targetGroup || targetGroup.id === groupId) return;
+        prevRank = targetGroup.rank;
+        const gIdx = groups.indexOf(targetGroup);
+        const nextGroup = groups[gIdx + 1];
+        nextRank = nextGroup ? nextGroup.rank : null;
+      }
+
+      let newRank: Rank;
+      try {
+        newRank = Rank.between(prevRank, nextRank);
+      } catch {
+        return;
+      }
+
+      void fetch(`/api/reorder/groups/${groupId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slotId: storageIdRef.current, rank: newRank }),
+      });
+    },
+    [],
+  );
+
   const onDropRef = useRef(onDrop);
   onDropRef.current = onDrop;
+  const onGroupCreateRef = useRef(onGroupCreate);
+  onGroupCreateRef.current = onGroupCreate;
+  const onGroupJoinRef = useRef(onGroupJoin);
+  onGroupJoinRef.current = onGroupJoin;
+  const onGroupReorderRef = useRef(onGroupReorder);
+  onGroupReorderRef.current = onGroupReorder;
+
+  const enableGroupsRef = useRef(enableGroups);
+  enableGroupsRef.current = enableGroups;
+
   const DndWrapper = useMemo(
     () =>
       function DndWrapperBound({ children }: { children: ReactNode }) {
@@ -264,17 +556,42 @@ export function useArea<P extends BaseItem>(
         );
         const [activeId, setActiveId] = useState<string | null>(null);
         const [overId, setOverId] = useState<string | null>(null);
+        const [overData, setOverData] = useState<Record<string, unknown>>({});
 
         let insertionIndicator: InsertionIndicator = null;
+        let groupingIndicator: GroupingIndicator = null;
+
         if (activeId && overId && activeId !== overId) {
-          const list = itemsRef.current;
-          const draggedIdx = list.findIndex((x) => x.id === activeId);
-          const overIdx = list.findIndex((x) => x.id === overId);
-          if (draggedIdx >= 0 && overIdx >= 0) {
-            insertionIndicator = {
-              itemId: overId,
-              position: draggedIdx < overIdx ? "after" : "before",
-            };
+          const zone = overData.zone as string | undefined;
+
+          if (enableGroupsRef.current && zone) {
+            // Three-zone mode
+            if (zone === "before") {
+              insertionIndicator = {
+                itemId: overData.targetId as string,
+                position: "before",
+              };
+            } else if (zone === "after") {
+              insertionIndicator = {
+                itemId: overData.targetId as string,
+                position: "after",
+              };
+            } else if (zone === "child") {
+              groupingIndicator = { targetId: overData.targetId as string };
+            }
+            // group-join is handled by GroupBox's own isOver
+          } else {
+            // Single-zone mode (legacy)
+            const list = itemsRef.current;
+            const overPlainId = stripPrefix(DROP_PREFIX, overId);
+            const draggedIdx = list.findIndex((x) => x.id === activeId);
+            const overIdx = list.findIndex((x) => x.id === overPlainId);
+            if (draggedIdx >= 0 && overIdx >= 0) {
+              insertionIndicator = {
+                itemId: overPlainId,
+                position: draggedIdx < overIdx ? "after" : "before",
+              };
+            }
           }
         }
 
@@ -289,7 +606,6 @@ export function useArea<P extends BaseItem>(
               body: JSON.stringify({ contributionId, rank: String(rank) }),
             });
 
-          // Rank all unranked items first to stabilize sort order for DnD
           let prevR: Rank | null = null;
           for (const item of items) {
             if (isSpacer(item)) continue;
@@ -303,9 +619,16 @@ export function useArea<P extends BaseItem>(
             }
           }
 
-          // Add the spacer after all items
           const spacerRank = Rank.between(prevR, null);
           patch(`${SPACER_PREFIX}${crypto.randomUUID()}`, spacerRank);
+        }
+
+        function addGroup() {
+          void fetch(`/api/reorder/${storageIdRef.current}/groups`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          });
         }
 
         const ctxValue: ReorderAreaCtxValue = {
@@ -313,7 +636,11 @@ export function useArea<P extends BaseItem>(
           hiddenItems: hiddenItemsRef.current,
           getLabel: getLabelRef.current,
           insertionIndicator,
+          groupingIndicator,
           addSpacer,
+          addGroup: enableGroupsRef.current ? addGroup : null,
+          dragInProgress: activeId !== null,
+          enableGroups: enableGroupsRef.current,
         };
         return (
           <ReorderAreaContext.Provider value={ctxValue}>
@@ -321,38 +648,105 @@ export function useArea<P extends BaseItem>(
               sensors={sensors}
               collisionDetection={pointerWithin}
               onDragStart={(e) => {
-                setActiveId(
-                  stripPrefix(DRAG_PREFIX, String(e.active.id)),
-                );
+                const id = String(e.active.id);
+                if (id.startsWith(DRAG_GROUP_PREFIX)) {
+                  setActiveId(id);
+                } else {
+                  setActiveId(stripPrefix(DRAG_PREFIX, id));
+                }
               }}
               onDragOver={(e) => {
-                setOverId(
-                  e.over
-                    ? stripPrefix(DROP_PREFIX, String(e.over.id))
-                    : null,
-                );
+                if (e.over) {
+                  setOverId(String(e.over.id));
+                  setOverData(
+                    (e.over.data.current as Record<string, unknown>) ?? {},
+                  );
+                } else {
+                  setOverId(null);
+                  setOverData({});
+                }
               }}
               onDragEnd={(e: DragEndEvent) => {
-                const draggedKey = stripPrefix(
-                  DRAG_PREFIX,
-                  String(e.active.id),
-                );
-                const overKey = e.over
-                  ? stripPrefix(DROP_PREFIX, String(e.over.id))
-                  : null;
-                if (overKey) onDropRef.current(draggedKey, overKey);
+                const activeIdStr = String(e.active.id);
+                const dropData =
+                  (e.over?.data.current as Record<string, unknown>) ?? {};
+                const zone = dropData.zone as string | undefined;
+
+                if (activeIdStr.startsWith(DRAG_GROUP_PREFIX)) {
+                  // Group drag
+                  const groupId = activeIdStr.slice(DRAG_GROUP_PREFIX.length);
+                  if (e.over) {
+                    onGroupReorderRef.current(groupId, dropData);
+                  }
+                } else {
+                  // Item drag
+                  const draggedKey = stripPrefix(DRAG_PREFIX, activeIdStr);
+
+                  if (enableGroupsRef.current && zone) {
+                    // Three-zone dispatch
+                    if (
+                      zone === "before" ||
+                      zone === "after"
+                    ) {
+                      const targetId = dropData.targetId as string;
+                      if (targetId) onDropRef.current(draggedKey, targetId);
+                    } else if (zone === "child") {
+                      const targetId = dropData.targetId as string;
+                      if (targetId)
+                        onGroupCreateRef.current(draggedKey, targetId);
+                    } else if (zone === "group-join") {
+                      const groupId = dropData.groupId as string;
+                      if (groupId)
+                        onGroupJoinRef.current(draggedKey, groupId);
+                    }
+                  } else {
+                    // Single-zone dispatch (legacy)
+                    const overKey = e.over
+                      ? stripPrefix(DROP_PREFIX, String(e.over.id))
+                      : null;
+                    if (overKey) onDropRef.current(draggedKey, overKey);
+                  }
+                }
+
                 setActiveId(null);
                 setOverId(null);
+                setOverData({});
               }}
               onDragCancel={() => {
                 setActiveId(null);
                 setOverId(null);
+                setOverData({});
               }}
             >
               {children}
               {em && <RestoreButton />}
             </DndContext>
           </ReorderAreaContext.Provider>
+        );
+      },
+    [],
+  );
+
+  const GroupBoxBound = useMemo(
+    () =>
+      function GroupBoxBound({
+        group,
+        children,
+      }: {
+        group: ReorderGroup;
+        children: ReactNode;
+      }) {
+        const ctx = useContext(ReorderAreaContext);
+        const editMode = useEditMode();
+        if (!ctx) return <>{children}</>;
+        return (
+          <ReorderGroupBox
+            group={group}
+            storageId={ctx.storageId}
+            editMode={editMode}
+            dragInProgress={ctx.dragInProgress}
+            children={children}
+          />
         );
       },
     [],
@@ -368,10 +762,16 @@ export function useArea<P extends BaseItem>(
       item: P | SpacerItem;
       children: ReactNode;
     }>,
+    groupedEntries,
+    GroupBox: GroupBoxBound as ComponentType<{
+      group: ReorderGroup;
+      children: ReactNode;
+    }>,
   };
 }
 
 const DRAG_PREFIX = "reorder-drag-";
+const DRAG_GROUP_PREFIX = "reorder-drag-group-";
 const DROP_PREFIX = "reorder-drop-";
 const stripPrefix = (prefix: string, s: string) =>
   s.startsWith(prefix) ? s.slice(prefix.length) : s;
@@ -401,6 +801,29 @@ function ReorderItemActive({
   children: ReactNode;
 }) {
   const ctx = useContext(ReorderAreaContext);
+
+  if (ctx?.enableGroups) {
+    return (
+      <ReorderItemThreeZone item={item}>{children}</ReorderItemThreeZone>
+    );
+  }
+
+  return (
+    <ReorderItemSingleZone item={item} ctx={ctx}>
+      {children}
+    </ReorderItemSingleZone>
+  );
+}
+
+function ReorderItemSingleZone({
+  item,
+  ctx,
+  children,
+}: {
+  item: BaseItem;
+  ctx: ReorderAreaCtxValue | null;
+  children: ReactNode;
+}) {
   const draggable = useDraggable({ id: `${DRAG_PREFIX}${item.id}` });
   const droppable = useDroppable({ id: `${DROP_PREFIX}${item.id}` });
 
@@ -462,6 +885,106 @@ function ReorderItemActive({
           <MdClose className="size-2.5" />
         </button>
         <div className="pointer-events-none">{children}</div>
+      </div>
+      {showAfter && <div className="reorder-drop-indicator" />}
+    </>
+  );
+}
+
+function ReorderItemThreeZone({
+  item,
+  children,
+}: {
+  item: BaseItem;
+  children: ReactNode;
+}) {
+  const ctx = useContext(ReorderAreaContext);
+  const draggable = useDraggable({ id: `${DRAG_PREFIX}${item.id}` });
+
+  const beforeDroppable = useDroppable({
+    id: `reorder-drop-before-${item.id}`,
+    data: { zone: "before", targetId: item.id },
+  });
+  const afterDroppable = useDroppable({
+    id: `reorder-drop-after-${item.id}`,
+    data: { zone: "after", targetId: item.id },
+  });
+  const childDroppable = useDroppable({
+    id: `reorder-drop-child-${item.id}`,
+    data: { zone: "child", targetId: item.id },
+  });
+
+  const transform = draggable.transform;
+  const isDragging = draggable.isDragging;
+
+  const style: React.CSSProperties = isDragging
+    ? {
+        transform: transform
+          ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+          : undefined,
+        touchAction: "none",
+        zIndex: 50,
+      }
+    : {
+        touchAction: "none",
+      };
+
+  function handleHide(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!ctx) return;
+    void fetch(`/api/reorder/${ctx.storageId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contributionId: item.id, hidden: true }),
+    });
+  }
+
+  const isGroupTarget = ctx?.groupingIndicator?.targetId === item.id;
+  const showBefore =
+    ctx?.insertionIndicator?.itemId === item.id &&
+    ctx.insertionIndicator.position === "before";
+  const showAfter =
+    ctx?.insertionIndicator?.itemId === item.id &&
+    ctx.insertionIndicator.position === "after";
+
+  return (
+    <>
+      {showBefore && <div className="reorder-drop-indicator" />}
+      <div
+        ref={draggable.setNodeRef}
+        {...draggable.attributes}
+        {...draggable.listeners}
+        style={style}
+        className="group/reorder-item relative"
+      >
+        <div
+          ref={childDroppable.setNodeRef}
+          className={[
+            "relative cursor-grab rounded-md ring-1 ring-primary/50",
+            isDragging && "opacity-40",
+            isGroupTarget && "ring-2 ring-primary bg-accent/30",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          <button
+            className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover/reorder-item:opacity-80 hover:!opacity-100 transition-opacity"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={handleHide}
+            aria-label={`Hide ${item.id}`}
+          >
+            <MdClose className="size-2.5" />
+          </button>
+          <div className="pointer-events-none">{children}</div>
+        </div>
+        <div
+          ref={beforeDroppable.setNodeRef}
+          className="pointer-events-none absolute inset-x-0 top-0 h-[8px]"
+        />
+        <div
+          ref={afterDroppable.setNodeRef}
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[8px]"
+        />
       </div>
       {showAfter && <div className="reorder-drop-indicator" />}
     </>
@@ -597,6 +1120,18 @@ function RestoreButton() {
         )}
 
         <div className="border-t border-border p-1">
+          {ctx.addGroup && (
+            <button
+              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
+              onClick={() => {
+                ctx.addGroup!();
+                setOpen(false);
+              }}
+            >
+              <MdAdd className="size-3.5 shrink-0 text-muted-foreground" />
+              Add Group
+            </button>
+          )}
           <button
             className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
             onClick={() => {

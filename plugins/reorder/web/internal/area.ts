@@ -6,6 +6,8 @@ export type ReorderConfig<P> = {
   getGroup?: (item: P) => string | null;
   /** Label accessor for the restore popover when an item is hidden. */
   getLabel?: (item: P) => string;
+  /** Enable user-created groups within this reorder area. */
+  enableGroups?: boolean;
 };
 
 declare const ReorderableTag: unique symbol;

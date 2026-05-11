@@ -582,6 +582,13 @@
       "tag": "20260511_141004_c347aa93__add_prompt_templates",
       "hash": "c347aa93",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1778536519000,
+      "tag": "20260511_215519_f83d579b__add_reorder_groups",
+      "hash": "f83d579b",
+      "breakpoints": true
     }
   ]
 }

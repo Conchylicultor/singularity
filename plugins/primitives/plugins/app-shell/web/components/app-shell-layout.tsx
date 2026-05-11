@@ -1,7 +1,8 @@
 import { Fragment, useMemo, useState, type ComponentType, type ReactNode } from "react";
 import { MdChevronRight } from "react-icons/md";
 import type { ReorderableSlot } from "@plugins/reorder/web";
-import { Reorder, isSpacer } from "@plugins/reorder/web";
+import { Reorder, isGroupEntry, isSpacer } from "@plugins/reorder/web";
+import type { TopLevelEntry } from "@plugins/reorder/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { Button } from "@/components/ui/button";
@@ -120,15 +121,23 @@ export function AppShellLayout({
     getGroup: () => null,
   });
   const buttonGroups = useMemo(() => {
-    const map = new Map<string, typeof sidebarButtonsArea.items>();
-    for (const btn of sidebarButtonsArea.items) {
-      const key = btn.group ?? "";
+    const map = new Map<string, TopLevelEntry<AppShellSidebarItem>[]>();
+    for (const entry of sidebarButtonsArea.groupedEntries) {
+      let key: string;
+      if (isGroupEntry(entry)) {
+        const firstMember = entry.members[0];
+        key = firstMember && !isSpacer(firstMember) ? (firstMember.group ?? "") : "";
+      } else if (isSpacer(entry)) {
+        key = "";
+      } else {
+        key = entry.group ?? "";
+      }
       const list = map.get(key) ?? [];
-      list.push(btn);
+      list.push(entry);
       map.set(key, list);
     }
     return map;
-  }, [sidebarButtonsArea]);
+  }, [sidebarButtonsArea.groupedEntries]);
 
   const [collapsed, setCollapsed] = useState<Set<string>>(defaultCollapsed);
   const toggleSection = (key: string) =>
@@ -156,7 +165,7 @@ export function AppShellLayout({
         )}
         <div className="flex shrink-0 flex-col">
           <sidebarButtonsArea.DndWrapper>
-            {Array.from(buttonGroups.entries()).map(([groupName, btns]) => (
+            {Array.from(buttonGroups.entries()).map(([groupName, entries]) => (
               <Fragment key={`btn-group-${groupName}`}>
                 <SidebarGroup>
                   {groupName && (() => {
@@ -178,24 +187,57 @@ export function AppShellLayout({
                   {!collapsed.has(groupName) && (
                     <SidebarGroupContent>
                       <SidebarMenu>
-                        {btns.map((btn) => (
-                          <sidebarButtonsArea.ReorderItem
-                            key={btn.id}
-                            item={btn}
-                          >
-                            <PluginErrorBoundary
-                              slot={sidebarSlotId}
-                              label={btn.title}
+                        {entries.map((entry) => {
+                          if (isGroupEntry(entry)) {
+                            return (
+                              <sidebarButtonsArea.GroupBox
+                                key={entry.group.id}
+                                group={entry.group}
+                              >
+                                {entry.members.map((member) => {
+                                  if (isSpacer(member)) return null;
+                                  return (
+                                    <sidebarButtonsArea.ReorderItem
+                                      key={member.id}
+                                      item={member}
+                                    >
+                                      <PluginErrorBoundary
+                                        slot={sidebarSlotId}
+                                        label={member.title}
+                                      >
+                                        <SidebarMenuItem>
+                                          <SidebarMenuButton onClick={member.onClick}>
+                                            <member.icon className="size-4" />
+                                            <span>{member.title}</span>
+                                          </SidebarMenuButton>
+                                        </SidebarMenuItem>
+                                      </PluginErrorBoundary>
+                                    </sidebarButtonsArea.ReorderItem>
+                                  );
+                                })}
+                              </sidebarButtonsArea.GroupBox>
+                            );
+                          }
+                          if (isSpacer(entry)) return null;
+                          return (
+                            <sidebarButtonsArea.ReorderItem
+                              key={entry.id}
+                              item={entry}
                             >
-                              <SidebarMenuItem>
-                                <SidebarMenuButton onClick={btn.onClick}>
-                                  <btn.icon className="size-4" />
-                                  <span>{btn.title}</span>
-                                </SidebarMenuButton>
-                              </SidebarMenuItem>
-                            </PluginErrorBoundary>
-                          </sidebarButtonsArea.ReorderItem>
-                        ))}
+                              <PluginErrorBoundary
+                                slot={sidebarSlotId}
+                                label={entry.title}
+                              >
+                                <SidebarMenuItem>
+                                  <SidebarMenuButton onClick={entry.onClick}>
+                                    <entry.icon className="size-4" />
+                                    <span>{entry.title}</span>
+                                  </SidebarMenuButton>
+                                </SidebarMenuItem>
+                              </PluginErrorBoundary>
+                            </sidebarButtonsArea.ReorderItem>
+                          );
+                        })}
                       </SidebarMenu>
                     </SidebarGroupContent>
                   )}
@@ -261,15 +303,46 @@ export function AppShellLayout({
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-5" />
           <toolbarArea.DndWrapper>
-            {toolbarArea.entries.map((item) => (
-              <toolbarArea.ReorderItem key={item.id} item={item}>
-                {!isSpacer(item) && (
+            {toolbarArea.groupedEntries.map((entry) => {
+              if (isGroupEntry(entry)) {
+                return (
+                  <toolbarArea.GroupBox
+                    key={entry.group.id}
+                    group={entry.group}
+                  >
+                    <div className="flex items-center gap-1">
+                      {entry.members.map((member) => {
+                        if (isSpacer(member)) return null;
+                        return (
+                          <toolbarArea.ReorderItem
+                            key={member.id}
+                            item={member}
+                          >
+                            <PluginErrorBoundary slot={toolbarSlotId}>
+                              <ToolbarItem {...member} />
+                            </PluginErrorBoundary>
+                          </toolbarArea.ReorderItem>
+                        );
+                      })}
+                    </div>
+                  </toolbarArea.GroupBox>
+                );
+              }
+              if (isSpacer(entry)) {
+                return (
+                  <toolbarArea.ReorderItem key={entry.id} item={entry}>
+                    {null}
+                  </toolbarArea.ReorderItem>
+                );
+              }
+              return (
+                <toolbarArea.ReorderItem key={entry.id} item={entry}>
                   <PluginErrorBoundary slot={toolbarSlotId}>
-                    <ToolbarItem {...item} />
+                    <ToolbarItem {...entry} />
                   </PluginErrorBoundary>
-                )}
-              </toolbarArea.ReorderItem>
-            ))}
+                </toolbarArea.ReorderItem>
+              );
+            })}
           </toolbarArea.DndWrapper>
         </header>
 

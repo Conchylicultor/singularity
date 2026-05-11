@@ -4,8 +4,15 @@ import "./styles.css";
 export { Reorder } from "./internal/reorder";
 export { setEditMode, useEditMode } from "./internal/edit-mode-store";
 export type { ReorderableSlot, ReorderConfig } from "./internal/area";
-export type { HostOverride, UseAreaResult, SpacerItem } from "./internal/use-area";
-export { isSpacer, SPACER_PREFIX } from "./internal/use-area";
+export type {
+  GroupEntry,
+  HostOverride,
+  ReorderGroup,
+  SpacerItem,
+  TopLevelEntry,
+  UseAreaResult,
+} from "./internal/use-area";
+export { isGroupEntry, isSpacer, SPACER_PREFIX } from "./internal/use-area";
 
 export default {
   id: "reorder",

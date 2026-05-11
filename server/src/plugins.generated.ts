@@ -72,6 +72,7 @@ import infraWorktreePlugin from "@plugins/infra/plugins/worktree/server";
 import notificationsPlugin from "@plugins/notifications/server";
 import pluginMetaPluginViewPlugin from "@plugins/plugin-meta/plugins/plugin-view/server";
 import primitivesRankPlugin from "@plugins/primitives/plugins/rank/server";
+import reorderGroupsPlugin from "@plugins/reorder/plugins/groups/server";
 import reorderPlugin from "@plugins/reorder/server";
 import screenshotPlugin from "@plugins/screenshot/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
@@ -144,6 +145,7 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (notificationsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (pluginMetaPluginViewPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
 (primitivesRankPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(reorderGroupsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, primitivesRankPlugin];
 (reorderPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (statsCommitsPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraPathsPlugin, infraWorktreePlugin];
 (statsCostPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
@@ -226,6 +228,7 @@ export const plugins: ServerPluginDefinition[] = [
   notificationsPlugin,
   pluginMetaPluginViewPlugin,
   primitivesRankPlugin,
+  reorderGroupsPlugin,
   reorderPlugin,
   screenshotPlugin,
   statsCommitsPlugin,

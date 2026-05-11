@@ -773,7 +773,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (shared):
     - Types: `DatabaseConfig`, `DatabaseProvider`
     - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `grouped`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `grouped`, `groups`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Exports (server):
@@ -1230,8 +1230,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/reorder/server/internal/tables.ts`
     - DB schema: `plugins/reorder/server/schema.ts`
   - Exports (web):
-    - Types: `HostOverride`, `ReorderableSlot`, `ReorderConfig`, `SpacerItem`, `UseAreaResult`
-    - Values: `isSpacer`, `Reorder`, `setEditMode`, `SPACER_PREFIX`, `useEditMode`
+    - Types: `GroupEntry`, `HostOverride`, `ReorderableSlot`, `ReorderConfig`, `ReorderGroup`, `SpacerItem`, `TopLevelEntry`, `UseAreaResult`
+    - Values: `isGroupEntry`, `isSpacer`, `Reorder`, `setEditMode`, `SPACER_PREFIX`, `useEditMode`
   - Exports (server):
     - Values: `_reorderPrefs`, `reorderPrefsResource`
   - Exports (shared):
@@ -1242,11 +1242,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/reorder/:slotId`
     - `PATCH /api/reorder/:slotId`
     - `DELETE /api/reorder/:slotId/:contributionId`
+  - Endpoint callers: `groups`
   - Plugins:
     - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
       - Contributes:
         - `Shell.Toolbar` (group `actions`) → `PenButton`
         - `Core.Root` → `EscHandler`
+    - **`groups`** — User-created groups within reorderable areas. Drag items onto each other to form groups.
+      - Defines:
+        - DB schema: `plugins/reorder/plugins/groups/server/internal/tables.ts`
+        - DB schema: `plugins/reorder/plugins/groups/server/schema.ts`
+      - Exports (server):
+        - Values: `_reorderGroupMembers`, `_reorderGroups`, `reorderGroupsResource`
+      - Exports (shared):
+        - Types: `ReorderGroup`, `ReorderGroupMember`, `ReorderGroupsPayload`
+        - Values: `ReorderGroupMemberSchema`, `ReorderGroupSchema`, `ReorderGroupsPayloadSchema`, `reorderGroupsResource`
+      - Server:
+        - Uses: `database.db`
+        - `POST /api/reorder/:slotId/groups`
+        - `PATCH /api/reorder/groups/:id`
+        - `DELETE /api/reorder/groups/:id`
+        - `POST /api/reorder/groups/:id/members`
+        - `DELETE /api/reorder/:slotId/groups/members/:contributionId`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Exports (web):
