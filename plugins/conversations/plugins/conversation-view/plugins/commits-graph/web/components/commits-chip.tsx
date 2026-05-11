@@ -15,7 +15,7 @@ export function CommitsChip() {
   });
   const { data: pushes } = useResource(pushesResource);
   const pushCount = useMemo(
-    () => (pushes ?? []).filter((p) => p.attemptId === conversation.attemptId).length,
+    () => pushes.filter((p) => p.attemptId === conversation.attemptId).length,
     [pushes, conversation.attemptId],
   );
   const match = usePaneMatch();
@@ -24,11 +24,11 @@ export function CommitsChip() {
 
   // Hide the chip until we know there is a relationship with main. `null`
   // mergeBase means the worktree has no shared history (e.g. detached).
-  if (data && data.mergeBase === null) return null;
+  if (data.mergeBase === null) return null;
 
-  const ahead = data?.ahead ?? 0;
-  const behind = data?.behind ?? 0;
-  const branch = data?.branch ?? null;
+  const ahead = data.ahead;
+  const behind = data.behind;
+  const branch = data.branch;
 
   const parts = [
     `${ahead} ahead`,

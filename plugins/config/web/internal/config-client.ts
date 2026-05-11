@@ -47,7 +47,7 @@ export function useConfigValues<S extends Schema>(
       out[key] = "";
       continue;
     }
-    const stored = data?.[`${pluginId}.${key}`];
+    const stored = data[`${pluginId}.${key}`];
     out[key] = stored ?? getDefault(raw);
   }
   return out as Values<S>;
@@ -56,7 +56,7 @@ export function useConfigValues<S extends Schema>(
 /** "Is this secret field currently set?" + timestamp. */
 export function useSecretFieldSet(fullKey: string): SecretFieldState {
   const { data } = useResource(configSecretsResource);
-  return data?.[fullKey] ?? { set: false };
+  return data[fullKey] ?? { set: false };
 }
 
 /** Imperative write — used by the Settings pane. */

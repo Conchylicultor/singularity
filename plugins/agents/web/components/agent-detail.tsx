@@ -38,7 +38,7 @@ async function patchAgent(id: string, patch: Patch) {
 
 export function AgentDetail({ agentId }: { agentId: string }) {
   const { data } = useResource(agentsResource);
-  const agent = data?.find((a) => a.id === agentId) ?? null;
+  const agent = data.find((a) => a.id === agentId) ?? null;
   const launchesQ = useResource(agentLaunchesResource);
 
   const [model, setModel] = useState<string | null>(agent?.model ?? null);
@@ -56,7 +56,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
   );
 
   const latestStatus = useMemo(() => {
-    const launches = launchesQ.data ?? [];
+    const launches = launchesQ.data;
     const latest = launches
       .filter((l) => l.agentId === agentId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];

@@ -33,7 +33,7 @@ export function PluginLinkChip({
   attrs: Record<string, string>;
 }) {
   const id = content.trim();
-  const { conversation } = conversationPane.useData() ?? {};
+  const conversation = conversationPane.useDataMaybe()?.conversation;
 
   const { data } = useQuery<PluginTreePayload>({
     queryKey: ["plugin-view-tree"],

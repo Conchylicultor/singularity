@@ -3,6 +3,6 @@ import { taskAutoStartResource, type TaskAutoStartRow } from "../shared/resource
 
 export function useTaskAutoStart(taskId: string | null | undefined): TaskAutoStartRow | null {
   const { data } = useResource(taskAutoStartResource);
-  if (!taskId || !data) return null;
+  if (!taskId) return null;
   return data.find((r) => r.parentId === taskId) ?? null;
 }

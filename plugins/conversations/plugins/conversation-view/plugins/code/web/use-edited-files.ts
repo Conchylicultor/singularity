@@ -3,8 +3,8 @@ import { editedFilesResource } from "../shared/resources";
 import type { EditedFile } from "../shared/protocol";
 
 export function useEditedFiles(conversationId: string): {
-  files: EditedFile[] | null;
+  files: EditedFile[];
 } {
   const { data } = useResource(editedFilesResource, { id: conversationId });
-  return { files: data ?? null };
+  return { files: data };
 }

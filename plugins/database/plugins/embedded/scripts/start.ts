@@ -136,6 +136,7 @@ async function main(): Promise<void> {
       { stdio: "pipe" },
     );
     if (result.status !== 0) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; SpawnSyncReturns fields may be null
       const out = result.stderr?.toString() || result.stdout?.toString() || "";
       throw new Error(`initdb failed: ${out}`);
     }
@@ -170,6 +171,7 @@ async function main(): Promise<void> {
     },
   );
   if (result.status !== 0) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; SpawnSyncReturns fields may be null
     const out = result.stderr?.toString() || result.stdout?.toString() || "";
     throw new Error(`pg_ctl start failed: ${out} (see ${PG_LOG_FILE})`);
   }

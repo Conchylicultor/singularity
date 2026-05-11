@@ -49,7 +49,7 @@ export function ExcludedPathToggles({ dense = false }: ExcludedPathTogglesProps)
       )}
     >
       {excludedPaths.map((path) => {
-        const enabled = overrides?.[path] ?? true;
+        const enabled = overrides[path] ?? true;
         return (
           <button
             key={path}

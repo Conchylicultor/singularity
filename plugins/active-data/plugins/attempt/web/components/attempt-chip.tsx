@@ -16,7 +16,7 @@ export function AttemptChip({ content }: { content: string; attrs: Record<string
   const attemptId = content.trim();
   const { data } = useResource(attemptsResource);
   const attempt = useMemo(
-    () => data?.find((a) => a.id === attemptId) ?? null,
+    () => data.find((a) => a.id === attemptId) ?? null,
     [data, attemptId],
   );
 

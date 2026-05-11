@@ -12,7 +12,7 @@ export function AttemptPane() {
   const match = usePaneMatch();
 
   const attempt = useMemo(
-    () => data?.find((a) => a.id === attemptId) ?? null,
+    () => data.find((a) => a.id === attemptId) ?? null,
     [data, attemptId],
   );
 

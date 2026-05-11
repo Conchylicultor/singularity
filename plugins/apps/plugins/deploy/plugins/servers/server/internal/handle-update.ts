@@ -26,6 +26,7 @@ export async function handleUpdate(
     .set(updates)
     .where(eq(_deployServers.id, params.id))
     .returning();
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return new Response("Not found", { status: 404 });
   if (body.sshPrivateKey) {
     await setSecret(

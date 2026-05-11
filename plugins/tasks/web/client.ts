@@ -44,5 +44,5 @@ export async function deleteTask(id: string): Promise<void> {
 export function useTask(id: string | null | undefined): Task | null {
   const { data } = useResource(tasksResource);
   if (!id) return null;
-  return data?.find((t) => t.id === id) ?? null;
+  return data.find((t) => t.id === id) ?? null;
 }

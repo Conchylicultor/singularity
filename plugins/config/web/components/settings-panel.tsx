@@ -179,7 +179,7 @@ export function SettingsPanel() {
                 <div className="divide-y divide-border">
                   {g.fields.map((f) => {
                     const fk = fullKey(g.pluginId, f.key);
-                    const stored = values?.[fk];
+                    const stored = values[fk];
                     const current = stored ?? f.default;
                     const isOverridden = stored !== undefined;
                     return (

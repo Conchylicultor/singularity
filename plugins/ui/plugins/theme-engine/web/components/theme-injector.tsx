@@ -37,7 +37,7 @@ function GroupStyle({ group }: { group: TokenGroupContribution }) {
     const light = buildVarsBlock(group.descriptor, active.light);
     const dark = buildVarsBlock(group.descriptor, active.dark);
     el.textContent = `:root {\n${light}\n}\n.dark {\n${dark}\n}`;
-    return () => el?.remove();
+    return () => el.remove();
   }, [active, group.descriptor, group.id]);
 
   return null;

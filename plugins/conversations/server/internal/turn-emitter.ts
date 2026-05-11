@@ -90,6 +90,7 @@ function subscribeToConversation(conversationId: string): () => void {
       hasPrimed = true;
       if (endTurns.length > 0 && (await hasPendingTrigger(conversationId))) {
         const latest = endTurns[endTurns.length - 1];
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
         if (latest) await emitEndTurn(conversationId, latest);
       }
       return;

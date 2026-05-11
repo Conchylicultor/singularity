@@ -47,7 +47,7 @@ function FilePeekPaneBody() {
   }, [resolved, worktree, line]);
 
   const { files } = useEditedFiles(convId ?? "");
-  const status = files?.find((f) => f.path === filePath)?.status ?? "clean";
+  const status = files.find((f) => f.path === filePath)?.status ?? "clean";
   const renderers = useFileRenderers({ path: filePath, status });
 
   if (resolved.status === "loading") {

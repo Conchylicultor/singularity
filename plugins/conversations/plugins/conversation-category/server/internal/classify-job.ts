@@ -91,6 +91,7 @@ export const classifyConversationJob = defineJob({
     }
 
     const { autoClassify, categories } = await readConfig(conversationCategoryConfig);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; config value is boolean at runtime
     if (!autoClassify) return;
     if (categories.length === 0) return;
 

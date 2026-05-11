@@ -12,8 +12,7 @@ interface UserEntry {
   at: string;
 }
 
-function extractUserEntries(events: JsonlEvent[] | null): UserEntry[] {
-  if (!events) return [];
+function extractUserEntries(events: JsonlEvent[]): UserEntry[] {
   const entries: UserEntry[] = [];
   let userIndex = 0;
   for (let i = 0; i < events.length; i++) {
@@ -41,7 +40,7 @@ function truncate(text: string): string {
 export function MessageToc() {
   const { conversation } = conversationPane.useData();
   const { data } = useResource(jsonlEventsResource, { id: conversation.id });
-  const entries = useMemo(() => extractUserEntries(data ?? null), [data]);
+  const entries = useMemo(() => extractUserEntries(data), [data]);
 
   if (entries.length === 0) return null;
 

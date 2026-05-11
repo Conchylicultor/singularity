@@ -35,6 +35,7 @@ export async function handleCrashRecovery(): Promise<Response> {
      LIMIT 1
   `);
   const row = result.rows[0];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) {
     return Response.json(
       { ok: false, error: "enqueued row not found" },

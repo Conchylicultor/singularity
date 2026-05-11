@@ -35,6 +35,7 @@ export function checkRuntime(
 ): boolean {
   if (!sourceRuntime || !targetRuntime) return true;
   const allowed = runtimes[sourceRuntime];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!allowed) return false;
   return allowed.includes(targetRuntime);
 }

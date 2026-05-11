@@ -99,7 +99,7 @@ export function TaskDraftPopover({
   const parentTaskId = target.kind === "child" ? target.parentTaskId : null;
   const { data: tasks } = useResource(tasksResource);
   const parentTask: Task | null =
-    parentTaskId && tasks ? tasks.find((t) => t.id === parentTaskId) ?? null : null;
+    parentTaskId ? tasks.find((t) => t.id === parentTaskId) ?? null : null;
 
   const seenIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -148,13 +148,13 @@ export function TaskDraftPopover({
       const effectiveRelate =
         relate && relateMode
           ? { taskId: relate.taskId, mode: relateMode }
-          : hasAmbientRelate && ambientRelateMode && activeRelate
-            ? { taskId: activeRelate.taskId, mode: ambientRelateMode }
+          : hasAmbientRelate && ambientRelateMode
+            ? { taskId: activeRelate!.taskId, mode: ambientRelateMode }
             : undefined;
 
       const effectiveTarget: TaskChainTarget =
-        hasAmbientRelate && ambientRelateMode && activeRelate
-          ? { kind: "child", parentTaskId: activeRelate.taskId }
+        hasAmbientRelate && ambientRelateMode
+          ? { kind: "child", parentTaskId: activeRelate!.taskId }
           : target;
 
       const outcome = await submitChain({

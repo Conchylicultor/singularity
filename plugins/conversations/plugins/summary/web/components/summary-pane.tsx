@@ -19,7 +19,7 @@ export function SummaryPane() {
   const { conversation } = conversationPane.useData();
   const { data: byConversation } = useResource(conversationSummariesResource);
   const summaries: ConversationSummary[] | undefined =
-    byConversation?.[conversation.id];
+    byConversation[conversation.id];
   const latest = summaries?.[0];
 
   const [pendingSince, setPendingSince] = useState<number | null>(null);

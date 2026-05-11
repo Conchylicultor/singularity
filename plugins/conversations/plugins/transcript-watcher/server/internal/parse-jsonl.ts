@@ -109,6 +109,7 @@ function extractText(content: unknown): string {
   if (!Array.isArray(content)) return "";
   const parts: string[] = [];
   for (const block of content as RawBlock[]) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
     if (block?.type === "text" && typeof block.text === "string") {
       parts.push(block.text);
     }
@@ -161,6 +162,7 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
         }
       } else if (Array.isArray(content)) {
         for (const block of content as RawBlock[]) {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
           if (block?.type === "tool_result") {
             const toolUseId =
               typeof block.tool_use_id === "string" ? block.tool_use_id : "";
@@ -175,9 +177,11 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
             } else {
               pendingResults.push({ toolUseId, result });
             }
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
           } else if (block?.type === "text" && typeof block.text === "string") {
             await pushTextWithImages(block.text, ts, events);
           } else if (
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
             block?.type === "image" &&
             block.source?.type === "base64" &&
             typeof block.source.data === "string"
@@ -207,6 +211,7 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
       const setUsageOnce = (
         event: JsonlEvent & ({ kind: "assistant-text" } | { kind: "tool-call" }),
       ) => {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; values may change by the time setUsageOnce is called
         if (!shouldAttributeUsage || !lineUsage || !msgId) return;
         if (usageAnchor) {
           if (usageAnchor === event) event.usage = lineUsage;
@@ -217,6 +222,7 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
         usageAttributedMsgIds.add(msgId);
       };
       for (const block of msg.content as RawBlock[]) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
         if (block?.type === "thinking" && typeof block.thinking === "string") {
           events.push({
             kind: "assistant-thinking",
@@ -224,6 +230,7 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
             messageId: msgId,
             thinking: block.thinking,
           });
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
         } else if (block?.type === "text" && typeof block.text === "string") {
           if (msgId) {
             const existing = assistantTextByMsgId.get(msgId);
@@ -244,6 +251,7 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
           if (msgId) assistantTextByMsgId.set(msgId, event);
           setUsageOnce(event);
           events.push(event);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
         } else if (block?.type === "tool_use") {
           const toolUseId = typeof block.id === "string" ? block.id : "";
           const event: ToolCallEvent = {

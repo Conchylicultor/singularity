@@ -10,6 +10,7 @@ export function useScope(): {
 } {
   const { singularityOnly } = useConfigValues(costConfig, "stats-cost");
   return {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     scope: singularityOnly ? "singularity" : "all",
     singularityOnly,
     toggle: () =>

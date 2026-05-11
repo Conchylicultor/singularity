@@ -94,6 +94,7 @@ export async function readTurns(
       const texts: string[] = [];
       if (Array.isArray(msg.content)) {
         for (const c of msg.content as Array<{ type?: string; text?: string }>) {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
           if (c?.type === "text" && typeof c.text === "string") {
             texts.push(c.text);
           }

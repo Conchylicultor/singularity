@@ -32,6 +32,7 @@ export const wsHandler: WsHandler = {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- forward-compat guard; more message types may be added
     if (parsed.type === "subscribe") {
       // Unsubscribe from previous channel if any
       const prev = subscriptions.get(ws);

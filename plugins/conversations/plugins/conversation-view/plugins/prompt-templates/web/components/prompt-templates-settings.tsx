@@ -46,10 +46,6 @@ export function PromptTemplatesSettings() {
   const { data: templates } = useResource(promptTemplatesResource);
   const deletingRef = useRef(new Set<string>());
 
-  if (!templates) {
-    return <p className="text-muted-foreground text-xs">Loading...</p>;
-  }
-
   const visible = templates.filter((t) => !deletingRef.current.has(t.id));
 
   function handleDelete(id: string) {

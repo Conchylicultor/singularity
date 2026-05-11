@@ -148,7 +148,7 @@ export function BlockedByButton({
               </li>
             ))}
             {orphanDepIds.map((id) => {
-              const depTask = allTasks?.find((t) => t.id === id);
+              const depTask = allTasks.find((t) => t.id === id);
               const isTerminal =
                 depTask?.status === "done" || depTask?.status === "dropped";
               return (

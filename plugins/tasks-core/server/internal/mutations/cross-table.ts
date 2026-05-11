@@ -61,16 +61,19 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
       .returning();
     inserted = !!row;
   });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; TS can't see mutation inside async transaction callback
   if (inserted) {
     tasksResource.notify();
     attemptsResource.notify();
     recentConversationsResource.notify();
   }
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; TS can't see mutation inside async transaction callback
   if (!inserted) return null;
   const [row] = await db
     .select()
     .from(conversations)
     .where(eq(conversations.id, input.id))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }

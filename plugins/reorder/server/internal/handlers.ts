@@ -22,7 +22,7 @@ export async function handleGetSlot(
   const out: Record<string, { rank?: string; hidden: boolean }> = {};
   for (const r of rows)
     out[r.contributionId] = {
-      rank: (r.rank as string) ?? undefined,
+      rank: r.rank as string,
       hidden: r.hidden,
     };
   return Response.json(out);

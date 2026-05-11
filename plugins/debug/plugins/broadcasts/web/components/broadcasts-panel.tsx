@@ -50,10 +50,8 @@ export function BroadcastsPanel() {
     try {
       const res = await fetch("/api/debug/broadcasts");
       const data = (await res.json()) as ReadResponse;
-      if (data.ok) {
-        setEntries(data.entries);
-        setFilePath(data.path);
-      }
+      setEntries(data.entries);
+      setFilePath(data.path);
     } catch (e) {
       setError(String(e));
     } finally {

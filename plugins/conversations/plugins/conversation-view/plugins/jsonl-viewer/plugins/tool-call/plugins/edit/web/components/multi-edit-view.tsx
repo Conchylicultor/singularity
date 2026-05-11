@@ -31,8 +31,8 @@ export function MultiEditView({ event }: ToolRendererProps) {
               </div>
             )}
             <InlineDiff
-              oldText={edit.old_string ?? ""}
-              newText={edit.new_string ?? ""}
+              oldText={edit.old_string}
+              newText={edit.new_string}
               path={file_path}
             />
           </div>

@@ -15,15 +15,14 @@ export function DocsPane() {
   const { files } = useEditedFiles(conversation.id);
   const pushedDocs = usePushedDocFiles(conversation.attemptId);
 
-  const docs = useMemo<DocFile[] | null>(() => {
-    if (files === null && pushedDocs === null) return null;
+  const docs = useMemo<DocFile[]>(() => {
     const byPath = new Map<string, DocFile>();
     // Pushed docs first (lower priority)
     for (const f of pushedDocs ?? []) {
       byPath.set(f.path, { ...f, worktree: "main" });
     }
     // Working tree docs override pushed (current state takes precedence)
-    for (const f of files ?? []) {
+    for (const f of files) {
       if (isDocFile(f.path)) {
         byPath.set(f.path, { ...f, worktree: conversation.attemptId });
       }
@@ -34,34 +33,29 @@ export function DocsPane() {
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!docs) return;
     const first = docs[0];
     if (!first) return;
     if (selectedPath && docs.some((f) => f.path === selectedPath)) return;
     setSelectedPath(first.path);
   }, [docs, selectedPath]);
 
-  const selected = docs?.find((f) => f.path === selectedPath) ?? null;
+  const selected = docs.find((f) => f.path === selectedPath) ?? null;
 
   const title = (
     <span className="flex items-center gap-2">
       <span>Docs</span>
-      {docs !== null && (
-        <span className="tabular-nums text-xs text-muted-foreground">
-          {docs.length}
-        </span>
-      )}
+      <span className="tabular-nums text-xs text-muted-foreground">
+        {docs.length}
+      </span>
     </span>
   );
 
   return (
     <PaneChrome pane={convDocsPane} title={title}>
       <div className="flex h-full min-h-0 flex-col">
-        {(docs == null || docs.length !== 1) && (
+        {docs.length !== 1 && (
           <div className="max-h-[40%] min-h-0 shrink-0 overflow-auto border-b py-1">
-            {docs == null ? (
-              <div className="px-2 py-1 text-xs text-muted-foreground">Loading…</div>
-            ) : docs.length === 0 ? (
+            {docs.length === 0 ? (
               <div className="px-2 py-1 text-xs text-muted-foreground">
                 No design docs in the diff.
               </div>

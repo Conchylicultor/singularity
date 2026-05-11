@@ -11,6 +11,7 @@ export async function handleRestoreBatch(req: Request): Promise<Response> {
     return Response.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; body may be null after JSON.parse
   const ids = (body as { ids?: unknown })?.ids;
   if (!Array.isArray(ids) || !ids.every((x): x is string => typeof x === "string")) {
     return Response.json({ error: "Expected { ids: string[] }" }, { status: 400 });

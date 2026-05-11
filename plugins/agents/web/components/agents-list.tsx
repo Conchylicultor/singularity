@@ -110,7 +110,7 @@ export function AgentsList({
   onSelect?: (id: string) => void;
 }) {
   const { data } = useResource(agentsResource);
-  const rows = data ?? [];
+  const rows = data;
   const listActions = AgentsSlots.ListActions.useContributions();
 
   return (

@@ -13,7 +13,7 @@ export async function setCategory(
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(
-      (body as { error?: string })?.error ?? `HTTP ${res.status}`,
+      (body as { error?: string }).error ?? `HTTP ${res.status}`,
     );
   }
 }
@@ -26,7 +26,7 @@ export async function reclassify(conversationId: string): Promise<void> {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(
-      (body as { error?: string })?.error ?? `HTTP ${res.status}`,
+      (body as { error?: string }).error ?? `HTTP ${res.status}`,
     );
   }
 }

@@ -41,6 +41,7 @@ export async function handleDeleteColor(
   _req: Request,
   params: Record<string, string>,
 ): Promise<Response> {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   const category = decodeURIComponent(params.category ?? "");
   if (!category) return json({ error: "missing-category" }, 400);
   await db

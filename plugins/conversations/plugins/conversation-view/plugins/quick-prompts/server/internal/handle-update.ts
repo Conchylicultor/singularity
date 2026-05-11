@@ -29,6 +29,7 @@ export async function handleUpdate(
     .where(eq(quickPromptsTable.id, id))
     .returning({ id: quickPromptsTable.id });
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!updated) return new Response("Not found", { status: 404 });
 
   if (typeof body.prompt === "string") {

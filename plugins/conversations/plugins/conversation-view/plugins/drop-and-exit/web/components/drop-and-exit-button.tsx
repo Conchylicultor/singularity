@@ -15,7 +15,7 @@ export function DropAndExitButton({
   const { data: pushes } = useResource(pushesResource);
 
   const hasPush = useMemo(
-    () => (pushes ?? []).some((p) => p.attemptId === conversation.attemptId),
+    () => pushes.some((p) => p.attemptId === conversation.attemptId),
     [pushes, conversation.attemptId],
   );
 

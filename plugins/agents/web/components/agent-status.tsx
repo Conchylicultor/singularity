@@ -8,7 +8,7 @@ export function AgentStatus({ agentId, size = "sm" }: { agentId: string; size?: 
   const launchesQ = useResource(agentLaunchesResource);
 
   const status = useMemo(() => {
-    const launches = launchesQ.data ?? [];
+    const launches = launchesQ.data;
     const latest = launches
       .filter((l) => l.agentId === agentId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];

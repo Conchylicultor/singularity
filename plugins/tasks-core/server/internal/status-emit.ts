@@ -17,6 +17,7 @@ export async function readTaskStatus(taskId: string): Promise<TaskStatus | null>
     .from(tasks)
     .where(eq(tasks.id, taskId))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row?.status ?? null;
 }
 
@@ -30,6 +31,7 @@ async function readParent(taskId: string): Promise<ParentSnapshot | null> {
     .from(_tasks)
     .where(eq(_tasks.id, taskId))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }
 

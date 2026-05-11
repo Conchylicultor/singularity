@@ -169,7 +169,7 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
   )?.params.convId;
 
   const attempts = useMemo(() => {
-    const rows = attemptsQ.data ?? [];
+    const rows = attemptsQ.data;
     return rows
       .filter((a) => a.taskId === taskId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
@@ -236,8 +236,8 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
 function TaskChip({ taskId }: { taskId: string }) {
   const { conversation } = conversationPane.useData();
   const { data: tasks } = useResource(tasksResource);
-  const task = tasks?.find((t) => t.id === taskId);
-  const title = task?.title?.trim() || "Untitled task";
+  const task = tasks.find((t) => t.id === taskId);
+  const title = task?.title.trim() || "Untitled task";
   return (
     <button
       type="button"

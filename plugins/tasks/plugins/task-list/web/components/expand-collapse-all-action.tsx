@@ -39,8 +39,7 @@ export function ExpandCollapseAllAction({
   taskId: string;
   hasChildren: boolean;
 }) {
-  const { data } = useResource(tasksResource);
-  const rows = data ?? [];
+  const { data: rows } = useResource(tasksResource);
   if (!hasChildren) return null;
 
   const nodes = subtreeWithChildren(rows, taskId);

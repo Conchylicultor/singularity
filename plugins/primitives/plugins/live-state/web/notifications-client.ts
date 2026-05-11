@@ -218,10 +218,8 @@ export class NotificationsClient {
       this.applyUpdate(channel, msg.key, msg.params, msg.value, msg.version);
       return;
     }
-    if (msg.kind === "invalidate") {
-      this.applyInvalidate(channel, msg.key, msg.params, msg.version);
-      return;
-    }
+    // Only remaining case: "invalidate"
+    this.applyInvalidate(channel, msg.key, msg.params, msg.version);
   }
 
   private applyUpdate(

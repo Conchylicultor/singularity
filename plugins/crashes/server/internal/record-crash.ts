@@ -58,6 +58,7 @@ export async function recordCrash(
     })
     .returning();
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return { taskId: null, wasNew: false, crashLoop: loop };
 
   if (row.crashLoop) {
@@ -107,6 +108,7 @@ async function ensureTaskForCrash(
       .from(_crashes)
       .where(eq(_crashes.id, crashId))
       .limit(1);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!latest) return { taskId: null, wasNew: false };
 
     const linked = latest.taskId ? await getTask(latest.taskId) : null;

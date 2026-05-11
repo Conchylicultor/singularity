@@ -18,7 +18,7 @@ export function useConversationNote(
   conversationId: string,
 ): ConversationNoteState {
   const { data } = useResource(conversationNotesResource);
-  const serverNote = data?.[conversationId]?.notes ?? "";
+  const serverNote = data[conversationId]?.notes ?? "";
   const noteExists = serverNote.trim().length > 0;
   const isManuallyOpen = useIsOpen(conversationId);
 

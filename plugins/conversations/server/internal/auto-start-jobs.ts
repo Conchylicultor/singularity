@@ -41,6 +41,7 @@ export const maybeLaunchTaskJob = defineJob({
       return;
     }
     const ext = await getTaskAutoStart(taskId);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!ext) {
       console.warn(
         `[tasks.maybe-launch] task ${taskId} has no auto_start row; trigger fired but no launch (already launched, cancelled, or never armed)`,

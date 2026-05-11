@@ -58,11 +58,14 @@ export const generateTurnSummaryJob = defineJob({
   maxAttempts: 2,
   run: async ({ event }) => {
     const { enabled } = await readConfig(turnSummaryConfig);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; config value is boolean at runtime
     if (!enabled) return;
 
     const conversationId = event?.conversationId;
     if (!conversationId) return;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     const assistantText = event?.text ?? "";
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     const messageId = event?.messageId ?? null;
     if (!messageId) {
       // Without a stable assistant message id we can't dedupe. Skip — the

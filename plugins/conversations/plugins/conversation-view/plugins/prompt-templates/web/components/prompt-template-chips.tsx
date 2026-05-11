@@ -17,7 +17,7 @@ export function PromptTemplateChips({
     scope: conversation.id,
   });
 
-  if (!templates || templates.length === 0) return null;
+  if (templates.length === 0) return null;
 
   const disabled =
     live.status === "gone" ||

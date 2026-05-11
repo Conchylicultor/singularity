@@ -64,6 +64,7 @@ export const notionDescriptor: AuthProviderDescriptor = defineAuthProvider({
         return { clientId: idFromEnv, clientSecret: secretFromEnv };
       }
       const cfg = await readGlobalConfig("auth-notion", notionAuthConfig);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; readGlobalConfig returns "" for unset secrets
       if (!cfg.clientId || !cfg.clientSecret) {
         throw new AuthCredentialsMissingError("notion");
       }

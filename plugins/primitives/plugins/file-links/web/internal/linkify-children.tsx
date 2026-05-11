@@ -36,11 +36,11 @@ export function linkifyChildren(
     // active-data linkify) can wrap text in fragments and we still see the
     // strings inside.
     if (el.type === Fragment) {
-      return <Fragment>{linkifyChildren(el.props?.children, onFileOpen)}</Fragment>;
+      return <Fragment>{linkifyChildren(el.props.children, onFileOpen)}</Fragment>;
     }
     if (typeof el.type !== "string") return el;
     if (SKIP_TYPES.has(el.type)) return el;
-    const inner = el.props?.children;
+    const inner = el.props.children;
     if (inner === undefined) return el;
     return cloneElement(el, undefined, linkifyChildren(inner, onFileOpen));
   }

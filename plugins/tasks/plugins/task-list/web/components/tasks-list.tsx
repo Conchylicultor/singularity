@@ -103,8 +103,7 @@ export function TasksList({
   rootTaskId?: string;
   onSelect: (id: string) => void;
 }) {
-  const { data } = useResource(tasksResource);
-  const rows = data ?? [];
+  const { data: rows } = useResource(tasksResource);
   const listActions = TasksSlots.ListActions.useContributions();
 
   return (

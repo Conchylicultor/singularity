@@ -114,7 +114,7 @@ export function useTaskAutoGroups(
 
       const titleParts = sortedTaskIds
         .slice(0, 2)
-        .map((tid) => taskById.get(tid)?.title?.trim() || "Untitled");
+        .map((tid) => taskById.get(tid)?.title.trim() || "Untitled");
       let title = titleParts.join(" · ");
       if (sortedTaskIds.length > 2) title += " …";
 

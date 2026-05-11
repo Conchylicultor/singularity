@@ -206,6 +206,7 @@ export function renderPluginRegistry(opts: { root: string; runtime: Runtime }): 
     lines.push(`import ${e.importName} from "${e.importPath}";`);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- forward-compat guard; more runtimes may be added
   if (opts.runtime === "server" || opts.runtime === "central") {
     const deps = buildDependsOn(opts.root, entries, opts.runtime);
     if (deps.size > 0) {

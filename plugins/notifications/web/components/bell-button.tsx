@@ -34,7 +34,7 @@ function navigateTo(url: string) {
 export function BellButton() {
   const [open, setOpen] = useState(false);
   const { data: notifications, dataUpdatedAt } = useResource(notificationsResource);
-  const list = notifications ?? [];
+  const list = notifications;
   const unreadCount = list.filter((n) => !n.read).length;
 
   const prevIdsRef = useRef<Set<string> | null>(null);
@@ -55,8 +55,8 @@ export function BellButton() {
           });
         }
       }
-      prevIdsRef.current = currentIds;
     }
+    prevIdsRef.current = currentIds;
   }
 
   function dismiss(id: string) {

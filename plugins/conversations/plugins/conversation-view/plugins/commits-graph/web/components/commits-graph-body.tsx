@@ -39,11 +39,6 @@ export function CommitsGraphBody() {
       </div>
     );
   }
-  if (!data) {
-    return (
-      <div className="p-4 text-sm text-muted-foreground">Loading commits…</div>
-    );
-  }
   if (data.mergeBase === null) {
     return (
       <div className="p-4 text-sm text-muted-foreground">
@@ -61,8 +56,8 @@ export function CommitsGraphBody() {
     branch,
     mergeBase,
   } = data;
-  const landedCommits = landed ?? [];
-  const behindCommits = behind_ ?? [];
+  const landedCommits = landed;
+  const behindCommits = behind_;
   const branchLabel = branch ?? "HEAD";
   const hasAgentWork = commits.length > 0 || landedCommits.length > 0;
 

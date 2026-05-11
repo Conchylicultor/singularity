@@ -92,6 +92,7 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
     .set(dbPatch)
     .where(eq(_tasks.id, id))
     .returning({ id: _tasks.id });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!updated) return null;
   if (typeof patch.parentId === "string" && patch.parentId.length > 0) {
     await db
@@ -102,6 +103,7 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
   tasksResource.notify();
   await emitStatusChangeIfChanged(id, before);
   const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }
 
@@ -120,6 +122,7 @@ export async function updateTaskTitle(
       ),
     )
     .returning({ id: _tasks.id });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (updated) tasksResource.notify();
   return !!updated;
 }
@@ -132,6 +135,7 @@ export async function deleteTask(id: string): Promise<boolean> {
     .limit(1);
   if (children.length > 0) throw new Error("Task has children");
   const [row] = await db.delete(_tasks).where(eq(_tasks.id, id)).returning();
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
   tasksResource.notify();
   return true;
@@ -148,12 +152,14 @@ export async function addTaskDependency(
     .from(_tasks)
     .where(eq(_tasks.id, taskId))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!task) throw new Error("Task not found");
   const [dep] = await db
     .select({ id: _tasks.id })
     .from(_tasks)
     .where(eq(_tasks.id, dependsOnTaskId))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!dep) throw new Error("Dependency task not found");
   if (await taskDependsOn(dependsOnTaskId, taskId)) {
     throw new Error("Cycle detected in dependencies");
@@ -178,6 +184,7 @@ export async function removeTaskDependency(
       ),
     )
     .returning({ taskId: _taskDependencies.taskId });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
   tasksResource.notify();
   return true;

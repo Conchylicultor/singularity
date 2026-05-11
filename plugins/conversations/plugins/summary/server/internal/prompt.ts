@@ -34,7 +34,9 @@ export async function buildSummarizePayload(
   sections.push("<target-conversation>");
   sections.push(`  <id>${escapeText(targetConversationId)}</id>`);
   sections.push(`  <status>${escapeText(conv.status)}</status>`);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; legacy rows may have empty strings
   if (conv.model) sections.push(`  <model>${escapeText(conv.model)}</model>`);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; legacy rows may have empty strings
   if (conv.kind) sections.push(`  <kind>${escapeText(conv.kind)}</kind>`);
   if (conv.title)
     sections.push(`  <title>${escapeText(conv.title)}</title>`);

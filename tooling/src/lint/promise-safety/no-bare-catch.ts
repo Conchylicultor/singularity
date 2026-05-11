@@ -34,6 +34,7 @@ export default createRule({
         node: TSESTree.CallExpression,
       ) {
         const arg = node.arguments[0];
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
         if (!arg) return;
 
         if (

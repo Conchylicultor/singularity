@@ -40,7 +40,7 @@ export function ExpandCollapseAllAction({
   hasChildren: boolean;
 }) {
   const { data } = useResource(agentsResource);
-  const rows = data ?? [];
+  const rows = data;
   if (!hasChildren) return null;
 
   const nodes = subtreeWithChildren(rows, agentId);

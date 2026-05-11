@@ -56,6 +56,7 @@ export async function handleUpdate(
     .set(patch)
     .where(eq(_agents.id, id))
     .returning({ id: _agents.id });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!updated) return new Response("Not found", { status: 404 });
   if (typeof body.parentId === "string" && body.parentId.length > 0) {
     await db

@@ -121,14 +121,14 @@ export function QueueView({
   // separate `blockedDeck` and always rendered after the main deck so they
   // never occupy the top-of-queue "do next" slot.
   const { deck, blockedDeck, unranked } = useMemo(() => {
-    const ranks = new Map((rankRows ?? []).map((r) => [r.conversationId, r.rank]));
-    const taskStatusMap = new Map((taskRows ?? []).map((t) => [t.id, t.status]));
+    const ranks = new Map(rankRows.map((r) => [r.conversationId, r.rank]));
+    const taskStatusMap = new Map(taskRows.map((t) => [t.id, t.status]));
     const ranked: Array<Conversation & { rank: Rank }> = [];
     const blocked: Array<Conversation & { rank: Rank }> = [];
     const noRank: Conversation[] = [];
     for (const c of active) {
       if (c.status !== "waiting") continue;
-      const isBlocked = c.taskId != null && taskStatusMap.get(c.taskId) === "blocked";
+      const isBlocked = taskStatusMap.get(c.taskId) === "blocked";
       const rank = ranks.get(c.id);
       if (rank) {
         if (isBlocked) {

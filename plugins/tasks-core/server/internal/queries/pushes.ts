@@ -29,6 +29,7 @@ export async function getLatestPush(): Promise<Push | null> {
     .from(pushes)
     .orderBy(desc(pushes.createdAt))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }
 

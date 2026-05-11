@@ -107,7 +107,7 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Resource ${key} fetch failed: ${res.status}`);
       const body = (await res.json()) as { value: unknown; version: number };
-      return (schema ? schema.parse(body.value) : (body.value as T));
+      return schema.parse(body.value) as T;
     },
     // sub-ack writes setQueryData, so normally queryFn never runs.
     // It's the fallback when the WS is down.

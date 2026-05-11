@@ -116,6 +116,7 @@ export function useArea<P extends BaseItem>(
     | undefined;
   const effectiveGetLabel = useCallback(
     (item: BaseItem): string =>
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       slotGetLabel?.(item as P) ??
       (item as Record<string, unknown>)._pluginName as string ??
       item.id,
@@ -133,7 +134,7 @@ export function useArea<P extends BaseItem>(
     const visible: (P | SpacerItem)[] = [];
     const hidden: P[] = [];
     for (const item of filtered) {
-      if (rankMap?.[item.id]?.hidden && !item.excludeFromReorder) {
+      if (rankMap[item.id]?.hidden && !item.excludeFromReorder) {
         hidden.push(item);
       } else {
         visible.push(item);
@@ -141,11 +142,9 @@ export function useArea<P extends BaseItem>(
     }
 
     // Inject spacer items from rankMap
-    if (rankMap) {
-      for (const key of Object.keys(rankMap)) {
-        if (key.startsWith(SPACER_PREFIX) && rankMap[key]?.rank) {
-          visible.push({ id: key, _spacer: true as const });
-        }
+    for (const key of Object.keys(rankMap)) {
+      if (key.startsWith(SPACER_PREFIX) && rankMap[key]?.rank) {
+        visible.push({ id: key, _spacer: true as const });
       }
     }
 
@@ -171,8 +170,8 @@ export function useArea<P extends BaseItem>(
         const bx = isSpacer(b.item) ? false : !!b.item.excludeFromReorder;
         if (ax !== bx) return ax ? 1 : -1;
         if (ax && bx) return a.naturalIdx - b.naturalIdx;
-        const ar = rankMap?.[a.item.id]?.rank ?? null;
-        const br = rankMap?.[b.item.id]?.rank ?? null;
+        const ar = rankMap[a.item.id]?.rank ?? null;
+        const br = rankMap[b.item.id]?.rank ?? null;
         if (ar && br) return Rank.compare(ar, br);
         if (ar) return -1;
         if (br) return 1;
@@ -235,8 +234,8 @@ export function useArea<P extends BaseItem>(
       const next = movingDown ? (siblings[tIdx + 1] ?? null) : siblings[tIdx]!;
 
       const rm = rankMapRef.current;
-      const prevRank = prev ? (rm?.[prev.id]?.rank ?? null) : null;
-      const nextRank = next ? (rm?.[next.id]?.rank ?? null) : null;
+      const prevRank = prev ? (rm[prev.id]?.rank ?? null) : null;
+      const nextRank = next ? (rm[next.id]?.rank ?? null) : null;
 
       let newRank: Rank;
       try {
@@ -294,7 +293,7 @@ export function useArea<P extends BaseItem>(
           let prevR: Rank | null = null;
           for (const item of items) {
             if (isSpacer(item)) continue;
-            const existing = rm?.[item.id]?.rank ?? null;
+            const existing = rm[item.id]?.rank ?? null;
             if (existing) {
               prevR = existing;
             } else {

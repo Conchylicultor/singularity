@@ -242,6 +242,7 @@ async function aggregateOneFile(o: AggOpts): Promise<PerSession | null> {
     } catch {
       continue;
     }
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; parsed JSON may have any shape
     const usage = obj?.message?.usage;
     if (!usage) continue;
     inputTokens += usage.input_tokens ?? 0;

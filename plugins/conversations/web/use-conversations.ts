@@ -19,11 +19,11 @@ export function useConversations(): {
 } {
   const q = useResource(recentConversationsResource);
   return {
-    active: q.data?.active ?? [],
-    recentGone: q.data?.recentGone ?? [],
-    hasMoreGone: q.data?.hasMoreGone ?? false,
-    totalGoneCount: q.data?.totalGoneCount ?? 0,
-    system: q.data?.system ?? [],
+    active: q.data.active,
+    recentGone: q.data.recentGone,
+    hasMoreGone: q.data.hasMoreGone,
+    totalGoneCount: q.data.totalGoneCount,
+    system: q.data.system,
     isLoading: q.isLoading,
   };
 }

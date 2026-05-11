@@ -30,7 +30,7 @@ export function LaunchPromptsButton({
   const { data: prompts } = useResource(launchPromptsResource);
   const [launching, setLaunching] = useState(false);
 
-  if (!prompts || prompts.length === 0) return null;
+  if (prompts.length === 0) return null;
 
   async function launch(item: LaunchPrompt) {
     if (launching) return;

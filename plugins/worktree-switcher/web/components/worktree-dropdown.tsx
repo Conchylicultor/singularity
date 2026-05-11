@@ -15,7 +15,7 @@ export function WorktreeDropdown() {
   const { data: tasks } = useResource(tasksResource);
 
   const taskTitle = useMemo(() => {
-    if (!isAgentWorktree || !attempts || !tasks) return null;
+    if (!isAgentWorktree) return null;
     const attempt = attempts.find((a) =>
       a.worktreePath.endsWith("/" + currentWorktree),
     );

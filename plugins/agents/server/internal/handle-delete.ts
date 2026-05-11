@@ -18,6 +18,7 @@ export async function handleDelete(
     return new Response("Agent has children", { status: 409 });
   }
   const [row] = await db.delete(_agents).where(eq(_agents.id, id)).returning();
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return new Response("Not found", { status: 404 });
   // Launches cascade via FK; still notify so subscribed detail views refresh.
   agentsResource.notify();

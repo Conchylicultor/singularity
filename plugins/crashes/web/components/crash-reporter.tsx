@@ -9,7 +9,7 @@ export function CrashReporter() {
       void report({
         source: "browser-error",
         errorType: err?.name ?? null,
-        message: err?.message ?? e.message ?? "Unknown error",
+        message: err?.message ?? e.message,
         stack: err?.stack ?? null,
         url: window.location.href,
         userAgent: navigator.userAgent,

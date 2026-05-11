@@ -44,7 +44,8 @@ export class CrossTabElection<TMsg> {
     const hasChannel = typeof BroadcastChannel !== "undefined";
     this.locks =
       typeof navigator !== "undefined"
-        ? (navigator as Navigator & { locks?: LockManager }).locks ?? null
+        ? // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+          (navigator as Navigator & { locks?: LockManager }).locks ?? null
         : null;
 
     if (!hasChannel || !this.locks) {

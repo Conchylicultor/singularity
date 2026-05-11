@@ -61,6 +61,7 @@ export const jobsResumeJob = defineJob({
       )
       .limit(1);
     const row = existing[0];
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!row) {
       // Workflow was cleaned up (completed earlier) — nothing to resume.
       return;

@@ -24,6 +24,7 @@ export async function insertPush(input: InsertPushInput): Promise<boolean> {
     .from(_attempts)
     .where(eq(_attempts.id, input.attemptId))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   const taskId = attemptRow?.taskId ?? null;
   const before = taskId ? await readTaskStatus(taskId) : null;
   const [row] = await db
@@ -31,6 +32,7 @@ export async function insertPush(input: InsertPushInput): Promise<boolean> {
     .values(input)
     .onConflictDoNothing()
     .returning();
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (row) {
     pushesResource.notify();
     attemptsResource.notify();

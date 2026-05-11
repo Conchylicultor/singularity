@@ -53,6 +53,7 @@ export async function handleUpload(req: Request): Promise<Response> {
     })
     .returning();
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return new Response("failed to record attachment", { status: 500 });
   return Response.json({
     id: row.id,

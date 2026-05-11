@@ -35,6 +35,7 @@ async function taskIdForConversation(conversationId: string): Promise<string | n
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
     .where(eq(_conversations.id, conversationId))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row?.taskId ?? null;
 }
 
@@ -44,6 +45,7 @@ async function taskIdForAttempt(attemptId: string): Promise<string | null> {
     .from(_attempts)
     .where(eq(_attempts.id, attemptId))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row?.taskId ?? null;
 }
 
@@ -88,7 +90,9 @@ export async function insertConversationOnConflictDoNothing(
     })
     .onConflictDoNothing()
     .returning();
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (row && taskId) await emitStatusChangeIfChanged(taskId, before);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }
 

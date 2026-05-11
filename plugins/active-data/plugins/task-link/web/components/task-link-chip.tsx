@@ -20,9 +20,9 @@ const TASK_STATUS_DOT: Record<TaskStatus, string> = {
 export function TaskLinkChip({ content }: { content: string; attrs: Record<string, string> }) {
   const taskId = content.trim();
   const { data } = useResource(tasksResource);
-  const { conversation } = conversationPane.useData() ?? {};
+  const conversation = conversationPane.useDataMaybe()?.conversation;
   const task = useMemo(
-    () => data?.find((t) => t.id === taskId) ?? null,
+    () => data.find((t) => t.id === taskId) ?? null,
     [data, taskId],
   );
 

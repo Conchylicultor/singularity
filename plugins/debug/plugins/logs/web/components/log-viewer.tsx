@@ -129,23 +129,34 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
           lastSeqRef.current = msg.seq;
           setEntries((prev) => [...prev, msg]);
           break;
+        case "error":
+          setEntries((prev) => [
+            ...prev,
+            { seq: lastSeqRef.current + 1, line: `[error] ${msg.error}`, stream: "stderr", timestamp: Date.now() },
+          ]);
+          lastSeqRef.current += 1;
+          break;
       }
     },
   });
 
   // Re-subscribe when channel changes on an already-open socket
   useEffect(() => {
-    if (!isBackendSource || !selected || selected.source !== "backend") return;
+    if (!isBackendSource) return;
     const handle = wsHandle.current;
     if (!handle) return;
-    const msg: ClientMessage = { type: "subscribe", channel: selected.id };
+    // isBackendSource guarantees selected is non-null and source === "backend"
+    const backendSelected = selected as Extract<ChannelRef, { source: "backend" }>;
+    const msg: ClientMessage = { type: "subscribe", channel: backendSelected.id };
     handle.send(JSON.stringify(msg));
   }, [selectedKey, wsHandle, isBackendSource, selected]);
 
   // Gateway-sourced channel: SSE stream of backend stdout/stderr.
   useEffect(() => {
-    if (!isGatewaySource || !selected || selected.source !== "gateway") return;
-    const url = `/gateway/worktrees/${encodeURIComponent(selected.worktree)}/logs`;
+    if (!isGatewaySource) return;
+    // isGatewaySource guarantees selected is non-null and source === "gateway"
+    const gatewaySelected = selected as Extract<ChannelRef, { source: "gateway" }>;
+    const url = `/gateway/worktrees/${encodeURIComponent(gatewaySelected.worktree)}/logs`;
     const es = new ReconnectingEventSource({
       url,
       events: ["history", "entry"],

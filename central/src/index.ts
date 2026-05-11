@@ -137,6 +137,7 @@ const server = Bun.serve<WsData>({
 
     if (req.headers.get("upgrade") === "websocket") {
       const handler = wsRoutes[url.pathname];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (handler) {
         server.upgrade(req, { data: { path: url.pathname } });
         return;
@@ -144,6 +145,7 @@ const server = Bun.serve<WsData>({
     }
 
     const literal = literalHttpRoutes[`${req.method} ${url.pathname}`];
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (literal) return literal(req, {});
 
     const matched = matchSegments(
@@ -157,12 +159,15 @@ const server = Bun.serve<WsData>({
   },
   websocket: {
     open(ws) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       wsRoutes[ws.data.path]?.open(ws);
     },
     message(ws, msg) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       wsRoutes[ws.data.path]?.message(ws, msg);
     },
     close(ws, code, reason) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       wsRoutes[ws.data.path]?.close(ws, code, reason);
     },
   },

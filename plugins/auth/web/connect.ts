@@ -51,7 +51,8 @@ export function startConnectFlow(args: ConnectArgs): Promise<ConnectResult> {
         message?: string;
         identity?: ConnectResult["identity"];
       };
-      if (!data || data.type !== "singularity.auth.complete") return;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (!data || data.type !== "singularity.auth.complete") return; // runtime guard on external postMessage data
       if (data.providerId && data.providerId !== args.providerId) return;
       cleanup();
       resolve({

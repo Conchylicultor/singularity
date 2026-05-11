@@ -74,6 +74,7 @@ async function listPanes(): Promise<
     map.set(name, {
       panePid: pid,
       dead: deadStr === "1",
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       worktreePath: startPath ?? "",
       rawTitle: rest.join(SEP),
     });
@@ -93,7 +94,7 @@ export const tmuxRuntime: ConversationRuntime = {
     const out = new Map<string, RuntimeInfo>();
     ids.forEach((id, i) => {
       const { rawTitle, dead, worktreePath } = panes.get(id)!;
-      const title = cleanPaneTitle(rawTitle ?? "");
+      const title = cleanPaneTitle(rawTitle);
       const state = states[i]!;
       // Session file is authoritative for status.
       // null = file not written yet (startup race) — treat as working

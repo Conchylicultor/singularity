@@ -11,6 +11,7 @@ export async function handleGet(
     .select()
     .from(_deployServers)
     .where(eq(_deployServers.id, params.id));
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return new Response("Not found", { status: 404 });
   return Response.json({
     ...row,

@@ -16,6 +16,7 @@ export const applyGroupJob = defineJob({
     .passthrough(),
   maxAttempts: 3,
   run: async ({ event }) => {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!event?.taskId || !event?.conversationId) return;
 
     const [pending] = await db
@@ -24,6 +25,7 @@ export const applyGroupJob = defineJob({
       .where(eq(_improvePendingGroups.taskId, event.taskId))
       .limit(1);
 
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!pending) return;
 
     await db

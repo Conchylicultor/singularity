@@ -23,6 +23,7 @@ export async function setTaskAutoStart(
     .from(_tasks)
     .where(eq(_tasks.id, id))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!task) return false;
   if (autoStart) {
     const now = new Date();
@@ -53,6 +54,7 @@ export async function claimAutoStart(id: string): Promise<boolean> {
     .delete(_tasksAutoStartExt)
     .where(eq(_tasksAutoStartExt.parentId, id))
     .returning({ parentId: _tasksAutoStartExt.parentId });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (row) tasksAutoStartResource.notify();
   return !!row;
 }

@@ -8,6 +8,5 @@ export function useAuthState() {
 
 export function useAccountStatus(providerId: string): AuthAccountState | null {
   const { data } = useAuthState();
-  if (!data) return null;
   return data.providers[providerId] ?? null;
 }

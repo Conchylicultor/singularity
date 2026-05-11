@@ -82,6 +82,7 @@ function isObjectSlot<T>(
 ): v is { column: PgColumnBuilderBase; match: (col: AnyPgColumn, payload: T) => SQL } {
   return (
     typeof v === "object" &&
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime null guard; typeof null === "object"
     v !== null &&
     "match" in v &&
     // biome-ignore lint/suspicious/noExplicitAny: runtime brand check.

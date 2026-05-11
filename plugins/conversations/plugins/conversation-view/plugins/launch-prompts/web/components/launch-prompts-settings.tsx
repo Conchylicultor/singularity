@@ -47,10 +47,6 @@ export function LaunchPromptsSettings() {
   const { data: prompts } = useResource(launchPromptsResource);
   const deletingRef = useRef(new Set<string>());
 
-  if (!prompts) {
-    return <p className="text-muted-foreground text-xs">Loading…</p>;
-  }
-
   const visible = prompts.filter((p) => !deletingRef.current.has(p.id));
 
   function handleDelete(id: string) {

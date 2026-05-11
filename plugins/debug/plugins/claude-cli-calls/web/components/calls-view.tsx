@@ -10,7 +10,7 @@ type SourceFilter = string;
 
 export function CallsView() {
   const { data } = useResource(claudeCliCallsResource);
-  const calls = useMemo(() => data ?? [], [data]);
+  const calls = data;
   const [modelFilter, setModelFilter] = useState<ModelFilter>("all");
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
 

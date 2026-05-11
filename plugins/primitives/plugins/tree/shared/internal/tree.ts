@@ -54,6 +54,7 @@ export function computeDrop<T extends Node>(
     try {
       return {
         parentId: target.id,
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
         rank: Rank.between(last?.rank ?? null, null),
       };
     } catch {
@@ -72,12 +73,14 @@ export function computeDrop<T extends Node>(
       const prev = siblings[idx - 1];
       return {
         parentId: target.parentId,
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
         rank: Rank.between(prev?.rank ?? null, target.rank),
       };
     }
     const next = siblings[idx + 1];
     return {
       parentId: target.parentId,
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       rank: Rank.between(target.rank, next?.rank ?? null),
     };
   } catch {

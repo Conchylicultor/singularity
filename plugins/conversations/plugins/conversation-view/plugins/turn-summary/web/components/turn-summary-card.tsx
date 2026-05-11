@@ -40,7 +40,7 @@ export function TurnSummaryCard({
 }) {
   const { data } = useResource(turnSummariesResource);
   const [collapsed, setCollapsed] = useState(false);
-  const summary = data?.[conversation.id];
+  const summary = data[conversation.id];
   if (!summary) return null;
 
   const caveats = parseBullets(summary.caveats);

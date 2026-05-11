@@ -16,8 +16,8 @@ export function AgentAvatarRow({ conv }: { conv: ConversationItemConv }) {
   const { data: launches } = useResource(agentLaunchesResource);
   const { data: agents } = useResource(agentsResource);
   if (conv.kind !== "agent" || !conv.taskId) return null;
-  const launch = launches?.find((l) => l.taskId === conv.taskId);
-  const agent = launch ? agents?.find((a) => a.id === launch.agentId) : null;
+  const launch = launches.find((l) => l.taskId === conv.taskId);
+  const agent = launch ? agents.find((a) => a.id === launch.agentId) : null;
   return (
     <Avatar
       icon={agent?.icon ?? DEFAULT_AGENT_AVATAR.icon}

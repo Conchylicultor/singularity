@@ -24,6 +24,7 @@ function useGithubBase(): string | null {
         const res = await fetch("/api/repo-info");
         if (!res.ok) return;
         const info = (await res.json()) as RepoInfo;
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!cancelled) setBase(info.githubBase);
       } catch {
         // leave base null — row still renders without a link
@@ -77,8 +78,7 @@ export function TaskEvents({ taskId }: { taskId: string }) {
         ?.params.convId;
 
   const attempts = useMemo(() => {
-    const rows = attemptsQ.data ?? [];
-    return rows
+    return attemptsQ.data
       .filter((a) => a.taskId === taskId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
   }, [attemptsQ.data, taskId]);
@@ -86,8 +86,7 @@ export function TaskEvents({ taskId }: { taskId: string }) {
   const attemptIds = useMemo(() => new Set(attempts.map((a) => a.id)), [attempts]);
 
   const pushes = useMemo(() => {
-    const rows = pushesQ.data ?? [];
-    return rows
+    return pushesQ.data
       .filter((p) => attemptIds.has(p.attemptId))
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
   }, [pushesQ.data, attemptIds]);

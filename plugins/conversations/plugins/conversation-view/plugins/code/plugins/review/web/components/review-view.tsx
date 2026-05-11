@@ -59,7 +59,7 @@ export function ReviewView() {
 
   const pushesQ = useResource(pushesResource);
   const pushGroups = useMemo(() => {
-    const rows = (pushesQ.data ?? []).filter(
+    const rows = pushesQ.data.filter(
       (p) => p.attemptId === conversation.attemptId,
     );
     return groupPushes(rows);

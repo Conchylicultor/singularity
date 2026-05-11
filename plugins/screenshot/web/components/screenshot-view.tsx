@@ -51,6 +51,7 @@ export function ScreenshotView({ id }: { id: string }) {
       try {
         const res = await fetch(`/api/screenshots/${id}`);
         if (res.ok) {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!blobDelivered.current) {
             setImageBlob(await res.blob());
             resetEdits();
@@ -58,11 +59,13 @@ export function ScreenshotView({ id }: { id: string }) {
           return;
         }
         if (res.status !== 404 || Date.now() > deadline) {
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (!blobDelivered.current)
             setError(res.status === 404 ? "Screenshot not found" : `Failed (${res.status})`);
           return;
         }
       } catch (err) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!blobDelivered.current) setError((err as Error).message);
         return;
       }

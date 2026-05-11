@@ -11,7 +11,7 @@ export function AttemptSwitchButton() {
   const { data } = useResource(attemptsResource);
   const match = usePaneMatch();
 
-  const attempt = data?.find((a) => a.id === conversation.attemptId) ?? null;
+  const attempt = data.find((a) => a.id === conversation.attemptId) ?? null;
   const count = attempt?.conversations.length ?? 0;
 
   const inAttemptView =

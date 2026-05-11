@@ -35,6 +35,7 @@ export async function endRank(): Promise<Rank> {
     .where(eq(_conversations.status, "waiting"))
     .orderBy(desc(_conversationsExtQueue.rank))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return Rank.between(last?.rank ? Rank.from(last.rank as string) : null, null);
 }
 
@@ -82,6 +83,7 @@ export async function rankForTop(excludeId: string): Promise<Rank> {
     )
     .orderBy(asc(_conversationsExtQueue.rank))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return Rank.between(null, first?.rank ? Rank.from(first.rank as string) : null);
 }
 
@@ -96,6 +98,7 @@ export async function rankForBottom(excludeId: string): Promise<Rank> {
     )
     .orderBy(desc(_conversationsExtQueue.rank))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return Rank.between(last?.rank ? Rank.from(last.rank as string) : null, null);
 }
 
@@ -107,6 +110,7 @@ export async function rankAfterN(conversationId: string, n: number): Promise<Ran
     .from(_conversationsExtQueue)
     .where(eq(_conversationsExtQueue.parentId, conversationId))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!self?.rank) return rankForBottom(conversationId);
 
   const rows = await joinedWaiting()
@@ -139,6 +143,7 @@ export async function rankAdjacentTo(
     .from(_conversationsExtQueue)
     .where(eq(_conversationsExtQueue.parentId, targetId))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!target?.rank) throw new Error(`No queue rank for conversation ${targetId}`);
 
   if (zone === "before") {
@@ -151,6 +156,7 @@ export async function rankAdjacentTo(
       )
       .orderBy(desc(_conversationsExtQueue.rank))
       .limit(1);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     return safeBetween(pred?.rank ? Rank.from(pred.rank as string) : null, Rank.from(target.rank as string));
   } else {
     const [succ] = await joinedWaiting()
@@ -162,6 +168,7 @@ export async function rankAdjacentTo(
       )
       .orderBy(asc(_conversationsExtQueue.rank))
       .limit(1);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     return safeBetween(Rank.from(target.rank as string), succ?.rank ? Rank.from(succ.rank as string) : null);
   }
 }
@@ -188,6 +195,7 @@ export async function rankAfterBlockers(
     .orderBy(desc(_conversationsExtQueue.rank))
     .limit(1);
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!last?.rank) return positionTwoRank(conversationId, executor);
 
   const [succ] = await joinedWaiting(executor)
@@ -203,6 +211,7 @@ export async function rankAfterBlockers(
 
   return safeBetween(
     Rank.from(last.rank as string),
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     succ?.rank ? Rank.from(succ.rank as string) : null,
   );
 }

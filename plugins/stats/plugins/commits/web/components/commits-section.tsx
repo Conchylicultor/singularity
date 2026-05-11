@@ -17,12 +17,14 @@ export function CommitsSection() {
           type="button"
           onClick={toggle}
           title={
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             filterRebases
               ? "Deduplication on: multi-commit pushes counted once — click to disable"
               : "Deduplication off: every commit counted — click to filter rebases"
           }
           className={cn(
             "rounded-full border px-3 py-1 text-xs transition-colors",
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             filterRebases
               ? "bg-primary text-primary-foreground border-primary"
               : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",

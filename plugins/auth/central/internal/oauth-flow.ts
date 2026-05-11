@@ -116,6 +116,7 @@ export function defaultParseTokenResponse(
   raw: unknown,
 ): ParsedTokenResponse {
   const r = raw as RawTokenResponse;
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard on external API response
   if (!r || typeof r.access_token !== "string") {
     throw new Error("auth: token response missing access_token");
   }

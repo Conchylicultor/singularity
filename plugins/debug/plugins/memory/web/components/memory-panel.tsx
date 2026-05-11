@@ -37,12 +37,10 @@ export function MemoryPanel() {
     try {
       const res = await fetch("/api/debug/memory");
       const data = (await res.json()) as ListResponse;
-      if (data.ok) {
-        setFiles(data.files);
-        setDir(data.dir);
-        if (data.files.length > 0 && selected === null) {
-          setSelected(data.files[0]?.name ?? null);
-        }
+      setFiles(data.files);
+      setDir(data.dir);
+      if (data.files.length > 0 && selected === null) {
+        setSelected(data.files[0]?.name ?? null);
       }
     } catch {
       // non-fatal

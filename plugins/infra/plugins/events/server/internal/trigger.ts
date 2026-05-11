@@ -63,6 +63,7 @@ interface RowInsertSpec<P> {
 }
 
 async function insertTriggerRow<P>(spec: RowInsertSpec<P>): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- forward-compat guard; more source kinds may be added
   if (spec.on.__kind !== "event") {
     throw new Error(
       `[events] trigger({ on }) got unsupported source kind: ${(spec.on as { __kind: string }).__kind}`,
@@ -90,6 +91,7 @@ async function insertTriggerRow<P>(spec: RowInsertSpec<P>): Promise<string> {
     });
 
   const row = rows[0];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new Error(`[events] trigger insert returned no rows`);
   return row.id as string;
 }

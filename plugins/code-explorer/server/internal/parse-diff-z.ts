@@ -27,6 +27,7 @@ export function parseDiffNameStatusZ(out: string): NameStatusRecord[] {
     if (code === "R" || code === "C") {
       const oldPath = tokens[i + 1];
       const newPath = tokens[i + 2];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (oldPath === undefined || newPath === undefined) break;
       result.push({
         status: code === "R" ? "renamed" : "copied",
@@ -36,6 +37,7 @@ export function parseDiffNameStatusZ(out: string): NameStatusRecord[] {
       i += 3;
     } else {
       const path = tokens[i + 1];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (path === undefined) break;
       result.push({ status: mapSimpleStatus(code), path });
       i += 2;
@@ -64,6 +66,7 @@ export function parseDiffNumstatZ(out: string): NumstatRecord[] {
     if (path === "") {
       const oldPath = tokens[i + 1];
       const newPath = tokens[i + 2];
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (oldPath === undefined || newPath === undefined) break;
       result.push({ additions: add, deletions: del, path: newPath, from: oldPath });
       i += 3;

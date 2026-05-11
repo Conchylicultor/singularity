@@ -33,7 +33,7 @@ export function PushAndExitButton({
 }) {
   const live = useConversation(conversation.id) ?? conversation;
   const { data: jobs } = useResource(pushAndExitResource);
-  const job = jobs?.[conversation.id] as JobState | undefined;
+  const job = jobs[conversation.id] as JobState | undefined;
   const busy = job?.status === "running";
 
   const [draft, , clearDraft] = useDraft("conversation:prompt", "", { scope: conversation.id });
@@ -51,7 +51,7 @@ export function PushAndExitButton({
     // assumption (treat the conversation as if it has unpushed work) and
     // prevents the label from flickering through "Drop & Exit" / "Exit"
     // while resources stream in.
-    if (files === null || pushes === undefined || conversationsLoading) {
+    if (conversationsLoading) {
       return "push-and-exit";
     }
     if (files.length > 0) {

@@ -15,7 +15,7 @@ export function QuickPromptChips({
   const { data: prompts } = useResource(quickPromptsResource);
   const [sendingId, setSendingId] = useState<string | null>(null);
 
-  if (!prompts || prompts.length === 0) return null;
+  if (prompts.length === 0) return null;
   if (live.status !== "waiting") return null;
 
   async function sendPrompt(id: string, text: string) {

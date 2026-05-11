@@ -62,6 +62,7 @@ export const googleDescriptor: AuthProviderDescriptor = defineAuthProvider({
       const cfg = await readGlobalConfig("auth-google", googleAuthConfig);
       // Google requires both; either missing means we can't complete the OAuth
       // flow, so treat the provider as unconfigured.
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; readGlobalConfig returns "" for unset secrets
       if (!cfg.clientId || !cfg.clientSecret) {
         throw new AuthCredentialsMissingError("google");
       }

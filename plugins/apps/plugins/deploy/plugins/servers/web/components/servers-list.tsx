@@ -30,7 +30,7 @@ export function ServersList() {
         </button>
       </div>
       <div className="flex-1 overflow-auto">
-        {!servers || servers.length === 0 ? (
+        {servers.length === 0 ? (
           <div className="text-muted-foreground p-4 text-sm">
             No servers registered. Add one to get started.
           </div>

@@ -70,13 +70,13 @@ function walk(node: ReactNode, contribs: PatternContrib[], inPre = false): React
     // Fragments are transparent wrappers — recurse so a chained linkify
     // (e.g. file-links wrapping output in <Fragment>) doesn't hide text.
     if (el.type === Fragment) {
-      return <Fragment>{walk(el.props?.children, contribs, inPre)}</Fragment>;
+      return <Fragment>{walk(el.props.children, contribs, inPre)}</Fragment>;
     }
     if (typeof el.type !== "string") return el;
     if (ALWAYS_SKIP.has(el.type)) return el;
     // <pre> and <code>-inside-<pre> are skipped; standalone inline <code> is linkified
     if (SKIP_IN_PRE.has(el.type) && (inPre || el.type === "pre")) return el;
-    const inner = el.props?.children;
+    const inner = el.props.children;
     if (inner === undefined) return el;
     return cloneElement(el, undefined, walk(inner, contribs, el.type === "pre"));
   }

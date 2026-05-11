@@ -23,6 +23,7 @@ export async function listTasks(filters?: TaskFilters): Promise<Task[]> {
 
 export async function getTask(id: string): Promise<Task | null> {
   const [row] = (await db.select().from(tasks).where(eq(tasks.id, id)).limit(1)) as unknown as Task[];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   return row ?? null;
 }
 

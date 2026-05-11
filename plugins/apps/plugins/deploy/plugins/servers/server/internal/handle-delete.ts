@@ -12,6 +12,7 @@ export async function handleDelete(
     .delete(_deployServers)
     .where(eq(_deployServers.id, params.id))
     .returning();
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return new Response("Not found", { status: 404 });
   await deleteSecret({ namespace: "deploy-ssh", key: params.id });
   serversResource.notify();

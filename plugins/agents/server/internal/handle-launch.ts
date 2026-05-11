@@ -30,6 +30,7 @@ export async function handleLaunch(
     .from(agents)
     .where(eq(agents.id, agentId))
     .limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!agent) return new Response("Not found", { status: 404 });
   if (!agent.prompt) {
     return new Response("Agent has no prompt (folder node)", { status: 400 });

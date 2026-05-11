@@ -60,6 +60,8 @@ export class SharedWebSocket {
             this.readyState = SharedWebSocket.CONNECTING;
             this.setStatus("reconnecting");
             break;
+          case "tx":
+            break;
         }
       },
       onFollowerJoined: () => {

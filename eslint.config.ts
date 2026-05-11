@@ -20,7 +20,6 @@ import { fileURLToPath, pathToFileURL } from "url";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import type { Linter } from "eslint";
-import jsxA11y from "eslint-plugin-jsx-a11y";
 import reactHooks from "eslint-plugin-react-hooks";
 import { promiseSafetyRules } from "./tooling/src/lint/promise-safety/index";
 
@@ -118,19 +117,23 @@ const baseConfigs: Linter.Config[] = [
       "@typescript-eslint": tsPlugin as unknown as Linter.Plugin,
       "promise-safety": { rules: promiseSafetyRules } as unknown as Linter.Plugin,
       "react-hooks": reactHooks as unknown as Linter.Plugin,
-      "jsx-a11y": jsxA11y as unknown as Linter.Plugin,
     },
     rules: {
       "@typescript-eslint/no-floating-promises": "off",
       "@typescript-eslint/no-misused-promises": ["error", {
         checksVoidReturn: { attributes: false },
       }],
+      "@typescript-eslint/switch-exhaustiveness-check": "error",
+      "@typescript-eslint/no-unnecessary-condition": ["warn", {
+        allowConstantLoopConditions: true,
+      }],
       "promise-safety/no-floating-promises": "error",
       "promise-safety/no-bare-catch": "error",
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "error",
-      "jsx-a11y/click-events-have-key-events": "warn",
-      "jsx-a11y/no-static-element-interactions": "warn",
+      "no-constant-binary-expression": "error",
+      "eqeqeq": ["error", "smart"],
+      "no-template-curly-in-string": "error",
     },
   },
   {

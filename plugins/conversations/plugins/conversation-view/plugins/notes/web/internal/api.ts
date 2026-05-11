@@ -14,7 +14,7 @@ export async function upsertNote(
     const body = (await res.json().catch(() => ({}))) as {
       error?: string;
     };
-    throw new Error(body?.error ?? `HTTP ${res.status}`);
+    throw new Error(body.error ?? `HTTP ${res.status}`);
   }
 }
 
@@ -27,6 +27,6 @@ export async function deleteNote(conversationId: string): Promise<void> {
     const body = (await res.json().catch(() => ({}))) as {
       error?: string;
     };
-    throw new Error(body?.error ?? `HTTP ${res.status}`);
+    throw new Error(body.error ?? `HTTP ${res.status}`);
   }
 }

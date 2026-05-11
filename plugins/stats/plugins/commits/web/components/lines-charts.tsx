@@ -469,7 +469,7 @@ export function LinesChartsSection() {
   const [bucket, setBucket] = useState<Bucket>("day");
   const { data: overrides } = useResource(excludedPathStateResource);
   const { filterRebases } = useConfigValues(commitsConfig, "stats-commits");
-  const filterKey = JSON.stringify(overrides ?? {});
+  const filterKey = JSON.stringify(overrides);
 
   return (
     <div className="flex flex-col gap-6">

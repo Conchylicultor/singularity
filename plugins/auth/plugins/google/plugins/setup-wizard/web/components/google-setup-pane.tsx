@@ -220,7 +220,7 @@ export function GoogleSetupPane() {
               <div className="flex items-center gap-1 text-xs text-emerald-700">
                 <MdCheck className="h-4 w-4" />
                 Connected
-                {status?.identity?.email ? ` (${status.identity.email})` : ""}
+                {status.identity?.email ? ` (${status.identity.email})` : ""}
               </div>
             ) : (
               <>

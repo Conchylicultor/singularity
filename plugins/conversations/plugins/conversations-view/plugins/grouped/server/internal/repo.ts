@@ -52,6 +52,7 @@ export async function addMembersToGroup(groupId: string, conversationIds: string
       .from(_conversationGroups)
       .where(eq(_conversationGroups.id, groupId))
       .limit(1);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!group) throw new Error(`Group ${groupId} not found`);
     for (const conversationId of conversationIds) {
       const rank = await nextRankUnder(_conversationGroupMembers, _conversationGroupMembers.groupId, groupId, tx);
@@ -78,6 +79,7 @@ export async function removeMember(conversationId: string): Promise<boolean> {
     .delete(_conversationGroupMembers)
     .where(eq(_conversationGroupMembers.conversationId, conversationId))
     .returning({ conversationId: _conversationGroupMembers.conversationId });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
   conversationGroupsResource.notify();
   return true;
@@ -99,6 +101,7 @@ export async function updateGroup(id: string, patch: UpdateGroupPatch): Promise<
     .set(dbPatch)
     .where(eq(_conversationGroups.id, id))
     .returning({ id: _conversationGroups.id });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
   conversationGroupsResource.notify();
   return true;
@@ -109,6 +112,7 @@ export async function deleteGroup(id: string): Promise<boolean> {
     .delete(_conversationGroups)
     .where(eq(_conversationGroups.id, id))
     .returning({ id: _conversationGroups.id });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
   conversationGroupsResource.notify();
   return true;

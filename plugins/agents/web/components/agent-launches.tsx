@@ -24,7 +24,7 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
   )?.params.convId;
 
   const launches = useMemo(() => {
-    const rows = launchesQ.data ?? [];
+    const rows = launchesQ.data;
     return rows
       .filter((l) => l.agentId === agentId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));

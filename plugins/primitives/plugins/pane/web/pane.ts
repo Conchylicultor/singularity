@@ -572,7 +572,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
   ): void {
     const replace = internal.chrome.enabled && !internal.chrome.history;
     const chain = getChain();
-    const ownParams = extractOwnParams(internal, params ?? {});
+    const ownParams = extractOwnParams(internal, params);
 
     // If already in chain, update params or no-op (unless root or append is forced)
     const existingIdx = chain.findIndex((s) => s.paneId === internal.id);
@@ -593,7 +593,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
       // Try insertion into current chain
       const positions = findValidPositions(internal, chain);
       if (positions.length > 0) {
-        const ancestorParamKeys = Object.keys(params ?? {}).filter(
+        const ancestorParamKeys = Object.keys(params).filter(
           (k) => !(k in ownParams),
         );
         for (let p = positions.length - 1; p >= 0; p--) {
@@ -628,7 +628,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     }
 
     // No valid position, root forced, or no matching params — build fresh chain
-    setChain(buildFreshChain(internal, params ?? {}), replace);
+    setChain(buildFreshChain(internal, params), replace);
   }
 
   function close(): void {

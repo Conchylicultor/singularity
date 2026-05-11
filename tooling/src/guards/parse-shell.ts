@@ -44,6 +44,7 @@ function splitOnOperators(s: string): string[] {
     if (mode === "none") {
       if (c === "'") { mode = "single"; cur += c; continue; }
       if (c === '"') { mode = "double"; cur += c; continue; }
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (c === "\\" && next !== undefined) { cur += c + next; i++; continue; }
       if ((c === "&" && next === "&") || (c === "|" && next === "|")) {
         parts.push(cur); cur = ""; i++; continue;
@@ -56,6 +57,7 @@ function splitOnOperators(s: string): string[] {
       cur += c;
       if (c === "'") mode = "none";
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (c === "\\" && next !== undefined) { cur += c + next; i++; continue; }
       cur += c;
       if (c === '"') mode = "none";
@@ -79,6 +81,7 @@ function shellSplit(s: string): string[] {
     if (mode === "none") {
       if (c === "'") { mode = "single"; started = true; continue; }
       if (c === '"') { mode = "double"; started = true; continue; }
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (c === "\\" && next !== undefined) { cur += next; started = true; i++; continue; }
       if (/\s/.test(c)) { flush(); continue; }
       cur += c; started = true;
@@ -87,6 +90,7 @@ function shellSplit(s: string): string[] {
       cur += c;
     } else {
       if (c === '"') { mode = "none"; continue; }
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (c === "\\" && next !== undefined) { cur += next; i++; continue; }
       cur += c;
     }
@@ -105,6 +109,7 @@ function scanRedirections(cmd: string): ShellRedirection[] {
     if (mode === "none") {
       if (c === "'") { mode = "single"; masked += " "; continue; }
       if (c === '"') { mode = "double"; masked += " "; continue; }
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (c === "\\" && next !== undefined) { masked += "  "; i++; continue; }
       masked += c;
     } else if (mode === "single") {
@@ -112,6 +117,7 @@ function scanRedirections(cmd: string): ShellRedirection[] {
       masked += " ";
     } else {
       if (c === '"') { mode = "none"; masked += " "; continue; }
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (c === "\\" && next !== undefined) { masked += "  "; i++; continue; }
       masked += " ";
     }

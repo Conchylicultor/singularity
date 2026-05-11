@@ -15,13 +15,13 @@ export function DocsButton() {
   const isOpen =
     match?.chain.some((e) => e.pane === convDocsPane._internal) ?? false;
 
-  const workingDocs = useMemo(() => files?.filter((f) => isDocFile(f.path)) ?? null, [files]);
+  const workingDocs = useMemo(() => files.filter((f) => isDocFile(f.path)), [files]);
 
   const count = useMemo(() => {
-    if (workingDocs === null && pushedDocs === null) return null;
-    const workingPaths = new Set((workingDocs ?? []).map((f) => f.path));
+    if (workingDocs.length === 0 && pushedDocs === null) return null;
+    const workingPaths = new Set(workingDocs.map((f) => f.path));
     const pushedOnlyCount = (pushedDocs ?? []).filter((f) => !workingPaths.has(f.path)).length;
-    return (workingDocs?.length ?? 0) + pushedOnlyCount;
+    return workingDocs.length + pushedOnlyCount;
   }, [workingDocs, pushedDocs]);
 
   const disabled = count !== null && count === 0;

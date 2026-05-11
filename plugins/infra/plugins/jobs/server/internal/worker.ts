@@ -102,6 +102,7 @@ async function dispatch(
   }
 
   const workflowRunId =
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- back-compat guard; pre-workflowRunId rows may still be in the queue
     payload.workflowRunId ??
     // Back-compat for any pre-workflowRunId rows that may still sit in the
     // queue during a rolling upgrade: synthesise a stable id from jobId so
