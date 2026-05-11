@@ -37,7 +37,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
 - Exports (shared):
   - Types: `DatabaseConfig`, `DatabaseProvider`
   - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
-- Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `grouped`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+- Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `grouped`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
 - Sub-plugins:
   - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
   - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.

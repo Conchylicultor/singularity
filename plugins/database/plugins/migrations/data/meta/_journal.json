@@ -575,6 +575,13 @@
       "tag": "20260510_190957_31be266e__decouple_done_from_gone",
       "hash": "31be266e",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1778508604000,
+      "tag": "20260511_141004_c347aa93__add_prompt_templates",
+      "hash": "c347aa93",
+      "breakpoints": true
     }
   ]
 }

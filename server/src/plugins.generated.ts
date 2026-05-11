@@ -29,6 +29,7 @@ import conversationsConversationViewHoldAndExitPlugin from "@plugins/conversatio
 import conversationsConversationViewJsonlViewerPlugin from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/server";
 import conversationsConversationViewLaunchPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/launch-prompts/server";
 import conversationsConversationViewNotesPlugin from "@plugins/conversations/plugins/conversation-view/plugins/notes/server";
+import conversationsConversationViewPromptTemplatesPlugin from "@plugins/conversations/plugins/conversation-view/plugins/prompt-templates/server";
 import conversationsConversationViewPushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server";
 import conversationsConversationViewQuickPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server";
 import conversationsConversationViewResumePlugin from "@plugins/conversations/plugins/conversation-view/plugins/resume/server";
@@ -105,6 +106,7 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (conversationsConversationViewJsonlViewerPlugin as ServerPluginDefinition).dependsOn = [conversationsTranscriptWatcherPlugin, tasksCorePlugin];
 (conversationsConversationViewLaunchPromptsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraAttachmentsPlugin, primitivesRankPlugin];
 (conversationsConversationViewNotesPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEntityExtensionsPlugin, tasksCorePlugin];
+(conversationsConversationViewPromptTemplatesPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraAttachmentsPlugin, primitivesRankPlugin];
 (conversationsConversationViewPushAndExitPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraJobsPlugin, infraMcpPlugin, tasksCorePlugin];
 (conversationsConversationViewQuickPromptsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraAttachmentsPlugin, primitivesRankPlugin];
 (conversationsConversationViewResumePlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, tasksCorePlugin];
@@ -171,6 +173,7 @@ export const plugins: ServerPluginDefinition[] = [
   conversationsConversationViewJsonlViewerPlugin,
   conversationsConversationViewLaunchPromptsPlugin,
   conversationsConversationViewNotesPlugin,
+  conversationsConversationViewPromptTemplatesPlugin,
   conversationsConversationViewPushAndExitPlugin,
   conversationsConversationViewQuickPromptsPlugin,
   conversationsConversationViewResumePlugin,

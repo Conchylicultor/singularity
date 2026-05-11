@@ -82,6 +82,9 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
           - `/api/launch-prompts/:id (PATCH, DELETE)`
         - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
           - `/api/conversation-notes/:conversationId (PUT, DELETE)`
+        - **`prompt-templates`** — Template chips above the prompt input that prepend text to the editor draft for editing before sending. Named template chips that prepend text to the conversation prompt editor for editing before sending.
+          - `/api/prompt-templates (GET, POST)`
+          - `/api/prompt-templates/:id (PATCH, DELETE)`
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
           - `/api/conversations/:id/push-and-exit (POST, DELETE)`
         - **`quick-prompts`** — Named prompt chips in the conversation floating bar. Click to send a preset message to the active conversation. Named prompts that appear as chips in the conversation toolbar. Click to send a preset message.

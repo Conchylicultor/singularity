@@ -274,7 +274,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
   - Imported by: `build`, `commits`, `conversation-category`, `turn-summary`
-  - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `quick-prompts`, `theme-engine`
+  - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `theme-engine`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:
@@ -357,7 +357,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` `conversation`
         - `Conversation.ActionBar` → `ExpandConversationButton`
-      - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+      - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Exports (web):
@@ -559,6 +559,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
           - Contributes:
             - `Conversation.PromptInput` → `PromptInput`
+        - **`prompt-templates`** — Template chips above the prompt input that prepend text to the editor draft for editing before sending. Named template chips that prepend text to the conversation prompt editor for editing before sending.
+          - Defines:
+            - DB schema: `plugins/conversations/plugins/conversation-view/plugins/prompt-templates/server/internal/tables-attachments.ts`
+            - DB schema: `plugins/conversations/plugins/conversation-view/plugins/prompt-templates/server/internal/tables.ts`
+          - Contributes:
+            - `Conversation.AbovePromptInput` → `PromptTemplateChips`
+            - `Config.Section` "Prompt Templates" → `PromptTemplatesSettings`
+          - Server:
+            - Uses: `database.db`
+            - `GET /api/prompt-templates`
+            - `POST /api/prompt-templates`
+            - `PATCH /api/prompt-templates/:id`
+            - `DELETE /api/prompt-templates/:id`
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables.ts`
@@ -754,7 +767,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (shared):
     - Types: `DatabaseConfig`, `DatabaseProvider`
     - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `grouped`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `grouped`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Exports (server):

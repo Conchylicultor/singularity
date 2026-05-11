@@ -77,6 +77,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "conversations/plugins/conversation-view/plugins/notes", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/notes/web") },
   { name: "conversations/plugins/conversation-view/plugins/open-app", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/open-app/web") },
   { name: "conversations/plugins/conversation-view/plugins/prompt-input", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/prompt-input/web") },
+  { name: "conversations/plugins/conversation-view/plugins/prompt-templates", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/prompt-templates/web") },
   { name: "conversations/plugins/conversation-view/plugins/push-and-exit", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/web") },
   { name: "conversations/plugins/conversation-view/plugins/quick-prompts", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/web") },
   { name: "conversations/plugins/conversation-view/plugins/resume", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/resume/web") },
