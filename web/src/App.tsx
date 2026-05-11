@@ -28,7 +28,7 @@ export default function App() {
   const [state, setState] = useState<LoadedState | null>(null);
 
   useEffect(() => {
-    loadPlugins(pluginEntries).then(setState);
+    void loadPlugins(pluginEntries).then(setState);
   }, []);
 
   if (!state) return null;
