@@ -8,6 +8,6 @@ export default {
   description:
     "Lists pushes, attempts, and conversations for a task. Clicking a conversation opens taskConversationPane.",
   contributions: [
-    TaskDetailSlots.Section({ id: "events", order: 50, component: TaskEvents }),
+    TaskDetailSlots.Section({ id: "events", label: "Events", component: TaskEvents }),
   ],
 } satisfies PluginDefinition;

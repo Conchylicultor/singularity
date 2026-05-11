@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { MdBolt } from "react-icons/md";
 import { Breadcrumb } from "@plugins/primitives/plugins/breadcrumb/web";
 import type { PluginNode } from "../../shared/types";
@@ -9,12 +8,6 @@ interface PluginDetailProps {
 }
 
 export function PluginDetail({ node }: PluginDetailProps) {
-  const sections = PluginView.Section.useContributions();
-  const ordered = useMemo(
-    () => [...sections].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-    [sections],
-  );
-
   if (!node) {
     return (
       <div className="flex h-full items-center justify-center p-12 text-center">
@@ -29,8 +22,8 @@ export function PluginDetail({ node }: PluginDetailProps) {
 
   return (
     <div className="h-full overflow-y-auto">
-      <div className="mx-auto flex max-w-3xl flex-col gap-8 px-8 py-8">
-        <header className="flex flex-col gap-3">
+      <div className="mx-auto max-w-3xl">
+        <header className="flex flex-col gap-3 px-6 pt-6">
           <div className="flex items-baseline gap-3 text-2xl font-semibold tracking-tight">
             <Breadcrumb
               segments={trail.map((seg, i) => ({
@@ -54,9 +47,7 @@ export function PluginDetail({ node }: PluginDetailProps) {
           )}
         </header>
 
-        {ordered.map((s) => (
-          <s.component key={s.id} node={node} />
-        ))}
+        <PluginView.Host node={node} />
       </div>
     </div>
   );

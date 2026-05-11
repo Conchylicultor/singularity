@@ -5,8 +5,6 @@
 ## Plugin reference
 
 - Description: Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.
-- Defines:
-  - Slots: `TaskDetail.Above`, `TaskDetail.Section`
 - Exports (web):
   - Values: `taskConversationPane`, `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskNavigateProvider`, `tasksRootPane`, `TaskTreeDetail`, `useFlushAll`, `useRegisterFlush`, `useTaskNavigate`
 - Contributes:

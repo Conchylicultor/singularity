@@ -1,16 +1,3 @@
-import { defineSlot } from "@core";
-import type { ComponentType } from "react";
+import { defineDetailSections } from "@plugins/primitives/plugins/detail-sections/web";
 
-export const TaskDetail = {
-  Above: defineSlot<{
-    id: string;
-    order?: number;
-    component: ComponentType<{ taskId: string }>;
-  }>("task-detail.above"),
-
-  Section: defineSlot<{
-    id: string;
-    order?: number;
-    component: ComponentType<{ taskId: string }>;
-  }>("task-detail.section"),
-};
+export const TaskDetail = defineDetailSections<{ taskId: string }>("task-detail");

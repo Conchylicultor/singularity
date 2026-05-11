@@ -8,6 +8,6 @@ export default {
   description:
     "Renders the task's attachments (images, files) in the detail pane.",
   contributions: [
-    TaskDetailSlots.Section({ id: "attachments", order: 40, component: TaskAttachments }),
+    TaskDetailSlots.Section({ id: "attachments", label: "Attachments", component: TaskAttachments }),
   ],
 } satisfies PluginDefinition;

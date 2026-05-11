@@ -7,6 +7,6 @@ export default {
   name: "Plugin View: Sub-plugins",
   description: "Lists direct child plugins with load-bearing indicators in the plugin detail pane.",
   contributions: [
-    PluginViewSlots.Section({ id: "sub-plugins", order: 20, component: SubPluginsSection }),
+    PluginViewSlots.Section({ id: "sub-plugins", label: "Sub-plugins", component: SubPluginsSection }),
   ],
 } satisfies PluginDefinition;

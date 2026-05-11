@@ -1050,8 +1050,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `BarrelExport`, `CommandDef`, `Contribution`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`
         - Values: `buildPluginTree`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
-      - Defines:
-        - Slots: `PluginView.Section`
       - Exports (web):
         - Types: `PluginNode`, `PluginTreePayload`
         - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
@@ -1065,13 +1063,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
           - Contributes:
-            - `PluginViewSlots.Section` → `RuntimesSection`
+            - `PluginViewSlots.Section` "Runtimes" → `RuntimesSection`
         - **`source-path`** — Displays the plugin's source path in the plugin detail pane.
           - Contributes:
-            - `PluginViewSlots.Section` → `SourcePathSection`
+            - `PluginViewSlots.Section` "Source Path" → `SourcePathSection`
         - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.
           - Contributes:
-            - `PluginViewSlots.Section` → `SubPluginsSection`
+            - `PluginViewSlots.Section` "Sub-plugins" → `SubPluginsSection`
     - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
       - Contributes:
         - `Pane.Register` `publish`
@@ -1096,6 +1094,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `BreadcrumbProps`, `BreadcrumbSegment`
         - Values: `Breadcrumb`
+    - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.
+      - Exports (web):
+        - Types: `DetailSections`
+        - Values: `defineDetailSections`
     - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
       - Exports (web):
         - Types: `EditableField`, `UseEditableFieldOptions`
@@ -1335,16 +1337,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Resources: `tasks-auto-start` (push)
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
       - Contributes:
-        - `TaskDetailSlots.Section` → `TaskAttachments`
+        - `TaskDetailSlots.Section` "Attachments" → `TaskAttachments`
     - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the parent task when applicable.
       - Contributes:
-        - `TaskDetailSlots.Section` → `TaskDependencies`
+        - `TaskDetailSlots.Section` "Dependencies" → `TaskDependencies`
     - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.
       - Contributes:
-        - `TaskDetailSlots.Section` → `TaskDescription`
+        - `TaskDetailSlots.Section` "Description" → `TaskDescription`
     - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.
-      - Defines:
-        - Slots: `TaskDetail.Above`, `TaskDetail.Section`
       - Exports (web):
         - Values: `taskConversationPane`, `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskNavigateProvider`, `tasksRootPane`, `TaskTreeDetail`, `useFlushAll`, `useRegisterFlush`, `useTaskNavigate`
       - Contributes:
@@ -1362,13 +1362,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `TaskChainCardSchema`, `TaskChainLaunchSchema`, `TaskChainRelateModeSchema`, `TaskChainRelateSchema`, `TaskChainSubmitBodySchema`, `TaskChainSubmitResponseSchema`, `TaskChainTargetSchema`
     - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens taskConversationPane.
       - Contributes:
-        - `TaskDetailSlots.Section` → `TaskEvents`
+        - `TaskDetailSlots.Section` "Events" → `TaskEvents`
     - **`task-graph`** — Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.
       - Contributes:
-        - `TaskDetailSlots.Above` → `TaskGraph`
+        - `TaskDetailSlots.Section` "Graph" → `TaskGraph`
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
       - Contributes:
-        - `TaskDetailSlots.Section` → `TaskHeader`
+        - `TaskDetailSlots.Section` "Header" → `TaskHeader`
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
       - Defines:
         - Slots: `Tasks.List`, `Tasks.TaskActions`, `Tasks.ListActions`

@@ -7,6 +7,6 @@ export default {
   name: "Plugin View: Source Path",
   description: "Displays the plugin's source path in the plugin detail pane.",
   contributions: [
-    PluginViewSlots.Section({ id: "source-path", order: 30, component: SourcePathSection }),
+    PluginViewSlots.Section({ id: "source-path", label: "Source Path", component: SourcePathSection }),
   ],
 } satisfies PluginDefinition;

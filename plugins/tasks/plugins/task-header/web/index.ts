@@ -8,6 +8,6 @@ export default {
   description:
     "Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.",
   contributions: [
-    TaskDetailSlots.Section({ id: "header", order: 10, component: TaskHeader }),
+    TaskDetailSlots.Section({ id: "header", label: "Header", component: TaskHeader }),
   ],
 } satisfies PluginDefinition;

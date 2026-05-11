@@ -8,6 +8,6 @@ export default {
   description:
     "Lists the task's dependencies as removable chips, with a quick-add button for the parent task when applicable.",
   contributions: [
-    TaskDetailSlots.Section({ id: "dependencies", order: 30, component: TaskDependencies }),
+    TaskDetailSlots.Section({ id: "dependencies", label: "Dependencies", component: TaskDependencies }),
   ],
 } satisfies PluginDefinition;

@@ -7,6 +7,6 @@ export default {
   name: "Plugin View: Runtimes",
   description: "Displays runtime pills (web/server/central) in the plugin detail pane.",
   contributions: [
-    PluginViewSlots.Section({ id: "runtimes", order: 10, component: RuntimesSection }),
+    PluginViewSlots.Section({ id: "runtimes", label: "Runtimes", component: RuntimesSection }),
   ],
 } satisfies PluginDefinition;

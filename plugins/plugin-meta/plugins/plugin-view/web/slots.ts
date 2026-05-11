@@ -1,11 +1,4 @@
-import { defineSlot } from "@core";
-import type { ComponentType } from "react";
+import { defineDetailSections } from "@plugins/primitives/plugins/detail-sections/web";
 import type { PluginNode } from "../shared/types";
 
-export const PluginView = {
-  Section: defineSlot<{
-    id: string;
-    order?: number;
-    component: ComponentType<{ node: PluginNode }>;
-  }>("plugin-view.section"),
-};
+export const PluginView = defineDetailSections<{ node: PluginNode }>("plugin-view");
