@@ -3,6 +3,7 @@ import type { WsData, HttpHandler, WsHandler } from "./types";
 import { plugins } from "./plugins";
 import { notificationsWsHandler, handleResourceHttp } from "./resources";
 import { topoSortPlugins } from "./topo";
+import { collectContributions } from "./contributions";
 
 // Phase 1 — register: sequential, topo-sorted. Each plugin's `register`
 // array holds Registration tokens returned by helpers like `Mcp.tool`,
@@ -24,6 +25,11 @@ for (const p of ordered) {
     }
   }
 }
+
+// ── Contributions ──────────────────────────────────────────────
+// Collect declarative contributions from all plugins before onReady.
+// Consuming plugins call Token.getContributions() in their onReady.
+collectContributions(ordered);
 
 // ── Route tables ────────────────────────────────────────────────
 // Flatten plugin routes into lookup tables. Literal routes go in an O(1)

@@ -40,6 +40,8 @@ export interface Registration {
   register(): void | Promise<void>;
 }
 
+export type { ServerContribution, ServerContributionToken } from "./contributions";
+
 export interface ServerPluginDefinition {
   id: string;
   name: string;
@@ -86,4 +88,5 @@ export interface ServerPluginDefinition {
    * are logged but do not block other plugins' shutdown.
    */
   onShutdown?: () => void | Promise<void>;
+  contributions?: import("./contributions").ServerContribution[];
 }
