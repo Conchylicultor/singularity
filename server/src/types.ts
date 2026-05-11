@@ -20,11 +20,6 @@ export type HttpHandler = (
 // circular import.
 export type ResourceLike = { key: string };
 
-// Opaque handle for a config descriptor defined via `defineConfig`. The
-// concrete `ConfigDescriptor<S>` type lives in `@plugins/config/shared`.
-// biome-ignore lint/suspicious/noExplicitAny: descriptor is type-erased here.
-export type ConfigDescriptorLike = { schema: Record<string, any> };
-
 /**
  * A lazy registry write. Returned by helpers like `Mcp.tool`, `Runtime.define`,
  * `defineJob`, `defineTriggerEvent`, and `UNSAFE_installDurableHooks`. The
@@ -55,8 +50,6 @@ export interface ServerPluginDefinition {
   wsRoutes?: Record<string, WsHandler>;
   /** Live-state resources declared via `defineResource`. */
   resources?: ResourceLike[];
-  /** Config descriptor declared via `defineConfig` (plugins/config/shared). */
-  config?: ConfigDescriptorLike;
   /**
    * Plugins this plugin's `register` array must run after. Most plugins need
    * this empty: phase ordering (all `register` writes before any `onReady`)

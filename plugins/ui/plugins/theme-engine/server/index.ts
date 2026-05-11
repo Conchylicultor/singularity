@@ -1,8 +1,9 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Config } from "@plugins/config/server";
 import { themeEngineConfig } from "../shared";
 
 export default {
   id: "ui-theme-engine",
   name: "UI: Theme Engine",
-  config: themeEngineConfig,
+  contributions: [Config.Field(themeEngineConfig)],
 } satisfies ServerPluginDefinition;

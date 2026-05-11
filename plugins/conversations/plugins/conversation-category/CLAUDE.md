@@ -51,7 +51,7 @@ unless the user clicks "Re-classify with Haiku".
   - `Config.Section` "Category colors" → `CategoryColorSettings`
 - Server:
   - Register: `classifyConversationJob`
-  - Uses: `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
+  - Uses: `config.Config`, `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
   - `POST /api/conversation-category/:conversationId/classify`
   - `POST /api/conversation-category/:conversationId`
   - `DELETE /api/conversation-category/:conversationId`

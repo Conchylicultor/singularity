@@ -190,6 +190,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Auth.Provider`
         - `googleSetupPane.open`
+      - Server:
+        - Uses: `config.Config`
       - Central:
         - Register: `googleAuthRegistration`
         - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
@@ -205,6 +207,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `notionAuthConfig`
       - Contributes:
         - `Auth.Provider`
+      - Server:
+        - Uses: `config.Config`
       - Central:
         - Register: `notionAuthRegistration`
         - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
@@ -218,7 +222,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Pane.Register` `build`
   - Server:
     - Register: `buildRunJob`
-    - Uses: `config.readConfig`, `database.db`
+    - Uses: `config.Config`, `config.readConfig`, `database.db`
     - Resources: `build.history` (push), `build.mainAheadCount` (push)
     - `POST /api/build`
     - `GET /api/build/status`
@@ -259,7 +263,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `SecretFieldState`, `SectionWithPlugin`, `SpecWithPlugin`
     - Values: `Config`, `configResource`, `configSecretsResource`, `resetConfigValue`, `setConfigValue`, `settingsPane`, `useConfigValues`, `useSecretFieldSet`, `useSectionsWithPlugin`, `useSpecsWithPlugin`
   - Exports (server):
-    - Values: `configResource`, `configSecretsResource`, `readConfig`
+    - Values: `Config`, `configResource`, `configSecretsResource`, `readConfig`
   - Exports (shared):
     - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `Schema`, `ValueOf`, `Values`
     - Values: `defineConfig`, `fullKey`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `validateKind`
@@ -273,7 +277,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/config/specs`
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
-  - Imported by: `build`, `commits`, `conversation-category`, `turn-summary`
+  - Imported by: `build`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `notion`, `review`, `segmented-progress-bar`, `shape`, `sidebar-palette`, `theme-engine`, `turn-summary`
   - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `theme-engine`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
@@ -320,7 +324,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Config.Section` "Category colors" → `CategoryColorSettings`
       - Server:
         - Register: `classifyConversationJob`
-        - Uses: `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
+        - Uses: `config.Config`, `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
         - `POST /api/conversation-category/:conversationId/classify`
         - `POST /api/conversation-category/:conversationId`
         - `DELETE /api/conversation-category/:conversationId`
@@ -416,6 +420,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Contributes:
                 - `Pane.Register` `conv-review`
                 - `Conversation.ActionBar` → `ReviewButton`
+              - Server:
+                - Uses: `config.Config`
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
           - Exports (shared):
             - Types: `CommitDelta`, `CommitRow`, `CommitsGraph`
@@ -638,7 +644,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Conversation.AbovePromptInput` → `TurnSummaryCard`
           - Server:
             - Register: `generateTurnSummaryJob`
-            - Uses: `config.readConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
+            - Uses: `config.Config`, `config.readConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:
             - `Conversation.ActionBar` → `VscodeButton`
@@ -1272,7 +1278,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Stats.Chart` "Lines changed" → `LinesChartsSection`
         - `Config.Section` "Excluded path toggles" → `ExcludedPathToggles`
       - Server:
-        - Uses: `config.readConfig`, `database.db`
+        - Uses: `config.Config`, `config.readConfig`, `database.db`
         - `GET /api/stats/commits/cumulative`
         - `GET /api/stats/commits/rate`
         - `GET /api/stats/commits/lines/cumulative`
@@ -1292,7 +1298,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Stats.Chart` "Cost distribution per conversation" → `CostDistributionChart`
         - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
       - Server:
-        - Uses: `database.db`, `tasks-core._conversations`
+        - Uses: `config.Config`, `database.db`, `tasks-core._conversations`
         - `GET /api/stats/cost/daily`
         - `GET /api/stats/cost/daily-by-family`
         - `GET /api/stats/cost/cumulative`
@@ -1445,6 +1451,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `segmentedProgressBarConfig`
       - Contributes:
         - `ThemeEngine.VariantGroup` → `VariantPicker`
+      - Server:
+        - Uses: `config.Config`
       - Plugins:
         - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
           - Contributes:
@@ -1464,6 +1472,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Core.Root` → `ThemeInjector`
         - `Config.Section` "UI Themes" → `VariantSettings`
+      - Server:
+        - Uses: `config.Config`
       - Slot contributors: `color-palette`, `segmented-progress-bar`, `shape`, `sidebar-palette`, `tokens`
     - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
       - Contributes:
@@ -1483,6 +1493,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `ThemeEngine.TokenGroup` "Color Palette"
             - `ThemeEngine.VariantGroup` → `ColorPalettePicker`
+          - Server:
+            - Uses: `config.Config`
         - **`shape`** — Shape token group (border-radius) with switchable presets.
           - Defines:
             - Slots: `Shape.Preset`
@@ -1495,6 +1507,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `ThemeEngine.TokenGroup` "Shape"
             - `ThemeEngine.VariantGroup` → `ShapePicker`
+          - Server:
+            - Uses: `config.Config`
         - **`sidebar-palette`** — Sidebar palette token group with switchable presets.
           - Defines:
             - Slots: `SidebarPalette.Preset`
@@ -1507,6 +1521,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `ThemeEngine.TokenGroup` "Sidebar Palette"
             - `ThemeEngine.VariantGroup` → `SidebarPalettePicker`
+          - Server:
+            - Uses: `config.Config`
 
 - **`welcome`** — Landing pane shown at `/`.
   - Exports (web):

@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Config } from "@plugins/config/server";
 import { reviewConfig } from "../shared/config";
 
 export default {
@@ -6,5 +7,5 @@ export default {
   name: "Conversation: Code — Review",
   description:
     "Toolbar button and full-screen view to review all worktree changes file-by-file.",
-  config: reviewConfig,
+  contributions: [Config.Field(reviewConfig)],
 } satisfies ServerPluginDefinition;

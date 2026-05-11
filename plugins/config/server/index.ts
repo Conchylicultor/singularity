@@ -1,5 +1,4 @@
 import type { ServerPluginDefinition } from "@server/types";
-import { plugins as allPlugins } from "@server/plugins";
 import { ready as secretsReady } from "@plugins/infra/plugins/secrets/server";
 import { configResource } from "./internal/resource";
 import { configSecretsResource } from "./internal/secrets-resource";
@@ -13,6 +12,7 @@ import {
   handleSpecs,
 } from "./internal/handlers";
 
+export { Config } from "./internal/contribution";
 export { configResource } from "./internal/resource";
 export { configSecretsResource } from "./internal/secrets-resource";
 export { readConfig } from "./internal/read-config";
@@ -30,7 +30,7 @@ export default {
   },
   resources: [configResource, configSecretsResource],
   async onReady() {
-    buildRegistry(allPlugins);
+    buildRegistry();
     // Plaintext→secrets migration is main-only: the secrets store is
     // centralized on main, and running per-worktree would race multiple
     // writers against each other via RPC.

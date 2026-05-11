@@ -4,6 +4,7 @@ import type {
   Schema,
 } from "@plugins/config/shared";
 import { fullKey, normalize } from "@plugins/config/shared";
+import { Config } from "./contribution";
 
 export interface RegisteredPlugin {
   pluginId: string;
@@ -14,32 +15,24 @@ export interface RegisteredPlugin {
 
 let registry: RegisteredPlugin[] | null = null;
 let byFullKey: Map<string, NormalizedField> | null = null;
-// biome-ignore lint/suspicious/noExplicitAny: descriptor objects are erased here.
-const descriptorToPluginId = new WeakMap<ConfigDescriptor<any>, string>();
+const schemaToPluginId = new WeakMap<Schema, string>();
 
 /**
- * Build (or rebuild) the server-side config registry from the loaded plugin
- * list. Called once from the config plugin's `onReady` — later plugin mutations
+ * Build (or rebuild) the server-side config registry from contributions.
+ * Called once from the config plugin's `onReady` — later plugin mutations
  * require a restart, consistent with the rest of the server plugin system.
  */
-export function buildRegistry(
-  plugins: ReadonlyArray<{
-    id: string;
-    name: string;
-    description?: string;
-    config?: { schema: Schema };
-  }>,
-): void {
+export function buildRegistry(): void {
+  const contributions = Config.Field.getContributions();
   const out: RegisteredPlugin[] = [];
   const keys = new Map<string, NormalizedField>();
-  for (const p of plugins) {
-    if (!p.config) continue;
-    const descriptor = p.config as ConfigDescriptor;
-    descriptorToPluginId.set(descriptor, p.id);
-    const fields = normalize(descriptor.schema);
+  for (const c of contributions) {
+    if (!c._pluginId) continue;
+    schemaToPluginId.set(c.schema, c._pluginId);
+    const fields = normalize(c.schema);
     if (fields.length === 0) continue;
     for (const f of fields) {
-      const fk = fullKey(p.id, f.key);
+      const fk = fullKey(c._pluginId, f.key);
       if (keys.has(fk)) {
         // biome-ignore lint/suspicious/noConsole: misconfiguration surfaced at boot.
         console.warn(`[config] duplicate full-key "${fk}" — later plugin wins.`);
@@ -47,9 +40,9 @@ export function buildRegistry(
       keys.set(fk, f);
     }
     out.push({
-      pluginId: p.id,
-      pluginName: p.name,
-      pluginDescription: p.description,
+      pluginId: c._pluginId,
+      pluginName: c._pluginName ?? c._pluginId,
+      pluginDescription: c._pluginDescription,
       fields,
     });
   }
@@ -66,5 +59,5 @@ export function getField(fk: string): NormalizedField | undefined {
 }
 
 export function pluginIdOf(descriptor: ConfigDescriptor): string | undefined {
-  return descriptorToPluginId.get(descriptor);
+  return schemaToPluginId.get(descriptor.schema);
 }

@@ -3,7 +3,7 @@ import { isNull } from "drizzle-orm";
 import { deleteTriggersFor, trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
-import { readConfig } from "@plugins/config/server";
+import { Config, readConfig } from "@plugins/config/server";
 import { db } from "@plugins/database/server";
 import { handleBuild } from "./internal/handle-build";
 import { handleBuildStatus } from "./internal/handle-build-status";
@@ -17,7 +17,7 @@ import { buildConfig } from "../shared/config";
 export default {
   id: "build",
   name: "Build",
-  config: buildConfig,
+  contributions: [Config.Field(buildConfig)],
   resources: [mainAheadCountResource, buildHistoryResource],
   httpRoutes: {
     "POST /api/build": handleBuild,

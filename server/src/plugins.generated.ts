@@ -90,6 +90,8 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (activeDataPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, tasksCorePlugin];
 (agentsAutoLaunchTogglePlugin as ServerPluginDefinition).dependsOn = [agentsPlugin, databasePlugin, infraEntityExtensionsPlugin];
 (agentsPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraAttachmentsPlugin, primitivesRankPlugin, tasksCorePlugin];
+(authGooglePlugin as ServerPluginDefinition).dependsOn = [configPlugin];
+(authNotionPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (buildPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, debugLogsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin, infraPathsPlugin];
 (codeExplorerFileResolvePlugin as ServerPluginDefinition).dependsOn = [codeExplorerPlugin, infraPathsPlugin];
 (codeExplorerPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
@@ -98,6 +100,7 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (conversationsConversationCategoryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, databasePlugin, infraClaudeCliPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
 (conversationsConversationProgressPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, infraPathsPlugin, tasksCorePlugin];
 (conversationsConversationViewAllowMonitorPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
+(conversationsConversationViewCodeReviewPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (conversationsConversationViewCodePlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, tasksCorePlugin];
 (conversationsConversationViewCommitsGraphPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, tasksCorePlugin];
 (conversationsConversationViewDropAndExitPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, tasksCorePlugin];
@@ -141,13 +144,18 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (primitivesRankPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (reorderPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (statsCommitsPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraPathsPlugin, infraWorktreePlugin];
-(statsCostPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
+(statsCostPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
 (statsTasksPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
 (tasksCorePlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraAttachmentsPlugin, infraEventsPlugin, primitivesRankPlugin];
 (tasksAutoStartPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, tasksCorePlugin];
 (tasksTaskTitlePlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraClaudeCliPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
 (tasksPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraAttachmentsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin, infraMcpPlugin, infraPathsPlugin, infraWorktreePlugin, tasksAutoStartPlugin, tasksCorePlugin, tasksTaskTitlePlugin];
 (terminalPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
+(uiSegmentedProgressBarPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
+(uiThemeEnginePlugin as ServerPluginDefinition).dependsOn = [configPlugin];
+(uiTokensColorPalettePlugin as ServerPluginDefinition).dependsOn = [configPlugin];
+(uiTokensShapePlugin as ServerPluginDefinition).dependsOn = [configPlugin];
+(uiTokensSidebarPalettePlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 
 export const plugins: ServerPluginDefinition[] = [
   activeDataPlugin,

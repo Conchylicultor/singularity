@@ -29,7 +29,7 @@ fetch URL so `useFetchJson` re-fetches when the toggle flips.
   - `Stats.Chart` "Cost distribution per conversation" → `CostDistributionChart`
   - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
 - Server:
-  - Uses: `database.db`, `tasks-core._conversations`
+  - Uses: `config.Config`, `database.db`, `tasks-core._conversations`
   - `GET /api/stats/cost/daily`
   - `GET /api/stats/cost/daily-by-family`
   - `GET /api/stats/cost/cumulative`

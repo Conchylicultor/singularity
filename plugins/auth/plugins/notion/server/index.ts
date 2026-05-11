@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Config } from "@plugins/config/server";
 import { notionAuthConfig } from "../shared";
 
 // Worktree-side registration carrier for the config schema only — the OAuth
@@ -7,5 +8,5 @@ import { notionAuthConfig } from "../shared";
 export default {
   id: "auth-notion",
   name: "Auth: Notion",
-  config: notionAuthConfig,
+  contributions: [Config.Field(notionAuthConfig)],
 } satisfies ServerPluginDefinition;

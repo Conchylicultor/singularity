@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Config } from "@plugins/config/server";
 import { handleCumulative, handleLinesCumulative } from "./internal/handle-cumulative";
 import { handleLinesRate, handleRate } from "./internal/handle-rate";
 import {
@@ -13,7 +14,7 @@ export default {
   id: "stats-commits",
   name: "Stats: Commits",
   description: "Commit-based stats: commits and lines of change over time.",
-  config: commitsConfig,
+  contributions: [Config.Field(commitsConfig)],
   httpRoutes: {
     "GET /api/stats/commits/cumulative": handleCumulative,
     "GET /api/stats/commits/rate": handleRate,

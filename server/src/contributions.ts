@@ -2,12 +2,17 @@ export type ServerContribution = {
   readonly _kind: symbol;
   _pluginId?: string;
   _pluginName?: string;
+  _pluginDescription?: string;
   [key: string]: unknown;
 };
 
 export interface ServerContributionToken<P> {
   (props: P): ServerContribution;
-  getContributions(): (P & { _pluginId?: string; _pluginName?: string })[];
+  getContributions(): (P & {
+    _pluginId?: string;
+    _pluginName?: string;
+    _pluginDescription?: string;
+  })[];
 }
 
 let byKind: Map<symbol, ServerContribution[]> = new Map();
@@ -33,13 +38,19 @@ export function defineServerContribution<P>(
 }
 
 export function collectContributions(
-  plugins: { id: string; name: string; contributions?: ServerContribution[] }[],
+  plugins: {
+    id: string;
+    name: string;
+    description?: string;
+    contributions?: ServerContribution[];
+  }[],
 ): void {
   byKind = new Map();
   for (const p of plugins) {
     for (const c of p.contributions ?? []) {
       c._pluginId = p.id;
       c._pluginName = p.name;
+      c._pluginDescription = p.description;
       let list = byKind.get(c._kind);
       if (!list) {
         list = [];

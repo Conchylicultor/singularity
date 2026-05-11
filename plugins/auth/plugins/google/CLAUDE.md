@@ -10,6 +10,8 @@
 - Contributes:
   - `Auth.Provider`
   - `googleSetupPane.open`
+- Server:
+  - Uses: `config.Config`
 - Central:
   - Register: `googleAuthRegistration`
   - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`

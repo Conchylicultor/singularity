@@ -9,6 +9,8 @@
   - Values: `notionAuthConfig`
 - Contributes:
   - `Auth.Provider`
+- Server:
+  - Uses: `config.Config`
 - Central:
   - Register: `notionAuthRegistration`
   - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`

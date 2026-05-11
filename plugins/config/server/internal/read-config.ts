@@ -26,7 +26,7 @@ export async function readConfig<S extends Schema>(
   const pluginId = pluginIdOf(descriptor as ConfigDescriptor);
   if (!pluginId) {
     throw new Error(
-      "readConfig: descriptor not registered. Ensure the owning plugin sets `config: <descriptor>` on its ServerPluginDefinition and that the config plugin's onReady has run.",
+      "readConfig: descriptor not registered. Ensure the owning plugin contributes `Config.Field(descriptor)` and that the config plugin's onReady has run.",
     );
   }
   const fields = normalize(descriptor.schema);

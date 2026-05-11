@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Config } from "@plugins/config/server";
 import {
   deleteTriggersFor,
   trigger,
@@ -17,7 +18,7 @@ export default {
   name: "Conversation View: Turn Summary",
   description:
     "After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.",
-  config: turnSummaryConfig,
+  contributions: [Config.Field(turnSummaryConfig)],
   resources: [turnSummariesResource],
   register: [generateTurnSummaryJob],
   onReady: async () => {

@@ -15,6 +15,8 @@
   - Values: `segmentedProgressBarConfig`
 - Contributes:
   - `ThemeEngine.VariantGroup` → `VariantPicker`
+- Server:
+  - Uses: `config.Config`
 - Sub-plugins:
   - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
   - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.
