@@ -116,7 +116,7 @@ export async function listAllChecks(): Promise<Check[]> {
 }
 
 export interface RunChecksOptions {
-  onCheckDone?: (id: string, durationMs: number) => void;
+  onCheckDone?: (id: string, durationMs: number, wallStartMs: number) => void;
 }
 
 export async function runChecks(ids?: string[], options?: RunChecksOptions): Promise<boolean> {
@@ -133,17 +133,23 @@ export async function runChecks(ids?: string[], options?: RunChecksOptions): Pro
     return false;
   }
 
+  const results = await Promise.all(
+    selected.map(async (check) => {
+      const wallStart = performance.now();
+      const result = await check.run();
+      const durationMs = Math.round(performance.now() - wallStart);
+      return { check, result, durationMs, wallStart };
+    }),
+  );
+
   let allOk = true;
-  for (const check of selected) {
-    process.stdout.write(`• ${check.id} ... `);
-    const t0 = performance.now();
-    const result = await check.run();
-    options?.onCheckDone?.(check.id, Math.round(performance.now() - t0));
+  for (const { check, result, durationMs, wallStart } of results) {
+    options?.onCheckDone?.(check.id, durationMs, wallStart);
     if (result.ok) {
-      console.log("ok");
+      console.log(`• ${check.id} ... ok`);
     } else {
       allOk = false;
-      console.log("FAIL");
+      console.log(`• ${check.id} ... FAIL`);
       console.error(`  ${result.message}`);
       if (result.hint) console.error(`  hint: ${result.hint}`);
     }

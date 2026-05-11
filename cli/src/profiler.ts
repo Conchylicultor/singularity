@@ -40,9 +40,13 @@ export function pushBuildSpan(
   phase: string,
   label: string,
   durationMs: number,
+  wallStartMs?: number,
 ): void {
-  const now = Math.round(performance.now() - t0);
-  spans.push({ id, phase, label, startMs: now - durationMs, durationMs });
+  const startMs =
+    wallStartMs != null
+      ? Math.round(wallStartMs - t0)
+      : Math.round(performance.now() - t0) - durationMs;
+  spans.push({ id, phase, label, startMs, durationMs });
 }
 
 export function writeBuildProfile(name: string): void {

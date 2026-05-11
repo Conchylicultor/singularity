@@ -526,8 +526,8 @@ export function registerBuild(program: Command) {
       if (!opts.skipChecks) {
         console.log("Running checks...");
         const ok = await runChecks(undefined, {
-          onCheckDone: (id, durationMs) => {
-            pushBuildSpan(`check:${id}`, "build:checks", id, durationMs);
+          onCheckDone: (id, durationMs, wallStartMs) => {
+            pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
           },
         });
         if (!ok) process.exit(1);
