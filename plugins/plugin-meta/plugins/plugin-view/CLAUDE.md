@@ -17,13 +17,14 @@ sibling plugins (e.g. publish's tree component).
   - Types: `PluginNode`, `PluginTreePayload`
   - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
 - Exports (shared):
-  - Types: `PluginNode`, `PluginTreePayload`
+  - Types: `BarrelExport`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`
 - Contributes:
   - `Pane.Register` `plugin-view`
 - Server:
   - `GET /api/plugin-view/tree`
 - Endpoint callers: `plugin-link`, `publish`
 - Sub-plugins:
+  - **`public-api`** — Displays the plugin's public exports, slots, routes, and consumer relationships.
   - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
   - **`source-path`** — Displays the plugin's source path in the plugin detail pane.
   - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.

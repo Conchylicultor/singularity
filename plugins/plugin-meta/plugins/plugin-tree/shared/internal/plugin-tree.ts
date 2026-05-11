@@ -66,6 +66,8 @@ export interface PluginNode {
   contributions: Contribution[];
   server: RuntimeDetail;
   central: RuntimeDetail;
+  webApiUses: string[];
+  sharedApiUses: string[];
   dbFiles: string[];
 
   importedBy: string[];
@@ -383,7 +385,7 @@ function parsePaneDefinitions(webDir: string): Map<string, PaneDefinition> {
   return out;
 }
 
-function parseServerApiUses(serverDir: string, selfName: string, runtime: "server" | "central" = "server"): string[] {
+function parseServerApiUses(serverDir: string, selfName: string, runtime: "web" | "server" | "central" | "shared" = "server"): string[] {
   const files: string[] = [];
   walkFiles(serverDir, files);
   const uses = new Set<string>();
@@ -683,6 +685,10 @@ function collectPlugin(dir: string, pluginsRoot: string): CollectedPlugin {
     : [];
   const centralResources = existsSync(centralDir) ? parseResources(centralDir) : [];
   const centralRegister = centralSrc ? parseRegisterTokens(centralSrc) : [];
+  const webDir = join(dir, "web");
+  const sharedDir = join(dir, "shared");
+  const webApiUses = existsSync(webDir) ? parseServerApiUses(webDir, basename(dir), "web") : [];
+  const sharedApiUses = existsSync(sharedDir) ? parseServerApiUses(sharedDir, basename(dir), "shared") : [];
 
   const rel = relative(pluginsRoot, dir);
   const segs = rel.split(/[\\/]+/);
@@ -732,6 +738,8 @@ function collectPlugin(dir: string, pluginsRoot: string): CollectedPlugin {
         registerTokens: centralRegister,
         apiUses: centralApiUses,
       },
+      webApiUses,
+      sharedApiUses,
       dbFiles,
       importedBy: [],
       slotContributors: [],
@@ -750,7 +758,7 @@ function computeRelationships(byDir: Map<string, PluginNode>): void {
 
   for (const importer of byDir.values()) {
     const referenced = new Set<string>();
-    for (const u of [...importer.server.apiUses, ...importer.central.apiUses]) {
+    for (const u of [...importer.server.apiUses, ...importer.central.apiUses, ...importer.webApiUses, ...importer.sharedApiUses]) {
       referenced.add(u.split(".")[0]!);
     }
     for (const targetName of referenced) {

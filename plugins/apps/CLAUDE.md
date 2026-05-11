@@ -10,6 +10,7 @@
   - Values: `Apps`
 - Contributes:
   - `Core.Root` → `AppsLayout`
+- Imported by: `shell`
 - Sub-plugins:
   - **`agent-manager`** — Agent manager app shell and layout.
   - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.

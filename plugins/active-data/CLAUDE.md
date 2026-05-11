@@ -80,6 +80,7 @@ Behavior:
   - Uses: `database.db`, `tasks-core._conversations`
   - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
   - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
+- Imported by: `assistant-text`, `attempt`, `conv`, `plugin-link`, `task`, `task-link`
 - Slot contributors: `attempt`, `conv`, `plugin-link`, `task`, `task-link`
 - Sub-plugins:
   - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed.

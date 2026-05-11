@@ -102,7 +102,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
   - `POST /api/auth/disconnect/:provider`
   - `POST /api/auth/api-key/:provider`
   - `GET /api/auth/state`
-- Imported by: `google`, `notion`
+- Imported by: `google`, `notion`, `setup-wizard`
 - Slot contributors: `google`, `notion`
 - Endpoint callers: `setup-wizard`
 - Sub-plugins:

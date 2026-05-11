@@ -1,3 +1,35 @@
+export interface BarrelExport {
+  name: string;
+  kind: "type" | "value";
+  category: "type" | "hook" | "component" | "value";
+  consumers?: string[];
+}
+
+export interface SlotInfo {
+  groupName: string;
+  memberName: string;
+  slotId: string;
+  contributors: string[];
+}
+
+export interface RouteInfo {
+  route: string;
+  callers: string[];
+}
+
+export interface ResourceInfo {
+  key: string;
+  mode: string;
+}
+
+export interface PublicApi {
+  exports: Record<"web" | "server" | "central" | "shared", BarrelExport[]>;
+  importedBy: string[];
+  slots: SlotInfo[];
+  routes: RouteInfo[];
+  resources: ResourceInfo[];
+}
+
 export interface PluginNode {
   /** Path relative to plugins/, e.g. "active-data/plugins/conv". */
   path: string;
@@ -9,6 +41,7 @@ export interface PluginNode {
   loadBearing: boolean;
   runtimes: { web: boolean; server: boolean; central: boolean };
   children: PluginNode[];
+  publicApi?: PublicApi;
 }
 
 export interface PluginTreePayload {

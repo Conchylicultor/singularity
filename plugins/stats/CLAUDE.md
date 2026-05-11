@@ -13,6 +13,7 @@
   - `Pane.Register` `stats`
   - `Shell.Sidebar` "Stats" (group `System`)
   - `statsPane.open`
+- Imported by: `commits`, `cost`, `tasks`
 - Slot contributors: `commits`, `cost`, `tasks`
 - Sub-plugins:
   - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.

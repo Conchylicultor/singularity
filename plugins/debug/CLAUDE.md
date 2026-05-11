@@ -11,6 +11,7 @@
   - Values: `Debug`
 - Contributes:
   - `Shell.Sidebar` "Debug" → `DebugSidebar`
+- Imported by: `broadcasts`, `claude-cli-calls`, `conversations-recover`, `db-backup`, `events-test`, `logs`, `memory`, `profiling`, `queue`, `worktree-cleanup`
 - Slot contributors: `broadcasts`, `claude-cli-calls`, `conversations-recover`, `db-backup`, `events-test`, `logs`, `memory`, `profiling`, `queue`, `worktree-cleanup`
 - Sub-plugins:
   - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.

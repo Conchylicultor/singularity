@@ -14,6 +14,7 @@
   - `POST /api/screenshots/:id`
   - `GET /api/screenshots/:id`
   - `POST /api/screenshots/:id/file`
+- Imported by: `draw-on-app`
 - Sub-plugins:
   - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.
   - **`draw-on-app`** — Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.
