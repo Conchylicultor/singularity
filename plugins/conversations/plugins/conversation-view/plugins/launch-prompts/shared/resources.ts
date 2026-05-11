@@ -15,4 +15,5 @@ export type LaunchPrompt = z.infer<typeof LaunchPromptSchema>;
 export const launchPromptsResource = resourceDescriptor<LaunchPrompt[]>(
   "launch-prompts",
   z.array(LaunchPromptSchema),
+  [],
 );

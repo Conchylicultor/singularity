@@ -14,4 +14,5 @@ export interface JsonlEventsResponse {
 export const jsonlEventsResource = resourceDescriptor<JsonlEvent[], { id: string }>(
   "jsonl-events",
   JsonlEventsPayloadSchema,
+  [],
 );

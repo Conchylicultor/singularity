@@ -14,6 +14,7 @@ export function defineSlot<P>(id: string): Slot<P> {
   slot.id = id;
 
   slot.useContributions = () => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- method named useContributions; ESLint doesn't recognize object.useX as a hook
     const ctx = useContext(PluginRuntimeContext);
     if (!ctx) {
       throw new Error("useContributions must be used within PluginProvider");

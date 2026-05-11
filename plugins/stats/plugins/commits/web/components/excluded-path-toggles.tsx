@@ -9,6 +9,7 @@ type PathStateMap = Record<string, boolean>;
 export const excludedPathStateResource = resourceDescriptor<PathStateMap>(
   "stats-commits.excluded-path-state",
   z.record(z.boolean()),
+  {},
 );
 
 async function setPathEnabled(path: string, enabled: boolean): Promise<void> {

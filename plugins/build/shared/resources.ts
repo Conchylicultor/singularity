@@ -10,6 +10,7 @@ export type MainAheadCount = z.infer<typeof MainAheadCountSchema>;
 export const mainAheadCountResource = resourceDescriptor<MainAheadCount>(
   "build.mainAheadCount",
   MainAheadCountSchema,
+  { count: 0 },
 );
 
 export const BuildRunSchema = z.object({
@@ -26,4 +27,5 @@ export type BuildRun = z.infer<typeof BuildRunSchema>;
 export const buildHistoryResource = resourceDescriptor<BuildRun[]>(
   "build.history",
   z.array(BuildRunSchema),
+  [],
 );

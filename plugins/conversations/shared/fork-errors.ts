@@ -16,4 +16,5 @@ export interface ForkError {
 export const forkErrorsResource = resourceDescriptor<ForkError | null>(
   "conversations.fork-errors",
   ForkErrorSchema.nullable(),
+  null,
 );

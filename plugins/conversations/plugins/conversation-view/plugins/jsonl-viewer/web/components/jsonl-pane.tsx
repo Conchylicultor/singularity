@@ -18,8 +18,8 @@ interface UsageTotals {
   latestContext: number;
 }
 
-function aggregateUsage(events: JsonlEvent[] | null): UsageTotals | null {
-  if (!events || events.length === 0) return null;
+function aggregateUsage(events: JsonlEvent[]): UsageTotals | null {
+  if (events.length === 0) return null;
   let output = 0;
   let latestContext = 0;
   let sawAny = false;
@@ -93,13 +93,11 @@ export function JsonlPane({
 }) {
   const isWorking = conversation.status === "working" || conversation.status === "starting";
   const isGone = conversation.status === "gone" || conversation.status === "done";
-  const { data, error, isLoading } = useResource(jsonlEventsResource, {
+  const { data: events, error, dataUpdatedAt } = useResource(jsonlEventsResource, {
     id: conversation.id,
   });
-  const events = data ?? null;
   const totals = useMemo(() => aggregateUsage(events), [events]);
   const lastAssistantEvent = useMemo(() => {
-    if (!events) return null;
     for (let i = events.length - 1; i >= 0; i--) {
       if (events[i]?.kind === "assistant-text") return events[i] ?? null;
     }
@@ -111,7 +109,7 @@ export function JsonlPane({
   if (isWorking) {
     if (!wasWorkingRef.current) {
       // Transition into working: seed from last event or now
-      const lastEvent = events?.length ? events[events.length - 1] : null;
+      const lastEvent = events.length ? events[events.length - 1] : null;
       const lastAt = lastEvent?.at ?? null;
       workingStartAtRef.current = lastAt ? new Date(lastAt).getTime() : Date.now();
     }
@@ -132,7 +130,7 @@ export function JsonlPane({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2 border-b px-2 py-1.5">
-        {events !== null && (
+        {events.length > 0 && (
           <span className="tabular-nums text-xs text-muted-foreground">
             {events.length}
           </span>
@@ -145,13 +143,13 @@ export function JsonlPane({
           className={`h-full overflow-auto transition-opacity ${isGone ? "opacity-50" : ""}`}
         >
           <div ref={sticky.contentRef}>
-            {events === null && isLoading ? (
+            {dataUpdatedAt === 0 ? (
               <div className="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
             ) : error ? (
               <div className="px-3 py-2 text-xs text-destructive">
                 {error instanceof Error ? error.message : String(error)}
               </div>
-            ) : !events || events.length === 0 ? (
+            ) : events.length === 0 ? (
               <div className="flex flex-col px-3 py-2 text-xs text-muted-foreground">
                 <span>No transcript yet. Claude may not have written its session log.</span>
                 {isWorking && <WorkingIndicator startAt={workingStartAt} />}

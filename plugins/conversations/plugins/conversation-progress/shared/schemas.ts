@@ -35,4 +35,5 @@ export const conversationProgressResource =
   resourceDescriptor<ConversationProgressPayload>(
     "conversation-progress",
     ConversationProgressPayloadSchema,
+    [],
   );

@@ -11,11 +11,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import {
-  conversationGroupsResource,
-  type ConversationGroup,
-  type ConversationGroupMember,
-} from "../../shared";
+import { conversationGroupsResource } from "../../shared";
 import type { Conversation } from "@plugins/tasks-core/shared";
 import { tasksResource } from "@plugins/tasks/shared";
 import { useTaskAutoGroups } from "./use-task-auto-groups";
@@ -85,8 +81,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
   } = props;
 
   const { data } = useResource(conversationGroupsResource);
-  const groups: ConversationGroup[] = data?.groups ?? [];
-  const members: ConversationGroupMember[] = data?.members ?? [];
+  const { groups, members } = data;
 
   const groupIdByConvId = useMemo(() => {
     const m = new Map<string, string>();
@@ -158,7 +153,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
   const { data: tasksData } = useResource(tasksResource);
   const { autoGroups, trulyUngrouped } = useTaskAutoGroups(
     ungroupedAttemptGroups,
-    tasksData ?? [],
+    tasksData,
   );
 
   const hasActiveInGroup = (ags: AttemptGroup[]) =>

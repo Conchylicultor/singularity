@@ -127,7 +127,7 @@ const baseConfigs: Linter.Config[] = [
       }],
       "promise-safety/no-floating-promises": "error",
       "promise-safety/no-bare-catch": "error",
-      "react-hooks/rules-of-hooks": "warn",
+      "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
       "jsx-a11y/click-events-have-key-events": "warn",
       "jsx-a11y/no-static-element-interactions": "warn",

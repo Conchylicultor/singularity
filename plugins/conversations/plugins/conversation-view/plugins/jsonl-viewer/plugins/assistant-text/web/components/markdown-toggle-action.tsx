@@ -6,8 +6,8 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
 export function MarkdownToggleAction({ event }: { event: JsonlEvent }) {
-  if (event.kind !== "assistant-text") return null;
   const { markdownMode, setMarkdownMode } = useRowMarkdown();
+  if (event.kind !== "assistant-text") return null;
   return (
     <RowActionButton
       title={markdownMode ? "Show raw text" : "Render markdown"}

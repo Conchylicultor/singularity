@@ -35,4 +35,5 @@ export const AuthStateValueSchema = z.object({
 export const authStateResource = centralResourceDescriptor<AuthStateValue>(
   "auth-state",
   AuthStateValueSchema,
+  { providers: {} },
 );

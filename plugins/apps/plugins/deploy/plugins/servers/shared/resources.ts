@@ -5,4 +5,5 @@ import { ServerSchema, type Server } from "./schemas";
 export const serversResource = resourceDescriptor<Server[]>(
   "deploy.servers",
   z.array(ServerSchema),
+  [],
 );

@@ -17,4 +17,5 @@ export type JobState =
 export const pushAndExitResource = resourceDescriptor<Record<string, JobState>>(
   "push-and-exit",
   z.record(JobStateSchema),
+  {},
 );

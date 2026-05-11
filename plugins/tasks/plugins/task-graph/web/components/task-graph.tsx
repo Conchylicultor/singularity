@@ -221,8 +221,7 @@ function TaskGraphInner({
 }
 
 export function TaskGraph({ taskId }: { taskId: string }) {
-  const { data } = useResource(tasksResource);
-  const allTasks = data ?? [];
+  const { data: allTasks } = useResource(tasksResource);
   const closure = useMemo(() => computeDagClosure(taskId, allTasks), [taskId, allTasks]);
   const { nodes, edges } = useMemo(
     () => layoutDag(closure, taskId),

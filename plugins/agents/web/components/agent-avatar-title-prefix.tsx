@@ -11,14 +11,15 @@ import { cn } from "@/lib/utils";
 // "this is from an agent" and "which agent". Click toggles the side pane that
 // shows the agent's detail/history.
 export function AgentAvatarTitlePrefix({ conversation }: { conversation: ConversationRecord }) {
-  if (conversation.kind !== "agent") return null;
-
   const match = usePaneMatch();
-  const isOpen = match?.chain.some((e) => e.pane === agentSidePane._internal) ?? false;
   const { data: launches } = useResource(agentLaunchesResource);
   const { data: agents } = useResource(agentsResource);
-  const launch = (launches ?? []).find((l) => l.taskId === conversation.taskId);
-  const agent = launch ? agents?.find((a) => a.id === launch.agentId) : null;
+
+  if (conversation.kind !== "agent") return null;
+
+  const isOpen = match?.chain.some((e) => e.pane === agentSidePane._internal) ?? false;
+  const launch = launches.find((l) => l.taskId === conversation.taskId);
+  const agent = launch ? agents.find((a) => a.id === launch.agentId) : null;
   const agentId = launch?.agentId;
 
   return (

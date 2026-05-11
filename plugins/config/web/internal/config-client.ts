@@ -6,6 +6,7 @@ import { getDefault } from "@plugins/config/shared";
 export const configResource = resourceDescriptor<Record<string, unknown>>(
   "config",
   z.record(z.unknown()),
+  {},
 );
 
 export interface SecretFieldState {
@@ -22,6 +23,7 @@ export const configSecretsResource =
   resourceDescriptor<Record<string, SecretFieldState>>(
     "config-secrets",
     z.record(SecretFieldStateSchema),
+    {},
   );
 
 /**

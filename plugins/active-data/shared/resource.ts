@@ -17,4 +17,4 @@ export type ActiveDataBindingsPayload = z.infer<
 export const activeDataBindingsResource = resourceDescriptor<
   ActiveDataBindingsPayload,
   { conversationId: string }
->("active-data.bindings", ActiveDataBindingsPayloadSchema);
+>("active-data.bindings", ActiveDataBindingsPayloadSchema, []);

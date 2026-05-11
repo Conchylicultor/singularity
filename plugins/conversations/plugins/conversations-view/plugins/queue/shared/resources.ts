@@ -11,4 +11,5 @@ export type QueueRankRow = z.infer<typeof QueueRankRowSchema>;
 export const queueRanksResource = resourceDescriptor<QueueRankRow[]>(
   "queue-ranks",
   z.array(QueueRankRowSchema),
+  [],
 );

@@ -28,4 +28,5 @@ export type ConversationGroupsPayload = z.infer<typeof ConversationGroupsPayload
 export const conversationGroupsResource = resourceDescriptor<ConversationGroupsPayload>(
   "conversation-groups",
   ConversationGroupsPayloadSchema,
+  { groups: [], members: [] },
 );

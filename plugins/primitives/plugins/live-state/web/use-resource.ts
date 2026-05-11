@@ -3,7 +3,8 @@ import {
   QueryClient,
   QueryClientProvider,
   useQuery,
-  type UseQueryResult,
+  type DefinedUseQueryResult,
+  type NonUndefinedGuard,
 } from "@tanstack/react-query";
 import { NotificationsClient, queryKeyFor } from "./notifications-client";
 import type { ChannelStatuses } from "./notifications-client";
@@ -79,7 +80,7 @@ export function useNotificationsChannelStatuses(): ChannelStatuses {
 export function useResource<T, P extends ResourceParams = ResourceParams>(
   resource: ResourceDescriptor<T, P>,
   params?: P,
-): UseQueryResult<T> {
+): DefinedUseQueryResult<T> {
   const notifications = useContext(NotificationsContext);
   if (!notifications) {
     throw new Error("useResource must be used within a NotificationsProvider");
@@ -98,9 +99,9 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
     // stable shapes (small flat objects of strings).
   }, [notifications, key, origin, schema, JSON.stringify(p)]);
 
-  return useQuery<T>({
+  return useQuery({
     queryKey: queryKeyFor(key, p),
-    queryFn: async () => {
+    queryFn: async (): Promise<T> => {
       const qs = new URLSearchParams(p).toString();
       const base = origin === "central" ? "/api/central-resources" : "/api/resources";
       const url = `${base}/${encodeURIComponent(key)}${qs ? `?${qs}` : ""}`;
@@ -111,5 +112,12 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
     },
     // sub-ack writes setQueryData, so normally queryFn never runs.
     // It's the fallback when the WS is down.
+    // Cast needed because generic T is not constrained to exclude undefined at
+    // the definition site.  ResourceDescriptor.initialData is required (T, not
+    // T | undefined), so the cast is structurally safe.
+    initialData: resource.initialData as NonUndefinedGuard<T>,
+    // Seeded at epoch 0 so consumers that need a loading distinction can
+    // check `dataUpdatedAt === 0` (pre-WS-sub-ack) vs `> 0` (server data).
+    initialDataUpdatedAt: 0,
   });
 }

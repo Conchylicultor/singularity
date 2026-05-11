@@ -19,4 +19,5 @@ export type ConversationCategoriesPayload = z.infer<
 export const conversationCategoriesResource = resourceDescriptor<ConversationCategoriesPayload>(
   "conversation-categories",
   ConversationCategoriesPayloadSchema,
+  [],
 );

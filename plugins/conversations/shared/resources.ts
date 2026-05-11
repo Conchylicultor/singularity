@@ -12,4 +12,4 @@ export type ConversationListPayload = {
   system: ConversationEntry[];
 };
 
-export const recentConversationsResource = resourceDescriptor<ConversationListPayload>("conversations", ConversationListPayloadSchema);
+export const recentConversationsResource = resourceDescriptor<ConversationListPayload>("conversations", ConversationListPayloadSchema, { active: [], recentGone: [], hasMoreGone: false, totalGoneCount: 0, system: [] });

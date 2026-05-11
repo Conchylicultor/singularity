@@ -21,8 +21,7 @@ function targetForSibling(task: Task): TaskChainTarget {
 
 export function TaskDependencies({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
-  const { data } = useResource(tasksResource);
-  const tasks = data ?? [];
+  const { data: tasks } = useResource(tasksResource);
 
   const deps = task?.dependencies ?? [];
 

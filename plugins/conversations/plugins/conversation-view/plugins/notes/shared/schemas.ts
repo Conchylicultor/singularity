@@ -20,4 +20,5 @@ export const conversationNotesResource =
   resourceDescriptor<ConversationNotesPayload>(
     "conversation-notes",
     ConversationNotesPayloadSchema,
+    {},
   );

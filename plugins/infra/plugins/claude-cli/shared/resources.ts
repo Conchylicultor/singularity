@@ -18,4 +18,5 @@ export type ClaudeCliCall = z.infer<typeof ClaudeCliCallSchema>;
 export const claudeCliCallsResource = resourceDescriptor<ClaudeCliCall[]>(
   "claude-cli-calls",
   z.array(ClaudeCliCallSchema),
+  [],
 );

@@ -10,4 +10,5 @@ export type AgentAutoLaunchRow = z.infer<typeof AgentAutoLaunchRowSchema>;
 export const agentAutoLaunchResource = resourceDescriptor<AgentAutoLaunchRow[]>(
   "agent-auto-launch",
   z.array(AgentAutoLaunchRowSchema),
+  [],
 );

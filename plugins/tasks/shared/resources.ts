@@ -22,6 +22,6 @@ export type {
   Task,
 } from "@plugins/tasks-core/shared";
 
-export const tasksResource = resourceDescriptor<Task[]>("tasks", z.array(TaskSchema));
-export const attemptsResource = resourceDescriptor<AttemptWithConversations[]>("attempts", z.array(AttemptWithConversationsSchema));
-export const pushesResource = resourceDescriptor<Push[]>("pushes", z.array(PushSchema));
+export const tasksResource = resourceDescriptor<Task[]>("tasks", z.array(TaskSchema), []);
+export const attemptsResource = resourceDescriptor<AttemptWithConversations[]>("attempts", z.array(AttemptWithConversationsSchema), []);
+export const pushesResource = resourceDescriptor<Push[]>("pushes", z.array(PushSchema), []);

@@ -11,4 +11,4 @@ export type ReorderSlotPrefs = z.infer<typeof ReorderSlotPrefsSchema>;
 export const reorderPrefsResource = resourceDescriptor<
   ReorderSlotPrefs,
   { slotId: string }
->("reorder.prefs", ReorderSlotPrefsSchema);
+>("reorder.prefs", ReorderSlotPrefsSchema, {});

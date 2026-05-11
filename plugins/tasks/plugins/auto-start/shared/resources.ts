@@ -11,4 +11,5 @@ export type TaskAutoStartRow = z.infer<typeof TaskAutoStartRowSchema>;
 export const taskAutoStartResource = resourceDescriptor<TaskAutoStartRow[]>(
   "tasks-auto-start",
   z.array(TaskAutoStartRowSchema),
+  [],
 );

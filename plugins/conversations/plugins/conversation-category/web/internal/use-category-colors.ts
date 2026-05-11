@@ -4,9 +4,10 @@ import { resourceDescriptor, useResource } from "@plugins/primitives/plugins/liv
 const categoryColorsResource = resourceDescriptor<Record<string, string>>(
   "conversation-category-colors",
   z.record(z.string()),
+  {},
 );
 
 export function useCategoryColors(): Record<string, string> {
   const { data } = useResource(categoryColorsResource);
-  return data ?? {};
+  return data;
 }

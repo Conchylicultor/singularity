@@ -17,4 +17,5 @@ export type TurnSummariesPayload = z.infer<typeof TurnSummariesPayloadSchema>;
 export const turnSummariesResource = resourceDescriptor<TurnSummariesPayload>(
   "turn-summaries",
   TurnSummariesPayloadSchema,
+  {},
 );

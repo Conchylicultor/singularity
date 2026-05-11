@@ -5,4 +5,5 @@ import { NotificationSchema, type Notification } from "./schema";
 export const notificationsResource = resourceDescriptor<Notification[]>(
   "notifications",
   z.array(NotificationSchema),
+  [],
 );

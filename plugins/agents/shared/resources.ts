@@ -26,8 +26,10 @@ export type AgentLaunchConversationRef = {
 export const agentsResource = resourceDescriptor<Agent[]>(
   "agents",
   z.array(AgentSchema),
+  [],
 );
 export const agentLaunchesResource = resourceDescriptor<AgentLaunchWithStatus[]>(
   "agent-launches",
   z.array(AgentLaunchWithStatusSchema),
+  [],
 );

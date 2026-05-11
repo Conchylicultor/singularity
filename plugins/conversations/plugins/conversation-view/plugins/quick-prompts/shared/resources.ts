@@ -14,4 +14,5 @@ export type QuickPrompt = z.infer<typeof QuickPromptSchema>;
 export const quickPromptsResource = resourceDescriptor<QuickPrompt[]>(
   "quick-prompts",
   z.array(QuickPromptSchema),
+  [],
 );
