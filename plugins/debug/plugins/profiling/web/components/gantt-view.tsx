@@ -33,7 +33,7 @@ export function GanttView(): ReactElement {
           ))}
         </div>
 
-        {hovered && <SpanDetail span={hovered} />}
+        <SpanDetail span={hovered} />
       </div>
     </ProfilingContext.Provider>
   );

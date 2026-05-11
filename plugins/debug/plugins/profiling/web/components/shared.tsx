@@ -247,22 +247,28 @@ function SpanRow({
   );
 }
 
-export function SpanDetail({ span }: { span: Span }): ReactElement {
+export function SpanDetail({ span }: { span: Span | null }): ReactElement {
   return (
     <div className="border-t bg-muted/50 px-4 py-2 text-xs">
-      <span className="font-mono font-medium">{span.id}</span>
-      <span className="mx-2 text-muted-foreground">&middot;</span>
-      <span>
-        Phase: <strong>{span.phase}</strong>
-      </span>
-      <span className="mx-2 text-muted-foreground">&middot;</span>
-      <span>
-        Start: <strong>+{formatDuration(span.startMs)}</strong>
-      </span>
-      <span className="mx-2 text-muted-foreground">&middot;</span>
-      <span>
-        Duration: <strong>{formatDuration(span.durationMs)}</strong>
-      </span>
+      {span ? (
+        <>
+          <span className="font-mono font-medium">{span.id}</span>
+          <span className="mx-2 text-muted-foreground">&middot;</span>
+          <span>
+            Phase: <strong>{span.phase}</strong>
+          </span>
+          <span className="mx-2 text-muted-foreground">&middot;</span>
+          <span>
+            Start: <strong>+{formatDuration(span.startMs)}</strong>
+          </span>
+          <span className="mx-2 text-muted-foreground">&middot;</span>
+          <span>
+            Duration: <strong>{formatDuration(span.durationMs)}</strong>
+          </span>
+        </>
+      ) : (
+        <span className="text-muted-foreground/50">Hover a span to see details</span>
+      )}
     </div>
   );
 }
