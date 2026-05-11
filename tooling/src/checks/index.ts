@@ -115,7 +115,11 @@ export async function listAllChecks(): Promise<Check[]> {
   return [...CHECKS, ...pluginChecks];
 }
 
-export async function runChecks(ids?: string[]): Promise<boolean> {
+export interface RunChecksOptions {
+  onCheckDone?: (id: string, durationMs: number) => void;
+}
+
+export async function runChecks(ids?: string[], options?: RunChecksOptions): Promise<boolean> {
   const all = await listAllChecks();
 
   const selected = ids && ids.length > 0
@@ -132,7 +136,9 @@ export async function runChecks(ids?: string[]): Promise<boolean> {
   let allOk = true;
   for (const check of selected) {
     process.stdout.write(`• ${check.id} ... `);
+    const t0 = performance.now();
     const result = await check.run();
+    options?.onCheckDone?.(check.id, Math.round(performance.now() - t0));
     if (result.ok) {
       console.log("ok");
     } else {

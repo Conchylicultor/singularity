@@ -10,7 +10,7 @@ export const profilingPane = Pane.define({
 
 function ProfilingBody() {
   return (
-    <PaneChrome pane={profilingPane} title="Boot Profiling">
+    <PaneChrome pane={profilingPane} title="Profiling">
       <GanttView />
     </PaneChrome>
   );

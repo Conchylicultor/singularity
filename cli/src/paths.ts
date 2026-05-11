@@ -4,6 +4,7 @@ import { join } from "node:path";
 
 export const HOME_DIR        = homedir();
 export const SINGULARITY_DIR = join(HOME_DIR, ".singularity");
+export const WORKTREES_DIR  = join(SINGULARITY_DIR, "worktrees");
 
 export const PG_DIR = join(SINGULARITY_DIR, "postgres");
 export const PG_DATA_DIR = join(PG_DIR, "data-pg18");

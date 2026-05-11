@@ -15,10 +15,11 @@ import {
   readDatabaseConfig,
   PG_LOG_FILE,
   SINGULARITY_DIR,
+  WORKTREES_DIR,
 } from "../paths";
+import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profiler";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
-const WORKTREES_DIR = join(SINGULARITY_DIR, "worktrees");
 const CENTRAL_ROUTES_FILE = join(SINGULARITY_DIR, "central-routes.json");
 
 interface CentralRoutesManifest {
@@ -397,9 +398,15 @@ export function registerBuild(program: Command) {
       "DANGER: allow running build from the main branch. Agents MUST NOT pass this flag without explicit user approval in the current conversation.",
     )
     .action(async (opts: { migrationName?: string; resetMigration?: boolean; customMigration?: boolean; restart: boolean; skipChecks?: boolean; allowMain?: boolean }) => {
+      let endSpan = buildProfilerStart("ensureHooksPath", "build:preflight", "ensureHooksPath");
       await ensureHooksPath();
-      await registerMergeDrivers(await getWorktreeRoot());
+      endSpan();
 
+      endSpan = buildProfilerStart("registerMergeDrivers", "build:preflight", "registerMergeDrivers");
+      await registerMergeDrivers(await getWorktreeRoot());
+      endSpan();
+
+      endSpan = buildProfilerStart("branchGuard", "build:preflight", "branch guard");
       const branch = await getCurrentBranch();
       if (branch === "main" && !opts.allowMain) {
         console.error(
@@ -415,37 +422,53 @@ export function registerBuild(program: Command) {
         );
         process.exit(1);
       }
+      endSpan();
 
+      endSpan = buildProfilerStart("checkBroadcasts", "build:preflight", "checkBroadcasts");
       await checkBroadcasts("build");
+      endSpan();
 
       const root = await getWorktreeRoot();
       const name = basename(root);
 
+      endSpan = buildProfilerStart("nameValidation", "build:preflight", "name validation");
       if (!NAME_REGEX.test(name)) {
         console.error(
           `Invalid worktree name "${name}". Must match ${NAME_REGEX}`,
         );
         process.exit(1);
       }
+      endSpan();
 
+      endSpan = buildProfilerStart("acquireBuildLock", "build:setup", "acquire build lock");
       const webDir = resolve(root, "web");
       await acquireBuildLock(resolve(webDir, ".build.lock"));
+      endSpan();
+
+      endSpan = buildProfilerStart("sweepStaging", "build:setup", "sweep staging leftovers");
       await sweepStagingLeftovers(webDir);
+      endSpan();
 
       // 1. Install dependencies. Required before the gateway can find the
       // platform-specific embedded-postgres binaries under
       // plugins/infra/plugins/database/node_modules/@embedded-postgres/.
+      endSpan = buildProfilerStart("bunInstall", "build:setup", "bun install");
       console.log("Installing dependencies...");
       await exec(["bun", "install"], root);
+      endSpan();
 
       // 2a. Regenerate plugin registry files — must happen before central
       // is spawned so its plugins.generated.ts is in sync.
+      endSpan = buildProfilerStart("pluginRegistry", "build:codegen", "plugin registry");
       console.log("Generating plugin registry...");
       await generatePluginRegistry({ root });
+      endSpan();
 
       // 2b. Refresh the central-routes manifest so the gateway knows which
       // path prefixes are owned by central plugins.
+      endSpan = buildProfilerStart("centralRoutes", "build:codegen", "central routes manifest");
       await writeCentralRoutesManifest(root);
+      endSpan();
 
       // 2b'. Write the central spec early too — otherwise the gateway has no
       // way to spawn central. (Repeated at end of build for idempotency.)
@@ -453,6 +476,7 @@ export function registerBuild(program: Command) {
       // worktree's: central is a singleton serving every worktree, so the
       // canonical source is main. The file is idempotent across worktree
       // builds — same content every time.
+      endSpan = buildProfilerStart("centralJson", "build:codegen", "central.json");
       const mainRoot = await getMainRepoRoot();
       const centralDir = resolve(mainRoot, "central");
       if (existsSync(join(centralDir, "src", "index.ts"))) {
@@ -462,17 +486,23 @@ export function registerBuild(program: Command) {
           JSON.stringify({ server: centralDir }, null, 2) + "\n",
         );
       }
+      endSpan();
 
       // 2c. Ensure the embedded Postgres cluster is up. The gateway owns
       // PG supervision now (see gateway/postgres.go) and answers
       // /api/database/status from its own state — central is not involved.
+      endSpan = buildProfilerStart("waitForPg", "build:database", "wait for Postgres");
       await waitForPg();
+      endSpan();
 
       // 2d. Ensure the worktree's DB fork has completed (forked asynchronously
       // during conversation creation).
+      endSpan = buildProfilerStart("waitForDatabase", "build:database", "wait for DB fork");
       await waitForDatabase(name);
+      endSpan();
 
       // 3. Regenerate DB migrations from plugin schema files
+      endSpan = buildProfilerStart("generateMigration", "build:database", "generate migrations");
       console.log("Generating DB migrations...");
       await generateMigration({
         root,
@@ -481,10 +511,13 @@ export function registerBuild(program: Command) {
         resetMigration: opts.resetMigration,
         customMigration: opts.customMigration,
       });
+      endSpan();
 
       // 4. Regenerate plugins/CLAUDE.md
+      endSpan = buildProfilerStart("pluginDocs", "build:validation", "generate plugin docs");
       console.log("Generating plugins doc...");
       await generatePluginDocs({ root });
+      endSpan();
 
       // 3c. Run repo validation checks (typescript, plugin-boundaries, eslint,
       // plugin-contributed checks, ...). Fail before the expensive frontend
@@ -492,7 +525,11 @@ export function registerBuild(program: Command) {
       // still gate `push`.
       if (!opts.skipChecks) {
         console.log("Running checks...");
-        const ok = await runChecks();
+        const ok = await runChecks(undefined, {
+          onCheckDone: (id, durationMs) => {
+            pushBuildSpan(`check:${id}`, "build:checks", id, durationMs);
+          },
+        });
         if (!ok) process.exit(1);
       }
 
@@ -500,8 +537,10 @@ export function registerBuild(program: Command) {
       // the web `tsc -b` only covers files reachable from web — so server-only
       // modules (handlers, pollers) can ship with broken imports and only
       // surface as 502s on first request. Run server tsc explicitly here.
+      endSpan = buildProfilerStart("tscServer", "build:validation", "tsc server");
       console.log("Type-checking server...");
       await exec(["bunx", "tsc"], resolve(root, "server"));
+      endSpan();
 
       // 4b. Type-check central if present. Same rationale as server.
       // Type-check the *worktree's* central, not main's: local edits must be
@@ -509,16 +548,20 @@ export function registerBuild(program: Command) {
       // here would otherwise only surface after merge.)
       const worktreeCentralDir = resolve(root, "central");
       if (existsSync(join(worktreeCentralDir, "src", "index.ts"))) {
+        endSpan = buildProfilerStart("tscCentral", "build:validation", "tsc central");
         console.log("Type-checking central...");
         await exec(["bunx", "tsc"], worktreeCentralDir);
+        endSpan();
       }
 
       // 5. Build frontend into a per-pid staging dir, then atomically
       // publish. Vite reads `VITE_OUT_DIR` (see web/vite.config.ts).
+      endSpan = buildProfilerStart("viteBuild", "build:frontend", "vite build");
       const stagingName = `${STAGING_PREFIX}${process.pid}`;
       const stagingPath = resolve(webDir, stagingName);
       console.log("Building frontend...");
       await exec(["bun", "run", "build"], webDir, { VITE_OUT_DIR: stagingName });
+      endSpan();
 
       // Write the commit hash at build time so the server can report drift.
       const commitProc = Bun.spawnSync(["git", "rev-parse", "HEAD"], {
@@ -532,11 +575,14 @@ export function registerBuild(program: Command) {
 
       // Atomic publish. Brief microsecond window between rm and rename where
       // dist doesn't exist; acceptable since both are atomic syscalls.
+      endSpan = buildProfilerStart("atomicPublish", "build:frontend", "atomic publish");
       const livePath = resolve(webDir, "dist");
       await rm(livePath, { recursive: true, force: true });
       await rename(stagingPath, livePath);
+      endSpan();
 
       // 6. Write registry JSON
+      endSpan = buildProfilerStart("registerWorktree", "build:deploy", "register worktree");
       console.log("Registering worktree...");
       const spec = {
         server: resolve(root, "server"),
@@ -548,6 +594,7 @@ export function registerBuild(program: Command) {
         join(WORKTREES_DIR, `${name}.json`),
         JSON.stringify(spec, null, 2) + "\n",
       );
+      endSpan();
 
       // 6b. Emit the central routing manifest. The gateway watches this file
       // and forwards listed paths to the central backend regardless of host.
@@ -569,6 +616,7 @@ export function registerBuild(program: Command) {
         // running code (central always runs main's central/), so restarting on
         // every worktree build would needlessly drop every open WS connection.
         if (root === mainRoot) {
+          endSpan = buildProfilerStart("restartCentral", "build:deploy", "restart central");
           console.log("Restarting central...");
           try {
             const resp = await fetch(
@@ -583,14 +631,17 @@ export function registerBuild(program: Command) {
           } catch {
             // Gateway not running — central will spawn fresh on first request.
           }
+          endSpan();
         }
       }
 
       // 4. Restart the backend if the gateway has it running
       if (!opts.restart) {
+        writeBuildProfile(name);
         console.log(`Deployed to http://${name}.localhost:9000 (restart skipped)`);
         return;
       }
+      endSpan = buildProfilerStart("restartBackend", "build:deploy", "restart backend");
       console.log("Restarting backend...");
       let gatewayUp = true;
       try {
@@ -610,15 +661,19 @@ export function registerBuild(program: Command) {
         gatewayUp = false;
         console.log("Gateway not reachable, skipping backend restart");
       }
+      endSpan();
 
       // Smoke-test the server boot. tsc catches static import errors but the
       // server can still fail to evaluate (missing env, init-time cycle, etc.)
       // and surface as a 502 on first request. Hit /api/health to force a boot
       // and fail the build if the server can't come up.
       if (gatewayUp) {
+        endSpan = buildProfilerStart("probeHealth", "build:deploy", "health probe");
         await probeHealth(name);
+        endSpan();
       }
 
+      writeBuildProfile(name);
       console.log(`Deployed to http://${name}.localhost:9000`);
     });
 }

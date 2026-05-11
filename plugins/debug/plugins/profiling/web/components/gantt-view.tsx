@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type ReactElement } from "react";
 import { MdRefresh } from "react-icons/md";
 import { cn } from "@/lib/utils";
 
-type PhaseId =
+type ServerPhaseId =
   | "register"
   | "awaitPgReady"
   | "runMigrations"
@@ -10,9 +10,21 @@ type PhaseId =
   | "socketBind"
   | "onReady";
 
+type BuildPhaseId =
+  | "build:preflight"
+  | "build:setup"
+  | "build:codegen"
+  | "build:database"
+  | "build:validation"
+  | "build:checks"
+  | "build:frontend"
+  | "build:deploy";
+
+type PhaseId = ServerPhaseId | BuildPhaseId;
+
 interface Span {
   id: string;
-  phase: PhaseId;
+  phase: string;
   plugin?: string;
   label: string;
   startMs: number;
@@ -20,11 +32,24 @@ interface Span {
 }
 
 interface ProfilingData {
-  spans: Span[];
-  totalDurationMs: number;
+  buildSpans: Span[];
+  buildTotalMs: number;
+  serverSpans: Span[];
+  serverTotalMs: number;
 }
 
-const PHASE_ORDER: PhaseId[] = [
+const BUILD_PHASE_ORDER: BuildPhaseId[] = [
+  "build:preflight",
+  "build:setup",
+  "build:codegen",
+  "build:database",
+  "build:validation",
+  "build:checks",
+  "build:frontend",
+  "build:deploy",
+];
+
+const SERVER_PHASE_ORDER: ServerPhaseId[] = [
   "register",
   "awaitPgReady",
   "runMigrations",
@@ -34,6 +59,14 @@ const PHASE_ORDER: PhaseId[] = [
 ];
 
 const PHASE_LABELS: Record<PhaseId, string> = {
+  "build:preflight": "Preflight",
+  "build:setup": "Setup",
+  "build:codegen": "Codegen",
+  "build:database": "Database",
+  "build:validation": "Validation",
+  "build:checks": "Checks",
+  "build:frontend": "Frontend",
+  "build:deploy": "Deploy",
   register: "Register (sequential)",
   awaitPgReady: "Await PG Ready",
   runMigrations: "Run Migrations",
@@ -43,6 +76,14 @@ const PHASE_LABELS: Record<PhaseId, string> = {
 };
 
 const PHASE_COLORS: Record<PhaseId, string> = {
+  "build:preflight": "bg-rose-500",
+  "build:setup": "bg-orange-500",
+  "build:codegen": "bg-amber-500",
+  "build:database": "bg-yellow-500",
+  "build:validation": "bg-lime-500",
+  "build:checks": "bg-emerald-500",
+  "build:frontend": "bg-green-500",
+  "build:deploy": "bg-teal-500",
   register: "bg-blue-500",
   awaitPgReady: "bg-amber-500",
   runMigrations: "bg-orange-500",
@@ -52,6 +93,14 @@ const PHASE_COLORS: Record<PhaseId, string> = {
 };
 
 const PHASE_BG: Record<PhaseId, string> = {
+  "build:preflight": "bg-rose-50 dark:bg-rose-950/30",
+  "build:setup": "bg-orange-50 dark:bg-orange-950/30",
+  "build:codegen": "bg-amber-50 dark:bg-amber-950/30",
+  "build:database": "bg-yellow-50 dark:bg-yellow-950/30",
+  "build:validation": "bg-lime-50 dark:bg-lime-950/30",
+  "build:checks": "bg-emerald-50 dark:bg-emerald-950/30",
+  "build:frontend": "bg-green-50 dark:bg-green-950/30",
+  "build:deploy": "bg-teal-50 dark:bg-teal-950/30",
   register: "bg-blue-50 dark:bg-blue-950/30",
   awaitPgReady: "bg-amber-50 dark:bg-amber-950/30",
   runMigrations: "bg-orange-50 dark:bg-orange-950/30",
@@ -60,11 +109,30 @@ const PHASE_BG: Record<PhaseId, string> = {
   onReady: "bg-sky-50 dark:bg-sky-950/30",
 };
 
+function groupByPhase(spans: Span[]): {
+  all: Map<string, Span[]>;
+  visible: Map<string, Span[]>;
+} {
+  const all = new Map<string, Span[]>();
+  for (const span of spans) {
+    const list = all.get(span.phase) ?? [];
+    list.push(span);
+    all.set(span.phase, list);
+  }
+  const visible = new Map<string, Span[]>();
+  for (const [phase, list] of all) {
+    const nonZero = list.filter((s) => s.durationMs > 0);
+    nonZero.sort((a, b) => b.durationMs - a.durationMs);
+    visible.set(phase, nonZero);
+  }
+  return { all, visible };
+}
+
 export function GanttView(): ReactElement {
   const [data, setData] = useState<ProfilingData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [hovered, setHovered] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<Span | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -98,7 +166,7 @@ export function GanttView(): ReactElement {
       </div>
     );
   }
-  if (!data || data.spans.length === 0) {
+  if (!data || (data.buildSpans.length === 0 && data.serverSpans.length === 0)) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
         No profiling data available.
@@ -106,29 +174,19 @@ export function GanttView(): ReactElement {
     );
   }
 
-  const allByPhase = new Map<PhaseId, Span[]>();
-  for (const span of data.spans) {
-    const list = allByPhase.get(span.phase) ?? [];
-    list.push(span);
-    allByPhase.set(span.phase, list);
-  }
+  const hasBuild = data.buildSpans.length > 0;
+  const hasServer = data.serverSpans.length > 0;
+  const buildGrouped = groupByPhase(data.buildSpans);
+  const serverGrouped = groupByPhase(data.serverSpans);
 
-  const byPhase = new Map<PhaseId, Span[]>();
-  for (const [phase, spans] of allByPhase) {
-    const nonZero = spans.filter((s) => s.durationMs > 0);
-    nonZero.sort((a, b) => b.durationMs - a.durationMs);
-    byPhase.set(phase, nonZero);
-  }
-
-  const total = data.totalDurationMs;
+  const headerParts: string[] = [];
+  if (hasBuild) headerParts.push(`Build ${data.buildTotalMs.toLocaleString()} ms`);
+  if (hasServer) headerParts.push(`Boot ${data.serverTotalMs.toLocaleString()} ms`);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex items-center gap-2 border-b px-4 py-2">
-        <div className="text-sm font-medium">Boot time</div>
-        <div className="font-mono text-sm tabular-nums text-muted-foreground">
-          {total.toLocaleString()} ms
-        </div>
+        <div className="text-sm font-medium">{headerParts.join(" · ")}</div>
         <div className="flex-1" />
         <button
           className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
@@ -139,33 +197,91 @@ export function GanttView(): ReactElement {
         </button>
       </div>
 
-      <TimeAxis totalMs={total} />
-
       <div className="flex-1 overflow-y-auto">
-        {PHASE_ORDER.map((phase) => {
-          const allSpans = allByPhase.get(phase);
-          if (!allSpans || allSpans.length === 0) return null;
-          const visibleSpans = byPhase.get(phase) ?? [];
-          return (
-            <PhaseGroup
-              key={phase}
-              phase={phase}
-              allSpans={allSpans}
-              spans={visibleSpans}
-              total={total}
-              hovered={hovered}
-              onHover={setHovered}
-            />
-          );
-        })}
+        {hasBuild && (
+          <GanttSection
+            label="Build"
+            spans={data.buildSpans}
+            totalMs={data.buildTotalMs}
+            phaseOrder={BUILD_PHASE_ORDER}
+            allByPhase={buildGrouped.all}
+            visibleByPhase={buildGrouped.visible}
+            hovered={hovered}
+            onHover={setHovered}
+          />
+        )}
+
+        {hasBuild && hasServer && (
+          <div className="flex items-center gap-3 border-b bg-muted/30 px-4 py-1">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              Server Boot
+            </span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+        )}
+
+        {hasServer && (
+          <GanttSection
+            label="Server Boot"
+            spans={data.serverSpans}
+            totalMs={data.serverTotalMs}
+            phaseOrder={SERVER_PHASE_ORDER}
+            allByPhase={serverGrouped.all}
+            visibleByPhase={serverGrouped.visible}
+            hovered={hovered}
+            onHover={setHovered}
+          />
+        )}
       </div>
 
-      {hovered && <SpanDetail span={data.spans.find((s) => s.id === hovered)} />}
+      {hovered && <SpanDetail span={hovered} />}
     </div>
   );
 }
 
-function TimeAxis({ totalMs }: { totalMs: number }): ReactElement {
+function GanttSection({
+  label,
+  totalMs,
+  phaseOrder,
+  allByPhase,
+  visibleByPhase,
+  hovered,
+  onHover,
+}: {
+  label: string;
+  spans: Span[];
+  totalMs: number;
+  phaseOrder: readonly string[];
+  allByPhase: Map<string, Span[]>;
+  visibleByPhase: Map<string, Span[]>;
+  hovered: Span | null;
+  onHover: (s: Span | null) => void;
+}): ReactElement {
+  return (
+    <>
+      <TimeAxis totalMs={totalMs} label={label} />
+      {phaseOrder.map((phase) => {
+        const allSpans = allByPhase.get(phase);
+        if (!allSpans || allSpans.length === 0) return null;
+        const visibleSpans = visibleByPhase.get(phase) ?? [];
+        return (
+          <PhaseGroup
+            key={phase}
+            phase={phase as PhaseId}
+            allSpans={allSpans}
+            spans={visibleSpans}
+            total={totalMs}
+            hovered={hovered}
+            onHover={onHover}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+function TimeAxis({ totalMs, label }: { totalMs: number; label: string }): ReactElement {
   const tickCount = 6;
   const ticks = Array.from({ length: tickCount + 1 }, (_, i) =>
     Math.round((i / tickCount) * totalMs),
@@ -173,7 +289,9 @@ function TimeAxis({ totalMs }: { totalMs: number }): ReactElement {
 
   return (
     <div className="relative flex h-6 border-b px-4">
-      <div className="w-40 shrink-0" />
+      <div className="flex w-40 shrink-0 items-center text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </div>
       <div className="relative flex-1">
         {ticks.map((ms) => (
           <div
@@ -205,8 +323,8 @@ function PhaseGroup({
   allSpans: Span[];
   spans: Span[];
   total: number;
-  hovered: string | null;
-  onHover: (id: string | null) => void;
+  hovered: Span | null;
+  onHover: (s: Span | null) => void;
 }): ReactElement {
   const phaseStart = Math.min(...allSpans.map((s) => s.startMs));
   const phaseEnd = Math.max(...allSpans.map((s) => s.startMs + s.durationMs));
@@ -239,7 +357,7 @@ function PhaseGroup({
               span={span}
               total={total}
               phase={phase}
-              isHovered={hovered === span.id}
+              isHovered={hovered?.id === span.id}
               onHover={onHover}
             />
           ))}
@@ -260,7 +378,7 @@ function SpanRow({
   total: number;
   phase: PhaseId;
   isHovered: boolean;
-  onHover: (id: string | null) => void;
+  onHover: (s: Span | null) => void;
 }): ReactElement {
   const leftPct = `${(span.startMs / total) * 100}%`;
   const widthPct = `${Math.max((span.durationMs / total) * 100, 0.3)}%`;
@@ -268,7 +386,7 @@ function SpanRow({
   return (
     <div
       className="flex items-center gap-2 py-0.5"
-      onMouseEnter={() => onHover(span.id)}
+      onMouseEnter={() => onHover(span)}
       onMouseLeave={() => onHover(null)}
     >
       <div className="w-40 shrink-0 truncate font-mono text-[11px] text-muted-foreground">
@@ -291,8 +409,7 @@ function SpanRow({
   );
 }
 
-function SpanDetail({ span }: { span: Span | undefined }): ReactElement | null {
-  if (!span) return null;
+function SpanDetail({ span }: { span: Span }): ReactElement {
   return (
     <div className="border-t bg-muted/50 px-4 py-2 text-xs">
       <span className="font-mono font-medium">{span.id}</span>

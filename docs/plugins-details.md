@@ -853,12 +853,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - `GET /api/debug/memory`
         - `GET /api/debug/memory/:name`
-    - **`profiling`** — Gantt chart of server startup phases and plugin spans. Startup profiling spans for the Gantt debug pane.
+    - **`profiling`** — Gantt chart of build steps and server startup phases. Startup profiling spans for the Gantt debug pane.
       - Exports (web):
         - Values: `profilingPane`
       - Contributes:
         - `Pane.Register` `debug-profiling`
-        - `Debug.Item` "Boot Profiling"
+        - `Debug.Item` "Profiling"
         - `profilingPane.open`
       - Server:
         - `GET /api/debug/profiling`

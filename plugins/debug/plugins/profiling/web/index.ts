@@ -8,13 +8,13 @@ export { profilingPane } from "./panes";
 
 export default {
   id: "debug-profiling",
-  name: "Boot Profiling",
-  description: "Gantt chart of server startup phases and plugin spans.",
+  name: "Profiling",
+  description: "Gantt chart of build steps and server startup phases.",
   contributions: [
     Pane.Register({ pane: profilingPane }),
     Debug.Item({
       id: "profiling",
-      title: "Boot Profiling",
+      title: "Profiling",
       icon: MdSpeed,
       onClick: () => profilingPane.open({}),
     }),

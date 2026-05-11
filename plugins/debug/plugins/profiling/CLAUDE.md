@@ -4,12 +4,12 @@
 
 ## Plugin reference
 
-- Description: Gantt chart of server startup phases and plugin spans. Startup profiling spans for the Gantt debug pane.
+- Description: Gantt chart of build steps and server startup phases. Startup profiling spans for the Gantt debug pane.
 - Exports (web):
   - Values: `profilingPane`
 - Contributes:
   - `Pane.Register` `debug-profiling`
-  - `Debug.Item` "Boot Profiling"
+  - `Debug.Item` "Profiling"
   - `profilingPane.open`
 - Server:
   - `GET /api/debug/profiling`

@@ -129,6 +129,7 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (debugBroadcastsPlugin as ServerPluginDefinition).dependsOn = [infraWorktreePlugin];
 (debugDbBackupPlugin as ServerPluginDefinition).dependsOn = [databaseAdminPlugin, infraPathsPlugin];
 (debugMemoryPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, infraWorktreePlugin];
+(debugProfilingPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
 (debugWorktreeCleanupPlugin as ServerPluginDefinition).dependsOn = [databaseAdminPlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
 (eventsTestPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEventsPlugin, infraJobsPlugin];
 (improvePlugin as ServerPluginDefinition).dependsOn = [conversationsConversationsViewGroupedPlugin, conversationsPlugin, databasePlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];

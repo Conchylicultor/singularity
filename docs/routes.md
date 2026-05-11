@@ -128,7 +128,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
     - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
       - `/api/debug/memory (GET)`
       - `/api/debug/memory/:name (GET)`
-    - **`profiling`** — Gantt chart of server startup phases and plugin spans. Startup profiling spans for the Gantt debug pane.
+    - **`profiling`** — Gantt chart of build steps and server startup phases. Startup profiling spans for the Gantt debug pane.
       - `/api/debug/profiling (GET)`
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
       - `/api/debug/worktrees (GET)`
