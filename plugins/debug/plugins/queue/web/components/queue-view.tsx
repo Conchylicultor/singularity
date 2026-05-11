@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdReplay, MdWorkOutline } from "react-icons/md";
 import { ShellCommands as Shell } from "@plugins/shell/web";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { jobsListResource, type JobRow, type JobState } from "@plugins/infra/plugins/jobs/shared";
+import { eventEmissionsResource, eventTriggersResource, type EmissionRow, type TriggerRow } from "@plugins/infra/plugins/events/shared";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -69,30 +72,6 @@ function toastErr(e: unknown, prefix: string) {
   Shell.Toast({ description: `${prefix}: ${msg}`, variant: "error" });
 }
 
-function usePolling<T>(
-  load: () => Promise<T>,
-  intervalMs: number,
-): { data: T | null; error: string | null; reload: () => void } {
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const refresh = useCallback(async () => {
-    try {
-      const v = await load();
-      setData(v);
-      setError(null);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    }
-  }, [load]);
-  const triggerRefresh = useCallback(() => { void refresh(); }, [refresh]);
-  useEffect(() => {
-    triggerRefresh();
-    const h = setInterval(triggerRefresh, intervalMs);
-    return () => clearInterval(h);
-  }, [triggerRefresh, intervalMs]);
-  return { data, error, reload: triggerRefresh };
-}
-
 function relativeTime(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const abs = Math.abs(ms);
@@ -114,26 +93,6 @@ function truncate(s: string, max: number): string {
 
 // ─── Jobs tab ────────────────────────────────────────────────────────────
 
-type JobState = "pending" | "running" | "retrying" | "dead";
-
-interface JobRow {
-  id: string;
-  jobName: string;
-  input: unknown;
-  state: JobState;
-  attempts: number;
-  maxAttempts: number;
-  runAt: string;
-  lockedAt: string | null;
-  queueName: string | null;
-  lastError: string | null;
-}
-
-interface JobsPayload {
-  rows: JobRow[];
-  counts: Record<JobState, number>;
-}
-
 const STATE_STYLES: Record<JobState, string> = {
   pending: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200",
   running: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
@@ -144,25 +103,18 @@ const STATE_STYLES: Record<JobState, string> = {
 function JobsTab() {
   const [filter, setFilter] = useState<JobState | "all">("all");
   const [selected, setSelected] = useState<JobRow | null>(null);
+  const { data, refetch } = useResource(jobsListResource);
 
-  const load = useCallback(
-    () => jsonFetch<JobsPayload>(`/api/jobs?limit=500`),
-    [],
-  );
-  const { data, error, reload } = usePolling(load, 2000);
-
-  const counts = data?.counts ?? { pending: 0, running: 0, retrying: 0, dead: 0 };
+  const counts = data.counts;
   const total = counts.pending + counts.running + counts.retrying + counts.dead;
   const visible = useMemo(
-    () =>
-      (data?.rows ?? []).filter((r) => filter === "all" || r.state === filter),
-    [data, filter],
+    () => data.rows.filter((r) => filter === "all" || r.state === filter),
+    [data.rows, filter],
   );
 
   async function retry(id: string) {
     try {
       await jsonFetch(`/api/jobs/${id}/retry`, { method: "POST" });
-      reload();
     } catch (e) {
       toastErr(e, "Retry failed");
     }
@@ -171,7 +123,6 @@ function JobsTab() {
   async function cancel(id: string) {
     try {
       await jsonFetch(`/api/jobs/${id}`, { method: "DELETE" });
-      reload();
     } catch (e) {
       toastErr(e, "Cancel failed");
     }
@@ -196,11 +147,10 @@ function JobsTab() {
           Dead <span className="opacity-60">{counts.dead}</span>
         </FilterChip>
         <div className="flex-1" />
-        <Button size="sm" variant="ghost" onClick={reload}>
+        <Button size="sm" variant="ghost" onClick={() => void refetch()}>
           <MdRefresh className="size-4" /> Refresh
         </Button>
       </div>
-      {error && <div className="border-b bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">{error}</div>}
       <div className="flex-1 overflow-auto">
         {visible.length === 0 ? (
           <Empty>No jobs.</Empty>
@@ -315,23 +265,10 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
 
 // ─── Events tab ──────────────────────────────────────────────────────────
 
-interface EmissionRow {
-  id: string;
-  eventName: string;
-  payload: Record<string, unknown>;
-  matchedCount: number;
-  matchedTriggerIds: string[];
-  emittedAt: string;
-}
-
 function EventsTab() {
-  const load = useCallback(
-    () => jsonFetch<{ rows: EmissionRow[] }>(`/api/events/emissions?limit=200`),
-    [],
-  );
-  const { data, error, reload } = usePolling(load, 2000);
+  const { data, refetch } = useResource(eventEmissionsResource);
   const [selected, setSelected] = useState<EmissionRow | null>(null);
-  const rows = data?.rows ?? [];
+  const rows = data.rows;
 
   return (
     <div className="flex h-full flex-col">
@@ -340,11 +277,10 @@ function EventsTab() {
           Capped ring-buffer of last ~1000 emit() calls.
         </div>
         <div className="flex-1" />
-        <Button size="sm" variant="ghost" onClick={reload}>
+        <Button size="sm" variant="ghost" onClick={() => void refetch()}>
           <MdRefresh className="size-4" /> Refresh
         </Button>
       </div>
-      {error && <div className="border-b bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">{error}</div>}
       <div className="flex-1 overflow-auto">
         {rows.length === 0 ? (
           <Empty>No emissions recorded yet. Emit an event to populate this log.</Empty>
@@ -445,24 +381,9 @@ function EmissionDrawer({
 
 // ─── Triggers tab ────────────────────────────────────────────────────────
 
-interface TriggerRow {
-  eventName: string;
-  id: string;
-  jobName: string;
-  jobWith: Record<string, unknown>;
-  enabled: boolean;
-  oneShot: boolean;
-  createdAt: string;
-  filters: Record<string, unknown>;
-}
-
 function TriggersTab() {
-  const load = useCallback(
-    () => jsonFetch<{ rows: TriggerRow[] }>(`/api/events/triggers`),
-    [],
-  );
-  const { data, error, reload } = usePolling(load, 2000);
-  const rows = data?.rows ?? [];
+  const { data, refetch } = useResource(eventTriggersResource);
+  const rows = data.rows;
 
   const grouped = useMemo(() => {
     const map = new Map<string, TriggerRow[]>();
@@ -481,7 +402,6 @@ function TriggersTab() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled }),
       });
-      reload();
     } catch (e) {
       toastErr(e, "Toggle failed");
     }
@@ -490,7 +410,6 @@ function TriggersTab() {
   async function remove(id: string) {
     try {
       await jsonFetch(`/api/events/triggers/${id}`, { method: "DELETE" });
-      reload();
     } catch (e) {
       toastErr(e, "Delete failed");
     }
@@ -503,11 +422,10 @@ function TriggersTab() {
           Active subscriptions across all registered events.
         </div>
         <div className="flex-1" />
-        <Button size="sm" variant="ghost" onClick={reload}>
+        <Button size="sm" variant="ghost" onClick={() => void refetch()}>
           <MdRefresh className="size-4" /> Refresh
         </Button>
       </div>
-      {error && <div className="border-b bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">{error}</div>}
       <div className="flex-1 overflow-auto">
         {grouped.length === 0 ? (
           <Empty>No active triggers.</Empty>

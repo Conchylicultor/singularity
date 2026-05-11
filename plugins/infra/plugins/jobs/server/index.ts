@@ -1,9 +1,11 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import {
   handleCancelJob,
   handleListJobs,
   handleRetryJob,
 } from "./internal/handle";
+import { jobsListResource } from "./internal/resources";
 import { jobsResumeJob } from "./internal/resume-job";
 import {
   startStuckLockSweeper,
@@ -26,6 +28,7 @@ export {
   UNSAFE_installDurableHooks,
 } from "./internal/step-ctx";
 export type { DurableHooks } from "./internal/step-ctx";
+export { jobsListResource } from "./internal/resources";
 
 export default {
   id: "jobs",
@@ -39,6 +42,7 @@ export default {
     "DELETE /api/jobs/:id": handleCancelJob,
   },
   register: [jobsResumeJob],
+  contributions: [Resource.Declare(jobsListResource)],
   onReady: async () => {
     await startWorker();
     startStuckLockSweeper();

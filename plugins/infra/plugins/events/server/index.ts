@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@server/resources";
 import { eventsDispatchJob } from "./internal/dispatch-job";
 import { jobsHooksRegistration } from "./internal/install-jobs-hooks";
 import {
@@ -7,6 +8,10 @@ import {
   handleDeleteTrigger,
   handlePatchTrigger,
 } from "./internal/handle";
+import {
+  eventEmissionsResource,
+  eventTriggersResource,
+} from "./internal/resources";
 
 export { defineTriggerEvent } from "./internal/event";
 export type {
@@ -28,6 +33,7 @@ export type {
   TriggerSpec,
   UnsafeTriggerByNameSpec,
 } from "./internal/trigger";
+export { eventEmissionsResource, eventTriggersResource } from "./internal/resources";
 
 export default {
   id: "events",
@@ -42,4 +48,5 @@ export default {
     "PATCH /api/events/triggers/:id": handlePatchTrigger,
   },
   register: [eventsDispatchJob, jobsHooksRegistration],
+  contributions: [Resource.Declare(eventEmissionsResource), Resource.Declare(eventTriggersResource)],
 } satisfies ServerPluginDefinition;

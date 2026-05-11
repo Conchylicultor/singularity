@@ -16,6 +16,7 @@ import type { Registration } from "@server/types";
 import { eventTriggerColumns } from "./base-columns";
 import { eventsDispatchJob } from "./dispatch-job";
 import { triggerTableRegistry } from "./registry";
+import { eventEmissionsResource } from "./resources";
 import { _event_emissions, EMISSIONS_CAP } from "./tables";
 
 /**
@@ -208,6 +209,7 @@ async function dispatch<T>(
   // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
   const matchedIds = rows.map((r) => (r as any).id as string);
   await recordEmission(def.name, payload, matchedIds, tx);
+  eventEmissionsResource.notify();
 
   if (rows.length === 0) return;
 
