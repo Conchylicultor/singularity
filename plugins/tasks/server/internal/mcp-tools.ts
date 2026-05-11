@@ -32,18 +32,19 @@ issues that should reshape what comes after — a linear chain lets the next
 agent see the actual outcome instead of executing a stale plan. Branch
 only when the steps are genuinely independent.
 
-\`autoStart\` queues the task: it auto-launches a conversation as soon as
-all its dependencies are non-blocking. Combine with \`dependencies\` to emit
-a fully-armed DAG of follow-up work in a single planning pass. Pick the
-model based on the task's nature: \`opus\` for design, planning,
-architecture, open-ended problem-solving, load-bearing infrastructure
-work, or otherwise complex implementations; \`sonnet\` for execution,
-well-scoped fixes, and routine work.
+**Follow-up tasks (the default case):** any task you create as a next
+step should ALWAYS have both fields set:
+- \`dependencies: ["current"]\` — blocks the task until your conversation
+  is reviewed and marked done. This is mandatory for every follow-up;
+  omitting it means the task races ahead before the user has seen your
+  work.
+- \`autoStart\` — queue it to launch automatically once unblocked. Pick
+  the model by task nature: \`opus\` for new features or anything that
+  requires design/planning; \`sonnet\` for mechanical refactoring,
+  well-scoped fixes, and routine execution.
 
-When you (the calling agent) are doing the planning, anchor the chain on
-yourself: pass \`dependencies: ["current"]\` on the *first* follow-up so it
-only starts once your planning conversation is reviewed and your task is
-marked done. Chain subsequent follow-ups off that first task linearly.
+Chain subsequent follow-ups off the *first* follow-up's task ID, not off
+\`"current"\`, so the chain stays linear.
 
 Do NOT create a meta "holder" task to group follow-ups under. Every task
 gets executed — a holder would just auto-launch an empty agent with
@@ -77,12 +78,12 @@ as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
         model: z
           .enum(["sonnet", "opus"])
           .describe(
-            "Model to use when the auto-launched conversation starts. Use \"opus\" for design, planning, complex problem-solving, load-bearing infrastructure, or complex implementations; \"sonnet\" for execution and well-scoped tasks."
+            "Model to use when the auto-launched conversation starts. Use \"opus\" for new features or tasks that require design/planning; \"sonnet\" for mechanical refactoring, well-scoped fixes, and routine execution."
           ),
       })
       .optional()
       .describe(
-        "Queue the task for auto-launch once all dependencies are non-blocking. Omit to leave the task in the user's queue as a regular open task."
+        "Queue the task for auto-launch once all dependencies are non-blocking. Set this for every follow-up task — omit only when you explicitly want the task to sit in the user's queue without auto-launching."
       ),
   },
   async handler(
