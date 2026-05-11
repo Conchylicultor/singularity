@@ -1,14 +1,14 @@
 import { ESLintUtils } from "@typescript-eslint/utils";
 
 const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://internal/lint/welcome/${name}`,
+  (name) => `https://internal/lint/debug-logs/${name}`,
 );
 
 const noConsoleLog = createRule({
   name: "no-console-log",
   meta: {
     type: "problem",
-    docs: { description: "Disallow console.log inside the welcome plugin." },
+    docs: { description: "Disallow console.log; use Log.channel() instead." },
     schema: [],
     messages: {
       noConsole: "Use a structured logger instead of console.log.",
@@ -27,6 +27,6 @@ const noConsoleLog = createRule({
 });
 
 export default {
-  name: "welcome",
+  name: "debug-logs",
   rules: { "no-console-log": noConsoleLog },
 };
