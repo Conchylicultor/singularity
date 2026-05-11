@@ -811,7 +811,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - `GET /api/debug/broadcasts`
         - `PUT /api/debug/broadcasts`
-      - Endpoint callers: `db-backup`, `memory`, `profiling`, `worktree-cleanup`
+      - Endpoint callers: `boot`, `build`, `db-backup`, `memory`, `worktree-cleanup`
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
       - Exports (web):
         - Values: `claudeCliCallsPane`
@@ -853,15 +853,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - `GET /api/debug/memory`
         - `GET /api/debug/memory/:name`
-    - **`profiling`** — Gantt chart of build steps and server startup phases. Startup profiling spans for the Gantt debug pane.
+    - **`profiling`** — Gantt chart of build steps and server startup phases.
+      - Defines:
+        - Slots: `Profiling.Section`
       - Exports (web):
-        - Values: `profilingPane`
+        - Types: `PhaseConfig`, `ProfilingContextValue`, `Span`
+        - Values: `formatDuration`, `GanttSection`, `groupByPhase`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `useProfilingContext`
       - Contributes:
         - `Pane.Register` `debug-profiling`
         - `Debug.Item` "Profiling"
         - `profilingPane.open`
-      - Server:
-        - `GET /api/debug/profiling`
+      - Slot contributors: `boot`, `build`
+      - Plugins:
+        - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
+          - Contributes:
+            - `Profiling.Section` → `BootSection`
+          - Server:
+            - `GET /api/debug/profiling/boot`
+        - **`build`** — Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
+          - Contributes:
+            - `Profiling.Section` → `BuildSection`
+          - Server:
+            - `GET /api/debug/profiling/build`
     - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
       - Exports (web):
         - Values: `queuePane`

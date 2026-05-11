@@ -18,7 +18,7 @@
   - **`db-backup`** — Backup non-worktree Postgres databases to ~/.backups/singularity/. Backup non-worktree Postgres databases to ~/.backups/singularity/.
   - **`logs`** — System logs pane, opened from the Debug sidebar.
   - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
-  - **`profiling`** — Gantt chart of build steps and server startup phases. Startup profiling spans for the Gantt debug pane.
+  - **`profiling`** — Gantt chart of build steps and server startup phases.
   - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
   - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
 

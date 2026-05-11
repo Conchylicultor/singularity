@@ -53,7 +53,8 @@ import debugBroadcastsPlugin from "@plugins/debug/plugins/broadcasts/server";
 import debugDbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
 import debugLogsPlugin from "@plugins/debug/plugins/logs/server";
 import debugMemoryPlugin from "@plugins/debug/plugins/memory/server";
-import debugProfilingPlugin from "@plugins/debug/plugins/profiling/server";
+import debugProfilingBootPlugin from "@plugins/debug/plugins/profiling/plugins/boot/server";
+import debugProfilingBuildPlugin from "@plugins/debug/plugins/profiling/plugins/build/server";
 import debugWorktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/server";
 import eventsTestPlugin from "@plugins/events-test/server";
 import healthPlugin from "@plugins/health/server";
@@ -129,7 +130,7 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (debugBroadcastsPlugin as ServerPluginDefinition).dependsOn = [infraWorktreePlugin];
 (debugDbBackupPlugin as ServerPluginDefinition).dependsOn = [databaseAdminPlugin, infraPathsPlugin];
 (debugMemoryPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, infraWorktreePlugin];
-(debugProfilingPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
+(debugProfilingBuildPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
 (debugWorktreeCleanupPlugin as ServerPluginDefinition).dependsOn = [databaseAdminPlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
 (eventsTestPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEventsPlugin, infraJobsPlugin];
 (improvePlugin as ServerPluginDefinition).dependsOn = [conversationsConversationsViewGroupedPlugin, conversationsPlugin, databasePlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
@@ -206,7 +207,8 @@ export const plugins: ServerPluginDefinition[] = [
   debugDbBackupPlugin,
   debugLogsPlugin,
   debugMemoryPlugin,
-  debugProfilingPlugin,
+  debugProfilingBootPlugin,
+  debugProfilingBuildPlugin,
   debugWorktreeCleanupPlugin,
   eventsTestPlugin,
   healthPlugin,

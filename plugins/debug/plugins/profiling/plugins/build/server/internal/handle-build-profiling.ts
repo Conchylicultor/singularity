@@ -1,18 +1,15 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { getProfilingData } from "@server/profiler";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 
-interface BuildSpan {
-  id: string;
-  phase: string;
-  label: string;
-  startMs: number;
-  durationMs: number;
-}
-
 interface BuildProfile {
-  spans: BuildSpan[];
+  spans: Array<{
+    id: string;
+    phase: string;
+    label: string;
+    startMs: number;
+    durationMs: number;
+  }>;
   totalDurationMs: number;
 }
 
@@ -27,13 +24,10 @@ function readBuildProfile(): BuildProfile | null {
   }
 }
 
-export function handleProfiling(_req: Request): Response {
-  const server = getProfilingData();
+export function handleBuildProfiling(_req: Request): Response {
   const build = readBuildProfile();
   return Response.json({
-    buildSpans: build?.spans ?? [],
-    buildTotalMs: build?.totalDurationMs ?? 0,
-    serverSpans: server.spans,
-    serverTotalMs: server.totalDurationMs,
+    spans: build?.spans ?? [],
+    totalMs: build?.totalDurationMs ?? 0,
   });
 }
