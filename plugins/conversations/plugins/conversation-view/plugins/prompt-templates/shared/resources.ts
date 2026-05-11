@@ -14,4 +14,5 @@ export type PromptTemplate = z.infer<typeof PromptTemplateSchema>;
 export const promptTemplatesResource = resourceDescriptor<PromptTemplate[]>(
   "prompt-templates",
   z.array(PromptTemplateSchema),
+  [],
 );
