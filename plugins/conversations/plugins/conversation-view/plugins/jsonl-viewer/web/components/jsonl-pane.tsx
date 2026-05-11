@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   JumpToBottomButton,
@@ -82,6 +82,62 @@ function PendingContentIndicator() {
   );
 }
 
+function EventSections({ events, children }: { events: JsonlEvent[]; children?: ReactNode }) {
+  const sections = useMemo(() => {
+    const result: { start: number; end: number }[] = [];
+    let sectionStart = 0;
+    for (let i = 1; i < events.length; i++) {
+      if (events[i]?.kind === "user-text") {
+        result.push({ start: sectionStart, end: i });
+        sectionStart = i;
+      }
+    }
+    if (events.length > 0) {
+      result.push({ start: sectionStart, end: events.length });
+    }
+    return result;
+  }, [events]);
+
+  const renderEvent = (i: number) => {
+    const event = events[i]!;
+    return (
+      <EventRow
+        key={event.kind === "tool-call" ? event.toolUseId : i}
+        event={event}
+        index={i}
+      />
+    );
+  };
+
+  return (
+    <div className="flex flex-col gap-2 p-2 pb-10">
+      {sections.map((section) => {
+        const firstEvent = events[section.start]!;
+        if (firstEvent.kind !== "user-text") {
+          return (
+            <Fragment key={section.start}>
+              {Array.from({ length: section.end - section.start }, (_, j) =>
+                renderEvent(section.start + j),
+              )}
+            </Fragment>
+          );
+        }
+        return (
+          <div key={section.start} className="flex flex-col gap-2">
+            <div className="sticky top-0 z-10 bg-background pb-0.5 shadow-[0_2px_6px_-2px_rgba(0,0,0,0.1)]">
+              {renderEvent(section.start)}
+            </div>
+            {Array.from({ length: section.end - section.start - 1 }, (_, j) =>
+              renderEvent(section.start + 1 + j),
+            )}
+          </div>
+        );
+      })}
+      {children}
+    </div>
+  );
+}
+
 export function JsonlPane({
   conversation,
   actions,
@@ -156,17 +212,10 @@ export function JsonlPane({
               </div>
             ) : (
               <LastAssistantProvider event={lastAssistantEvent}>
-                <div className="flex flex-col gap-2 p-2 pb-10">
-                  {events.map((event, i) => (
-                    <EventRow
-                      key={event.kind === "tool-call" ? event.toolUseId : i}
-                      event={event}
-                      index={i}
-                    />
-                  ))}
+                <EventSections events={events}>
                   {isWorking && <WorkingIndicator startAt={workingStartAt} />}
                   {!isWorking && !!conversation.waitingFor && <PendingContentIndicator />}
-                </div>
+                </EventSections>
               </LastAssistantProvider>
             )}
           </div>
