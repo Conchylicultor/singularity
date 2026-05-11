@@ -1239,7 +1239,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Defines:
     - Slots: `Stats.Chart`
   - Exports (web):
-    - Values: `Stats`, `statsPane`
+    - Values: `Stats`, `statsPane`, `useShowEmptyDays`
   - Contributes:
     - `Pane.Register` `stats`
     - `Shell.Sidebar` "Stats" (group `System`)
@@ -1250,7 +1250,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Defines:
         - DB schema: `plugins/stats/plugins/commits/server/internal/tables.ts`
       - Exports (web):
-        - Values: `axisProps`, `barCursor`, `ChartState`, `gridProps`, `lineCursor`, `tooltipContentStyle`, `tooltipLabelStyle`, `tooltipNumberFormatter`, `useFetchJson`, `yAxisFormatter`
+        - Values: `axisProps`, `barCursor`, `ChartState`, `fillGaps`, `gridProps`, `lineCursor`, `tooltipContentStyle`, `tooltipLabelStyle`, `tooltipNumberFormatter`, `useFetchJson`, `yAxisFormatter`
       - Contributes:
         - `Stats.Chart` "Commits" → `CommitsSection`
         - `Stats.Chart` "Lines changed" → `LinesChartsSection`

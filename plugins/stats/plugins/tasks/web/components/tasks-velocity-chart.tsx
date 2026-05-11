@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Bar,
   CartesianGrid,
@@ -15,6 +15,7 @@ import {
   ChartState,
   axisProps,
   barCursor,
+  fillGaps,
   gridProps,
   tooltipContentStyle,
   tooltipLabelStyle,
@@ -22,6 +23,7 @@ import {
   useFetchJson,
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
+import { useShowEmptyDays } from "@plugins/stats/web";
 
 const ADDED_COLOR = "var(--chart-active, #f59e0b)";
 const COMPLETED_COLOR = "var(--chart-completed, #16a34a)";
@@ -39,9 +41,14 @@ interface DailyPoint {
 }
 
 export function TasksVelocityChart() {
+  const { showEmptyDays } = useShowEmptyDays();
   const { data, error } = useFetchJson<{ points: DailyPoint[] }>(
     "/api/stats/tasks/daily",
   );
+  const points = useMemo(() => {
+    const raw = data?.points ?? [];
+    return showEmptyDays ? fillGaps(raw, "date", "day") : raw;
+  }, [data?.points, showEmptyDays]);
   const [hidden, setHidden] = useState<Record<SeriesKey, boolean>>({
     added: false,
     completed: false,
@@ -79,7 +86,7 @@ export function TasksVelocityChart() {
       >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
-            data={data?.points ?? []}
+            data={points}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
           >
             <CartesianGrid {...gridProps} />

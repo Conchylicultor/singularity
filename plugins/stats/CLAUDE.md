@@ -8,7 +8,7 @@
 - Defines:
   - Slots: `Stats.Chart`
 - Exports (web):
-  - Values: `Stats`, `statsPane`
+  - Values: `Stats`, `statsPane`, `useShowEmptyDays`
 - Contributes:
   - `Pane.Register` `stats`
   - `Shell.Sidebar` "Stats" (group `System`)

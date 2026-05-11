@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -13,12 +13,14 @@ import {
   ChartState,
   axisProps,
   barCursor,
+  fillGaps,
   gridProps,
   tooltipContentStyle,
   tooltipLabelStyle,
   useFetchJson,
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
+import { useShowEmptyDays } from "@plugins/stats/web";
 import { formatTokens } from "./format";
 import { useScope, withScope } from "./use-scope";
 
@@ -39,10 +41,15 @@ const SERIES = [
 
 export function TokenMixChart() {
   const { scope } = useScope();
+  const { showEmptyDays } = useShowEmptyDays();
   const { data, error } = useFetchJson<{ points: Point[] }>(
     withScope("/api/stats/cost/token-mix", scope),
     scope,
   );
+  const points = useMemo(() => {
+    const raw = data?.points ?? [];
+    return showEmptyDays ? fillGaps(raw, "date", "day") : raw;
+  }, [data?.points, showEmptyDays]);
   const [hidden, setHidden] = useState<Record<string, boolean>>({});
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -72,7 +79,7 @@ export function TokenMixChart() {
       >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={data?.points ?? []}
+            data={points}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
           >
             <CartesianGrid {...gridProps} />

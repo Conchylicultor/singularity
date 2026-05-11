@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -9,10 +9,12 @@ import {
   YAxis,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { useShowEmptyDays } from "@plugins/stats/web";
 import {
   ChartState,
   axisProps,
   barCursor,
+  fillGaps,
   gridProps,
   tooltipContentStyle,
   tooltipLabelStyle,
@@ -45,11 +47,16 @@ export function RateChart({
   dedup?: boolean;
 }) {
   const [bucket, setBucket] = useState<Bucket>("day");
+  const { showEmptyDays } = useShowEmptyDays();
   const dedupParam = dedup ? "&dedup=1" : "";
   const { data, error } = useFetchJson<{ points: Point[] }>(
     `${baseUrl}?bucket=${bucket}${dedupParam}`,
     dedup ? "dedup" : undefined,
   );
+  const points = useMemo(() => {
+    const raw = data?.points ?? [];
+    return showEmptyDays ? fillGaps(raw, "bucket", bucket) : raw;
+  }, [data?.points, showEmptyDays, bucket]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -61,7 +68,7 @@ export function RateChart({
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={data?.points ?? []}
+              data={points}
               margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
             >
               <CartesianGrid {...gridProps} />

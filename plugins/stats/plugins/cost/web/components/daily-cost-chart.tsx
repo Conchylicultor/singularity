@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   Bar,
   BarChart,
@@ -12,11 +13,13 @@ import {
   ChartState,
   axisProps,
   barCursor,
+  fillGaps,
   gridProps,
   tooltipContentStyle,
   tooltipLabelStyle,
   useFetchJson,
 } from "@plugins/stats/plugins/commits/web";
+import { useShowEmptyDays } from "@plugins/stats/web";
 import { formatUsd, formatUsdCompact } from "./format";
 import { useScope, withScope } from "./use-scope";
 
@@ -55,12 +58,16 @@ function colorFor(model: string, idx: number): string {
 
 export function DailyCostChart() {
   const { scope } = useScope();
+  const { showEmptyDays } = useShowEmptyDays();
   const { data, error } = useFetchJson<Resp>(
     withScope("/api/stats/cost/daily", scope),
     scope,
   );
-  const rows = (data?.points ?? []).map((p) => ({ date: p.date, ...p.byModel }));
   const models = data?.models ?? [];
+  const rows = useMemo(() => {
+    const raw = (data?.points ?? []).map((p) => ({ date: p.date, ...p.byModel }));
+    return showEmptyDays ? fillGaps(raw, "date", "day") : raw;
+  }, [data?.points, showEmptyDays]);
 
   return (
     <div className="h-72 w-full">

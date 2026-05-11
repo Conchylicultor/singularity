@@ -1,13 +1,16 @@
+import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   ChartState,
   axisProps,
   barCursor,
+  fillGaps,
   gridProps,
   tooltipContentStyle,
   tooltipLabelStyle,
   useFetchJson,
 } from "@plugins/stats/plugins/commits/web";
+import { useShowEmptyDays } from "@plugins/stats/web";
 import { useScope, withScope } from "./use-scope";
 
 const FAMILY_COLORS: Record<string, string> = {
@@ -29,12 +32,16 @@ interface Resp {
 
 export function ModelUsageChart() {
   const { scope } = useScope();
+  const { showEmptyDays } = useShowEmptyDays();
   const { data, error } = useFetchJson<Resp>(
     withScope("/api/stats/cost/daily-by-family", scope),
     scope,
   );
-  const rows = (data?.points ?? []).map((p) => ({ date: p.date, ...p.byFamily }));
   const families = data?.families ?? [];
+  const rows = useMemo(() => {
+    const raw = (data?.points ?? []).map((p) => ({ date: p.date, ...p.byFamily }));
+    return showEmptyDays ? fillGaps(raw, "date", "day") : raw;
+  }, [data?.points, showEmptyDays]);
   return (
     <div className="h-72 w-full">
       <ChartState error={error} loading={data === null} empty={!!data && rows.length === 0}>

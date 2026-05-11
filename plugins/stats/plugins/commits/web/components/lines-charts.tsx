@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useConfigValues } from "@plugins/config/web";
+import { useShowEmptyDays } from "@plugins/stats/web";
 import { commitsConfig } from "../../shared/config";
 import {
   Area,
@@ -21,6 +22,7 @@ import {
   ChartState,
   axisProps,
   barCursor,
+  fillGaps,
   gridProps,
   lineCursor,
   tooltipContentStyle,
@@ -91,17 +93,22 @@ interface CumulativePoint {
 
 export function CumulativeLinesChart({ filterKey, dedup }: { filterKey?: string; dedup?: boolean }) {
   const dedupParam = dedup ? "?dedup=1" : "";
+  const { showEmptyDays } = useShowEmptyDays();
   const { data, error } = useFetchJson<{ points: CumulativePoint[] }>(
     `/api/stats/commits/lines/cumulative${dedupParam}`,
     `${filterKey ?? ""}:${dedup ? "1" : "0"}`,
   );
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
-  const points = (data?.points ?? []).map((p) => ({
-    date: p.date,
-    added: p.added,
-    removed: -p.removed,
-    net: p.added - p.removed,
-  }));
+  const points = useMemo(() => {
+    const raw = data?.points ?? [];
+    const filled = showEmptyDays ? fillGaps(raw, "date", "day", "carry") : raw;
+    return filled.map((p) => ({
+      date: p.date,
+      added: p.added,
+      removed: -p.removed,
+      net: p.added - p.removed,
+    }));
+  }, [data?.points, showEmptyDays]);
   return (
     <div className="h-64 w-full">
       <ChartState
@@ -197,11 +204,17 @@ interface RatePoint {
 
 export function LinesRateChart({ bucket, filterKey, dedup }: { bucket: Bucket; filterKey?: string; dedup?: boolean }) {
   const dedupParam = dedup ? "&dedup=1" : "";
+  const { showEmptyDays } = useShowEmptyDays();
   const { data, error } = useFetchJson<{ points: RatePoint[] }>(
     `/api/stats/commits/lines/rate?bucket=${bucket}${dedupParam}`,
     `${filterKey ?? ""}:${dedup ? "1" : "0"}`,
   );
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
+  const points = useMemo(() => {
+    const raw = data?.points ?? [];
+    const filled = showEmptyDays ? fillGaps(raw, "bucket", bucket) : raw;
+    return filled.map((p) => ({ ...p, removed: -p.removed }));
+  }, [data?.points, showEmptyDays, bucket]);
 
   return (
     <div className="h-64 w-full">
@@ -212,7 +225,7 @@ export function LinesRateChart({ bucket, filterKey, dedup }: { bucket: Bucket; f
       >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={(data?.points ?? []).map((p) => ({ ...p, removed: -p.removed }))}
+            data={points}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
             stackOffset="sign"
           >
@@ -314,13 +327,18 @@ function extColor(ext: string): string {
 
 export function CumulativeLinesBreakdownChart({ filterKey, dedup }: { filterKey?: string; dedup?: boolean }) {
   const dedupParam = dedup ? "&dedup=1" : "";
+  const { showEmptyDays } = useShowEmptyDays();
   const { data, error } = useFetchJson<{ points: ByExtPoint[] }>(
     `/api/stats/commits/lines/cumulative?breakdown=ext${dedupParam}`,
     `${filterKey ?? ""}:${dedup ? "1" : "0"}`,
   );
   const points = data?.points ?? [];
   const exts = topExtensions(points);
-  const flatPoints = flattenByExt(points, exts, "date");
+  const rawFlat = flattenByExt(points, exts, "date");
+  const flatPoints = useMemo(
+    () => (showEmptyDays ? fillGaps(rawFlat, "date", "day", "carry") : rawFlat),
+    [rawFlat, showEmptyDays],
+  );
   const allKeys = exts.includes(OTHER_KEY)
     ? exts
     : [...new Set([...exts, ...(flatPoints.some((p) => OTHER_KEY in p) ? [OTHER_KEY] : [])])];
@@ -382,13 +400,18 @@ export function CumulativeLinesBreakdownChart({ filterKey, dedup }: { filterKey?
 
 export function LinesRateBreakdownChart({ bucket, filterKey, dedup }: { bucket: Bucket; filterKey?: string; dedup?: boolean }) {
   const dedupParam = dedup ? "&dedup=1" : "";
+  const { showEmptyDays } = useShowEmptyDays();
   const { data, error } = useFetchJson<{ points: ByExtPoint[] }>(
     `/api/stats/commits/lines/rate?bucket=${bucket}&breakdown=ext${dedupParam}`,
     `${filterKey ?? ""}:${dedup ? "1" : "0"}`,
   );
   const points = data?.points ?? [];
   const exts = topExtensions(points);
-  const flatPoints = flattenByExt(points, exts, "bucket");
+  const rawFlat = flattenByExt(points, exts, "bucket");
+  const flatPoints = useMemo(
+    () => (showEmptyDays ? fillGaps(rawFlat, "bucket", bucket) : rawFlat),
+    [rawFlat, showEmptyDays, bucket],
+  );
   const hasOther = flatPoints.some((p) => OTHER_KEY in p);
   const allKeys = hasOther ? [...exts, OTHER_KEY] : exts;
 

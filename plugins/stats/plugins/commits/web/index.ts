@@ -17,6 +17,7 @@ export {
   lineCursor,
   barCursor,
   gridProps,
+  fillGaps,
 } from "./components/chart-primitives";
 
 export default {

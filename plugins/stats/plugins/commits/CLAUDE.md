@@ -8,7 +8,7 @@
 - Defines:
   - DB schema: `plugins/stats/plugins/commits/server/internal/tables.ts`
 - Exports (web):
-  - Values: `axisProps`, `barCursor`, `ChartState`, `gridProps`, `lineCursor`, `tooltipContentStyle`, `tooltipLabelStyle`, `tooltipNumberFormatter`, `useFetchJson`, `yAxisFormatter`
+  - Values: `axisProps`, `barCursor`, `ChartState`, `fillGaps`, `gridProps`, `lineCursor`, `tooltipContentStyle`, `tooltipLabelStyle`, `tooltipNumberFormatter`, `useFetchJson`, `yAxisFormatter`
 - Contributes:
   - `Stats.Chart` "Commits" → `CommitsSection`
   - `Stats.Chart` "Lines changed" → `LinesChartsSection`

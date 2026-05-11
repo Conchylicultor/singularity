@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   CartesianGrid,
   Line,
@@ -10,12 +11,14 @@ import {
 import {
   ChartState,
   axisProps,
+  fillGaps,
   gridProps,
   lineCursor,
   tooltipContentStyle,
   tooltipLabelStyle,
   useFetchJson,
 } from "@plugins/stats/plugins/commits/web";
+import { useShowEmptyDays } from "@plugins/stats/web";
 import { formatUsd, formatUsdCompact } from "./format";
 import { useScope, withScope } from "./use-scope";
 
@@ -26,10 +29,15 @@ interface Point {
 
 export function CumulativeCostChart() {
   const { scope } = useScope();
+  const { showEmptyDays } = useShowEmptyDays();
   const { data, error } = useFetchJson<{ points: Point[] }>(
     withScope("/api/stats/cost/cumulative", scope),
     scope,
   );
+  const points = useMemo(() => {
+    const raw = data?.points ?? [];
+    return showEmptyDays ? fillGaps(raw, "date", "day", "carry") : raw;
+  }, [data?.points, showEmptyDays]);
   return (
     <div className="h-64 w-full">
       <ChartState
@@ -39,7 +47,7 @@ export function CumulativeCostChart() {
       >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
-            data={data?.points ?? []}
+            data={points}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
           >
             <CartesianGrid {...gridProps} />

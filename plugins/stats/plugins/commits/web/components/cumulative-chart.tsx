@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   CartesianGrid,
   Line,
@@ -7,9 +8,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useShowEmptyDays } from "@plugins/stats/web";
 import {
   ChartState,
   axisProps,
+  fillGaps,
   gridProps,
   lineCursor,
   tooltipContentStyle,
@@ -34,7 +37,12 @@ export function CumulativeChart({
   dedup?: boolean;
 }) {
   const fullUrl = dedup ? `${url}?dedup=1` : url;
+  const { showEmptyDays } = useShowEmptyDays();
   const { data, error } = useFetchJson<{ points: Point[] }>(fullUrl, dedup ? "dedup" : undefined);
+  const points = useMemo(() => {
+    const raw = data?.points ?? [];
+    return showEmptyDays ? fillGaps(raw, "date", "day", "carry") : raw;
+  }, [data?.points, showEmptyDays]);
   return (
     <div className="h-64 w-full">
       <ChartState
@@ -44,7 +52,7 @@ export function CumulativeChart({
       >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
-            data={data?.points ?? []}
+            data={points}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
           >
             <CartesianGrid {...gridProps} />

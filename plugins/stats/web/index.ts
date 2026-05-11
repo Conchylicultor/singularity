@@ -6,6 +6,7 @@ import { statsPane } from "./panes";
 
 export { Stats } from "./slots";
 export { statsPane } from "./panes";
+export { useShowEmptyDays } from "./components/stats-context";
 
 export default {
   id: "stats",
