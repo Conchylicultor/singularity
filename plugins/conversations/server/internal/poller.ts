@@ -108,9 +108,13 @@ async function tick(): Promise<void> {
   for (const [id, info] of next) {
     const dbRow = dbById.get(id);
     if (!dbRow) continue;
+    // "done" means a deliberate close (exit_clean / toolbar Exit) — never
+    // overwrite it back to working/waiting just because the tmux session
+    // hasn't been reaped yet.
+    if (dbRow.status === "done") continue;
 
     if (info.dead) {
-      if (dbRow.status === "gone" || dbRow.status === "done") continue;
+      if (dbRow.status === "gone") continue;
       if (await markConversationGone(id)) changed = true;
       continue;
     }
