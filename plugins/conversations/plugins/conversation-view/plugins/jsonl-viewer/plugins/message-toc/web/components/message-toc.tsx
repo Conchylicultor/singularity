@@ -43,7 +43,7 @@ export function MessageToc() {
   const { data } = useResource(jsonlEventsResource, { id: conversation.id });
   const entries = useMemo(() => extractUserEntries(data ?? null), [data]);
 
-  if (entries.length <= 1) return null;
+  if (entries.length === 0) return null;
 
   const scrollTo = (eventIndex: number) => {
     const el = document.querySelector(`[data-event-index="${eventIndex}"]`);
