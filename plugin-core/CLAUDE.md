@@ -233,7 +233,7 @@ No `web/index.ts` or `server/index.ts` required unless the umbrella itself has c
 
 ## Key Design Decisions
 
-- **No dynamic loading** — plugins are statically imported, known at build time
+- **Per-plugin error isolation (web)** — web plugins use dynamic `import()` for per-plugin error isolation; server/central use static imports. All plugins are known at build time (the generated registry lists them)
 - **No dependencies field** — import statements enforce dependency at build time
 - **No lifecycle hooks** — plugins use React's own lifecycle (useEffect, etc.)
 - **Slots are the only extension mechanism** — no special `root`, `background`, or other fields

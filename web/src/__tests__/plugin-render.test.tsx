@@ -1,22 +1,22 @@
-import { describe, it, expect } from "vitest";
+import { it, expect } from "vitest";
 import { render } from "@testing-library/react";
-import { PluginProvider } from "@core";
+import { PluginProvider, loadPlugins } from "@core";
+import type { PluginDefinition } from "@core";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { plugins } from "../plugins";
+import { pluginEntries } from "../plugins";
 
-/** Slots whose components need SidebarProvider context. */
 const SIDEBAR_SLOTS = new Set(["shell.sidebar"]);
-
-/** Slots that render the full shell (which brings its own providers). */
 const SHELL_SLOTS = new Set(["core.root"]);
 
 function Wrapper({
   slotId,
   children,
+  plugins,
 }: {
   slotId: string;
   children: React.ReactNode;
+  plugins: PluginDefinition[];
 }) {
   let content = <>{children}</>;
   if (SIDEBAR_SLOTS.has(slotId)) {
@@ -28,7 +28,9 @@ function Wrapper({
   return <PluginProvider plugins={plugins}>{content}</PluginProvider>;
 }
 
-describe("plugin contributions render without crashing", () => {
+it("plugin contributions render without crashing", async () => {
+  const { plugins, errors } = await loadPlugins(pluginEntries);
+  expect(errors).toHaveLength(0);
   for (const plugin of plugins) {
     for (const contribution of plugin.contributions ?? []) {
       const slotId = (contribution as Record<string, unknown>)
@@ -39,15 +41,13 @@ describe("plugin contributions render without crashing", () => {
 
       if (!Component) continue;
 
-      it(`${plugin.name} > ${slotId}`, () => {
-        expect(() => {
-          render(
-            <Wrapper slotId={slotId}>
-              <Component />
-            </Wrapper>,
-          );
-        }).not.toThrow();
-      });
+      expect(() => {
+        render(
+          <Wrapper slotId={slotId} plugins={plugins}>
+            <Component />
+          </Wrapper>,
+        );
+      }).not.toThrow();
     }
   }
 });

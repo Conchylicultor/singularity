@@ -182,6 +182,25 @@ export function renderPluginRegistry(opts: { root: string; runtime: Runtime }): 
   const lines: string[] = [];
   lines.push(HEADER);
   lines.push("");
+
+  if (opts.runtime === "web") {
+    lines.push(`import type { PluginDefinition } from "@core";`);
+    lines.push("");
+    lines.push("export interface PluginEntry {");
+    lines.push("  name: string;");
+    lines.push("  loader: () => Promise<{ default: PluginDefinition }>;");
+    lines.push("}");
+    lines.push("");
+    lines.push("export const pluginEntries: PluginEntry[] = [");
+    for (const e of entries) {
+      const name = e.importPath.replace(/^@plugins\//, "").replace(/\/web$/, "");
+      lines.push(`  { name: ${JSON.stringify(name)}, loader: () => import(${JSON.stringify(e.importPath)}) },`);
+    }
+    lines.push("];");
+    lines.push("");
+    return lines.join("\n");
+  }
+
   lines.push(cfg.typeImport);
   for (const e of entries) {
     lines.push(`import ${e.importName} from "${e.importPath}";`);

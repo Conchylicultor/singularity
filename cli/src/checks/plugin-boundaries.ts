@@ -145,16 +145,20 @@ export const pluginBoundaries: Check = {
       // R9: forbid inline import-type expressions targeting plugin barrels. They
       // bypass the static import scanner and make cross-plugin deps invisible to
       // the boundary system. Use a top-level `import type { X } from "…"` instead.
-      for (const inlinePath of extractInlineImports(src)) {
-        const resolved = resolveImport(inlinePath, pluginSet);
-        if (!resolved) continue;
-        if (sourcePlugin && sourcePlugin === resolved.pluginPath) continue;
-        violations.push({
-          rule: "inline-import",
-          file: relFile,
-          message: `inline \`import("${inlinePath}")\` type expression bypasses the boundary system`,
-          fix: `replace with a top-level import type statement: \`import type { … } from "${inlinePath}"\``,
-        });
+      // Framework files (plugin registries) are exempt — their dynamic imports
+      // are the resilient-loading mechanism, not accidental boundary bypasses.
+      if (!FRAMEWORK_FILES.has(relFile)) {
+        for (const inlinePath of extractInlineImports(src)) {
+          const resolved = resolveImport(inlinePath, pluginSet);
+          if (!resolved) continue;
+          if (sourcePlugin && sourcePlugin === resolved.pluginPath) continue;
+          violations.push({
+            rule: "inline-import",
+            file: relFile,
+            message: `inline \`import("${inlinePath}")\` type expression bypasses the boundary system`,
+            fix: `replace with a top-level import type statement: \`import type { … } from "${inlinePath}"\``,
+          });
+        }
       }
 
       const imports = extractPluginImports(src);
