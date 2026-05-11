@@ -4,23 +4,66 @@ import type {
 } from "@plugins/conversations/server";
 import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
 import { CLAUDE, TMUX } from "@plugins/infra/plugins/paths/server";
-import { resolveSessionState } from "./claude-session";
+import { resolveSessionState, type SessionState } from "./claude-session";
 // Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename
 // legacy prefix kept so zombie sessions still get picked up by the poller.
 const SESSION_NAME_RE = /^(conv|claude)-\d+(-[a-z0-9]+)?$/;
 
+const SPINNER_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈]\s*/;
+const READY_RE = /^✳\s*/;
 const STATUS_PREFIX_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈✳]\s*/;
 
-function cleanPaneTitle(raw: string): string {
-  const trimmed = raw.replace(/^_ /, "").trim();
-  const title = trimmed.replace(STATUS_PREFIX_RE, "").trim();
+interface ResolvedPaneStatus {
+  title: string;
+  working: boolean;
+  waitingFor: string | null;
+}
 
+/**
+ * Merge the two status sources for a tmux pane into a single verdict.
+ *
+ * 1. Tmux pane title prefix (real-time):
+ *    - Spinner glyph → working
+ *    - ✳ ready mark  → not working
+ *    - Neither       → no signal (startup race, bare hostname, etc.)
+ *
+ * 2. Pid JSON session file (~/.claude/sessions/<pid>.json):
+ *    - status: "busy" | "idle" | "waiting" (can lag behind the TUI)
+ *    - waitingFor: human-readable reason (only meaningful when not busy)
+ *
+ * The pane title is the freshest signal for busy/idle because it updates
+ * on every TUI render frame. The session file provides `waitingFor`
+ * context (permission prompt, user input, etc.) that the title lacks,
+ * and acts as a fallback when the title carries no prefix.
+ */
+function resolvePaneStatus(
+  rawTitle: string,
+  session: SessionState,
+): ResolvedPaneStatus {
+  const trimmed = rawTitle.replace(/^_ /, "").trim();
+
+  // Extract display title (strip status prefix).
+  const titleText = trimmed.replace(STATUS_PREFIX_RE, "").trim();
   const isDefault =
-    !title ||
-    /^[a-zA-Z0-9-]+\.(local|internal|lan)$/.test(title) ||
-    SESSION_NAME_RE.test(title);
+    !titleText ||
+    /^[a-zA-Z0-9-]+\.(local|internal|lan)$/.test(titleText) ||
+    SESSION_NAME_RE.test(titleText);
+  const title = isDefault ? "" : titleText;
 
-  return isDefault ? "" : title;
+  // Resolve working status.
+  let working: boolean;
+  if (SPINNER_RE.test(trimmed)) {
+    working = true;
+  } else if (READY_RE.test(trimmed)) {
+    working = false;
+  } else {
+    // No title signal — fall back to session file.
+    // null = file not written yet (startup race) → treat as working.
+    working = session.status == null || session.status === "busy";
+  }
+
+  const waitingFor = working ? null : (session.waitingFor ?? null);
+  return { title, working, waitingFor };
 }
 
 // Field separator: tab (not present in pane paths or titles) keeps splits
@@ -94,19 +137,15 @@ export const tmuxRuntime: ConversationRuntime = {
     const out = new Map<string, RuntimeInfo>();
     ids.forEach((id, i) => {
       const { rawTitle, dead, worktreePath } = panes.get(id)!;
-      const title = cleanPaneTitle(rawTitle);
       const state = states[i]!;
-      // Session file is authoritative for status.
-      // null = file not written yet (startup race) — treat as working
-      // (the conversation was just created, Claude is booting).
-      const working = state.status == null || state.status === "busy";
+      const resolved = resolvePaneStatus(rawTitle, state);
       out.set(id, {
-        title,
-        working: working && !dead,
+        title: resolved.title,
+        working: resolved.working && !dead,
         dead,
         claudeSessionId: state.sessionId ?? null,
         worktreePath,
-        waitingFor: dead ? null : state.waitingFor,
+        waitingFor: dead ? null : resolved.waitingFor,
       });
     });
     return out;
