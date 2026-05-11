@@ -1,3 +1,5 @@
+import type { ServerPluginDefinition } from "@server/types";
+
 export {
   openShortLivedClient,
   connectionString,
@@ -6,4 +8,9 @@ export { listDatabases, databaseExists, dropDatabase } from "./internal/database
 export { forkDatabase } from "./internal/fork";
 export { backupDatabase, inspectBackup } from "./internal/backup";
 export type { BackupInfo, TableStat } from "./internal/backup";
-export { default } from "./internal/plugin";
+
+export default {
+  id: "database-admin",
+  name: "Database Admin",
+  description: "Admin operations for the database plugin — fork, backup, drop, list.",
+} satisfies ServerPluginDefinition;

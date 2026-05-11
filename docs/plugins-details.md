@@ -276,7 +276,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Imported by: `build`, `commits`, `conversation-category`, `turn-summary`
   - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `quick-prompts`, `theme-engine`
 
-- **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
+- **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:
     - DB schema: `plugins/conversations/server/internal/tables-created-event.ts`
     - DB schema: `plugins/conversations/server/internal/tables-turn-completed-event.ts`
@@ -1293,7 +1293,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `GET /api/stats/tasks/cumulative`
         - `GET /api/stats/tasks/daily`
 
-- **`tasks`** — Nested tasks with attempts linking to conversations.
+- **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
   - Exports (web):
     - Types: `AutoStartModel`, `TaskPatch`
     - Values: `deleteTask`, `patchTask`, `setAutoStart`, `useTask`

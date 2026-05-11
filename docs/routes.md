@@ -53,7 +53,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
   - `/api/config/specs (GET)`
   - `/api/config/:key (DELETE)`
 
-- **`conversations`** — Conversation domain: shared server code and types; view plugins live under `plugins/`.
+- **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - `/api/conversations (GET, POST, DELETE)`
   - `/api/conversations/gone (GET)`
   - `/api/conversations/:id (GET)`
@@ -209,7 +209,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
       - `/api/stats/tasks/cumulative (GET)`
       - `/api/stats/tasks/daily (GET)`
 
-- **`tasks`** — Nested tasks with attempts linking to conversations.
+- **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
   - `/api/tasks (GET, POST)`
   - `/api/tasks/chain (POST)`
   - `/api/tasks/:id (GET, PATCH, DELETE)`

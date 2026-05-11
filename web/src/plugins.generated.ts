@@ -87,6 +87,7 @@ import conversationsConversationsViewQueuePlugin from "@plugins/conversations/pl
 import conversationsConversationsViewPlugin from "@plugins/conversations/plugins/conversations-view/web";
 import conversationsModelProviderPlugin from "@plugins/conversations/plugins/model-provider/web";
 import conversationsSummaryPlugin from "@plugins/conversations/plugins/summary/web";
+import conversationsPlugin from "@plugins/conversations/web";
 import crashesLaunchFixPlugin from "@plugins/crashes/plugins/launch-fix/web";
 import crashesPlugin from "@plugins/crashes/web";
 import debugBroadcastsPlugin from "@plugins/debug/plugins/broadcasts/web";
@@ -152,6 +153,7 @@ import tasksTaskGraphPlugin from "@plugins/tasks/plugins/task-graph/web";
 import tasksTaskHeaderPlugin from "@plugins/tasks/plugins/task-header/web";
 import tasksTaskListPlugin from "@plugins/tasks/plugins/task-list/web";
 import tasksTaskStatusPlugin from "@plugins/tasks/plugins/task-status/web";
+import tasksPlugin from "@plugins/tasks/web";
 import terminalPlugin from "@plugins/terminal/web";
 import themePlugin from "@plugins/theme/web";
 import uiSegmentedProgressBarDotsPlugin from "@plugins/ui/plugins/segmented-progress-bar/plugins/dots/web";
@@ -247,6 +249,7 @@ export const plugins: PluginDefinition[] = [
   conversationsConversationsViewPlugin,
   conversationsModelProviderPlugin,
   conversationsSummaryPlugin,
+  conversationsPlugin,
   crashesLaunchFixPlugin,
   crashesPlugin,
   debugBroadcastsPlugin,
@@ -312,6 +315,7 @@ export const plugins: PluginDefinition[] = [
   tasksTaskHeaderPlugin,
   tasksTaskListPlugin,
   tasksTaskStatusPlugin,
+  tasksPlugin,
   terminalPlugin,
   themePlugin,
   uiSegmentedProgressBarDotsPlugin,

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Nested tasks with attempts linking to conversations.
+- Description: Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
 - Exports (web):
   - Types: `AutoStartModel`, `TaskPatch`
   - Values: `deleteTask`, `patchTask`, `setAutoStart`, `useTask`

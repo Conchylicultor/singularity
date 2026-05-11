@@ -1,3 +1,5 @@
+import type { ServerPluginDefinition } from "@server/types";
+
 export {
   getSecret,
   setSecret,
@@ -13,3 +15,9 @@ export {
   SecretsMainOfflineError,
   SecretsKeychainLockedError,
 } from "@plugins/infra/plugins/secrets/shared";
+
+export default {
+  id: "secrets",
+  name: "Secrets",
+  loadBearing: true,
+} satisfies ServerPluginDefinition;

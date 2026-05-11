@@ -11,6 +11,7 @@ import { noRawSse } from "./no-raw-sse";
 import { noPluginImportsInCore } from "./no-plugin-imports-in-core";
 import { noPluginWorkspaceDeps } from "./no-plugin-workspace-deps";
 import { noRawWebsocket } from "./no-raw-websocket";
+import { noReexportDefault } from "./no-reexport-default";
 import { noRelativeServerImports } from "./no-relative-server-imports";
 import { noUseResourceCast } from "./no-use-resource-cast";
 import { pluginBoundaries } from "./plugin-boundaries";
@@ -37,6 +38,7 @@ export const CHECKS: Check[] = [
   noRawEventSource,
   noRawSse,
   noRawWebsocket,
+  noReexportDefault,
   noRelativeServerImports,
   noUseResourceCast,
   typescript,

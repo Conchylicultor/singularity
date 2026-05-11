@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Conversation domain: shared server code and types; view plugins live under `plugins/`.
+- Description: Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 - Load-bearing: yes
 - Defines:
   - DB schema: `plugins/conversations/server/internal/tables-created-event.ts`

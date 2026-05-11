@@ -48,7 +48,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`config`** [load-bearing] — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
 
-- **`conversations`** [load-bearing] — Conversation domain: shared server code and types; view plugins live under `plugins/`.
+- **`conversations`** [load-bearing] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
     - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
@@ -227,7 +227,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, sourced from ccusage.
     - **`tasks`** — Task-based stats: active (open) tasks over time.
 
-- **`tasks`** — Nested tasks with attempts linking to conversations.
+- **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
   - Plugins:
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
