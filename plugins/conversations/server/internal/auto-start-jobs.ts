@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
-import { getTask, hasBlockingDep, listAttemptsForTask } from "@plugins/tasks-core/server";
+import {
+  getTask,
+  hasBlockingDep,
+  listArmedDependentsOf,
+  listAttemptsForTask,
+} from "@plugins/tasks-core/server";
 import { buildTaskPrompt } from "@plugins/tasks-core/shared";
 import {
   claimAutoStart,
@@ -10,9 +15,8 @@ import {
 import { createConversation } from "./lifecycle";
 
 // Job that launches a queued task once all its dependencies are non-blocking.
-// Subscribed via per-dep tasks-core taskStatusChanged triggers (status='done'
-// or 'dropped') installed at queue time in plugins/tasks/server/internal/
-// handle-create.ts.
+// Invoked by maybeLaunchDependentsJob (static trigger on taskStatusChanged)
+// or directly by armTaskAutoStart (no blocking deps at queue time).
 //
 // Concurrency: triggers can fire concurrently (multiple deps flipping at
 // once, or retried jobs). The atomic claimAutoStart() acts as a CAS on
@@ -66,5 +70,30 @@ export const maybeLaunchTaskJob = defineJob({
       prompt: buildTaskPrompt(t),
       spawnedBy: "auto-start",
     });
+  },
+});
+
+// Static trigger target: fires on every taskStatusChanged, filters to
+// done/dropped, then fans out maybeLaunchTaskJob for each armed dependent.
+// Replaces the old per-dep oneShot triggers that armTaskAutoStart used to
+// create — the dependency graph now stays solely in task_dependencies.
+export const maybeLaunchDependentsJob = defineJob({
+  name: "tasks.maybe-launch-dependents",
+  input: z.object({}),
+  event: z
+    .object({
+      taskId: z.string(),
+      parentId: z.string().nullable(),
+      status: z.string(),
+      previousStatus: z.string(),
+    })
+    .passthrough(),
+  run: async ({ event }) => {
+    if (!event) return;
+    if (event.status !== "done" && event.status !== "dropped") return;
+    const dependents = await listArmedDependentsOf(event.taskId);
+    await Promise.all(
+      dependents.map((taskId) => maybeLaunchTaskJob.enqueue({ taskId })),
+    );
   },
 });

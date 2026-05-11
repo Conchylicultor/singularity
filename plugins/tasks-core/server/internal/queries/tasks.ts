@@ -95,6 +95,20 @@ export async function listBlockingDepIds(taskId: string): Promise<string[]> {
   return rows.map((r) => r.depTaskId);
 }
 
+// Armed tasks that depend on `changedTaskId`. Used by the static
+// taskStatusChanged trigger to fan out maybeLaunchTaskJob enqueues.
+export async function listArmedDependentsOf(
+  changedTaskId: string,
+): Promise<string[]> {
+  const result = await db.execute<{ task_id: string }>(
+    sql`SELECT DISTINCT td.task_id
+        FROM ${_taskDependencies} td
+        JOIN tasks_ext_auto_start tas ON tas.parent_id = td.task_id
+        WHERE td.depends_on_task_id = ${changedTaskId}`,
+  );
+  return result.rows.map((r) => r.task_id);
+}
+
 // True if `start` (transitively) depends on `target`. Used to prevent
 // dependency cycles before inserting `target → start`.
 export async function taskDependsOn(start: string, target: string): Promise<boolean> {
