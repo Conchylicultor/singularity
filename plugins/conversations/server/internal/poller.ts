@@ -3,6 +3,7 @@ import {
   updateConversation,
   updateTaskTitle,
   adoptOrphanConversation,
+  markConversationGone,
   recentConversationsResource,
 } from "@plugins/tasks-core/server";
 import { recordCrash } from "@plugins/crashes/server";
@@ -110,8 +111,7 @@ async function tick(): Promise<void> {
 
     if (info.dead) {
       if (dbRow.status === "gone" || dbRow.status === "done") continue;
-      await updateConversation(id, { status: "gone", endedAt: new Date(), waitingFor: null });
-      changed = true;
+      if (await markConversationGone(id)) changed = true;
       continue;
     }
 
@@ -181,8 +181,7 @@ async function tick(): Promise<void> {
         console.error("[conversations.poller] recordCrash failed", e);
       });
     }
-    await updateConversation(id, { status: "gone", endedAt: new Date(), waitingFor: null });
-    changed = true;
+    if (await markConversationGone(id)) changed = true;
   }
 
   if (changed) recentConversationsResource.notify();

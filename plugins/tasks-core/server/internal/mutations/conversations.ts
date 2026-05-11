@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _attempts, _conversations } from "../tables";
 import { conversations } from "../schema";
@@ -139,6 +139,27 @@ export async function deleteConversationRow(id: string): Promise<void> {
   await db.delete(_conversations).where(eq(_conversations.id, id));
   recentConversationsResource.notify();
   if (taskId) await emitStatusChangeIfChanged(taskId, before);
+}
+
+// Atomically transition to "gone" only if the current status is still active.
+// Returns true if the row was updated, false if it was already gone/done.
+// Prevents the poller from overwriting a "done" set by the exit_clean flow.
+export async function markConversationGone(id: string): Promise<boolean> {
+  const taskId = await taskIdForConversation(id);
+  const before = taskId ? await readTaskStatus(taskId) : null;
+  const now = new Date();
+  const result = await db
+    .update(_conversations)
+    .set({ status: "gone", endedAt: now, waitingFor: null, updatedAt: now })
+    .where(
+      and(
+        eq(_conversations.id, id),
+        notInArray(_conversations.status, ["gone", "done"]),
+      ),
+    )
+    .returning({ id: _conversations.id });
+  if (result.length > 0 && taskId) await emitStatusChangeIfChanged(taskId, before);
+  return result.length > 0;
 }
 
 export async function markConversationClosed(

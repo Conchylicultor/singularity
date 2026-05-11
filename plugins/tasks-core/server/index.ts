@@ -115,6 +115,7 @@ export {
   updateConversation,
   updateConversationsTitleForTask,
   deleteConversationRow,
+  markConversationGone,
   markConversationClosed,
 } from "./internal/mutations/conversations";
 export type {
