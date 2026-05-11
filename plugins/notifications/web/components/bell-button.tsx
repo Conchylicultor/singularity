@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { MdNotifications, MdNotificationsNone } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { ShellCommands } from "@plugins/shell/web";
@@ -25,7 +25,14 @@ const VARIANT_TEXT: Record<Notification["variant"], string> = {
   success: "text-green-500",
 };
 
+function navigateTo(url: string) {
+  window.history.pushState({}, "", url);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+  window.dispatchEvent(new CustomEvent("shell:navigate"));
+}
+
 export function BellButton() {
+  const [open, setOpen] = useState(false);
   const { data: notifications } = useResource(notificationsResource);
   const list = notifications ?? [];
   const unreadCount = list.filter((n) => !n.read).length;
@@ -60,14 +67,15 @@ export function BellButton() {
     void fetch("/api/notifications/dismiss-all", { method: "POST" });
   }
 
-  function onOpenChange(open: boolean) {
-    if (open && unreadCount > 0) {
+  function onOpenChange(next: boolean) {
+    setOpen(next);
+    if (next && unreadCount > 0) {
       void fetch("/api/notifications/mark-all-read", { method: "POST" });
     }
   }
 
   return (
-    <Popover onOpenChange={onOpenChange}>
+    <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger className="relative flex items-center justify-center size-8 cursor-default">
         {unreadCount > 0 ? (
           <MdNotifications className="size-5" />
@@ -102,7 +110,15 @@ export function BellButton() {
               {list.map((n) => (
                 <li
                   key={n.id}
-                  className={`flex gap-2 px-3 py-2.5 border-l-2 ${VARIANT_BORDER[n.variant]} ${n.read ? "opacity-60" : ""} hover:bg-muted/50`}
+                  className={`flex gap-2 px-3 py-2.5 border-l-2 ${VARIANT_BORDER[n.variant]} ${n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
+                  onClick={
+                    n.linkTo?.startsWith("/")
+                      ? () => {
+                          navigateTo(n.linkTo!);
+                          setOpen(false);
+                        }
+                      : undefined
+                  }
                 >
                   <div className="flex-1 min-w-0">
                     <p
@@ -113,14 +129,24 @@ export function BellButton() {
                     <p className="text-xs text-muted-foreground line-clamp-2">
                       {n.description}
                     </p>
-                    <RelativeTime
-                      date={n.createdAt}
-                      className="text-[10px] text-muted-foreground mt-0.5"
-                    />
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <RelativeTime
+                        date={n.createdAt}
+                        className="text-[10px] text-muted-foreground"
+                      />
+                      {n.linkTo?.startsWith("/") && (
+                        <span className="text-[10px] text-muted-foreground hover:text-foreground">
+                          View task &rarr;
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <button
                     className="shrink-0 text-muted-foreground hover:text-foreground text-sm leading-none"
-                    onClick={() => dismiss(n.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      dismiss(n.id);
+                    }}
                     aria-label="Dismiss"
                   >
                     &times;
