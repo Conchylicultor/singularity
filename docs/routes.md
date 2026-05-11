@@ -182,6 +182,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
 
 - **`reorder`** — Generic reorder primitive. Slot owners opt in via Reorder.area; hosts render with Reorder.useArea. Generic reorder primitive: per-worktree storage of slot contribution ranks.
   - `/api/reorder/:slotId (GET, PATCH)`
+  - `/api/reorder/:slotId/:contributionId (DELETE)`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - `/api/screenshots/:id (POST, GET)`

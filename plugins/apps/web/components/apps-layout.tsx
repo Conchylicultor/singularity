@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, type ComponentType, type ReactNode } from "react";
 import { Reorder } from "@plugins/reorder/web";
 import { TooltipProvider } from "@plugins/primitives/plugins/tooltip/web";
 import { Apps } from "../slots";
@@ -47,7 +47,7 @@ export function AppsLayout() {
           items={appsArea.items}
           activeAppId={activeApp?.id}
           DndWrapper={appsArea.DndWrapper}
-          ReorderItem={appsArea.ReorderItem}
+          ReorderItem={appsArea.ReorderItem as ComponentType<{ item: (typeof appsArea.items)[number]; children: ReactNode }>}
         />
         <div className="min-w-0 flex-1">
           {activeApp && <activeApp.component />}

@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState, type ComponentType, type ReactNode } from "react";
 import { MdChevronRight } from "react-icons/md";
 import type { ReorderableSlot } from "@plugins/reorder/web";
-import { Reorder } from "@plugins/reorder/web";
+import { Reorder, isSpacer } from "@plugins/reorder/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { Button } from "@/components/ui/button";
@@ -261,17 +261,14 @@ export function AppShellLayout({
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-5" />
           <toolbarArea.DndWrapper>
-            {toolbarArea.items.map((item, i) => (
-              <Fragment key={item.id}>
-                {i > 0 && item.group !== toolbarArea.items[i - 1]!.group && (
-                  <div className="flex-1" />
-                )}
-                <toolbarArea.ReorderItem item={item}>
+            {toolbarArea.entries.map((item) => (
+              <toolbarArea.ReorderItem key={item.id} item={item}>
+                {!isSpacer(item) && (
                   <PluginErrorBoundary slot={toolbarSlotId}>
                     <ToolbarItem {...item} />
                   </PluginErrorBoundary>
-                </toolbarArea.ReorderItem>
-              </Fragment>
+                )}
+              </toolbarArea.ReorderItem>
             ))}
           </toolbarArea.DndWrapper>
         </header>

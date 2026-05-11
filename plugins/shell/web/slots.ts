@@ -26,7 +26,6 @@ export const Shell = {
       group?: string;
     }>("shell.toolbar"),
     {
-      getGroup: (item) => item.group ?? null,
       getLabel: (item) => item.label ?? item.id,
     },
   ),

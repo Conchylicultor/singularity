@@ -48,8 +48,8 @@ Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The
   - DB schema: `plugins/reorder/server/internal/tables.ts`
   - DB schema: `plugins/reorder/server/schema.ts`
 - Exports (web):
-  - Types: `HostOverride`, `ReorderableSlot`, `ReorderConfig`, `UseAreaResult`
-  - Values: `Reorder`, `setEditMode`, `useEditMode`
+  - Types: `HostOverride`, `ReorderableSlot`, `ReorderConfig`, `SpacerItem`, `UseAreaResult`
+  - Values: `isSpacer`, `Reorder`, `setEditMode`, `SPACER_PREFIX`, `useEditMode`
 - Exports (server):
   - Values: `_reorderPrefs`, `reorderPrefsResource`
 - Exports (shared):
@@ -59,6 +59,7 @@ Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The
   - Uses: `database.db`
   - `GET /api/reorder/:slotId`
   - `PATCH /api/reorder/:slotId`
+  - `DELETE /api/reorder/:slotId/:contributionId`
 - Sub-plugins:
   - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
 

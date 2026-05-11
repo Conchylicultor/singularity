@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _reorderPrefs } from "./tables";
 import { reorderPrefsResource } from "./resource";
@@ -94,6 +94,38 @@ export async function handlePatchSlot(
       });
   }
 
+  reorderPrefsResource.notify({ slotId });
+  return Response.json({ ok: true });
+}
+
+const SPACER_PREFIX = "__spacer__";
+
+export async function handleDeleteContribution(
+  _req: Request,
+  params: Record<string, string>,
+): Promise<Response> {
+  const slotId = params.slotId;
+  const contributionId = params.contributionId;
+  if (!slotId || !contributionId) {
+    return Response.json(
+      { error: "slotId and contributionId required" },
+      { status: 400 },
+    );
+  }
+  if (!contributionId.startsWith(SPACER_PREFIX)) {
+    return Response.json(
+      { error: "Only spacer rows may be deleted" },
+      { status: 400 },
+    );
+  }
+  await db
+    .delete(_reorderPrefs)
+    .where(
+      and(
+        eq(_reorderPrefs.slotId, slotId),
+        eq(_reorderPrefs.contributionId, contributionId),
+      ),
+    );
   reorderPrefsResource.notify({ slotId });
   return Response.json({ ok: true });
 }

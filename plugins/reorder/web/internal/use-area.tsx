@@ -37,6 +37,18 @@ import { useEditMode } from "./edit-mode-store";
 
 type BaseItem = { id: string; excludeFromReorder?: boolean };
 
+// --- Spacer items -----------------------------------------------------------
+
+export const SPACER_PREFIX = "__spacer__";
+
+export type SpacerItem = { readonly id: string; readonly _spacer: true };
+
+export function isSpacer(item: { id: string }): item is SpacerItem {
+  return item.id.startsWith(SPACER_PREFIX);
+}
+
+// -----------------------------------------------------------------------------
+
 export type HostOverride<P extends BaseItem> = {
   /** Per-host filter (e.g. Shell.Sidebar's three sub-lists each pick a subset). */
   filter?: (item: P) => boolean;
@@ -52,11 +64,14 @@ export type HostOverride<P extends BaseItem> = {
 };
 
 export type UseAreaResult<P extends BaseItem> = {
+  /** Contributions only (no spacers). Backward-compatible with existing hosts. */
   items: P[];
+  /** Full ordered list including spacer items. Use this when rendering spacers. */
+  entries: (P | SpacerItem)[];
   hiddenItems: P[];
   editMode: boolean;
   DndWrapper: ComponentType<{ children: ReactNode }>;
-  ReorderItem: ComponentType<{ item: P; children: ReactNode }>;
+  ReorderItem: ComponentType<{ item: P | SpacerItem; children: ReactNode }>;
 };
 
 // --- Area context (shared between DndWrapper, ReorderItem, RestoreButton) ---
@@ -71,6 +86,7 @@ type ReorderAreaCtxValue = {
   hiddenItems: BaseItem[];
   getLabel: (item: BaseItem) => string;
   insertionIndicator: InsertionIndicator;
+  addSpacer: () => void;
 };
 const ReorderAreaContext = createContext<ReorderAreaCtxValue | null>(null);
 
@@ -111,10 +127,10 @@ export function useArea<P extends BaseItem>(
     slotId: storageId,
   });
 
-  const { items, hiddenItems } = useMemo(() => {
+  const { items, entries, hiddenItems } = useMemo(() => {
     const filtered = filter ? raw.filter(filter) : raw;
 
-    const visible: P[] = [];
+    const visible: (P | SpacerItem)[] = [];
     const hidden: P[] = [];
     for (const item of filtered) {
       if (rankMap?.[item.id]?.hidden && !item.excludeFromReorder) {
@@ -124,22 +140,35 @@ export function useArea<P extends BaseItem>(
       }
     }
 
+    // Inject spacer items from rankMap
+    if (rankMap) {
+      for (const key of Object.keys(rankMap)) {
+        if (key.startsWith(SPACER_PREFIX) && rankMap[key]?.rank) {
+          visible.push({ id: key, _spacer: true as const });
+        }
+      }
+    }
+
     // Group order is fixed by natural-order discovery (first appearance).
     const groupOrder: string[] = [];
-    const groupOf = (it: P): string => (getGroup ? (getGroup(it) ?? "") : "");
+    const groupOf = (it: P | SpacerItem): string =>
+      isSpacer(it) ? "" : getGroup ? (getGroup(it) ?? "") : "";
     for (const it of visible) {
       const g = groupOf(it);
       if (!groupOrder.includes(g)) groupOrder.push(g);
     }
 
     const sorted = visible
-      .map((item, naturalIdx) => ({ item, naturalIdx }))
+      .map((item, naturalIdx) => ({
+        item,
+        naturalIdx: isSpacer(item) ? Infinity : naturalIdx,
+      }))
       .sort((a, b) => {
         const ga = groupOrder.indexOf(groupOf(a.item));
         const gb = groupOrder.indexOf(groupOf(b.item));
         if (ga !== gb) return ga - gb;
-        const ax = !!a.item.excludeFromReorder;
-        const bx = !!b.item.excludeFromReorder;
+        const ax = isSpacer(a.item) ? false : !!a.item.excludeFromReorder;
+        const bx = isSpacer(b.item) ? false : !!b.item.excludeFromReorder;
         if (ax !== bx) return ax ? 1 : -1;
         if (ax && bx) return a.naturalIdx - b.naturalIdx;
         const ar = rankMap?.[a.item.id]?.rank ?? null;
@@ -151,13 +180,13 @@ export function useArea<P extends BaseItem>(
       })
       .map((row) => row.item);
 
-    return { items: sorted, hiddenItems: hidden };
+    const entries = sorted;
+    const items = sorted.filter((x): x is P => !isSpacer(x));
+    return { items, entries, hiddenItems: hidden };
   }, [raw, rankMap, filter, getGroup]);
 
-  // Refs so closures (onDrop, DndWrapper, RestoreButton) see fresh values
-  // without re-creating their identities.
-  const itemsRef = useRef<P[]>(items);
-  itemsRef.current = items;
+  const itemsRef = useRef<(P | SpacerItem)[]>(entries);
+  itemsRef.current = entries;
   const rankMapRef = useRef(rankMap);
   rankMapRef.current = rankMap;
   const getGroupRef = useRef(getGroup);
@@ -179,14 +208,21 @@ export function useArea<P extends BaseItem>(
 
       const dragged = list[draggedIdx]!;
       const target = list[overIdx]!;
-      if (dragged.excludeFromReorder || target.excludeFromReorder) return;
+      const draggedExcluded = isSpacer(dragged)
+        ? false
+        : !!dragged.excludeFromReorder;
+      const targetExcluded = isSpacer(target)
+        ? false
+        : !!target.excludeFromReorder;
+      if (draggedExcluded || targetExcluded) return;
 
       const gg = getGroupRef.current;
-      const groupValue = gg ? gg(dragged) : null;
-      if (gg && gg(target) !== groupValue) return;
+      const groupValue = gg && !isSpacer(dragged) ? gg(dragged) : null;
+      if (gg && !isSpacer(target) && gg(target) !== groupValue) return;
 
       const siblings = list.filter((x) => {
         if (x.id === draggedKey) return false;
+        if (isSpacer(x)) return true;
         if (x.excludeFromReorder) return false;
         if (!gg) return true;
         return gg(x) === groupValue;
@@ -243,11 +279,42 @@ export function useArea<P extends BaseItem>(
           }
         }
 
+        function addSpacer() {
+          const sid = storageIdRef.current;
+          const rm = rankMapRef.current;
+          const items = itemsRef.current;
+          const patch = (contributionId: string, rank: Rank) =>
+            void fetch(`/api/reorder/${sid}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ contributionId, rank: String(rank) }),
+            });
+
+          // Rank all unranked items first to stabilize sort order for DnD
+          let prevR: Rank | null = null;
+          for (const item of items) {
+            if (isSpacer(item)) continue;
+            const existing = rm?.[item.id]?.rank ?? null;
+            if (existing) {
+              prevR = existing;
+            } else {
+              const newR = Rank.between(prevR, null);
+              prevR = newR;
+              patch(item.id, newR);
+            }
+          }
+
+          // Add the spacer after all items
+          const spacerRank = Rank.between(prevR, null);
+          patch(`${SPACER_PREFIX}${crypto.randomUUID()}`, spacerRank);
+        }
+
         const ctxValue: ReorderAreaCtxValue = {
           storageId: storageIdRef.current,
           hiddenItems: hiddenItemsRef.current,
           getLabel: getLabelRef.current,
           insertionIndicator,
+          addSpacer,
         };
         return (
           <ReorderAreaContext.Provider value={ctxValue}>
@@ -294,11 +361,12 @@ export function useArea<P extends BaseItem>(
 
   return {
     items,
+    entries,
     hiddenItems,
     editMode,
     DndWrapper,
     ReorderItem: ReorderItem as ComponentType<{
-      item: P;
+      item: P | SpacerItem;
       children: ReactNode;
     }>,
   };
@@ -313,10 +381,13 @@ function ReorderItem({
   item,
   children,
 }: {
-  item: BaseItem;
+  item: BaseItem | SpacerItem;
   children: ReactNode;
 }) {
   const editMode = useEditMode();
+  if (isSpacer(item)) {
+    return <SpacerReorderItem item={item} editMode={editMode} />;
+  }
   if (!editMode || item.excludeFromReorder) {
     return <>{children}</>;
   }
@@ -398,6 +469,89 @@ function ReorderItemActive({
   );
 }
 
+function SpacerReorderItem({
+  item,
+  editMode,
+}: {
+  item: SpacerItem;
+  editMode: boolean;
+}) {
+  const ctx = useContext(ReorderAreaContext);
+  const draggable = useDraggable({ id: `${DRAG_PREFIX}${item.id}` });
+  const droppable = useDroppable({ id: `${DROP_PREFIX}${item.id}` });
+
+  if (!editMode) {
+    return (
+      <div
+        ref={(node) => {
+          droppable.setNodeRef(node);
+        }}
+        className="flex-1"
+      />
+    );
+  }
+
+  const transform = draggable.transform;
+  const isDragging = draggable.isDragging;
+  const style: React.CSSProperties = isDragging
+    ? {
+        transform: transform
+          ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+          : undefined,
+        touchAction: "none",
+        zIndex: 50,
+      }
+    : { touchAction: "none" };
+
+  function handleDelete(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!ctx) return;
+    void fetch(`/api/reorder/${ctx.storageId}/${item.id}`, {
+      method: "DELETE",
+    });
+  }
+
+  const indicator = ctx?.insertionIndicator;
+  const showBefore =
+    indicator?.itemId === item.id && indicator.position === "before";
+  const showAfter =
+    indicator?.itemId === item.id && indicator.position === "after";
+
+  return (
+    <>
+      {showBefore && <div className="reorder-drop-indicator" />}
+      <div
+        ref={(node) => {
+          draggable.setNodeRef(node);
+          droppable.setNodeRef(node);
+        }}
+        {...draggable.attributes}
+        {...draggable.listeners}
+        style={style}
+        className={[
+          "group relative flex h-7 min-w-8 flex-1 cursor-grab items-center justify-center rounded-md border border-dashed border-muted-foreground/40 px-2",
+          isDragging && "opacity-40",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <span className="text-[10px] text-muted-foreground/60 select-none">
+          ⇔
+        </span>
+        <button
+          className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={handleDelete}
+          aria-label="Remove spacer"
+        >
+          <MdClose className="size-2.5" />
+        </button>
+      </div>
+      {showAfter && <div className="reorder-drop-indicator" />}
+    </>
+  );
+}
+
 function RestoreButton() {
   const ctx = useContext(ReorderAreaContext)!;
   const [open, setOpen] = useState(false);
@@ -414,7 +568,7 @@ function RestoreButton() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        className="mt-1 flex h-7 w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-muted-foreground/40 text-xs text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground transition-colors"
+        className="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-muted-foreground/40 px-2.5 text-xs text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground transition-colors"
         aria-label="Add items"
       >
         <MdAdd className="size-3.5" />
@@ -442,6 +596,19 @@ function RestoreButton() {
             ))}
           </div>
         )}
+
+        <div className="border-t border-border p-1">
+          <button
+            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
+            onClick={() => {
+              ctx.addSpacer();
+              setOpen(false);
+            }}
+          >
+            <MdAdd className="size-3.5 shrink-0 text-muted-foreground" />
+            Add Spacer
+          </button>
+        </div>
 
         <div className="border-t border-border px-2.5 py-2">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1.5">
