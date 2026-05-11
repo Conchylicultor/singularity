@@ -510,7 +510,7 @@ export interface PaneObject<
   useParams(): OwnParams;
   useData(): Provides;
   useDataMaybe(): Provides | null;
-  open(params: FullParams & Record<string, string>, opts?: { root?: boolean }): void;
+  open(params: FullParams & Record<string, string>, opts?: { root?: boolean; append?: boolean }): void;
   close(): void;
   expand(): void;
   back(): void;
@@ -569,15 +569,15 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
 
   function open(
     params: Record<string, string>,
-    opts?: { root?: boolean },
+    opts?: { root?: boolean; append?: boolean },
   ): void {
     const replace = internal.chrome.enabled && !internal.chrome.history;
     const chain = getChain();
     const ownParams = extractOwnParams(internal, params ?? {});
 
-    // If already in chain, update params or no-op (unless root is forced)
+    // If already in chain, update params or no-op (unless root or append is forced)
     const existingIdx = chain.findIndex((s) => s.paneId === internal.id);
-    if (existingIdx >= 0 && !opts?.root) {
+    if (existingIdx >= 0 && !opts?.root && !opts?.append) {
       const existing = chain[existingIdx]!.params;
       const same =
         Object.keys(ownParams).length === Object.keys(existing).length &&
