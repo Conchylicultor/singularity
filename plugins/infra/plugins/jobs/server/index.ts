@@ -13,7 +13,7 @@ import {
 } from "./internal/stuck-lock-sweeper";
 import { startWorker, stopWorker } from "./internal/worker";
 
-export { defineJob, UNSAFE_getRegisteredJob, DEFAULT_MAX_ATTEMPTS } from "./internal/registry";
+export { defineJob, UNSAFE_getRegisteredJob, getAllRegisteredJobNames, DEFAULT_MAX_ATTEMPTS } from "./internal/registry";
 export { sweepOnce as UNSAFE_sweepStuckLocks } from "./internal/stuck-lock-sweeper";
 export type {
   DefineJobSpec,

@@ -1,10 +1,7 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { Resource } from "@server/resources";
 import { Config } from "@plugins/config/server";
-import {
-  deleteTriggersFor,
-  trigger,
-} from "@plugins/infra/plugins/events/server";
+import { Trigger } from "@plugins/infra/plugins/events/server";
 import { conversationTurnCompleted } from "@plugins/conversations/server";
 import { turnSummaryConfig } from "../shared/config";
 import { generateTurnSummaryJob } from "./internal/job";
@@ -19,20 +16,10 @@ export default {
   name: "Conversation View: Turn Summary",
   description:
     "After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.",
-  contributions: [Config.Field(turnSummaryConfig), Resource.Declare(turnSummariesResource)],
+  contributions: [
+    Config.Field(turnSummaryConfig),
+    Resource.Declare(turnSummariesResource),
+    Trigger({ on: conversationTurnCompleted, do: generateTurnSummaryJob, with: {}, oneShot: false }),
+  ],
   register: [generateTurnSummaryJob],
-  onReady: async () => {
-    // Idempotent re-subscribe: drop any stale conversationTurnCompleted →
-    // generateTurnSummaryJob trigger rows from a prior incarnation, then
-    // install one persistent (oneShot:false) trigger so every turn completion
-    // for any conversation tries to summarize. The job is idempotent on
-    // (conversationId, messageId) so re-fires are safe.
-    await deleteTriggersFor(generateTurnSummaryJob);
-    await trigger({
-      on: conversationTurnCompleted,
-      do: generateTurnSummaryJob,
-      with: {},
-      oneShot: false,
-    });
-  },
 } satisfies ServerPluginDefinition;

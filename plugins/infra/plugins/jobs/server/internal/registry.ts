@@ -292,3 +292,7 @@ export function UNSAFE_getRegisteredJob(
 ): RegisteredJob | undefined {
   return jobRegistry.get(name);
 }
+
+export function getAllRegisteredJobNames(): Set<string> {
+  return new Set(jobRegistry.keys());
+}

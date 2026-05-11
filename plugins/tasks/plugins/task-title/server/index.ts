@@ -1,8 +1,5 @@
 import type { ServerPluginDefinition } from "@server/types";
-import {
-  deleteTriggersFor,
-  trigger,
-} from "@plugins/infra/plugins/events/server";
+import { Trigger } from "@plugins/infra/plugins/events/server";
 import {
   conversationCreated,
   userTurnSent,
@@ -25,21 +22,8 @@ export default {
   description:
     "Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip.",
   register: [titleOnConversationCreatedJob, titleOnUserTurnSentJob],
-  onReady: async () => {
-    await deleteTriggersFor(titleOnConversationCreatedJob);
-    await trigger({
-      on: conversationCreated,
-      do: titleOnConversationCreatedJob,
-      with: {},
-      oneShot: false,
-    });
-
-    await deleteTriggersFor(titleOnUserTurnSentJob);
-    await trigger({
-      on: userTurnSent,
-      do: titleOnUserTurnSentJob,
-      with: {},
-      oneShot: false,
-    });
-  },
+  contributions: [
+    Trigger({ on: conversationCreated, do: titleOnConversationCreatedJob, with: {}, oneShot: false }),
+    Trigger({ on: userTurnSent, do: titleOnUserTurnSentJob, with: {}, oneShot: false }),
+  ],
 } satisfies ServerPluginDefinition;

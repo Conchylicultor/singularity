@@ -14,10 +14,7 @@ import {
 import { handleRepoInfo } from "./internal/handle-repo-info";
 import { handleTaskAttachments } from "./internal/handle-task-attachments";
 import { pushIngestJob, runInitialReconcile } from "./internal/push-watcher";
-import {
-  deleteTriggersFor,
-  trigger,
-} from "@plugins/infra/plugins/events/server";
+import { Trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
 import {
   backfillConversationsMetaParent,
@@ -46,6 +43,9 @@ export default {
     "GET /api/repo-info": handleRepoInfo,
   },
   register: [addTaskTool, pushIngestJob],
+  contributions: [
+    Trigger({ on: refAdvanced.where({ refName: "refs/heads/main" }), do: pushIngestJob, with: {}, oneShot: false }),
+  ],
   onReady: async () => {
     const created = await ensureConversationsMetaTask();
     if (created) {
@@ -54,12 +54,5 @@ export default {
     // Reconcile catches any commits that landed while the server was down.
     // The git-watcher trigger keeps us live from this point forward.
     await runInitialReconcile();
-    await deleteTriggersFor(pushIngestJob);
-    await trigger({
-      on: refAdvanced.where({ refName: "refs/heads/main" }),
-      do: pushIngestJob,
-      with: {},
-      oneShot: false,
-    });
   },
 } satisfies ServerPluginDefinition;

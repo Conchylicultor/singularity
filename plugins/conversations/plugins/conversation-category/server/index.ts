@@ -1,10 +1,7 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { Resource } from "@server/resources";
 import { Config } from "@plugins/config/server";
-import {
-  deleteTriggersFor,
-  trigger,
-} from "@plugins/infra/plugins/events/server";
+import { Trigger } from "@plugins/infra/plugins/events/server";
 import { conversationTurnCompleted } from "@plugins/conversations/server";
 import { conversationCategoryConfig } from "../shared/config";
 import { classifyConversationJob } from "./internal/classify-job";
@@ -32,7 +29,12 @@ export default {
   name: "Conversation: Category",
   description:
     "Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.",
-  contributions: [Config.Field(conversationCategoryConfig), Resource.Declare(conversationCategoriesResource), Resource.Declare(categoryColorsResource)],
+  contributions: [
+    Config.Field(conversationCategoryConfig),
+    Resource.Declare(conversationCategoriesResource),
+    Resource.Declare(categoryColorsResource),
+    Trigger({ on: conversationTurnCompleted, do: classifyConversationJob, with: {}, oneShot: false }),
+  ],
   httpRoutes: {
     "POST /api/conversation-category/:conversationId/classify": handleClassify,
     "POST /api/conversation-category/:conversationId": handleSetCategory,
@@ -42,13 +44,4 @@ export default {
     "DELETE /api/conversation-category/colors/:category": handleDeleteColor,
   },
   register: [classifyConversationJob],
-  onReady: async () => {
-    await deleteTriggersFor(classifyConversationJob);
-    await trigger({
-      on: conversationTurnCompleted,
-      do: classifyConversationJob,
-      with: {},
-      oneShot: false,
-    });
-  },
 } satisfies ServerPluginDefinition;

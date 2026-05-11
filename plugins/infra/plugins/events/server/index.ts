@@ -12,6 +12,10 @@ import {
   eventEmissionsResource,
   eventTriggersResource,
 } from "./internal/resources";
+import {
+  syncTriggerContributions,
+  sweepStaleTriggers,
+} from "./internal/trigger-contributions";
 
 export { defineTriggerEvent } from "./internal/event";
 export type {
@@ -33,6 +37,7 @@ export type {
   TriggerSpec,
   UnsafeTriggerByNameSpec,
 } from "./internal/trigger";
+export { Trigger } from "./internal/trigger-contributions";
 export { eventEmissionsResource, eventTriggersResource } from "./internal/resources";
 
 export default {
@@ -49,4 +54,8 @@ export default {
   },
   register: [eventsDispatchJob, jobsHooksRegistration],
   contributions: [Resource.Declare(eventEmissionsResource), Resource.Declare(eventTriggersResource)],
+  onReady: async () => {
+    await syncTriggerContributions();
+    await sweepStaleTriggers();
+  },
 } satisfies ServerPluginDefinition;

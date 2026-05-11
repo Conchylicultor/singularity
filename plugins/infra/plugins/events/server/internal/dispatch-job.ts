@@ -13,11 +13,12 @@ import { triggerTableRegistry } from "./registry";
 // `target.run({ input, event, ctx })`, and (for oneShot triggers) removes the
 // trigger row on success.
 //
-// Pre-run failures (unknown target, schema drift) throw so Graphile retries
-// and eventually marks the job as permanently failed — visible in the worker
-// queue rather than silently swallowed. The trigger row is preserved because
-// the throw happens before oneShot cleanup. Post-run failures (oneShot
-// cleanup) log at error level but don't throw to avoid re-running the target.
+// Pre-run failures (schema drift) throw so Graphile retries and eventually
+// marks the job as permanently failed — visible in the worker queue rather
+// than silently swallowed. Unknown targets (stale triggers referencing deleted
+// jobs) are self-healed: the orphaned trigger row is removed and dispatch
+// returns without throwing. Post-run failures (oneShot cleanup) log at error
+// level but don't throw to avoid re-running the target.
 export const eventsDispatchJob = defineJob({
   name: "events.dispatch",
   input: z.object({
@@ -34,11 +35,17 @@ export const eventsDispatchJob = defineJob({
   run: async ({ input: p, ctx }) => {
     const target = UNSAFE_getRegisteredJob(p.jobName);
     if (!target) {
-      const err = new Error(
-        `[events] unknown job "${p.jobName}" (event "${p.eventName}", trigger ${p.triggerId})`,
-      );
-      reportServerError({ message: err.message, stack: err.stack ?? null });
-      throw err;
+      const msg = `[events] removing stale trigger ${p.triggerId}: job "${p.jobName}" no longer exists (event "${p.eventName}")`;
+      console.warn(msg);
+      reportServerError({ message: msg });
+      const table = triggerTableRegistry.get(p.eventName);
+      if (table) {
+        await db
+          .delete(table)
+          // biome-ignore lint/suspicious/noExplicitAny: dynamic id column access on untyped PgTable
+          .where(eq((table as any).id as AnyPgColumn, p.triggerId));
+      }
+      return;
     }
     const parsedInput = target.inputSchema.safeParse(p.jobWith);
     if (!parsedInput.success) {

@@ -973,7 +973,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/infra/plugins/events/server/internal/tables.ts`
       - Exports (server):
         - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`, `UnsafeTriggerByNameSpec`
-        - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `eventEmissionsResource`, `eventTriggersResource`, `trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
+        - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `eventEmissionsResource`, `eventTriggersResource`, `trigger`, `Trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
       - Exports (shared):
         - Types: `EmissionRow`, `EmissionsPayload`, `TriggerRow`, `TriggersPayload`
         - Values: `EmissionRowSchema`, `EmissionsPayloadSchema`, `eventEmissionsResource`, `eventTriggersResource`, `TriggerRowSchema`, `TriggersPayloadSchema`
@@ -999,7 +999,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
       - Exports (server):
         - Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`
-        - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `isSuspendSignal`, `jobsListResource`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
+        - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
       - Exports (shared):
         - Types: `JobRow`, `JobsPayload`, `JobState`
         - Values: `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`

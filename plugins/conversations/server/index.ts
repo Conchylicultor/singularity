@@ -21,10 +21,7 @@ import { conversationCreated } from "./internal/tables-created-event";
 import { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 import { userTurnSent } from "./internal/tables-user-turn-sent-event";
 import { taskStatusChanged } from "@plugins/tasks-core/server";
-import {
-  deleteTriggersFor,
-  trigger,
-} from "@plugins/infra/plugins/events/server";
+import { Trigger } from "@plugins/infra/plugins/events/server";
 
 export { maybeLaunchTaskJob } from "./internal/auto-start-jobs";
 
@@ -67,22 +64,14 @@ export default {
     "POST /api/conversations/:id/close": handleClose,
   },
   // recentConversationsResource is now mounted on tasks-core; only fork-errors stays here.
-  contributions: [Resource.Declare(forkErrorsResource)],
+  contributions: [
+    Resource.Declare(forkErrorsResource),
+    Trigger({ on: taskStatusChanged, do: maybeLaunchDependentsJob, with: {}, oneShot: false }),
+  ],
   register: [maybeLaunchTaskJob, maybeLaunchDependentsJob, conversationCreated, conversationTurnCompleted, userTurnSent],
   onReady: async () => {
     await ensureSystemMeta();
     startPoller();
     startTurnEmitter();
-
-    // Sweep stale per-dep oneShot rows from old armTaskAutoStart calls.
-    await deleteTriggersFor(maybeLaunchTaskJob);
-    // Single static trigger replaces all dynamic per-dep triggers.
-    await deleteTriggersFor(maybeLaunchDependentsJob);
-    await trigger({
-      on: taskStatusChanged,
-      do: maybeLaunchDependentsJob,
-      with: {},
-      oneShot: false,
-    });
   },
 } satisfies ServerPluginDefinition;

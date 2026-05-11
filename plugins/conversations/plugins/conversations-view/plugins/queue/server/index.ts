@@ -1,9 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { Resource } from "@server/resources";
-import {
-  deleteTriggersFor,
-  trigger,
-} from "@plugins/infra/plugins/events/server";
+import { Trigger } from "@plugins/infra/plugins/events/server";
 import {
   conversationCreated,
   conversationTurnCompleted,
@@ -26,7 +23,11 @@ export default {
   name: "Conversations Queue",
   description:
     "Server side of the global Anki-style conversations queue. Owns the conversations_ext_queue side-table via the entity-extensions primitive and seeds rank on conversationCreated + conversationTurnCompleted.",
-  contributions: [Resource.Declare(queueRanksResource)],
+  contributions: [
+    Resource.Declare(queueRanksResource),
+    Trigger({ on: conversationCreated, do: seedRankJob, with: {}, oneShot: false }),
+    Trigger({ on: conversationTurnCompleted, do: seedRankJob, with: {}, oneShot: false }),
+  ],
   register: [seedRankJob],
   httpRoutes: {
     "POST /api/conversations-queue/reorder": handleReorder,
@@ -34,20 +35,5 @@ export default {
     "POST /api/conversations-queue/demote": handleDemote,
     "POST /api/conversations-queue/step-down": handleStepDown,
     "POST /api/conversations-queue/rerank": handleRerank,
-  },
-  onReady: async () => {
-    await deleteTriggersFor(seedRankJob);
-    await trigger({
-      on: conversationCreated,
-      do: seedRankJob,
-      with: {},
-      oneShot: false,
-    });
-    await trigger({
-      on: conversationTurnCompleted,
-      do: seedRankJob,
-      with: {},
-      oneShot: false,
-    });
   },
 } satisfies ServerPluginDefinition;
