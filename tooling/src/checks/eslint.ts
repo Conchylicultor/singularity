@@ -28,7 +28,7 @@ export const eslintCheck: Check = {
     return {
       ok: false,
       message: `ESLint reported violations:\n  ${combined.split("\n").join("\n  ")}`,
-      hint: "Global rules live in cli/src/lint/; plugin rules in plugins/<name>/lint/index.ts.",
+      hint: "Global rules live in tooling/src/lint/; plugin rules in plugins/<name>/lint/index.ts.",
     };
   },
 };

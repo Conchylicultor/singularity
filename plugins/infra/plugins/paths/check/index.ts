@@ -17,6 +17,9 @@ const ALLOWED_PATHS = [
   "plugins/infra/plugins/paths/server/internal/bins.ts",
   // Non-plugin runtimes that cannot import from @plugins — each has its own canonical paths file.
   "cli/src/paths.ts",
+  // Tooling inlines the subset of paths it needs (HOME_DIR, libpqEnv) to avoid depending on cli/.
+  "tooling/src/guards/guards/main-edits.ts",
+  "tooling/src/checks/migrations-in-sync.ts",
   // Standalone script that intentionally avoids importing server internals.
   "server/backfill-pushes.ts",
   // Database plugin owns its own embedded-PG path constants and config

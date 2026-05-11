@@ -66,6 +66,7 @@ Think carefully about the plugin's boundaries, APIs, etc. when designing plugins
 ├── gateway/          # Namespace proxy (Go). See [`gateway/CLAUDE.md`](gateway/CLAUDE.md)
 ├── server/           # Backend (TypeScript/Bun)
 ├── cli/              # Agent CLI (TypeScript, Commander.js)
+├── tooling/          # Repo tooling: checks, guards, lint rules, boundary engine
 ├── sidequests/       # Independent side projects (see Sidequests section below)
 └── research/         # Research docs and plans
 ```
@@ -111,7 +112,7 @@ Run repo validation checks (e.g. `schema.ts` matches committed migrations):
 ./singularity check --migrations-in-sync  # run a single check
 ```
 
-Checks also run automatically as the first step of `push`, and (unless `--skip-checks` is passed) at the start of `build` after migration/doc generation. New built-in checks live in `cli/src/checks/` and are registered in `cli/src/checks/index.ts`.
+Checks also run automatically as the first step of `push`, and (unless `--skip-checks` is passed) at the start of `build` after migration/doc generation. New built-in checks live in `tooling/src/checks/` and are registered in `tooling/src/checks/index.ts`.
 
 Plugins can also contribute their own checks (no codegen, no registry edits — discovered at runtime):
 
@@ -193,13 +194,13 @@ When working on this project, follow these instructions thoughtfully:
 - When implementing a new feature or plugin, read the `structure-decision` SKILL ([`.claude/skills/structure-decision/SKILL.md`](.claude/skills/structure-decision/SKILL.md)) for rules on where to place code and how to structure it.
 - When creating a new top-level app, use the `create-app` SKILL ([`.claude/skills/create-app/SKILL.md`](.claude/skills/create-app/SKILL.md)).
 - Always edit files in your worktree, not the main branch.
-- **Avoid `find` for file searches.** Claude Code's shell shim reroutes `find` to a bundled bfs that holds an unbounded directory FD frontier; broad finds against this repo (with `node_modules` + worktrees) accumulate ~65k DIR FDs and have crashed macOS. Use `rg --files -g '<glob>'` or `fd '<regex>'` — both respect `.gitignore` and have bounded FDs. Only use `find` when you need its predicates (`-mtime`, `-size`, `-perm`, etc.), and always scope it with `-prune` or `-maxdepth N`. The PreToolUse guard at `cli/src/guards/guards/find.ts` denies unbounded `find` calls.
+- **Avoid `find` for file searches.** Claude Code's shell shim reroutes `find` to a bundled bfs that holds an unbounded directory FD frontier; broad finds against this repo (with `node_modules` + worktrees) accumulate ~65k DIR FDs and have crashed macOS. Use `rg --files -g '<glob>'` or `fd '<regex>'` — both respect `.gitignore` and have bounded FDs. Only use `find` when you need its predicates (`-mtime`, `-size`, `-perm`, etc.), and always scope it with `-prune` or `-maxdepth N`. The PreToolUse guard at `tooling/src/guards/guards/find.ts` denies unbounded `find` calls.
 - **STOP on unexpected failures; never improvise around them.** If an MCP tool errors, a CLI behaves strangely, a write lands somewhere you didn't expect, a connection is refused, or any operation fails in a way you don't fully understand — surface the failure clearly and ask. Do NOT route around it (e.g. falling back to bash + curl after an MCP call fails, retrying against a different host, or "trying the next thing that looks close enough"). One real incident: a silent MCP handshake failure caused an agent to curl the main namespace and corrupt its DB. A loud failure is debuggable; a workaround built on a broken assumption is not.
 - **Prefer the clean, modern, best-practice design over the hacky one, even when it's more work.** This applies to *both* bug fixes *and* new feature design. Every concrete task — a bug, a missing behavior, a requested feature — is a toy case for a larger structural question. Ask: "what general primitive, plugin, slot, or abstraction would make this *and* future similar cases trivial?" — then build that, rather than patching the symptom or bolting the feature onto existing code. This might include refactoring or creating new plugins.
 - **Group related plugins under an umbrella.** For 2+ related plugins, prefer an umbrella parent (`plugins/<umbrella>/plugins/<child>/`) over flat top-level entries. This keeps `plugins/` readable as semantic categories rather than an unbounded flat list. The umbrella doesn't need to re-export children's APIs — each sub-plugin owns its barrel.
 - **Subagents default to Sonnet.** When spawning any `Agent` call, always pass `model: "sonnet"` explicitly. Never omit the model and let it default to Opus. Only use Opus for load-bearing, complex implementation tasks — research, lookup, synthesis, and reporting are all Sonnet work.
 - **On breakage, rebase to HEAD first.** When the build fails to start or something is broken in an unexpected way, rebase the worktree branch onto `main` (`git fetch origin main && git rebase origin/main`) — the issue may already be fixed upstream.
-- **Promise handling — never swallow rejections.** Two global ESLint rules enforce this (`cli/src/lint/promise-safety/`):
+- **Promise handling — never swallow rejections.** Two global ESLint rules enforce this (`tooling/src/lint/promise-safety/`):
   - `promise-safety/no-floating-promises` — every promise must be explicitly handled.
   - `promise-safety/no-bare-catch` — `.catch(() => {})` and `.catch(console.error)` are banned because they silently swallow errors and hide bugs.
 

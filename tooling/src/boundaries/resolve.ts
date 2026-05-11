@@ -1,5 +1,4 @@
-import { existsSync } from "fs";
-import { join, relative, sep } from "path";
+import { sep } from "path";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/shared";
 import type { ZoneDefinition } from "./types";
 
@@ -24,7 +23,7 @@ interface ZoneEntry {
 }
 
 export function buildZoneMap(
-  root: string,
+  _root: string,
   zones: ZoneDefinition[],
   pluginTree: PluginTree | null,
 ): ZoneMap {

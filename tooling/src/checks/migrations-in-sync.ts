@@ -1,7 +1,25 @@
-import { cpSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "fs";
+import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { homedir } from "node:os";
 import { basename, join, relative, resolve } from "path";
-import { libpqEnv } from "../paths";
 import type { Check } from "./types";
+
+const DATABASE_CONFIG_PATH = join(homedir(), ".singularity", "database.json");
+
+function libpqEnv(): Record<string, string> {
+  let config: { connection: { host: string; port: number; user: string } };
+  try {
+    config = JSON.parse(readFileSync(DATABASE_CONFIG_PATH, "utf-8"));
+  } catch {
+    config = {
+      connection: { host: "localhost", port: 5432, user: process.env.USER ?? "postgres" },
+    };
+  }
+  return {
+    PGHOST: process.env.PGHOST ?? config.connection.host,
+    PGPORT: process.env.PGPORT ?? String(config.connection.port),
+    PGUSER: process.env.PGUSER ?? config.connection.user,
+  };
+}
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {

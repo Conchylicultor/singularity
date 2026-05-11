@@ -7,10 +7,10 @@
  * its `name`, and enables every contributed rule as `"error"` scoped to the
  * plugin's own subtree.
  *
- * The CLI runs ESLint via `cli/src/checks/eslint.ts` (`./singularity check
+ * The CLI runs ESLint via `tooling/src/checks/eslint.ts` (`./singularity check
  * --eslint`); there's no separate npm script to keep in sync.
  *
- * Global lint rules (promise-safety, etc.) live in `cli/src/lint/` and are
+ * Global lint rules (promise-safety, etc.) live in `tooling/src/lint/` and are
  * registered in baseConfigs below — they apply to all `**\/*.{ts,tsx}` files.
  */
 
@@ -22,7 +22,7 @@ import tsParser from "@typescript-eslint/parser";
 import type { Linter } from "eslint";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import reactHooks from "eslint-plugin-react-hooks";
-import { promiseSafetyRules } from "./cli/src/lint/promise-safety/index";
+import { promiseSafetyRules } from "./tooling/src/lint/promise-safety/index";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pluginsRoot = join(here, "plugins");

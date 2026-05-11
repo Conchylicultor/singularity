@@ -12,7 +12,7 @@
     "types": ["@types/bun"],
     "paths": {
       "@plugins/*": ["../plugins/*"],
-      "@tooling/*": ["../tooling/src/*"]
+      "@tooling/*": ["./src/*"]
     }
   },
   "include": ["src", "../plugins/packages/plugins/*/shared"]

@@ -903,6 +903,13 @@
         "typescript": "~5.8.3",
       },
     },
+    "tooling": {
+      "name": "@singularity/tooling",
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "~5.8.3",
+      },
+    },
     "web": {
       "name": "@singularity/web",
       "version": "0.0.1",
@@ -1869,6 +1876,8 @@
     "@singularity/plugin-worktree-switcher": ["@singularity/plugin-worktree-switcher@workspace:plugins/worktree-switcher"],
 
     "@singularity/server": ["@singularity/server@workspace:server"],
+
+    "@singularity/tooling": ["@singularity/tooling@workspace:tooling"],
 
     "@singularity/web": ["@singularity/web@workspace:web"],
 

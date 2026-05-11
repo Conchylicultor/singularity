@@ -24,22 +24,24 @@ async function runTsc(cwd: string, args: string[]): Promise<{ ok: true } | { ok:
 
 export const typescript: Check = {
   id: "typescript",
-  description: "Frontend and server pass tsc --noEmit (no type errors)",
+  description: "Frontend, server, and tooling pass tsc --noEmit (no type errors)",
   async run() {
     const root = await getRoot();
 
-    const [web, server] = await Promise.all([
+    const [web, server, tooling] = await Promise.all([
       runTsc(`${root}/web`, ["-p", "tsconfig.app.json"]),
       runTsc(`${root}/server`, []),
+      runTsc(`${root}/tooling`, []),
     ]);
 
-    if (web.ok && server.ok) return { ok: true };
+    if (web.ok && server.ok && tooling.ok) return { ok: true };
 
     const sections: string[] = [];
     if (!web.ok) sections.push(`web:\n    ${web.errors.split("\n").join("\n    ")}`);
     if (!server.ok) sections.push(`server:\n    ${server.errors.split("\n").join("\n    ")}`);
+    if (!tooling.ok) sections.push(`tooling:\n    ${tooling.errors.split("\n").join("\n    ")}`);
 
-    const combined = `${web.ok ? "" : web.errors}\n${server.ok ? "" : server.errors}`;
+    const combined = `${web.ok ? "" : web.errors}\n${server.ok ? "" : server.errors}\n${tooling.ok ? "" : tooling.errors}`;
     const hasMissingModule = /error TS2307: Cannot find module/.test(combined);
     const hint = hasMissingModule
       ? "A \"Cannot find module\" error for a dep you didn't touch is usually a missing workspace link — run ./singularity build first (it re-runs bun install) and re-push. Otherwise: fix type errors before pushing; if a cast is necessary, fix the type definition instead."

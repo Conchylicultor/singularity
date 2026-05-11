@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/tooling",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "~5.8.3"
+  }
+}

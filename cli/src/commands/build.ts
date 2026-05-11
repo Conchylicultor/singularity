@@ -4,12 +4,12 @@ import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/shared";
 import { basename, join, resolve } from "path";
 import { generateMigration } from "../migrations";
-import { generatePluginDocs, collectAllPlugins } from "../docgen";
-import { generatePluginRegistry } from "../plugin-registry-gen";
+import { generatePluginDocs, collectAllPlugins } from "@tooling/docgen";
+import { generatePluginRegistry } from "@tooling/plugin-registry-gen";
 import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot } from "../git/main-repo-root";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
-import { runChecks } from "../checks";
+import { runChecks } from "@tooling/checks";
 import {
   libpqEnv,
   readDatabaseConfig,

@@ -4,7 +4,8 @@
       "@plugins/*": ["./plugins/*"],
       "@server/*": ["./server/src/*"],
       "@central/*": ["./central/src/*"],
-      "@core/*": ["./plugin-core/*"]
+      "@core/*": ["./plugin-core/*"],
+      "@tooling/*": ["./tooling/src/*"]
     }
   },
   "files": [],
