@@ -11,6 +11,8 @@ export function buildTaskPrompt(
   // When the description already starts with the title (improve-form tasks store
   // the full user text in the description, and the title is derived from its first
   // line), prepending the title again would duplicate that first line.
+  // Also handle the truncation case where synthesiseTitleFallback adds "…".
   if (desc.startsWith(title)) return desc;
+  if (title.endsWith("…") && desc.startsWith(title.slice(0, -1))) return desc;
   return `${title}\n\n${desc}`;
 }
