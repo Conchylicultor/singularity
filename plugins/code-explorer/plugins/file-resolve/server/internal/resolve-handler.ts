@@ -61,7 +61,7 @@ export async function handleResolve(
   ]);
   if (code !== 0) return Response.json({ kind: "not-found" });
 
-  const querySeg = cleaned.split("/");
+  const querySeg = cleaned.split("/").filter((s) => s !== "...");
   const matches: string[] = [];
 
   for (const line of out.split("\n")) {

@@ -8,6 +8,7 @@ import {
   useMarkdownEnhancement,
   type MarkdownEnhancement,
 } from "@plugins/primitives/plugins/markdown/web";
+import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
@@ -15,8 +16,13 @@ import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 export function FileLinksEnhancer({ children }: { children: ReactNode }) {
   const conv = conversationPane.useDataMaybe();
   const task = taskDetailPane.useDataMaybe();
+  const match = usePaneMatch();
 
-  const worktree = conv?.conversation.attemptId ?? (task ? "main" : undefined);
+  const peekWorktree = match?.chain.find(
+    (e) => e.pane === filePeekPane._internal,
+  )?.params.worktree;
+
+  const worktree = conv?.conversation.attemptId ?? (task ? "main" : peekWorktree);
 
   const onFileOpen = useMemo(() => {
     if (!worktree) return undefined;
