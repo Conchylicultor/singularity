@@ -334,8 +334,6 @@ function ReorderItemActive({
   const draggable = useDraggable({ id: `${DRAG_PREFIX}${item.id}` });
   const droppable = useDroppable({ id: `${DROP_PREFIX}${item.id}` });
 
-  const delay = useMemo(() => (item.id.length * 37) % 350, [item.id]);
-
   const transform = draggable.transform;
   const isDragging = draggable.isDragging;
 
@@ -348,7 +346,6 @@ function ReorderItemActive({
         zIndex: 50,
       }
     : {
-        animationDelay: `-${delay}ms`,
         touchAction: "none",
       };
 
@@ -380,14 +377,14 @@ function ReorderItemActive({
         {...draggable.listeners}
         style={style}
         className={[
-          "relative cursor-grab",
-          isDragging ? "opacity-40" : "reorder-wiggle",
+          "group relative cursor-grab rounded-md ring-1 ring-primary/50",
+          isDragging && "opacity-40",
         ]
           .filter(Boolean)
           .join(" ")}
       >
         <button
-          className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
+          className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
           onPointerDown={(e) => e.stopPropagation()}
           onClick={handleHide}
           aria-label={`Hide ${item.id}`}
