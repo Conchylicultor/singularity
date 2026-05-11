@@ -9,6 +9,7 @@ export type { ConversationRecord } from "./slots";
 export { conversationPane, ConversationProvide } from "./panes";
 export { ConversationView } from "./components/conversation-view";
 export { draftToPlainText, isDraftEmpty } from "./prompt-draft-utils";
+export { PromptInsertProvider, usePromptInsert } from "./prompt-insert-context";
 
 export default {
   id: "conversation",

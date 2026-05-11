@@ -1,8 +1,10 @@
 import { PenLine } from "lucide-react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import {
+  type ConversationRecord,
+  usePromptInsert,
+} from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
-import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { Button } from "@/components/ui/button";
 import { promptTemplatesResource } from "../../shared/resources";
 
@@ -13,9 +15,7 @@ export function PromptTemplateChips({
 }) {
   const live = useConversation(conversation.id) ?? conversation;
   const { data: templates } = useResource(promptTemplatesResource);
-  const [, setDraft] = useDraft("conversation:prompt", "", {
-    scope: conversation.id,
-  });
+  const promptInsert = usePromptInsert();
 
   if (templates.length === 0) return null;
 
@@ -26,10 +26,6 @@ export function PromptTemplateChips({
 
   if (disabled) return null;
 
-  function insertTemplate(prompt: string) {
-    setDraft((prev) => prompt + (prev ? "\n" + prev : ""));
-  }
-
   return (
     <div className="flex flex-wrap gap-1.5">
       {templates.map((t) => (
@@ -38,7 +34,8 @@ export function PromptTemplateChips({
           variant="outline"
           size="sm"
           className="h-7 rounded-full border-dashed px-3 text-xs"
-          onClick={() => insertTemplate(t.prompt)}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => promptInsert?.insertAtCursor(t.prompt)}
         >
           <PenLine className="mr-1 size-3" />
           {t.title}

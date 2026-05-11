@@ -5,6 +5,7 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $getRoot, $getSelection, $isRangeSelection } from "lexical";
 import { cn } from "@/lib/utils";
 import { buildInitialConfig } from "../internal/lexical-config";
 import { ImageUploadPlugin } from "../internal/image-upload-plugin";
@@ -40,6 +41,7 @@ export function PromptEditor({
   maxHeight,
   namespace = "prompt-editor",
   onError,
+  insertRef,
 }: {
   value: string;
   onChange: (markdown: string) => void;
@@ -53,6 +55,7 @@ export function PromptEditor({
   maxHeight?: string;
   namespace?: string;
   onError?: (msg: string) => void;
+  insertRef?: React.MutableRefObject<((text: string) => void) | null>;
 }) {
   const initialConfig = useMemo(
     () =>
@@ -81,9 +84,36 @@ export function PromptEditor({
       {onSubmit && submitMode !== "none" && (
         <EnterKeyPlugin onSubmit={onSubmit} submitMode={submitMode} />
       )}
+      {insertRef && <InsertPlugin insertRef={insertRef} />}
       <HistoryPlugin />
     </LexicalComposer>
   );
+}
+
+function InsertPlugin({
+  insertRef,
+}: {
+  insertRef: React.MutableRefObject<((text: string) => void) | null>;
+}) {
+  const [editor] = useLexicalComposerContext();
+  useEffect(() => {
+    insertRef.current = (text: string) => {
+      editor.update(() => {
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          selection.insertText(text);
+        } else {
+          $getRoot().selectStart();
+          const sel = $getSelection();
+          if ($isRangeSelection(sel)) sel.insertText(text);
+        }
+      });
+    };
+    return () => {
+      insertRef.current = null;
+    };
+  }, [editor, insertRef]);
+  return null;
 }
 
 function EditorShell({

@@ -9,7 +9,7 @@
   - Slots: `Conversation.PromptInput`, `Conversation.TitlePrefix`
 - Exports (web):
   - Types: `ConversationRecord`
-  - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`
+  - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
 - Contributes:
   - `Pane.Register` `conversation`
   - `Conversation.ActionBar` → `ExpandConversationButton`

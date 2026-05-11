@@ -1,8 +1,9 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MdStop } from "react-icons/md";
 import {
   type ConversationRecord,
   isDraftEmpty,
+  usePromptInsert,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
@@ -20,6 +21,13 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
 
   const disabled = live.status === "gone" || live.status === "done" || live.status === "starting";
   const working = live.status === "working";
+
+  const insertRef = useRef<((text: string) => void) | null>(null);
+  const promptInsert = usePromptInsert();
+  useEffect(() => {
+    if (!promptInsert) return;
+    return promptInsert.registerInsert((text) => insertRef.current?.(text));
+  }, [promptInsert]);
 
   // Latest-draft ref so the send handler doesn't capture stale state.
   const draftRef = useRef(draft);
@@ -99,6 +107,7 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
               variant: "error",
             })
           }
+          insertRef={insertRef}
         />
       </div>
       {working && (

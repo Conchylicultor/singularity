@@ -6,6 +6,7 @@ import { Reorder, type UseAreaResult } from "@plugins/reorder/web";
 import { ActionBarView } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { Conversation, type ConversationRecord } from "../slots";
 import { conversationPane } from "../panes";
+import { PromptInsertProvider } from "../prompt-insert-context";
 import { JsonlPane } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
 type PromptBarItem = {
@@ -101,28 +102,30 @@ export function ConversationView() {
         <div className="min-h-0 flex-1 overflow-hidden">
           <JsonlPane conversation={conversation} actions={<ActionBarView />}>
             {showBottomBar && (
-              <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-1.5 pb-2">
-                <abovePromptInput.DndWrapper>
-                  {abovePromptInput.items.map((item) => {
-                    const Cmp = item.component;
-                    return (
-                      <abovePromptInput.ReorderItem key={item.id} item={item}>
-                        <PluginErrorBoundary slot={Conversation.AbovePromptInput.id}>
-                          <Cmp conversation={conversation} />
-                        </PluginErrorBoundary>
-                      </abovePromptInput.ReorderItem>
-                    );
-                  })}
-                </abovePromptInput.DndWrapper>
-                {PromptInputComponent && (
-                  <PromptInputComponent conversation={conversation} />
-                )}
-                {promptBar.items.length > 0 && (
-                  <div className="flex justify-end">
-                    <PromptBar area={promptBar} conversation={conversation} />
-                  </div>
-                )}
-              </div>
+              <PromptInsertProvider>
+                <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-1.5 pb-2">
+                  <abovePromptInput.DndWrapper>
+                    {abovePromptInput.items.map((item) => {
+                      const Cmp = item.component;
+                      return (
+                        <abovePromptInput.ReorderItem key={item.id} item={item}>
+                          <PluginErrorBoundary slot={Conversation.AbovePromptInput.id}>
+                            <Cmp conversation={conversation} />
+                          </PluginErrorBoundary>
+                        </abovePromptInput.ReorderItem>
+                      );
+                    })}
+                  </abovePromptInput.DndWrapper>
+                  {PromptInputComponent && (
+                    <PromptInputComponent conversation={conversation} />
+                  )}
+                  {promptBar.items.length > 0 && (
+                    <div className="flex justify-end">
+                      <PromptBar area={promptBar} conversation={conversation} />
+                    </div>
+                  )}
+                </div>
+              </PromptInsertProvider>
             )}
           </JsonlPane>
         </div>
