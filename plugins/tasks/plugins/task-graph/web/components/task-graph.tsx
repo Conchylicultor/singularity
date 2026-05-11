@@ -182,7 +182,7 @@ function TaskGraphInner({
     const refit = () => {
       if (frame !== null) cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        fitView({ padding: 0.15, maxZoom: 1 });
+        void fitView({ padding: 0.15, maxZoom: 1 });
       });
     };
     refit();

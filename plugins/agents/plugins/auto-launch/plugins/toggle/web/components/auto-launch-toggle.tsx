@@ -20,7 +20,7 @@ export function AutoLaunchToggle({ agentId }: { agentId: string }) {
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        patchAutoLaunch(agentId, !enabled);
+        void patchAutoLaunch(agentId, !enabled);
       }}
       title={enabled ? "Auto-launch: on" : "Auto-launch: off"}
       aria-label="Toggle auto-launch"

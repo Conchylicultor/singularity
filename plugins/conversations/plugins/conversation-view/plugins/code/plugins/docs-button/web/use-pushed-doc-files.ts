@@ -27,7 +27,7 @@ export function usePushedDocFiles(attemptId: string): EditedFile[] | null {
     }
 
     let cancelled = false;
-    Promise.all(
+    void Promise.all(
       ids.map((pushId) =>
         fetch(`/api/code/main/push?pushId=${encodeURIComponent(pushId)}`)
           .then((r) => (r.ok ? (r.json() as Promise<{ files: EditedFile[] }>) : Promise.resolve({ files: [] })))

@@ -71,7 +71,7 @@ export function ScreenshotView({ id }: { id: string }) {
   }, [id]);
 
   useEffect(() => {
-    reload();
+    void reload();
   }, [reload]);
 
   return (
@@ -140,7 +140,7 @@ export function ScreenshotView({ id }: { id: string }) {
           }}
           onReset={() => {
             blobDelivered.current = false;
-            reload();
+            void reload();
           }}
         />
       </div>

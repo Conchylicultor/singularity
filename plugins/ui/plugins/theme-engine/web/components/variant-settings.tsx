@@ -15,13 +15,13 @@ function GlobalPresetPicker() {
   if (globalPresets.length === 0) return null;
 
   const handleChange = (presetId: string) => {
-    setConfigValue(`${PLUGIN_ID}.globalPreset`, presetId);
+    void setConfigValue(`${PLUGIN_ID}.globalPreset`, presetId);
     const preset = globalPresets.find((p) => p.id === presetId);
     if (!preset) return;
     for (const [groupId, groupPresetId] of Object.entries(preset.groups)) {
       const group = tokenGroups.find((g) => g.id === groupId);
       if (group && groupPresetId) {
-        setConfigValue(`${group.pluginId}.preset`, groupPresetId);
+        void setConfigValue(`${group.pluginId}.preset`, groupPresetId);
       }
     }
   };

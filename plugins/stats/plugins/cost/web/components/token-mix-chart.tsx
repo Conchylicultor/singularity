@@ -52,14 +52,12 @@ export function TokenMixChart() {
   }, [data?.points, showEmptyDays]);
   const [hidden, setHidden] = useState<Record<string, boolean>>({});
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleLegendClick = (payload: any) => {
     const key = payload?.dataKey;
     if (typeof key !== "string") return;
     setHidden((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const legendFormatter = (value: string, entry: any) => {
     const key = typeof entry?.dataKey === "string" ? entry.dataKey : undefined;
     const isHidden = key ? (hidden[key] ?? false) : false;

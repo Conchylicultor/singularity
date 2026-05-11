@@ -67,8 +67,9 @@ function CrashFallback({
           .then((r) => {
             if (!cancelled) setContext(r ?? null);
           })
-          .catch(() => {
-            // Never throw from the error path.
+          .catch((err) => {
+            // Never throw from the error path — log and swallow.
+            console.error("[error-boundary] boundary reporter failed", err);
           });
       } else if (result !== undefined) {
         setContext(result);

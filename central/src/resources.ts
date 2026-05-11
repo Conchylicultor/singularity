@@ -212,7 +212,7 @@ function scheduleNotify(entry: RegistryEntry, params: ResourceParams): void {
   entry.pendingNotifies.set(paramsKey(params), params);
   if (flushScheduled) return;
   flushScheduled = true;
-  queueMicrotask(flushNotifies);
+  queueMicrotask(() => { void flushNotifies(); });
 }
 
 async function flushNotifies(): Promise<void> {

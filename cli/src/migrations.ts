@@ -72,8 +72,8 @@ export async function generateMigration(opts: {
     },
   });
   // Send Enter to auto-accept the default answer on any select prompt.
-  proc.stdin.write(new Uint8Array([0x0d]));
-  proc.stdin.end();
+  void proc.stdin.write(new Uint8Array([0x0d]));
+  void proc.stdin.end();
 
   // Tee stderr: forward live to the user AND capture so we can detect cases
   // where drizzle-kit printed a diagnostic but still exited 0 (seen with

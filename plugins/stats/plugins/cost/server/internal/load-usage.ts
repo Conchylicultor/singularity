@@ -80,7 +80,7 @@ export async function loadBundle(): Promise<AggregateBundle> {
 // Called from the server plugin's onReady hook so the cache is warm before any
 // chart fires its first fetch.
 export function prewarmBundle(): void {
-  void loadBundle().catch(() => {});
+  void loadBundle();
 }
 
 export function parseScope(req: Request): Scope {

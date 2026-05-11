@@ -86,7 +86,7 @@ async function refreshAccount(
     }
   })();
   inFlightRefreshes.set(key, promise);
-  promise.finally(() => inFlightRefreshes.delete(key));
+  void promise.finally(() => inFlightRefreshes.delete(key));
   return promise;
 }
 

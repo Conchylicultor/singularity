@@ -84,12 +84,13 @@ function usePolling<T>(
       setError(e instanceof Error ? e.message : String(e));
     }
   }, [load]);
+  const triggerRefresh = useCallback(() => { void refresh(); }, [refresh]);
   useEffect(() => {
-    refresh();
-    const h = setInterval(refresh, intervalMs);
+    triggerRefresh();
+    const h = setInterval(triggerRefresh, intervalMs);
     return () => clearInterval(h);
-  }, [refresh, intervalMs]);
-  return { data, error, reload: refresh };
+  }, [triggerRefresh, intervalMs]);
+  return { data, error, reload: triggerRefresh };
 }
 
 function relativeTime(iso: string): string {

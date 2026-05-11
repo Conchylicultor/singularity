@@ -500,7 +500,6 @@ export function usePathname(): string {
  * design decision 6 ("params are own-only").
  */
 export interface PaneObject<
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   FullParams = {},
   Provides = void,
   OwnParams = FullParams,
@@ -736,7 +735,6 @@ interface DefineArgs<Path extends string, Provides, ParentParams> {
 function define<
   Path extends string = "",
   Provides = void,
-  // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   ParentParams = {},
 >(
   args: DefineArgs<Path, Provides, ParentParams>,
@@ -815,6 +813,5 @@ export function useSyncPaneRegistry(): void {
 
 export function useMatchForPath(pathname: string): PaneMatch | null {
   syncChainFromUrl(pathname);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- currentChain is module-level, synced above
   return useMemo(() => resolveChain(currentChain), [pathname]);
 }

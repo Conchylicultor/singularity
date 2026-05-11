@@ -72,19 +72,19 @@ export function PushAndExitButton({
   useEffect(() => {
     if (!busy) return;
     if (isActiveStatus(live.status)) return;
-    fetch(
+    void fetch(
       `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
       { method: "DELETE" },
-    ).catch(() => {});
+    );
   }, [busy, live.status, conversation.id]);
 
   useEffect(() => {
     if (job?.status !== "clean") return;
     Shell.Toast({ description: "Pushed and closed", variant: "success" });
-    fetch(
+    void fetch(
       `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
       { method: "DELETE" },
-    ).catch(() => {});
+    );
   }, [job?.status]);
 
   useEffect(() => {
@@ -94,10 +94,10 @@ export function PushAndExitButton({
       description: `Push & Exit failed: ${message}`,
       variant: "error",
     });
-    fetch(
+    void fetch(
       `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
       { method: "DELETE" },
-    ).catch(() => {});
+    );
   }, [job?.status]);
 
   const disabled = busy || sending || live.status === "gone" || live.status === "done" || live.status === "starting";
@@ -213,10 +213,10 @@ export function PushAndExitButton({
   }
 
   function onKeepOpen() {
-    fetch(
+    void fetch(
       `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
       { method: "DELETE" },
-    ).catch(() => {});
+    );
   }
 
   const showDialog = job?.status === "flag";

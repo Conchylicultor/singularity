@@ -287,14 +287,13 @@ export function DiffView({
   useEffect(() => {
     if (!baseHunks) return;
     const ref = base ?? "HEAD";
-    fetch(`/api/code/${encodeURIComponent(worktree)}/file?path=${encodeURIComponent(basePath)}&ref=${encodeURIComponent(ref)}`)
+    void fetch(`/api/code/${encodeURIComponent(worktree)}/file?path=${encodeURIComponent(basePath)}&ref=${encodeURIComponent(ref)}`)
       .then((res) => res.ok ? res.json() : null)
       .then((body: { content?: string } | null) => {
         if (!body?.content) return;
         fileContentRef.current = body.content;
         setTotalLines(body.content.split("\n").length);
       })
-      .catch(() => {});
   }, [baseHunks, worktree, basePath, base]);
 
   const effectiveHunks = expandedHunks ?? baseHunks;

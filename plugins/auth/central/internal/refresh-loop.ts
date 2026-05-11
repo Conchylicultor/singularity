@@ -10,7 +10,7 @@ let timer: any = null;
 
 export function startRefreshLoop(): void {
   if (timer) return;
-  timer = setInterval(tick, TICK_INTERVAL_MS);
+  timer = setInterval(() => { void tick(); }, TICK_INTERVAL_MS);
   if (timer && typeof timer.unref === "function") timer.unref();
 }
 

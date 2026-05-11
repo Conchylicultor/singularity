@@ -32,7 +32,6 @@ export function Column({ entry, depth, isLast }: ColumnProps) {
 
   // Keep capturedWidthRef up-to-date on every render while we're the last column.
   // No deps intentional: we need the latest measurement before the next column opens.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useLayoutEffect(() => {
     if (isLast && divRef.current) {
       capturedWidthRef.current = divRef.current.offsetWidth;
@@ -49,7 +48,6 @@ export function Column({ entry, depth, isLast }: ColumnProps) {
       // width: split the space 50/50 so both columns start roughly equal.
       setWidthRef.current(Math.round(capturedWidthRef.current / 2));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLast, paneId]);
 
   // Some other column is maximized → collapse this one (overrides isLast guard).

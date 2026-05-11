@@ -71,8 +71,10 @@ async function upload(id: string, blob: Blob): Promise<void> {
   // "Loading…" until the user dismisses it.
   void navigator.clipboard
     .write([new ClipboardItem({ "image/png": blob })])
-    .catch(() => {
-      /* clipboard denied; non-fatal */
+    .catch((err) => {
+      // Clipboard permission denied or not supported — non-fatal; upload proceeds regardless.
+      if (err instanceof DOMException && (err.name === "NotAllowedError" || err.name === "SecurityError")) return;
+      throw err;
     });
 
   try {

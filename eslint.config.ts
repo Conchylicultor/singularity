@@ -9,13 +9,20 @@
  *
  * The CLI runs ESLint via `cli/src/checks/eslint.ts` (`./singularity check
  * --eslint`); there's no separate npm script to keep in sync.
+ *
+ * Global lint rules (promise-safety, etc.) live in `cli/src/lint/` and are
+ * registered in baseConfigs below — they apply to all `**\/*.{ts,tsx}` files.
  */
 
 import { existsSync, readdirSync } from "fs";
 import { dirname, join, sep } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
+import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import type { Linter } from "eslint";
+import jsxA11y from "eslint-plugin-jsx-a11y";
+import reactHooks from "eslint-plugin-react-hooks";
+import { promiseSafetyRules } from "./cli/src/lint/promise-safety/index";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pluginsRoot = join(here, "plugins");
@@ -89,7 +96,41 @@ const baseConfigs: Linter.Config[] = [
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       parser: tsParser as unknown as Linter.Parser,
-      parserOptions: { ecmaVersion: "latest", sourceType: "module" },
+      parserOptions: {
+        ecmaVersion: "latest",
+        sourceType: "module",
+        projectService: {
+          allowDefaultProject: [
+            "*.config.ts",
+            "web/vitest.config.ts",
+            "server/*.ts",
+            "plugins/*/scripts/*.ts",
+            "plugins/*/*.config.ts",
+            "plugins/*/plugins/*/*.config.ts",
+            "plugins/*/plugins/*/scripts/*.ts",
+          ],
+          defaultProject: "web/tsconfig.app.json",
+        },
+        tsconfigRootDir: here,
+      },
+    },
+    plugins: {
+      "@typescript-eslint": tsPlugin as unknown as Linter.Plugin,
+      "promise-safety": { rules: promiseSafetyRules } as unknown as Linter.Plugin,
+      "react-hooks": reactHooks as unknown as Linter.Plugin,
+      "jsx-a11y": jsxA11y as unknown as Linter.Plugin,
+    },
+    rules: {
+      "@typescript-eslint/no-floating-promises": "off",
+      "@typescript-eslint/no-misused-promises": ["error", {
+        checksVoidReturn: { attributes: false },
+      }],
+      "promise-safety/no-floating-promises": "error",
+      "promise-safety/no-bare-catch": "error",
+      "react-hooks/rules-of-hooks": "warn",
+      "react-hooks/exhaustive-deps": "warn",
+      "jsx-a11y/click-events-have-key-events": "warn",
+      "jsx-a11y/no-static-element-interactions": "warn",
     },
   },
   {

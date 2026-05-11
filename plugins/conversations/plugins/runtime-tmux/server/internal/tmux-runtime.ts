@@ -235,7 +235,7 @@ export const tmuxRuntime: ConversationRuntime = {
       stdout: "pipe",
       stderr: "pipe",
     });
-    load.stdin.write(text);
+    void load.stdin.write(text);
     await load.stdin.end();
     const loadExit = await load.exited;
     if (loadExit !== 0) {

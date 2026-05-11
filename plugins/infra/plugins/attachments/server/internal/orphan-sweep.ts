@@ -13,7 +13,7 @@ export function startOrphanSweep(): void {
   if (started) return;
   started = true;
   void runSweep();
-  setInterval(runSweep, INTERVAL_MS);
+  setInterval(() => { void runSweep(); }, INTERVAL_MS);
 }
 
 async function runSweep(): Promise<void> {

@@ -87,11 +87,20 @@ export class CrossTabElection<TMsg> {
   private requestLock(steal: boolean): void {
     if (this.closed || !this.locks) return;
     const opts: LockOptions = { mode: "exclusive", steal };
-    void this.locks.request(this.name, opts, () => {
-      if (this.closed) return;
-      this.becomeLeader();
-      return new Promise<void>(() => {});
-    });
+    this.locks
+      .request(this.name, opts, () => {
+        if (this.closed) return;
+        this.becomeLeader();
+        return new Promise<void>(() => {});
+      })
+      .catch((err: unknown) => {
+        if (this.closed) return;
+        if (err instanceof DOMException && err.name === "AbortError") {
+          this.demoteToFollower();
+          return;
+        }
+        throw err;
+      });
     if (!steal) this.armTimeout();
   }
 
@@ -101,6 +110,16 @@ export class CrossTabElection<TMsg> {
     this.stopTimeout();
     this.startHeartbeat();
     this.callbacks.onElected();
+  }
+
+  private demoteToFollower(): void {
+    if (this.closed) return;
+    this.isLeader = false;
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+    this.requestLock(false);
   }
 
   private startHeartbeat(): void {

@@ -83,7 +83,7 @@ export async function recordCrash(
       source: row.source,
       fingerprint: fp,
     },
-  }).catch(() => {});
+  });
   return { ...outcome, crashLoop: false };
 }
 

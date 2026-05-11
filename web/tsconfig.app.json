@@ -30,11 +30,15 @@
     "../plugin-core",
     "../plugins/*/web",
     "../plugins/*/shared",
+    "../plugins/*/lint",
     "../plugins/*/plugins/*/web",
     "../plugins/*/plugins/*/shared",
+    "../plugins/*/plugins/*/lint",
     "../plugins/*/plugins/*/plugins/*/web",
     "../plugins/*/plugins/*/plugins/*/shared",
     "../plugins/*/plugins/*/plugins/*/plugins/*/web",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/shared"
+    "../plugins/*/plugins/*/plugins/*/plugins/*/shared",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/web",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/shared"
   ]
 }

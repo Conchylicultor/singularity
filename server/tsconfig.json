@@ -21,9 +21,15 @@
     "../plugin-core/shared",
     "../plugins/*/server",
     "../plugins/*/shared",
+    "../plugins/*/check",
     "../plugins/*/plugins/*/server",
     "../plugins/*/plugins/*/shared",
+    "../plugins/*/plugins/*/check",
     "../plugins/*/plugins/*/plugins/*/server",
-    "../plugins/*/plugins/*/plugins/*/shared"
+    "../plugins/*/plugins/*/plugins/*/shared",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/server",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/shared",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/server",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/shared"
   ]
 }

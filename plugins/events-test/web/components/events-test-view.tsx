@@ -84,8 +84,8 @@ export function EventsTestView() {
 
   // Initial load + light poll so oneShot deletions and new log entries show.
   useEffect(() => {
-    refresh();
-    const iv = setInterval(refresh, 1000);
+    void refresh();
+    const iv = setInterval(() => { void refresh(); }, 1000);
     return () => clearInterval(iv);
   }, [refresh]);
 

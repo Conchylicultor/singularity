@@ -54,7 +54,7 @@ export async function handleGenerate(
     deleteConversation(conv.id).catch((err) => {
       console.error(`[conversation-summary] cleanup of ${conv.id} failed`, err);
     });
-    fs.unlink(contextPath).catch(() => {});
+    void fs.unlink(contextPath);
   }, CLEANUP_AFTER_MS).unref();
 
   return Response.json(

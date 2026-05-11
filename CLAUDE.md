@@ -199,6 +199,16 @@ When working on this project, follow these instructions thoughtfully:
 - **Group related plugins under an umbrella.** For 2+ related plugins, prefer an umbrella parent (`plugins/<umbrella>/plugins/<child>/`) over flat top-level entries. This keeps `plugins/` readable as semantic categories rather than an unbounded flat list. The umbrella doesn't need to re-export children's APIs — each sub-plugin owns its barrel.
 - **Subagents default to Sonnet.** When spawning any `Agent` call, always pass `model: "sonnet"` explicitly. Never omit the model and let it default to Opus. Only use Opus for load-bearing, complex implementation tasks — research, lookup, synthesis, and reporting are all Sonnet work.
 - **On breakage, rebase to HEAD first.** When the build fails to start or something is broken in an unexpected way, rebase the worktree branch onto `main` (`git fetch origin main && git rebase origin/main`) — the issue may already be fixed upstream.
+- **Promise handling — never swallow rejections.** Two global ESLint rules enforce this (`cli/src/lint/promise-safety/`):
+  - `promise-safety/no-floating-promises` — every promise must be explicitly handled.
+  - `promise-safety/no-bare-catch` — `.catch(() => {})` and `.catch(console.error)` are banned because they silently swallow errors and hide bugs.
+
+  Correct patterns (in order of preference):
+  - `await promise` — preferred when in an async context.
+  - `promise.catch((err) => { if (err instanceof Expected) handle(err); else throw err; })` — catch specific exceptions, re-throw unknown. Use when a specific error message should reach the user (toast, error boundary).
+  - `void promise` — intentional fire-and-forget. The rejection is NOT caught — it still surfaces via the global `unhandledrejection` handler (which the `crashes` plugin reports). Use only when there is no better local handler (background refreshes, best-effort pings).
+
+  Never: bare `promise;` (floating), `.catch(() => {})` (swallowed), `.catch(console.error)` (logged but lost). These hide bugs.
 - **When the user explicitly says "Exit"**, signal the outcome via exactly one MCP tool call, then write your final wrap-up message:
   1. Call exactly one MCP tool to signal the outcome:
      - `exit_clean` — everything went smoothly, nothing I need to know. The conversation will close automatically.

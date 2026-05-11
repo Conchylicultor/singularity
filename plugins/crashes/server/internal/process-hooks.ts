@@ -19,7 +19,9 @@ export function installProcessHooks(): void {
     appendCrashSync("server-unhandled", err);
     // Don't exit: rejections are recoverable in practice. The buffer is
     // flushed best-effort by flushBufferedCrashes below (next tick).
-    void flushBufferedCrashes().catch(() => {});
+    void flushBufferedCrashes().catch((err) => {
+      console.error("[crashes] flushBufferedCrashes failed in unhandledRejection handler", err);
+    });
   });
 }
 

@@ -32,7 +32,6 @@ export function GroupRename({
       onFocused?.();
     }
     // We intentionally only fire when autoFocus flips to true.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoFocus]);
 
   return (
