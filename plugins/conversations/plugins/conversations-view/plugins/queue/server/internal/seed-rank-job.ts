@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConversation, hasBlockingDep, listBlockingDepIds } from "@plugins/tasks-core/server";
-import { lockDeck, positionTwoRank, rankAfterBlockers } from "./queue-ranks";
+import { isTopOfDeck, lockDeck, positionTwoRank, rankAfterBlockers } from "./queue-ranks";
 import { conversationsQueue } from "./tables";
 import { queueRanksResource } from "./resource";
 import { db } from "@plugins/database/server";
@@ -9,9 +9,16 @@ import { db } from "@plugins/database/server";
 // Bound to both `conversationCreated` and `conversationTurnCompleted`. Every
 // fire seeds the conversation at "position 2" (one slot below the current
 // top), which gives the Anki-style cycling: a fresh conversation lands just
-// below what the user is working on, and a conversation that finishes a turn
-// re-slots into the same spot. When the conversation's task has blocking
-// dependencies, it instead slots after the last waiting blocker conversation.
+// below what the user is working on.
+//
+// The position-1 conversation is never demoted: if it already holds the top
+// rank when its turn completes, the existing rank is preserved. This keeps
+// the user's active focus stable while new/returning conversations slot in
+// behind it.
+//
+// When the conversation's task has blocking dependencies, it instead slots
+// after the last waiting blocker conversation.
+//
 // Crucially, this is NOT triggered by status transitions — recovering a `gone`
 // conversation drives `gone → working → waiting` without producing a
 // `conversationTurnCompleted`, so the original rank is preserved by
@@ -32,6 +39,8 @@ export const seedRankJob = defineJob({
 
     await db.transaction(async (tx) => {
       await lockDeck(tx);
+
+      if (await isTopOfDeck(conversationId, tx)) return;
 
       let rank;
       if (conv?.taskId && (await hasBlockingDep(conv.taskId))) {

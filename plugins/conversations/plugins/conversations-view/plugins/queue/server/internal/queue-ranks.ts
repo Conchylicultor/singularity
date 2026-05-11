@@ -3,13 +3,16 @@ import { Rank } from "@plugins/primitives/plugins/rank/shared";
 import { db } from "@plugins/database/server";
 import { _conversations, _attempts } from "@plugins/tasks-core/server";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
+import type { ConversationStatus } from "@plugins/conversations/shared";
 import { conversationsQueue } from "./tables";
 
 const _conversationsExtQueue = conversationsQueue.table;
 
+const LIVE_STATUSES: ConversationStatus[] = ["waiting", "working", "starting"];
+
 // All "deck" reads join the queue ext-table with `_conversations` and filter
-// to `status = "waiting"`. The queue is the single global ordered list of
-// waiting conversations; non-waiting rows may have an ext entry but never
+// to live-process statuses (waiting, working, starting). The queue is the
+// single global ordered list; non-live rows may have an ext entry but never
 // participate in deck math.
 
 function joinedWaiting(executor: RankExecutor = db) {
@@ -40,16 +43,18 @@ export async function endRank(): Promise<Rank> {
 }
 
 // Position 2 of the deck: between the current top and second-place ranks.
-// 0 waiting → returns any rank (becomes the only item).
-// 1 waiting → returns a rank after that single item.
+// 0 live → returns any rank (becomes the only item).
+// 1 live → returns a rank after that single item.
 // `excludeId` keeps the conversation being ranked out of the deck query.
+// Uses LIVE_STATUSES (not just "waiting") so the position-1 conversation
+// is always visible as the anchor, even when it's "working" or "starting".
 // When `executor` is a transaction, the caller MUST have acquired the lock
 // (via `lockDeck`) so concurrent seeders serialize on the same rows.
 export async function positionTwoRank(
   excludeId?: string,
   executor: RankExecutor = db,
 ): Promise<Rank> {
-  const where: SQL[] = [eq(_conversations.status, "waiting")];
+  const where: SQL[] = [inArray(_conversations.status, LIVE_STATUSES)];
   if (excludeId) where.push(ne(_conversationsExtQueue.parentId, excludeId));
   const top2 = await joinedWaiting(executor)
     .where(and(...where))
@@ -68,8 +73,22 @@ export async function lockDeck(executor: RankExecutor): Promise<void> {
     .select({ id: _conversationsExtQueue.parentId })
     .from(_conversationsExtQueue)
     .innerJoin(_conversations, eq(_conversations.id, _conversationsExtQueue.parentId))
-    .where(eq(_conversations.status, "waiting"))
+    .where(inArray(_conversations.status, LIVE_STATUSES))
     .for("update", { of: _conversationsExtQueue });
+}
+
+// Returns true when `conversationId` currently holds the top rank among all
+// live conversations in the deck. Used by seedRankJob to avoid demoting the
+// position-1 item on turn completion.
+export async function isTopOfDeck(
+  conversationId: string,
+  executor: RankExecutor = db,
+): Promise<boolean> {
+  const [top] = await joinedWaiting(executor)
+    .where(inArray(_conversations.status, LIVE_STATUSES))
+    .orderBy(asc(_conversationsExtQueue.rank))
+    .limit(1);
+  return top?.id === conversationId;
 }
 
 // Rank that places a conversation before all currently-waiting conversations.
