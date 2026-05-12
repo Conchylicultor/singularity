@@ -5,7 +5,7 @@ import { defineResource } from "@server/resources";
 import {
   ClaudeCliCallSchema,
   type ClaudeCliCall,
-} from "../../shared/resources";
+} from "../../core/resources";
 import { _claudeCliCalls } from "./tables";
 
 export const RECENT_CALLS_LIMIT = 1000;

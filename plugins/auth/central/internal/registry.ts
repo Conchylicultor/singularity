@@ -1,6 +1,6 @@
 import type { Registration } from "@central/types";
-import type { AuthProviderDescriptor } from "@plugins/auth/shared";
-import { AuthProviderUnknownError } from "@plugins/auth/shared";
+import type { AuthProviderDescriptor } from "@plugins/auth/core";
+import { AuthProviderUnknownError } from "@plugins/auth/core";
 
 const providers = new Map<string, AuthProviderDescriptor>();
 

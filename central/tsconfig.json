@@ -18,10 +18,17 @@
   },
   "include": [
     "src",
-    "../plugin-core/shared",
     "../plugins/*/central",
+    "../plugins/*/core",
+    "../plugins/*/internal",
     "../plugins/*/plugins/*/central",
+    "../plugins/*/plugins/*/core",
+    "../plugins/*/plugins/*/internal",
     "../plugins/*/plugins/*/plugins/*/central",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/central"
+    "../plugins/*/plugins/*/plugins/*/core",
+    "../plugins/*/plugins/*/plugins/*/internal",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/central",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/core",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/internal"
   ]
 }

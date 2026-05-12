@@ -1,6 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { TasksList } from "@plugins/tasks/plugins/task-list/web";
-import { tasksResource } from "@plugins/tasks/shared";
+import { tasksResource } from "@plugins/tasks/core";
 import { TaskNavigateProvider } from "../context";
 import { TaskDetail } from "./task-detail";
 

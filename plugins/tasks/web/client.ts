@@ -1,6 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { tasksResource, type Task } from "../shared";
-import type { Rank } from "@plugins/primitives/plugins/rank/shared";
+import { tasksResource, type Task } from "../core";
+import type { Rank } from "@plugins/primitives/plugins/rank/core";
 
 export type TaskPatch = Partial<{
   title: string;

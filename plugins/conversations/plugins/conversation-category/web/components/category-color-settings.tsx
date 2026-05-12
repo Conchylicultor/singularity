@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useConfigValues } from "@plugins/config/web";
 import { cn } from "@/lib/utils";
-import { conversationCategoryConfig } from "../../shared";
+import { conversationCategoryConfig } from "../../internal";
 import { useCategoryColors } from "../internal/use-category-colors";
 import {
   COLOR_PALETTE,

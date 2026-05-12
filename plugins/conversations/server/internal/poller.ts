@@ -11,7 +11,7 @@ import { isMain } from "@plugins/infra/plugins/paths/server";
 import { isTransientDbError } from "@plugins/database/server";
 import { Runtime, type RuntimeInfo } from "./runtime";
 import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
-import type { ConversationStatus } from "../../shared";
+import type { ConversationStatus } from "../../core";
 
 function liveStatusFor(info: RuntimeInfo): ConversationStatus {
   return info.working ? "working" : "waiting";

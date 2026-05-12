@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { claudeCliCallsResource } from "@plugins/infra/plugins/claude-cli/shared";
-import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/shared";
+import { claudeCliCallsResource } from "@plugins/infra/plugins/claude-cli/core";
+import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/core";
 import { CallRow } from "./call-row";
 import { cn } from "@/lib/utils";
 

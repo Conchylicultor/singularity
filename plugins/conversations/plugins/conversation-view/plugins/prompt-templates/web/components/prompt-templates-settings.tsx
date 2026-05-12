@@ -4,7 +4,7 @@ import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { promptTemplatesResource } from "../../shared/resources";
+import { promptTemplatesResource } from "../../internal/resources";
 
 function toastError(title: string, err: unknown) {
   ShellCommands.Toast({

@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { Config } from "@plugins/config/server";
-import { colorPaletteConfig } from "../shared";
+import { colorPaletteConfig } from "../internal";
 
 export default {
   id: "ui-tokens-color-palette",

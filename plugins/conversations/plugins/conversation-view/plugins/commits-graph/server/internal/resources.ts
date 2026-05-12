@@ -1,12 +1,12 @@
 import { defineResource } from "@server/resources";
 import { getAttempt, listPushesForAttempt, pushesResource } from "@plugins/tasks-core/server";
-import type { Push } from "@plugins/tasks-core/shared";
+import type { Push } from "@plugins/tasks-core/core";
 import {
   CommitDeltaSchema,
   CommitsGraphSchema,
   type CommitDelta,
   type CommitsGraph,
-} from "../../shared/protocol";
+} from "../../internal/protocol";
 import { computeDelta, computeGraph } from "./compute-graph";
 
 type Params = { attemptId: string };

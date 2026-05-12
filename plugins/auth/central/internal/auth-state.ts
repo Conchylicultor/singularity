@@ -1,7 +1,7 @@
 import type {
   AuthAccountState,
   AuthStateValue,
-} from "@plugins/auth/shared";
+} from "@plugins/auth/core";
 import { listProviders } from "./registry";
 import { getAccount } from "./token-store";
 import { tryResolveCredentials } from "./credentials";

@@ -2,7 +2,7 @@ import { asc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
 import { quickPromptsTable } from "./tables";
-import type { QuickPrompt } from "../../shared/resources";
+import type { QuickPrompt } from "../../internal/resources";
 
 export const quickPromptsServerResource = defineResource<QuickPrompt[]>({
   key: "quick-prompts",

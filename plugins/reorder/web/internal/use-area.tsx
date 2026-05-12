@@ -20,7 +20,7 @@ import {
 } from "@dnd-kit/core";
 import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
 import { Input } from "@/components/ui/input";
-import { Rank } from "@plugins/primitives/plugins/rank/shared";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   Popover,
@@ -30,8 +30,8 @@ import {
 import {
   reorderGroupsResource,
   type ReorderGroup,
-} from "@plugins/reorder/plugins/groups/shared";
-import { reorderPrefsResource } from "../../shared/resource";
+} from "@plugins/reorder/plugins/groups/core";
+import { reorderPrefsResource } from "../../internal/resource";
 import {
   lookupReorderConfig,
   type ReorderableSlot,
@@ -54,7 +54,7 @@ export function isSpacer(item: { id: string }): item is SpacerItem {
 
 // --- Group types ------------------------------------------------------------
 
-export type { ReorderGroup } from "@plugins/reorder/plugins/groups/shared";
+export type { ReorderGroup } from "@plugins/reorder/plugins/groups/core";
 
 export type GroupEntry<P> = {
   kind: "group";

@@ -5,11 +5,11 @@
 ## Plugin reference
 
 - Description: Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
-- Exports (web):
-  - Values: `useEditedFiles`
-- Exports (shared):
+- Exports (core):
   - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`
   - Values: `editedFilesResource`
+- Exports (web):
+  - Values: `useEditedFiles`
 - Server:
   - Uses: `tasks-core.getConversation`
   - Resources: `edited-files` (invalidate)

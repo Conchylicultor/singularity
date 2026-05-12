@@ -1,4 +1,4 @@
-import type { CommitDelta, CommitRow, CommitsGraph } from "../../shared/protocol";
+import type { CommitDelta, CommitRow, CommitsGraph } from "../../internal/protocol";
 import { runGit } from "./git";
 
 const MAIN = "main";

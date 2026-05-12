@@ -1,1 +1,1 @@
-export { segmentedProgressBarConfig } from "../../shared";
+export { segmentedProgressBarConfig } from "../../core";

@@ -32,11 +32,11 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
 
 - Description: Core database infrastructure. Connection pooling and DB readiness.
 - Load-bearing: yes
-- Exports (server):
-  - Values: `awaitDbReady`, `db`, `isTransientDbError`
-- Exports (shared):
+- Exports (core):
   - Types: `DatabaseConfig`, `DatabaseProvider`
   - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
+- Exports (server):
+  - Values: `awaitDbReady`, `db`, `isTransientDbError`
 - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `grouped`, `groups`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
 - Sub-plugins:
   - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.

@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { TaskDraftCard, type ParentTaskPreview } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";
 import type { ChainModel } from "./model-chip";
-import type { TaskChainRelateMode } from "../../shared/types";
+import type { TaskChainRelateMode } from "../../core/types";
 
 export interface CardDraft {
   localId: string;

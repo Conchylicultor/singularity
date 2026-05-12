@@ -1,4 +1,4 @@
-import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
+import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 
 export interface NameStatusRecord {
   status: EditedFileStatus;

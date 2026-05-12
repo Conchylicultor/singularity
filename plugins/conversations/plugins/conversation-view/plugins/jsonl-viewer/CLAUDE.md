@@ -7,12 +7,12 @@
 - Description: Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
 - Defines:
   - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.RowAction`, `JsonlViewer.Overlay`
+- Exports (core):
+  - Types: `JsonlEventsResponse`
+  - Values: `JsonlEventsPayloadSchema`, `jsonlEventsResource`
 - Exports (web):
   - Types: `EventRendererContribution`, `OverlayContribution`, `RowActionContribution`
   - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`
-- Exports (shared):
-  - Types: `JsonlEventsResponse`
-  - Values: `JsonlEventsPayloadSchema`, `jsonlEventsResource`
 - Contributes:
   - `JsonlViewer.RowAction` → `RawJsonAction`
 - Server:

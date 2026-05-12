@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
-import { attemptsResource, tasksResource } from "@plugins/tasks/shared";
+import { attemptsResource, tasksResource } from "@plugins/tasks/core";
 
 const currentWorktree = (() => {
   const host = window.location.hostname;

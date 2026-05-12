@@ -1,7 +1,7 @@
 import { initTokenStore } from "./token-store";
 import { startRefreshLoop } from "./refresh-loop";
 import { warmAuthState } from "./auth-state";
-import { AuthKeychainLockedError } from "@plugins/auth/shared";
+import { AuthKeychainLockedError } from "@plugins/auth/core";
 
 let booted = false;
 

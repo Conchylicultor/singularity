@@ -6,7 +6,7 @@ export { pluginViewPane } from "./panes";
 export { PluginDetail } from "./components/plugin-detail";
 export { Section } from "./components/section";
 export { PluginView as PluginViewSlots } from "./slots";
-export type { PluginNode, PluginTreePayload } from "../shared/types";
+export type { PluginNode, PluginTreePayload } from "../core/types";
 
 export default {
   id: "plugin-view",

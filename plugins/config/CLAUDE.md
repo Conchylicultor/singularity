@@ -64,14 +64,14 @@ If you're tempted to store `{ [item]: { enabled: boolean, … } }` as a JSON blo
 - Defines:
   - Slots: `Config.Spec`, `Config.Section`
   - DB schema: `plugins/config/server/internal/tables.ts`
+- Exports (core):
+  - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `Schema`, `ValueOf`, `Values`
+  - Values: `defineConfig`, `fullKey`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `validateKind`
 - Exports (web):
   - Types: `SecretFieldState`, `SectionWithPlugin`, `SpecWithPlugin`
   - Values: `Config`, `configResource`, `configSecretsResource`, `resetConfigValue`, `setConfigValue`, `settingsPane`, `useConfigValues`, `useSecretFieldSet`, `useSectionsWithPlugin`, `useSpecsWithPlugin`
 - Exports (server):
   - Values: `Config`, `configResource`, `configSecretsResource`, `readConfig`
-- Exports (shared):
-  - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `Schema`, `ValueOf`, `Values`
-  - Values: `defineConfig`, `fullKey`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `validateKind`
 - Contributes:
   - `Pane.Register` `settings`
   - `Shell.Sidebar` "Settings" (group `System`)

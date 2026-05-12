@@ -10,10 +10,10 @@ import type {
   BarrelExport,
   RouteInfo,
   SlotInfo,
-} from "@plugins/plugin-meta/plugins/plugin-view/shared";
+} from "@plugins/plugin-meta/plugins/plugin-view/core";
 
-type ExportRuntime = "web" | "server" | "central" | "shared";
-const RUNTIMES: ExportRuntime[] = ["web", "server", "central", "shared"];
+type ExportRuntime = "web" | "server" | "central" | "core" | "internal";
+const RUNTIMES: ExportRuntime[] = ["web", "server", "central", "core", "internal"];
 
 export function PublicApiSection({ node }: { node: PluginNode }) {
   const api = node.publicApi;
@@ -118,7 +118,8 @@ const RUNTIME_COLORS: Record<ExportRuntime, string> = {
   web: "text-sky-600 dark:text-sky-400",
   server: "text-emerald-600 dark:text-emerald-400",
   central: "text-violet-600 dark:text-violet-400",
-  shared: "text-amber-600 dark:text-amber-400",
+  core: "text-amber-600 dark:text-amber-400",
+  internal: "text-orange-600 dark:text-orange-400",
 };
 
 function RuntimeGroup({

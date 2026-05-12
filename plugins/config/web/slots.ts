@@ -1,6 +1,6 @@
 import { useContext, type ComponentType } from "react";
 import { PluginRuntimeContext, defineSlot } from "@core";
-import type { ConfigDescriptor } from "@plugins/config/shared";
+import type { ConfigDescriptor } from "@plugins/config/core";
 
 export const Config = {
   /**

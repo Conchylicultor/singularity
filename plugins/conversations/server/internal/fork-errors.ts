@@ -1,6 +1,6 @@
 import { defineResource } from "@server/resources";
-import type { ForkError } from "../../shared/fork-errors";
-import { ForkErrorSchema } from "../../shared/fork-errors";
+import type { ForkError } from "../../core/fork-errors";
+import { ForkErrorSchema } from "../../core/fork-errors";
 
 let latest: ForkError | null = null;
 

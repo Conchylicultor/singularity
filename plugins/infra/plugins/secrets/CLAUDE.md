@@ -51,15 +51,15 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.si
 
 - Description: Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
 - Load-bearing: yes
+- Exports (core):
+  - Types: `SecretMetadata`, `SecretRef`
+  - Values: `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`
 - Exports (server):
   - Types: `SecretMetadata`, `SecretRef`
   - Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`, `setSecret`
 - Exports (central):
   - Types: `SecretMetadata`, `SecretRef`
   - Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `setSecret`
-- Exports (shared):
-  - Types: `SecretMetadata`, `SecretRef`
-  - Values: `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`
 - Central:
   - `POST /api/secrets/get`
   - `POST /api/secrets/set`

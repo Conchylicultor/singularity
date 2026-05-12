@@ -3,7 +3,7 @@ import { MdCheckCircle, MdDeleteForever } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation, useConversationAction } from "@plugins/conversations/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { pushesResource } from "@plugins/tasks/shared";
+import { pushesResource } from "@plugins/tasks/core";
 import { Button } from "@/components/ui/button";
 
 export function DropAndExitButton({

@@ -14,7 +14,7 @@ import {
   type Agent,
   type AgentLaunchWithStatus,
 } from "./schema";
-import type { AgentLaunchConversationRef } from "../../shared/resources";
+import type { AgentLaunchConversationRef } from "../../internal/resources";
 
 export const agentsResource = defineResource<Agent[]>({
   key: "agents",

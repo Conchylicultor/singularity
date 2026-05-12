@@ -8,7 +8,7 @@ import {
   MdTimelapse,
 } from "react-icons/md";
 import type { IconType } from "react-icons";
-import type { TaskStatus } from "@plugins/tasks-core/shared";
+import type { TaskStatus } from "@plugins/tasks-core/core";
 import { cn } from "@/lib/utils";
 
 export const STATUS_META: Record<

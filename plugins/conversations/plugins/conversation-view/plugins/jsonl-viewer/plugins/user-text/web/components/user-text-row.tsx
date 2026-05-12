@@ -3,7 +3,7 @@ import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
-import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/shared";
+import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { formatTime } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
 type UserTextEvent = Extract<JsonlEvent, { kind: "user-text" }>;

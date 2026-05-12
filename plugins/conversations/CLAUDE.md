@@ -10,15 +10,15 @@
   - DB schema: `plugins/conversations/server/internal/tables-created-event.ts`
   - DB schema: `plugins/conversations/server/internal/tables-turn-completed-event.ts`
   - DB schema: `plugins/conversations/server/internal/tables-user-turn-sent-event.ts`
+- Exports (core):
+  - Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `ForkError`
+  - Values: `ConversationStatusSchema`, `forkErrorsResource`, `hasLiveProcess`, `isActiveStatus`, `recentConversationsResource`
 - Exports (web):
   - Types: `ConversationActionOpts`
   - Values: `GonePageSchema`, `useConversation`, `useConversationAction`, `useConversationById`, `useConversations`
 - Exports (server):
   - Types: `ConversationCreatedPayload`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`, `UserTurnSentPayload`
   - Values: `afterTurn`, `conversationCreated`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `getConversationRow`, `hasLiveProcess`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`, `userTurnSent`
-- Exports (shared):
-  - Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `ForkError`
-  - Values: `ConversationStatusSchema`, `forkErrorsResource`, `hasLiveProcess`, `isActiveStatus`, `recentConversationsResource`
 - Server:
   - Register: `maybeLaunchTaskJob`, `maybeLaunchDependentsJob`, `conversationCreated`, `conversationTurnCompleted`, `userTurnSent`
   - Uses: `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.recentConversationsResource`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`

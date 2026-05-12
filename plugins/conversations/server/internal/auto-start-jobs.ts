@@ -7,7 +7,7 @@ import {
   listArmedDependentsOf,
   listAttemptsForTask,
 } from "@plugins/tasks-core/server";
-import { buildTaskPrompt } from "@plugins/tasks-core/shared";
+import { buildTaskPrompt } from "@plugins/tasks-core/core";
 import {
   claimAutoStart,
   getTaskAutoStart,

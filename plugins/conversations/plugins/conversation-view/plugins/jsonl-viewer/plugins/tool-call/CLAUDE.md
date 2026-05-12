@@ -7,11 +7,11 @@
 - Description: Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
 - Defines:
   - Slots: `JsonlViewerTool.Renderer`
+- Exports (core):
+  - Types: `ToolCallEvent`, `ToolRendererProps`
 - Exports (web):
   - Types: `ToolRendererContribution`
   - Values: `JsonlViewerTool`, `ToolCallCard`, `ToolFilePath`, `toRelativePath`
-- Exports (shared):
-  - Types: `ToolCallEvent`, `ToolRendererProps`
 - Contributes:
   - `JsonlViewer.EventRenderer` → `ToolCallRow`
   - `JsonlViewer.RowAction` → `CopyToolResultAction`

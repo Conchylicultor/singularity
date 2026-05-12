@@ -2,7 +2,7 @@ import {
   HighlightedCode,
   languageForPath,
 } from "@plugins/primitives/plugins/syntax-highlight/web";
-import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/shared";
+import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard, ToolFilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 
 type WriteInput = { file_path: string; content: string };

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Exports (shared):
+- Exports (core):
   - Types: `DelayStrategy`
   - Values: `exponential`, `fixed`, `RetryDeadlineError`, `retryUntil`, `withJitter`
 

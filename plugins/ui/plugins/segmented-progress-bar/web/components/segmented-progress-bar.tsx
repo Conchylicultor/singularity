@@ -1,7 +1,7 @@
 import { useConfigValues } from "@plugins/config/web";
 import { SegmentedProgressBar as Slots } from "../slots";
 import { segmentedProgressBarConfig } from "../internal/config";
-import type { SegmentedProgressBarProps } from "../../shared";
+import type { SegmentedProgressBarProps } from "../../core";
 
 const PLUGIN_ID = "ui-segmented-progress-bar";
 

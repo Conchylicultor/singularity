@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import type { ZodType } from "zod";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { activeDataBindingsResource } from "@plugins/active-data/shared";
+import { activeDataBindingsResource } from "@plugins/active-data/core";
 import { useActiveDataIdentity } from "./identity-context";
 
 export interface ActiveDataBindingHandle<T> {

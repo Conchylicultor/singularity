@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { pushesResource } from "@plugins/tasks/shared";
-import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
+import { pushesResource } from "@plugins/tasks/core";
+import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { isDocFile } from "./panes";
 
 /** Returns all .md/.mdx files changed in any push for the given attempt, deduped by path. Null while loading. */

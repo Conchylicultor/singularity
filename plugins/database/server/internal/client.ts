@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { retryUntil, exponential } from "@plugins/packages/plugins/retry/shared";
-import { readDatabaseConfig, buildConnectionString } from "@plugins/database/shared";
+import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
+import { readDatabaseConfig, buildConnectionString } from "@plugins/database/core";
 
 const worktree = process.env.SINGULARITY_WORKTREE;
 if (!worktree) {

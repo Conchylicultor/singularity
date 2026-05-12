@@ -1,1 +1,1 @@
-export { sidebarPaletteConfig } from "../../shared";
+export { sidebarPaletteConfig } from "../../internal";

@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
-import type { Rank } from "@plugins/primitives/plugins/rank/shared";
+import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   ReorderSlotPrefsSchema,
   type ReorderSlotPrefs,
-} from "../../shared/resource";
+} from "../../internal/resource";
 import { _reorderPrefs } from "./tables";
 
 export const reorderPrefsResource = defineResource<

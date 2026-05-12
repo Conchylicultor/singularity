@@ -1,5 +1,5 @@
 import type { Registration } from "@server/types";
-import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import {
   getConversationRuntime,
   getConversationClaudeSessionId,

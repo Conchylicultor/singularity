@@ -1,5 +1,5 @@
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
-import type { SegmentedProgressBarProps } from "@plugins/ui/plugins/segmented-progress-bar/shared";
+import type { SegmentedProgressBarProps } from "@plugins/ui/plugins/segmented-progress-bar/core";
 
 export function DotsRenderer({
   steps,

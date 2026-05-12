@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
-import { JobStateSchema, type JobState } from "../../shared/resources";
+import { JobStateSchema, type JobState } from "../../internal/resources";
 import { _pushAndExitJobs } from "./tables";
 
 type Status = JobState["status"];

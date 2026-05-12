@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { Config } from "@plugins/config/server";
-import { notionAuthConfig } from "../shared";
+import { notionAuthConfig } from "../internal";
 
 // Worktree-side registration carrier for the config schema only — the OAuth
 // runtime lives in `../central/`. See `../google/server/index.ts` for the

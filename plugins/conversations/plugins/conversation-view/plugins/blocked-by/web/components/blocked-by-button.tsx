@@ -5,7 +5,7 @@ import { useConversations } from "@plugins/conversations/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useTask } from "@plugins/tasks/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { tasksResource } from "@plugins/tasks/shared";
+import { tasksResource } from "@plugins/tasks/core";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { buttonVariants } from "@/components/ui/button";
 import {

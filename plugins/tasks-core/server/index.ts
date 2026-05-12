@@ -48,7 +48,7 @@ export {
 export type {
   AttemptWithConversations,
   ConversationSummary,
-} from "../shared";
+} from "../core";
 
 // Query functions — reads
 export {

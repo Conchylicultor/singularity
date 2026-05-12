@@ -1,4 +1,4 @@
-import type { ColorPaletteTokenValues } from "../shared";
+import type { ColorPaletteTokenValues } from "../internal";
 
 interface Preset {
   id: string;

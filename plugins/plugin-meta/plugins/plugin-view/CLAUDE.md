@@ -13,11 +13,11 @@ sibling plugins (e.g. publish's tree component).
 ## Plugin reference
 
 - Description: Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
+- Exports (core):
+  - Types: `PluginNode`, `PluginTreePayload`
 - Exports (web):
   - Types: `PluginNode`, `PluginTreePayload`
   - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
-- Exports (shared):
-  - Types: `BarrelExport`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`
 - Contributes:
   - `Pane.Register` `plugin-view`
 - Server:

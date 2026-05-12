@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MdChevronRight } from "react-icons/md";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
-import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
+import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { useCommitFiles } from "../use-commit-files";
 
 export function CommitDiffView({

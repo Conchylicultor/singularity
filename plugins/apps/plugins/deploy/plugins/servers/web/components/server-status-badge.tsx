@@ -1,4 +1,4 @@
-import type { ServerStatus } from "../../shared";
+import type { ServerStatus } from "../../internal";
 
 const styles: Record<ServerStatus, { bg: string; label: string }> = {
   online: { bg: "bg-green-500", label: "Online" },

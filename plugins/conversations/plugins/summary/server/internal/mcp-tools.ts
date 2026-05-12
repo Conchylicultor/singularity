@@ -5,7 +5,7 @@ import { readConversationTurns } from "@plugins/conversations/server";
 import { getConversation } from "@plugins/tasks-core/server";
 import { _conversationSummaries } from "./tables";
 import { conversationSummariesResource } from "./resources";
-import { PhaseSchema } from "../../shared/resources";
+import { PhaseSchema } from "../../internal/resources";
 
 export const SUMMARY_MODEL = "claude-sonnet-4-6";
 

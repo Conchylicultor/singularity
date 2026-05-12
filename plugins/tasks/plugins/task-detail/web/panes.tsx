@@ -8,7 +8,7 @@ import {
   Tasks as TasksSlots,
   TasksList,
 } from "@plugins/tasks/plugins/task-list/web";
-import { type Task } from "@plugins/tasks/shared";
+import { type Task } from "@plugins/tasks/core";
 import { useTask } from "@plugins/tasks/web";
 import { TaskDetailFlushProvider } from "./context";
 import { TaskDetail } from "./components/task-detail";

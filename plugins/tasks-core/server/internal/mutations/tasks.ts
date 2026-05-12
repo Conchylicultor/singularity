@@ -5,7 +5,7 @@ import { tasks } from "../schema";
 import { tasksResource } from "../resources";
 import { findNextRankUnder, isDescendant, taskDependsOn } from "../queries/tasks";
 import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
-import { Rank } from "@plugins/primitives/plugins/rank/shared";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 
 export const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 

@@ -1,6 +1,6 @@
 import { defineSlot } from "@core";
 import type { ComponentType } from "react";
-import type { SegmentedProgressBarProps } from "../shared";
+import type { SegmentedProgressBarProps } from "../core";
 
 export interface SegmentedProgressBarVariantContribution {
   id: string;

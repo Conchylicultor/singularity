@@ -8,11 +8,11 @@
 - Defines:
   - DB schema: `plugins/reorder/plugins/groups/server/internal/tables.ts`
   - DB schema: `plugins/reorder/plugins/groups/server/schema.ts`
-- Exports (server):
-  - Values: `_reorderGroupMembers`, `_reorderGroups`, `reorderGroupsResource`
-- Exports (shared):
+- Exports (core):
   - Types: `ReorderGroup`, `ReorderGroupMember`, `ReorderGroupsPayload`
   - Values: `ReorderGroupMemberSchema`, `ReorderGroupSchema`, `ReorderGroupsPayloadSchema`, `reorderGroupsResource`
+- Exports (server):
+  - Values: `_reorderGroupMembers`, `_reorderGroups`, `reorderGroupsResource`
 - Server:
   - Uses: `database.db`
   - `POST /api/reorder/:slotId/groups`

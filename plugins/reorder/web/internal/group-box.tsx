@@ -6,7 +6,7 @@ import {
 } from "react-icons/md";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
-import type { ReorderGroup } from "@plugins/reorder/plugins/groups/shared";
+import type { ReorderGroup } from "@plugins/reorder/plugins/groups/core";
 import { GroupRename } from "./group-rename";
 
 export function ReorderGroupBox({

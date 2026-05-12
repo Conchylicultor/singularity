@@ -3,7 +3,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { SegmentedProgressBarProps } from "@plugins/ui/plugins/segmented-progress-bar/shared";
+import type { SegmentedProgressBarProps } from "@plugins/ui/plugins/segmented-progress-bar/core";
 
 export function SegmentedRenderer({
   steps,

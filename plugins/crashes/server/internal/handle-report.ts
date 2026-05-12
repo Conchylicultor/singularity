@@ -1,5 +1,5 @@
 import { recordCrash } from "./record-crash";
-import type { CrashReport, CrashSource } from "../../shared/types";
+import type { CrashReport, CrashSource } from "../../internal/types";
 
 const VALID_SOURCES: ReadonlySet<CrashSource> = new Set([
   "browser-error",

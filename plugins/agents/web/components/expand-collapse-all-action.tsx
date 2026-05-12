@@ -1,7 +1,7 @@
 import { MdUnfoldLess, MdUnfoldMore } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { cn } from "@/lib/utils";
-import { agentsResource } from "../../shared/resources";
+import { agentsResource } from "../../internal/resources";
 import { patchAgent } from "./agents-list";
 
 type AgentRow = { id: string; parentId: string | null; expanded: boolean };

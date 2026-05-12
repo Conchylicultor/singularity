@@ -22,8 +22,8 @@ import {
   isDescendant,
   type DropZone,
   type TreeNode,
-} from "../../shared";
-import { Rank } from "@plugins/primitives/plugins/rank/shared";
+} from "../../core";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { cn } from "@/lib/utils";
 import { pendingFocus } from "./pending-focus";
 import { TreeListProvider } from "./use-tree-row";

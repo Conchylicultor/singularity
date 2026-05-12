@@ -1,4 +1,4 @@
-import type { Rank } from "@plugins/primitives/plugins/rank/shared";
+import type { Rank } from "@plugins/primitives/plugins/rank/core";
 
 export type TreeItem = {
   id: string;

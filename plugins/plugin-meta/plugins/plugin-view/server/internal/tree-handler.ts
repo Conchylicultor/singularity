@@ -3,9 +3,9 @@ import {
   type PluginNode as TreePluginNode,
   type PluginTree,
   type BarrelExport as TreeBarrelExport,
-} from "@plugins/plugin-meta/plugins/plugin-tree/shared";
+} from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
-import type { BarrelExport, PluginNode, PluginTreePayload } from "../../shared/types";
+import type { BarrelExport, PluginNode, PluginTreePayload } from "../../core/types";
 
 function categorize(name: string, kind: "type" | "value"): "type" | "hook" | "component" | "value" {
   if (kind === "type") return "type";
@@ -15,10 +15,9 @@ function categorize(name: string, kind: "type" | "value"): "type" | "hook" | "co
 }
 
 function buildSymbolConsumers(tree: PluginTree): Map<string, Map<string, string[]>> {
-  // pluginName -> symbolName -> [consumerPluginNames]
   const result = new Map<string, Map<string, string[]>>();
   for (const node of tree.byDir.values()) {
-    for (const use of [...node.server.apiUses, ...node.central.apiUses, ...node.webApiUses, ...node.sharedApiUses]) {
+    for (const use of [...node.server.apiUses, ...node.central.apiUses, ...node.webApiUses, ...node.coreApiUses, ...node.internalApiUses]) {
       const dot = use.indexOf(".");
       if (dot < 0) continue;
       const targetPlugin = use.slice(0, dot);
@@ -57,7 +56,8 @@ function toApiNode(node: TreePluginNode, symbolConsumers: Map<string, Map<string
         web: mapExports(node.exports.web),
         server: mapExports(node.exports.server),
         central: mapExports(node.exports.central),
-        shared: mapExports(node.exports.shared),
+        core: mapExports(node.exports.core),
+        internal: mapExports(node.exports.internal),
       },
       importedBy: node.importedBy.sort(),
       slots: node.slots.map((s) => ({

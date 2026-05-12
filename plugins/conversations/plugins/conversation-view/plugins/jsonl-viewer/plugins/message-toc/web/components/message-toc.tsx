@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { MdFormatListNumbered, MdKeyboardArrowDown } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/shared";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
+import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 
 interface UserEntry {
   eventIndex: number;

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/shared";
+import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/core";
 import { quickPromptsTable } from "./tables";
 import { quickPromptAttachments } from "./tables-attachments";
 import { quickPromptsServerResource } from "./resources";

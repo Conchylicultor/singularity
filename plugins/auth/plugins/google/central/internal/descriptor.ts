@@ -3,9 +3,9 @@ import {
   AuthCredentialsMissingError,
   type AuthIdentity,
   type AuthProviderDescriptor,
-} from "@plugins/auth/shared";
+} from "@plugins/auth/core";
 import { readGlobalConfig } from "@plugins/auth/central";
-import { googleAuthConfig, GOOGLE_DEFAULT_SCOPES } from "../../shared";
+import { googleAuthConfig, GOOGLE_DEFAULT_SCOPES } from "../../internal";
 
 interface GoogleUserInfo {
   sub: string;

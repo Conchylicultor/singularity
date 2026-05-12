@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
-import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
+import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { FilePaneView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { convDocsPane, isDocFile } from "../panes";
 import { usePushedDocFiles } from "../use-pushed-doc-files";

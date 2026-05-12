@@ -1,5 +1,5 @@
 import { readConfig } from "@plugins/config/server";
-import { conversationCategoryConfig } from "../../shared/config";
+import { conversationCategoryConfig } from "../../internal/config";
 import { conversationCategory } from "./tables";
 import { conversationCategoriesResource } from "./resource";
 import { classifyConversationJob } from "./classify-job";

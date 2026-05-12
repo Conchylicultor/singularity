@@ -1,5 +1,5 @@
 import { useConfigValues, setConfigValue } from "@plugins/config/web";
-import { themeEngineConfig } from "../../shared";
+import { themeEngineConfig } from "../../core";
 import { ThemeEngine } from "../slots";
 
 const PLUGIN_ID = "ui-theme-engine";

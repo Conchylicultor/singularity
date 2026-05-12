@@ -1,4 +1,4 @@
-import type { EditedFileStatus } from "../../shared/protocol";
+import type { EditedFileStatus } from "../../core/protocol";
 
 export interface NameStatusRecord {
   status: EditedFileStatus;

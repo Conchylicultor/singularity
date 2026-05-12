@@ -1,4 +1,4 @@
-import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
+import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { parseDiffNameStatusZ, parseDiffNumstatZ } from "./parse-diff-z";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";

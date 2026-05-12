@@ -6,7 +6,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import {
   conversationSummariesResource,
   type ConversationSummary,
-} from "../../shared/resources";
+} from "../../internal/resources";
 import { PHASE_CLASSES, PHASE_LABEL } from "./phase-styles";
 import { convSummaryPane } from "../panes";
 

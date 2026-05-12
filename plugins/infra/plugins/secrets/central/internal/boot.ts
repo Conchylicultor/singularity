@@ -1,7 +1,7 @@
 import { initStore } from "./store";
 import { getEncryptionKey } from "./key-store";
 import { migrateLegacyAuthTokens } from "./migrate-auth-tokens";
-import { SecretsKeychainLockedError } from "@plugins/infra/plugins/secrets/shared";
+import { SecretsKeychainLockedError } from "@plugins/infra/plugins/secrets/core";
 
 let booted = false;
 let resolveReady: () => void;

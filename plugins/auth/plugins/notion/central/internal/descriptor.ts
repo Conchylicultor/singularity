@@ -3,9 +3,9 @@ import {
   AuthCredentialsMissingError,
   type AuthIdentity,
   type AuthProviderDescriptor,
-} from "@plugins/auth/shared";
+} from "@plugins/auth/core";
 import { readGlobalConfig } from "@plugins/auth/central";
-import { notionAuthConfig } from "../../shared";
+import { notionAuthConfig } from "../../internal";
 
 interface NotionMe {
   bot?: {

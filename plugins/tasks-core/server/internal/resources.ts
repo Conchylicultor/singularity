@@ -4,12 +4,12 @@ import { defineResource } from "@server/resources";
 import { pushes } from "./tables";
 import { attempts, tasks } from "./schema";
 import { TaskSchema, PushSchema, type Task } from "./schema";
-import type { ConversationSummary } from "../../shared";
+import type { ConversationSummary } from "../../core";
 import {
   AttemptWithConversationsSchema,
   ConversationListPayloadSchema,
-} from "../../shared";
-import type { AttemptWithConversations, ConversationListPayload } from "../../shared";
+} from "../../core";
+import type { AttemptWithConversations, ConversationListPayload } from "../../core";
 import {
   countGoneConversations,
   listActiveConversations,

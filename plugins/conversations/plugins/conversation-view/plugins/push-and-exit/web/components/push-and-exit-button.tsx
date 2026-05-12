@@ -4,11 +4,11 @@ import { LogOut, Play } from "lucide-react";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { isDraftEmpty } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, useConversation } from "@plugins/conversations/web";
-import { isActiveStatus } from "@plugins/conversations/shared";
+import { isActiveStatus } from "@plugins/conversations/core";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { pushesResource } from "@plugins/tasks/shared";
+import { pushesResource } from "@plugins/tasks/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +22,7 @@ import {
 import {
   pushAndExitResource,
   type JobState,
-} from "../../shared/resources";
+} from "../../internal/resources";
 
 type Mode = "send" | "push-and-exit" | "exit" | "drop-and-exit" | "go";
 

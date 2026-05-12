@@ -7,7 +7,7 @@ import type {
   TaskChainSubmitBody,
   TaskChainSubmitResponse,
   TaskChainTarget,
-} from "../../shared/types";
+} from "../../core/types";
 
 export interface SubmitArgs {
   cards: CardDraft[];

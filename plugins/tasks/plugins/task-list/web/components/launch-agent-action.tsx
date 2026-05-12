@@ -1,5 +1,5 @@
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
-import { buildTaskPrompt } from "@plugins/tasks-core/shared";
+import { buildTaskPrompt } from "@plugins/tasks-core/core";
 
 export function LaunchAgentAction({ taskId }: { taskId: string }) {
   const getRequest = async () => {

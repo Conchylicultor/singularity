@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { NormalizedField } from "@plugins/config/shared";
+import type { NormalizedField } from "@plugins/config/core";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

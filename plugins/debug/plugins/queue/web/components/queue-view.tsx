@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdReplay, MdWorkOutline } from "react-icons/md";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { jobsListResource, type JobRow, type JobState } from "@plugins/infra/plugins/jobs/shared";
-import { eventEmissionsResource, eventTriggersResource, type EmissionRow, type TriggerRow } from "@plugins/infra/plugins/events/shared";
+import { jobsListResource, type JobRow, type JobState } from "@plugins/infra/plugins/jobs/core";
+import { eventEmissionsResource, eventTriggersResource, type EmissionRow, type TriggerRow } from "@plugins/infra/plugins/events/core";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 

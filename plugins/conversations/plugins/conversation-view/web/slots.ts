@@ -1,9 +1,9 @@
 import { defineSlot } from "@core";
 import type { ComponentType } from "react";
-import type { Conversation as ConversationRecord } from "@plugins/tasks-core/shared";
+import type { Conversation as ConversationRecord } from "@plugins/tasks-core/core";
 import { Reorder } from "@plugins/reorder/web";
 
-export type { Conversation as ConversationRecord } from "@plugins/tasks-core/shared";
+export type { Conversation as ConversationRecord } from "@plugins/tasks-core/core";
 
 export const Conversation = {
   PromptBar: Reorder.area(

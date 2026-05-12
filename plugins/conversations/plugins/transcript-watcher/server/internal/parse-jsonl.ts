@@ -1,4 +1,4 @@
-import type { JsonlEvent, TokenUsage, ToolCallResult } from "../../shared";
+import type { JsonlEvent, TokenUsage, ToolCallResult } from "../../core";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 

@@ -11,11 +11,11 @@ One `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers all active conversations. A p
 ## Plugin reference
 
 - Description: Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
-- Exports (server):
-  - Values: `findTranscriptPath`, `readJsonlEvents`, `watchTranscript`
-- Exports (shared):
+- Exports (core):
   - Types: `JsonlEvent`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`
   - Values: `JsonlEventSchema`, `TokenUsageSchema`
+- Exports (server):
+  - Values: `findTranscriptPath`, `readJsonlEvents`, `watchTranscript`
 - Server:
   - Uses: `tasks-core.getConversationClaudeSessionId`
 

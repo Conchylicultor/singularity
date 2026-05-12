@@ -1,5 +1,5 @@
 import { ensureMetaTask } from "@plugins/tasks-core/server";
-import { IMPROVEMENTS_META_TASK_ID } from "../../shared/constants";
+import { IMPROVEMENTS_META_TASK_ID } from "../../internal/constants";
 
 const TITLE = "Improvements";
 

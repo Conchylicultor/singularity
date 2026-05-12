@@ -1,5 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { Rank } from "@plugins/primitives/plugins/rank/shared";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
 import { nextRankUnder } from "@plugins/primitives/plugins/rank/server";
 import { _reorderGroupMembers, _reorderGroups } from "./tables";

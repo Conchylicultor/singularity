@@ -9,12 +9,12 @@
 - Defines:
   - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`
   - DB schema: `plugins/infra/plugins/events/server/internal/tables.ts`
+- Exports (core):
+  - Types: `EmissionRow`, `EmissionsPayload`, `TriggerRow`, `TriggersPayload`
+  - Values: `EmissionRowSchema`, `EmissionsPayloadSchema`, `eventEmissionsResource`, `eventTriggersResource`, `TriggerRowSchema`, `TriggersPayloadSchema`
 - Exports (server):
   - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`, `UnsafeTriggerByNameSpec`
   - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `eventEmissionsResource`, `eventTriggersResource`, `trigger`, `Trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
-- Exports (shared):
-  - Types: `EmissionRow`, `EmissionsPayload`, `TriggerRow`, `TriggersPayload`
-  - Values: `EmissionRowSchema`, `EmissionsPayloadSchema`, `eventEmissionsResource`, `eventTriggersResource`, `TriggerRowSchema`, `TriggersPayloadSchema`
 - Server:
   - Register: `eventsDispatchJob`, `jobsHooksRegistration`
   - Uses: `database.db`

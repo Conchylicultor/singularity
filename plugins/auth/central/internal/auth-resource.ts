@@ -1,6 +1,6 @@
 import { defineResource } from "@central/resources";
 import { z } from "zod";
-import type { AuthStateValue, AuthAccountState } from "@plugins/auth/shared";
+import type { AuthStateValue, AuthAccountState } from "@plugins/auth/core";
 import { computeAuthState, warmAuthState } from "./auth-state";
 
 const AuthIdentitySchema = z.object({

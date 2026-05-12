@@ -4,7 +4,7 @@ import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
 import { hasSecret } from "@plugins/infra/plugins/secrets/server";
 import { _deployServers } from "./tables";
-import { ServerSchema, type Server, type ServerStatus } from "../../shared";
+import { ServerSchema, type Server, type ServerStatus } from "../../internal";
 
 export const serversResource = defineResource<Server[]>({
   key: "deploy.servers",

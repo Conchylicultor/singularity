@@ -18,18 +18,22 @@
   },
   "include": [
     "src",
-    "../plugin-core/shared",
     "../plugins/*/server",
-    "../plugins/*/shared",
+    "../plugins/*/core",
+    "../plugins/*/internal",
     "../plugins/*/check",
     "../plugins/*/plugins/*/server",
-    "../plugins/*/plugins/*/shared",
+    "../plugins/*/plugins/*/core",
+    "../plugins/*/plugins/*/internal",
     "../plugins/*/plugins/*/check",
     "../plugins/*/plugins/*/plugins/*/server",
-    "../plugins/*/plugins/*/plugins/*/shared",
+    "../plugins/*/plugins/*/plugins/*/core",
+    "../plugins/*/plugins/*/plugins/*/internal",
     "../plugins/*/plugins/*/plugins/*/plugins/*/server",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/shared",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/core",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/internal",
     "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/server",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/shared"
+    "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/core",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/internal"
   ]
 }

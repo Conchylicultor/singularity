@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "fs";
 import { join, relative } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/shared";
+import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { Check } from "./types";
 
 const RUNTIMES = ["web", "server", "central"] as const;

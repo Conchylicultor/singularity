@@ -4,7 +4,7 @@ import { defineResource } from "@server/resources";
 import {
   ReorderGroupsPayloadSchema,
   type ReorderGroupsPayload,
-} from "../../shared";
+} from "../../core";
 import { _reorderGroupMembers, _reorderGroups } from "./tables";
 
 export const reorderGroupsResource = defineResource<

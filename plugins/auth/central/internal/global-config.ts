@@ -11,8 +11,8 @@ import type {
   ConfigDescriptor,
   Schema,
   Values,
-} from "@plugins/config/shared";
-import { fullKey, getDefault, normalize } from "@plugins/config/shared";
+} from "@plugins/config/core";
+import { fullKey, getDefault, normalize } from "@plugins/config/core";
 import { getSecret } from "@plugins/infra/plugins/secrets/central";
 
 const CONFIG_SECRETS_NAMESPACE = "config-fields";

@@ -1,6 +1,6 @@
 import { SegmentedProgressBar } from "@plugins/ui/plugins/segmented-progress-bar/web";
 import type { ConversationItemConv } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { PHASE_ORDER, PHASE_LABELS } from "../../shared/schemas";
+import { PHASE_ORDER, PHASE_LABELS } from "../../internal/schemas";
 import { useProgressFor } from "../internal/use-progress";
 
 const STEPS = PHASE_ORDER.map((p) => ({ id: p, label: PHASE_LABELS[p] }));

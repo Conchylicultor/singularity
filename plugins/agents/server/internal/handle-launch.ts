@@ -5,7 +5,7 @@ import { createConversation } from "@plugins/conversations/server";
 import {
   ConversationModelSchema,
   type ConversationModel,
-} from "@plugins/conversations/plugins/model-provider/shared";
+} from "@plugins/conversations/plugins/model-provider/core";
 import { _agent_launches } from "./tables";
 import { agents } from "./schema";
 import { AGENTS_META_TASK_ID } from "./meta-agents";

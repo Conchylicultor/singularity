@@ -9,7 +9,7 @@ import {
   attemptsResource,
   pushesResource,
   type Attempt,
-} from "@plugins/tasks/shared";
+} from "@plugins/tasks/core";
 import { taskConversationPane } from "@plugins/tasks/plugins/task-detail/web";
 import { cn } from "@/lib/utils";
 

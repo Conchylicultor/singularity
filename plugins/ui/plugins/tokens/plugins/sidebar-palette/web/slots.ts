@@ -1,5 +1,5 @@
 import { defineSlot } from "@core";
-import type { SidebarPaletteTokenValues } from "../shared";
+import type { SidebarPaletteTokenValues } from "../internal";
 
 export interface SidebarPalettePresetContribution {
   id: string;

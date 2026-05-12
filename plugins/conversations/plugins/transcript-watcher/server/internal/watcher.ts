@@ -1,10 +1,10 @@
 import parcel from "@parcel/watcher";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
-import { retryUntil, fixed } from "@plugins/packages/plugins/retry/shared";
+import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { getConversationClaudeSessionId } from "@plugins/tasks-core/server";
 import { findTranscriptPath } from "./find-transcript-path";
 import { readJsonlEvents } from "./parse-jsonl";
-import type { JsonlEvent } from "../../shared";
+import type { JsonlEvent } from "../../core";
 
 const RECONCILE_MS = 30_000;
 

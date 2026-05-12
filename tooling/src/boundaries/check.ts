@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { join, relative, sep } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/shared";
+import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { Check, CheckResult } from "../checks/types";
 import type { BoundaryConfig } from "./types";
 import { buildZoneMap } from "./resolve";

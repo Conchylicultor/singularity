@@ -6,7 +6,7 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
 import { Button } from "@/components/ui/button";
-import { promptTemplatesResource } from "../../shared/resources";
+import { promptTemplatesResource } from "../../internal/resources";
 
 export function PromptTemplateChips({
   conversation,

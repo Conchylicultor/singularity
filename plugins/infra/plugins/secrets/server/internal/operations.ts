@@ -1,8 +1,8 @@
 import type {
   SecretMetadata,
   SecretRef,
-} from "@plugins/infra/plugins/secrets/shared";
-import { SecretsMainOfflineError } from "@plugins/infra/plugins/secrets/shared";
+} from "@plugins/infra/plugins/secrets/core";
+import { SecretsMainOfflineError } from "@plugins/infra/plugins/secrets/core";
 
 const GATEWAY_BASE = "http://localhost:9000";
 const RETRY_DELAY_MS = 250;

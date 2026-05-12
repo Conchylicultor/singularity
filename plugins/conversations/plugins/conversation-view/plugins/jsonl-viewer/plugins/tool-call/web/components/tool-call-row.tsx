@@ -1,6 +1,6 @@
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { JsonlViewerTool } from "../slots";
-import type { ToolCallEvent } from "../../shared";
+import type { ToolCallEvent } from "../../core";
 import { GenericToolView } from "./generic-tool-view";
 
 function resolveRenderer(

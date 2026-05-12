@@ -1,6 +1,6 @@
 import { recentConversationsResource } from "@plugins/tasks-core/server";
 import { recordCrash } from "@plugins/crashes/server";
-import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/shared";
+import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { createConversation } from "./lifecycle";
 
 export async function handleCreate(req: Request): Promise<Response> {

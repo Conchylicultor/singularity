@@ -1,5 +1,5 @@
 import { boolean, index, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
-import { rankText } from "@plugins/primitives/plugins/rank/shared";
+import { rankText } from "@plugins/primitives/plugins/rank/core";
 
 export const _reorderGroups = pgTable(
   "reorder_groups",

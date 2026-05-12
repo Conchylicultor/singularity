@@ -9,7 +9,7 @@ import {
   synthesiseTitleFallback,
 } from "@plugins/tasks/plugins/task-title/server";
 import { armTaskAutoStart } from "./arm-auto-start";
-import { Rank } from "@plugins/primitives/plugins/rank/shared";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 
 interface AutoStartInput {
   model?: "opus" | "sonnet";

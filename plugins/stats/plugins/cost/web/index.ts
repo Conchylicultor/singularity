@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@core";
 import { Config } from "@plugins/config/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Stats } from "@plugins/stats/web";
-import { costConfig } from "../shared/config";
+import { costConfig } from "../internal/config";
 import { AvgCostPerConversationChart } from "./components/avg-cost-per-conversation-chart";
 import { CostDistributionChart } from "./components/cost-distribution-chart";
 import { CostSection } from "./components/cost-section";

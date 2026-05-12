@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { dirname, join, relative, resolve, sep } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/shared";
+import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { Check, CheckResult } from "./types";
 
 const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
@@ -26,7 +26,7 @@ const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
   "central/src/index.ts",
 ]);
 
-const VALID_RUNTIMES = new Set(["web", "server", "central", "shared"]);
+const VALID_RUNTIMES = new Set(["web", "server", "central", "core", "internal"]);
 
 const PUSH_BACK_HINT =
   "Do NOT work around these violations by editing `plugin-boundaries.ts`, expanding the skip list, " +
@@ -90,7 +90,7 @@ export const pluginBoundaries: Check = {
     // R3: barrel purity for every index.ts under each plugin's runtime folders
     for (const p of plugins) {
       if (skippedSet.has(p.relPath)) continue;
-      for (const runtime of ["web", "server", "central", "shared"] as const) {
+      for (const runtime of ["web", "server", "central", "core", "internal"] as const) {
         const barrel = join(p.absPath, runtime, "index.ts");
         if (!existsSync(barrel)) continue;
         checkBarrelPurity(barrel, relative(root, barrel), violations, p.relPath);
@@ -172,6 +172,16 @@ export const pluginBoundaries: Check = {
 
         const frameworkExempt = FRAMEWORK_FILES.has(relFile);
 
+        // R10: cross-plugin internal/ imports are forbidden — internal/ is plugin-private.
+        if (!frameworkExempt && resolved.suffixHead === "internal") {
+          violations.push({
+            rule: "cross-plugin-internal",
+            file: relFile,
+            message: `cross-plugin import from \`${imp.path}\` — internal/ is plugin-private`,
+            fix: `if \`${resolved.pluginPath}\` needs a public API, create a \`core/\` barrel`,
+          });
+        }
+
         // R4: grammar — the import must end at `<runtime>`, nothing deeper.
         if (!frameworkExempt && (!VALID_RUNTIMES.has(resolved.suffixHead) || resolved.tail !== "")) {
           violations.push({
@@ -210,10 +220,12 @@ export const pluginBoundaries: Check = {
       const parts = e.split("\0");
       return { from: parts[0]!, to: parts[1]!, runtime: parts[2] as "web" | "server" | "central" | "shared" };
     });
-    // Shared code is reachable from every runtime.
-    const webEdges = edgeList.filter((e) => e.runtime === "web" || e.runtime === "shared");
-    const serverEdges = edgeList.filter((e) => e.runtime === "server" || e.runtime === "shared");
-    const centralEdges = edgeList.filter((e) => e.runtime === "central" || e.runtime === "shared");
+    // Core/internal code is reachable from every runtime.
+    const crossRuntime = (e: { runtime: string }) =>
+      e.runtime === "core" || e.runtime === "internal";
+    const webEdges = edgeList.filter((e) => e.runtime === "web" || crossRuntime(e));
+    const serverEdges = edgeList.filter((e) => e.runtime === "server" || crossRuntime(e));
+    const centralEdges = edgeList.filter((e) => e.runtime === "central" || crossRuntime(e));
     const cycle = detectCycle(webEdges) ?? detectCycle(serverEdges) ?? detectCycle(centralEdges);
     if (cycle) {
       violations.push({
@@ -234,11 +246,10 @@ export const pluginBoundaries: Check = {
   },
 };
 
-/** Return the runtime ("web" | "server" | "central" | "shared") of `relFile`, or null if unknown. */
 function runtimeForPath(
   relFile: string,
   pluginSet: Set<string>,
-): "web" | "server" | "central" | "shared" | null {
+): "web" | "server" | "central" | "core" | "internal" | null {
   const norm = relFile.split(sep).join("/");
   const pluginPath = pluginForPath(relFile, pluginSet);
   if (!pluginPath) return null;
@@ -247,7 +258,8 @@ function runtimeForPath(
   if (segment === "web") return "web";
   if (segment === "server") return "server";
   if (segment === "central") return "central";
-  if (segment === "shared") return "shared";
+  if (segment === "core") return "core";
+  if (segment === "internal") return "internal";
   return null;
 }
 

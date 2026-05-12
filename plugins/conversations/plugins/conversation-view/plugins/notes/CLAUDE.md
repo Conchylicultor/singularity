@@ -10,7 +10,7 @@
   - Entity extension of: `tasks-core` (table `conversations_ext_notes`)
 - Exports (server):
   - Values: `conversationNotes`, `conversationNotesResource`
-- Exports (shared):
+- Exports (internal):
   - Types: `ConversationNote`, `ConversationNotesPayload`
   - Values: `ConversationNoteSchema`, `ConversationNotesPayloadSchema`, `conversationNotesResource`
 - Contributes:

@@ -6,7 +6,7 @@ import {
   TriggersPayloadSchema,
   type EmissionsPayload,
   type TriggersPayload,
-} from "../../shared/resources";
+} from "../../core/resources";
 import { triggerTableRegistry } from "./registry";
 import { _event_emissions } from "./tables";
 

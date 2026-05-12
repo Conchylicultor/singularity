@@ -1,6 +1,6 @@
 import { defineResource } from "@server/resources";
 import { getConversation } from "@plugins/tasks-core/server";
-import { EditedFilesPayloadSchema } from "../../shared/protocol";
+import { EditedFilesPayloadSchema } from "../../core/protocol";
 import { getEditedFiles } from "./get-edited-files";
 import { watchEditedFiles } from "./watch-edited-files";
 

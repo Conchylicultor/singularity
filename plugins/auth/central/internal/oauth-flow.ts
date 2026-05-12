@@ -3,7 +3,7 @@ import type {
   AuthIdentity,
   OAuth2Config,
   ParsedTokenResponse,
-} from "@plugins/auth/shared";
+} from "@plugins/auth/core";
 
 const REDIRECT_HOST = "http://localhost:9000";
 

@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 
-export { Rank, RankSchema } from "../shared";
+export { Rank, RankSchema } from "../core";
 
 export default {
   id: "rank",

@@ -3,7 +3,7 @@ import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { tasksResource, type Task } from "@plugins/tasks/shared";
+import { tasksResource, type Task } from "@plugins/tasks/core";
 import {
   Popover,
   PopoverContent,
@@ -20,7 +20,7 @@ import { describeOutcome, submitChain } from "../internal/submit";
 import type {
   TaskChainRelateMode,
   TaskChainTarget,
-} from "../../shared/types";
+} from "../../core/types";
 import { useActiveRelateContext } from "../active-relate-context";
 
 const HEAD_DEFAULT_MODEL: ChainModel = "sonnet";

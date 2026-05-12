@@ -2,8 +2,8 @@ import type {
   ConfigDescriptor,
   NormalizedField,
   Schema,
-} from "@plugins/config/shared";
-import { fullKey, normalize } from "@plugins/config/shared";
+} from "@plugins/config/core";
+import { fullKey, normalize } from "@plugins/config/core";
 import { Config } from "./contribution";
 
 export interface RegisteredPlugin {

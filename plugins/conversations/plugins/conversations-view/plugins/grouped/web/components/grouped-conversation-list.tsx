@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback, Fragment, type ReactNode } from "react";
-import { Rank } from "@plugins/primitives/plugins/rank/shared";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   DndContext,
   DragOverlay,
@@ -11,9 +11,9 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { conversationGroupsResource } from "../../shared";
-import type { Conversation } from "@plugins/tasks-core/shared";
-import { tasksResource } from "@plugins/tasks/shared";
+import { conversationGroupsResource } from "../../internal";
+import type { Conversation } from "@plugins/tasks-core/core";
+import { tasksResource } from "@plugins/tasks/core";
 import { useTaskAutoGroups } from "./use-task-auto-groups";
 import { AutoGroupBox } from "./auto-group-box";
 import {

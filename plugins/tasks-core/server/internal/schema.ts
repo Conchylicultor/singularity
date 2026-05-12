@@ -3,8 +3,8 @@ import { pgView } from "drizzle-orm/pg-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { _attempts, _conversations, _taskDependencies, _tasks, pushes } from "./tables";
-import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/shared";
-import { RankSchema } from "@plugins/primitives/plugins/rank/shared";
+import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
+import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 
 // Derived views + Zod schemas + types. All tables live in `./tables.ts` so
 // this file can import them without any cross-plugin dependency, eliminating

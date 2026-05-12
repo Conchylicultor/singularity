@@ -3,7 +3,7 @@ import { defineResource } from "@server/resources";
 import {
   TurnSummariesPayloadSchema,
   type TurnSummariesPayload,
-} from "../../shared";
+} from "../../internal";
 import { turnSummaries } from "./tables";
 
 export const turnSummariesResource = defineResource<TurnSummariesPayload>({

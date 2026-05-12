@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { Conversation, Task } from "@plugins/tasks-core/shared";
+import type { Conversation, Task } from "@plugins/tasks-core/core";
 
 export type AttemptGroup = Conversation[]; // [root, ...forks]
 

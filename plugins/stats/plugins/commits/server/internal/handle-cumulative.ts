@@ -1,5 +1,5 @@
 import { readConfig } from "@plugins/config/server";
-import { commitsConfig } from "../../shared/config";
+import { commitsConfig } from "../../internal/config";
 import { deduplicateByPushId, getCommits, getCommitsExcludingPaths } from "./commit-timestamps";
 import { activeExcludedPaths } from "./excluded-paths";
 

@@ -9,8 +9,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-import { rankText } from "@plugins/primitives/plugins/rank/shared";
-import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
+import { rankText } from "@plugins/primitives/plugins/rank/core";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
 // Physical tables only. This file is a load-order leaf: it must NOT import
 // from any other plugin's schema/tables file so that cross-plugin schemas can

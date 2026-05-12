@@ -2,7 +2,7 @@ import { defineConfig } from "drizzle-kit";
 import {
   readDatabaseConfig,
   buildConnectionString,
-} from "@plugins/database/shared";
+} from "@plugins/database/core";
 
 const worktree = process.env.SINGULARITY_WORKTREE;
 if (!worktree) {

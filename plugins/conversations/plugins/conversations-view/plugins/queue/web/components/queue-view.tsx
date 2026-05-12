@@ -15,11 +15,11 @@ import { MdChevronRight, MdClose, MdKeyboardDoubleArrowDown, MdOutlineQueue, MdV
 import { useConversations } from "@plugins/conversations/web";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import type { Conversation } from "@plugins/tasks-core/shared";
+import type { Conversation } from "@plugins/tasks-core/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { queueRanksResource } from "../../shared/resources";
-import { tasksResource } from "@plugins/tasks/shared";
-import { Rank } from "@plugins/primitives/plugins/rank/shared";
+import { queueRanksResource } from "../../internal/resources";
+import { tasksResource } from "@plugins/tasks/core";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   SidebarMenu,
   SidebarMenuAction,

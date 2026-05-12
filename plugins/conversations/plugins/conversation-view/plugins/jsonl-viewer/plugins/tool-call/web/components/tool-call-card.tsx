@@ -3,7 +3,7 @@ import {
   TokenBadge,
   formatTime,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import type { ToolCallEvent } from "../../shared";
+import type { ToolCallEvent } from "../../core";
 
 interface ToolCallCardProps {
   event: ToolCallEvent;

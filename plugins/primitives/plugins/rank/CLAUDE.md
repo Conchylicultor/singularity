@@ -54,13 +54,13 @@ import { RankSchema } from "@plugins/primitives/plugins/rank/shared";
 ## Plugin reference
 
 - Description: Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
+- Exports (core):
+  - Values: `Rank`, `RankSchema`, `rankText`
 - Exports (web):
   - Values: `Rank`, `RankSchema`
 - Exports (server):
   - Types: `RankExecutor`
   - Values: `nextRankIn`, `nextRankUnder`, `rankText`
-- Exports (shared):
-  - Values: `Rank`, `RankSchema`, `rankText`
 - Server:
   - Uses: `database.db`
 

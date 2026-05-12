@@ -2,7 +2,7 @@ import type {
   ConversationRuntime,
   RuntimeInfo,
 } from "@plugins/conversations/server";
-import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
+import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import { CLAUDE, TMUX } from "@plugins/infra/plugins/paths/server";
 import { resolveSessionState, type SessionState } from "./claude-session";
 // Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename

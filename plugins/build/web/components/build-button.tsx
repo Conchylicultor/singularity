@@ -6,7 +6,7 @@ import { MdRefresh, MdOpenInFull } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { mainAheadCountResource, buildHistoryResource } from "../../shared/resources";
+import { mainAheadCountResource, buildHistoryResource } from "../../internal/resources";
 import { BuildPopoverContent } from "./build-popover-content";
 import { buildPane } from "../panes";
 

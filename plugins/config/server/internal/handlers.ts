@@ -9,7 +9,7 @@ import {
   configSecretsResource,
 } from "./secrets-resource";
 import { deleteSecret, setSecret } from "@plugins/infra/plugins/secrets/server";
-import { fullKey, validateKind, normalizeStringList } from "@plugins/config/shared";
+import { fullKey, validateKind, normalizeStringList } from "@plugins/config/core";
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

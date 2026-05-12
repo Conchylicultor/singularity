@@ -2,7 +2,7 @@ import { asc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
 import { promptTemplatesTable } from "./tables";
-import type { PromptTemplate } from "../../shared/resources";
+import type { PromptTemplate } from "../../internal/resources";
 
 export const promptTemplatesServerResource = defineResource<PromptTemplate[]>({
   key: "prompt-templates",

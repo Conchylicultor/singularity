@@ -1,6 +1,6 @@
 import { defineSlot } from "@core";
 import type { ComponentType } from "react";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 
 export interface EventRendererContribution {
   kind: JsonlEvent["kind"];

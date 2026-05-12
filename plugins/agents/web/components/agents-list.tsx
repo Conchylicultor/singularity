@@ -6,15 +6,15 @@ import {
   TreeList,
   type TreeItem,
 } from "@plugins/primitives/plugins/tree/web";
-import type { TreeNode } from "@plugins/primitives/plugins/tree/shared";
-import type { Rank } from "@plugins/primitives/plugins/rank/shared";
+import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
+import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   Avatar,
   AVATAR_ICON_KEYS,
   AVATAR_COLOR_KEYS,
   DEFAULT_AGENT_AVATAR,
 } from "@plugins/primitives/plugins/avatar/web";
-import { agentsResource } from "../../shared/resources";
+import { agentsResource } from "../../internal/resources";
 import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";
 import { AgentStatus } from "./agent-status";

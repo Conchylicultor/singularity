@@ -11,7 +11,7 @@ To switch Opus versions: change `cliFlag` in `shared/registry.ts`.
 ## Plugin reference
 
 - Description: Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
-- Exports (shared):
+- Exports (core):
   - Types: `ConversationModel`, `ModelMeta`
   - Values: `ConversationModelSchema`, `DEFAULT_MODEL`, `MODEL_REGISTRY`
 

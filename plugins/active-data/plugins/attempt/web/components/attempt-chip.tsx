@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { attemptPane } from "@plugins/attempt-view/web";
-import { attemptsResource } from "@plugins/tasks/shared";
-import type { AttemptStatus } from "@plugins/tasks-core/shared";
+import { attemptsResource } from "@plugins/tasks/core";
+import type { AttemptStatus } from "@plugins/tasks-core/core";
 
 const ATTEMPT_STATUS_DOT: Record<AttemptStatus, string> = {
   pending: "bg-muted-foreground/60",

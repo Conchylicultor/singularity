@@ -1,5 +1,5 @@
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
 const MODEL_CLASSES: Record<ConversationModel, string> = {
   opus: "bg-muted text-muted-foreground",

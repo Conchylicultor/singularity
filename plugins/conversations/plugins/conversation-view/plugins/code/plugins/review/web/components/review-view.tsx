@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { pushesResource, type Push } from "@plugins/tasks/shared";
-import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
+import { pushesResource, type Push } from "@plugins/tasks/core";
+import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { usePushFiles } from "../use-push-files";

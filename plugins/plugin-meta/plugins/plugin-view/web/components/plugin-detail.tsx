@@ -1,6 +1,6 @@
 import { MdBolt } from "react-icons/md";
 import { Breadcrumb } from "@plugins/primitives/plugins/breadcrumb/web";
-import type { PluginNode } from "../../shared/types";
+import type { PluginNode } from "../../core/types";
 import { PluginView } from "../slots";
 
 interface PluginDetailProps {

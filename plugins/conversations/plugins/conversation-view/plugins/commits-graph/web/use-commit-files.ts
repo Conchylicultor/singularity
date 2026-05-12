@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
+import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 
 export type CommitFiles = {
   files: EditedFile[];

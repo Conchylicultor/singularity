@@ -4,7 +4,7 @@ import { defineResource } from "@server/resources";
 import {
   ActiveDataBindingsPayloadSchema,
   type ActiveDataBindingsPayload,
-} from "../../shared/resource";
+} from "../../core/resource";
 import { _activeDataBindings } from "./tables";
 
 export const activeDataBindingsResource = defineResource<

@@ -2,8 +2,8 @@ import type {
   AuthEnvAccessor,
   AuthProviderDescriptor,
   ResolvedCredentials,
-} from "@plugins/auth/shared";
-import { AuthCredentialsMissingError } from "@plugins/auth/shared";
+} from "@plugins/auth/core";
+import { AuthCredentialsMissingError } from "@plugins/auth/core";
 
 const envAccessor: AuthEnvAccessor = {
   get(key: string): string | undefined {

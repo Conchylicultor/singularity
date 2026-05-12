@@ -1,11 +1,11 @@
 import { defineResource } from "@server/resources";
 import { z } from "zod";
-import type { SecretMetadata } from "@plugins/infra/plugins/secrets/shared";
+import type { SecretMetadata } from "@plugins/infra/plugins/secrets/core";
 import {
   getSecretMetadata,
   SecretsMainOfflineError,
 } from "@plugins/infra/plugins/secrets/server";
-import { fullKey } from "@plugins/config/shared";
+import { fullKey } from "@plugins/config/core";
 import { getRegistry } from "./registry";
 
 export const CONFIG_SECRETS_NAMESPACE = "config-fields";

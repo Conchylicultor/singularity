@@ -1,4 +1,4 @@
-import type { ToolRendererProps } from "../../shared";
+import type { ToolRendererProps } from "../../core";
 import { ToolCallCard } from "./tool-call-card";
 
 function formatJson(value: unknown): string {

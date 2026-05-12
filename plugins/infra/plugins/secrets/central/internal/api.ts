@@ -5,7 +5,7 @@
 // Each operation awaits `ready` before touching the store so a caller's
 // onReady can run in any order relative to secrets's onReady.
 
-import type { SecretMetadata, SecretRef } from "@plugins/infra/plugins/secrets/shared";
+import type { SecretMetadata, SecretRef } from "@plugins/infra/plugins/secrets/core";
 import { ready } from "./boot";
 import {
   deleteLocal,

@@ -3,7 +3,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useConversations, GonePageSchema } from "@plugins/conversations/web";
 import { cn } from "@/lib/utils";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
-import type { Conversation } from "@plugins/tasks-core/shared";
+import type { Conversation } from "@plugins/tasks-core/core";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import {
   SidebarMenu,

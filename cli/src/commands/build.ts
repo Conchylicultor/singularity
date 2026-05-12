@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
 import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
-import { retryUntil, fixed } from "@plugins/packages/plugins/retry/shared";
+import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { basename, join, resolve } from "path";
 import { generateMigration } from "../migrations";
 import { generatePluginDocs, collectAllPlugins } from "@tooling/docgen";

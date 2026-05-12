@@ -6,7 +6,7 @@ import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
 import { cn } from "@/lib/utils";
 import { ModelChip, type ChainModel } from "./model-chip";
 import { RelateModeChip } from "./relate-mode-chip";
-import type { TaskChainRelateMode } from "../../shared/types";
+import type { TaskChainRelateMode } from "../../core/types";
 
 export interface ParentTaskPreview {
   id: string;

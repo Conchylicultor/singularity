@@ -5,7 +5,7 @@ import path from "node:path";
 import { decrypt, encrypt } from "./crypto";
 import { getEncryptionKey } from "./key-store";
 import { SINGULARITY_DIR, STORE_PATH } from "./paths";
-import type { SecretMetadata } from "@plugins/infra/plugins/secrets/shared";
+import type { SecretMetadata } from "@plugins/infra/plugins/secrets/core";
 
 interface Entry {
   value: string;

@@ -1,5 +1,5 @@
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import type { ConversationStatus } from "@plugins/conversations/shared";
+import type { ConversationStatus } from "@plugins/conversations/core";
 
 const STATUS_CLASSES: Record<ConversationStatus, string> = {
   starting: "bg-muted text-muted-foreground",

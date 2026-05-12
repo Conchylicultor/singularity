@@ -5,14 +5,14 @@
 ## Plugin reference
 
 - Description: Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
+- Exports (core):
+  - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
+  - Values: `attemptsResource`, `pushesResource`, `tasksResource`
 - Exports (web):
   - Types: `AutoStartModel`, `TaskPatch`
   - Values: `deleteTask`, `patchTask`, `setAutoStart`, `useTask`
 - Exports (server):
   - Values: `armTaskAutoStart`
-- Exports (shared):
-  - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
-  - Values: `attemptsResource`, `pushesResource`, `tasksResource`
 - Server:
   - Register: `addTaskTool`, `pushIngestJob`
   - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.taskAttachments`, `tasks-core.updateTask`

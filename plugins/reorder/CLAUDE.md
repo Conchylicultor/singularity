@@ -52,7 +52,7 @@ Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The
   - Values: `isGroupEntry`, `isSpacer`, `Reorder`, `setEditMode`, `SPACER_PREFIX`, `useEditMode`
 - Exports (server):
   - Values: `_reorderPrefs`, `reorderPrefsResource`
-- Exports (shared):
+- Exports (internal):
   - Types: `ReorderSlotPrefs`
   - Values: `reorderPrefsResource`, `ReorderSlotPrefsSchema`
 - Server:

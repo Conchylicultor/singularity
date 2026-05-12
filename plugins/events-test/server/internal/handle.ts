@@ -1,6 +1,6 @@
 import { asc, sql } from "drizzle-orm";
 import { deleteTrigger, deleteTriggersFor, trigger } from "@plugins/infra/plugins/events/server";
-import { retryUntil, fixed } from "@plugins/packages/plugins/retry/shared";
+import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { db } from "@plugins/database/server";
 import { logEntries, logPing, resetLog } from "./log-job";
 import { _pingedTriggers, pinged } from "./tables";

@@ -7,12 +7,12 @@
 - Description: Central settings pane for switching visual variants of pluggable UI components.
 - Defines:
   - Slots: `ThemeEngine.VariantGroup`, `ThemeEngine.TokenGroup`, `ThemeEngine.GlobalPreset`
+- Exports (core):
+  - Types: `TokenGroupDescriptor`, `TokenGroupField`, `TokenGroupSchema`
+  - Values: `defineTokenGroup`, `themeEngineConfig`
 - Exports (web):
   - Types: `GlobalPresetContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`
   - Values: `ThemeEngine`, `ThemeScope`
-- Exports (shared):
-  - Types: `TokenGroupDescriptor`, `TokenGroupField`, `TokenGroupSchema`
-  - Values: `defineTokenGroup`, `themeEngineConfig`
 - Contributes:
   - `Core.Root` → `ThemeInjector`
   - `Config.Section` "UI Themes" → `VariantSettings`

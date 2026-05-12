@@ -10,7 +10,7 @@
 - Exports (web):
   - Types: `SidebarPalettePresetContribution`
   - Values: `SidebarPalette`
-- Exports (shared):
+- Exports (internal):
   - Types: `SidebarPaletteTokenValues`
   - Values: `sidebarPaletteConfig`, `sidebarPaletteGroup`
 - Contributes:

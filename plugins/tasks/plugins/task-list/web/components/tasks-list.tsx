@@ -7,14 +7,14 @@ import {
   TreeList,
   type TreeItem,
 } from "@plugins/primitives/plugins/tree/web";
-import type { TreeNode } from "@plugins/primitives/plugins/tree/shared";
-import type { TaskStatus } from "@plugins/tasks-core/shared";
-import { tasksResource } from "@plugins/tasks/shared";
+import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
+import type { TaskStatus } from "@plugins/tasks-core/core";
+import { tasksResource } from "@plugins/tasks/core";
 import { patchTask, setAutoStart } from "@plugins/tasks/web";
 import { Tasks as TasksSlots } from "../slots";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import { cn } from "@/lib/utils";
-import type { Rank } from "@plugins/primitives/plugins/rank/shared";
+import type { Rank } from "@plugins/primitives/plugins/rank/core";
 
 type Task = TreeItem & {
   title: string;

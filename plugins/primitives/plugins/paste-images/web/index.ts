@@ -11,7 +11,7 @@ export {
   rewriteAttachmentMarkdown,
   isAttachmentUrl,
   ATTACHMENT_MARKDOWN_RE,
-} from "../shared";
+} from "../core";
 
 export default {
   id: "paste-images",

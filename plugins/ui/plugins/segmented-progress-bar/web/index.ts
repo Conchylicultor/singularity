@@ -5,7 +5,7 @@ import { VariantPicker } from "./components/variant-picker";
 export { SegmentedProgressBar } from "./components/segmented-progress-bar";
 export { SegmentedProgressBar as SegmentedProgressBarSlots } from "./slots";
 export type { SegmentedProgressBarVariantContribution } from "./slots";
-export type { SegmentedProgressBarProps, Step } from "../shared";
+export type { SegmentedProgressBarProps, Step } from "../core";
 
 export default {
   id: "ui-segmented-progress-bar",

@@ -5,9 +5,9 @@ import {
   useStickyScroll,
 } from "@plugins/primitives/plugins/auto-scroll/web";
 
-import type { Conversation } from "@plugins/tasks-core/shared";
-import { jsonlEventsResource } from "../../shared";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
+import type { Conversation } from "@plugins/tasks-core/core";
+import { jsonlEventsResource } from "../../core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";

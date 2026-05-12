@@ -13,10 +13,11 @@ export default defineBoundaries({
 
   // Layer 1: Runtime isolation (default-deny — unlisted = blocked)
   runtimes: {
-    web: ["web", "shared"],
-    server: ["server", "shared"],
-    central: ["central", "shared"],
-    shared: ["shared"],
+    web: ["web", "core", "internal"],
+    server: ["server", "core", "internal"],
+    central: ["central", "core", "internal"],
+    core: ["core"],
+    internal: ["internal", "core"],
   },
 
   runtimeExceptions: [
@@ -40,6 +41,9 @@ export default defineBoundaries({
     allow("plugin.** -> core"),
     allow("plugin.** -> server"),
     allow("plugin.** -> central"),
+
+    // Server framework can import plugin public API (core runtime only — enforced by runtime isolation + R10)
+    allow("server -> plugin.**"),
 
     // Plugins can import other plugins
     allow("plugin.** -> plugin.**"),

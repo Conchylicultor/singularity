@@ -1,12 +1,12 @@
 import { MdPlayArrow } from "react-icons/md";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import {
   useLastAssistantEvent,
   RowActionButton,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
-import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
+import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
 const MODELS = Object.keys(MODEL_REGISTRY) as ConversationModel[];
 

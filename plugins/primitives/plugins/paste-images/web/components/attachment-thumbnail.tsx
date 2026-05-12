@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MdClose } from "react-icons/md";
-import { attachmentUrl } from "../../shared";
+import { attachmentUrl } from "../../core";
 import { Lightbox } from "./lightbox";
 
 // Inline image thumbnail with optional remove × and click-to-expand lightbox.

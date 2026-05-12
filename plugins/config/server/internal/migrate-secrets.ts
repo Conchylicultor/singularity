@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { setSecret } from "@plugins/infra/plugins/secrets/server";
-import { fullKey } from "@plugins/config/shared";
+import { fullKey } from "@plugins/config/core";
 import { config } from "./tables";
 import { getRegistry } from "./registry";
 import { CONFIG_SECRETS_NAMESPACE } from "./secrets-resource";

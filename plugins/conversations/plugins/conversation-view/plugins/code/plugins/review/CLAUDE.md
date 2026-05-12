@@ -5,7 +5,7 @@
 ## Plugin reference
 
 - Description: Toolbar button and full-screen view to review all worktree changes file-by-file. Toolbar button and full-screen view to review all worktree changes file-by-file.
-- Exports (shared):
+- Exports (internal):
   - Values: `reviewConfig`
 - Contributes:
   - `Pane.Register` `conv-review`

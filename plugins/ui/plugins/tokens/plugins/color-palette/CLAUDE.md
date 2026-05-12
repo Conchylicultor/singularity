@@ -10,7 +10,7 @@
 - Exports (web):
   - Types: `ColorPalettePresetContribution`
   - Values: `ColorPalette`
-- Exports (shared):
+- Exports (internal):
   - Types: `ColorPaletteTokenValues`
   - Values: `colorPaletteConfig`, `colorPaletteGroup`
 - Contributes:

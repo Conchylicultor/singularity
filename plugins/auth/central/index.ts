@@ -15,7 +15,7 @@ export {
 export { registerAuthProvider } from "./internal/registry";
 export { authStateResource } from "./internal/auth-resource";
 export { readGlobalConfig } from "./internal/global-config";
-export { defineAuthProvider } from "@plugins/auth/shared";
+export { defineAuthProvider } from "@plugins/auth/core";
 export type {
   AuthIdentity,
   AuthProviderDescriptor,
@@ -27,14 +27,14 @@ export type {
   ResolvedCredentials,
   ParsedTokenResponse,
   AuthEnvAccessor,
-} from "@plugins/auth/shared";
+} from "@plugins/auth/core";
 export {
   AuthError,
   AuthNeedsConsentError,
   AuthProviderUnknownError,
   AuthCredentialsMissingError,
   AuthKeychainLockedError,
-} from "@plugins/auth/shared";
+} from "@plugins/auth/core";
 
 export default {
   id: "auth",

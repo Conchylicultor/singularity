@@ -4,8 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@/components/ui/button";
-import { recentConversationsResource } from "@plugins/conversations/shared";
-import { ConversationSchema, type Conversation } from "@plugins/tasks-core/shared";
+import { recentConversationsResource } from "@plugins/conversations/core";
+import { ConversationSchema, type Conversation } from "@plugins/tasks-core/core";
 
 const GONE_PAGE_SIZE = 50;
 const QUERY_KEY = ["conversations-recover", "recent-closed"];

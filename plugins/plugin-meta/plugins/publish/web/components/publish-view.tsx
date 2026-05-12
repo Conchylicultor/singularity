@@ -3,7 +3,7 @@ import {
   usePaneMatch,
 } from "@plugins/primitives/plugins/pane/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import type { PluginTreePayload } from "@plugins/plugin-meta/plugins/plugin-view/shared";
+import type { PluginTreePayload } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { PluginTree } from "./plugin-tree";
 
 type LoadState =

@@ -1,5 +1,5 @@
 import parcel from "@parcel/watcher";
-import type { EditedFile } from "../../shared/protocol";
+import type { EditedFile } from "../../core/protocol";
 import { getEditedFiles } from "./get-edited-files";
 
 const DEBOUNCE_MS = 200;

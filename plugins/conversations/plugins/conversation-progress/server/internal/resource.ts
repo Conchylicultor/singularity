@@ -4,7 +4,7 @@ import { defineResource } from "@server/resources";
 import {
   ConversationProgressPayloadSchema,
   type ConversationProgressPayload,
-} from "../../shared/schemas";
+} from "../../internal/schemas";
 import { conversationProgress } from "./tables";
 
 export const conversationProgressResource =

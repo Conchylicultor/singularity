@@ -1,5 +1,5 @@
 import { resolve, sep } from "node:path";
-import type { EditedFile, EditedFileStatus } from "../../shared/protocol";
+import type { EditedFile, EditedFileStatus } from "../../core/protocol";
 import { parseDiffNameStatusZ, parseDiffNumstatZ } from "./parse-diff-z";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";

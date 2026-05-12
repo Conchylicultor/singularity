@@ -8,7 +8,7 @@ import {
   type PgTable,
 } from "drizzle-orm/pg-core";
 import { db } from "@plugins/database/server";
-import type { Attachment } from "../../shared/types";
+import type { Attachment } from "../../internal/types";
 import { _attachments } from "./tables";
 
 type OwnerTable = PgTable & { id: AnyPgColumn };

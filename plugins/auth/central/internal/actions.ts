@@ -1,4 +1,4 @@
-import type { AuthIdentity } from "@plugins/auth/shared";
+import type { AuthIdentity } from "@plugins/auth/core";
 import { getProvider } from "./registry";
 import { deleteAccount, setAccount } from "./token-store";
 import { invalidateAuthStateCache } from "./auth-state";

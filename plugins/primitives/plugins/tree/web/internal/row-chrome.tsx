@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import type { TreeNode } from "../../shared";
+import type { TreeNode } from "../../core";
 import type { TreeItem } from "./types";
 import { useTreeListContext, useTreeRow, type RowControls } from "./use-tree-row";
 

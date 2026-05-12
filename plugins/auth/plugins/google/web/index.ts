@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@core";
 import { Auth } from "@plugins/auth/web";
 import { Config } from "@plugins/config/web";
 import { SiGoogle } from "react-icons/si";
-import { googleAuthConfig } from "../shared";
+import { googleAuthConfig } from "../internal";
 import { googleSetupPane } from "@plugins/auth/plugins/google/plugins/setup-wizard/web";
 
 export default {

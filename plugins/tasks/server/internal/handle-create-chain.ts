@@ -13,13 +13,13 @@ import { getAttachment } from "@plugins/infra/plugins/attachments/server";
 import {
   attachmentMarkdown,
   extractAttachmentIds,
-} from "@plugins/primitives/plugins/paste-images/shared";
+} from "@plugins/primitives/plugins/paste-images/core";
 import {
   TaskChainSubmitBodySchema,
   type TaskChainCard,
   type TaskChainSubmitBody,
   type TaskChainSubmitResponse,
-} from "@plugins/tasks/plugins/task-draft-form/shared";
+} from "@plugins/tasks/plugins/task-draft-form/core";
 import { armTaskAutoStart } from "./arm-auto-start";
 
 export async function handleCreateChain(req: Request): Promise<Response> {

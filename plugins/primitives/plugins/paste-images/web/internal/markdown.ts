@@ -11,7 +11,7 @@ import {
   ATTACHMENT_MARKDOWN_RE,
   attachmentMarkdown,
   isAttachmentUrl,
-} from "../../shared";
+} from "../../core";
 import { $createImageNode, $isImageNode } from "./image-node";
 
 // Editor state → markdown. Each paragraph emits a line; image nodes become

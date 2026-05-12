@@ -15,7 +15,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { tasksResource, type Task } from "@plugins/tasks/shared";
+import { tasksResource, type Task } from "@plugins/tasks/core";
 import { taskDetailPane, useTaskNavigate } from "@plugins/tasks/plugins/task-detail/web";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 import { cn } from "@/lib/utils";

@@ -1,8 +1,8 @@
 import type {
   AuthIdentity,
   AuthProviderKind,
-} from "@plugins/auth/shared";
-import { AuthKeychainLockedError } from "@plugins/auth/shared";
+} from "@plugins/auth/core";
+import { AuthKeychainLockedError } from "@plugins/auth/core";
 import {
   getSecret,
   ready as secretsReady,

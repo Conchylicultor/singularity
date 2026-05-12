@@ -18,11 +18,11 @@ export {
   listKeysInNamespace,
 } from "./internal/api";
 export { ready } from "./internal/boot";
-export type { SecretRef, SecretMetadata } from "@plugins/infra/plugins/secrets/shared";
+export type { SecretRef, SecretMetadata } from "@plugins/infra/plugins/secrets/core";
 export {
   SecretsError,
   SecretsKeychainLockedError,
-} from "@plugins/infra/plugins/secrets/shared";
+} from "@plugins/infra/plugins/secrets/core";
 
 export default {
   id: "secrets",

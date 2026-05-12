@@ -4,7 +4,7 @@ import type { ConversationRecord } from "@plugins/conversations/plugins/conversa
 import { useConversation } from "@plugins/conversations/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { Button } from "@/components/ui/button";
-import { quickPromptsResource } from "../../shared/resources";
+import { quickPromptsResource } from "../../internal/resources";
 
 export function QuickPromptChips({
   conversation,

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import type { PluginNode, PluginTreePayload } from "../shared/types";
+import type { PluginNode, PluginTreePayload } from "../core/types";
 import { PluginDetail } from "./components/plugin-detail";
 
 export const pluginViewPane = Pane.define({

@@ -1,4 +1,4 @@
-import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/shared";
+import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { FileContent } from "./file-content";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
 import { FileTabs } from "./file-tabs";

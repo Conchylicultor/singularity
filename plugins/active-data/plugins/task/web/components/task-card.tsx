@@ -12,9 +12,9 @@ import {
   attemptsResource,
   tasksResource,
   type Attempt,
-} from "@plugins/tasks/shared";
+} from "@plugins/tasks/core";
 import { taskConversationPane } from "@plugins/tasks/plugins/task-detail/web";
-import { TaskSchema, type Task } from "@plugins/tasks-core/shared";
+import { TaskSchema, type Task } from "@plugins/tasks-core/core";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 

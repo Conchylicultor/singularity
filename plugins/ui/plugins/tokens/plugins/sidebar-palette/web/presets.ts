@@ -1,4 +1,4 @@
-import type { SidebarPaletteTokenValues } from "../shared";
+import type { SidebarPaletteTokenValues } from "../internal";
 
 interface Preset {
   id: string;

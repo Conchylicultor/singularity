@@ -7,12 +7,12 @@
 - Description: Pluggable segmented progress bar with switchable visual variants.
 - Defines:
   - Slots: `SegmentedProgressBar.Variant`
+- Exports (core):
+  - Types: `SegmentedProgressBarProps`, `Step`
+  - Values: `segmentedProgressBarConfig`
 - Exports (web):
   - Types: `SegmentedProgressBarProps`, `SegmentedProgressBarVariantContribution`, `Step`
   - Values: `SegmentedProgressBar`, `SegmentedProgressBarSlots`
-- Exports (shared):
-  - Types: `SegmentedProgressBarProps`, `Step`
-  - Values: `segmentedProgressBarConfig`
 - Contributes:
   - `ThemeEngine.VariantGroup` → `VariantPicker`
 - Server:

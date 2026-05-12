@@ -9,8 +9,8 @@ import { refreshAccessToken } from "./oauth-flow";
 import type {
   AuthIdentity,
   AuthProviderDescriptor,
-} from "@plugins/auth/shared";
-import { AuthNeedsConsentError } from "@plugins/auth/shared";
+} from "@plugins/auth/core";
+import { AuthNeedsConsentError } from "@plugins/auth/core";
 
 const REFRESH_LEAD_MS = 60_000;
 const inFlightRefreshes = new Map<string, Promise<StoredAccount>>();

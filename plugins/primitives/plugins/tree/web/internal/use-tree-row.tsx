@@ -11,8 +11,8 @@ import {
   type DraggableAttributes,
   type DraggableSyntheticListeners,
 } from "@dnd-kit/core";
-import { Rank } from "@plugins/primitives/plugins/rank/shared";
-import type { TreeNode } from "../../shared";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
+import type { TreeNode } from "../../core";
 import { pendingFocus } from "./pending-focus";
 import type { TreeItem } from "./types";
 

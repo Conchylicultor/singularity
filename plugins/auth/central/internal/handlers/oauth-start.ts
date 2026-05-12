@@ -9,7 +9,7 @@ import {
   recordPendingState,
   redirectUriFor,
 } from "../oauth-flow";
-import { AuthCredentialsMissingError } from "@plugins/auth/shared";
+import { AuthCredentialsMissingError } from "@plugins/auth/core";
 
 /**
  * GET /api/auth/start/:provider

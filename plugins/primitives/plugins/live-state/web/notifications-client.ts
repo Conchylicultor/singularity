@@ -5,7 +5,7 @@ import {
   subscribeWsStatus,
   type WsStatus,
 } from "@plugins/primitives/plugins/networking/web";
-import type { ResourceOrigin } from "../shared/resource";
+import type { ResourceOrigin } from "../core/resource";
 
 // Drives the TanStack Query cache off server resource notifications. Uses
 // SharedWebSocket, which transparently shares the connection across all tabs

@@ -1,5 +1,5 @@
 import { MdCode } from "react-icons/md";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/shared";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import {
   RowActionButton,
   useRowMarkdown,

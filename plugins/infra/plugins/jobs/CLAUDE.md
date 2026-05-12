@@ -8,12 +8,12 @@
 - Load-bearing: yes
 - Defines:
   - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
+- Exports (core):
+  - Types: `JobRow`, `JobsPayload`, `JobState`
+  - Values: `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`
 - Exports (server):
   - Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`
   - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
-- Exports (shared):
-  - Types: `JobRow`, `JobsPayload`, `JobState`
-  - Values: `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`
 - Server:
   - Register: `jobsResumeJob`
   - Uses: `database.db`

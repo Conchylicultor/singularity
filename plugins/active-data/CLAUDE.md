@@ -68,14 +68,14 @@ Behavior:
 - Defines:
   - Slots: `ActiveData.Tag`
   - DB schema: `plugins/active-data/server/internal/tables.ts`
+- Exports (core):
+  - Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`
+  - Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `inlineBoundary`
 - Exports (web):
   - Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataCodeContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`, `CodeReplaceContrib`
   - Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
 - Exports (server):
   - Values: `_activeDataBindings`, `activeDataBindingsResource`
-- Exports (shared):
-  - Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`
-  - Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `inlineBoundary`
 - Server:
   - Uses: `database.db`, `tasks-core._conversations`
   - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`

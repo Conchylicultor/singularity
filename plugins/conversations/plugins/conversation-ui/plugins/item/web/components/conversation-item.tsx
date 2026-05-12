@@ -1,5 +1,5 @@
-import type { ConversationKind } from "@plugins/tasks-core/shared";
-import type { ConversationStatus } from "@plugins/conversations/shared";
+import type { ConversationKind } from "@plugins/tasks-core/core";
+import type { ConversationStatus } from "@plugins/conversations/core";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
 import { cn } from "@/lib/utils";

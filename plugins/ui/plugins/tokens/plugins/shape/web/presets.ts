@@ -1,4 +1,4 @@
-import type { ShapeTokenValues } from "../shared";
+import type { ShapeTokenValues } from "../internal";
 
 interface Preset {
   id: string;

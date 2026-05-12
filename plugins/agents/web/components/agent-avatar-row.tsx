@@ -7,7 +7,7 @@ import {
   CONV_STATUS_DOT,
   type ConversationItemConv,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { agentLaunchesResource, agentsResource } from "../../shared/resources";
+import { agentLaunchesResource, agentsResource } from "../../internal/resources";
 
 // Resolves the launching agent for a conversation by walking
 // agent_launches.task_id → conversation.taskId, then renders that agent's

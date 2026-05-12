@@ -19,7 +19,7 @@ export type {
   TaskChainSubmitBody,
   TaskChainSubmitResponse,
   TaskChainTarget,
-} from "../shared/types";
+} from "../core/types";
 
 export {
   setActiveRelateContext,

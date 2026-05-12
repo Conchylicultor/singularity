@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Exports (shared):
+- Exports (core):
   - Types: `BarrelExport`, `CommandDef`, `Contribution`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`
   - Values: `buildPluginTree`
 

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { attemptsResource } from "@plugins/tasks/shared";
+import { attemptsResource } from "@plugins/tasks/core";
 import { cn } from "@/lib/utils";
 import { attemptPane, attemptConversationPane } from "../panes";
 

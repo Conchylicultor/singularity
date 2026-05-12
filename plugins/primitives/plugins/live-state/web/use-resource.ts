@@ -8,7 +8,7 @@ import {
 } from "@tanstack/react-query";
 import { NotificationsClient, queryKeyFor } from "./notifications-client";
 import type { ChannelStatuses } from "./notifications-client";
-import type { ResourceDescriptor } from "../shared/resource";
+import type { ResourceDescriptor } from "../core/resource";
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
 
 type ResourceParams = Record<string, string>;

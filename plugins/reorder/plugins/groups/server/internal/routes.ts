@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RankSchema } from "@plugins/primitives/plugins/rank/shared";
+import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import {
   addMembersToGroup,
   createGroup,

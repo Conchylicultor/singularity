@@ -1,6 +1,6 @@
 import { defineSlot } from "@core";
 import type { ComponentType } from "react";
-import type { ToolRendererProps } from "../shared";
+import type { ToolRendererProps } from "../core";
 
 export interface ToolRendererContribution {
   name?: string;

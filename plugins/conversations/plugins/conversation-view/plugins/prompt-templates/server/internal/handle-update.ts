@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/shared";
+import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/core";
 import { promptTemplatesTable } from "./tables";
 import { promptTemplateAttachments } from "./tables-attachments";
 import { promptTemplatesServerResource } from "./resources";

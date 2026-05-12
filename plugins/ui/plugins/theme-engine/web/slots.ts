@@ -1,7 +1,7 @@
 import { defineSlot } from "@core";
 import type { ComponentType } from "react";
-import type { TokenGroupDescriptor } from "../shared";
-import type { ConfigDescriptor } from "@plugins/config/shared";
+import type { TokenGroupDescriptor } from "../core";
+import type { ConfigDescriptor } from "@plugins/config/core";
 
 export interface VariantGroupContribution {
   componentId: string;

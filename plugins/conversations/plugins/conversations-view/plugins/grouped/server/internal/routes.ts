@@ -6,7 +6,7 @@ import {
   removeMember,
   updateGroup,
 } from "./repo";
-import { RankSchema } from "@plugins/primitives/plugins/rank/shared";
+import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 
 const CreateBody = z.object({
   title: z.string().optional(),

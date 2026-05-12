@@ -10,7 +10,7 @@ import {
   fullKey,
   normalize,
   type NormalizedField,
-} from "@plugins/config/shared";
+} from "@plugins/config/core";
 import { configResource, resetConfigValue, setConfigValue } from "../internal/config-client";
 import { Field } from "./field";
 import { Button } from "@/components/ui/button";

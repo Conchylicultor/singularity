@@ -6,7 +6,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { rankText } from "@plugins/primitives/plugins/rank/shared";
+import { rankText } from "@plugins/primitives/plugins/rank/core";
 
 // Physical tables only. Leaf in the schema dependency graph (no cross-plugin
 // imports). Views, Zod schemas, and types live in `./schema.ts`.

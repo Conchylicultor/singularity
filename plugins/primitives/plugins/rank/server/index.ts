@@ -4,7 +4,7 @@ export { nextRankIn, nextRankUnder } from "./internal/helpers";
 export type { RankExecutor } from "./internal/helpers";
 // Re-exported so agents implementing a ranked table find both the column type
 // and the helpers in one place.
-export { rankText } from "@plugins/primitives/plugins/rank/shared";
+export { rankText } from "@plugins/primitives/plugins/rank/core";
 
 export default {
   id: "rank",

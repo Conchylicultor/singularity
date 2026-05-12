@@ -10,8 +10,8 @@ import {
   updateConversation,
 } from "@plugins/tasks-core/server";
 import { Runtime } from "./runtime";
-import { DEFAULT_MODEL, type ConversationModel } from "@plugins/conversations/plugins/model-provider/shared";
-import type { Conversation, ConversationKind } from "@plugins/tasks-core/shared";
+import { DEFAULT_MODEL, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import type { Conversation, ConversationKind } from "@plugins/tasks-core/core";
 import { forkDatabase } from "@plugins/database/plugins/admin/server";
 import { reportForkError } from "./fork-errors";
 import { setupWorktree, worktreePathFor } from "@plugins/infra/plugins/worktree/server";

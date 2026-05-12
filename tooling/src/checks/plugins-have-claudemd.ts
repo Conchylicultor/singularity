@@ -1,7 +1,7 @@
 import { existsSync } from "fs";
 import { join } from "path";
 import type { Check } from "./types";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/shared";
+import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { pluginClaudeMdPath } from "../docgen";
 
 async function getRoot(): Promise<string> {

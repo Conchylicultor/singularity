@@ -14,7 +14,7 @@ const PLUGIN_IMPORT_RE =
 
 // Imports from @plugins/packages/ are allowed everywhere — the packages umbrella
 // is pure utility code (equivalent to the old packages/ directory), not plugin code.
-const ALLOWED_PLUGIN_IMPORT_RE = /@plugins\/packages\/|@plugins\/plugin-meta\/plugins\/plugin-tree\//;
+const ALLOWED_PLUGIN_IMPORT_RE = /@plugins\/packages\/|@plugins\/plugin-meta\/plugins\/plugin-tree\/|@plugins\/[^'"]*\/core\b/;
 
 // Only plugins/ itself and the composition roots may import from plugins/
 const ALLOWED_DIRS = ["plugins/"];
@@ -31,7 +31,7 @@ const COMPOSITION_ROOTS = [
 export const noPluginImportsInCore: Check = {
   id: "no-plugin-imports-in-core",
   description:
-    "Only `plugins/` may import from other plugins — `server/`, `plugin-core/`, `web/`, `cli/`, etc. must never import from `plugins/`",
+    "Non-plugin code may only import from `@plugins/*/core` (public API). Other plugin runtimes (web, server, internal) are off-limits.",
   async run() {
     const root = await getRoot();
     const proc = Bun.spawn(
@@ -61,7 +61,7 @@ export const noPluginImportsInCore: Check = {
     return {
       ok: false,
       message: `plugin imports found outside plugins/ (${offenders.length} occurrence(s)):\n    ${offenders.join("\n    ")}`,
-      hint: "Move shared types/values to plugin-core or a shared package. Plugins depend on core — core must never depend on plugins.",
+      hint: "Non-plugin code may import from `@plugins/<name>/core` (public API) but not from other plugin runtimes. Move shared types to the plugin's core/ barrel.",
     };
   },
 };

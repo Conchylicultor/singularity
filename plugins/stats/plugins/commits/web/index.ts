@@ -4,7 +4,7 @@ import { Config } from "@plugins/config/web";
 import { CommitsSection } from "./components/commits-section";
 import { ExcludedPathToggles } from "./components/excluded-path-toggles";
 import { LinesChartsSection } from "./components/lines-charts";
-import { commitsConfig } from "../shared/config";
+import { commitsConfig } from "../internal/config";
 
 export {
   useFetchJson,

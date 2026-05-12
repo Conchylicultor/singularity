@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
-import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/shared";
+import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/core";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { cn } from "@/lib/utils";
 
