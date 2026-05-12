@@ -68,7 +68,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Pane.Register` "agent-conversation"
     - `Pane.Register` "agent-system-detail"
     - `Pane.Register` "agent-side"
-    - `Shell.Sidebar` "Agents"
+    - `Shell.Sidebar` "Agents" → `component`
     - `Item.Avatar` → `AgentAvatarRow`
     - `Conversation.TitlePrefix` → `AgentAvatarTitlePrefix`
     - `Agents.AgentActions` "expand-collapse-all" → `ExpandCollapseAllAction`
@@ -165,7 +165,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
           - Contributes:
             - `Pane.Register` "publish"
-            - `Forge.Sidebar` "Publish"
+            - `Forge.Sidebar` "Publish" → `component`
         - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
           - Exports (web):
             - Values: `Forge`
@@ -195,7 +195,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `readGlobalConfig`, `registerAuthProvider`
   - Contributes:
     - `Pane.Register` "accounts"
-    - `Shell.Sidebar` "Accounts"
+    - `Shell.Sidebar` "Accounts" → `component`
   - Central:
     - `GET /api/auth/start/:provider`
     - `GET /api/auth/callback/:provider`
@@ -253,7 +253,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Pane.Register` "global-file-tree"
     - `Pane.Register` "conv-file-tree"
-    - `Shell.Sidebar` "Explorer"
+    - `Shell.Sidebar` "Explorer" → `component`
     - `Conversation.ActionBar` → `ConvTreeButton`
   - Server:
     - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`
@@ -288,7 +288,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `Config`, `configResource`, `configSecretsResource`, `readConfig`
   - Contributes:
     - `Pane.Register` "settings"
-    - `Shell.Sidebar` "Settings"
+    - `Shell.Sidebar` "Settings" → `component`
   - Server:
     - Uses: `database.db`
     - `GET /api/config`
@@ -684,7 +684,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `ViewContribution`, `ViewProps`
         - Values: `ConversationsView`
       - Contributes:
-        - `Shell.Sidebar` "Conversations" → `ConversationList`
+        - `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
         - `Core.Root` → `ForkErrorWatcher`
         - `Core.Root` → `AutoLaunchWatcher`
       - Slot contributors: `grouped`, `history`, `queue`
@@ -767,7 +767,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `recoveryPane`
   - Contributes:
     - `Pane.Register` "conversations-recover"
-    - `DebugApp.Sidebar` "Recovery"
+    - `DebugApp.Sidebar` "Recovery" → `component`
   - Server:
     - Uses: `conversations.resumeConversation`, `tasks-core.recentConversationsResource`
     - `POST /api/conversations-recover/restore-batch`
@@ -825,7 +825,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `broadcastsPane`
       - Contributes:
         - `Pane.Register` "debug-broadcasts"
-        - `DebugApp.Sidebar` "Broadcasts"
+        - `DebugApp.Sidebar` "Broadcasts" → `component`
       - Server:
         - `GET /api/debug/broadcasts`
         - `PUT /api/debug/broadcasts`
@@ -835,13 +835,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `claudeCliCallsPane`
       - Contributes:
         - `Pane.Register` "claude-cli-calls"
-        - `DebugApp.Sidebar` "Claude CLI Calls"
+        - `DebugApp.Sidebar` "Claude CLI Calls" → `component`
     - **`db-backup`** — Backup non-worktree Postgres databases to ~/.backups/singularity/. Backup non-worktree Postgres databases to ~/.backups/singularity/.
       - Exports (web):
         - Values: `dbBackupPane`
       - Contributes:
         - `Pane.Register` "db-backup"
-        - `DebugApp.Sidebar` "DB Backup"
+        - `DebugApp.Sidebar` "DB Backup" → `component`
       - Server:
         - `GET /api/debug/backup-db`
         - `POST /api/debug/backup-db`
@@ -854,7 +854,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` "logs"
         - `Pane.Register` "logs-channel"
-        - `DebugApp.Sidebar` "Logs"
+        - `DebugApp.Sidebar` "Logs" → `component`
       - Server:
         - `GET /api/logs/channels`
         - `WS /ws/logs`
@@ -863,7 +863,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `memoryPane`
       - Contributes:
         - `Pane.Register` "debug-memory"
-        - `DebugApp.Sidebar` "Memory"
+        - `DebugApp.Sidebar` "Memory" → `component`
       - Server:
         - `GET /api/debug/memory`
         - `GET /api/debug/memory/:name`
@@ -875,7 +875,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `formatDuration`, `GanttSection`, `groupByPhase`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `useProfilingContext`
       - Contributes:
         - `Pane.Register` "debug-profiling"
-        - `DebugApp.Sidebar` "Profiling"
+        - `DebugApp.Sidebar` "Profiling" → `component`
       - Slot contributors: `boot`, `build`
       - Plugins:
         - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
@@ -893,13 +893,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `queuePane`
       - Contributes:
         - `Pane.Register` "queue"
-        - `DebugApp.Sidebar` "Queue"
+        - `DebugApp.Sidebar` "Queue" → `component`
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
       - Exports (web):
         - Values: `worktreeCleanupPane`
       - Contributes:
         - `Pane.Register` "worktree-cleanup"
-        - `DebugApp.Sidebar` "Worktree Cleanup"
+        - `DebugApp.Sidebar` "Worktree Cleanup" → `component`
       - Server:
         - Uses: `tasks-core.getAttempt`, `tasks-core.listAttempts`, `tasks-core.listTasks`
         - `GET /api/debug/worktrees`
@@ -913,7 +913,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `eventsTestPane`
   - Contributes:
     - `Pane.Register` "events-test"
-    - `DebugApp.Sidebar` "Events Test"
+    - `DebugApp.Sidebar` "Events Test" → `component`
   - Server:
     - Register: `defineJob('events_test.log')`, `defineTriggerEvent('events_test.pinged')`
     - Uses: `database.db`
@@ -1134,7 +1134,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`app-shell`** — Reusable sidebar + toolbar + miller-columns layout. Apps instantiate with their own slot set.
       - Exports (web):
         - Types: `AppShellSidebarItem`, `AppShellToolbarItem`
-        - Values: `AppShellLayout`
+        - Values: `AppShellLayout`, `sidebarNavItem`, `SidebarNavItem`, `SidebarPaneSection`
     - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
       - Exports (web):
         - Types: `JumpToBottomButtonProps`, `StickyScrollHandle`, `UseStickyScrollOptions`
@@ -1321,7 +1321,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `Stats`, `statsPane`, `useShowEmptyDays`
   - Contributes:
     - `Pane.Register` "stats"
-    - `Shell.Sidebar` "Stats"
+    - `Shell.Sidebar` "Stats" → `component`
   - Imported by: `commits`, `cost`, `tasks`
   - Slot contributors: `commits`, `cost`, `tasks`
   - Plugins:
@@ -1431,7 +1431,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Pane.Register` "tasks-root"
         - `Pane.Register` "task-detail"
         - `Pane.Register` "task-conversation"
-        - `Shell.Sidebar` "Tasks"
+        - `Shell.Sidebar` "Tasks" → `component`
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Exports (core):
         - Types: `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelate`, `TaskChainRelateMode`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`

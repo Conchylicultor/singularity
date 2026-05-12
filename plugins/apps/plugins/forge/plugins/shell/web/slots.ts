@@ -1,4 +1,5 @@
 import { defineSlot } from "@core";
+import type { ComponentType } from "react";
 import type { AppShellSidebarItem } from "@plugins/primitives/plugins/app-shell/web";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import { Reorder } from "@plugins/reorder/web";
