@@ -155,6 +155,23 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
       | undefined;
 
     if (type === "user" && msg?.role === "user") {
+      const isMeta = obj.isMeta === true;
+      const sourceToolUseID =
+        typeof obj.sourceToolUseID === "string" ? obj.sourceToolUseID : null;
+      if (isMeta && sourceToolUseID) {
+        const linked = toolCallByUseId.get(sourceToolUseID);
+        if (linked) {
+          const text = extractText(msg.content);
+          if (text) {
+            linked.injectedContext = [
+              ...(linked.injectedContext ?? []),
+              text,
+            ];
+          }
+          continue;
+        }
+      }
+
       const content = msg.content;
       if (typeof content === "string") {
         if (content.length > 0) {

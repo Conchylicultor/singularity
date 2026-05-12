@@ -525,7 +525,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Contributes:
                 - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
                 - `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
-              - Slot contributors: `add-task`, `bash`, `edit`, `read`, `write`
+              - Slot contributors: `add-task`, `bash`, `edit`, `read`, `skill`, `write`
               - Plugins:
                 - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
                   - Contributes:
@@ -540,6 +540,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
                   - Contributes:
                     - `JsonlViewerTool.Renderer` "Read" → `ReadToolView`
+                - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
+                  - Contributes:
+                    - `JsonlViewerTool.Renderer` "Skill" → `SkillToolView`
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
                   - Contributes:
                     - `JsonlViewerTool.Renderer` "Write" → `WriteToolView`

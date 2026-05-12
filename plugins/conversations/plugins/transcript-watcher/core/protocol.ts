@@ -43,6 +43,7 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     input: z.unknown(),
     usage: TokenUsageSchema.optional(),
     result: ToolCallResultSchema.optional(),
+    injectedContext: z.array(z.string()).optional(),
   }),
   z.object({
     kind: z.literal("assistant-thinking"),
