@@ -25,6 +25,7 @@ export interface CardDraft {
   includeUrl: boolean;
   includeScreenshot: boolean;
   includeParentTask: boolean;
+  linkedToPrev: boolean;
 }
 
 export type CaptureKind = "url" | "screenshot" | "parentTask";
@@ -57,6 +58,7 @@ export function makeCard(model: ChainModel): CardDraft {
     includeUrl: false,
     includeScreenshot: false,
     includeParentTask: false,
+    linkedToPrev: true,
   };
 }
 
@@ -117,6 +119,12 @@ export function TaskDraftForm({
     onCardsChange([...cards, makeCard(model)]);
   };
 
+  const toggleLink = (idx: number) => {
+    onCardsChange(
+      cards.map((c, i) => (i === idx ? { ...c, linkedToPrev: !c.linkedToPrev } : c)),
+    );
+  };
+
   const removeAt = (idx: number) => {
     if (submitting || cards.length <= 1) return;
     const next = cards.filter((_, i) => i !== idx);
@@ -156,7 +164,8 @@ export function TaskDraftForm({
                 <Fragment key={card.localId}>
                   {idx > 0 && (
                     <ChainConnector
-                      showBlocksLabel={true}
+                      linked={card.linkedToPrev}
+                      onToggle={() => toggleLink(idx)}
                       disabled={submitting || !!draggingId}
                       onInsert={() => insertAt(idx)}
                     />

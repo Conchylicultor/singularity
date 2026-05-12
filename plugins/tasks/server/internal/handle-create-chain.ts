@@ -120,7 +120,7 @@ export async function handleCreateChain(req: Request): Promise<Response> {
         // No forward blocker for the new task from relate.
       }
     }
-    if (!isHead) {
+    if (!isHead && card.linkedToPrev !== false) {
       blockerIds.push(taskIds[i - 1]!);
     }
 

@@ -25,6 +25,9 @@ export const TaskChainCardSchema = z.object({
   attachmentIds: z.array(z.string()).optional(),
   // Honored on head card only when target.kind === "child".
   includeParentTask: z.boolean().optional(),
+  // When false, this card does not block on the previous card (parallel launch).
+  // Omitted means true (sequential, default). Ignored on the head card.
+  linkedToPrev: z.boolean().optional(),
 });
 export type TaskChainCard = z.infer<typeof TaskChainCardSchema>;
 
