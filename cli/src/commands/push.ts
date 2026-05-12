@@ -1,6 +1,8 @@
 import type { Command } from "commander";
-import { existsSync, readdirSync, readFileSync, rmSync, statSync } from "fs";
+import { dlopen } from "bun:ffi";
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statSync } from "fs";
 import { join } from "path";
+import { SINGULARITY_DIR } from "../paths";
 import { checkBroadcasts } from "../broadcasts";
 
 async function run(
@@ -189,6 +191,32 @@ async function getCurrentBranch(): Promise<string> {
   return stdout;
 }
 
+const PUSH_LOCK_PATH = join(SINGULARITY_DIR, "push.lock");
+
+const { symbols: ffi } = dlopen(
+  process.platform === "darwin" ? "libc.dylib" : "libc.so.6",
+  { flock: { args: ["i32", "i32"], returns: "i32" } },
+);
+const LOCK_EX = 2;
+const LOCK_NB = 4;
+
+async function withPushLock<T>(fn: () => Promise<T>): Promise<T> {
+  mkdirSync(SINGULARITY_DIR, { recursive: true });
+  const fd = openSync(PUSH_LOCK_PATH, "w");
+  try {
+    // Try non-blocking first to detect contention
+    const nb = ffi.flock(fd, LOCK_EX | LOCK_NB);
+    if (nb !== 0) {
+      console.log("Another push is in progress — waiting for lock...");
+      ffi.flock(fd, LOCK_EX);
+      console.log("Lock acquired, proceeding.");
+    }
+    return await fn();
+  } finally {
+    closeSync(fd);
+  }
+}
+
 export function registerPush(program: Command) {
   program
     .command("push")
@@ -254,129 +282,116 @@ export function registerPush(program: Command) {
       // Split fetch + rebase because `git pull --rebase --exec` isn't a valid
       // flag combination on Apple Git (the --exec doesn't propagate to rebase).
       if (opts.fromMain) {
-        console.log("Pulling main...");
-        await exec(["git", "fetch", "origin", "main"]);
-        await exec([
-          "git",
-          "rebase",
-          "origin/main",
-          "--exec",
-          `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
-        ]);
-        const fromMainRoot = await getWorktreeRoot();
-        await postRebaseNormalize(fromMainRoot, pushId);
-        console.log("Running checks...");
-        const ok = await runChecksSubprocess(fromMainRoot);
-        if (!ok) {
-          console.error(
-            "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
-              "(your commit is still on HEAD; use `git reset --soft HEAD~1` to unstage it if needed).",
-          );
-          process.exit(1);
-        }
-        console.log("Pushing main...");
-        await exec(["git", "push"]);
+        await withPushLock(async () => {
+          console.log("Pulling main...");
+          await exec(["git", "fetch", "origin", "main"]);
+          await exec([
+            "git",
+            "rebase",
+            "origin/main",
+            "--exec",
+            `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
+          ]);
+          const fromMainRoot = await getWorktreeRoot();
+          await postRebaseNormalize(fromMainRoot, pushId);
+          console.log("Running checks...");
+          const ok = await runChecksSubprocess(fromMainRoot);
+          if (!ok) {
+            console.error(
+              "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
+                "(your commit is still on HEAD; use `git reset --soft HEAD~1` to unstage it if needed).",
+            );
+            process.exit(1);
+          }
+          console.log("Pushing main...");
+          await exec(["git", "push"]);
+        });
         console.log("Done. Pushed directly from main.");
         return;
       }
 
-      // 2. Pull main to ensure it's up to date before merging.
-      // Use explicit fetch + merge instead of `git pull --ff-only` because FETCH_HEAD
-      // is shared across all worktrees; a prior fetch in another worktree can leave
-      // multiple "for-merge" entries, causing "Cannot fast-forward to multiple branches".
+      // Steps 2–7 touch the shared main worktree and must be serialized
+      // across all concurrent agents. The flock is held for the entire
+      // critical section so no two pushes can race on main.
       const mainWorktree = await getMainWorktree();
-      console.log("Pulling main...");
-      await exec(["git", "fetch", "origin", "main"], mainWorktree);
-      await exec(["git", "merge", "--ff-only", "origin/main"], mainWorktree);
+      await withPushLock(async () => {
+        // 2. Pull main to ensure it's up to date before merging.
+        // Use explicit fetch + merge instead of `git pull --ff-only` because FETCH_HEAD
+        // is shared across all worktrees; a prior fetch in another worktree can leave
+        // multiple "for-merge" entries, causing "Cannot fast-forward to multiple branches".
+        console.log("Pulling main...");
+        await exec(["git", "fetch", "origin", "main"], mainWorktree);
+        await exec(["git", "merge", "--ff-only", "origin/main"], mainWorktree);
 
-      // 3. Rebase onto main so the merge is always a fast-forward. `--exec`
-      //    runs after each replayed commit, amending it to carry a shared
-      //    Singularity-Push trailer so the server can group all commits in
-      //    this push as a single event.
-      const { exitCode: rebaseExit } = await run([
-        "git",
-        "rebase",
-        "main",
-        "--exec",
-        `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
-      ]);
-      if (rebaseExit !== 0) {
-        await run(["git", "rebase", "--abort"]);
-        console.error(
-          [
-            `Rebase of ${branch} onto main failed (aborted).`,
-            ``,
-            `Conflicts during this rebase are routine when main has moved — resolve them yourself, don't bail out.`,
-            ``,
-            `To resolve:`,
-            `  1. git fetch origin main`,
-            `  2. git rebase origin/main     (NEVER 'git merge' — push re-rebases and a merge commit produces churn)`,
-            `  3. Resolve conflicts, then 'git add <files>' and 'git rebase --continue'`,
-            `     (or 'git rebase --abort' to bail out)`,
-            `  4. Re-run ./singularity push`,
-            ``,
-            `If main's shape has diverged enough that your commit no longer makes sense,`,
-            `'git reset --hard origin/main' + reapply as a fresh commit is cleaner than rebasing.`,
-          ].join("\n"),
-        );
-        process.exit(1);
-      }
+        // 3. Rebase onto main so the merge is always a fast-forward. `--exec`
+        //    runs after each replayed commit, amending it to carry a shared
+        //    Singularity-Push trailer so the server can group all commits in
+        //    this push as a single event.
+        const { exitCode: rebaseExit } = await run([
+          "git",
+          "rebase",
+          "main",
+          "--exec",
+          `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
+        ]);
+        if (rebaseExit !== 0) {
+          await run(["git", "rebase", "--abort"]);
+          console.error(
+            [
+              `Rebase of ${branch} onto main failed (aborted).`,
+              ``,
+              `Conflicts during this rebase are routine when main has moved — resolve them yourself, don't bail out.`,
+              ``,
+              `To resolve:`,
+              `  1. git fetch origin main`,
+              `  2. git rebase origin/main     (NEVER 'git merge' — push re-rebases and a merge commit produces churn)`,
+              `  3. Resolve conflicts, then 'git add <files>' and 'git rebase --continue'`,
+              `     (or 'git rebase --abort' to bail out)`,
+              `  4. Re-run ./singularity push`,
+              ``,
+              `If main's shape has diverged enough that your commit no longer makes sense,`,
+              `'git reset --hard origin/main' + reapply as a fresh commit is cleaner than rebasing.`,
+            ].join("\n"),
+          );
+          process.exit(1);
+        }
 
-      // 3b. Post-rebase normalize: regenerate auto-generated artifacts
-      //     (docs, drizzle migrations) from the rebased source tree and
-      //     amend the head commit. The merge drivers in .gitattributes
-      //     accepted the upstream side during the rebase; this step makes
-      //     the final commit canonical. Aborts on hand-edited migrations
-      //     or on real conflict markers in CLAUDE.md prose.
-      await postRebaseNormalize(await getWorktreeRoot(), pushId);
+        // 3b. Post-rebase normalize: regenerate auto-generated artifacts
+        //     (docs, drizzle migrations) from the rebased source tree and
+        //     amend the head commit. The merge drivers in .gitattributes
+        //     accepted the upstream side during the rebase; this step makes
+        //     the final commit canonical. Aborts on hand-edited migrations
+        //     or on real conflict markers in CLAUDE.md prose.
+        await postRebaseNormalize(await getWorktreeRoot(), pushId);
 
-      // 4. Run checks on the rebased tree — this is exactly what will land on main.
-      //    Spawned as a subprocess so the check code comes from the rebased
-      //    tree, not the (potentially stale) module cache of this process.
-      console.log("Running checks...");
-      const root = await getWorktreeRoot();
-      const ok = await runChecksSubprocess(root);
-      if (!ok) {
-        console.error(
-          `Checks failed after rebasing ${branch} onto main. ` +
-            `Fix the issue and re-run ./singularity push ` +
-            `(your commits are on ${branch}; use \`git reset --soft HEAD~1\` to unstage the last one if needed).`,
-        );
-        process.exit(1);
-      }
+        // 4. Run checks on the rebased tree — this is exactly what will land on main.
+        //    Spawned as a subprocess so the check code comes from the rebased
+        //    tree, not the (potentially stale) module cache of this process.
+        console.log("Running checks...");
+        const root = await getWorktreeRoot();
+        const ok = await runChecksSubprocess(root);
+        if (!ok) {
+          console.error(
+            `Checks failed after rebasing ${branch} onto main. ` +
+              `Fix the issue and re-run ./singularity push ` +
+              `(your commits are on ${branch}; use \`git reset --soft HEAD~1\` to unstage the last one if needed).`,
+          );
+          process.exit(1);
+        }
 
-      // 5. Push the branch (force since rebase rewrites history — safe for single-owner worktree branches)
-      console.log(`Pushing branch ${branch}...`);
-      await exec(["git", "push", "--force-with-lease", "-u", "origin", branch]);
+        // 5. Push the branch (force since rebase rewrites history — safe for single-owner worktree branches)
+        console.log(`Pushing branch ${branch}...`);
+        await exec(["git", "push", "--force-with-lease", "-u", "origin", branch]);
 
-      // 6. Fast-forward merge into main
-      console.log(`Merging ${branch} into main...`);
-      const { exitCode: mergeExit } = await run(
-        ["git", "merge", "--ff-only", branch],
-        mainWorktree,
-      );
-      if (mergeExit !== 0) {
-        console.error(
-          [
-            `Fast-forward of main onto ${branch} failed.`,
-            ``,
-            `Most likely cause: another push landed on main between the rebase (step 3)`,
-            `and this merge (step 6), causing main to diverge again.`,
-            ``,
-            `Fix: re-run ./singularity push`,
-            `The rebase will pick up the new main commits and the merge will succeed.`,
-          ].join("\n"),
-        );
-        process.exit(1);
-      }
+        // 6. Fast-forward merge into main (guaranteed to succeed — we hold the
+        //    lock, so no other push can have advanced main since our rebase).
+        console.log(`Merging ${branch} into main...`);
+        await exec(["git", "merge", "--ff-only", branch], mainWorktree);
 
-      // 7. Push main
-      console.log("Pushing main...");
-      await exec(["git", "push"], mainWorktree);
-
-      // Dep sync in main is handled by main's auto-build on the next push
-      // event — running `bun install` here races with that build's own
-      // `bun install` and can corrupt node_modules.
+        // 7. Push main
+        console.log("Pushing main...");
+        await exec(["git", "push"], mainWorktree);
+      });
 
       console.log(`Done. ${branch} merged into main and pushed.`);
     });
