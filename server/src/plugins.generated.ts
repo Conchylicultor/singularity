@@ -151,7 +151,7 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (statsCostPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
 (statsTasksPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
 (tasksCorePlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraAttachmentsPlugin, infraEventsPlugin, primitivesRankPlugin];
-(tasksAutoStartPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, tasksCorePlugin];
+(tasksAutoStartPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEntityExtensionsPlugin, tasksCorePlugin];
 (tasksTaskTitlePlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraClaudeCliPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
 (tasksPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraAttachmentsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin, infraMcpPlugin, infraPathsPlugin, infraWorktreePlugin, tasksAutoStartPlugin, tasksCorePlugin, tasksTaskTitlePlugin];
 (terminalPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];

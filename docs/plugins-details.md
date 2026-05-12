@@ -1401,6 +1401,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
       - Defines:
         - DB schema: `plugins/tasks/plugins/auto-start/server/internal/tables.ts`
+        - Entity extension of: `tasks-core` (table `tasks_ext_auto_start`)
       - Exports (web):
         - Types: `TaskAutoStartRow`
         - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`, `useTaskAutoStart`
@@ -1482,7 +1483,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `database.db`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push)
   - Imported by: `active-data`, `agents`, `allow-monitor`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
-  - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`)
+  - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`), `auto-start` (table `tasks_ext_auto_start`)
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):

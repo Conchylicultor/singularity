@@ -617,6 +617,13 @@
       "tag": "20260512_211737_17a17f5b__add_close_requested",
       "hash": "17a17f5b",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1778622720000,
+      "tag": "20260512_215200_f7b59bbc__add_task_auto_start_fk",
+      "hash": "f7b59bbc",
+      "breakpoints": true
     }
   ]
 }

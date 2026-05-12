@@ -7,6 +7,7 @@
 - Description: Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
 - Defines:
   - DB schema: `plugins/tasks/plugins/auto-start/server/internal/tables.ts`
+  - Entity extension of: `tasks-core` (table `tasks_ext_auto_start`)
 - Exports (web):
   - Types: `TaskAutoStartRow`
   - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`, `useTaskAutoStart`
