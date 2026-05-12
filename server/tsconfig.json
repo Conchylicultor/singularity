@@ -20,20 +20,20 @@
     "src",
     "../plugins/*/server",
     "../plugins/*/core",
-    "../plugins/*/internal",
+    "../plugins/*/shared",
     "../plugins/*/check",
     "../plugins/*/plugins/*/server",
     "../plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/internal",
+    "../plugins/*/plugins/*/shared",
     "../plugins/*/plugins/*/check",
     "../plugins/*/plugins/*/plugins/*/server",
     "../plugins/*/plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/plugins/*/internal",
+    "../plugins/*/plugins/*/plugins/*/shared",
     "../plugins/*/plugins/*/plugins/*/plugins/*/server",
     "../plugins/*/plugins/*/plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/internal",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/shared",
     "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/server",
     "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/internal"
+    "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/shared"
   ]
 }

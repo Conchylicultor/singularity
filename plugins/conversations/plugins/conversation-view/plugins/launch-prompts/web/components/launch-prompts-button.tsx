@@ -9,8 +9,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { launchPromptsResource } from "../../internal/resources";
-import type { LaunchPrompt } from "../../internal/resources";
+import { launchPromptsResource } from "../../shared/resources";
+import type { LaunchPrompt } from "../../shared/resources";
 
 const MODEL_LABEL: Record<"sonnet" | "opus", string> = {
   sonnet: "Sonnet",

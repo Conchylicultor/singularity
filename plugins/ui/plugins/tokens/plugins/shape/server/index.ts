@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { Config } from "@plugins/config/server";
-import { shapeConfig } from "../internal";
+import { shapeConfig } from "../shared";
 
 export default {
   id: "ui-tokens-shape",

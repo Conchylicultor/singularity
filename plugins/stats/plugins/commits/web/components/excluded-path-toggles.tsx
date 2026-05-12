@@ -2,7 +2,7 @@ import { z } from "zod";
 import { resourceDescriptor, useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useConfigValues } from "@plugins/config/web";
 import { cn } from "@/lib/utils";
-import { commitsConfig } from "../../internal/config";
+import { commitsConfig } from "../../shared/config";
 
 type PathStateMap = Record<string, boolean>;
 

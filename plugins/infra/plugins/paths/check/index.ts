@@ -25,7 +25,7 @@ const ALLOWED_PATHS = [
   // Database plugin owns its own embedded-PG path constants and config
   // reader. Lives in shared/ so server, central, and CLI can all import
   // from a sanctioned location.
-  "plugins/database/plugins/embedded/internal/internal/paths.ts",
+  "plugins/database/plugins/embedded/shared/internal/paths.ts",
   "plugins/database/core/internal/config.ts",
   // Display-only strings (JSX text, plugin description metadata, log messages).
   "plugins/auth/web/components/accounts-pane.tsx",

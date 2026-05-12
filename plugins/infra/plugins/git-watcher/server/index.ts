@@ -6,8 +6,8 @@ import { startGitWatcher, stopGitWatcher } from "./internal/watcher";
 
 export { refHeadResource } from "./internal/ref-head-resource";
 export { refAdvanced, _refAdvancedTriggers } from "./internal/tables-ref-advanced";
-export type { RefAdvancedPayload, RefHead } from "../internal/types";
-export { RefHeadSchema } from "../internal/types";
+export type { RefAdvancedPayload, RefHead } from "../shared/types";
+export { RefHeadSchema } from "../shared/types";
 
 export default {
   id: "git-watcher",

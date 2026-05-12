@@ -33,20 +33,20 @@
     "../plugin-core",
     "../plugins/*/web",
     "../plugins/*/core",
-    "../plugins/*/internal",
+    "../plugins/*/shared",
     "../plugins/*/lint",
     "../plugins/*/plugins/*/web",
     "../plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/internal",
+    "../plugins/*/plugins/*/shared",
     "../plugins/*/plugins/*/lint",
     "../plugins/*/plugins/*/plugins/*/web",
     "../plugins/*/plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/plugins/*/internal",
+    "../plugins/*/plugins/*/plugins/*/shared",
     "../plugins/*/plugins/*/plugins/*/plugins/*/web",
     "../plugins/*/plugins/*/plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/internal",
+    "../plugins/*/plugins/*/plugins/*/plugins/*/shared",
     "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/web",
     "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/internal"
+    "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/shared"
   ]
 }

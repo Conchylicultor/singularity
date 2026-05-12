@@ -133,7 +133,7 @@ Configured in `tsconfig.json`:
 
 - `@plugins/*` → `../plugins/*/`
 
-The `include` field covers `../plugins/*/server`, `../plugins/*/core`, and `../plugins/*/internal` so plugin server code and shared types are type-checked together with the server.
+The `include` field covers `../plugins/*/server`, `../plugins/*/core`, and `../plugins/*/shared` so plugin server code and shared types are type-checked together with the server.
 
 Server-side plugin dependencies (like `bun-pty`) are declared in the plugin's own `package.json` and resolved via bun workspaces. No path aliases are needed for third-party packages.
 

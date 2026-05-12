@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { Config } from "@plugins/config/server";
-import { costConfig } from "../internal/config";
+import { costConfig } from "../shared/config";
 import {
   handleAvgPerConversation,
   handleCumulative,

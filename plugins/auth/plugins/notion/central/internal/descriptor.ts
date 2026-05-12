@@ -5,7 +5,7 @@ import {
   type AuthProviderDescriptor,
 } from "@plugins/auth/core";
 import { readGlobalConfig } from "@plugins/auth/central";
-import { notionAuthConfig } from "../../internal";
+import { notionAuthConfig } from "../../shared";
 
 interface NotionMe {
   bot?: {

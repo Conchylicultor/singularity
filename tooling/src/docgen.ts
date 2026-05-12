@@ -54,7 +54,7 @@ function renderPluginBody(
   }
 
   const renderExportsAt = (
-    runtime: "web" | "server" | "central" | "core" | "internal",
+    runtime: "web" | "server" | "central" | "core" | "shared",
     exports: BarrelExport[],
   ): void => {
     if (exports.length === 0) return;
@@ -72,7 +72,7 @@ function renderPluginBody(
   renderExportsAt("web", p.exports.web);
   renderExportsAt("server", p.exports.server);
   renderExportsAt("central", p.exports.central);
-  renderExportsAt("internal", p.exports.internal);
+  renderExportsAt("shared", p.exports.shared);
 
   if (p.runtimeContributions && p.runtimeContributions.length > 0) {
     lines.push(`${bodyIndent}- Contributes:`);

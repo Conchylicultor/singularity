@@ -1,1 +1,1 @@
-export { colorPaletteConfig } from "../../internal";
+export { colorPaletteConfig } from "../../shared";

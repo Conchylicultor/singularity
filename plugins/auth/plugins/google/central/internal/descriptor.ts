@@ -5,7 +5,7 @@ import {
   type AuthProviderDescriptor,
 } from "@plugins/auth/core";
 import { readGlobalConfig } from "@plugins/auth/central";
-import { googleAuthConfig, GOOGLE_DEFAULT_SCOPES } from "../../internal";
+import { googleAuthConfig, GOOGLE_DEFAULT_SCOPES } from "../../shared";
 
 interface GoogleUserInfo {
   sub: string;

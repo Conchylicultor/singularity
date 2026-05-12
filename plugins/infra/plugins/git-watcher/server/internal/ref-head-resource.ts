@@ -1,5 +1,5 @@
 import { defineResource } from "@server/resources";
-import { RefHeadSchema } from "../../internal/types";
+import { RefHeadSchema } from "../../shared/types";
 import { readSha } from "./read-sha";
 
 type Params = { refName: string };

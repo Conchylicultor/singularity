@@ -4,7 +4,7 @@ import { defineResource } from "@server/resources";
 import {
   AgentAutoLaunchRowSchema,
   type AgentAutoLaunchRow,
-} from "../../internal/resources";
+} from "../../shared/resources";
 import { agentAutoLaunch } from "./tables";
 
 export const agentAutoLaunchResource = defineResource({

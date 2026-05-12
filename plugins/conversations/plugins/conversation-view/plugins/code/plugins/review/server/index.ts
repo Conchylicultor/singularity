@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { Config } from "@plugins/config/server";
-import { reviewConfig } from "../internal/config";
+import { reviewConfig } from "../shared/config";
 
 export default {
   id: "conversation-code-review",

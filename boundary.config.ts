@@ -13,11 +13,11 @@ export default defineBoundaries({
 
   // Layer 1: Runtime isolation (default-deny — unlisted = blocked)
   runtimes: {
-    web: ["web", "core", "internal"],
-    server: ["server", "core", "internal"],
-    central: ["central", "core", "internal"],
+    web: ["web", "core", "shared"],
+    server: ["server", "core", "shared"],
+    central: ["central", "core", "shared"],
     core: ["core"],
-    internal: ["internal", "core"],
+    shared: ["shared", "core"],
   },
 
   runtimeExceptions: [

@@ -1,5 +1,5 @@
 import { defineSlot } from "@core";
-import type { ColorPaletteTokenValues } from "../internal";
+import type { ColorPaletteTokenValues } from "../shared";
 
 export interface ColorPalettePresetContribution {
   id: string;

@@ -2,7 +2,7 @@ import { sep } from "path";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { ZoneDefinition } from "./types";
 
-const RUNTIMES = new Set(["web", "server", "central", "core", "internal"]);
+const RUNTIMES = new Set(["web", "server", "central", "core", "shared"]);
 
 export interface ResolvedZone {
   /** Zone name without runtime suffix (e.g., "plugin.shell", "core", "server"). */

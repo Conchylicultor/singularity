@@ -1,7 +1,7 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { commitsGraphResource } from "../../internal/resources";
-import type { CommitRow } from "../../internal/protocol";
+import { commitsGraphResource } from "../../shared/resources";
+import type { CommitRow } from "../../shared/protocol";
 import { CommitRail, MergeBaseMarker, COMMIT_ROW_HEIGHT } from "./commit-rail";
 import { convCommitDiffPane } from "../panes";
 

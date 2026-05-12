@@ -17,7 +17,7 @@ function categorize(name: string, kind: "type" | "value"): "type" | "hook" | "co
 function buildSymbolConsumers(tree: PluginTree): Map<string, Map<string, string[]>> {
   const result = new Map<string, Map<string, string[]>>();
   for (const node of tree.byDir.values()) {
-    for (const use of [...node.server.apiUses, ...node.central.apiUses, ...node.webApiUses, ...node.coreApiUses, ...node.internalApiUses]) {
+    for (const use of [...node.server.apiUses, ...node.central.apiUses, ...node.webApiUses, ...node.coreApiUses, ...node.sharedApiUses]) {
       const dot = use.indexOf(".");
       if (dot < 0) continue;
       const targetPlugin = use.slice(0, dot);
@@ -57,7 +57,7 @@ function toApiNode(node: TreePluginNode, symbolConsumers: Map<string, Map<string
         server: mapExports(node.exports.server),
         central: mapExports(node.exports.central),
         core: mapExports(node.exports.core),
-        internal: mapExports(node.exports.internal),
+        shared: mapExports(node.exports.shared),
       },
       importedBy: node.importedBy.sort(),
       slots: node.slots.map((s) => ({

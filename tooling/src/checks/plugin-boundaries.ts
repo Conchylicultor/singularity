@@ -26,7 +26,7 @@ const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
   "central/src/index.ts",
 ]);
 
-const VALID_RUNTIMES = new Set(["web", "server", "central", "core", "internal"]);
+const VALID_RUNTIMES = new Set(["web", "server", "central", "core", "shared"]);
 
 // Every top-level subdirectory inside a plugin must be one of these.
 // Anything else (typos like "serrver/", ad-hoc folders like "utils/") is flagged.
@@ -106,7 +106,7 @@ export const pluginBoundaries: Check = {
     // R3: barrel purity for every index.ts under each plugin's runtime folders
     for (const p of plugins) {
       if (skippedSet.has(p.relPath)) continue;
-      for (const runtime of ["web", "server", "central", "core", "internal"] as const) {
+      for (const runtime of ["web", "server", "central", "core", "shared"] as const) {
         const barrel = join(p.absPath, runtime, "index.ts");
         if (!existsSync(barrel)) continue;
         checkBarrelPurity(barrel, relative(root, barrel), violations, p.relPath);
@@ -188,12 +188,12 @@ export const pluginBoundaries: Check = {
 
         const frameworkExempt = FRAMEWORK_FILES.has(relFile);
 
-        // R10: cross-plugin internal/ imports are forbidden — internal/ is plugin-private.
-        if (!frameworkExempt && resolved.suffixHead === "internal") {
+        // R10: cross-plugin shared/ imports are forbidden — shared/ is plugin-private.
+        if (!frameworkExempt && resolved.suffixHead === "shared") {
           violations.push({
             rule: "cross-plugin-internal",
             file: relFile,
-            message: `cross-plugin import from \`${imp.path}\` — internal/ is plugin-private`,
+            message: `cross-plugin import from \`${imp.path}\` — shared/ is plugin-private`,
             fix: `if \`${resolved.pluginPath}\` needs a public API, create a \`core/\` barrel`,
           });
         }
@@ -236,9 +236,9 @@ export const pluginBoundaries: Check = {
       const parts = e.split("\0");
       return { from: parts[0]!, to: parts[1]!, runtime: parts[2] as "web" | "server" | "central" | "shared" };
     });
-    // Core/internal code is reachable from every runtime.
+    // Core/shared code is reachable from every runtime.
     const crossRuntime = (e: { runtime: string }) =>
-      e.runtime === "core" || e.runtime === "internal";
+      e.runtime === "core" || e.runtime === "shared";
     const webEdges = edgeList.filter((e) => e.runtime === "web" || crossRuntime(e));
     const serverEdges = edgeList.filter((e) => e.runtime === "server" || crossRuntime(e));
     const centralEdges = edgeList.filter((e) => e.runtime === "central" || crossRuntime(e));
@@ -265,7 +265,7 @@ export const pluginBoundaries: Check = {
 function runtimeForPath(
   relFile: string,
   pluginSet: Set<string>,
-): "web" | "server" | "central" | "core" | "internal" | null {
+): "web" | "server" | "central" | "core" | "shared" | null {
   const norm = relFile.split(sep).join("/");
   const pluginPath = pluginForPath(relFile, pluginSet);
   if (!pluginPath) return null;
@@ -275,7 +275,7 @@ function runtimeForPath(
   if (segment === "server") return "server";
   if (segment === "central") return "central";
   if (segment === "core") return "core";
-  if (segment === "internal") return "internal";
+  if (segment === "shared") return "shared";
   return null;
 }
 
@@ -424,7 +424,7 @@ function checkUnknownDirs(p: PluginDir, allPlugins: PluginDir[], violations: Vio
       rule: "unknown-dir",
       file: `plugins/${p.relPath}/${e.name}/`,
       message: `unrecognized directory \`${e.name}/\` contains TypeScript files but is not a recognized zone`,
-      fix: `plugin code must live in one of: ${[...KNOWN_PLUGIN_DIRS].join(", ")}. If this is a typo, rename it. If it's private shared code, use \`internal/\`.`,
+      fix: `plugin code must live in one of: ${[...KNOWN_PLUGIN_DIRS].join(", ")}. If this is a typo, rename it. If it's private shared code, use \`shared/\`.`,
     });
   }
 }
@@ -457,11 +457,11 @@ function dirContainsTsFiles(dir: string): boolean {
  * `export * from "..."` / `export * as X from "..."` are disallowed because
  * docgen can't follow them to enumerate the public surface — every public
  * name must be written in the barrel. Wrap with a named re-export instead:
- * `import * as X from "./internal"; export { X };`.
+ * `import * as X from "./shared"; export { X };`.
  *
  * Any runtime declaration at the top level (`const`, `let`, `var`, `function`, `class`,
  * top-level `await`, control flow) is a violation — it should live in a sibling file
- * (conventionally `internal/`).
+ * (conventionally `shared/`).
  */
 function checkBarrelPurity(absPath: string, relPath: string, violations: Violation[], pluginPath: string) {
   const raw = safeRead(absPath);
@@ -501,7 +501,7 @@ function checkBarrelPurity(absPath: string, relPath: string, violations: Violati
         rule: "barrel-purity",
         file: `${relPath}:${line}`,
         message: `wildcard re-export in barrel: \`${head}${trimmed.length > head.length ? "…" : ""}\``,
-        fix: "docgen can't follow `export *` to enumerate the public surface — every exported name must be written in the barrel. Replace with named re-exports (`export { A, B, type C } from \"./internal/foo\"`) or namespace: `import * as Foo from \"./internal/foo\"; export { Foo };`.",
+        fix: "docgen can't follow `export *` to enumerate the public surface — every exported name must be written in the barrel. Replace with named re-exports (`export { A, B, type C } from \"./shared/foo\"`) or namespace: `import * as Foo from \"./shared/foo\"; export { Foo };`.",
       });
       continue;
     }
@@ -509,7 +509,7 @@ function checkBarrelPurity(absPath: string, relPath: string, violations: Violati
       rule: "barrel-purity",
       file: `${relPath}:${line}`,
       message: `disallowed top-level statement in barrel: \`${head}${trimmed.length > head.length ? "…" : ""}\``,
-      fix: "move this code into a sibling file (conventionally `internal/`). Barrels may only contain imports, re-exports, type aliases, and a single `export default`.",
+      fix: "move this code into a sibling file (conventionally `shared/`). Barrels may only contain imports, re-exports, type aliases, and a single `export default`.",
     });
   }
 }

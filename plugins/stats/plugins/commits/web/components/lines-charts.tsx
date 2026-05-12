@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useConfigValues } from "@plugins/config/web";
 import { useShowEmptyDays } from "@plugins/stats/web";
-import { commitsConfig } from "../../internal/config";
+import { commitsConfig } from "../../shared/config";
 import {
   Area,
   Bar,

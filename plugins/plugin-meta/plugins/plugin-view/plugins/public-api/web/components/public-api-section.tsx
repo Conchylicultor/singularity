@@ -12,8 +12,8 @@ import type {
   SlotInfo,
 } from "@plugins/plugin-meta/plugins/plugin-view/core";
 
-type ExportRuntime = "web" | "server" | "central" | "core" | "internal";
-const RUNTIMES: ExportRuntime[] = ["web", "server", "central", "core", "internal"];
+type ExportRuntime = "web" | "server" | "central" | "core" | "shared";
+const RUNTIMES: ExportRuntime[] = ["web", "server", "central", "core", "shared"];
 
 export function PublicApiSection({ node }: { node: PluginNode }) {
   const api = node.publicApi;
@@ -119,7 +119,7 @@ const RUNTIME_COLORS: Record<ExportRuntime, string> = {
   server: "text-emerald-600 dark:text-emerald-400",
   central: "text-violet-600 dark:text-violet-400",
   core: "text-amber-600 dark:text-amber-400",
-  internal: "text-orange-600 dark:text-orange-400",
+  shared: "text-orange-600 dark:text-orange-400",
 };
 
 function RuntimeGroup({

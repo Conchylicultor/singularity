@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@core";
 import { Config } from "@plugins/config/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
-import { turnSummaryConfig } from "../internal/config";
+import { turnSummaryConfig } from "../shared/config";
 import { TurnSummaryCard } from "./components/turn-summary-card";
 
 export default {

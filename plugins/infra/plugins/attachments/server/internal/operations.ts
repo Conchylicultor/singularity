@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { unlink } from "node:fs/promises";
 import { db } from "@plugins/database/server";
 import { _attachments } from "./tables";
-import type { Attachment } from "../../internal/types";
+import type { Attachment } from "../../shared/types";
 
 export async function getAttachment(id: string): Promise<Attachment | null> {
   const [row] = await db.select().from(_attachments).where(eq(_attachments.id, id)).limit(1);

@@ -12,7 +12,7 @@
   - Values: `addServerPane`, `serverDetailPane`, `serversResource`, `serversRootPane`
 - Exports (server):
   - Values: `_deployServers`, `serversResource`
-- Exports (internal):
+- Exports (shared):
   - Types: `Server`, `ServerStatus`
   - Values: `ServerSchema`, `serversResource`, `ServerStatusSchema`
 - Contributes:

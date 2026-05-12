@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
-import { QueueRankRowSchema, type QueueRankRow } from "../../internal/resources";
+import { QueueRankRowSchema, type QueueRankRow } from "../../shared/resources";
 import { conversationsQueue } from "./tables";
 
 export const queueRanksResource = defineResource({

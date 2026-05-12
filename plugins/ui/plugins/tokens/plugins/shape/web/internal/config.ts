@@ -1,1 +1,1 @@
-export { shapeConfig } from "../../internal";
+export { shapeConfig } from "../../shared";

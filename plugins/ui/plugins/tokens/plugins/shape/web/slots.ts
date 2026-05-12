@@ -1,5 +1,5 @@
 import { defineSlot } from "@core";
-import type { ShapeTokenValues } from "../internal";
+import type { ShapeTokenValues } from "../shared";
 
 export interface ShapePresetContribution {
   id: string;

@@ -31,7 +31,7 @@ const COMPOSITION_ROOTS = [
 export const noPluginImportsInCore: Check = {
   id: "no-plugin-imports-in-core",
   description:
-    "Non-plugin code may only import from `@plugins/*/core` (public API). Other plugin runtimes (web, server, internal) are off-limits.",
+    "Non-plugin code may only import from `@plugins/*/core` (public API). Other plugin runtimes (web, server, shared) are off-limits.",
   async run() {
     const root = await getRoot();
     const proc = Bun.spawn(

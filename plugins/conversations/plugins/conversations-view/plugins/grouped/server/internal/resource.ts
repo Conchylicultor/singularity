@@ -5,7 +5,7 @@ import { _conversationGroupMembers, _conversationGroups } from "./tables";
 import {
   ConversationGroupsPayloadSchema,
   type ConversationGroupsPayload,
-} from "../../internal";
+} from "../../shared";
 
 export const conversationGroupsResource = defineResource<ConversationGroupsPayload>({
   key: "conversation-groups",

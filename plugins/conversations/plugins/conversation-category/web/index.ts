@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@core";
 import { Config } from "@plugins/config/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { conversationCategoryConfig } from "../internal";
+import { conversationCategoryConfig } from "../shared";
 import { CategoryChipToolbar } from "./components/category-chip-toolbar";
 import { CategoryColorSettings } from "./components/category-color-settings";
 

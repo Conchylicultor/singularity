@@ -5,7 +5,7 @@ import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   ReorderSlotPrefsSchema,
   type ReorderSlotPrefs,
-} from "../../internal/resource";
+} from "../../shared/resource";
 import { _reorderPrefs } from "./tables";
 
 export const reorderPrefsResource = defineResource<

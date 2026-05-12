@@ -1,6 +1,6 @@
 import { defineResource } from "@server/resources";
 import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
-import { MainAheadCountSchema } from "../../internal/resources";
+import { MainAheadCountSchema } from "../../shared/resources";
 import { getMainAheadCount } from "./git-status";
 
 // Cascaded off the git-watcher's `refHeadResource`: every advance of

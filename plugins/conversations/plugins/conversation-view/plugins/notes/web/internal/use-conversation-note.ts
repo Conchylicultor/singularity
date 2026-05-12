@@ -4,7 +4,7 @@ import {
   useEditableField,
   type EditableField,
 } from "@plugins/primitives/plugins/editable-field/web";
-import { conversationNotesResource } from "../../internal";
+import { conversationNotesResource } from "../../shared";
 import { upsertNote, deleteNote } from "./api";
 import { useIsOpen, setIsOpen, toggleIsOpen } from "./notes-visibility-store";
 

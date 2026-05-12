@@ -78,7 +78,7 @@ export interface PluginNode {
   runtimes: Record<Runtime, boolean>;
   children: PluginNode[];
 
-  exports: Record<Runtime | "core" | "internal", BarrelExport[]>;
+  exports: Record<Runtime | "core" | "shared", BarrelExport[]>;
   slots: SlotDef[];
   commands: CommandDef[];
   contributions: Contribution[];
@@ -86,7 +86,7 @@ export interface PluginNode {
   central: RuntimeDetail;
   webApiUses: string[];
   coreApiUses: string[];
-  internalApiUses: string[];
+  sharedApiUses: string[];
   dbFiles: string[];
 
   importedBy: string[];
@@ -407,7 +407,7 @@ function parsePaneDefinitions(webDir: string): Map<string, PaneDefinition> {
   return out;
 }
 
-function parseServerApiUses(serverDir: string, selfName: string, runtime: "web" | "server" | "central" | "core" | "internal" = "server"): string[] {
+function parseServerApiUses(serverDir: string, selfName: string, runtime: "web" | "server" | "central" | "core" | "shared" = "server"): string[] {
   const files: string[] = [];
   walkFiles(serverDir, files);
   const uses = new Set<string>();
@@ -574,8 +574,7 @@ function findAllPluginDirs(pluginsRoot: string): string[] {
     const hasCentral = existsSync(join(dir, "central", "index.ts"));
     const hasShared = existsSync(join(dir, "shared", "index.ts"));
     const hasCore = existsSync(join(dir, "core", "index.ts"));
-    const hasInternal = existsSync(join(dir, "internal", "index.ts"));
-    const hasBarrel = hasWeb || hasServer || hasCentral || hasShared || hasCore || hasInternal;
+    const hasBarrel = hasWeb || hasServer || hasCentral || hasShared || hasCore;
     const isUmbrella =
       !hasBarrel &&
       existsSync(join(dir, "plugins")) &&
@@ -698,8 +697,8 @@ function collectPlugin(dir: string, pluginsRoot: string): CollectedPlugin {
   const centralExports = centralIndex ? parseBarrelExports(centralIndex) : [];
   const coreIndex = readIfExists(join(dir, "core", "index.ts"));
   const coreExports = coreIndex ? parseBarrelExports(coreIndex) : [];
-  const internalIndex = readIfExists(join(dir, "internal", "index.ts"));
-  const internalExports = internalIndex ? parseBarrelExports(internalIndex) : [];
+  const sharedIndex = readIfExists(join(dir, "shared", "index.ts"));
+  const sharedExports = sharedIndex ? parseBarrelExports(sharedIndex) : [];
 
   const serverDir = join(dir, "server");
   const serverApiUses = existsSync(serverDir) ? parseServerApiUses(serverDir, basename(dir)) : [];
@@ -713,10 +712,10 @@ function collectPlugin(dir: string, pluginsRoot: string): CollectedPlugin {
   const centralRegister = centralSrc ? parseRegisterTokens(centralSrc) : [];
   const webDir = join(dir, "web");
   const coreDir = join(dir, "core");
-  const internalDir = join(dir, "internal");
+  const sharedDir = join(dir, "shared");
   const webApiUses = existsSync(webDir) ? parseServerApiUses(webDir, basename(dir), "web") : [];
   const coreApiUses = existsSync(coreDir) ? parseServerApiUses(coreDir, basename(dir), "core") : [];
-  const internalApiUses = existsSync(internalDir) ? parseServerApiUses(internalDir, basename(dir), "internal") : [];
+  const sharedApiUses = existsSync(sharedDir) ? parseServerApiUses(sharedDir, basename(dir), "shared") : [];
 
   const rel = relative(pluginsRoot, dir);
   const segs = rel.split(/[\\/]+/);
@@ -748,7 +747,7 @@ function collectPlugin(dir: string, pluginsRoot: string): CollectedPlugin {
         server: serverExports,
         central: centralExports,
         core: coreExports,
-        internal: internalExports,
+        shared: sharedExports,
       },
       slots,
       commands,
@@ -769,7 +768,7 @@ function collectPlugin(dir: string, pluginsRoot: string): CollectedPlugin {
       },
       webApiUses,
       coreApiUses,
-      internalApiUses,
+      sharedApiUses,
       dbFiles,
       importedBy: [],
       slotContributors: [],
@@ -788,7 +787,7 @@ function computeRelationships(byDir: Map<string, PluginNode>): void {
 
   for (const importer of byDir.values()) {
     const referenced = new Set<string>();
-    for (const u of [...importer.server.apiUses, ...importer.central.apiUses, ...importer.webApiUses, ...importer.coreApiUses, ...importer.internalApiUses]) {
+    for (const u of [...importer.server.apiUses, ...importer.central.apiUses, ...importer.webApiUses, ...importer.coreApiUses, ...importer.sharedApiUses]) {
       referenced.add(u.split(".")[0]!);
     }
     for (const targetName of referenced) {
@@ -872,7 +871,7 @@ function computeRelationships(byDir: Map<string, PluginNode>): void {
   for (const info of byDir.values()) {
     pluginVarToTable.set(info.name, parseTableNamesFromDbFiles(info.dbFiles));
   }
-  const pluginModuleRe = /@plugins\/([^/"'`]+)\/(?:server|central|shared|core|internal)/;
+  const pluginModuleRe = /@plugins\/([^/"'`]+)\/(?:server|central|shared|core)/;
   for (const info of byDir.values()) {
     for (const ref of parseEntityExtensionCalls(info.dbFiles)) {
       const pluginMatch = ref.parentModule.match(pluginModuleRe);

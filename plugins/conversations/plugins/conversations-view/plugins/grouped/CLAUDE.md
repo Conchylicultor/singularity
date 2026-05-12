@@ -9,7 +9,7 @@
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
 - Exports (server):
   - Values: `_conversationGroupMembers`, `_conversationGroups`, `addMemberToGroup`, `conversationGroupsResource`
-- Exports (internal):
+- Exports (shared):
   - Types: `ConversationGroup`, `ConversationGroupMember`, `ConversationGroupsPayload`
   - Values: `ConversationGroupMemberSchema`, `ConversationGroupSchema`, `ConversationGroupsPayloadSchema`, `conversationGroupsResource`
 - Contributes:

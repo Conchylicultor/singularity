@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { Config } from "@plugins/config/server";
-import { sidebarPaletteConfig } from "../internal";
+import { sidebarPaletteConfig } from "../shared";
 
 export default {
   id: "ui-tokens-sidebar-palette",

@@ -23,7 +23,7 @@ export interface ResourceInfo {
 }
 
 export interface PublicApi {
-  exports: Record<"web" | "server" | "central" | "core" | "internal", BarrelExport[]>;
+  exports: Record<"web" | "server" | "central" | "core" | "shared", BarrelExport[]>;
   importedBy: string[];
   slots: SlotInfo[];
   routes: RouteInfo[];

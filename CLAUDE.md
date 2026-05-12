@@ -45,7 +45,7 @@ Think carefully about the plugin's boundaries, APIs, etc. when designing plugins
 ### Plugin boundary rules (enforced by `./singularity check --plugin-boundaries`)
 
 - **One barrel per runtime.** `plugins/<name>/<runtime>/index.ts` is the only cross-plugin entry point. No `api.ts`, no deep paths.
-- **Cross-plugin import grammar.** Only runtime barrels are legal: `@plugins/<name>/{web,server,core}` for top-level plugins, or `@plugins/<name>/plugins/.../.../{web,server,core}` for any nesting depth. `internal/` is plugin-private — cross-plugin imports from `internal/` are forbidden (enforced by R10). Forbidden: paths that go *inside* a barrel (`/web/components/`, `/server/internal/`, etc.), workspace-name imports (`@singularity/plugin-shell`), and relative `../` escapes into another plugin's tree.
+- **Cross-plugin import grammar.** Only runtime barrels are legal: `@plugins/<name>/{web,server,core}` for top-level plugins, or `@plugins/<name>/plugins/.../.../{web,server,core}` for any nesting depth. `shared/` is plugin-private — cross-plugin imports from `shared/` are forbidden (enforced by R10). Forbidden: paths that go *inside* a barrel (`/web/components/`, `/server/internal/`, etc.), workspace-name imports (`@singularity/plugin-shell`), and relative `../` escapes into another plugin's tree.
 - **No cross-plugin re-exports.** Import the source barrel directly — never proxy another plugin's symbols through your own barrel. Re-exports hide the real dependency. Right: `import { X } from "@plugins/tasks/plugins/task-draft-form/web"`. Wrong: re-exporting `X` from `@plugins/tasks/web` so others don't have to.
 - **Barrel purity.** Each `index.ts` may only contain `import` statements, re-exports of the plugin's own internal files, type aliases, and a single `export default <definePlugin(...)>`. No `const`/`let`, no logic, no side effects.
 - **Registry exclusivity.** Default-export imports (`import fooPlugin from "@plugins/foo/web"`) are only allowed in `web/src/plugins.ts` and `server/src/plugins.ts`.
@@ -61,7 +61,7 @@ Think carefully about the plugin's boundaries, APIs, etc. when designing plugins
 │       ├── web/      # Frontend code
 │       ├── server/   # Backend code
 │       ├── core/     # Public API — types/utils importable cross-plugin and from server/web
-│       ├── internal/ # Private DRY — shared within this plugin only, never imported cross-plugin
+│       ├── shared/   # Private DRY — shared between web/server within this plugin only, never imported cross-plugin
 │       ├── lint/     # ESLint rules contributed by this plugin (optional)
 │       └── check/    # Custom Check[] enforced by ./singularity check (optional)
 ├── web/              # Frontend bootstrap (SPA shell, plugin registry)

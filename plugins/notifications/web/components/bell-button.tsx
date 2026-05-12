@@ -8,8 +8,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { notificationsResource } from "../../internal/resources";
-import type { Notification } from "../../internal/schema";
+import { notificationsResource } from "../../shared/resources";
+import type { Notification } from "../../shared/schema";
 
 const VARIANT_BORDER: Record<Notification["variant"], string> = {
   error: "border-l-destructive",

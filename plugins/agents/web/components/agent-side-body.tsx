@@ -1,6 +1,6 @@
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { agentsResource, type Agent } from "../../internal/resources";
+import { agentsResource, type Agent } from "../../shared/resources";
 import { agentSidePane } from "../panes";
 import { AgentDetail } from "./agent-detail";
 

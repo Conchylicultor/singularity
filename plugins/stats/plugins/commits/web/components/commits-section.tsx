@@ -1,6 +1,6 @@
 import { setConfigValue, useConfigValues } from "@plugins/config/web";
 import { cn } from "@/lib/utils";
-import { commitsConfig } from "../../internal/config";
+import { commitsConfig } from "../../shared/config";
 import { CumulativeCommitsChart } from "./cumulative-chart";
 import { CommitsRateChart } from "./rate-chart";
 

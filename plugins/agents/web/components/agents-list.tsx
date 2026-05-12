@@ -14,7 +14,7 @@ import {
   AVATAR_COLOR_KEYS,
   DEFAULT_AGENT_AVATAR,
 } from "@plugins/primitives/plugins/avatar/web";
-import { agentsResource } from "../../internal/resources";
+import { agentsResource } from "../../shared/resources";
 import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";
 import { AgentStatus } from "./agent-status";

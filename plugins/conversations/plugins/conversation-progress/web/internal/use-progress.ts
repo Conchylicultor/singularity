@@ -1,6 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { conversationProgressResource } from "../../internal/schemas";
-import type { ConversationProgress } from "../../internal/schemas";
+import { conversationProgressResource } from "../../shared/schemas";
+import type { ConversationProgress } from "../../shared/schemas";
 
 export function useProgressFor(conversationId: string): ConversationProgress | null {
   const { data } = useResource(conversationProgressResource);

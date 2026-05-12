@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { Config } from "@plugins/config/server";
-import { googleAuthConfig } from "../internal";
+import { googleAuthConfig } from "../shared";
 
 // Worktree-side registration carrier. The OAuth runtime (descriptor, refresh
 // loop, token store) lives in `../central/`. This stub exists solely so the

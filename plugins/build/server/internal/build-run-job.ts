@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { readConfig } from "@plugins/config/server";
-import { buildConfig } from "../../internal/config";
+import { buildConfig } from "../../shared/config";
 import { isBuildInflight, triggerBuild } from "./run-build";
 import { setLastAutoBuildAt } from "./auto-build-tracker";
 

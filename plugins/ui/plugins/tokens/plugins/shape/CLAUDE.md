@@ -10,7 +10,7 @@
 - Exports (web):
   - Types: `ShapePresetContribution`
   - Values: `Shape`
-- Exports (internal):
+- Exports (shared):
   - Types: `ShapeTokenValues`
   - Values: `shapeConfig`, `shapeGroup`
 - Contributes:

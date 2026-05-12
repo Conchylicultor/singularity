@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { agentLaunchesResource } from "../../internal/resources";
+import { agentLaunchesResource } from "../../shared/resources";
 import { cn } from "@/lib/utils";
 
 export function AgentStatus({ agentId, size = "sm" }: { agentId: string; size?: "sm" | "md" }) {

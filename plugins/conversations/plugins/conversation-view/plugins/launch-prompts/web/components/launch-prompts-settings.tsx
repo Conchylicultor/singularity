@@ -4,8 +4,8 @@ import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { launchPromptsResource } from "../../internal/resources";
-import type { LaunchPrompt } from "../../internal/resources";
+import { launchPromptsResource } from "../../shared/resources";
+import type { LaunchPrompt } from "../../shared/resources";
 
 function toastError(title: string, err: unknown) {
   ShellCommands.Toast({

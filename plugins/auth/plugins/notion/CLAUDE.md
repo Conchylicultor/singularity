@@ -5,7 +5,7 @@
 ## Plugin reference
 
 - Description: Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
-- Exports (internal):
+- Exports (shared):
   - Values: `notionAuthConfig`
 - Contributes:
   - `Auth.Provider` "Notion"

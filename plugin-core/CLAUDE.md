@@ -143,7 +143,7 @@ export default {
 `@core` is the **framework** only — slots, commands, contributions, plugin context, and the `PluginDefinition` type. Cross-cutting client-side primitives live as plugins under [`plugins/primitives/`](../plugins/primitives/):
 
 - `<PluginErrorBoundary>`, `ErrorBoundary.Action`, `registerBoundaryReporter` → `@plugins/primitives/plugins/error-boundary/web`
-- `useResource`, `NotificationsProvider`, `resourceDescriptor` → `@plugins/primitives/plugins/live-state/web` (and `…/core` or `…/internal` for resource declarations)
+- `useResource`, `NotificationsProvider`, `resourceDescriptor` → `@plugins/primitives/plugins/live-state/web` (and `…/core` or `…/shared` for resource declarations)
 - `useReconnectingWebSocket`, `ReconnectingEventSource`, `SharedWebSocket`, `fetchWithRetry`, `subscribeWsStatus` → `@plugins/primitives/plugins/networking/web`
 - `useEditableField` → `@plugins/primitives/plugins/editable-field/web`
 
@@ -172,7 +172,7 @@ plugins/
     │   └── internal/     # Handler implementations, business logic (never imported externally)
     ├── core/             # Public API — types/utils importable cross-plugin (@plugins/foo/core)
     │   └── index.ts      # Barrel re-exporting public types and values
-    ├── internal/         # Private DRY — shared within this plugin only (intra-plugin @plugins/foo/internal)
+    ├── shared/           # Private DRY — shared between web/server within this plugin only (intra-plugin @plugins/foo/shared)
     │   └── protocol.ts   # e.g. WebSocket message types, resource descriptors
     └── scripts/          # Standalone entry points invoked outside the server/web build
         └── start.ts      # e.g. DB lifecycle, future: server bootstrap, CLI entry points

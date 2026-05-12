@@ -8,7 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { conversationCategoryConfig } from "../../internal";
+import { conversationCategoryConfig } from "../../shared";
 import { useCategoryFor } from "../internal/use-category";
 import { useCategoryColors } from "../internal/use-category-colors";
 import { colorClassFor } from "../internal/colors";

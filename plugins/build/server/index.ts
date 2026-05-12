@@ -13,7 +13,7 @@ import { getMainAheadCount } from "./internal/git-status";
 import { mainAheadCountResource } from "./internal/main-ahead-resource";
 import { buildHistoryResource } from "./internal/build-history-resource";
 import { _buildRuns } from "./internal/tables";
-import { buildConfig } from "../internal/config";
+import { buildConfig } from "../shared/config";
 
 export default {
   id: "build",

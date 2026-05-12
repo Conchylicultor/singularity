@@ -1,4 +1,4 @@
-import type { CrashReport } from "../internal/types";
+import type { CrashReport } from "../shared/types";
 
 export interface CrashReportResult {
   taskId: string | null;

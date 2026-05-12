@@ -3,7 +3,7 @@ import { Resource } from "@server/resources";
 import { Config } from "@plugins/config/server";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { conversationTurnCompleted } from "@plugins/conversations/server";
-import { conversationCategoryConfig } from "../internal/config";
+import { conversationCategoryConfig } from "../shared/config";
 import { classifyConversationJob } from "./internal/classify-job";
 import { conversationCategoriesResource } from "./internal/resource";
 import { categoryColorsResource } from "./internal/colors-resource";

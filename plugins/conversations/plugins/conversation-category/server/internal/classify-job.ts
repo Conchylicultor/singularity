@@ -10,7 +10,7 @@ import {
   ClaudeCliError,
   runClaudePrint,
 } from "@plugins/infra/plugins/claude-cli/server";
-import { conversationCategoryConfig } from "../../internal/config";
+import { conversationCategoryConfig } from "../../shared/config";
 import { conversationCategory } from "./tables";
 import { conversationCategoriesResource } from "./resource";
 import { pickCategory } from "./pick-category";

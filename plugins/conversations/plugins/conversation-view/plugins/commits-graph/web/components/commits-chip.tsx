@@ -5,7 +5,7 @@ import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import { pushesResource } from "@plugins/tasks/core";
-import { commitDeltaResource } from "../../internal/resources";
+import { commitDeltaResource } from "../../shared/resources";
 import { convCommitsGraphPane } from "../panes";
 
 export function CommitsChip() {

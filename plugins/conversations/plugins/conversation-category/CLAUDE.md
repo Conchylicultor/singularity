@@ -43,7 +43,7 @@ unless the user clicks "Re-classify with Haiku".
   - Entity extension of: `tasks-core` (table `conversations_ext_category`)
 - Exports (server):
   - Values: `_conversationCategoryColors`, `categoryColorsResource`, `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`
-- Exports (internal):
+- Exports (shared):
   - Types: `ConversationCategoriesPayload`, `ConversationCategory`
   - Values: `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`
 - Contributes:

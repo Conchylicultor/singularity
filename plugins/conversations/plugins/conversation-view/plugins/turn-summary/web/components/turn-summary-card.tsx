@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, AlertTriangle, ArrowRight } from "lucide-react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { turnSummariesResource } from "../../internal";
+import { turnSummariesResource } from "../../shared";
 
 function parseBullets(text: string): string[] {
   if (!text.trim()) return [];

@@ -31,7 +31,7 @@ import {
   reorderGroupsResource,
   type ReorderGroup,
 } from "@plugins/reorder/plugins/groups/core";
-import { reorderPrefsResource } from "../../internal/resource";
+import { reorderPrefsResource } from "../../shared/resource";
 import {
   lookupReorderConfig,
   type ReorderableSlot,

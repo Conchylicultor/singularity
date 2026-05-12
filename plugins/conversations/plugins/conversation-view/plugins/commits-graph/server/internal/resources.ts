@@ -6,7 +6,7 @@ import {
   CommitsGraphSchema,
   type CommitDelta,
   type CommitsGraph,
-} from "../../internal/protocol";
+} from "../../shared/protocol";
 import { computeDelta, computeGraph } from "./compute-graph";
 
 type Params = { attemptId: string };
