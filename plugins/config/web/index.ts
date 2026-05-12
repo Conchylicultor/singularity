@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Shell } from "@plugins/shell/web";
 import { MdSettings } from "react-icons/md";
@@ -28,7 +28,7 @@ export default {
     Pane.Register({ pane: settingsPane }),
     Shell.Sidebar({
       id: "settings",
-      ...sidebarNavItem({ title: "Settings", icon: MdSettings, onClick: () => settingsPane.open({}) }),
+      ...sidebarNavItem({ title: "Settings", icon: MdSettings, onClick: () => openPane(settingsPane, {}) }),
     }),
   ],
 } satisfies PluginDefinition;

@@ -1,4 +1,5 @@
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { patchTask, useTask } from "@plugins/tasks/web";
 import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
@@ -6,8 +7,9 @@ import { DescriptionView } from "./description-view";
 
 export function TaskDescription({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
+  const openPane = useOpenPane();
   const openFile = (path: string) =>
-    filePeekPane.open({ worktree: "main", filePath: path });
+    openPane(filePeekPane, { worktree: "main", filePath: path });
 
   const descField = useEditableField({
     value: task?.description ?? "",

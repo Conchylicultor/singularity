@@ -1,14 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { cn } from "@/lib/utils";
 import { ConversationsView } from "../slots";
 
 const ACTIVE_VIEW_KEY = "conversations-view:active-view";
-
-function openConversation(name: string) {
-  conversationPane.open({ convId: name }, { root: true });
-}
 
 function activeIdFromPath(pathname: string): string | null {
   const m = pathname.match(/^\/c\/([^/]+)/);
@@ -17,6 +14,7 @@ function activeIdFromPath(pathname: string): string | null {
 
 export function ConversationList() {
   const views = ConversationsView.View.useContributions();
+  const openPane = useOpenPane();
   const ordered = useMemo(
     () => [...views].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
     [views],
@@ -60,7 +58,7 @@ export function ConversationList() {
   };
 
   const navigate = (id: string) => {
-    openConversation(id);
+    openPane(conversationPane, { convId: id }, { root: true });
     setActiveId(id);
   };
 

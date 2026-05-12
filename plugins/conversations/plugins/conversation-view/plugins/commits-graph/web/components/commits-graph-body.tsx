@@ -1,4 +1,5 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { commitsGraphResource } from "../../shared/resources";
 import type { CommitRow } from "../../shared/protocol";
@@ -158,11 +159,12 @@ function CommitRowItem({
   pushed?: boolean;
   convId: string;
 }) {
+  const openPane = useOpenPane();
   return (
     <li
       className="flex cursor-pointer items-center gap-2 border-b border-border/50 pl-2 pr-3 hover:bg-accent/50"
       style={{ height: COMMIT_ROW_HEIGHT }}
-      onClick={() => convCommitDiffPane.open({ convId, sha: commit.sha })}
+      onClick={() => openPane(convCommitDiffPane, { convId, sha: commit.sha })}
     >
       <CommitRail isFirst={isFirst} isLast={isLast} color={color} />
       <span

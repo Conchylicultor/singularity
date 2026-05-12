@@ -5,12 +5,13 @@ import {
   ConversationItem,
   CONV_STATUS_DOT,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 
 export function ConvChip({ content }: { content: string; attrs: Record<string, string> }) {
   const sideConvId = content.trim();
   const conv = useConversationById(sideConvId || null);
   const match = usePaneMatch();
+  const openPane = useOpenPane();
   const parentEntry = match?.chain.find(
     (e) => e.pane === conversationPane._internal,
   );
@@ -27,9 +28,9 @@ export function ConvChip({ content }: { content: string; attrs: Record<string, s
         // rewrites to /c/A/c/C (replace the side, host unchanged).
         // Self-reference or out-of-conversation context → full /c view.
         if (parentConvId && parentConvId !== sideConvId) {
-          convSidePane.open({ convId: parentConvId, sideConvId });
+          openPane(convSidePane, { convId: parentConvId, sideConvId });
         } else {
-          conversationPane.open({ convId: sideConvId });
+          openPane(conversationPane, { convId: sideConvId });
         }
       }}
       className="inline-flex max-w-full items-center gap-1.5 rounded bg-muted px-1.5 py-0.5 align-baseline text-xs text-primary hover:bg-muted/80 hover:underline"

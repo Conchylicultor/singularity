@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MdOpenInNew } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { convSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-conversation/web";
@@ -68,6 +68,7 @@ export function TaskEvents({ taskId }: { taskId: string }) {
   const pushesQ = useResource(pushesResource);
   const githubBase = useGithubBase();
   const match = usePaneMatch();
+  const openPane = useOpenPane();
   const isInsideConversation = match?.chain.some(
     (e) => e.pane === conversationPane._internal,
   ) ?? false;
@@ -194,11 +195,11 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                                     taskConversationPane.close();
                                   }
                                 } else if (isInsideConversation) {
-                                  convSidePane.open({
+                                  openPane(convSidePane, {
                                     sideConvId: c.id,
                                   });
                                 } else {
-                                  taskConversationPane.open({
+                                  openPane(taskConversationPane, {
                                     taskId,
                                     convId: c.id,
                                   });

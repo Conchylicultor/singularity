@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { MdArticle } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { convDocsPane, isDocFile } from "../panes";
@@ -12,6 +12,7 @@ export function DocsButton() {
   const { files } = useEditedFiles(conversation.id);
   const pushedDocs = usePushedDocFiles(conversation.attemptId);
   const match = usePaneMatch();
+  const openPane = useOpenPane();
   const isOpen =
     match?.chain.some((e) => e.pane === convDocsPane._internal) ?? false;
 
@@ -37,7 +38,7 @@ export function DocsButton() {
       onClick={() =>
         isOpen
           ? convDocsPane.close()
-          : convDocsPane.open({ convId: conversation.id })
+          : openPane(convDocsPane, { convId: conversation.id })
       }
       className="gap-1.5"
     >

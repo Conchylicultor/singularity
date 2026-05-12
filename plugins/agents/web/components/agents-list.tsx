@@ -1,5 +1,6 @@
 import { MdAdd } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   RenameInput,
   RowChrome,
@@ -112,6 +113,7 @@ export function AgentsList({
   const { data } = useResource(agentsResource);
   const rows = data;
   const listActions = AgentsSlots.ListActions.useContributions();
+  const openPane = useOpenPane();
 
   return (
     <div className="flex flex-col gap-1">
@@ -120,7 +122,7 @@ export function AgentsList({
         rows={rows}
         selectedId={selectedId}
         onSelect={(id) =>
-          onSelect ? onSelect(id) : agentDetailPane.open({ id })
+          onSelect ? onSelect(id) : openPane(agentDetailPane, { id })
         }
         onToggleExpanded={(id, next) => patchAgent(id, { expanded: next })}
         onMove={(id, dest) => patchAgent(id, dest)}

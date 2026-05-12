@@ -15,6 +15,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { tasksResource, type Task } from "@plugins/tasks/core";
 import { taskDetailPane, useTaskNavigate } from "@plugins/tasks/plugins/task-detail/web";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
@@ -228,12 +229,13 @@ export function TaskGraph({ taskId }: { taskId: string }) {
     [closure, taskId],
   );
   const ctxNavigate = useTaskNavigate();
+  const openPane = useOpenPane();
   const onNavigate = useCallback(
     (id: string) => {
       if (ctxNavigate) ctxNavigate(id);
-      else taskDetailPane.open({ taskId: id });
+      else openPane(taskDetailPane, { taskId: id });
     },
-    [ctxNavigate],
+    [ctxNavigate, openPane],
   );
 
   if (closure.length <= 1) return null;

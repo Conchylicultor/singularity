@@ -18,6 +18,8 @@ export {
   buildChainUrl,
   getChain,
   syncChainFromUrl,
+  openPane,
+  useOpenPane,
 } from "./pane";
 export type {
   PaneObject,

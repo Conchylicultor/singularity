@@ -1,5 +1,6 @@
 import { MdArrowForward } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useConversations } from "@plugins/conversations/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { cn } from "@/lib/utils";
@@ -23,8 +24,9 @@ export function WelcomeView() {
   const workingCount = active.filter((c) => c.status === "working").length;
   const totalCount = activeCount + totalGoneCount;
 
+  const openPane = useOpenPane();
   const openConversation = (name: string) => {
-    conversationPane.open({ convId: name });
+    openPane(conversationPane, { convId: name }, { root: true });
   };
 
   const recentConversations = conversations.slice(0, 5);

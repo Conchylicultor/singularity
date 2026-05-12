@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@/components/ui/button";
 import { tasksResource, type Task } from "@plugins/tasks/core";
 import { useTask } from "@plugins/tasks/web";
@@ -100,8 +101,9 @@ function DepChip({
   const dep = tasks.find((t) => t.id === depId) ?? null;
   const title = dep?.title ?? depId;
   const isTerminal = dep ? dep.status === "done" || dep.status === "dropped" : false;
+  const openPane = useOpenPane();
 
-  const open = () => taskDetailPane.open({ taskId: depId });
+  const open = () => openPane(taskDetailPane, { taskId: depId });
   const remove = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await fetch(`/api/tasks/${taskId}/dependencies/${depId}`, {

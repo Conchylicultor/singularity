@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { agentLaunchesResource } from "../../shared/resources";
 import { agentConversationPane } from "../panes";
@@ -19,6 +19,7 @@ function formatDate(value: Date | string): string {
 export function AgentLaunches({ agentId }: { agentId: string }) {
   const launchesQ = useResource(agentLaunchesResource);
   const match = usePaneMatch();
+  const openPane = useOpenPane();
   const activeConvId = match?.chain.find(
     (e) => e.pane === agentConversationPane._internal,
   )?.params.convId;
@@ -52,7 +53,7 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
                     if (isActive) {
                       agentConversationPane.close();
                     } else {
-                      agentConversationPane.open({
+                      openPane(agentConversationPane, {
                         id: agentId,
                         convId: primary.id,
                       });

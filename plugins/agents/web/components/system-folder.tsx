@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MdChevronRight, MdSmartToy } from "react-icons/md";
 import { cn } from "@/lib/utils";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Agents as AgentsSlots } from "../slots";
 import { systemAgentDetailPane } from "../panes";
 
@@ -11,6 +12,7 @@ export function SystemFolder({
 }) {
   const descriptors = AgentsSlots.SystemAgent.useContributions();
   const [open, setOpen] = useState(true);
+  const openPane = useOpenPane();
 
   if (descriptors.length === 0) return null;
 
@@ -42,7 +44,7 @@ export function SystemFolder({
               <button
                 key={d.id}
                 type="button"
-                onClick={() => systemAgentDetailPane.open({ systemId: d.id })}
+                onClick={() => openPane(systemAgentDetailPane, { systemId: d.id })}
                 className={cn(
                   "flex items-center gap-2 rounded px-1 py-1 text-sm",
                   "hover:bg-accent",

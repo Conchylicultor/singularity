@@ -1,5 +1,5 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome, type, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Deploy } from "@plugins/apps/plugins/deploy/plugins/shell/web";
 import { serversResource, type Server } from "../shared";
 import { ServersList } from "./components/servers-list";
@@ -41,10 +41,11 @@ function ServersRoot() {
 }
 
 function AddServerBody() {
+  const openPane = useOpenPane();
   return (
     <PaneChrome pane={addServerPane}>
       <AddServerForm
-        onSuccess={(id) => serverDetailPane.open({ serverId: id })}
+        onSuccess={(id) => openPane(serverDetailPane, { serverId: id })}
       />
     </PaneChrome>
   );

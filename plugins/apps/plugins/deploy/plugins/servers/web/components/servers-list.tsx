@@ -1,5 +1,5 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { serversResource, type Server } from "../../shared";
 import { addServerPane, serverDetailPane } from "../panes";
 import { ServerStatusBadge } from "./server-status-badge";
@@ -7,6 +7,7 @@ import { ServerStatusBadge } from "./server-status-badge";
 export function ServersList() {
   const { data: servers } = useResource(serversResource);
   const match = usePaneMatch();
+  const openPane = useOpenPane();
   const selectedId = match?.chain.find(
     (e) => e.pane === serverDetailPane._internal,
   )?.params.serverId;
@@ -19,7 +20,7 @@ export function ServersList() {
       <div className="flex items-center justify-between border-b px-4 py-3">
         <h2 className="text-sm font-semibold">Servers</h2>
         <button
-          onClick={() => addServerPane.open({})}
+          onClick={() => openPane(addServerPane, {})}
           className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
             addingServer
               ? "bg-accent text-accent-foreground"
@@ -51,9 +52,10 @@ export function ServersList() {
 }
 
 function ServerRow({ server, selected }: { server: Server; selected: boolean }) {
+  const openPane = useOpenPane();
   return (
     <button
-      onClick={() => serverDetailPane.open({ serverId: server.id })}
+      onClick={() => openPane(serverDetailPane, { serverId: server.id })}
       className={`flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
         selected ? "bg-accent" : "hover:bg-accent/50"
       }`}

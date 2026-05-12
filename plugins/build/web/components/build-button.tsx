@@ -5,6 +5,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { MdRefresh, MdOpenInFull } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { mainAheadCountResource, buildHistoryResource } from "../../shared/resources";
 import { BuildPopoverContent } from "./build-popover-content";
@@ -30,6 +31,7 @@ export function BuildButton() {
   const [autoBuilding, setAutoBuilding] = useState(false);
   const [staleTab, setStaleTab] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const openPane = useOpenPane();
   const initialHashRef = useRef<string | null>(null);
   const lastAutoBuildAtRef = useRef<string | null | undefined>(undefined);
 
@@ -134,7 +136,7 @@ export function BuildButton() {
             className="size-6"
             onClick={() => {
               setOpen(false);
-              buildPane.open({});
+              openPane(buildPane, {});
             }}
             aria-label="Open in pane"
           >

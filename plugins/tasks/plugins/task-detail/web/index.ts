@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Shell } from "@plugins/shell/web";
 import { MdChecklist } from "react-icons/md";
@@ -31,7 +31,7 @@ export default {
     Pane.Register({ pane: taskConversationPane }),
     Shell.Sidebar({
       id: "tasks",
-      ...sidebarNavItem({ title: "Tasks", icon: MdChecklist, onClick: () => tasksRootPane.open({}) }),
+      ...sidebarNavItem({ title: "Tasks", icon: MdChecklist, onClick: () => openPane(tasksRootPane, {}) }),
     }),
   ],
 } satisfies PluginDefinition;

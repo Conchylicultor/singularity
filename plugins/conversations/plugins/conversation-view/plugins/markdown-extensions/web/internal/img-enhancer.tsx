@@ -4,6 +4,7 @@ import {
   useMarkdownEnhancement,
   type MarkdownEnhancement,
 } from "@plugins/primitives/plugins/markdown/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
@@ -21,13 +22,14 @@ function isExternalUrl(src: string): boolean {
 export function ImgEnhancer({ children }: { children: ReactNode }) {
   const conv = conversationPane.useDataMaybe();
   const task = taskDetailPane.useDataMaybe();
+  const openPane = useOpenPane();
   const worktree = conv?.conversation.attemptId ?? (task ? "main" : undefined);
 
   const onFileOpen = useMemo(() => {
     if (!worktree) return undefined;
     return (path: string) =>
-      filePeekPane.open({ worktree, filePath: path });
-  }, [worktree]);
+      openPane(filePeekPane, { worktree, filePath: path });
+  }, [worktree, openPane]);
 
   const enhancement = useMemo((): MarkdownEnhancement | null => {
     if (!worktree) return null;

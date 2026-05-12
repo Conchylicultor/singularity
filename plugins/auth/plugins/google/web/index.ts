@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@core";
+import { openPane } from "@plugins/primitives/plugins/pane/web";
 import { Auth } from "@plugins/auth/web";
 import { Config } from "@plugins/config/web";
 import { SiGoogle } from "react-icons/si";
@@ -16,7 +17,7 @@ export default {
       name: "Google",
       icon: SiGoogle,
       helpUrl: "https://console.cloud.google.com/apis/credentials",
-      configureCredentials: () => googleSetupPane.open({}),
+      configureCredentials: () => openPane(googleSetupPane, {}),
     }),
     Config.Spec(googleAuthConfig),
   ],

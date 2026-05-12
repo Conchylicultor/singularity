@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MdAdd, MdPlayArrow } from "react-icons/md";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { ConversationSchema, type Conversation } from "@plugins/tasks-core/core";
 import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
@@ -31,6 +32,7 @@ export function useLaunchConversation({
   onLaunched,
 }: Pick<LaunchButtonsProps, "getRequest" | "openAfterLaunch" | "onLaunched">) {
   const [launching, setLaunching] = useState<ConversationModel | null>(null);
+  const openPane = useOpenPane();
 
   const launch = async (e: React.MouseEvent, model: ConversationModel) => {
     e.stopPropagation();
@@ -53,7 +55,7 @@ export function useLaunchConversation({
       }
       const conversation = ConversationSchema.parse(await res.json());
       onLaunched?.(conversation);
-      if (openAfterLaunch) conversationPane.open({ convId: conversation.id });
+      if (openAfterLaunch) openPane(conversationPane, { convId: conversation.id });
     } finally {
       setLaunching(null);
     }

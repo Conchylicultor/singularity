@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   usePaneMatch,
+  useOpenPane,
 } from "@plugins/primitives/plugins/pane/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import type { PluginTreePayload } from "@plugins/plugin-meta/plugins/plugin-view/core";
@@ -15,6 +16,7 @@ export function PublishView() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
 
   const match = usePaneMatch();
+  const openPane = useOpenPane();
   const selectedId =
     match?.chain.find((e) => e.pane === pluginViewPane._internal)?.params
       .pluginId ?? null;
@@ -77,7 +79,7 @@ export function PublishView() {
         <PluginTree
           plugins={plugins}
           selected={selectedId}
-          onSelect={(id) => pluginViewPane.open({ pluginId: id })}
+          onSelect={(id) => openPane(pluginViewPane, { pluginId: id })}
         />
       </div>
     </div>

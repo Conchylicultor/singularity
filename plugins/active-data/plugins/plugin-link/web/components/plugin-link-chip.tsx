@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Blocks } from "lucide-react";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type { PluginNode, PluginTreePayload } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -34,6 +35,7 @@ export function PluginLinkChip({
 }) {
   const id = content.trim();
   const conversation = conversationPane.useDataMaybe()?.conversation;
+  const openPane = useOpenPane();
 
   const { data } = useQuery<PluginTreePayload>({
     queryKey: ["plugin-view-tree"],
@@ -72,9 +74,9 @@ export function PluginLinkChip({
       onClick={(e) => {
         e.stopPropagation();
         if (conversation) {
-          pluginConvSidePane.open({ convId: conversation.id, pluginId: resolvedId });
+          openPane(pluginConvSidePane, { convId: conversation.id, pluginId: resolvedId });
         } else {
-          pluginViewPane.open({ pluginId: resolvedId });
+          openPane(pluginViewPane, { pluginId: resolvedId });
         }
       }}
       className="inline-flex max-w-full items-center gap-1 rounded bg-muted px-1.5 py-0.5 align-baseline text-xs text-primary hover:bg-muted/80 hover:underline"

@@ -1,6 +1,7 @@
 import {
   createContext,
   createElement,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -27,9 +28,19 @@ type ExtractParams<Path extends string> = Path extends `${infer Seg}/${infer Res
 export type InferParams<Path extends string> =
   ExtractParams<Path> extends infer O ? { [K in keyof O]: O[K] } : never;
 
+let nextInstanceId = 0;
+
 export interface PaneSlot {
+  instanceId: number;
   paneId: string;
   params: Record<string, string>;
+}
+
+function createSlot(
+  paneId: string,
+  params: Record<string, string>,
+): PaneSlot {
+  return { instanceId: nextInstanceId++, paneId, params };
 }
 
 // ---------------------------------------------------------------------------
@@ -241,7 +252,7 @@ export function parseUrl(pathname: string): PaneSlot[] | null {
 
     if (!bestMatch) return null;
 
-    chain.push({ paneId: bestMatch.pane.id, params: bestMatch.params });
+    chain.push(createSlot(bestMatch.pane.id, bestMatch.params));
     cursor += bestMatch.consumed;
     predecessorId = bestMatch.pane.id;
   }
@@ -251,7 +262,7 @@ export function parseUrl(pathname: string): PaneSlot[] | null {
     for (const pane of registry.values()) {
       if (!pane.after.has(null)) continue;
       if (!pane.segment || pane.segment === "/" || pane.segment === "") {
-        chain.push({ paneId: pane.id, params: {} });
+        chain.push(createSlot(pane.id, {}));
         break;
       }
     }
@@ -399,7 +410,7 @@ function buildFreshChain(
         }
       }
     }
-    return { paneId: pane.id, params: own };
+    return createSlot(pane.id, own);
   });
 }
 
@@ -542,8 +553,9 @@ export interface PaneObject<
   useParams(): OwnParams;
   useData(): Provides;
   useDataMaybe(): Provides | null;
-  open(params: FullParams & Record<string, string>, opts?: { root?: boolean; append?: boolean }): void;
   close(): void;
+  /** Remove this pane from the chain while preserving its children. */
+  unwrap(): void;
   expand(): void;
   back(): void;
   forward(): void;
@@ -599,71 +611,6 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     return value === DATA_NOT_PROVIDED ? null : value;
   }
 
-  function open(
-    params: Record<string, string>,
-    opts?: { root?: boolean; append?: boolean },
-  ): void {
-    const replace = internal.chrome.enabled && !internal.chrome.history;
-    const chain = getChain();
-    const ownParams = extractOwnParams(internal, params);
-
-    // If already in chain, update params or no-op (unless root or append is forced)
-    const existingIdx = chain.findIndex((s) => s.paneId === internal.id);
-    if (existingIdx >= 0 && !opts?.root && !opts?.append) {
-      const existing = chain[existingIdx]!.params;
-      const same =
-        Object.keys(ownParams).length === Object.keys(existing).length &&
-        Object.keys(ownParams).every((k) => ownParams[k] === existing[k]);
-      if (same) return;
-      // Different params — update in-place, truncate children
-      const newChain = chain.slice(0, existingIdx + 1);
-      newChain[existingIdx] = { paneId: internal.id, params: ownParams };
-      setChain(newChain, replace);
-      return;
-    }
-
-    if (!opts?.root) {
-      // Try insertion into current chain
-      const positions = findValidPositions(internal, chain);
-      if (positions.length > 0) {
-        const ancestorParamKeys = Object.keys(params).filter(
-          (k) => !(k in ownParams),
-        );
-        for (let p = positions.length - 1; p >= 0; p--) {
-          const pos = positions[p]!;
-          let paramsMatch = true;
-          if (ancestorParamKeys.length > 0) {
-            for (let j = 0; j < pos; j++) {
-              const entry = chain[j]!;
-              for (const key of ancestorParamKeys) {
-                if (
-                  key in entry.params &&
-                  entry.params[key] !== params[key]
-                ) {
-                  paramsMatch = false;
-                  break;
-                }
-              }
-              if (!paramsMatch) break;
-            }
-          }
-          if (paramsMatch) {
-            const newChain = [
-              ...chain.slice(0, pos),
-              { paneId: internal.id, params: ownParams },
-              ...chain.slice(pos),
-            ];
-            setChain(validateChain(newChain), replace);
-            return;
-          }
-        }
-      }
-    }
-
-    // No valid position, root forced, or no matching params — build fresh chain
-    setChain(buildFreshChain(internal, params), replace);
-  }
-
   function close(): void {
     if (typeof window === "undefined") return;
     const chain = getChain();
@@ -672,6 +619,15 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     const newChain = chain.slice(0, idx);
     const replace = internal.chrome.enabled && !internal.chrome.history;
     setChain(newChain, replace);
+  }
+
+  function unwrap(): void {
+    if (typeof window === "undefined") return;
+    const chain = getChain();
+    const idx = chain.findIndex((s) => s.paneId === internal.id);
+    if (idx < 0) return;
+    const newChain = [...chain.slice(0, idx), ...chain.slice(idx + 1)];
+    setChain(validateChain(newChain));
   }
 
   function expand(): void {
@@ -701,8 +657,8 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     useParams,
     useData,
     useDataMaybe,
-    open,
     close,
+    unwrap,
     expand,
     back,
     forward,
@@ -848,4 +804,158 @@ export function useMatchForPath(pathname: string): PaneMatch | null {
   syncChainFromUrl(pathname);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- syncChainFromUrl mutates currentChain; pathname is the change signal
   return useMemo(() => resolveChain(currentChain), [pathname]);
+}
+
+// ---------------------------------------------------------------------------
+// openPaneImpl — non-positional open logic (shared by useOpenPane fallbacks).
+// ---------------------------------------------------------------------------
+
+function openPaneImpl(
+  internal: PaneInternal,
+  params: Record<string, string>,
+  opts?: { root?: boolean; append?: boolean },
+): void {
+  const replace = internal.chrome.enabled && !internal.chrome.history;
+  const chain = getChain();
+  const ownParams = extractOwnParams(internal, params);
+
+  // If already in chain, update params or no-op (unless root or append is forced)
+  const existingIdx = chain.findIndex((s) => s.paneId === internal.id);
+  if (existingIdx >= 0 && !opts?.root && !opts?.append) {
+    const existing = chain[existingIdx]!.params;
+    const same =
+      Object.keys(ownParams).length === Object.keys(existing).length &&
+      Object.keys(ownParams).every((k) => ownParams[k] === existing[k]);
+    if (same) return;
+    const newChain = chain.slice(0, existingIdx + 1);
+    newChain[existingIdx] = createSlot(internal.id, ownParams);
+    setChain(newChain, replace);
+    return;
+  }
+
+  if (!opts?.root) {
+    // Try insertion into current chain
+    const positions = findValidPositions(internal, chain);
+    if (positions.length > 0) {
+      const ancestorParamKeys = Object.keys(params).filter(
+        (k) => !(k in ownParams),
+      );
+      for (let p = positions.length - 1; p >= 0; p--) {
+        const pos = positions[p]!;
+        let paramsMatch = true;
+        if (ancestorParamKeys.length > 0) {
+          for (let j = 0; j < pos; j++) {
+            const entry = chain[j]!;
+            for (const key of ancestorParamKeys) {
+              if (
+                key in entry.params &&
+                entry.params[key] !== params[key]
+              ) {
+                paramsMatch = false;
+                break;
+              }
+            }
+            if (!paramsMatch) break;
+          }
+        }
+        if (paramsMatch) {
+          const newChain = [
+            ...chain.slice(0, pos),
+            createSlot(internal.id, ownParams),
+            ...chain.slice(pos),
+          ];
+          setChain(validateChain(newChain), replace);
+          return;
+        }
+      }
+    }
+  }
+
+  // No valid position, root forced, or no matching params — build fresh chain
+  setChain(buildFreshChain(internal, params), replace);
+}
+
+export function openPane(
+  target: PaneObject<any, any, any>,
+  params: Record<string, string>,
+  opts?: { root?: boolean; append?: boolean },
+): void {
+  openPaneImpl(target._internal, params, opts);
+}
+
+// ---------------------------------------------------------------------------
+// useOpenPane — caller-aware pane navigation hook.
+// ---------------------------------------------------------------------------
+
+export function useOpenPane(): (
+  target: PaneObject<any, any, any>,
+  params: Record<string, string>,
+  opts?: { root?: boolean; append?: boolean },
+) => void {
+  const depth = useContext(PaneDepthContext);
+  const chain = getChain();
+  const callerInstanceId =
+    depth >= 0 ? chain[depth]?.instanceId : undefined;
+
+  return useCallback(
+    (
+      target: PaneObject<any, any, any>,
+      params: Record<string, string>,
+      opts?: { root?: boolean; append?: boolean },
+    ) => {
+      const targetInternal = target._internal;
+
+      if (opts?.root || opts?.append || callerInstanceId === undefined) {
+        openPaneImpl(targetInternal, params, opts);
+        return;
+      }
+
+      const currentChain = getChain();
+      const callerIndex = currentChain.findIndex(
+        (s) => s.instanceId === callerInstanceId,
+      );
+      if (callerIndex < 0) {
+        openPaneImpl(targetInternal, params, opts);
+        return;
+      }
+
+      const callerPaneId = currentChain[callerIndex]!.paneId;
+      const callerPane = registry.get(callerPaneId);
+      const ownParams = extractOwnParams(targetInternal, params);
+      const replace =
+        targetInternal.chrome.enabled && !targetInternal.chrome.history;
+
+      // Self-reference: update params in-place, truncate children
+      if (targetInternal.id === callerPaneId) {
+        const existing = currentChain[callerIndex]!.params;
+        const same =
+          Object.keys(ownParams).length === Object.keys(existing).length &&
+          Object.keys(ownParams).every((k) => ownParams[k] === existing[k]);
+        if (same) return;
+        const newChain = currentChain.slice(0, callerIndex + 1);
+        newChain[callerIndex] = createSlot(targetInternal.id, ownParams);
+        setChain(newChain, replace);
+        return;
+      }
+
+      // Wrap left: caller can follow target → insert target before caller
+      if (callerPane?.after.has(targetInternal.id)) {
+        const newChain = [
+          ...currentChain.slice(0, callerIndex),
+          createSlot(targetInternal.id, ownParams),
+          ...currentChain.slice(callerIndex),
+        ];
+        setChain(validateChain(newChain), replace);
+        return;
+      }
+
+      // Open right (default): truncate after caller, append target
+      const newChain = [
+        ...currentChain.slice(0, callerIndex + 1),
+        createSlot(targetInternal.id, ownParams),
+      ];
+      setChain(validateChain(newChain), replace);
+    },
+    [callerInstanceId],
+  );
 }

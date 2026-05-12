@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Pane, PaneChrome, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome, usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
@@ -23,6 +23,7 @@ export const filePeekPane = Pane.define({
 
 function FilePeekPaneBody() {
   const match = usePaneMatch();
+  const openPane = useOpenPane();
   const convEntry = match?.chain.find(
     (e) => e.pane === conversationPane._internal,
   );
@@ -39,12 +40,12 @@ function FilePeekPaneBody() {
   useEffect(() => {
     if (resolved.status === "resolved") {
       const fp = resolved.path;
-      filePeekPane.open({
+      openPane(filePeekPane, {
         worktree,
         filePath: line != null ? `${fp}:${line}` : fp,
       });
     }
-  }, [resolved, worktree, line]);
+  }, [resolved, worktree, line, openPane]);
 
   const { files } = useEditedFiles(convId ?? "");
   const status = files.find((f) => f.path === filePath)?.status ?? "clean";
@@ -75,7 +76,7 @@ function FilePeekPaneBody() {
           query={filePath}
           matches={resolved.matches}
           onSelect={(fp) =>
-            filePeekPane.open({
+            openPane(filePeekPane, {
               worktree,
               filePath: line != null ? `${fp}:${line}` : fp,
             })

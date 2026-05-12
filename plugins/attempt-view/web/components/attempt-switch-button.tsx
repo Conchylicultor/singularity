@@ -1,15 +1,16 @@
 import { MdSplitscreen } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { attemptsResource } from "@plugins/tasks/core";
 import { Button } from "@/components/ui/button";
-import { attemptPane, attemptConversationPane } from "../panes";
+import { attemptPane } from "../panes";
 
 export function AttemptSwitchButton() {
   const { conversation } = conversationPane.useData();
   const { data } = useResource(attemptsResource);
   const match = usePaneMatch();
+  const openPane = useOpenPane();
 
   const attempt = data.find((a) => a.id === conversation.attemptId) ?? null;
   const count = attempt?.conversations.length ?? 0;
@@ -26,12 +27,9 @@ export function AttemptSwitchButton() {
       aria-pressed={inAttemptView}
       onClick={() => {
         if (inAttemptView) {
-          conversationPane.open({ convId: conversation.id });
+          attemptPane.unwrap();
         } else {
-          attemptConversationPane.open({
-            attemptId: conversation.attemptId,
-            convId: conversation.id,
-          });
+          openPane(attemptPane, { attemptId: conversation.attemptId });
         }
       }}
       className="gap-1.5"

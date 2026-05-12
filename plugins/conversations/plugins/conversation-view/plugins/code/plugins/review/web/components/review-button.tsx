@@ -1,7 +1,7 @@
 import { MdRateReview, MdWarning } from "react-icons/md";
 import { useMemo } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useConfigValues } from "@plugins/config/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pushesResource } from "@plugins/tasks/core";
@@ -26,6 +26,7 @@ export function ReviewButton() {
   const { conversation } = conversationPane.useData();
   const { files } = useEditedFiles(conversation.id);
   const match = usePaneMatch();
+  const openPane = useOpenPane();
   const isOpen =
     match?.chain.some((e) => e.pane === convReviewPane._internal) ?? false;
   const { safePaths, carefulPaths } = useConfigValues(reviewConfig, "conversation-code-review");
@@ -60,7 +61,7 @@ export function ReviewButton() {
       onClick={() =>
         isOpen
           ? convReviewPane.close()
-          : convReviewPane.open({ convId: conversation.id })
+          : openPane(convReviewPane, { convId: conversation.id })
       }
       className="gap-1.5"
     >

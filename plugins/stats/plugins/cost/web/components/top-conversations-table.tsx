@@ -1,5 +1,6 @@
 import { ChartState, useFetchJson } from "@plugins/stats/plugins/commits/web";
 import { cn } from "@/lib/utils";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { costConvSidePane } from "../panes";
 import { formatTokensCompact, formatUsd } from "./format";
 import { useScope, withScope } from "./use-scope";
@@ -53,6 +54,7 @@ export function TopConversationsTable() {
 }
 
 function TopRow({ row }: { row: Row }) {
+  const openPane = useOpenPane();
   const totalTokens =
     row.inputTokens +
     row.outputTokens +
@@ -60,7 +62,7 @@ function TopRow({ row }: { row: Row }) {
     row.cacheReadTokens;
   const isClickable = !!row.conversationId;
   const onClick = isClickable
-    ? () => costConvSidePane.open({ sideConvId: row.conversationId! })
+    ? () => openPane(costConvSidePane, { sideConvId: row.conversationId! })
     : undefined;
   return (
     <tr

@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { MdPublish } from "react-icons/md";
-import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Forge } from "@plugins/apps/plugins/forge/plugins/shell/web";
 import { publishPane } from "./panes";
@@ -14,7 +14,7 @@ export default {
     Pane.Register({ pane: publishPane }),
     Forge.Sidebar({
       id: "publish",
-      ...sidebarNavItem({ title: "Publish", icon: MdPublish, onClick: () => publishPane.open({}) }),
+      ...sidebarNavItem({ title: "Publish", icon: MdPublish, onClick: () => openPane(publishPane, {}) }),
     }),
   ],
 } satisfies PluginDefinition;

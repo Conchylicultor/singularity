@@ -1,7 +1,7 @@
 import { MdAutoAwesome } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   conversationSummariesResource,
@@ -18,13 +18,14 @@ export function SummarizeButton() {
   const latest = summaries?.[0];
 
   const match = usePaneMatch();
+  const openPane = useOpenPane();
   const isOpen =
     match?.chain.some((e) => e.pane === convSummaryPane._internal) ?? false;
 
   const onClick = () =>
     isOpen
       ? convSummaryPane.close()
-      : convSummaryPane.open({ convId: conversation.id });
+      : openPane(convSummaryPane, { convId: conversation.id });
 
   if (!latest) {
     return (

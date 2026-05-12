@@ -6,7 +6,7 @@ import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { taskSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
 import { useActiveDataBinding } from "@plugins/active-data/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import {
   attemptsResource,
@@ -164,6 +164,7 @@ export function TaskCard({
 function LaunchedAttempts({ taskId }: { taskId: string }) {
   const attemptsQ = useResource(attemptsResource);
   const match = usePaneMatch();
+  const openPane = useOpenPane();
   const activeConvId = match?.chain.find(
     (e) => e.pane === taskConversationPane._internal,
   )?.params.convId;
@@ -212,7 +213,7 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
                         if (activeConvId === c.id) {
                           taskConversationPane.close();
                         } else {
-                          taskConversationPane.open({ taskId, convId: c.id });
+                          openPane(taskConversationPane, { taskId, convId: c.id });
                         }
                       }}
                       className={cn(
@@ -236,6 +237,7 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
 function TaskChip({ taskId }: { taskId: string }) {
   const { conversation } = conversationPane.useData();
   const { data: tasks } = useResource(tasksResource);
+  const openPane = useOpenPane();
   const task = tasks.find((t) => t.id === taskId);
   const title = task?.title.trim() || "Untitled task";
   return (
@@ -243,7 +245,7 @@ function TaskChip({ taskId }: { taskId: string }) {
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        taskSidePane.open({ convId: conversation.id, taskId });
+        openPane(taskSidePane, { convId: conversation.id, taskId });
       }}
       className="bg-muted text-primary hover:bg-muted/80 inline-flex max-w-full items-center gap-1.5 rounded px-1.5 py-0.5 align-baseline text-xs hover:underline"
       title={title}

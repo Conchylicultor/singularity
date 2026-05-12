@@ -3,6 +3,7 @@ import { Auth } from "../slots";
 import { useAccountStatus } from "../hooks";
 import { Button } from "@/components/ui/button";
 import { ShellCommands } from "@plugins/shell/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { settingsPane } from "@plugins/config/web";
 import { currentWorktreeName, disconnect, startConnectFlow } from "../connect";
 
@@ -15,6 +16,7 @@ export function DefaultProviderRow({ providerId }: Props) {
   const providers = Auth.Provider.useContributions();
   const provider = providers.find((p) => p.id === providerId);
   const [busy, setBusy] = useState(false);
+  const openPane = useOpenPane();
 
   if (!provider) return null;
   const Icon = provider.icon;
@@ -118,7 +120,7 @@ export function DefaultProviderRow({ providerId }: Props) {
             onClick={() =>
               provider.configureCredentials
                 ? provider.configureCredentials()
-                : settingsPane.open({})
+                : openPane(settingsPane, {})
             }
           >
             Configure credentials

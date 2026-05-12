@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { attemptsResource } from "@plugins/tasks/core";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,7 @@ export function AttemptPane() {
   const { attemptId } = attemptPane.useParams();
   const { data } = useResource(attemptsResource);
   const match = usePaneMatch();
+  const openPane = useOpenPane();
 
   const attempt = useMemo(
     () => data.find((a) => a.id === attemptId) ?? null,
@@ -46,7 +47,7 @@ export function AttemptPane() {
                   <button
                     type="button"
                     onClick={() =>
-                      attemptConversationPane.open({
+                      openPane(attemptConversationPane, {
                         attemptId,
                         convId: c.id,
                       })

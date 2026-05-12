@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { MdAutoAwesome } from "react-icons/md";
@@ -16,7 +16,7 @@ export default {
     Pane.Register({ pane: claudeCliCallsPane }),
     DebugApp.Sidebar({
       id: "claude-cli-calls",
-      ...sidebarNavItem({ title: "Claude CLI Calls", icon: MdAutoAwesome, onClick: () => claudeCliCallsPane.open({}) }),
+      ...sidebarNavItem({ title: "Claude CLI Calls", icon: MdAutoAwesome, onClick: () => openPane(claudeCliCallsPane, {}) }),
     }),
   ],
 } satisfies PluginDefinition;

@@ -1,4 +1,4 @@
-import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Avatar, DEFAULT_AGENT_AVATAR } from "@plugins/primitives/plugins/avatar/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 // shows the agent's detail/history.
 export function AgentAvatarTitlePrefix({ conversation }: { conversation: ConversationRecord }) {
   const match = usePaneMatch();
+  const openPane = useOpenPane();
   const { data: launches } = useResource(agentLaunchesResource);
   const { data: agents } = useResource(agentsResource);
 
@@ -31,7 +32,7 @@ export function AgentAvatarTitlePrefix({ conversation }: { conversation: Convers
       onClick={() =>
         isOpen
           ? agentSidePane.close()
-          : agentSidePane.open({ convId: conversation.id, agentId: agentId! })
+          : openPane(agentSidePane, { convId: conversation.id, agentId: agentId! })
       }
       className={cn(
         "rounded-full transition-opacity",

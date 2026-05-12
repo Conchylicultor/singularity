@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { MdAltRoute, MdPublish } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import { pushesResource } from "@plugins/tasks/core";
@@ -19,6 +19,7 @@ export function CommitsChip() {
     [pushes, conversation.attemptId],
   );
   const match = usePaneMatch();
+  const openPane = useOpenPane();
   const isOpen =
     match?.chain.some((e) => e.pane === convCommitsGraphPane._internal) ?? false;
 
@@ -47,7 +48,7 @@ export function CommitsChip() {
       onClick={() =>
         isOpen
           ? convCommitsGraphPane.close()
-          : convCommitsGraphPane.open({ convId: conversation.id })
+          : openPane(convCommitsGraphPane, { convId: conversation.id })
       }
       className="gap-1 px-2 text-xs tabular-nums"
     >

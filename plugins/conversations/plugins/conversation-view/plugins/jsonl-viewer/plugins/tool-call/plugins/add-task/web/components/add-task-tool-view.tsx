@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { taskSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
 import { tasksResource } from "@plugins/tasks/core";
@@ -38,6 +39,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
 
   const { data } = useResource(tasksResource);
   const { conversation } = conversationPane.useData();
+  const openPane = useOpenPane();
   const task = useMemo(
     () => (taskId ? (data.find((t) => t.id === taskId) ?? null) : null),
     [data, taskId],
@@ -46,7 +48,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const openTask = (e: React.MouseEvent) => {
     if (!taskId) return;
     e.stopPropagation();
-    taskSidePane.open({ convId: conversation.id, taskId });
+    openPane(taskSidePane, { convId: conversation.id, taskId });
   };
 
   return (

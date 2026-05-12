@@ -1,5 +1,5 @@
 import { type ReactElement } from "react";
-import { Pane, PaneChrome, type, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome, type, usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   ConversationProvide,
   ConversationView,
@@ -48,6 +48,7 @@ export const taskConversationPane = Pane.define({
 function TasksRoot(): ReactElement {
   const lists = TasksSlots.List.useContributions();
   const match = usePaneMatch();
+  const openPane = useOpenPane();
   const selectedId = match?.chain.find(
     (e) => e.pane === taskDetailPane._internal,
   )?.params.taskId;
@@ -56,7 +57,7 @@ function TasksRoot(): ReactElement {
     <div className="h-full overflow-auto p-4">
       <TasksList
         selectedId={selectedId}
-        onSelect={(id) => taskDetailPane.open({ taskId: id })}
+        onSelect={(id) => openPane(taskDetailPane, { taskId: id })}
       />
       {lists.length > 0 && (
         <div className="mt-6 flex flex-col gap-4">

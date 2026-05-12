@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { MdChevronRight } from "react-icons/md";
 import { cn } from "@/lib/utils";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   Section,
   pluginViewPane,
@@ -362,12 +363,13 @@ function SubHeading({
 }
 
 function PluginLink({ name }: { name: string }) {
+  const openPane = useOpenPane();
   return (
     <button
       className="font-medium text-muted-foreground hover:text-foreground hover:underline"
       onClick={(e) => {
         e.stopPropagation();
-        pluginViewPane.open({ pluginId: name }, { append: true });
+        openPane(pluginViewPane, { pluginId: name });
       }}
     >
       {name}

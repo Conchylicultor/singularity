@@ -1,3 +1,4 @@
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 
@@ -13,13 +14,14 @@ interface ToolFilePathProps {
 
 export function ToolFilePath({ filePath }: ToolFilePathProps) {
   const { conversation } = conversationPane.useData();
+  const openPane = useOpenPane();
   const relativePath = toRelativePath(filePath, conversation.attemptId);
 
   if (!filePath) return null;
 
   const openFile = (e: React.MouseEvent) => {
     e.stopPropagation();
-    filePeekPane.open({
+    openPane(filePeekPane, {
       worktree: conversation.attemptId,
       filePath,
     });
