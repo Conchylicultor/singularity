@@ -18,6 +18,7 @@ import {
   handleDeleteColor,
 } from "./internal/colors-routes";
 
+export { conversationCategoryConfig } from "../shared/config";
 export { conversationCategory } from "./internal/tables";
 export { _conversationCategoryColors } from "./internal/tables-colors";
 export { conversationCategoriesResource } from "./internal/resource";

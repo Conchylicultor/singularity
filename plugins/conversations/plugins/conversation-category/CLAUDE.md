@@ -45,7 +45,7 @@ unless the user clicks "Re-classify with Haiku".
   - Types: `ColorKey`
   - Values: `autoColorKey`, `useCategoryColors`
 - Exports (server):
-  - Values: `_conversationCategoryColors`, `categoryColorsResource`, `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`
+  - Values: `_conversationCategoryColors`, `categoryColorsResource`, `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`, `conversationCategoryConfig`
 - Exports (shared):
   - Types: `ConversationCategoriesPayload`, `ConversationCategory`
   - Values: `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`

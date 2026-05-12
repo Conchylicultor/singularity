@@ -12,13 +12,11 @@ import {
   YAxis,
 } from "recharts";
 import { cn } from "@/lib/utils";
-import { useConfigValues } from "@plugins/config/web";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import {
   autoColorKey,
   useCategoryColors,
 } from "@plugins/conversations/plugins/conversation-category/web";
-import { conversationCategoryConfig } from "@plugins/conversations/plugins/conversation-category/shared";
 import {
   ChartState,
   axisProps,
@@ -64,11 +62,11 @@ function useCategoryColorFn(): (cat: string) => string {
 function useToggleable() {
   const [hidden, setHidden] = useState<Record<string, boolean>>({});
   const onLegendClick = (e: any) => {
-    const k = e?.dataKey as string | undefined;
+    const k = (e?.dataKey ?? e?.value) as string | undefined;
     if (k) setHidden((h) => ({ ...h, [k]: !h[k] }));
   };
   const legendFormatter = (value: string, entry: any) => {
-    const k = entry?.dataKey as string | undefined;
+    const k = (entry?.dataKey ?? entry?.value) as string | undefined;
     const isHidden = k ? hidden[k] : false;
     return (
       <span
@@ -91,9 +89,15 @@ interface ByCategoryPoint {
   byCategory: Record<string, number>;
 }
 
-function useOrderedKeys(points: ByCategoryPoint[]): string[] {
-  const { categories } = useConfigValues(conversationCategoryConfig, "conversation-category");
+interface CategoryResponse {
+  points: ByCategoryPoint[];
+  categories: string[];
+}
+
+function useOrderedKeys(data: CategoryResponse | null): string[] {
   return useMemo(() => {
+    if (!data) return [];
+    const { points, categories } = data;
     const present = new Set<string>();
     for (const p of points) {
       for (const cat of Object.keys(p.byCategory)) present.add(cat);
@@ -102,12 +106,11 @@ function useOrderedKeys(points: ByCategoryPoint[]): string[] {
     for (const cat of categories) {
       if (present.has(cat)) ordered.push(cat);
     }
-    // Append any data categories not in settings (including "Unknown")
     for (const cat of present) {
       if (!ordered.includes(cat)) ordered.push(cat);
     }
     return ordered;
-  }, [points, categories]);
+  }, [data]);
 }
 
 function flattenByCategory(
@@ -129,15 +132,14 @@ export function CumulativeCommitsCategoryChart({ dedup }: { dedup?: boolean }) {
   const { showEmptyDays } = useShowEmptyDays();
   const colorFor = useCategoryColorFn();
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
-  const { data, error } = useFetchJson<{ points: ByCategoryPoint[] }>(
+  const { data, error } = useFetchJson<CategoryResponse>(
     `/api/stats/commits/cumulative?breakdown=category${dedupParam}`,
     dedup ? "dedup" : undefined,
   );
-  const points = data?.points ?? [];
-  const allKeys = useOrderedKeys(points);
-  const rawFlat = flattenByCategory(points, allKeys, "date");
+  const allKeys = useOrderedKeys(data);
+  const rawFlat = flattenByCategory(data?.points ?? [], allKeys, "date");
   const flatPoints = useMemo(
-    () => (showEmptyDays ? fillGaps(rawFlat, "date", "day", "carry") : rawFlat),
+    () => (showEmptyDays && rawFlat.length >= 2 ? fillGaps(rawFlat, "date", "day", "carry") : rawFlat),
     [rawFlat, showEmptyDays],
   );
 
@@ -146,7 +148,7 @@ export function CumulativeCommitsCategoryChart({ dedup }: { dedup?: boolean }) {
       <ChartState
         error={error}
         loading={data === null}
-        empty={!!data && points.length === 0}
+        empty={!!data && data.points.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
@@ -172,7 +174,7 @@ export function CumulativeCommitsCategoryChart({ dedup }: { dedup?: boolean }) {
               ]}
             />
             <Legend
-              wrapperStyle={{ fontSize: 12 }}
+              wrapperStyle={{ fontSize: 12, cursor: "pointer" }}
               onClick={onLegendClick}
               formatter={legendFormatter}
             />
@@ -215,15 +217,14 @@ export function CommitsRateCategoryChart({ dedup }: { dedup?: boolean }) {
   const { showEmptyDays } = useShowEmptyDays();
   const colorFor = useCategoryColorFn();
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
-  const { data, error } = useFetchJson<{ points: ByCategoryPoint[] }>(
+  const { data, error } = useFetchJson<CategoryResponse>(
     `/api/stats/commits/rate?bucket=${bucket}&breakdown=category${dedupParam}`,
     dedup ? "dedup" : undefined,
   );
-  const points = data?.points ?? [];
-  const allKeys = useOrderedKeys(points);
-  const rawFlat = flattenByCategory(points, allKeys, "bucket");
+  const allKeys = useOrderedKeys(data);
+  const rawFlat = flattenByCategory(data?.points ?? [], allKeys, "bucket");
   const flatPoints = useMemo(
-    () => (showEmptyDays ? fillGaps(rawFlat, "bucket", bucket) : rawFlat),
+    () => (showEmptyDays && rawFlat.length >= 2 ? fillGaps(rawFlat, "bucket", bucket) : rawFlat),
     [rawFlat, showEmptyDays, bucket],
   );
 
@@ -233,7 +234,7 @@ export function CommitsRateCategoryChart({ dedup }: { dedup?: boolean }) {
         <ChartState
           error={error}
           loading={data === null}
-          empty={!!data && points.length === 0}
+          empty={!!data && data.points.length === 0}
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -259,7 +260,7 @@ export function CommitsRateCategoryChart({ dedup }: { dedup?: boolean }) {
                 ]}
               />
               <Legend
-                wrapperStyle={{ fontSize: 12 }}
+                wrapperStyle={{ fontSize: 12, cursor: "pointer" }}
                 onClick={onLegendClick}
                 formatter={legendFormatter}
               />

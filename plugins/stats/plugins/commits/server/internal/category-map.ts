@@ -1,5 +1,6 @@
 import { db } from "@plugins/database/server";
-import { conversationCategory } from "@plugins/conversations/plugins/conversation-category/server";
+import { readConfig } from "@plugins/config/server";
+import { conversationCategory, conversationCategoryConfig } from "@plugins/conversations/plugins/conversation-category/server";
 
 const UNKNOWN = "Unknown";
 const t = conversationCategory.table;
@@ -19,4 +20,9 @@ export function categoryFor(
 ): string {
   if (!conversationId) return UNKNOWN;
   return map.get(conversationId) ?? UNKNOWN;
+}
+
+export async function getConfigCategoryOrder(): Promise<string[]> {
+  const { categories } = await readConfig(conversationCategoryConfig);
+  return categories;
 }
