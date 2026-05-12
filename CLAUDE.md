@@ -1,6 +1,6 @@
 # Singularity
 
-Singularity is a new self-evolving app for the agentic era. The vision has a few steps:
+Singularity is the ultimate app for the agentic era — one app to replace all others, customized for each individual user, at the boundary of an application and an operating system. The vision has a few steps:
 
 - At first, the app itself is an Agent manager app whose goal is to fix todos faster than they are created. The app will be used to improve itself.
 
@@ -8,7 +8,7 @@ Singularity is a new self-evolving app for the agentic era. The vision has a few
 
 - The app evolves into a Notion-like WeChat: a single unified surface where agents compose user-tailored apps on the fly from plugin building blocks. Notion gives users composable blocks (databases, pages, views) to fit their workflow; Singularity does the same at the *app* level, with agents doing the composing. The agent manager becomes one such composition among many, sharing the same plugins and primitives.
 
-- The app scope will be expanded to research Agents' limits and interactions. Projects will ultimately move outside of coding into the physical world.
+- A plugin marketplace where users contribute and share building blocks. Each user gets a unique composition assembled by agents from marketplace plugins — not a one-size-fits-all tool, but a personal OS shaped to their workflow.
 
 ## Agent Workflow
 
