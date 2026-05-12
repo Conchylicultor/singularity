@@ -81,16 +81,28 @@ async function tick(): Promise<void> {
         const live = next.get(id)!;
         if (live.dead) continue;
         if (!live.worktreePath) continue;
-        const adopted = await adoptOrphanConversation({
-          id,
-          worktreePath: live.worktreePath,
-          runtimeId: live.runtime,
-          status: liveStatusFor(live),
-          title: live.title || null,
-        });
-        if (adopted) {
-          dbById.set(adopted.id, adopted);
-          changed = true;
+        try {
+          const adopted = await adoptOrphanConversation({
+            id,
+            worktreePath: live.worktreePath,
+            runtimeId: live.runtime,
+            status: liveStatusFor(live),
+            title: live.title || null,
+          });
+          if (adopted) {
+            dbById.set(adopted.id, adopted);
+            changed = true;
+          }
+        } catch (err) {
+          console.error(`[conversations.poller] adopt orphan "${id}" failed`, err);
+          await recordCrash({
+            source: "server-caught",
+            errorType: "OrphanAdoptionError",
+            message: `Failed to adopt orphan conversation ${id}: ${err instanceof Error ? err.message : String(err)}`,
+            label: "conversations.poller.adoptOrphan",
+          }).catch((e) => {
+            console.error("[conversations.poller] recordCrash failed", e);
+          });
         }
       }
     }

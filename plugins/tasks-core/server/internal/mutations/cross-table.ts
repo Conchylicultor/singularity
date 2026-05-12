@@ -33,20 +33,20 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
   const taskId = newTaskId();
   // Derive attempt id from the worktree directory name so basename(worktreePath) === attemptId.
   const attemptId = path.basename(input.worktreePath);
-  await db.transaction(async (tx) => {
-    const rank = await findNextRankUnder(CONVERSATIONS_META_TASK_ID, tx);
-    await tx
-      .insert(_tasks)
-      .values({
-        id: taskId,
-        parentId: CONVERSATIONS_META_TASK_ID,
-        title: input.title?.trim() || "Untitled",
-        rank: rank.toJSON(),
-      });
-    await tx
-      .insert(_attempts)
-      .values({ id: attemptId, taskId, worktreePath: input.worktreePath });
-    const [row] = await tx
+
+  // The attempt may already exist (e.g. the conversation was originally
+  // created on a worktree server, so the attempt row is in the main DB
+  // but the conversation row is not). If so, link the new conversation
+  // to the existing attempt instead of creating a new task+attempt chain.
+  const [existing] = await db
+    .select({ id: _attempts.id, taskId: _attempts.taskId })
+    .from(_attempts)
+    .where(eq(_attempts.id, attemptId))
+    .limit(1);
+
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+  if (existing) {
+    const [row] = await db
       .insert(_conversations)
       .values({
         id: input.id,
@@ -60,7 +60,36 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
       .onConflictDoNothing()
       .returning();
     inserted = !!row;
-  });
+  } else {
+    await db.transaction(async (tx) => {
+      const rank = await findNextRankUnder(CONVERSATIONS_META_TASK_ID, tx);
+      await tx
+        .insert(_tasks)
+        .values({
+          id: taskId,
+          parentId: CONVERSATIONS_META_TASK_ID,
+          title: input.title?.trim() || "Untitled",
+          rank: rank.toJSON(),
+        });
+      await tx
+        .insert(_attempts)
+        .values({ id: attemptId, taskId, worktreePath: input.worktreePath });
+      const [row] = await tx
+        .insert(_conversations)
+        .values({
+          id: input.id,
+          attemptId,
+          runtime: input.runtimeId,
+          status: input.status,
+          title: input.title ?? null,
+          spawnedBy: "poller",
+          model: "opus",
+        })
+        .onConflictDoNothing()
+        .returning();
+      inserted = !!row;
+    });
+  }
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; TS can't see mutation inside async transaction callback
   if (inserted) {
     tasksResource.notify();
