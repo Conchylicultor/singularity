@@ -4,11 +4,13 @@ import { mainEditsGuard } from "./guards/main-edits";
 import { mainWritesGuard } from "./guards/main-writes";
 import { migrationsGuard } from "./guards/migrations";
 import { postgresGuard } from "./guards/postgres";
+import { rgReplaceGuard } from "./guards/rg-replace";
 import type { Guard } from "./types";
 
 export const GUARDS: Guard<any>[] = [
   // Bash
   findGuard,
+  rgReplaceGuard,
   migrationsGuard,
   mainWritesGuard,
   postgresGuard,
