@@ -31,8 +31,6 @@ export function autoColorKey(label: string): ColorKey {
   return AUTO_ORDER[hashLabel(label) % AUTO_ORDER.length]!;
 }
 
-export function colorClassFor(label: string, overrides?: Record<string, string>): string {
-  const key = overrides?.[label];
-  if (key && key in COLOR_PALETTE) return COLOR_PALETTE[key as ColorKey].chip;
-  return COLOR_PALETTE[autoColorKey(label)].chip;
+export function colorClassFor(_label: string): string {
+  return CHIP_NEUTRAL;
 }

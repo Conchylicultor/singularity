@@ -329,7 +329,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `conversationPane.Actions` → `CategoryChipToolbar`
         - `Config.Spec`
-        - `Config.Section` "Category colors" → `CategoryColorSettings`
+        - `Config.Section` "Category avatars" → `CategoryColorSettings`
+        - `Item.Avatar` → `CategoryAvatarRow`
       - Server:
         - Register: `defineJob('conversation-category.classify')`
         - Uses: `config.Config`, `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
@@ -359,7 +360,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (web):
             - Types: `ConversationItemConv`, `ConversationItemProps`
             - Values: `CONV_STATUS_DOT`, `ConversationItem`, `ConvRelativeTime`, `ConvStatusDot`, `ConvSysBadge`, `ConvTitle`, `formatRelativeTime`, `Item`
-          - Slot contributors: `agents`, `conversation-progress`
+          - Slot contributors: `agents`, `conversation-category`, `conversation-progress`
     - **`conversation-view`** — Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
       - Defines:
         - Slots: `Conversation.PromptInput`, `Conversation.TitlePrefix`

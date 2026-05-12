@@ -1,9 +1,11 @@
 import type { PluginDefinition } from "@core";
 import { Config } from "@plugins/config/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationCategoryConfig } from "../shared";
 import { CategoryChipToolbar } from "./components/category-chip-toolbar";
 import { CategoryColorSettings } from "./components/category-color-settings";
+import { CategoryAvatarRow } from "./components/category-avatar-row";
 
 export default {
   id: "conversation-category",
@@ -18,10 +20,14 @@ export default {
     Config.Spec(conversationCategoryConfig),
     Config.Section({
       id: "category-colors",
-      title: "Category colors",
+      title: "Category avatars",
       description:
-        "Pick a color for each category. Click the active swatch to reset to auto.",
+        "Click an avatar to pick its icon and color. The avatar appears in the conversation list. Leave unchanged for automatic coloring.",
       component: CategoryColorSettings,
+    }),
+    Item.Avatar({
+      match: (conv) => conv.kind !== "agent",
+      component: CategoryAvatarRow,
     }),
   ],
 } satisfies PluginDefinition;

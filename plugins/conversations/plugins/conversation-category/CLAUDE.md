@@ -49,7 +49,8 @@ unless the user clicks "Re-classify with Haiku".
 - Contributes:
   - `conversationPane.Actions` → `CategoryChipToolbar`
   - `Config.Spec`
-  - `Config.Section` "Category colors" → `CategoryColorSettings`
+  - `Config.Section` "Category avatars" → `CategoryColorSettings`
+  - `Item.Avatar` → `CategoryAvatarRow`
 - Server:
   - Register: `defineJob('conversation-category.classify')`
   - Uses: `config.Config`, `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`

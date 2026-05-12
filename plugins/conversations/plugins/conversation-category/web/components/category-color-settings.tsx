@@ -1,30 +1,25 @@
 import { useCallback } from "react";
+import { Avatar, AvatarPicker, type AvatarSpec } from "@plugins/primitives/plugins/avatar/web";
 import { useConfigValues } from "@plugins/config/web";
-import { cn } from "@/lib/utils";
 import { conversationCategoryConfig } from "../../shared";
 import { useCategoryColors } from "../internal/use-category-colors";
-import {
-  COLOR_PALETTE,
-  COLOR_KEYS,
-  type ColorKey,
-  autoColorKey,
-} from "../internal/colors";
+import { autoColorKey } from "../internal/colors";
 
-async function setColor(category: string, colorKey: string): Promise<void> {
+async function setAvatar(category: string, spec: AvatarSpec): Promise<void> {
   const res = await fetch("/api/conversation-category/colors", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ category, colorKey }),
+    body: JSON.stringify({ category, colorKey: spec.color, iconKey: spec.icon }),
   });
-  if (!res.ok) throw new Error(`Failed to set color: ${res.status}`);
+  if (!res.ok) throw new Error(`Failed to set avatar: ${res.status}`);
 }
 
-async function deleteColor(category: string): Promise<void> {
+async function deleteAvatar(category: string): Promise<void> {
   const res = await fetch(
     `/api/conversation-category/colors/${encodeURIComponent(category)}`,
     { method: "DELETE" },
   );
-  if (!res.ok) throw new Error(`Failed to reset color: ${res.status}`);
+  if (!res.ok) throw new Error(`Failed to reset avatar: ${res.status}`);
 }
 
 export function CategoryColorSettings() {
@@ -34,62 +29,45 @@ export function CategoryColorSettings() {
   );
   const overrides = useCategoryColors();
 
-  const handlePick = useCallback(
-    async (category: string, key: ColorKey) => {
-      if (overrides[category] === key) {
-        await deleteColor(category); // toggle off → reset to auto
+  const handleChange = useCallback(
+    async (category: string, next: AvatarSpec) => {
+      if (!next.icon && !next.color) {
+        await deleteAvatar(category);
       } else {
-        await setColor(category, key);
+        await setAvatar(category, next);
       }
     },
-    [overrides],
+    [],
   );
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {categories.map((category) => {
-        const manualKey = overrides[category] as ColorKey | undefined;
-        const activeKey = manualKey ?? autoColorKey(category);
-        const isAuto = !manualKey;
+        const override = overrides[category];
+        const spec: AvatarSpec = {
+          icon: override?.iconKey ?? null,
+          color: override?.colorKey ?? null,
+        };
+        const isAuto = !spec.icon && !spec.color;
+        const autoColor = autoColorKey(category);
 
         return (
           <div key={category} className="flex items-center gap-3">
-            {/* Preview chip */}
-            <span
-              className={cn(
-                "inline-flex w-36 shrink-0 truncate items-center rounded-full px-2 py-0.5 text-xs font-medium",
-                COLOR_PALETTE[activeKey].chip,
-              )}
+            <AvatarPicker
+              value={spec}
+              onChange={(next) => handleChange(category, next)}
+              triggerLabel={`Edit avatar for ${category}`}
             >
-              {category}
-            </span>
+              <Avatar
+                icon={spec.icon}
+                color={spec.color ?? autoColor}
+                size="sm"
+                title={category}
+              />
+            </AvatarPicker>
 
-            {/* Color swatches */}
-            <div className="flex items-center gap-1.5">
-              {COLOR_KEYS.map((key) => {
-                const isActive = key === activeKey;
-                const isManual = isActive && !isAuto;
-                const isAutoHighlight = isActive && isAuto;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => handlePick(category, key)}
-                    title={`${key}${isAutoHighlight ? " (auto)" : ""}`}
-                    className={cn(
-                      "size-3.5 rounded-full transition-all hover:scale-110",
-                      COLOR_PALETTE[key].swatch,
-                      isManual &&
-                        "ring-2 ring-foreground/70 ring-offset-1 ring-offset-background scale-110",
-                      isAutoHighlight &&
-                        "ring-1 ring-foreground/30 ring-offset-1 ring-offset-background",
-                    )}
-                  />
-                );
-              })}
-            </div>
+            <span className="text-sm">{category}</span>
 
-            {/* Auto badge */}
             {isAuto && (
               <span className="text-[10px] text-muted-foreground">auto</span>
             )}
