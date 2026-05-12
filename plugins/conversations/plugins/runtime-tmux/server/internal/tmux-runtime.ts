@@ -260,6 +260,16 @@ export const tmuxRuntime: ConversationRuntime = {
       stdout: "pipe",
       stderr: "pipe",
     }).exited;
+    // Clear any partial input the user may have typed before we paste.
+    // C-c is the standard "abort current line" signal; at the Claude CLI's
+    // input prompt it discards the entire multi-line draft without affecting
+    // the running session. send() is only called when the conversation is
+    // not working (caller guards on !working), so C-c reaches the idle input
+    // handler rather than interrupting a streaming response.
+    await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "C-c"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
     // Send the text via load-buffer + paste-buffer -p so tmux wraps it in
     // bracketed paste markers (\x1b[200~ … \x1b[201~). Without that, Claude
     // CLI falls back to a timing/burst heuristic to detect pastes — large
