@@ -12,7 +12,12 @@ export type {
   TopLevelEntry,
   UseAreaResult,
 } from "./internal/use-area";
-export { isGroupEntry, isSpacer, SPACER_PREFIX } from "./internal/use-area";
+export {
+  isGroupEntry,
+  isSpacer,
+  itemKey,
+  SPACER_PREFIX,
+} from "./internal/use-area";
 
 export default {
   id: "reorder",

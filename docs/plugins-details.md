@@ -1236,7 +1236,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/reorder/server/schema.ts`
   - Exports (web):
     - Types: `GroupEntry`, `HostOverride`, `ReorderableSlot`, `ReorderConfig`, `ReorderGroup`, `SpacerItem`, `TopLevelEntry`, `UseAreaResult`
-    - Values: `isGroupEntry`, `isSpacer`, `Reorder`, `setEditMode`, `SPACER_PREFIX`, `useEditMode`
+    - Values: `isGroupEntry`, `isSpacer`, `itemKey`, `Reorder`, `setEditMode`, `SPACER_PREFIX`, `useEditMode`
   - Exports (server):
     - Values: `_reorderPrefs`, `reorderPrefsResource`
   - Exports (shared):

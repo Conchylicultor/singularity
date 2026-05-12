@@ -18,7 +18,7 @@ Reorder.useArea(slot: ReorderableSlot<P>, override?: { filter?, getGroup? })
   => { items, editMode, DndWrapper, ReorderItem }
 ```
 
-`id` is the **stable storage key** for a contribution's rank. Treat it like a DB primary key — never rename. Renaming orphans the persisted rank row.
+`id` is the **stable identifier** for a contribution's rank. The actual DB storage key is `pluginId:id` (computed by `itemKey()`), which prevents collisions when different plugins contribute the same `id` to the same slot. Never rename `id` — renaming orphans the persisted rank row.
 
 ## Rules for plugins using reorder
 
@@ -30,7 +30,7 @@ Reorder.useArea(slot: ReorderableSlot<P>, override?: { filter?, getGroup? })
 
 ## Storage
 
-Per-worktree Postgres table `_reorderPrefs(slot_id, contribution_id, rank)` with composite PK. Worktree DB forks main on creation, so a user's main-namespace customizations propagate to fresh worktrees automatically.
+Per-worktree Postgres table `_reorderPrefs(slot_id, contribution_id, rank)` with composite PK. `contribution_id` is the namespaced key `pluginId:id` (via `itemKey()`), not the bare `id`. Worktree DB forks main on creation, so a user's main-namespace customizations propagate to fresh worktrees automatically.
 
 `reorderPrefsResource` is a push resource parameterized by `{ slotId }` — open tabs of the same worktree resort within ~50 ms after a drag in any tab.
 
@@ -49,7 +49,7 @@ Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The
   - DB schema: `plugins/reorder/server/schema.ts`
 - Exports (web):
   - Types: `GroupEntry`, `HostOverride`, `ReorderableSlot`, `ReorderConfig`, `ReorderGroup`, `SpacerItem`, `TopLevelEntry`, `UseAreaResult`
-  - Values: `isGroupEntry`, `isSpacer`, `Reorder`, `setEditMode`, `SPACER_PREFIX`, `useEditMode`
+  - Values: `isGroupEntry`, `isSpacer`, `itemKey`, `Reorder`, `setEditMode`, `SPACER_PREFIX`, `useEditMode`
 - Exports (server):
   - Values: `_reorderPrefs`, `reorderPrefsResource`
 - Exports (shared):
