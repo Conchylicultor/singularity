@@ -119,20 +119,17 @@ export const tasks = pgView("tasks_v").as((qb) => {
       status: sql<"new" | "in_progress" | "need_action" | "attempted" | "done" | "held" | "dropped" | "blocked">`
         CASE
           WHEN ${facts.hasCompleted}                        THEN 'done'
+          WHEN ${facts.hasActive} AND ${facts.hasWaiting}   THEN 'need_action'
+          WHEN ${facts.hasActive}                           THEN 'in_progress'
           WHEN ${_tasks.droppedAt} IS NOT NULL              THEN 'dropped'
           WHEN ${_tasks.heldAt}    IS NOT NULL              THEN 'held'
           WHEN ${facts.hasBlockingDep}                      THEN 'blocked'
-          WHEN ${facts.hasActive} AND ${facts.hasWaiting}   THEN 'need_action'
-          WHEN ${facts.hasActive}                           THEN 'in_progress'
           WHEN ${facts.hasAttempt}                          THEN 'attempted'
           ELSE                                                   'new'
         END
       `.as("status"),
       active: sql<boolean>`(
-        ${_tasks.droppedAt} IS NULL
-        AND ${_tasks.heldAt} IS NULL
-        AND NOT ${facts.hasCompleted}
-        AND NOT ${facts.hasBlockingDep}
+        NOT ${facts.hasCompleted}
         AND ${facts.hasActive}
       )`.as("active"),
       finishedAt: sql<Date | null>`
