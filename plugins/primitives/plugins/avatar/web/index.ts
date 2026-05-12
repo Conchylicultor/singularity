@@ -11,8 +11,15 @@ export {
 export {
   AVATAR_ICONS,
   AVATAR_ICON_KEYS,
+  AVATAR_ICON_CATEGORIES_FLAT as AVATAR_ICON_CATEGORIES,
   DEFAULT_AGENT_AVATAR,
   resolveAvatarIcon,
+  searchIcons,
+  loadFullIconSet,
+  type AvatarIconCategory,
+  type FullIconSet,
+  type FullIconEntry,
+  type FullIconCategory,
 } from "./internal/icons";
 
 export default {
