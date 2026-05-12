@@ -1215,6 +1215,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
       - Exports (web):
         - Values: `formatRelativeTime`, `RelativeTime`
+    - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
+      - Exports (web):
+        - Types: `RenderSlot`, `RenderSlotConfig`, `ReorderConfig`, `SlotItemMiddleware`, `SlotListMiddleware`
+        - Values: `defineRenderSlot`, `getRenderSlotConfig`, `isRenderSlot`, `registerSlotItemMiddleware`, `registerSlotListMiddleware`, `RenderSlotSubIdContext`
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
       - Exports (web):
         - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
@@ -1247,7 +1251,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/reorder/:slotId`
     - `PATCH /api/reorder/:slotId`
     - `DELETE /api/reorder/:slotId/:contributionId`
-  - Imported by: `action-bar`, `app-shell`, `apps`, `conversation-view`, `detail-sections`, `edit-mode`, `shell`
+  - Imported by: `app-shell`, `apps`, `conversation-view`, `detail-sections`, `edit-mode`, `shell`
   - Endpoint callers: `groups`
   - Plugins:
     - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.

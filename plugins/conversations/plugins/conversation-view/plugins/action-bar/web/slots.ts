@@ -1,9 +1,8 @@
-import { defineSlot } from "@core";
 import type { ComponentType } from "react";
-import { Reorder } from "@plugins/reorder/web";
+import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 
 export const Conversation = {
-  ActionBar: Reorder.area(
-    defineSlot<{ component: ComponentType }>("conversation.action-bar"),
+  ActionBar: defineRenderSlot<{ component: ComponentType }>(
+    "conversation.action-bar",
   ),
 };

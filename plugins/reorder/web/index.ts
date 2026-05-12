@@ -1,4 +1,6 @@
 import type { PluginDefinition } from "@core";
+import { registerSlotListMiddleware } from "@plugins/primitives/plugins/slot-render/web";
+import { ReorderSortMiddleware } from "./internal/render-middleware";
 import "./styles.css";
 
 export { Reorder } from "./internal/reorder";
@@ -25,5 +27,15 @@ export default {
   description:
     "Generic reorder primitive. Slot owners opt in via Reorder.area; hosts render with Reorder.useArea.",
   loadBearing: true,
+  register: [
+    {
+      register() {
+        registerSlotListMiddleware({
+          priority: 0,
+          Component: ReorderSortMiddleware,
+        });
+      },
+    },
+  ],
   contributions: [],
 } satisfies PluginDefinition;

@@ -739,6 +739,10 @@
       "name": "@singularity/plugin-primitives-relative-time",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/slot-render": {
+      "name": "@singularity/plugin-primitives-slot-render",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/syntax-highlight": {
       "name": "@singularity/plugin-primitives-syntax-highlight",
       "version": "0.0.1",
@@ -1844,6 +1848,8 @@
     "@singularity/plugin-primitives-rank": ["@singularity/plugin-primitives-rank@workspace:plugins/primitives/plugins/rank"],
 
     "@singularity/plugin-primitives-relative-time": ["@singularity/plugin-primitives-relative-time@workspace:plugins/primitives/plugins/relative-time"],
+
+    "@singularity/plugin-primitives-slot-render": ["@singularity/plugin-primitives-slot-render@workspace:plugins/primitives/plugins/slot-render"],
 
     "@singularity/plugin-primitives-syntax-highlight": ["@singularity/plugin-primitives-syntax-highlight@workspace:plugins/primitives/plugins/syntax-highlight"],
 

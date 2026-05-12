@@ -60,7 +60,7 @@ Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The
   - `GET /api/reorder/:slotId`
   - `PATCH /api/reorder/:slotId`
   - `DELETE /api/reorder/:slotId/:contributionId`
-- Imported by: `action-bar`, `app-shell`, `apps`, `conversation-view`, `detail-sections`, `edit-mode`, `shell`
+- Imported by: `app-shell`, `apps`, `conversation-view`, `detail-sections`, `edit-mode`, `shell`
 - Endpoint callers: `groups`
 - Sub-plugins:
   - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.

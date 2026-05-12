@@ -142,6 +142,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "primitives/plugins/persistent-draft", loader: () => import("@plugins/primitives/plugins/persistent-draft/web") },
   { name: "primitives/plugins/rank", loader: () => import("@plugins/primitives/plugins/rank/web") },
   { name: "primitives/plugins/relative-time", loader: () => import("@plugins/primitives/plugins/relative-time/web") },
+  { name: "primitives/plugins/slot-render", loader: () => import("@plugins/primitives/plugins/slot-render/web") },
   { name: "primitives/plugins/syntax-highlight", loader: () => import("@plugins/primitives/plugins/syntax-highlight/web") },
   { name: "primitives/plugins/tooltip", loader: () => import("@plugins/primitives/plugins/tooltip/web") },
   { name: "primitives/plugins/tree", loader: () => import("@plugins/primitives/plugins/tree/web") },
