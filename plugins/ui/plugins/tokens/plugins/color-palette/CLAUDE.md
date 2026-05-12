@@ -14,8 +14,11 @@
   - Types: `ColorPaletteTokenValues`
   - Values: `colorPaletteConfig`, `colorPaletteGroup`
 - Contributes:
+  - `ColorPalette.Preset` "Default"
+  - `ColorPalette.Preset` "Ocean"
+  - `ColorPalette.Preset` "Warm"
   - `ThemeEngine.TokenGroup` "Color Palette"
-  - `ThemeEngine.VariantGroup` → `ColorPalettePicker`
+  - `ThemeEngine.VariantGroup` "Color Palette" → `ColorPalettePicker`
 - Server:
   - Uses: `config.Config`
 

@@ -264,6 +264,8 @@ export function defineJob<
     name: spec.name,
     inputSchema: spec.input,
     eventSchema: spec.event,
+    _kind: "job",
+    _doc: { label: spec.name },
     enqueue: enqueue as JobFactory<N, S, E>["enqueue"],
     register() {
       if (jobRegistry.has(spec.name)) {

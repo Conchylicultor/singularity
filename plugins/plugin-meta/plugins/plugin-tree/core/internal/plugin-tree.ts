@@ -1,5 +1,10 @@
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { basename, join, relative } from "path";
+import type { DocMeta } from "../../../../../../plugin-core/types";
+import {
+  registerBarrelStubs,
+  importBarrel,
+} from "@plugins/plugin-meta/plugins/barrel-import/core";
 
 // ── Public types ────────────────────────────────────────────────────
 
@@ -49,6 +54,19 @@ export interface EntityExtensionRef {
   tableName: string;
 }
 
+export interface DocMetaContribution {
+  slotId: string;
+  slotDisplayName?: string;
+  componentName?: string;
+  doc: DocMeta;
+}
+
+export interface DocMetaRegistration {
+  kind: string;
+  runtime: "server" | "central";
+  doc: DocMeta;
+}
+
 export interface PluginNode {
   dir: string;
   path: string;
@@ -76,6 +94,9 @@ export interface PluginNode {
   endpointCallers: string[];
   entityExtensions: EntityExtension[];
   extendedBy: EntityExtensionRef[];
+
+  runtimeContributions?: DocMetaContribution[];
+  runtimeRegistrations?: DocMetaRegistration[];
 }
 
 export interface PluginTree {
@@ -927,4 +948,140 @@ export function buildPluginTree(pluginsRoot: string): PluginTree {
   computeHierarchyIds(roots, "");
 
   return { pluginsRoot, byDir, roots };
+}
+
+// ── Runtime enrichment ─────────────────────────────────────────────
+
+function isSlotLike(v: unknown): v is { id: string; useContributions: unknown } {
+  return typeof v === "function" && typeof (v as any).id === "string" && typeof (v as any).useContributions === "function";
+}
+
+function collectSlotDisplayNames(mod: Record<string, unknown>): Map<string, string> {
+  const map = new Map<string, string>();
+  try {
+    for (const [key, val] of Object.entries(mod)) {
+      if (isSlotLike(val)) {
+        map.set(val.id, key);
+      } else if (val && typeof val === "object" && !Array.isArray(val)) {
+        try {
+          for (const [member, inner] of Object.entries(val as Record<string, unknown>)) {
+            if (isSlotLike(inner)) {
+              map.set(inner.id, `${key}.${member}`);
+            }
+          }
+        } catch {
+          // Skip objects with throwing getters
+        }
+      }
+    }
+  } catch {
+    // ESM namespace objects can throw on enumeration (TDZ bindings)
+  }
+  return map;
+}
+
+function extractComponentName(contribution: Record<string, unknown>): string | undefined {
+  const comp = contribution.component;
+  if (typeof comp === "function" && comp.name) return comp.name;
+  return undefined;
+}
+
+export async function enrichPluginTreeDocs(
+  tree: PluginTree,
+  repoRoot: string,
+): Promise<void> {
+  registerBarrelStubs(repoRoot);
+
+  // Pass 1: import all barrels and build a global slot ID → display name map
+  const slotDisplayNames = new Map<string, string>();
+  const importedModules = new Map<string, { mod: Record<string, unknown>; runtime: "web" | "server" | "central" }[]>();
+
+  // Seed with plugin-core slots (Core.Root etc.)
+  const coreBarrelPath = join(repoRoot, "plugin-core", "index.ts");
+  if (existsSync(coreBarrelPath)) {
+    const coreMod = await importBarrel(coreBarrelPath);
+    if (coreMod) {
+      for (const [id, name] of collectSlotDisplayNames(coreMod)) {
+        slotDisplayNames.set(id, name);
+      }
+    }
+  }
+
+  // Import web barrels first (they succeed), then server/central (some
+  // fail due to missing env vars). This ordering prevents Bun's
+  // "already fetched" cascade from poisoning web imports.
+  for (const runtime of ["web", "server", "central"] as const) {
+    for (const node of tree.byDir.values()) {
+      const barrelPath = join(node.dir, runtime, "index.ts");
+      if (!existsSync(barrelPath)) continue;
+
+      const mod = await importBarrel(barrelPath);
+      if (!mod) continue;
+
+      let mods = importedModules.get(node.dir);
+      if (!mods) {
+        mods = [];
+        importedModules.set(node.dir, mods);
+      }
+      mods.push({ mod, runtime });
+      for (const [id, name] of collectSlotDisplayNames(mod)) {
+        slotDisplayNames.set(id, name);
+      }
+    }
+  }
+
+  // Pass 2: extract contributions and registrations using the slot map
+  for (const node of tree.byDir.values()) {
+    const mods = importedModules.get(node.dir);
+    if (!mods) continue;
+
+    const contributions: DocMetaContribution[] = [];
+    const registrations: DocMetaRegistration[] = [];
+
+    for (const { mod, runtime } of mods) {
+      let def: Record<string, unknown> | undefined;
+      try {
+        def = mod.default as Record<string, unknown> | undefined;
+      } catch {
+        continue;
+      }
+      if (!def) continue;
+
+      const rawContributions = def.contributions as
+        | Array<Record<string, unknown> & { _slotId?: string; _doc?: DocMeta }>
+        | undefined;
+      if (rawContributions) {
+        for (const c of rawContributions) {
+          if (c._slotId) {
+            contributions.push({
+              slotId: c._slotId,
+              slotDisplayName: slotDisplayNames.get(c._slotId),
+              componentName: extractComponentName(c),
+              doc: c._doc ?? {},
+            });
+          }
+        }
+      }
+
+      if (runtime === "server" || runtime === "central") {
+        const rawRegister = def.register as
+          | Array<{ _kind?: string; _doc?: DocMeta }>
+          | undefined;
+        if (rawRegister) {
+          for (const r of rawRegister) {
+            if (r._kind) {
+              registrations.push({
+                kind: r._kind,
+                runtime,
+                doc: r._doc ?? {},
+              });
+            }
+          }
+        }
+      }
+    }
+
+    if (contributions.length > 0) node.runtimeContributions = contributions;
+    if (registrations.length > 0) node.runtimeRegistrations = registrations;
+  }
 }

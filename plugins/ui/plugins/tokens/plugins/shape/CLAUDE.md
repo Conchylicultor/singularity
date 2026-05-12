@@ -14,8 +14,12 @@
   - Types: `ShapeTokenValues`
   - Values: `shapeConfig`, `shapeGroup`
 - Contributes:
+  - `Shape.Preset` "Default"
+  - `Shape.Preset` "Sharp"
+  - `Shape.Preset` "Rounded"
+  - `Shape.Preset` "Pill"
   - `ThemeEngine.TokenGroup` "Shape"
-  - `ThemeEngine.VariantGroup` → `ShapePicker`
+  - `ThemeEngine.VariantGroup` "Shape" → `ShapePicker`
 - Server:
   - Uses: `config.Config`
 

@@ -8,9 +8,8 @@
 - Exports (web):
   - Values: `recoveryPane`
 - Contributes:
-  - `Pane.Register` `conversations-recover`
+  - `Pane.Register` "conversations-recover"
   - `Debug.Item` "Recovery"
-  - `recoveryPane.open`
 - Server:
   - Uses: `conversations.resumeConversation`, `tasks-core.recentConversationsResource`
   - `POST /api/conversations-recover/restore-batch`

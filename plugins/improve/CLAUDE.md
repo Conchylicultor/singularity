@@ -13,9 +13,9 @@
 - Exports (server):
   - Values: `_improve_config`, `_improvePendingGroups`, `IMPROVEMENTS_META_TASK_ID`
 - Contributes:
-  - `Shell.Toolbar` (group `actions`) → `ImproveButton`
+  - `Shell.Toolbar` → `ImproveButton`
 - Server:
-  - Register: `applyGroupJob`
+  - Register: `improve.apply-group`
   - Uses: `conversations.conversationCreated`, `database.db`, `tasks-core.ensureMetaTask`
 - Imported by: `draw-on-app`
 

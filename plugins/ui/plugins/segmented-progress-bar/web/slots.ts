@@ -11,5 +11,6 @@ export interface SegmentedProgressBarVariantContribution {
 export const SegmentedProgressBar = {
   Variant: defineSlot<SegmentedProgressBarVariantContribution>(
     "ui.segmented-progress-bar.variant",
+    { docLabel: (p) => p.label },
   ),
 };

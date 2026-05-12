@@ -1,4 +1,4 @@
-export { buildPluginTree } from "./internal/plugin-tree";
+export { buildPluginTree, enrichPluginTreeDocs } from "./internal/plugin-tree";
 export type {
   Runtime,
   BarrelExport,
@@ -8,6 +8,8 @@ export type {
   RuntimeDetail,
   EntityExtension,
   EntityExtensionRef,
+  DocMetaContribution,
+  DocMetaRegistration,
   PluginNode,
   PluginTree,
 } from "./internal/plugin-tree";

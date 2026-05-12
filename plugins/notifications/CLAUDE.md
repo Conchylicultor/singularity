@@ -11,7 +11,7 @@
   - Types: `RecordNotificationInput`
   - Values: `_notifications`, `notificationsResource`, `recordNotification`
 - Contributes:
-  - `Shell.Toolbar` (group `actions`) → `BellButton`
+  - `Shell.Toolbar` → `BellButton`
 - Server:
   - Uses: `database.db`
   - Resources: `notifications` (push)

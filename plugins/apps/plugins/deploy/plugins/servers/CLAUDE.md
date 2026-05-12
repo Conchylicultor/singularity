@@ -16,9 +16,9 @@
   - Types: `Server`, `ServerStatus`
   - Values: `ServerSchema`, `serversResource`, `ServerStatusSchema`
 - Contributes:
-  - `Pane.Register` `deploy-servers`
-  - `Pane.Register` `deploy-add-server`
-  - `Pane.Register` `deploy-server-detail`
+  - `Pane.Register` "deploy-servers"
+  - `Pane.Register` "deploy-add-server"
+  - `Pane.Register` "deploy-server-detail"
 - Server:
   - Uses: `database.db`
   - `GET /api/deploy/servers`

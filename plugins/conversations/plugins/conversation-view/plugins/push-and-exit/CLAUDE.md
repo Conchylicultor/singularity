@@ -8,9 +8,9 @@
 - Defines:
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables.ts`
 - Contributes:
-  - `Conversation.PromptBar` → `PushAndExitButton`
+  - `Conversation.PromptBar` "Exit" → `PushAndExitButton`
 - Server:
-  - Register: `pushAndExitJob`, `exitCleanFinalizeJob`, `exitCleanTool`, `flagRaiseTool`
+  - Register: `push_and_exit.run`, `push_and_exit.exit_clean_finalize`, `exit_clean`, `flag_raise`
   - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.sendTurn`, `database.db`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`
   - Resources: `push-and-exit` (push)
   - `POST /api/conversations/:id/push-and-exit`

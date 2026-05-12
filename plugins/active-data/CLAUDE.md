@@ -76,6 +76,8 @@ Behavior:
   - Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
 - Exports (server):
   - Values: `_activeDataBindings`, `activeDataBindingsResource`
+- Contributes:
+  - `MarkdownEnhancerSlot`
 - Server:
   - Uses: `database.db`, `tasks-core._conversations`
   - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`

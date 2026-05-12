@@ -6,5 +6,5 @@ export const Stats = {
     id: string;
     title: string;
     component: ComponentType;
-  }>("stats.chart"),
+  }>("stats.chart", { docLabel: (p) => p.title }),
 };

@@ -8,9 +8,8 @@
 - Exports (web):
   - Values: `worktreeCleanupPane`
 - Contributes:
-  - `Pane.Register` `worktree-cleanup`
+  - `Pane.Register` "worktree-cleanup"
   - `Debug.Item` "Worktree Cleanup"
-  - `worktreeCleanupPane.open`
 - Server:
   - Uses: `tasks-core.getAttempt`, `tasks-core.listAttempts`, `tasks-core.listTasks`
   - `GET /api/debug/worktrees`

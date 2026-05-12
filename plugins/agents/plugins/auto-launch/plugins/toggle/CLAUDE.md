@@ -11,7 +11,7 @@
 - Exports (server):
   - Values: `agentAutoLaunch`, `agentAutoLaunchResource`
 - Contributes:
-  - `Agents.AgentActions` → `AutoLaunchToggle`
+  - `Agents.AgentActions` "auto-launch" → `AutoLaunchToggle`
 - Server:
   - Uses: `agents._agents`, `database.db`
   - Resources: `agent-auto-launch` (push)

@@ -22,7 +22,8 @@ fetch URL so `useFetchJson` re-fetches when the toggle flips.
 - Exports (web):
   - Values: `costConvSidePane`
 - Contributes:
-  - `Pane.Register` `stats-cost-conv-side`
+  - `Pane.Register` "stats-cost-conv-side"
+  - `Config.Spec`
   - `Stats.Chart` "Cost & Tokens" → `CostSection`
   - `Stats.Chart` "Token mix per day" → `TokenMixChart`
   - `Stats.Chart` "Average cost per conversation" → `AvgCostPerConversationChart`

@@ -8,8 +8,8 @@
 - Exports (web):
   - Values: `attemptConversationPane`, `attemptPane`
 - Contributes:
-  - `Pane.Register` `attempt`
-  - `Pane.Register` `attempt-conversation`
+  - `Pane.Register` "attempt"
+  - `Pane.Register` "attempt-conversation"
   - `Conversation.ActionBar` → `AttemptSwitchButton`
 - Imported by: `attempt`
 

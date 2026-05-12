@@ -6,7 +6,7 @@
 
 - Description: Toolbar button that marks the top task as dropped and closes the conversation.
 - Contributes:
-  - `Conversation.PromptBar` → `DropAndExitButton`
+  - `Conversation.PromptBar` "Exit" → `DropAndExitButton`
 - Server:
   - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.listPushesForAttempt`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`, `tasks-core.updateTask`
   - `POST /api/conversations/:id/drop-and-exit`

@@ -8,8 +8,9 @@
 - Exports (internal):
   - Values: `reviewConfig`
 - Contributes:
-  - `Pane.Register` `conv-review`
+  - `Pane.Register` "conv-review"
   - `Conversation.ActionBar` → `ReviewButton`
+  - `Config.Spec`
 - Server:
   - Uses: `config.Config`
 

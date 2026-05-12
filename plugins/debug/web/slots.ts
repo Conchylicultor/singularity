@@ -7,5 +7,5 @@ export const Debug = {
     title: string;
     icon: ComponentType<{ className?: string }>;
     onClick: () => void;
-  }>("debug.item"),
+  }>("debug.item", { docLabel: (p) => p.title }),
 };

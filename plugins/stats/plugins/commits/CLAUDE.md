@@ -12,6 +12,7 @@
 - Contributes:
   - `Stats.Chart` "Commits" → `CommitsSection`
   - `Stats.Chart` "Lines changed" → `LinesChartsSection`
+  - `Config.Spec`
   - `Config.Section` "Excluded path toggles" → `ExcludedPathToggles`
 - Server:
   - Uses: `config.Config`, `config.readConfig`, `database.db`

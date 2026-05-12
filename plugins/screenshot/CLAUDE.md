@@ -8,8 +8,8 @@
 - Exports (web):
   - Values: `captureApp`, `screenshotPane`
 - Contributes:
-  - `Pane.Register` `screenshot`
-  - `Shell.Toolbar` (group `actions`) → `ScreenshotButton`
+  - `Pane.Register` "screenshot"
+  - `Shell.Toolbar` → `ScreenshotButton`
 - Server:
   - `POST /api/screenshots/:id`
   - `GET /api/screenshots/:id`

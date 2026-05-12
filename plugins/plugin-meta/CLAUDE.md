@@ -15,6 +15,7 @@ Sub-plugins:
 
 - Description: Plugins about the plugin system itself — browsing, inspecting, and publishing.
 - Sub-plugins:
+  - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
   - **`plugin-tree`**
   - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
   - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.

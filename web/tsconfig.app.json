@@ -24,7 +24,10 @@
       "@server/*": ["../server/src/*"]
     }
   },
-  "exclude": ["../plugins/plugin-meta/plugins/plugin-tree/**"],
+  "exclude": [
+    "../plugins/plugin-meta/plugins/plugin-tree/**",
+    "../plugins/plugin-meta/plugins/barrel-import/**"
+  ],
   "include": [
     "src",
     "../plugin-core",

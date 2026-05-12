@@ -5,13 +5,13 @@ export const Tasks = {
   List: defineSlot<{
     id: string;
     component: ComponentType;
-  }>("tasks.list"),
+  }>("tasks.list", { docLabel: (p) => p.id }),
   TaskActions: defineSlot<{
     id: string;
     component: ComponentType<{ taskId: string; hasChildren: boolean }>;
-  }>("tasks.task-actions"),
+  }>("tasks.task-actions", { docLabel: (p) => p.id }),
   ListActions: defineSlot<{
     id: string;
     component: ComponentType;
-  }>("tasks.list-actions"),
+  }>("tasks.list-actions", { docLabel: (p) => p.id }),
 };

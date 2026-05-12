@@ -11,9 +11,8 @@
   - Types: `PhaseConfig`, `ProfilingContextValue`, `Span`
   - Values: `formatDuration`, `GanttSection`, `groupByPhase`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `useProfilingContext`
 - Contributes:
-  - `Pane.Register` `debug-profiling`
+  - `Pane.Register` "debug-profiling"
   - `Debug.Item` "Profiling"
-  - `profilingPane.open`
 - Slot contributors: `boot`, `build`
 - Sub-plugins:
   - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.

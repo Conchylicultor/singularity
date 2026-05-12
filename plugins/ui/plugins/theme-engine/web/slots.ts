@@ -34,11 +34,14 @@ export interface GlobalPresetContribution {
 export const ThemeEngine = {
   VariantGroup: defineSlot<VariantGroupContribution>(
     "ui.theme-engine.variant-group",
+    { docLabel: (p) => p.componentLabel },
   ),
   TokenGroup: defineSlot<TokenGroupContribution>(
     "ui.theme-engine.token-group",
+    { docLabel: (p) => p.label },
   ),
   GlobalPreset: defineSlot<GlobalPresetContribution>(
     "ui.theme-engine.global-preset",
+    { docLabel: (p) => p.label },
   ),
 };

@@ -14,7 +14,7 @@
   - Types: `EventRendererContribution`, `OverlayContribution`, `RowActionContribution`
   - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`
 - Contributes:
-  - `JsonlViewer.RowAction` → `RawJsonAction`
+  - `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
 - Server:
   - Uses: `tasks-core.getConversationClaudeSessionId`
   - Resources: `jsonl-events` (push)

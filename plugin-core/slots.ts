@@ -9,8 +9,15 @@ export interface Slot<P> {
   useContributions(): P[];
 }
 
-export function defineSlot<P>(id: string): Slot<P> {
-  const slot = ((props: P) => ({ _slotId: id, ...props })) as unknown as Slot<P>;
+export function defineSlot<P>(
+  id: string,
+  opts?: { docLabel?: (props: P) => string | undefined },
+): Slot<P> {
+  const slot = ((props: P) => ({
+    _slotId: id,
+    _doc: { label: opts?.docLabel?.(props) },
+    ...props,
+  })) as unknown as Slot<P>;
   slot.id = id;
 
   slot.useContributions = () => {

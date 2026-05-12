@@ -11,10 +11,9 @@
   - Types: `LogChannel`, `LogStream`
   - Values: `Log`
 - Contributes:
-  - `Pane.Register` `logs`
-  - `Pane.Register` `logs-channel`
+  - `Pane.Register` "logs"
+  - `Pane.Register` "logs-channel"
   - `Debug.Item` "Logs"
-  - `logsPane.open`
 - Server:
   - `GET /api/logs/channels`
   - `WS /ws/logs`

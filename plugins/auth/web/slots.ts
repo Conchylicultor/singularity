@@ -23,5 +23,7 @@ export const Auth = {
    * The web-side contribution is purely presentational; provider behavior
    * (OAuth URLs, identity fetch) lives in the server-side descriptor.
    */
-  Provider: defineSlot<AuthProviderContribution>("auth.provider"),
+  Provider: defineSlot<AuthProviderContribution>("auth.provider", {
+    docLabel: (p) => p.name,
+  }),
 };

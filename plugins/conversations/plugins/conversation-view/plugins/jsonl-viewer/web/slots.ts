@@ -23,11 +23,14 @@ export interface OverlayContribution {
 export const JsonlViewer = {
   EventRenderer: defineSlot<EventRendererContribution>(
     "conversation.jsonl-viewer.event-renderer",
+    { docLabel: (p) => p.kind },
   ),
   RowAction: defineSlot<RowActionContribution>(
     "conversation.jsonl-viewer.row-action",
+    { docLabel: (p) => p.id },
   ),
   Overlay: defineSlot<OverlayContribution>(
     "conversation.jsonl-viewer.overlay",
+    { docLabel: (p) => p.id },
   ),
 };

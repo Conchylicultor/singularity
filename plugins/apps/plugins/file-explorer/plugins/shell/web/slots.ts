@@ -12,7 +12,7 @@ export const FileExplorer = {
       group?: string;
       labelExtra?: ComponentType;
       scroll?: boolean;
-    }>("file-explorer.sidebar"),
+    }>("file-explorer.sidebar", { docLabel: (p) => p.title }),
     { getGroup: (item) => item.group ?? null, getLabel: (item) => item.title },
   ),
 
@@ -23,7 +23,7 @@ export const FileExplorer = {
       onClick?: () => void;
       component?: ComponentType;
       group?: string;
-    }>("file-explorer.toolbar"),
+    }>("file-explorer.toolbar", { docLabel: (p) => p.label }),
     {
       getGroup: (item) => item.group ?? null,
       getLabel: (item) => item.label ?? item.id,

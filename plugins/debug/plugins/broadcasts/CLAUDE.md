@@ -8,9 +8,8 @@
 - Exports (web):
   - Values: `broadcastsPane`
 - Contributes:
-  - `Pane.Register` `debug-broadcasts`
+  - `Pane.Register` "debug-broadcasts"
   - `Debug.Item` "Broadcasts"
-  - `broadcastsPane.open`
 - Server:
   - `GET /api/debug/broadcasts`
   - `PUT /api/debug/broadcasts`

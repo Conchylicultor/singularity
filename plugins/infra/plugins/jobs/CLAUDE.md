@@ -15,7 +15,7 @@
   - Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`
   - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
 - Server:
-  - Register: `jobsResumeJob`
+  - Register: `jobs.resume`
   - Uses: `database.db`
   - Resources: `jobs-list` (invalidate)
   - `GET /api/jobs`

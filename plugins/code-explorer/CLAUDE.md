@@ -8,10 +8,9 @@
 - Exports (server):
   - Values: `resolveWorktreePath`
 - Contributes:
-  - `Pane.Register` `global-file-tree`
-  - `Pane.Register` `conv-file-tree`
-  - `Shell.Sidebar` "Explorer" (group `System`)
-  - `globalFileTreePane.open`
+  - `Pane.Register` "global-file-tree"
+  - `Pane.Register` "conv-file-tree"
+  - `Shell.Sidebar` "Explorer"
   - `Conversation.ActionBar` → `ConvTreeButton`
 - Server:
   - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`

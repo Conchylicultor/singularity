@@ -19,6 +19,7 @@ export interface FileRendererContribution {
 export const FilePane = {
   Renderer: defineSlot<FileRendererContribution>(
     "conversation.code.file-pane.renderer",
+    { docLabel: (p) => p.label },
   ),
 };
 

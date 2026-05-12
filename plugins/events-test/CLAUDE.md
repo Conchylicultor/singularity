@@ -10,11 +10,10 @@
 - Exports (web):
   - Values: `eventsTestPane`
 - Contributes:
-  - `Pane.Register` `events-test`
+  - `Pane.Register` "events-test"
   - `Debug.Item` "Events Test"
-  - `eventsTestPane.open`
 - Server:
-  - Register: `logPing`, `pinged`
+  - Register: `events_test.log`, `events_test.pinged`
   - Uses: `database.db`
   - `POST /api/events-test/subscribe`
   - `POST /api/events-test/emit`

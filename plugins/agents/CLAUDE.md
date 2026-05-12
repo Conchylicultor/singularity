@@ -17,17 +17,16 @@
   - Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`
   - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
 - Contributes:
-  - `Pane.Register` `agents-root`
-  - `Pane.Register` `agent-detail`
-  - `Pane.Register` `agent-conversation`
-  - `Pane.Register` `agent-system-detail`
-  - `Pane.Register` `agent-side`
-  - `Shell.Sidebar` "Agents" (group `System`)
-  - `agentsRootPane.open`
+  - `Pane.Register` "agents-root"
+  - `Pane.Register` "agent-detail"
+  - `Pane.Register` "agent-conversation"
+  - `Pane.Register` "agent-system-detail"
+  - `Pane.Register` "agent-side"
+  - `Shell.Sidebar` "Agents"
   - `Item.Avatar` → `AgentAvatarRow`
   - `Conversation.TitlePrefix` → `AgentAvatarTitlePrefix`
-  - `Agents.AgentActions` → `ExpandCollapseAllAction`
-  - `Agents.AgentActions` → `DeleteAgentAction`
+  - `Agents.AgentActions` "expand-collapse-all" → `ExpandCollapseAllAction`
+  - `Agents.AgentActions` "delete" → `DeleteAgentAction`
 - Server:
   - Uses: `conversations.createConversation`, `database.db`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
   - Resources: `agent-launches` (push)

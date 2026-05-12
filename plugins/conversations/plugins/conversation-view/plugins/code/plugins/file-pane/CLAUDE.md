@@ -11,7 +11,7 @@
   - Types: `FileContentState`, `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`
   - Values: `FileContent`, `FilePane`, `FilePaneView`, `filePeekPane`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileRenderers`
 - Contributes:
-  - `Pane.Register` `file-peek`
+  - `Pane.Register` "file-peek"
 - Slot contributors: `diff`, `image`, `markdown`, `raw`
 - Sub-plugins:
   - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.

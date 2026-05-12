@@ -6,7 +6,7 @@
 
 - Description: Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
 - Contributes:
-  - `Conversation.PromptBar` → `ResumeButton`
+  - `Conversation.PromptBar` "Exit" → `ResumeButton`
 - Server:
   - Uses: `conversations.resumeConversation`, `tasks-core.recentConversationsResource`
   - `POST /api/conversations/:id/resume`

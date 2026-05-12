@@ -20,7 +20,7 @@ export const Config = {
     title: string;
     description?: string;
     component: ComponentType;
-  }>("config.section"),
+  }>("config.section", { docLabel: (p) => p.title }),
 };
 
 export interface SpecWithPlugin {

@@ -14,8 +14,10 @@
   - Types: `SidebarPaletteTokenValues`
   - Values: `sidebarPaletteConfig`, `sidebarPaletteGroup`
 - Contributes:
+  - `SidebarPalette.Preset` "Default"
+  - `SidebarPalette.Preset` "Warm"
   - `ThemeEngine.TokenGroup` "Sidebar Palette"
-  - `ThemeEngine.VariantGroup` → `SidebarPalettePicker`
+  - `ThemeEngine.VariantGroup` "Sidebar Palette" → `SidebarPalettePicker`
 - Server:
   - Uses: `config.Config`
 

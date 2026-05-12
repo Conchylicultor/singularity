@@ -91,6 +91,8 @@ const hooks: Partial<DurableHooks> = {};
  */
 export function UNSAFE_installDurableHooks(impl: DurableHooks): Registration {
   return {
+    _kind: "durable-hooks",
+    _doc: {},
     register() {
       Object.assign(hooks, impl);
     },

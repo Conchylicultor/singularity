@@ -6,7 +6,7 @@
 
 - Description: Toolbar button that marks the task as held and closes the conversation.
 - Contributes:
-  - `Conversation.PromptBar` → `HoldAndExitButton`
+  - `Conversation.PromptBar` "Exit" → `HoldAndExitButton`
 - Server:
   - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`, `tasks-core.updateTask`
   - `POST /api/conversations/:id/hold-and-exit`

@@ -19,7 +19,7 @@ sibling plugins (e.g. publish's tree component).
   - Types: `PluginNode`, `PluginTreePayload`
   - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
 - Contributes:
-  - `Pane.Register` `plugin-view`
+  - `Pane.Register` "plugin-view"
 - Server:
   - `GET /api/plugin-view/tree`
 - Endpoint callers: `plugin-link`, `publish`

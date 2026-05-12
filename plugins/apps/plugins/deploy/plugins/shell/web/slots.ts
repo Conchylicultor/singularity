@@ -7,5 +7,5 @@ export const Deploy = {
     title: string;
     order: number;
     component: ComponentType<{ serverId: string }>;
-  }>("deploy.section"),
+  }>("deploy.section", { docLabel: (p) => p.title }),
 };

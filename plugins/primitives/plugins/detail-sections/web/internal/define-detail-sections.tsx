@@ -21,7 +21,7 @@ export function defineDetailSections<EntityProps extends Record<string, unknown>
     id: string;
     label: string;
     component: ComponentType<EntityProps>;
-  }>(`${id}.section`);
+  }>(`${id}.section`, { docLabel: (p) => p.id });
 
   const Section = Reorder.area(rawSlot, {
     getLabel: (c) => c.label,

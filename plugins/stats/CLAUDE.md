@@ -10,9 +10,8 @@
 - Exports (web):
   - Values: `Stats`, `statsPane`, `useShowEmptyDays`
 - Contributes:
-  - `Pane.Register` `stats`
-  - `Shell.Sidebar` "Stats" (group `System`)
-  - `statsPane.open`
+  - `Pane.Register` "stats"
+  - `Shell.Sidebar` "Stats"
 - Imported by: `commits`, `cost`, `tasks`
 - Slot contributors: `commits`, `cost`, `tasks`
 - Sub-plugins:

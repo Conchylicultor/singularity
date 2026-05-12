@@ -8,14 +8,13 @@
 - Exports (internal):
   - Values: `GOOGLE_DEFAULT_SCOPES`, `googleAuthConfig`
 - Contributes:
-  - `Auth.Provider`
-  - `googleSetupPane.open`
+  - `Auth.Provider` "Google"
+  - `Config.Spec`
 - Server:
   - Uses: `config.Config`
 - Central:
   - Register: `googleAuthRegistration`
   - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
-  - Register: `googleAuthRegistration`
 - Sub-plugins:
   - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
 

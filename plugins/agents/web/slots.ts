@@ -6,19 +6,21 @@ export const Agents = {
   List: defineSlot<{
     id: string;
     component: ComponentType;
-  }>("agents.list"),
+  }>("agents.list", { docLabel: (p) => p.id }),
   ListActions: defineSlot<{
     id: string;
     component: ComponentType;
-  }>("agents.list-actions"),
+  }>("agents.list-actions", { docLabel: (p) => p.id }),
   View: defineSlot<{
     id: string;
     title?: string;
     component: ComponentType<{ agentId: string }>;
-  }>("agents.view"),
+  }>("agents.view", { docLabel: (p) => p.title ?? p.id }),
   AgentActions: defineSlot<{
     id: string;
     component: ComponentType<{ agentId: string; hasChildren: boolean }>;
-  }>("agents.agent-actions"),
-  SystemAgent: defineSlot<SystemAgentDescriptor>("agents.system-agent"),
+  }>("agents.agent-actions", { docLabel: (p) => p.id }),
+  SystemAgent: defineSlot<SystemAgentDescriptor>("agents.system-agent", {
+    docLabel: (p) => p.name,
+  }),
 };

@@ -73,9 +73,8 @@ If you're tempted to store `{ [item]: { enabled: boolean, … } }` as a JSON blo
 - Exports (server):
   - Values: `Config`, `configResource`, `configSecretsResource`, `readConfig`
 - Contributes:
-  - `Pane.Register` `settings`
-  - `Shell.Sidebar` "Settings" (group `System`)
-  - `settingsPane.open`
+  - `Pane.Register` "settings"
+  - `Shell.Sidebar` "Settings"
 - Server:
   - Uses: `database.db`
   - `GET /api/config`

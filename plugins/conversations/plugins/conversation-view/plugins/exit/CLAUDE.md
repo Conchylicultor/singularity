@@ -6,7 +6,7 @@
 
 - Description: Toolbar button that closes the conversation without changing any task state.
 - Contributes:
-  - `Conversation.PromptBar` → `ExitButton`
+  - `Conversation.PromptBar` "Exit" → `ExitButton`
 - Server:
   - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`
   - `POST /api/conversations/:id/exit`

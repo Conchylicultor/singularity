@@ -13,8 +13,8 @@
   - Types: `ToolRendererContribution`
   - Values: `JsonlViewerTool`, `ToolCallCard`, `ToolFilePath`, `toRelativePath`
 - Contributes:
-  - `JsonlViewer.EventRenderer` → `ToolCallRow`
-  - `JsonlViewer.RowAction` → `CopyToolResultAction`
+  - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
+  - `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
 - Slot contributors: `add-task`, `bash`, `edit`, `read`, `write`
 - Sub-plugins:
   - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.

@@ -8,8 +8,9 @@
 - Defines:
   - DB schema: `plugins/build/server/internal/tables.ts`
 - Contributes:
-  - `Shell.Toolbar` (group `actions`) → `BuildButton`
-  - `Pane.Register` `build`
+  - `Shell.Toolbar` → `BuildButton`
+  - `Config.Spec`
+  - `Pane.Register` "build"
 - Server:
   - Register: `buildRunJob`
   - Uses: `config.Config`, `config.readConfig`, `database.db`

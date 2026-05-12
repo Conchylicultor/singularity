@@ -19,11 +19,13 @@ let byKind: Map<symbol, ServerContribution[]> = new Map();
 
 export function defineServerContribution<P>(
   debugName: string,
+  opts?: { docLabel?: (props: P) => string | undefined },
 ): ServerContributionToken<P> {
   const kind = Symbol(debugName);
 
   const token = ((props: P) => ({
     _kind: kind,
+    _doc: { label: opts?.docLabel?.(props as P) },
     ...props,
   })) as unknown as ServerContributionToken<P>;
 

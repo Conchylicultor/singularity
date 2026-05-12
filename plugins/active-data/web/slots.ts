@@ -38,5 +38,7 @@ export type ActiveDataContribution =
   | ActiveDataCodeContribution;
 
 export const ActiveData = {
-  Tag: defineSlot<ActiveDataContribution>("active-data.tag"),
+  Tag: defineSlot<ActiveDataContribution>("active-data.tag", {
+    docLabel: (p) => ("tag" in p ? p.tag : p.pattern?.source),
+  }),
 };

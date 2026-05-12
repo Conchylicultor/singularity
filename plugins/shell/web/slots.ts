@@ -13,7 +13,7 @@ export const Shell = {
       labelExtra?: ComponentType;
       /** When true, only the section label is pinned; the component renders in an independent scroll region. */
       scroll?: boolean;
-    }>("shell.sidebar"),
+    }>("shell.sidebar", { docLabel: (p) => p.title }),
     { getGroup: (item) => item.group ?? null, getLabel: (item) => item.title, enableGroups: true },
   ),
 
@@ -24,7 +24,7 @@ export const Shell = {
       onClick?: () => void;
       component?: ComponentType;
       group?: string;
-    }>("shell.toolbar"),
+    }>("shell.toolbar", { docLabel: (p) => p.label }),
     {
       getLabel: (item) => item.label ?? item.id,
       enableGroups: true,

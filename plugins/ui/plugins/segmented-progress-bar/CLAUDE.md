@@ -14,7 +14,7 @@
   - Types: `SegmentedProgressBarProps`, `SegmentedProgressBarVariantContribution`, `Step`
   - Values: `SegmentedProgressBar`, `SegmentedProgressBarSlots`
 - Contributes:
-  - `ThemeEngine.VariantGroup` → `VariantPicker`
+  - `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
 - Server:
   - Uses: `config.Config`
 - Sub-plugins:

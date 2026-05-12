@@ -10,7 +10,7 @@ export const Apps = {
       component: ComponentType;
       path: string;
       onClick?: () => void;
-    }>("apps.app"),
+    }>("apps.app", { docLabel: (p) => p.tooltip }),
     { getLabel: (item) => item.tooltip },
   ),
 };

@@ -1,11 +1,24 @@
 export type PluginId = string;
 
+/**
+ * Auto-documentable metadata attached to contributions and registration tokens.
+ * The `kind` is never stored here — it is always derived from structural
+ * identity (`_slotId` for slot contributions, `_kind` for registrations).
+ */
+export interface DocMeta {
+  /** Human-readable label for this specific contribution. */
+  label?: string;
+  /** Optional extra detail (description excerpt, path, etc.). */
+  detail?: string;
+}
+
 export type Contribution = {
   _slotId: string;
   /** Injected by PluginProvider from the enclosing PluginDefinition. */
   _pluginId?: PluginId;
   _pluginName?: string;
   _pluginDescription?: string;
+  _doc?: DocMeta;
   [key: string]: unknown;
 };
 
@@ -22,6 +35,9 @@ export type Contribution = {
  */
 export interface Registration {
   register(): void | Promise<void>;
+  /** Auto-set by the factory (e.g. "mcp-tool", "job"). Never manually specified. */
+  readonly _kind?: string;
+  _doc?: DocMeta;
 }
 
 export interface PluginDefinition {

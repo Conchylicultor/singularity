@@ -15,6 +15,18 @@ export type HttpHandler = (
   params: Record<string, string>,
 ) => Response | Promise<Response>;
 
+// Opaque handle for a resource defined via `defineResource`. The concrete
+// `Resource<T, P>` type lives in ./resources; kept minimal here to avoid a
+// circular import.
+export type ResourceLike = { key: string };
+
+// Opaque handle for a config descriptor defined via `defineConfig`. The
+// concrete `ConfigDescriptor<S>` type lives in `@plugins/config/shared`.
+// biome-ignore lint/suspicious/noExplicitAny: descriptor is type-erased here.
+export type ConfigDescriptorLike = { schema: Record<string, any> };
+
+export type { DocMeta } from "../../plugin-core/types";
+
 /**
  * A lazy registry write. Returned by helpers like `Mcp.tool`, `Runtime.define`,
  * `defineJob`, `defineTriggerEvent`, and `UNSAFE_installDurableHooks`. The
@@ -28,6 +40,9 @@ export type HttpHandler = (
  */
 export interface Registration {
   register(): void | Promise<void>;
+  /** Auto-set by the factory (e.g. "mcp-tool", "job"). Never manually specified. */
+  readonly _kind?: string;
+  _doc?: import("../../plugin-core/types").DocMeta;
 }
 
 export type { ServerContribution, ServerContributionToken } from "./contributions";

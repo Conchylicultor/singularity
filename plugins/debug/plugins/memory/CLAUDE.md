@@ -23,9 +23,8 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
 - Exports (web):
   - Values: `memoryPane`
 - Contributes:
-  - `Pane.Register` `debug-memory`
+  - `Pane.Register` "debug-memory"
   - `Debug.Item` "Memory"
-  - `memoryPane.open`
 - Server:
   - `GET /api/debug/memory`
   - `GET /api/debug/memory/:name`

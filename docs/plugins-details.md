@@ -16,6 +16,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
   - Exports (server):
     - Values: `_activeDataBindings`, `activeDataBindingsResource`
+  - Contributes:
+    - `MarkdownEnhancerSlot`
   - Server:
     - Uses: `database.db`, `tasks-core._conversations`
     - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
@@ -27,26 +29,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Values: `AttemptChip`
       - Contributes:
-        - `ActiveData.Tag` `ATTEMPT_ID_RE` → `AttemptChip`
+        - `ActiveData.Tag` "(?<!\/)att-\d+-[a-z0-9]{4}(?![/.])\b" → `AttemptChip`
     - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.
       - Exports (web):
         - Values: `ConvChip`
       - Contributes:
-        - `ActiveData.Tag` `CONV_ID_RE` → `ConvChip`
+        - `ActiveData.Tag` "(?<!\/)conv-\d+-[a-z0-9]{4}(?![/.])\b" → `ConvChip`
     - **`plugin-link`** — Renders plugin hierarchy IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's hierarchyId (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
       - Exports (web):
         - Values: `PluginLinkChip`
       - Contributes:
-        - `ActiveData.Tag` `PLUGIN_NAME_RE` → `PluginLinkChip`
-        - `Pane.Register` `plugin-conv-side`
+        - `ActiveData.Tag` "(?<!\/)[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*(?![/.])\b" → `PluginLinkChip`
+        - `Pane.Register` "plugin-conv-side"
     - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
       - Contributes:
-        - `ActiveData.Tag` → `TaskCard`
+        - `ActiveData.Tag` "task" → `TaskCard`
     - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed.
       - Exports (web):
         - Values: `TaskLinkChip`
       - Contributes:
-        - `ActiveData.Tag` `TASK_ID_RE` → `TaskLinkChip`
+        - `ActiveData.Tag` "(?<!\/)task-\d+-[a-z0-9]{4,8}(?![/.])\b" → `TaskLinkChip`
 
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
   - Defines:
@@ -61,17 +63,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`
     - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
   - Contributes:
-    - `Pane.Register` `agents-root`
-    - `Pane.Register` `agent-detail`
-    - `Pane.Register` `agent-conversation`
-    - `Pane.Register` `agent-system-detail`
-    - `Pane.Register` `agent-side`
-    - `Shell.Sidebar` "Agents" (group `System`)
-    - `agentsRootPane.open`
+    - `Pane.Register` "agents-root"
+    - `Pane.Register` "agent-detail"
+    - `Pane.Register` "agent-conversation"
+    - `Pane.Register` "agent-system-detail"
+    - `Pane.Register` "agent-side"
+    - `Shell.Sidebar` "Agents"
     - `Item.Avatar` → `AgentAvatarRow`
     - `Conversation.TitlePrefix` → `AgentAvatarTitlePrefix`
-    - `Agents.AgentActions` → `ExpandCollapseAllAction`
-    - `Agents.AgentActions` → `DeleteAgentAction`
+    - `Agents.AgentActions` "expand-collapse-all" → `ExpandCollapseAllAction`
+    - `Agents.AgentActions` "delete" → `DeleteAgentAction`
   - Server:
     - Uses: `conversations.createConversation`, `database.db`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
     - Resources: `agent-launches` (push)
@@ -95,7 +96,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (server):
             - Values: `agentAutoLaunch`, `agentAutoLaunchResource`
           - Contributes:
-            - `Agents.AgentActions` → `AutoLaunchToggle`
+            - `Agents.AgentActions` "auto-launch" → `AutoLaunchToggle`
           - Server:
             - Uses: `agents._agents`, `database.db`
             - Resources: `agent-auto-launch` (push)
@@ -112,7 +113,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`shell`** — App shell for the agent manager. Registers the / app entry and renders the main Shell layout.
           - Contributes:
-            - `Apps.App` → `AgentManagerLayout`
+            - `Apps.App` "Agent Manager" → `AgentManagerLayout`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -127,9 +128,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Types: `Server`, `ServerStatus`
             - Values: `ServerSchema`, `serversResource`, `ServerStatusSchema`
           - Contributes:
-            - `Pane.Register` `deploy-servers`
-            - `Pane.Register` `deploy-add-server`
-            - `Pane.Register` `deploy-server-detail`
+            - `Pane.Register` "deploy-servers"
+            - `Pane.Register` "deploy-add-server"
+            - `Pane.Register` "deploy-server-detail"
           - Server:
             - Uses: `database.db`
             - `GET /api/deploy/servers`
@@ -143,22 +144,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (web):
             - Values: `Deploy`
           - Contributes:
-            - `Apps.App` → `DeployLayout`
+            - `Apps.App` "Deploy" → `DeployLayout`
     - **`file-explorer`** — File explorer app.
       - Plugins:
         - **`shell`** — App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.
           - Exports (web):
             - Values: `FileExplorer`
           - Contributes:
-            - `Apps.App` → `FileExplorerLayout`
+            - `Apps.App` "File Explorer" → `FileExplorerLayout`
           - Imported by: `agents`, `auth`, `blocked-by`, `build`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `debug`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `publish`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - Exports (web):
     - Values: `attemptConversationPane`, `attemptPane`
   - Contributes:
-    - `Pane.Register` `attempt`
-    - `Pane.Register` `attempt-conversation`
+    - `Pane.Register` "attempt"
+    - `Pane.Register` "attempt-conversation"
     - `Conversation.ActionBar` → `AttemptSwitchButton`
   - Imported by: `attempt`
 
@@ -175,9 +176,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
     - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `readGlobalConfig`, `registerAuthProvider`
   - Contributes:
-    - `Pane.Register` `accounts`
-    - `Shell.Sidebar` "Accounts" (group `System`)
-    - `accountsPane.open`
+    - `Pane.Register` "accounts"
+    - `Shell.Sidebar` "Accounts"
   - Central:
     - `GET /api/auth/start/:provider`
     - `GET /api/auth/callback/:provider`
@@ -192,38 +192,38 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (internal):
         - Values: `GOOGLE_DEFAULT_SCOPES`, `googleAuthConfig`
       - Contributes:
-        - `Auth.Provider`
-        - `googleSetupPane.open`
+        - `Auth.Provider` "Google"
+        - `Config.Spec`
       - Server:
         - Uses: `config.Config`
       - Central:
         - Register: `googleAuthRegistration`
         - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
-        - Register: `googleAuthRegistration`
       - Plugins:
         - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
           - Exports (web):
             - Values: `googleSetupPane`
           - Contributes:
-            - `Pane.Register` `google-setup`
+            - `Pane.Register` "google-setup"
     - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
       - Exports (internal):
         - Values: `notionAuthConfig`
       - Contributes:
-        - `Auth.Provider`
+        - `Auth.Provider` "Notion"
+        - `Config.Spec`
       - Server:
         - Uses: `config.Config`
       - Central:
         - Register: `notionAuthRegistration`
         - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
-        - Register: `notionAuthRegistration`
 
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Defines:
     - DB schema: `plugins/build/server/internal/tables.ts`
   - Contributes:
-    - `Shell.Toolbar` (group `actions`) → `BuildButton`
-    - `Pane.Register` `build`
+    - `Shell.Toolbar` → `BuildButton`
+    - `Config.Spec`
+    - `Pane.Register` "build"
   - Server:
     - Register: `buildRunJob`
     - Uses: `config.Config`, `config.readConfig`, `database.db`
@@ -235,10 +235,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (server):
     - Values: `resolveWorktreePath`
   - Contributes:
-    - `Pane.Register` `global-file-tree`
-    - `Pane.Register` `conv-file-tree`
-    - `Shell.Sidebar` "Explorer" (group `System`)
-    - `globalFileTreePane.open`
+    - `Pane.Register` "global-file-tree"
+    - `Pane.Register` "conv-file-tree"
+    - `Shell.Sidebar` "Explorer"
     - `Conversation.ActionBar` → `ConvTreeButton`
   - Server:
     - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`
@@ -272,9 +271,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (server):
     - Values: `Config`, `configResource`, `configSecretsResource`, `readConfig`
   - Contributes:
-    - `Pane.Register` `settings`
-    - `Shell.Sidebar` "Settings" (group `System`)
-    - `settingsPane.open`
+    - `Pane.Register` "settings"
+    - `Shell.Sidebar` "Settings"
   - Server:
     - Uses: `database.db`
     - `GET /api/config`
@@ -299,7 +297,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `ConversationCreatedPayload`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`, `UserTurnSentPayload`
     - Values: `afterTurn`, `conversationCreated`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `getConversationRow`, `hasLiveProcess`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`, `userTurnSent`
   - Server:
-    - Register: `maybeLaunchTaskJob`, `maybeLaunchDependentsJob`, `conversationCreated`, `conversationTurnCompleted`, `userTurnSent`
+    - Register: `tasks.maybe-launch`, `tasks.maybe-launch-dependents`, `conversation.created`, `conversation.turn-completed`, `conversation.userTurnSent`
     - Uses: `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.recentConversationsResource`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/gone`
@@ -325,6 +323,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`
       - Contributes:
         - `conversationPane.Actions` → `CategoryChipToolbar`
+        - `Config.Spec`
         - `Config.Section` "Category colors" → `CategoryColorSettings`
       - Server:
         - Register: `classifyConversationJob`
@@ -345,7 +344,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `conversationPane.Actions` → `ProgressBarToolbar`
         - `Item.Chips` → `ProgressBarRow`
       - Server:
-        - Register: `classifyProgressJob`, `markProgressPushedJob`
+        - Register: `conversation-progress.classify`, `conversation-progress.mark-pushed`
         - Uses: `conversations.conversationTurnCompleted`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.pushLanded`
     - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
       - Plugins:
@@ -363,7 +362,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `ConversationRecord`
         - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
       - Contributes:
-        - `Pane.Register` `conversation`
+        - `Pane.Register` "conversation"
         - `Conversation.ActionBar` → `ExpandConversationButton`
       - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
@@ -378,7 +377,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `GET /api/conversations/:id/allow-files`
         - **`blocked-by`** — Prompt-bar button to mark this conversation's task as blocked by another conversation's task, creating a dependency and re-ordering the queue.
           - Contributes:
-            - `Conversation.PromptBar` → `BlockedByButton`
+            - `Conversation.PromptBar` "Deps" → `BlockedByButton`
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Exports (core):
             - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`
@@ -391,7 +390,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
               - Contributes:
-                - `Pane.Register` `conv-docs`
+                - `Pane.Register` "conv-docs"
                 - `Conversation.ActionBar` → `DocsButton`
             - **`file-pane`** — Hosts the file-peek pane and the FilePane.Renderer slot.
               - Defines:
@@ -400,7 +399,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Types: `FileContentState`, `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`
                 - Values: `FileContent`, `FilePane`, `FilePaneView`, `filePeekPane`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileRenderers`
               - Contributes:
-                - `Pane.Register` `file-peek`
+                - `Pane.Register` "file-peek"
               - Slot contributors: `diff`, `image`, `markdown`, `raw`
               - Plugins:
                 - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
@@ -422,8 +421,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Exports (internal):
                 - Values: `reviewConfig`
               - Contributes:
-                - `Pane.Register` `conv-review`
+                - `Pane.Register` "conv-review"
                 - `Conversation.ActionBar` → `ReviewButton`
+                - `Config.Spec`
               - Server:
                 - Uses: `config.Config`
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
@@ -431,33 +431,33 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Types: `CommitDelta`, `CommitRow`, `CommitsGraph`
             - Values: `commitDeltaResource`, `CommitDeltaSchema`, `CommitRowSchema`, `commitsGraphResource`, `CommitsGraphSchema`
           - Contributes:
-            - `Pane.Register` `conv-commits-graph`
-            - `Pane.Register` `conv-commit-diff`
+            - `Pane.Register` "conv-commits-graph"
+            - `Pane.Register` "conv-commit-diff"
             - `Conversation.ActionBar` → `CommitsChip`
           - Server:
             - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesForAttempt`, `tasks-core.pushesResource`
             - Resources: `commits-graph.delta` (push), `commits-graph.graph` (push)
         - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
           - Contributes:
-            - `Conversation.PromptBar` → `DropAndExitButton`
+            - `Conversation.PromptBar` "Exit" → `DropAndExitButton`
           - Server:
             - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.listPushesForAttempt`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/drop-and-exit`
         - **`exit`** — Toolbar button that closes the conversation without changing any task state.
           - Contributes:
-            - `Conversation.PromptBar` → `ExitButton`
+            - `Conversation.PromptBar` "Exit" → `ExitButton`
           - Server:
             - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`
             - `POST /api/conversations/:id/exit`
         - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
           - Contributes:
-            - `Conversation.PromptBar` → `ForkConversationButtons`
+            - `Conversation.PromptBar` "New" → `ForkConversationButtons`
         - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
           - Contributes:
-            - `JsonlViewer.RowAction` → `ForkSessionAction`
+            - `JsonlViewer.RowAction` "fork-session" → `ForkSessionAction`
         - **`hold-and-exit`** — Toolbar button that marks the task as held and closes the conversation.
           - Contributes:
-            - `Conversation.PromptBar` → `HoldAndExitButton`
+            - `Conversation.PromptBar` "Exit" → `HoldAndExitButton`
           - Server:
             - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/hold-and-exit`
@@ -471,7 +471,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Types: `EventRendererContribution`, `OverlayContribution`, `RowActionContribution`
             - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`
           - Contributes:
-            - `JsonlViewer.RowAction` → `RawJsonAction`
+            - `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
           - Server:
             - Uses: `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
@@ -479,21 +479,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Contributes:
-                - `JsonlViewer.EventRenderer` → `AssistantTextRow`
-                - `JsonlViewer.RowAction` → `MarkdownToggleAction`
-                - `JsonlViewer.RowAction` → `CopyAssistantTextAction`
+                - `JsonlViewer.EventRenderer` "assistant-text" → `AssistantTextRow`
+                - `JsonlViewer.RowAction` "markdown-toggle" → `MarkdownToggleAction`
+                - `JsonlViewer.RowAction` "copy-assistant-text" → `CopyAssistantTextAction`
             - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
               - Contributes:
-                - `JsonlViewer.EventRenderer` → `AssistantThinkingRow`
+                - `JsonlViewer.EventRenderer` "assistant-thinking" → `AssistantThinkingRow`
             - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
               - Contributes:
-                - `JsonlViewer.Overlay` → `MessageToc`
+                - `JsonlViewer.Overlay` "message-toc" → `MessageToc`
             - **`summary`** — Renders summary separator events in the JSONL viewer.
               - Contributes:
-                - `JsonlViewer.EventRenderer` → `SummaryRow`
+                - `JsonlViewer.EventRenderer` "summary" → `SummaryRow`
             - **`system`** — Renders system events in the JSONL viewer.
               - Contributes:
-                - `JsonlViewer.EventRenderer` → `SystemRow`
+                - `JsonlViewer.EventRenderer` "system" → `SystemRow`
             - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
               - Defines:
                 - Slots: `JsonlViewerTool.Renderer`
@@ -503,38 +503,38 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Types: `ToolRendererContribution`
                 - Values: `JsonlViewerTool`, `ToolCallCard`, `ToolFilePath`, `toRelativePath`
               - Contributes:
-                - `JsonlViewer.EventRenderer` → `ToolCallRow`
-                - `JsonlViewer.RowAction` → `CopyToolResultAction`
+                - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
+                - `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
               - Slot contributors: `add-task`, `bash`, `edit`, `read`, `write`
               - Plugins:
                 - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
                   - Contributes:
-                    - `JsonlViewerTool.Renderer` `/add_task$/` → `AddTaskToolView`
+                    - `JsonlViewerTool.Renderer` "add_task$" → `AddTaskToolView`
                 - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
                   - Contributes:
-                    - `JsonlViewerTool.Renderer` → `BashToolView`
+                    - `JsonlViewerTool.Renderer` "Bash" → `BashToolView`
                 - **`edit`** — Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
                   - Contributes:
-                    - `JsonlViewerTool.Renderer` → `EditView`
-                    - `JsonlViewerTool.Renderer` → `MultiEditView`
+                    - `JsonlViewerTool.Renderer` "Edit" → `EditView`
+                    - `JsonlViewerTool.Renderer` "MultiEdit" → `MultiEditView`
                 - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
                   - Contributes:
-                    - `JsonlViewerTool.Renderer` → `ReadToolView`
+                    - `JsonlViewerTool.Renderer` "Read" → `ReadToolView`
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
                   - Contributes:
-                    - `JsonlViewerTool.Renderer` → `WriteToolView`
+                    - `JsonlViewerTool.Renderer` "Write" → `WriteToolView`
             - **`user-image`** — Renders inline image thumbnails for user-image events.
               - Contributes:
-                - `JsonlViewer.EventRenderer` → `UserImageRow`
+                - `JsonlViewer.EventRenderer` "user-image" → `UserImageRow`
             - **`user-text`** — Renders user text events in the JSONL viewer.
               - Contributes:
-                - `JsonlViewer.EventRenderer` → `UserTextRow`
+                - `JsonlViewer.EventRenderer` "user-text" → `UserTextRow`
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/launch-prompts/server/internal/tables-attachments.ts`
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/launch-prompts/server/internal/tables.ts`
           - Contributes:
-            - `Conversation.PromptBar` → `LaunchPromptsButton`
+            - `Conversation.PromptBar` "Launch" → `LaunchPromptsButton`
             - `Config.Section` "Launch Prompts" → `LaunchPromptsSettings`
           - Server:
             - Uses: `database.db`
@@ -543,6 +543,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `PATCH /api/launch-prompts/:id`
             - `DELETE /api/launch-prompts/:id`
         - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, inline code enhancements, and image proxying.
+          - Contributes:
+            - `MarkdownEnhancerSlot`
+            - `MarkdownEnhancerSlot`
+            - `MarkdownEnhancerSlot`
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Contributes:
             - `conversationPane.Actions` → `ModelBadge`
@@ -558,7 +562,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `ConversationNoteSchema`, `ConversationNotesPayloadSchema`, `conversationNotesResource`
           - Contributes:
             - `Conversation.AbovePromptInput` → `NotesArea`
-            - `Conversation.PromptBar` → `NotesToggleButton`
+            - `Conversation.PromptBar` "Notes" → `NotesToggleButton`
           - Server:
             - Uses: `database.db`, `tasks-core._conversations`
             - `PUT /api/conversation-notes/:conversationId`
@@ -586,9 +590,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables.ts`
           - Contributes:
-            - `Conversation.PromptBar` → `PushAndExitButton`
+            - `Conversation.PromptBar` "Exit" → `PushAndExitButton`
           - Server:
-            - Register: `pushAndExitJob`, `exitCleanFinalizeJob`, `exitCleanTool`, `flagRaiseTool`
+            - Register: `push_and_exit.run`, `push_and_exit.exit_clean_finalize`, `exit_clean`, `flag_raise`
             - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.sendTurn`, `database.db`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
@@ -608,7 +612,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `DELETE /api/quick-prompts/:id`
         - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
           - Contributes:
-            - `Conversation.PromptBar` → `ResumeButton`
+            - `Conversation.PromptBar` "Exit" → `ResumeButton`
           - Server:
             - Uses: `conversations.resumeConversation`, `tasks-core.recentConversationsResource`
             - `POST /api/conversations/:id/resume`
@@ -616,24 +620,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (web):
             - Values: `convSidePane`
           - Contributes:
-            - `Pane.Register` `conv-side`
+            - `Pane.Register` "conv-side"
         - **`side-task`** — Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).
           - Exports (web):
             - Values: `taskSidePane`
           - Contributes:
-            - `Pane.Register` `task-side`
+            - `Pane.Register` "task-side"
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Contributes:
             - `conversationPane.Actions` → `StatusBadge`
         - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
           - Contributes:
-            - `Pane.Register` `conv-tasks`
+            - `Pane.Register` "conv-tasks"
             - `Conversation.ActionBar` → `TasksButton`
-            - `convTasksPane.Actions` → `GoToParentAction`
-            - `convTasksPane.Actions` → `ExpandToTasksAction`
+            - `pane.conv-tasks.actions` → `GoToParentAction`
+            - `pane.conv-tasks.actions` → `ExpandToTasksAction`
         - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
           - Contributes:
-            - `Pane.Register` `conv-terminal`
+            - `Pane.Register` "conv-terminal"
             - `Conversation.ActionBar` → `TerminalButton`
         - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
           - Defines:
@@ -646,6 +650,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `TurnSummariesPayloadSchema`, `turnSummariesResource`, `turnSummaryConfig`, `TurnSummarySchema`
           - Contributes:
             - `Conversation.AbovePromptInput` → `TurnSummaryCard`
+            - `Config.Spec`
           - Server:
             - Register: `generateTurnSummaryJob`
             - Uses: `config.Config`, `config.readConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
@@ -693,7 +698,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `ConversationsView.View` "Queue" → `QueueView`
           - Server:
-            - Register: `seedRankJob`
+            - Register: `queue.seed-rank`
             - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`, `tasks-core.listBlockingDepIds`
             - Resources: `queue-ranks` (push)
             - `POST /api/conversations-queue/reorder`
@@ -720,9 +725,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Values: `_conversationSummaries`, `conversationSummariesResource`
       - Contributes:
-        - `Pane.Register` `conv-summary`
+        - `Pane.Register` "conv-summary"
       - Server:
-        - Register: `submitConversationSummaryTool`
+        - Register: `submit_conversation_summary`
         - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `database.db`, `tasks-core.getConversation`, `tasks-core.getTask`
         - Resources: `conversation-summaries` (push)
         - `POST /api/conversation-summary/:conversationId/generate`
@@ -743,9 +748,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `recoveryPane`
   - Contributes:
-    - `Pane.Register` `conversations-recover`
+    - `Pane.Register` "conversations-recover"
     - `Debug.Item` "Recovery"
-    - `recoveryPane.open`
   - Server:
     - Uses: `conversations.resumeConversation`, `tasks-core.recentConversationsResource`
     - `POST /api/conversations-recover/restore-batch`
@@ -793,7 +797,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `runMigrations`
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
       - Server:
-        - Register: `queryDbTool`
+        - Register: `query_db`
         - Uses: `tasks-core.getConversation`
 
 - **`debug`** — Debug tools sidebar group.
@@ -810,9 +814,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Values: `broadcastsPane`
       - Contributes:
-        - `Pane.Register` `debug-broadcasts`
+        - `Pane.Register` "debug-broadcasts"
         - `Debug.Item` "Broadcasts"
-        - `broadcastsPane.open`
       - Server:
         - `GET /api/debug/broadcasts`
         - `PUT /api/debug/broadcasts`
@@ -821,16 +824,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Values: `claudeCliCallsPane`
       - Contributes:
-        - `Pane.Register` `claude-cli-calls`
+        - `Pane.Register` "claude-cli-calls"
         - `Debug.Item` "Claude CLI Calls"
-        - `claudeCliCallsPane.open`
     - **`db-backup`** — Backup non-worktree Postgres databases to ~/.backups/singularity/. Backup non-worktree Postgres databases to ~/.backups/singularity/.
       - Exports (web):
         - Values: `dbBackupPane`
       - Contributes:
-        - `Pane.Register` `db-backup`
+        - `Pane.Register` "db-backup"
         - `Debug.Item` "DB Backup"
-        - `dbBackupPane.open`
       - Server:
         - `GET /api/debug/backup-db`
         - `POST /api/debug/backup-db`
@@ -841,10 +842,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `LogChannel`, `LogStream`
         - Values: `Log`
       - Contributes:
-        - `Pane.Register` `logs`
-        - `Pane.Register` `logs-channel`
+        - `Pane.Register` "logs"
+        - `Pane.Register` "logs-channel"
         - `Debug.Item` "Logs"
-        - `logsPane.open`
       - Server:
         - `GET /api/logs/channels`
         - `WS /ws/logs`
@@ -852,9 +852,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Values: `memoryPane`
       - Contributes:
-        - `Pane.Register` `debug-memory`
+        - `Pane.Register` "debug-memory"
         - `Debug.Item` "Memory"
-        - `memoryPane.open`
       - Server:
         - `GET /api/debug/memory`
         - `GET /api/debug/memory/:name`
@@ -865,9 +864,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `PhaseConfig`, `ProfilingContextValue`, `Span`
         - Values: `formatDuration`, `GanttSection`, `groupByPhase`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `useProfilingContext`
       - Contributes:
-        - `Pane.Register` `debug-profiling`
+        - `Pane.Register` "debug-profiling"
         - `Debug.Item` "Profiling"
-        - `profilingPane.open`
       - Slot contributors: `boot`, `build`
       - Plugins:
         - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
@@ -884,16 +882,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Values: `queuePane`
       - Contributes:
-        - `Pane.Register` `queue`
+        - `Pane.Register` "queue"
         - `Debug.Item` "Queue"
-        - `queuePane.open`
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
       - Exports (web):
         - Values: `worktreeCleanupPane`
       - Contributes:
-        - `Pane.Register` `worktree-cleanup`
+        - `Pane.Register` "worktree-cleanup"
         - `Debug.Item` "Worktree Cleanup"
-        - `worktreeCleanupPane.open`
       - Server:
         - Uses: `tasks-core.getAttempt`, `tasks-core.listAttempts`, `tasks-core.listTasks`
         - `GET /api/debug/worktrees`
@@ -906,11 +902,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `eventsTestPane`
   - Contributes:
-    - `Pane.Register` `events-test`
+    - `Pane.Register` "events-test"
     - `Debug.Item` "Events Test"
-    - `eventsTestPane.open`
   - Server:
-    - Register: `logPing`, `pinged`
+    - Register: `events_test.log`, `events_test.pinged`
     - Uses: `database.db`
     - `POST /api/events-test/subscribe`
     - `POST /api/events-test/emit`
@@ -928,7 +923,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `getHealth`, `waitForRestart`
   - Contributes:
     - `Core.Root` → `ReconnectWatcher`
-    - `Shell.Toolbar` (group `actions`) → `HealthDot`
+    - `Shell.Toolbar` → `HealthDot`
   - Server:
     - `GET /api/health`
   - Imported by: `build`
@@ -943,9 +938,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (server):
     - Values: `_improve_config`, `_improvePendingGroups`, `IMPROVEMENTS_META_TASK_ID`
   - Contributes:
-    - `Shell.Toolbar` (group `actions`) → `ImproveButton`
+    - `Shell.Toolbar` → `ImproveButton`
   - Server:
-    - Register: `applyGroupJob`
+    - Register: `improve.apply-group`
     - Uses: `conversations.conversationCreated`, `database.db`, `tasks-core.ensureMetaTask`
   - Imported by: `draw-on-app`
 
@@ -998,7 +993,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`, `UnsafeTriggerByNameSpec`
         - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `eventEmissionsResource`, `eventTriggersResource`, `trigger`, `Trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
       - Server:
-        - Register: `eventsDispatchJob`, `jobsHooksRegistration`
+        - Register: `events.dispatch`, `durable-hooks`
         - Uses: `database.db`
         - Resources: `event-emissions` (invalidate), `event-triggers` (invalidate)
         - `GET /api/events/emissions`
@@ -1013,7 +1008,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `RefAdvancedPayload`, `RefHead`
         - Values: `_refAdvancedTriggers`, `refAdvanced`, `refHeadResource`, `RefHeadSchema`
       - Server:
-        - Register: `refAdvanced`
+        - Register: `git.refAdvanced`
     - **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
       - Defines:
         - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
@@ -1024,7 +1019,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`
         - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
       - Server:
-        - Register: `jobsResumeJob`
+        - Register: `jobs.resume`
         - Uses: `database.db`
         - Resources: `jobs-list` (invalidate)
         - `GET /api/jobs`
@@ -1074,7 +1069,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `RecordNotificationInput`
     - Values: `_notifications`, `notificationsResource`, `recordNotification`
   - Contributes:
-    - `Shell.Toolbar` (group `actions`) → `BellButton`
+    - `Shell.Toolbar` → `BellButton`
   - Server:
     - Uses: `database.db`
     - Resources: `notifications` (push)
@@ -1092,10 +1087,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
+    - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
+      - Exports (core):
+        - Values: `importBarrel`, `registerBarrelStubs`
     - **`plugin-tree`**
       - Exports (core):
-        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`
-        - Values: `buildPluginTree`
+        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`
+        - Values: `buildPluginTree`, `enrichPluginTreeDocs`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Exports (core):
         - Types: `BarrelExport`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`
@@ -1103,28 +1101,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `PluginNode`, `PluginTreePayload`
         - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
       - Contributes:
-        - `Pane.Register` `plugin-view`
+        - `Pane.Register` "plugin-view"
       - Server:
         - `GET /api/plugin-view/tree`
       - Endpoint callers: `plugin-link`, `publish`
       - Plugins:
         - **`public-api`** — Displays the plugin's public exports, slots, routes, and consumer relationships.
           - Contributes:
-            - `PluginViewSlots.Section` "Public API" → `PublicApiSection`
+            - `PluginViewSlots.Section` "public-api" → `PublicApiSection`
         - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
           - Contributes:
-            - `PluginViewSlots.Section` "Runtimes" → `RuntimesSection`
+            - `PluginViewSlots.Section` "runtimes" → `RuntimesSection`
         - **`source-path`** — Displays the plugin's source path in the plugin detail pane.
           - Contributes:
-            - `PluginViewSlots.Section` "Source Path" → `SourcePathSection`
+            - `PluginViewSlots.Section` "source-path" → `SourcePathSection`
         - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.
           - Contributes:
-            - `PluginViewSlots.Section` "Sub-plugins" → `SubPluginsSection`
+            - `PluginViewSlots.Section` "sub-plugins" → `SubPluginsSection`
     - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
       - Contributes:
-        - `Pane.Register` `publish`
-        - `Shell.Sidebar` "Publish" (group `System`)
-        - `publishPane.open`
+        - `Pane.Register` "publish"
+        - `Shell.Sidebar` "Publish"
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
@@ -1257,7 +1254,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
       - Contributes:
-        - `Shell.Toolbar` (group `actions`) → `PenButton`
+        - `Shell.Toolbar` → `PenButton`
         - `Core.Root` → `EscHandler`
     - **`groups`** — User-created groups within reorderable areas. Drag items onto each other to form groups.
       - Defines:
@@ -1280,8 +1277,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `captureApp`, `screenshotPane`
   - Contributes:
-    - `Pane.Register` `screenshot`
-    - `Shell.Toolbar` (group `actions`) → `ScreenshotButton`
+    - `Pane.Register` "screenshot"
+    - `Shell.Toolbar` → `ScreenshotButton`
   - Server:
     - `POST /api/screenshots/:id`
     - `GET /api/screenshots/:id`
@@ -1294,7 +1291,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `applyStrokes`, `DrawCanvas`
     - **`draw-on-app`** — Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.
       - Contributes:
-        - `Shell.Toolbar` (group `actions`) → `DrawOnAppButton`
+        - `Shell.Toolbar` → `DrawOnAppButton`
 
 - **`shell`** — Foundational app layout; defines the slots and commands most other plugins extend.
   - Defines:
@@ -1313,9 +1310,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `Stats`, `statsPane`, `useShowEmptyDays`
   - Contributes:
-    - `Pane.Register` `stats`
-    - `Shell.Sidebar` "Stats" (group `System`)
-    - `statsPane.open`
+    - `Pane.Register` "stats"
+    - `Shell.Sidebar` "Stats"
   - Imported by: `commits`, `cost`, `tasks`
   - Slot contributors: `commits`, `cost`, `tasks`
   - Plugins:
@@ -1327,6 +1323,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Stats.Chart` "Commits" → `CommitsSection`
         - `Stats.Chart` "Lines changed" → `LinesChartsSection`
+        - `Config.Spec`
         - `Config.Section` "Excluded path toggles" → `ExcludedPathToggles`
       - Server:
         - Uses: `config.Config`, `config.readConfig`, `database.db`
@@ -1342,7 +1339,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Values: `costConvSidePane`
       - Contributes:
-        - `Pane.Register` `stats-cost-conv-side`
+        - `Pane.Register` "stats-cost-conv-side"
+        - `Config.Spec`
         - `Stats.Chart` "Cost & Tokens" → `CostSection`
         - `Stats.Chart` "Token mix per day" → `TokenMixChart`
         - `Stats.Chart` "Average cost per conversation" → `AvgCostPerConversationChart`
@@ -1377,7 +1375,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (server):
     - Values: `armTaskAutoStart`
   - Server:
-    - Register: `addTaskTool`, `pushIngestJob`
+    - Register: `add_task`, `tasks.push-ingest`
     - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.taskAttachments`, `tasks-core.updateTask`
     - `GET /api/tasks`
     - `POST /api/tasks`
@@ -1409,22 +1407,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Resources: `tasks-auto-start` (push)
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
       - Contributes:
-        - `TaskDetailSlots.Section` "Attachments" → `TaskAttachments`
+        - `TaskDetailSlots.Section` "attachments" → `TaskAttachments`
     - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the parent task when applicable.
       - Contributes:
-        - `TaskDetailSlots.Section` "Dependencies" → `TaskDependencies`
+        - `TaskDetailSlots.Section` "dependencies" → `TaskDependencies`
     - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.
       - Contributes:
-        - `TaskDetailSlots.Section` "Description" → `TaskDescription`
+        - `TaskDetailSlots.Section` "description" → `TaskDescription`
     - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.
       - Exports (web):
         - Values: `taskConversationPane`, `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskNavigateProvider`, `tasksRootPane`, `TaskTreeDetail`, `useFlushAll`, `useRegisterFlush`, `useTaskNavigate`
       - Contributes:
-        - `Pane.Register` `tasks-root`
-        - `Pane.Register` `task-detail`
-        - `Pane.Register` `task-conversation`
-        - `Shell.Sidebar` "Tasks" (group `System`)
-        - `tasksRootPane.open`
+        - `Pane.Register` "tasks-root"
+        - `Pane.Register` "task-detail"
+        - `Pane.Register` "task-conversation"
+        - `Shell.Sidebar` "Tasks"
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Exports (core):
         - Types: `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelate`, `TaskChainRelateMode`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`
@@ -1434,22 +1431,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `setActiveRelateContext`, `TaskDraftPopover`, `useActiveRelateContext`
     - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens taskConversationPane.
       - Contributes:
-        - `TaskDetailSlots.Section` "Events" → `TaskEvents`
+        - `TaskDetailSlots.Section` "events" → `TaskEvents`
     - **`task-graph`** — Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.
       - Contributes:
-        - `TaskDetailSlots.Section` "Graph" → `TaskGraph`
+        - `TaskDetailSlots.Section` "graph" → `TaskGraph`
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
       - Contributes:
-        - `TaskDetailSlots.Section` "Header" → `TaskHeader`
+        - `TaskDetailSlots.Section` "header" → `TaskHeader`
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
       - Defines:
         - Slots: `Tasks.List`, `Tasks.TaskActions`, `Tasks.ListActions`
       - Exports (web):
         - Values: `Tasks`, `TasksList`
       - Contributes:
-        - `Tasks.TaskActions` → `ExpandCollapseAllAction`
-        - `Tasks.TaskActions` → `DeleteTaskAction`
-        - `Tasks.TaskActions` → `LaunchAgentAction`
+        - `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`
+        - `Tasks.TaskActions` "delete" → `DeleteTaskAction`
+        - `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
       - Exports (web):
         - Values: `STATUS_META`, `StatusBadge`, `StatusIcon`
@@ -1457,7 +1454,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Values: `generateTaskTitle`, `scheduleTaskTitleUpdate`, `scheduleTaskTitleUpgrade`, `synthesiseTitleFallback`
       - Server:
-        - Register: `titleOnConversationCreatedJob`, `titleOnUserTurnSentJob`
+        - Register: `task-title.on-conversation-created`, `task-title.on-user-turn-sent`
         - Uses: `conversations.conversationCreated`, `conversations.userTurnSent`, `tasks-core.getTask`, `tasks-core.updateConversationsTitleForTask`, `tasks-core.updateTaskTitle`
 
 - **`tasks-core`** — Schema + repository layer for the tasks/attempts/conversations FK cluster.
@@ -1474,7 +1471,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskStatus`, `TaskStatusChangedPayload`, `UpdateConversationPatch`, `UpdateTaskPatch`
     - Values: `_attempts`, `_conversations`, `_pushLandedTriggers`, `_tasks`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `conversationAttachments`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteAttempt`, `deleteConversationRow`, `deleteTask`, `emitStatusChangeIfChanged`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listArmedDependentsOf`, `listAttempts`, `listAttemptsForTask`, `listBlockingDepIds`, `listConversationsForDisplay`, `listConversationsForInfra`, `listGoneConversations`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `markConversationGone`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskAttachments`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `updateConversation`, `updateConversationsTitleForTask`, `updateTask`, `updateTaskTitle`
   - Server:
-    - Register: `pushLanded`, `taskStatusChanged`
+    - Register: `pushes.landed`, `tasks.statusChanged`
     - Uses: `database.db`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push)
   - Imported by: `active-data`, `agents`, `allow-monitor`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
@@ -1489,7 +1486,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`theme`** — Toolbar toggle for light/dark mode.
   - Contributes:
-    - `Shell.Toolbar` (group `actions`) → `ThemeToggle`
+    - `Shell.Toolbar` → `ThemeToggle`
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:
@@ -1503,7 +1500,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `SegmentedProgressBarProps`, `SegmentedProgressBarVariantContribution`, `Step`
         - Values: `SegmentedProgressBar`, `SegmentedProgressBarSlots`
       - Contributes:
-        - `ThemeEngine.VariantGroup` → `VariantPicker`
+        - `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
       - Server:
         - Uses: `config.Config`
       - Plugins:
@@ -1544,8 +1541,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Types: `ColorPaletteTokenValues`
             - Values: `colorPaletteConfig`, `colorPaletteGroup`
           - Contributes:
+            - `ColorPalette.Preset` "Default"
+            - `ColorPalette.Preset` "Ocean"
+            - `ColorPalette.Preset` "Warm"
             - `ThemeEngine.TokenGroup` "Color Palette"
-            - `ThemeEngine.VariantGroup` → `ColorPalettePicker`
+            - `ThemeEngine.VariantGroup` "Color Palette" → `ColorPalettePicker`
           - Server:
             - Uses: `config.Config`
         - **`shape`** — Shape token group (border-radius) with switchable presets.
@@ -1558,8 +1558,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Types: `ShapeTokenValues`
             - Values: `shapeConfig`, `shapeGroup`
           - Contributes:
+            - `Shape.Preset` "Default"
+            - `Shape.Preset` "Sharp"
+            - `Shape.Preset` "Rounded"
+            - `Shape.Preset` "Pill"
             - `ThemeEngine.TokenGroup` "Shape"
-            - `ThemeEngine.VariantGroup` → `ShapePicker`
+            - `ThemeEngine.VariantGroup` "Shape" → `ShapePicker`
           - Server:
             - Uses: `config.Config`
         - **`sidebar-palette`** — Sidebar palette token group with switchable presets.
@@ -1572,8 +1576,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Types: `SidebarPaletteTokenValues`
             - Values: `sidebarPaletteConfig`, `sidebarPaletteGroup`
           - Contributes:
+            - `SidebarPalette.Preset` "Default"
+            - `SidebarPalette.Preset` "Warm"
             - `ThemeEngine.TokenGroup` "Sidebar Palette"
-            - `ThemeEngine.VariantGroup` → `SidebarPalettePicker`
+            - `ThemeEngine.VariantGroup` "Sidebar Palette" → `SidebarPalettePicker`
           - Server:
             - Uses: `config.Config`
 
@@ -1581,10 +1587,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (web):
     - Values: `welcomePane`
   - Contributes:
-    - `Pane.Register` `welcome`
+    - `Pane.Register` "welcome"
 
 - **`worktree-switcher`** — Toolbar dropdown to switch the active worktree namespace.
   - Contributes:
-    - `Shell.Toolbar` (group `namespace`) → `WorktreeDropdown`
+    - `Shell.Toolbar` → `WorktreeDropdown`
 
 <!-- AUTOGENERATED:END -->

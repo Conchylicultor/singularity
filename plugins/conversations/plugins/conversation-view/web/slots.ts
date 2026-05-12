@@ -11,7 +11,7 @@ export const Conversation = {
       section: string;
       sectionOrder?: number;
       component: ComponentType<{ conversation: ConversationRecord }>;
-    }>("conversation.prompt-bar"),
+    }>("conversation.prompt-bar", { docLabel: (p) => p.section }),
     { getGroup: (item) => item.section },
   ),
   PromptInput: defineSlot<{

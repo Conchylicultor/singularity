@@ -11,5 +11,6 @@ export interface ToolRendererContribution {
 export const JsonlViewerTool = {
   Renderer: defineSlot<ToolRendererContribution>(
     "conversation.jsonl-viewer.tool-renderer",
+    { docLabel: (p) => p.name ?? p.pattern?.source },
   ),
 };

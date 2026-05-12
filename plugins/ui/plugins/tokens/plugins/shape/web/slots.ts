@@ -9,5 +9,7 @@ export interface ShapePresetContribution {
 }
 
 export const Shape = {
-  Preset: defineSlot<ShapePresetContribution>("ui.shape.preset"),
+  Preset: defineSlot<ShapePresetContribution>("ui.shape.preset", {
+    docLabel: (p) => p.label,
+  }),
 };

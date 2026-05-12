@@ -16,5 +16,7 @@ export interface ViewProps {
 }
 
 export const ConversationsView = {
-  View: defineSlot<ViewContribution>("conversations-view.view"),
+  View: defineSlot<ViewContribution>("conversations-view.view", {
+    docLabel: (p) => p.title,
+  }),
 };

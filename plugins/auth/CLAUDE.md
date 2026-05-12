@@ -93,9 +93,8 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
   - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
   - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `readGlobalConfig`, `registerAuthProvider`
 - Contributes:
-  - `Pane.Register` `accounts`
-  - `Shell.Sidebar` "Accounts" (group `System`)
-  - `accountsPane.open`
+  - `Pane.Register` "accounts"
+  - `Shell.Sidebar` "Accounts"
 - Central:
   - `GET /api/auth/start/:provider`
   - `GET /api/auth/callback/:provider`

@@ -15,7 +15,7 @@
   - Values: `ConversationNoteSchema`, `ConversationNotesPayloadSchema`, `conversationNotesResource`
 - Contributes:
   - `Conversation.AbovePromptInput` → `NotesArea`
-  - `Conversation.PromptBar` → `NotesToggleButton`
+  - `Conversation.PromptBar` "Notes" → `NotesToggleButton`
 - Server:
   - Uses: `database.db`, `tasks-core._conversations`
   - `PUT /api/conversation-notes/:conversationId`

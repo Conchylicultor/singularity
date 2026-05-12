@@ -5,5 +5,7 @@ import type { PaneObject } from "./pane";
 // matching the convention used by Shell.Sidebar, Code.ToolbarButton, etc.
 // Imported and re-exposed on the runtime `Pane` namespace in pane.ts.
 export const Pane = {
-  Register: defineSlot<{ pane: PaneObject<any, any, any> }>("pane.register"),
+  Register: defineSlot<{ pane: PaneObject<any, any, any> }>("pane.register", {
+    docLabel: (p) => p.pane?.id,
+  }),
 };
