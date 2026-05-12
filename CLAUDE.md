@@ -1,6 +1,6 @@
 # Singularity
 
-Singularity is the ultimate app for the agentic era — one app to replace all others, customized for each individual user, at the boundary of an application and an operating system. The vision has a few steps:
+Singularity is a self-evolving app for the agentic era. The goal is to have an app which can replace all others, customized for each individual user, at the boundary of an application and an operating system. The vision has a few steps:
 
 - At first, the app itself is an Agent manager app whose goal is to fix todos faster than they are created. The app will be used to improve itself.
 
