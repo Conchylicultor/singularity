@@ -968,23 +968,20 @@ export async function enrichPluginTreeDocs(
   const coreBarrelPath = join(repoRoot, "plugin-core", "index.ts");
   if (existsSync(coreBarrelPath)) {
     const coreMod = await importBarrel(coreBarrelPath);
-    if (coreMod) {
-      for (const [id, name] of collectSlotDisplayNames(coreMod)) {
-        slotDisplayNames.set(id, name);
-      }
+    for (const [id, name] of collectSlotDisplayNames(coreMod)) {
+      slotDisplayNames.set(id, name);
     }
   }
 
-  // Import web barrels first (they succeed), then server/central (some
-  // fail due to missing env vars). This ordering prevents Bun's
-  // "already fetched" cascade from poisoning web imports.
+  // Import web barrels first (they define slots consumed by
+  // contributions), then server/central. importBarrel() throws on
+  // failure so missing stubs surface immediately as build errors.
   for (const runtime of ["web", "server", "central"] as const) {
     for (const node of tree.byDir.values()) {
       const barrelPath = join(node.dir, runtime, "index.ts");
       if (!existsSync(barrelPath)) continue;
 
       const mod = await importBarrel(barrelPath);
-      if (!mod) continue;
 
       let mods = importedModules.get(node.dir);
       if (!mods) {

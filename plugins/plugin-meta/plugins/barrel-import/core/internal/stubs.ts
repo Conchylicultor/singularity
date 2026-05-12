@@ -12,6 +12,10 @@ export function registerBarrelStubs(_repoRoot: string): void {
   if (registered) return;
   registered = true;
 
+  // Server barrels read SINGULARITY_WORKTREE at module init (e.g. database
+  // pool guard). Set a dummy value so they don't throw during barrel import.
+  process.env.SINGULARITY_WORKTREE ??= "barrel-import-stub";
+
   const noop = () => {};
   const identity = <T>(x: T): T => x;
 
@@ -308,15 +312,15 @@ export function registerBarrelStubs(_repoRoot: string): void {
 }
 
 /**
- * Dynamically import a barrel file. Returns the module or null on failure.
+ * Dynamically import a barrel file. Throws on failure so missing stubs
+ * surface as build errors rather than silently omitting plugin metadata.
  * Requires `registerBarrelStubs()` to have been called first.
  */
-export async function importBarrel(barrelPath: string): Promise<Record<string, unknown> | null> {
+export async function importBarrel(barrelPath: string): Promise<Record<string, unknown>> {
   try {
     return (await import(barrelPath)) as Record<string, unknown>;
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.warn(`[barrel-import] Failed to import ${barrelPath}: ${msg}`);
-    return null;
+    throw new Error(`[barrel-import] Failed to import ${barrelPath}: ${msg}`);
   }
 }
