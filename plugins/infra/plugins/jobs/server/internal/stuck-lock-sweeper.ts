@@ -29,6 +29,7 @@ let timer: ReturnType<typeof setInterval> | null = null;
 export function startStuckLockSweeper(): void {
   if (timer) return;
   timer = setInterval(() => {
+    // eslint-disable-next-line promise-safety/no-bare-catch
     sweepOnce().catch((err) => {
       console.warn("[jobs] stuck-lock sweep failed", err);
     });

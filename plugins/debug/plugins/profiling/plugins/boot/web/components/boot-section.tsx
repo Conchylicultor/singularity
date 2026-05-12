@@ -39,6 +39,7 @@ export function BootSection(): ReactElement | null {
       const res = await fetch("/api/debug/profiling/boot");
       if (!res.ok) return;
       setData((await res.json()) as BootData);
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       // debug tool — silent on fetch errors
     }

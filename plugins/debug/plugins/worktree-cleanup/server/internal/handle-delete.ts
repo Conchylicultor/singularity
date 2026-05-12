@@ -23,6 +23,7 @@ export async function handleDelete(
       try {
         await stat(attempt.worktreePath);
         dirPresent = true;
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {
         // Directory already gone — skip git step
       }

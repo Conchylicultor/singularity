@@ -96,6 +96,7 @@ async function tick(): Promise<void> {
           }
         } catch (err) {
           console.error(`[conversations.poller] adopt orphan "${id}" failed`, err);
+          // eslint-disable-next-line promise-safety/no-bare-catch
           await recordCrash({
             source: "server-caught",
             errorType: "OrphanAdoptionError",
@@ -194,6 +195,7 @@ async function tick(): Promise<void> {
       // any — was already reported by process-hooks; this is a separate
       // signal that the safety net actually fired. Dedup keeps repeats
       // collapsed into one task with a growing count.
+      // eslint-disable-next-line promise-safety/no-bare-catch
       await recordCrash({
         source: "server-caught",
         errorType: "StuckStartingError",

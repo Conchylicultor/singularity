@@ -37,6 +37,7 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
       stdout: "pipe",
       stderr: "pipe",
     }).exited;
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {}
 }
 

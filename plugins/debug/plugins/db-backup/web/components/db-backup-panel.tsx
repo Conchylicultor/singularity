@@ -115,6 +115,7 @@ export function DbBackupPanel() {
       const res = await fetch("/api/debug/backup-db");
       const data = (await res.json()) as { ok: true; backups: BackupEntry[] } | { ok: false; error: string };
       if (data.ok) setBackups(data.backups);
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       // non-fatal
     }

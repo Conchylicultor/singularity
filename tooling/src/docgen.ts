@@ -315,6 +315,7 @@ export async function generatePluginDocs({ root }: GenerateDocsOptions): Promise
   if (existsSync(legacy)) {
     try {
       unlinkSync(legacy);
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       // Best-effort
     }

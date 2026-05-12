@@ -32,6 +32,7 @@ export function GroupedView({
       const next = !prev;
       try {
         localStorage.setItem(SHOW_SYSTEM_KEY, next ? "1" : "0");
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {}
       return next;
     });

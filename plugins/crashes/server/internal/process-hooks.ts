@@ -19,6 +19,7 @@ export function installProcessHooks(): void {
     appendCrashSync("server-unhandled", err);
     // Don't exit: rejections are recoverable in practice. The buffer is
     // flushed best-effort by flushBufferedCrashes below (next tick).
+    // eslint-disable-next-line promise-safety/no-bare-catch
     void flushBufferedCrashes().catch((err) => {
       console.error("[crashes] flushBufferedCrashes failed in unhandledRejection handler", err);
     });
@@ -38,6 +39,7 @@ export async function flushBufferedCrashes(): Promise<void> {
         message: c.message,
         stack: c.stack ?? null,
       });
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch (err) {
       console.error("[crashes] failed to flush buffered crash", err);
     }

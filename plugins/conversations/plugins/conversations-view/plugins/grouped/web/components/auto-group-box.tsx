@@ -43,6 +43,7 @@ export function AutoGroupBox({
               `auto-group:collapsed:${clusterKey}`,
               next ? "1" : "0",
             );
+          // eslint-disable-next-line promise-safety/no-bare-catch
           } catch {}
           return next;
         });

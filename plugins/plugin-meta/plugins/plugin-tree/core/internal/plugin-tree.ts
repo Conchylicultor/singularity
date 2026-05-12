@@ -609,6 +609,7 @@ function collectPlugin(dir: string, pluginsRoot: string): CollectedPlugin {
       try {
         const pkg = JSON.parse(pkgSrc);
         if (typeof pkg.description === "string" && pkg.description) description = pkg.description;
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {}
     }
   }
@@ -937,11 +938,13 @@ function collectSlotDisplayNames(mod: Record<string, unknown>): Map<string, stri
               map.set(inner.id, `${key}.${member}`);
             }
           }
+        // eslint-disable-next-line promise-safety/no-bare-catch
         } catch {
           // Skip objects with throwing getters
         }
       }
     }
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {
     // ESM namespace objects can throw on enumeration (TDZ bindings)
   }

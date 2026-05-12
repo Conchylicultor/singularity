@@ -202,6 +202,7 @@ function subscribersFor(key: string, pk: string): SocketState[] {
 function sendJson(ws: ServerWebSocket<WsData>, obj: unknown): void {
   try {
     ws.send(JSON.stringify(obj));
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {
     // close handler will clean up
   }
@@ -354,6 +355,7 @@ async function handleSub(
     if (prev === 0 && entry.onFirstSubscribe) {
       try {
         await entry.onFirstSubscribe(params);
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch (err) {
         console.error(`[resources] onFirstSubscribe failed for ${key}`, err);
       }
@@ -399,6 +401,7 @@ function releaseSubRefcount(key: string, pk: string, params: ResourceParams): vo
     if (entry.onLastUnsubscribe) {
       try {
         entry.onLastUnsubscribe(params);
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch (err) {
         console.error(`[resources] onLastUnsubscribe failed for ${key}`, err);
       }

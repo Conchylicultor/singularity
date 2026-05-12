@@ -116,6 +116,7 @@ async function emitEndTurn(conversationId: string, turn: EndTurnEvent): Promise<
       text: turn.text,
       messageId: turn.messageId,
     });
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error(`[conversations.turn-emitter] emit failed for ${conversationId}`, err);
   }

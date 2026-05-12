@@ -47,6 +47,7 @@ export async function onReady(): Promise<void> {
         "[secrets] migrated legacy ~/.singularity/auth tokens into secrets store",
       );
     }
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error("[secrets] legacy auth-token migration failed:", err);
   }

@@ -125,6 +125,7 @@ export function registerStart(program: Command) {
         try {
           process.kill(existingPid!, "SIGTERM");
           await Bun.sleep(2000);
+        // eslint-disable-next-line promise-safety/no-bare-catch
         } catch {}
       }
 

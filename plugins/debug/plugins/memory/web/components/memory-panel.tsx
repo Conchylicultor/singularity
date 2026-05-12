@@ -42,6 +42,7 @@ export function MemoryPanel() {
       if (data.files.length > 0 && selected === null) {
         setSelected(data.files[0]?.name ?? null);
       }
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       // non-fatal
     }

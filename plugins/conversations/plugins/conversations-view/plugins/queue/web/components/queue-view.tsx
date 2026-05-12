@@ -152,6 +152,7 @@ export function QueueView({
       const next = !prev;
       try {
         localStorage.setItem(WORKING_EXPANDED_KEY, next ? "1" : "0");
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {}
       return next;
     });
@@ -169,6 +170,7 @@ export function QueueView({
       const next = !prev;
       try {
         localStorage.setItem(QUEUE_EXPANDED_KEY, next ? "1" : "0");
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {}
       return next;
     });
@@ -186,6 +188,7 @@ export function QueueView({
       const next = !prev;
       try {
         localStorage.setItem(BLOCKED_EXPANDED_KEY, next ? "1" : "0");
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {}
       return next;
     });
@@ -203,6 +206,7 @@ export function QueueView({
       const next = !prev;
       try {
         localStorage.setItem(UNRANKED_EXPANDED_KEY, next ? "1" : "0");
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {}
       return next;
     });
@@ -220,6 +224,7 @@ export function QueueView({
       const next = !prev;
       try {
         localStorage.setItem(DISCONNECTED_EXPANDED_KEY, next ? "1" : "0");
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {}
       return next;
     });
@@ -237,6 +242,7 @@ export function QueueView({
       const next = !prev;
       try {
         localStorage.setItem(GONE_EXPANDED_KEY, next ? "1" : "0");
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {}
       return next;
     });

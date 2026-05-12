@@ -66,6 +66,7 @@ function ensureSymlinks(binDir: string): void {
     try {
       lstatSync(linkPath);
       continue; // already exists
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {}
     try {
       symlinkSync(basename(source), linkPath);

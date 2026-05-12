@@ -90,6 +90,7 @@ async function acquireBuildLock(lockPath: string): Promise<() => void> {
       const release = () => {
         try {
           unlinkSync(lockPath);
+        // eslint-disable-next-line promise-safety/no-bare-catch
         } catch {}
       };
       process.on("exit", release);
@@ -106,10 +107,12 @@ async function acquireBuildLock(lockPath: string): Promise<() => void> {
         } catch {
           try {
             await unlink(lockPath);
+          // eslint-disable-next-line promise-safety/no-bare-catch
           } catch {}
           continue;
         }
       }
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {}
     if (!warned) {
       console.log("Another build is in progress; waiting...");
@@ -230,6 +233,7 @@ async function databaseReady(name: string): Promise<boolean> {
   } finally {
     try {
       await c.end();
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {}
   }
 }
@@ -260,6 +264,7 @@ async function waitForPg(): Promise<void> {
         return true;
       } catch (err) {
         lastErr = err instanceof Error ? err.message : String(err);
+        // eslint-disable-next-line promise-safety/no-bare-catch
         try { await c.end(); } catch {}
         if (attempt === 0) console.log("Waiting for embedded Postgres to be ready...");
         return null;
@@ -628,6 +633,7 @@ export function registerBuild(program: Command) {
             } else if (resp.status !== 404) {
               console.warn(`Central restart returned ${resp.status}`);
             }
+          // eslint-disable-next-line promise-safety/no-bare-catch
           } catch {
             // Gateway not running — central will spawn fresh on first request.
           }

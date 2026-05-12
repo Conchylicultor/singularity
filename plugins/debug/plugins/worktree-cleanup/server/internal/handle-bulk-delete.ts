@@ -13,6 +13,7 @@ async function deleteOne(id: string): Promise<{ id: string; ok: true } | { id: s
   try {
     await stat(attempt.worktreePath);
     dirPresent = true;
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {
     // already gone
   }

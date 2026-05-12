@@ -27,10 +27,12 @@ function runRegisterPhase(plugins: PluginDefinition[]): PluginDefinition[] {
         // (mistyped helper), surface the rejection rather than letting it
         // dangle silently.
         if (result instanceof Promise) {
+          // eslint-disable-next-line promise-safety/no-bare-catch
           result.catch((err) =>
             console.error(`[plugin.${p.id}] register failed`, err),
           );
         }
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch (err) {
         console.error(`[plugin.${p.id}] register failed`, err);
       }

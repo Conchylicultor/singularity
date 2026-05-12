@@ -78,6 +78,7 @@ async function getRowCounts(file: string): Promise<Record<string, number>> {
         count++;
       }
     }
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {
     // noop
   }

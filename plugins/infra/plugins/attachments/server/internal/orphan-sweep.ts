@@ -44,6 +44,7 @@ async function runSweep(): Promise<void> {
       // biome-ignore lint/suspicious/noConsole: boot-time sweep visibility.
       console.log(`[attachments] orphan sweep removed ${rows.length} files`);
     }
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     // biome-ignore lint/suspicious/noConsole: surface failures but keep the timer alive.
     console.warn("[attachments] orphan sweep failed:", err);

@@ -33,6 +33,7 @@ async function tick(): Promise<void> {
     // await but swallow errors (logged inside on failure).
     try {
       await getAccessTokenInternal({ providerId: provider.id });
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       /* errors are persisted to the account.lastRefreshError field */
     }

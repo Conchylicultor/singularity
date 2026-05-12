@@ -39,6 +39,7 @@ export default {
     try {
       await secretsReady;
       await migratePlaintextSecretsToSecretStore();
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch (err) {
       console.error(
         "[config] failed to migrate plaintext secrets into secrets store:",

@@ -31,6 +31,7 @@ function readStored(paneId: string): number | undefined {
 function persistWidth(paneId: string, width: number) {
   try {
     localStorage.setItem(LS_KEY(paneId), String(width));
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {}
 }
 

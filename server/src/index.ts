@@ -205,6 +205,7 @@ async function shutdown(signal: string): Promise<void> {
   console.log(`[server] ${signal} received; shutting down`);
   await Promise.all(
     ordered.map((p) =>
+      // eslint-disable-next-line promise-safety/no-bare-catch
       Promise.resolve()
         .then(() => p.onShutdown?.())
         .catch((err) =>

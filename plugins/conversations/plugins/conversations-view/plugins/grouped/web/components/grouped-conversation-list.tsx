@@ -195,6 +195,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
       const next = !prev;
       try {
         localStorage.setItem(UNGROUPED_EXPANDED_KEY, next ? "1" : "0");
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {}
       return next;
     });
@@ -212,6 +213,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
       const next = !prev;
       try {
         localStorage.setItem(GONE_EXPANDED_KEY, next ? "1" : "0");
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {}
       return next;
     });

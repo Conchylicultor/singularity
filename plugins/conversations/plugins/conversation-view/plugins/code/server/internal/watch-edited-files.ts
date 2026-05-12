@@ -75,6 +75,7 @@ async function openRoom(room: Room): Promise<void> {
     room.serialized = JSON.stringify(files);
     room.lastRecomputeAt = Date.now();
     fanOut(room, files);
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error("[watch-edited-files] initial load failed", err);
   }
@@ -91,6 +92,7 @@ async function openRoom(room: Room): Promise<void> {
       },
       { ignore: IGNORE },
     );
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error("[watch-edited-files] failed to open watcher", err);
   }
@@ -132,6 +134,7 @@ async function recompute(room: Room): Promise<void> {
     room.serialized = serialized;
     room.lastFiles = files;
     fanOut(room, files);
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error("[watch-edited-files] recompute failed", err);
   }
@@ -141,6 +144,7 @@ function fanOut(room: Room, files: EditedFile[]): void {
   for (const listener of room.subscribers) {
     try {
       listener(files);
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch (err) {
       console.error("[watch-edited-files] listener threw", err);
     }
@@ -152,6 +156,7 @@ function closeRoom(room: Room): void {
   if (room.debounceTimer) clearTimeout(room.debounceTimer);
   if (room.ceilingTimer) clearTimeout(room.ceilingTimer);
   if (room.subscription) {
+    // eslint-disable-next-line promise-safety/no-bare-catch
     void room.subscription.unsubscribe().catch((err: unknown) => {
       console.error("[watch-edited-files] unsubscribe failed", err);
     });

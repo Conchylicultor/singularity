@@ -70,6 +70,7 @@ async function persist(): Promise<void> {
   } catch (err) {
     try {
       await unlink(tmpPath);
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       /* ignore */
     }

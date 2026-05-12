@@ -154,6 +154,7 @@ try {
   host = cfg.connection?.host ?? host;
   port = String(cfg.connection?.port ?? port);
   user = cfg.connection?.user ?? user;
+// eslint-disable-next-line promise-safety/no-bare-catch
 } catch {}
 host = process.env.PGHOST ?? host;
 port = process.env.PGPORT ?? port;

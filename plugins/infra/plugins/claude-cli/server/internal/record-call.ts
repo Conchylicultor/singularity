@@ -38,6 +38,7 @@ export async function recordClaudeCliCall(input: RecordCallInput): Promise<void>
       )
     `);
     claudeCliCallsResource.notify();
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.warn("[claude-cli] failed to record call:", err);
   }

@@ -57,6 +57,7 @@ export async function startGitWatcher(): Promise<void> {
         scheduleRecompute();
       });
       subscriptions.push(sub);
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch (err) {
       console.error(`[git-watcher] failed to open watcher on ${dir}`, err);
     }
@@ -80,6 +81,7 @@ export async function stopGitWatcher(): Promise<void> {
   subscriptions = [];
   await Promise.all(
     subs.map((s) =>
+      // eslint-disable-next-line promise-safety/no-bare-catch
       s.unsubscribe().catch((err) => {
         console.error("[git-watcher] unsubscribe failed", err);
       }),
@@ -131,6 +133,7 @@ async function recompute(): Promise<void> {
     if (sha) {
       try {
         await refAdvanced.emit({ refName, sha, previousSha });
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch (err) {
         console.error(`[git-watcher] emit refAdvanced(${refName}) failed`, err);
       }

@@ -57,6 +57,7 @@ export function useEditableField<T extends string>(
       if (prior) {
         try {
           await prior;
+        // eslint-disable-next-line promise-safety/no-bare-catch
         } catch {
           // Prior save's error is its own problem; don't block this save.
         }
@@ -104,6 +105,7 @@ export function useEditableField<T extends string>(
     if (savePromiseRef.current) {
       try {
         await savePromiseRef.current;
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {
         // Surface the error to the original caller of runSave, not here.
       }

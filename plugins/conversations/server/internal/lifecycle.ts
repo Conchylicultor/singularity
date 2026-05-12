@@ -134,6 +134,7 @@ export async function createConversation(
     });
   } catch (err) {
     if (newAttemptId) {
+      // eslint-disable-next-line promise-safety/no-bare-catch
       await deleteAttempt(newAttemptId).catch((e) => {
         console.error(`[conversations] failed to delete orphaned attempt ${newAttemptId} during cleanup`, e);
       });
@@ -152,6 +153,7 @@ export async function createConversation(
     // Without this, the row stays at "starting" forever — the poller skips
     // starting rows, and the UI just shows "Starting…" with a terminal pane
     // that prints "can't find session" because tmux never created one.
+    // eslint-disable-next-line promise-safety/no-bare-catch
     await updateConversation(conversationId, {
       status: "gone",
       endedAt: new Date(),

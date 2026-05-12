@@ -134,6 +134,7 @@ export async function runInitialReconcile(): Promise<void> {
   try {
     const commits = await readAllMainCommits(cwd);
     await recordMissing(commits);
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error("[tasks.push-watcher] initial reconcile failed", err);
   }
@@ -167,6 +168,7 @@ export const pushIngestJob = defineJob({
         ? await readCommitsInRange(`${event.previousSha}..${event.sha}`, cwd)
         : await readAllMainCommits(cwd);
       await recordMissing(commits);
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch (err) {
       console.error("[tasks.push-ingest] ingest failed", err);
     }

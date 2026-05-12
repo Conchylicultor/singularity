@@ -179,6 +179,7 @@ async function dispatch(
     await db
       .delete(_jobWaits)
       .where(eq(_jobWaits.workflowRunId, workflowRunId));
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.warn(
       `[jobs] cleanup of step/wait logs failed for workflow ${workflowRunId}`,

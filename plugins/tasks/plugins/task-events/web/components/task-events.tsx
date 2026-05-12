@@ -26,6 +26,7 @@ function useGithubBase(): string | null {
         const info = (await res.json()) as RepoInfo;
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!cancelled) setBase(info.githubBase);
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {
         // leave base null — row still renders without a link
       }

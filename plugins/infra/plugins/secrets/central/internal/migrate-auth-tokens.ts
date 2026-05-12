@@ -41,6 +41,7 @@ export async function migrateLegacyAuthTokens(): Promise<
   try {
     renameSync(LEGACY_AUTH_BLOB, `${LEGACY_AUTH_BLOB}.migrated-${ts}`);
     renameSync(LEGACY_AUTH_KEY, `${LEGACY_AUTH_KEY}.migrated-${ts}`);
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.warn(
       "[secrets] migration succeeded but failed to rename legacy files:",

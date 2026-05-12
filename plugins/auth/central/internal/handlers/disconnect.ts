@@ -10,6 +10,7 @@ export const handleDisconnect: HttpHandler = async (req, params) => {
     if (req.headers.get("content-length")) {
       body = (await req.json()) as { accountId?: string };
     }
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {
     /* empty body is fine */
   }

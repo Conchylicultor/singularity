@@ -63,6 +63,7 @@ function CrashFallback({
     const timer = setTimeout(() => {
       const result = callReporter(report);
       if (result && typeof (result as Promise<unknown>).then === "function") {
+        // eslint-disable-next-line promise-safety/no-bare-catch
         (result as Promise<unknown>)
           .then((r) => {
             if (!cancelled) setContext(r ?? null);

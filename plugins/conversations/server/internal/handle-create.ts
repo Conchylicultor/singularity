@@ -34,6 +34,7 @@ export async function handleCreate(req: Request): Promise<Response> {
     // recordCrash explicitly. Dedup-by-fingerprint keeps a regression that
     // breaks every launch from spamming tasks; a single crash row + task
     // surfaces the failure pattern instead.
+    // eslint-disable-next-line promise-safety/no-bare-catch
     await recordCrash({
       source: "server-caught",
       errorType: err instanceof Error ? err.name : "Error",

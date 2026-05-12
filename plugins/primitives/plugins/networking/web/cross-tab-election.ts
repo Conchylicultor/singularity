@@ -185,6 +185,7 @@ export class CrossTabElection<TMsg> {
     if (this.channel && !this.closed) {
       try {
         this.channel.postMessage(frame);
+      // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {
         // ignore
       }

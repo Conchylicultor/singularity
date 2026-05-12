@@ -27,6 +27,7 @@ export function appendCrashSync(source: CrashSource, err: Error): void {
         at: new Date().toISOString(),
       }) + "\n";
     appendFileSync(bufferFile(), line);
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {
     // Best-effort: we're in a crash path; swallowing is better than throwing.
   }
@@ -50,12 +51,14 @@ export function readAndClearBuffer(): BufferedCrash[] {
     if (!trimmed) continue;
     try {
       crashes.push(JSON.parse(trimmed) as BufferedCrash);
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       // Skip corrupt lines rather than failing the whole flush.
     }
   }
   try {
     unlinkSync(file);
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {
     // If unlink fails we'll re-process these on the next boot. Duplicate
     // entries collapse via the fingerprint unique index.

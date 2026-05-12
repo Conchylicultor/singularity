@@ -49,6 +49,7 @@ export function ConversationList() {
     setActiveViewId(id);
     try {
       localStorage.setItem(ACTIVE_VIEW_KEY, id);
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {}
   };
 

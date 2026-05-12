@@ -89,6 +89,7 @@ export class SharedWebSocket {
     this.election.close();
     try {
       this.onclose?.(new CloseEvent("close", { code: 1000, reason: "handle closed", wasClean: true }));
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch { /* ignore */ }
   }
 
@@ -130,6 +131,7 @@ export class SharedWebSocket {
       this.readyState = SharedWebSocket.OPEN;
       while (this.queue.length > 0) {
         const msg = this.queue.shift()!;
+        // eslint-disable-next-line promise-safety/no-bare-catch
         try { ws.send(msg); } catch { /* ignore */ }
       }
       this.setStatus("open");
@@ -144,6 +146,7 @@ export class SharedWebSocket {
     };
 
     ws.onerror = () => {
+      // eslint-disable-next-line promise-safety/no-bare-catch
       try { this.onerror?.(new Event("error")); } catch { /* ignore */ }
     };
 
@@ -165,6 +168,7 @@ export class SharedWebSocket {
 
   private writeOrQueue(data: string): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      // eslint-disable-next-line promise-safety/no-bare-catch
       try { this.ws.send(data); } catch { /* ignore */ }
     } else {
       this.queue.push(data);
@@ -183,6 +187,7 @@ export class SharedWebSocket {
       ws.onmessage = null;
       ws.onerror = null;
       ws.onclose = null;
+      // eslint-disable-next-line promise-safety/no-bare-catch
       try { ws.close(); } catch { /* ignore */ }
     }
   }
@@ -190,10 +195,12 @@ export class SharedWebSocket {
   // --- dispatchers ----------------------------------------------------------
 
   private dispatchOpen(): void {
+    // eslint-disable-next-line promise-safety/no-bare-catch
     try { this.onopen?.(new Event("open")); } catch { /* ignore */ }
   }
 
   private dispatchMessage(data: string): void {
+    // eslint-disable-next-line promise-safety/no-bare-catch
     try { this.onmessage?.(new MessageEvent("message", { data })); } catch { /* ignore */ }
   }
 

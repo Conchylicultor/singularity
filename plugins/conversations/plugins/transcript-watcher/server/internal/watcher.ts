@@ -44,6 +44,7 @@ export async function startTranscriptWatcher(): Promise<void> {
         }
       },
     );
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error("[transcript-watcher] failed to open parcel subscription", err);
   }
@@ -66,6 +67,7 @@ export async function stopTranscriptWatcher(): Promise<void> {
   rooms.clear();
   pathToConvId.clear();
   if (subscription) {
+    // eslint-disable-next-line promise-safety/no-bare-catch
     await subscription.unsubscribe().catch((err) =>
       console.error("[transcript-watcher] unsubscribe failed", err),
     );
@@ -145,6 +147,7 @@ async function processRoom(room: Room): Promise<void> {
     const events = await readJsonlEvents(room.transcriptPath);
     room.lastEvents = events;
     fanOut(room, events);
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error(`[transcript-watcher] processRoom failed for ${room.conversationId}`, err);
   }
@@ -154,6 +157,7 @@ function fanOut(room: Room, events: JsonlEvent[]): void {
   for (const listener of room.subscribers) {
     try {
       listener(events);
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch (err) {
       console.error("[transcript-watcher] listener threw", err);
     }

@@ -38,6 +38,7 @@ function writeToStorage<T>(sKey: string, value: T): void {
     window.dispatchEvent(
       new CustomEvent(SYNC_EVENT, { detail: { storageKey: sKey } }),
     );
+  // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {
     // Quota exceeded — silently ignore
   }
@@ -101,6 +102,7 @@ export function useDraft<T>(
       window.dispatchEvent(
         new CustomEvent(SYNC_EVENT, { detail: { storageKey: sKey } }),
       );
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       // ignore
     }

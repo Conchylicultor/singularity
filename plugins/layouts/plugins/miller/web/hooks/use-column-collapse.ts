@@ -42,6 +42,7 @@ export function useColumnCollapse(paneId: string): [boolean, () => void] {
     collapseState.set(paneId, next);
     try {
       sessionStorage.setItem(KEY(paneId), String(next));
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       // ignore storage errors (private mode, quota)
     }

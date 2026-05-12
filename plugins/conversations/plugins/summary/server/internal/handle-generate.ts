@@ -51,6 +51,7 @@ export async function handleGenerate(
   });
 
   setTimeout(() => {
+    // eslint-disable-next-line promise-safety/no-bare-catch
     deleteConversation(conv.id).catch((err) => {
       console.error(`[conversation-summary] cleanup of ${conv.id} failed`, err);
     });

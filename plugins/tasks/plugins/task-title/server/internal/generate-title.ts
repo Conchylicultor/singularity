@@ -72,6 +72,7 @@ export function scheduleTaskTitleUpdate(
         await updateTaskTitle(taskId, generated, [fallbackTitle]);
       }
       await updateConversationsTitleForTask(taskId, generated);
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch (err) {
       console.warn("[task-title] scheduleTaskTitleUpdate failed:", err);
     }
@@ -90,6 +91,7 @@ export function scheduleTaskTitleUpgrade(taskId: string, text: string): void {
       const generated = await generateTaskTitle(text, taskId);
       await updateTaskTitle(taskId, generated, UNINFORMATIVE_TITLES);
       await updateConversationsTitleForTask(taskId, generated);
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch (err) {
       console.warn("[task-title] scheduleTaskTitleUpgrade failed:", err);
     }
