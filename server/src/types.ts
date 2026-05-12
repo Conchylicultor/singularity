@@ -42,6 +42,8 @@ export interface Registration {
   register(): void | Promise<void>;
   /** Auto-set by the factory (e.g. "mcp-tool", "job"). Never manually specified. */
   readonly _kind?: string;
+  /** Factory function name for docgen display (e.g. "defineJob", "mcpTool"). Auto-set. */
+  readonly _factory?: string;
   _doc?: import("../../plugin-core/types").DocMeta;
 }
 

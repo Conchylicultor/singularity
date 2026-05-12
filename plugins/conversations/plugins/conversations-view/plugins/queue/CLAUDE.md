@@ -13,7 +13,7 @@
 - Contributes:
   - `ConversationsView.View` "Queue" → `QueueView`
 - Server:
-  - Register: `queue.seed-rank`
+  - Register: `defineJob('queue.seed-rank')`
   - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`, `tasks-core.listBlockingDepIds`
   - Resources: `queue-ranks` (push)
   - `POST /api/conversations-queue/reorder`

@@ -62,6 +62,7 @@ export interface DocMetaContribution {
 
 export interface DocMetaRegistration {
   kind: string;
+  factory?: string;
   runtime: "server" | "central";
   doc: DocMeta;
 }
@@ -1032,13 +1033,14 @@ export async function enrichPluginTreeDocs(
 
       if (runtime === "server" || runtime === "central") {
         const rawRegister = def.register as
-          | Array<{ _kind?: string; _doc?: DocMeta }>
+          | Array<{ _kind?: string; _factory?: string; _doc?: DocMeta }>
           | undefined;
         if (rawRegister) {
           for (const r of rawRegister) {
             if (r._kind) {
               registrations.push({
                 kind: r._kind,
+                factory: r._factory,
                 runtime,
                 doc: r._doc ?? {},
               });

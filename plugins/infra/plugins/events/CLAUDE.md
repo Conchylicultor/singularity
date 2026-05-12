@@ -16,7 +16,7 @@
   - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`, `UnsafeTriggerByNameSpec`
   - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `eventEmissionsResource`, `eventTriggersResource`, `trigger`, `Trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
 - Server:
-  - Register: `events.dispatch`, `durable-hooks`
+  - Register: `defineJob('events.dispatch')`, `UNSAFE_installDurableHooks()`
   - Uses: `database.db`
   - Resources: `event-emissions` (invalidate), `event-triggers` (invalidate)
   - `GET /api/events/emissions`

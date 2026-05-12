@@ -13,7 +13,7 @@
   - `Pane.Register` "events-test"
   - `DebugApp.Sidebar` "Events Test"
 - Server:
-  - Register: `events_test.log`, `events_test.pinged`
+  - Register: `defineJob('events_test.log')`, `defineTriggerEvent('events_test.pinged')`
   - Uses: `database.db`
   - `POST /api/events-test/subscribe`
   - `POST /api/events-test/emit`

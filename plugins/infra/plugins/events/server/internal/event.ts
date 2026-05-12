@@ -161,6 +161,7 @@ export function defineTriggerEvent<
     {
       name: spec.name,
       _kind: "trigger-event" as const,
+      _factory: "defineTriggerEvent",
       _doc: { label: spec.name },
       emit: async (payload: T, opts?: { tx?: EmitTx }) => {
         await dispatch(def, payload, opts?.tx);

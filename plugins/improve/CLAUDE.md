@@ -15,7 +15,7 @@
 - Contributes:
   - `Shell.Toolbar` → `ImproveButton`
 - Server:
-  - Register: `improve.apply-group`
+  - Register: `defineJob('improve.apply-group')`
   - Uses: `conversations.conversationCreated`, `database.db`, `tasks-core.ensureMetaTask`
 - Imported by: `draw-on-app`
 

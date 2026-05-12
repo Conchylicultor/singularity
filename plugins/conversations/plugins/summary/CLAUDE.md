@@ -12,7 +12,7 @@
 - Contributes:
   - `Pane.Register` "conv-summary"
 - Server:
-  - Register: `submit_conversation_summary`
+  - Register: `mcpTool('submit_conversation_summary')`
   - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `database.db`, `tasks-core.getConversation`, `tasks-core.getTask`
   - Resources: `conversation-summaries` (push)
   - `POST /api/conversation-summary/:conversationId/generate`

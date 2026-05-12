@@ -230,7 +230,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Config.Spec`
     - `Pane.Register` "build"
   - Server:
-    - Register: `build.run`
+    - Register: `defineJob('build.run')`
     - Uses: `config.Config`, `config.readConfig`, `database.db`
     - Resources: `build.history` (push), `build.mainAheadCount` (push)
     - `POST /api/build`
@@ -302,7 +302,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `ConversationCreatedPayload`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`, `UserTurnSentPayload`
     - Values: `afterTurn`, `conversationCreated`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `getConversationRow`, `hasLiveProcess`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`, `userTurnSent`
   - Server:
-    - Register: `tasks.maybe-launch`, `tasks.maybe-launch-dependents`, `conversation.created`, `conversation.turn-completed`, `conversation.userTurnSent`
+    - Register: `defineJob('tasks.maybe-launch')`, `defineJob('tasks.maybe-launch-dependents')`, `defineTriggerEvent('conversation.created')`, `defineTriggerEvent('conversation.turn-completed')`, `defineTriggerEvent('conversation.userTurnSent')`
     - Uses: `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.recentConversationsResource`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/gone`
@@ -331,7 +331,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Config.Spec`
         - `Config.Section` "Category colors" → `CategoryColorSettings`
       - Server:
-        - Register: `conversation-category.classify`
+        - Register: `defineJob('conversation-category.classify')`
         - Uses: `config.Config`, `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
         - `POST /api/conversation-category/:conversationId/classify`
         - `POST /api/conversation-category/:conversationId`
@@ -349,7 +349,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `conversationPane.Actions` → `ProgressBarToolbar`
         - `Item.Chips` → `ProgressBarRow`
       - Server:
-        - Register: `conversation-progress.classify`, `conversation-progress.mark-pushed`
+        - Register: `defineJob('conversation-progress.classify')`, `defineJob('conversation-progress.mark-pushed')`
         - Uses: `conversations.conversationTurnCompleted`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.pushLanded`
     - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
       - Plugins:
@@ -600,7 +600,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Conversation.PromptBar` "Exit" → `PushAndExitButton`
           - Server:
-            - Register: `push_and_exit.run`, `push_and_exit.exit_clean_finalize`, `exit_clean`, `flag_raise`
+            - Register: `defineJob('push_and_exit.run')`, `defineJob('push_and_exit.exit_clean_finalize')`, `mcpTool('exit_clean')`, `mcpTool('flag_raise')`
             - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.sendTurn`, `database.db`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
@@ -660,7 +660,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Conversation.AbovePromptInput` → `TurnSummaryCard`
             - `Config.Spec`
           - Server:
-            - Register: `turn-summary.generate`
+            - Register: `defineJob('turn-summary.generate')`
             - Uses: `config.Config`, `config.readConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:
@@ -706,7 +706,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `ConversationsView.View` "Queue" → `QueueView`
           - Server:
-            - Register: `queue.seed-rank`
+            - Register: `defineJob('queue.seed-rank')`
             - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`, `tasks-core.listBlockingDepIds`
             - Resources: `queue-ranks` (push)
             - `POST /api/conversations-queue/reorder`
@@ -733,7 +733,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` "conv-summary"
       - Server:
-        - Register: `submit_conversation_summary`
+        - Register: `mcpTool('submit_conversation_summary')`
         - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `database.db`, `tasks-core.getConversation`, `tasks-core.getTask`
         - Resources: `conversation-summaries` (push)
         - `POST /api/conversation-summary/:conversationId/generate`
@@ -803,7 +803,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `runMigrations`
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
       - Server:
-        - Register: `query_db`
+        - Register: `mcpTool('query_db')`
         - Uses: `tasks-core.getConversation`
 
 - **`debug`** — Debug tools umbrella plugin.
@@ -903,7 +903,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Pane.Register` "events-test"
     - `DebugApp.Sidebar` "Events Test"
   - Server:
-    - Register: `events_test.log`, `events_test.pinged`
+    - Register: `defineJob('events_test.log')`, `defineTriggerEvent('events_test.pinged')`
     - Uses: `database.db`
     - `POST /api/events-test/subscribe`
     - `POST /api/events-test/emit`
@@ -938,7 +938,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Shell.Toolbar` → `ImproveButton`
   - Server:
-    - Register: `improve.apply-group`
+    - Register: `defineJob('improve.apply-group')`
     - Uses: `conversations.conversationCreated`, `database.db`, `tasks-core.ensureMetaTask`
   - Imported by: `draw-on-app`
 
@@ -991,7 +991,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`, `UnsafeTriggerByNameSpec`
         - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `eventEmissionsResource`, `eventTriggersResource`, `trigger`, `Trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
       - Server:
-        - Register: `events.dispatch`, `durable-hooks`
+        - Register: `defineJob('events.dispatch')`, `UNSAFE_installDurableHooks()`
         - Uses: `database.db`
         - Resources: `event-emissions` (invalidate), `event-triggers` (invalidate)
         - `GET /api/events/emissions`
@@ -1006,7 +1006,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `RefAdvancedPayload`, `RefHead`
         - Values: `_refAdvancedTriggers`, `refAdvanced`, `refHeadResource`, `RefHeadSchema`
       - Server:
-        - Register: `git.refAdvanced`
+        - Register: `defineTriggerEvent('git.refAdvanced')`
     - **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
       - Defines:
         - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
@@ -1017,7 +1017,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`
         - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
       - Server:
-        - Register: `jobs.resume`
+        - Register: `defineJob('jobs.resume')`
         - Uses: `database.db`
         - Resources: `jobs-list` (invalidate)
         - `GET /api/jobs`
@@ -1373,7 +1373,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (server):
     - Values: `armTaskAutoStart`
   - Server:
-    - Register: `add_task`, `tasks.push-ingest`
+    - Register: `mcpTool('add_task')`, `defineJob('tasks.push-ingest')`
     - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.taskAttachments`, `tasks-core.updateTask`
     - `GET /api/tasks`
     - `POST /api/tasks`
@@ -1452,7 +1452,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Values: `generateTaskTitle`, `scheduleTaskTitleUpdate`, `scheduleTaskTitleUpgrade`, `synthesiseTitleFallback`
       - Server:
-        - Register: `task-title.on-conversation-created`, `task-title.on-user-turn-sent`
+        - Register: `defineJob('task-title.on-conversation-created')`, `defineJob('task-title.on-user-turn-sent')`
         - Uses: `conversations.conversationCreated`, `conversations.userTurnSent`, `tasks-core.getTask`, `tasks-core.updateConversationsTitleForTask`, `tasks-core.updateTaskTitle`
 
 - **`tasks-core`** — Schema + repository layer for the tasks/attempts/conversations FK cluster.
@@ -1469,7 +1469,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskStatus`, `TaskStatusChangedPayload`, `UpdateConversationPatch`, `UpdateTaskPatch`
     - Values: `_attempts`, `_conversations`, `_pushLandedTriggers`, `_tasks`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `conversationAttachments`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteAttempt`, `deleteConversationRow`, `deleteTask`, `emitStatusChangeIfChanged`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listArmedDependentsOf`, `listAttempts`, `listAttemptsForTask`, `listBlockingDepIds`, `listConversationsForDisplay`, `listConversationsForInfra`, `listGoneConversations`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `markConversationGone`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskAttachments`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `updateConversation`, `updateConversationsTitleForTask`, `updateTask`, `updateTaskTitle`
   - Server:
-    - Register: `pushes.landed`, `tasks.statusChanged`
+    - Register: `defineTriggerEvent('pushes.landed')`, `defineTriggerEvent('tasks.statusChanged')`
     - Uses: `database.db`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push)
   - Imported by: `active-data`, `agents`, `allow-monitor`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`

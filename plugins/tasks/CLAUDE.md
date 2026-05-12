@@ -14,7 +14,7 @@
 - Exports (server):
   - Values: `armTaskAutoStart`
 - Server:
-  - Register: `add_task`, `tasks.push-ingest`
+  - Register: `mcpTool('add_task')`, `defineJob('tasks.push-ingest')`
   - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.taskAttachments`, `tasks-core.updateTask`
   - `GET /api/tasks`
   - `POST /api/tasks`
