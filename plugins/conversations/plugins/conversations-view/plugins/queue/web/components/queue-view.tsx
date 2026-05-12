@@ -97,7 +97,9 @@ export function QueueView({
   onCloseConversation,
 }: ViewProps) {
   const { active, recentGone, isLoading } = useConversations();
-  const { data: rankRows } = useResource(queueRanksResource);
+  const { data: queueData } = useResource(queueRanksResource);
+  const rankRows = queueData.ranks;
+  const pinnedConversationId = queueData.pinnedConversationId;
   const { data: taskRows } = useResource(tasksResource);
 
   const working = useMemo(
@@ -111,15 +113,6 @@ export function QueueView({
     [active],
   );
 
-  // Anki-style deck: a single global ordered list of waiting conversations,
-  // sorted by rank ascending. Top of the list is "what to do next". Rank is
-  // owned by the queue plugin's side-table (queueRanksResource) — a
-  // conversation only appears in the deck once the seed-rank job has fired.
-  // Uses code-point order (not localeCompare) to match Postgres COLLATE "C".
-  // Waiting conversations with no rank entry yet go into `unranked`.
-  // Blocked conversations (task.status === "blocked") are partitioned into a
-  // separate `blockedDeck` and always rendered after the main deck so they
-  // never occupy the top-of-queue "do next" slot.
   const { deck, blockedDeck, unranked } = useMemo(() => {
     const ranks = new Map(rankRows.map((r) => [r.conversationId, r.rank]));
     const taskStatusMap = new Map(taskRows.map((t) => [t.id, t.status]));
@@ -272,6 +265,15 @@ export function QueueView({
     await queuePost("reorder", { conversationId, targetId: drop.targetId, zone: drop.zone });
   }, []);
 
+  const pinnedConv = useMemo(
+    () => (pinnedConversationId ? deck.find((c) => c.id === pinnedConversationId) ?? null : null),
+    [pinnedConversationId, deck],
+  );
+  const restDeck = useMemo(
+    () => (pinnedConv ? deck.filter((c) => c.id !== pinnedConversationId) : deck),
+    [deck, pinnedConv, pinnedConversationId],
+  );
+
   if (!isLoading && deck.length === 0 && blockedDeck.length === 0 && working.length === 0 && unranked.length === 0 && disconnected.length === 0 && recentGone.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-xs text-muted-foreground">
@@ -288,9 +290,9 @@ export function QueueView({
   const queueTop = nextTop;
   nextTop += SECTION_H;
 
-  const hasTopItem = queueExpanded && deck.length > 0;
+  const hasTopItem = queueExpanded && pinnedConv != null;
   const topItemTop = nextTop;
-  if (hasTopItem) nextTop += SECTION_H + 8; // top item row height + padding
+  if (hasTopItem) nextTop += SECTION_H + 8;
 
   const blockedTop = nextTop;
   if (blockedDeck.length > 0) nextTop += SECTION_H;
@@ -323,34 +325,36 @@ export function QueueView({
           onDragEnd={onDragEnd}
           onDragCancel={() => setDraggingId(null)}
         >
-          {/* Top item: direct child of root div so sticky spans all sections */}
-          <div className="sticky z-10 bg-sidebar pt-px pb-1 pl-1" style={{ top: topItemTop }}>
-            <SidebarMenu>
-              <QueueRow
-                conv={deck[0]!}
-                isTop
-                isBottom={deck.length === 1}
-                canStepDown={deck.length > 1}
-                isActive={deck[0]!.id === activeId}
-                dragInProgress={dragInProgress}
-                onNavigate={onNavigate}
-                onClose={onCloseConversation}
-                onPromoteToTop={(id) => queuePost("promote", { conversationId: id })}
-                onSendToBottom={(id) => queuePost("demote", { conversationId: id })}
-                onStepDown={(id) => queuePost("step-down", { conversationId: id, steps: 5 })}
-              />
-            </SidebarMenu>
-          </div>
-          {deck.length > 1 && (
+          {/* Pinned top item */}
+          {pinnedConv && (
+            <div className="sticky z-10 bg-sidebar pt-px pb-1 pl-1" style={{ top: topItemTop }}>
+              <SidebarMenu>
+                <QueueRow
+                  conv={pinnedConv}
+                  isTop
+                  isBottom={restDeck.length === 0}
+                  canStepDown={restDeck.length > 0}
+                  isActive={pinnedConv.id === activeId}
+                  dragInProgress={dragInProgress}
+                  onNavigate={onNavigate}
+                  onClose={onCloseConversation}
+                  onPromoteToTop={(id) => queuePost("promote", { conversationId: id })}
+                  onSendToBottom={(id) => queuePost("demote", { conversationId: id })}
+                  onStepDown={(id) => queuePost("step-down", { conversationId: id, steps: 5 })}
+                />
+              </SidebarMenu>
+            </div>
+          )}
+          {restDeck.length > 0 && (
             <div className="pl-1">
               <SidebarMenu>
-                {deck.slice(1).map((conv, idx) => (
+                {restDeck.map((conv, idx) => (
                   <QueueRow
                     key={conv.id}
                     conv={conv}
                     isTop={false}
-                    isBottom={idx === deck.length - 2}
-                    canStepDown={idx < deck.length - 2}
+                    isBottom={idx === restDeck.length - 1}
+                    canStepDown={idx < restDeck.length - 1}
                     isActive={conv.id === activeId}
                     dragInProgress={dragInProgress}
                     onNavigate={onNavigate}

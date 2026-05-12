@@ -697,17 +697,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`history`** — All conversations in historical order of creation.
           - Contributes:
             - `ConversationsView.View` "History" → `HistoryView`
-        - **`queue`** — Anki-style global priority queue of conversations awaiting user input. Top of the deck is what to do next; finishing a turn returns the conversation to position 2 so the top stays stable. Server side of the global Anki-style conversations queue. Owns the conversations_ext_queue side-table via the entity-extensions primitive and seeds rank on conversationCreated + conversationTurnCompleted.
+        - **`queue`** — Stable-rank global priority queue of conversations awaiting user input. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`
             - Entity extension of: `tasks-core` (table `conversations_ext_queue`)
           - Exports (server):
-            - Values: `conversationsQueue`, `endRank`, `isTopOfDeck`, `lockDeck`, `positionTwoRank`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `seedRankJob`
+            - Values: `conversationsQueue`, `endRank`, `lockDeck`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `seedRankJob`
           - Contributes:
             - `ConversationsView.View` "Queue" → `QueueView`
           - Server:
-            - Register: `defineJob('queue.seed-rank')`
-            - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`, `tasks-core.listBlockingDepIds`
+            - Register: `defineJob('queue.seed-rank')`, `defineJob('queue.validate-pin')`, `defineJob('queue.advance-pin')`
+            - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `conversations.userTurnSent`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`
             - Resources: `queue-ranks` (push)
             - `POST /api/conversations-queue/reorder`
             - `POST /api/conversations-queue/promote`

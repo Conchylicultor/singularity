@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { getConversation, hasBlockingDep, listBlockingDepIds } from "@plugins/tasks-core/server";
-import { lockDeck, positionTwoRank, rankAfterBlockers } from "./queue-ranks";
+import { getConversation } from "@plugins/tasks-core/server";
+import { rankForTop } from "./queue-ranks";
 import { conversationsQueue } from "./tables";
 import { queueRanksResource } from "./resource";
-import { db } from "@plugins/database/server";
+import { validatePin } from "./pinned";
 
 const Body = z.object({ conversationId: z.string().min(1) });
 
@@ -12,27 +12,9 @@ export async function handleRerank(req: Request): Promise<Response> {
   const conv = await getConversation(conversationId);
   if (!conv) return new Response("Not found", { status: 404 });
 
-  await db.transaction(async (tx) => {
-    await lockDeck(tx);
-
-    let rank;
-    if (conv.taskId && (await hasBlockingDep(conv.taskId))) {
-      const blockingTaskIds = await listBlockingDepIds(conv.taskId);
-      rank = await rankAfterBlockers(conversationId, blockingTaskIds, tx);
-    } else {
-      rank = await positionTwoRank(conversationId, tx);
-    }
-
-    const now = new Date();
-    await tx
-      .insert(conversationsQueue.table)
-      .values({ parentId: conversationId, rank: rank.toJSON(), updatedAt: now })
-      .onConflictDoUpdate({
-        target: conversationsQueue.table.parentId,
-        set: { rank: rank.toJSON(), updatedAt: now },
-      });
-  });
-
+  const rank = await rankForTop(conversationId);
+  await conversationsQueue.upsert(conversationId, { rank: rank.toJSON() });
+  await validatePin();
   queueRanksResource.notify();
   return Response.json({ ok: true });
 }

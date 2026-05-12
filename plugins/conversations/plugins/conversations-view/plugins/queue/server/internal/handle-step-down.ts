@@ -3,6 +3,7 @@ import { getConversation } from "@plugins/tasks-core/server";
 import { rankAfterN } from "./queue-ranks";
 import { conversationsQueue } from "./tables";
 import { queueRanksResource } from "./resource";
+import { validatePin } from "./pinned";
 
 const Body = z.object({ conversationId: z.string().min(1), steps: z.number().int().positive() });
 
@@ -12,6 +13,7 @@ export async function handleStepDown(req: Request): Promise<Response> {
   if (!conv) return new Response("Not found", { status: 404 });
   const rank = await rankAfterN(conversationId, steps);
   await conversationsQueue.upsert(conversationId, { rank: rank.toJSON() });
+  await validatePin();
   queueRanksResource.notify();
   return Response.json({ ok: true });
 }

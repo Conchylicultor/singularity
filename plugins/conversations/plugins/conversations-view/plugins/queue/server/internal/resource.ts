@@ -1,20 +1,22 @@
-import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
-import { QueueRankRowSchema, type QueueRankRow } from "../../shared/resources";
+import { QueueDataSchema, type QueueData, type QueueRankRow } from "../../shared/resources";
 import { conversationsQueue } from "./tables";
+import { validatePin } from "./pinned";
 
 export const queueRanksResource = defineResource({
   key: "queue-ranks",
   mode: "push",
-  schema: z.array(QueueRankRowSchema),
-  loader: async (): Promise<QueueRankRow[]> => {
+  schema: QueueDataSchema,
+  loader: async (): Promise<QueueData> => {
     const rows = await db
       .select({
         parentId: conversationsQueue.table.parentId,
         rank: conversationsQueue.table.rank,
       })
       .from(conversationsQueue.table);
-    return rows.map((r) => ({ conversationId: r.parentId, rank: r.rank })) as unknown as QueueRankRow[];
+    const ranks = rows.map((r) => ({ conversationId: r.parentId, rank: r.rank })) as unknown as QueueRankRow[];
+    const pinnedConversationId = await validatePin();
+    return { ranks, pinnedConversationId };
   },
 });

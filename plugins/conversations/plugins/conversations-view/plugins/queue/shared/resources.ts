@@ -8,8 +8,14 @@ export const QueueRankRowSchema = z.object({
 });
 export type QueueRankRow = z.infer<typeof QueueRankRowSchema>;
 
-export const queueRanksResource = resourceDescriptor<QueueRankRow[]>(
+export const QueueDataSchema = z.object({
+  ranks: z.array(QueueRankRowSchema),
+  pinnedConversationId: z.string().nullable(),
+});
+export type QueueData = z.infer<typeof QueueDataSchema>;
+
+export const queueRanksResource = resourceDescriptor<QueueData>(
   "queue-ranks",
-  z.array(QueueRankRowSchema),
-  [],
+  QueueDataSchema,
+  { ranks: [], pinnedConversationId: null },
 );

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, lt, ne, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, lt, ne } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
 import { _conversations, _attempts } from "@plugins/tasks-core/server";
@@ -42,29 +42,6 @@ export async function endRank(): Promise<Rank> {
   return Rank.between(last?.rank ? Rank.from(last.rank as string) : null, null);
 }
 
-// Position 2 of the deck: between the current top and second-place ranks.
-// 0 live → returns any rank (becomes the only item).
-// 1 live → returns a rank after that single item.
-// `excludeId` keeps the conversation being ranked out of the deck query.
-// Uses LIVE_STATUSES (not just "waiting") so the position-1 conversation
-// is always visible as the anchor, even when it's "working" or "starting".
-// When `executor` is a transaction, the caller MUST have acquired the lock
-// (via `lockDeck`) so concurrent seeders serialize on the same rows.
-export async function positionTwoRank(
-  excludeId?: string,
-  executor: RankExecutor = db,
-): Promise<Rank> {
-  const where: SQL[] = [inArray(_conversations.status, LIVE_STATUSES)];
-  if (excludeId) where.push(ne(_conversationsExtQueue.parentId, excludeId));
-  const top2 = await joinedWaiting(executor)
-    .where(and(...where))
-    .orderBy(asc(_conversationsExtQueue.rank))
-    .limit(2);
-  const top = top2[0]?.rank ? Rank.from(top2[0].rank as string) : null;
-  const second = top2[1]?.rank ? Rank.from(top2[1].rank as string) : null;
-  return safeBetween(top, second);
-}
-
 // Acquire a FOR UPDATE lock on the ext-queue rows that participate in deck
 // math. Call once at the start of a transaction before any rank reads —
 // concurrent transactions block here until the lock holder commits.
@@ -77,23 +54,9 @@ export async function lockDeck(executor: RankExecutor): Promise<void> {
     .for("update", { of: _conversationsExtQueue });
 }
 
-// Returns true when `conversationId` currently holds the top rank among all
-// live conversations in the deck. Used by seedRankJob to avoid demoting the
-// position-1 item on turn completion.
-export async function isTopOfDeck(
-  conversationId: string,
-  executor: RankExecutor = db,
-): Promise<boolean> {
-  const [top] = await joinedWaiting(executor)
-    .where(inArray(_conversations.status, LIVE_STATUSES))
-    .orderBy(asc(_conversationsExtQueue.rank))
-    .limit(1);
-  return top?.id === conversationId;
-}
-
 // Rank that places a conversation before all currently-waiting conversations.
-export async function rankForTop(excludeId: string): Promise<Rank> {
-  const [first] = await joinedWaiting()
+export async function rankForTop(excludeId: string, executor: RankExecutor = db): Promise<Rank> {
+  const [first] = await joinedWaiting(executor)
     .where(
       and(
         eq(_conversations.status, "waiting"),
@@ -197,7 +160,7 @@ export async function rankAfterBlockers(
   blockingTaskIds: string[],
   executor: RankExecutor = db,
 ): Promise<Rank> {
-  if (blockingTaskIds.length === 0) return positionTwoRank(conversationId, executor);
+  if (blockingTaskIds.length === 0) return rankForTop(conversationId, executor);
 
   const [last] = await executor
     .select({ rank: _conversationsExtQueue.rank })
@@ -215,7 +178,7 @@ export async function rankAfterBlockers(
     .limit(1);
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (!last?.rank) return positionTwoRank(conversationId, executor);
+  if (!last?.rank) return rankForTop(conversationId, executor);
 
   const [succ] = await joinedWaiting(executor)
     .where(

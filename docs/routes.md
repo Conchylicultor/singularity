@@ -99,7 +99,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
           - `/api/conversation-groups/:id (PATCH, DELETE)`
           - `/api/conversation-groups/:id/members (POST)`
           - `/api/conversation-groups/members/:conversationId (DELETE)`
-        - **`queue`** — Anki-style global priority queue of conversations awaiting user input. Top of the deck is what to do next; finishing a turn returns the conversation to position 2 so the top stays stable. Server side of the global Anki-style conversations queue. Owns the conversations_ext_queue side-table via the entity-extensions primitive and seeds rank on conversationCreated + conversationTurnCompleted.
+        - **`queue`** — Stable-rank global priority queue of conversations awaiting user input. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
           - `/api/conversations-queue/reorder (POST)`
           - `/api/conversations-queue/promote (POST)`
           - `/api/conversations-queue/demote (POST)`

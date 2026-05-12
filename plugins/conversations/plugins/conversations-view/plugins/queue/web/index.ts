@@ -7,7 +7,7 @@ export default {
   id: "conversations-queue",
   name: "Conversations Queue",
   description:
-    "Anki-style global priority queue of conversations awaiting user input. Top of the deck is what to do next; finishing a turn returns the conversation to position 2 so the top stays stable.",
+    "Stable-rank global priority queue of conversations awaiting user input. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus.",
   contributions: [
     ConversationsView.View({
       id: "queue",
