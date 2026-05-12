@@ -12,6 +12,7 @@
   - `Config.Spec`
   - `Pane.Register` "build"
 - Server:
+  - Register: `build.run`
   - Uses: `config.Config`, `config.readConfig`, `database.db`
   - Resources: `build.history` (push), `build.mainAheadCount` (push)
   - `POST /api/build`

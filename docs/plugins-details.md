@@ -230,6 +230,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Config.Spec`
     - `Pane.Register` "build"
   - Server:
+    - Register: `build.run`
     - Uses: `config.Config`, `config.readConfig`, `database.db`
     - Resources: `build.history` (push), `build.mainAheadCount` (push)
     - `POST /api/build`
@@ -330,6 +331,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Config.Spec`
         - `Config.Section` "Category colors" → `CategoryColorSettings`
       - Server:
+        - Register: `conversation-category.classify`
         - Uses: `config.Config`, `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
         - `POST /api/conversation-category/:conversationId/classify`
         - `POST /api/conversation-category/:conversationId`
@@ -658,6 +660,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Conversation.AbovePromptInput` → `TurnSummaryCard`
             - `Config.Spec`
           - Server:
+            - Register: `turn-summary.generate`
             - Uses: `config.Config`, `config.readConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:

@@ -15,6 +15,11 @@ export function registerBarrelStubs(_repoRoot: string): void {
   const noop = () => {};
   const identity = <T>(x: T): T => x;
 
+  // Several server modules (database/server, database/admin, paths) throw at
+  // top-level when this env var is missing. Setting a dummy value lets them
+  // evaluate; pg.Pool connections are lazy so no real DB connect happens.
+  process.env.SINGULARITY_WORKTREE ??= "__barrel_import_stub__";
+
   if (typeof globalThis.window === "undefined") {
     const loc = {
       protocol: "http:",
@@ -174,6 +179,39 @@ export function registerBarrelStubs(_repoRoot: string): void {
       // ── @core — self-contained, avoids importing real React ───────
       build.module("@core", () => ({
         exports: coreExports,
+        loader: "object",
+      }));
+
+      // ── Server plugin barrels that fail outside the real server ─────
+      // These plugins throw at module top-level (env checks, secrets, DB
+      // pools). 12+ consumer plugins import Config/db at top level and
+      // hit TDZ when the source barrel evaluation failed.
+
+      const configFieldKind = Symbol("config.field");
+      build.module("@plugins/config/server", () => ({
+        exports: {
+          Config: {
+            Field: (props: unknown) => ({
+              _kind: configFieldKind,
+              _doc: {},
+              ...(props as Record<string, unknown>),
+            }),
+          },
+          configResource: { key: "config" },
+          configSecretsResource: { key: "config.secrets" },
+          readConfig: () => ({}),
+          __esModule: true,
+        },
+        loader: "object",
+      }));
+
+      build.module("@plugins/database/server", () => ({
+        exports: {
+          db: {},
+          awaitDbReady: () => Promise.resolve(),
+          isTransientDbError: () => false,
+          __esModule: true,
+        },
         loader: "object",
       }));
 
