@@ -219,10 +219,23 @@ function OverflowActionsBar({
       setVisibleCount(count);
     };
 
-    const ro = new ResizeObserver(recompute);
+    // Defer observer-triggered recomputes to the next animation frame so that
+    // the setState call doesn't land during the layout phase — which would
+    // mutate the toolbar DOM, change the container width, and immediately
+    // re-fire the observer (the ResizeObserver loop Chrome warns about).
+    // The direct recompute() call below stays synchronous for the no-flash
+    // initial measurement inside useLayoutEffect.
+    let rafId: number | null = null;
+    const ro = new ResizeObserver(() => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(recompute);
+    });
     ro.observe(container);
     recompute();
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
   }, [totalCount]);
 
   const visibleSlot = slotActions.slice(0, Math.min(visibleCount, slotActions.length));
