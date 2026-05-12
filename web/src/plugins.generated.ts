@@ -121,6 +121,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "infra/plugins/attachments", loader: () => import("@plugins/infra/plugins/attachments/web") },
   { name: "layouts/plugins/miller", loader: () => import("@plugins/layouts/plugins/miller/web") },
   { name: "notifications", loader: () => import("@plugins/notifications/web") },
+  { name: "plugin-meta/plugins/plugin-health", loader: () => import("@plugins/plugin-meta/plugins/plugin-health/web") },
   { name: "plugin-meta/plugins/plugin-view/plugins/public-api", loader: () => import("@plugins/plugin-meta/plugins/plugin-view/plugins/public-api/web") },
   { name: "plugin-meta/plugins/plugin-view/plugins/runtimes", loader: () => import("@plugins/plugin-meta/plugins/plugin-view/plugins/runtimes/web") },
   { name: "plugin-meta/plugins/plugin-view/plugins/source-path", loader: () => import("@plugins/plugin-meta/plugins/plugin-view/plugins/source-path/web") },

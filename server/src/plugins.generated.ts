@@ -71,6 +71,7 @@ import infraPathsPlugin from "@plugins/infra/plugins/paths/server";
 import infraSecretsPlugin from "@plugins/infra/plugins/secrets/server";
 import infraWorktreePlugin from "@plugins/infra/plugins/worktree/server";
 import notificationsPlugin from "@plugins/notifications/server";
+import pluginMetaPluginHealthPlugin from "@plugins/plugin-meta/plugins/plugin-health/server";
 import pluginMetaPluginViewPlugin from "@plugins/plugin-meta/plugins/plugin-view/server";
 import primitivesRankPlugin from "@plugins/primitives/plugins/rank/server";
 import reorderGroupsPlugin from "@plugins/reorder/plugins/groups/server";
@@ -144,6 +145,7 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (infraJobsPlugin as ServerPluginDefinition).dependsOn = [databaseAdminPlugin, databasePlugin];
 (infraWorktreePlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
 (notificationsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(pluginMetaPluginHealthPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEntityExtensionsPlugin, infraMcpPlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
 (pluginMetaPluginViewPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
 (primitivesRankPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (reorderGroupsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, primitivesRankPlugin];
@@ -228,6 +230,7 @@ export const plugins: ServerPluginDefinition[] = [
   infraSecretsPlugin,
   infraWorktreePlugin,
   notificationsPlugin,
+  pluginMetaPluginHealthPlugin,
   pluginMetaPluginViewPlugin,
   primitivesRankPlugin,
   reorderGroupsPlugin,

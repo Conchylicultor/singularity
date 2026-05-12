@@ -624,6 +624,13 @@
       "tag": "20260512_215200_f7b59bbc__add_task_auto_start_fk",
       "hash": "f7b59bbc",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1778624456000,
+      "tag": "20260512_222056_f7be4bb3__merged_20260512_2220",
+      "hash": "f7be4bb3",
+      "breakpoints": true
     }
   ]
 }

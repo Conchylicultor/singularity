@@ -802,7 +802,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Exports (server):
     - Values: `awaitDbReady`, `db`, `isTransientDbError`
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `grouped`, `groups`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `grouped`, `groups`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Exports (server):
@@ -1109,6 +1109,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
       - Exports (core):
         - Values: `importBarrel`, `registerBarrelStubs`
+    - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
+      - Defines:
+        - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`
+        - Entity extension of: `tasks-core` (table `tasks_ext_health_review`)
+      - Exports (core):
+        - Types: `PluginHealthReview`, `PluginStaleness`, `ReviewTaskSummary`
+        - Values: `PluginHealthReviewSchema`, `PluginStalenessSchema`, `ReviewTaskSummarySchema`
+      - Exports (server):
+        - Values: `healthReviewExt`, `pluginHealthReviewsResource`
+      - Contributes:
+        - `PluginViewSlots.Section` "health" → `HealthSection`
+      - Server:
+        - Register: `mcpTool('propose_task')`
+        - Uses: `database.db`, `tasks-core._tasks`, `tasks-core.createTask`, `tasks-core.getConversation`
+        - Resources: `plugin-health-reviews` (push)
+        - `GET /api/plugin-health/reviews`
+        - `GET /api/plugin-health/staleness/:pluginId`
+        - `GET /api/plugin-health/tasks/:reviewId`
     - **`plugin-tree`**
       - Exports (core):
         - Types: `BarrelExport`, `CommandDef`, `Contribution`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`
@@ -1490,8 +1508,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineTriggerEvent('pushes.landed')`, `defineTriggerEvent('tasks.statusChanged')`
     - Uses: `database.db`
     - Resources: `attempts` (push), `conversations` (push), `pushes` (push)
-  - Imported by: `active-data`, `agents`, `allow-monitor`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
-  - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`), `auto-start` (table `tasks_ext_auto_start`)
+  - Imported by: `active-data`, `agents`, `allow-monitor`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
+  - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`), `auto-start` (table `tasks_ext_auto_start`), `plugin-health` (table `tasks_ext_health_review`)
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):

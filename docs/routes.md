@@ -186,6 +186,10 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
+    - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
+      - `/api/plugin-health/reviews (GET)`
+      - `/api/plugin-health/staleness/:pluginId (GET)`
+      - `/api/plugin-health/tasks/:reviewId (GET)`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - `/api/plugin-view/tree (GET)`
 

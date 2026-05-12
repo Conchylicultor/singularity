@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-plugin-meta-plugin-health",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Per-plugin health review tracking: review axes, staleness, and finding tasks."
+}
