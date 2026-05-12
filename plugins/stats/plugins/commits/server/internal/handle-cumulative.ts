@@ -2,6 +2,7 @@ import { readConfig } from "@plugins/config/server";
 import { commitsConfig } from "../../shared/config";
 import { deduplicateByPushId, getCommits, getCommitsExcludingPaths, getGitLogTiming } from "./commit-timestamps";
 import { activeExcludedPaths } from "./excluded-paths";
+import { buildCategoryMap, categoryFor, getConfigCategoryOrder } from "./category-map";
 
 function commitsTimingHeader(handlerMs: number): string {
   const git = getGitLogTiming();
@@ -26,8 +27,34 @@ async function resolveCommits(req: Request): Promise<Awaited<ReturnType<typeof g
 
 export async function handleCumulative(req: Request): Promise<Response> {
   const t0 = performance.now();
+  const breakdown = new URL(req.url).searchParams.get("breakdown") === "category";
   let commits = await getCommits();
   if (shouldDedup(req)) commits = deduplicateByPushId(commits);
+
+  if (breakdown) {
+    const catMap = await buildCategoryMap();
+    const perDay = new Map<string, Record<string, number>>();
+    for (const c of commits) {
+      const day = c.iso.slice(0, 10);
+      const cat = categoryFor(catMap, c.conversationId);
+      const existing = perDay.get(day) ?? {};
+      existing[cat] = (existing[cat] ?? 0) + 1;
+      perDay.set(day, existing);
+    }
+    const days = [...perDay.keys()].sort();
+    const running: Record<string, number> = {};
+    const points = days.map((date) => {
+      for (const [cat, count] of Object.entries(perDay.get(date)!)) {
+        running[cat] = (running[cat] ?? 0) + count;
+      }
+      return { date, byCategory: { ...running } };
+    });
+    const configOrder = await getConfigCategoryOrder();
+    const resp = Response.json({ points, categories: configOrder });
+    resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
+    return resp;
+  }
+
   const perDay = new Map<string, number>();
   for (const c of commits) {
     const day = c.iso.slice(0, 10);

@@ -150,7 +150,7 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (primitivesRankPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (reorderGroupsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, primitivesRankPlugin];
 (reorderPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
-(statsCommitsPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraPathsPlugin, infraWorktreePlugin];
+(statsCommitsPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsConversationCategoryPlugin, databasePlugin, infraPathsPlugin, infraWorktreePlugin];
 (statsCostPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
 (statsTasksPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
 (tasksCorePlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraAttachmentsPlugin, infraEventsPlugin, primitivesRankPlugin];

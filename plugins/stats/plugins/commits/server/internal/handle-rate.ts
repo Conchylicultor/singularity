@@ -2,6 +2,7 @@ import { readConfig } from "@plugins/config/server";
 import { commitsConfig } from "../../shared/config";
 import { deduplicateByPushId, getCommits, getCommitsExcludingPaths, getGitLogTiming } from "./commit-timestamps";
 import { activeExcludedPaths } from "./excluded-paths";
+import { buildCategoryMap, categoryFor, getConfigCategoryOrder } from "./category-map";
 
 function commitsTimingHeader(handlerMs: number): string {
   const git = getGitLogTiming();
@@ -62,8 +63,29 @@ function parseBucket(req: Request): Bucket {
 export async function handleRate(req: Request): Promise<Response> {
   const t0 = performance.now();
   const bucket = parseBucket(req);
+  const breakdown = new URL(req.url).searchParams.get("breakdown") === "category";
   let commits = await getCommits();
   if (shouldDedup(req)) commits = deduplicateByPushId(commits);
+
+  if (breakdown) {
+    const catMap = await buildCategoryMap();
+    const counts = new Map<string, Record<string, number>>();
+    for (const c of commits) {
+      const k = keyFor(c.iso, bucket);
+      const cat = categoryFor(catMap, c.conversationId);
+      const existing = counts.get(k) ?? {};
+      existing[cat] = (existing[cat] ?? 0) + 1;
+      counts.set(k, existing);
+    }
+    const points = [...counts.entries()]
+      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+      .map(([k, v]) => ({ bucket: k, byCategory: v }));
+    const configOrder = await getConfigCategoryOrder();
+    const resp = Response.json({ bucket, points, categories: configOrder });
+    resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
+    return resp;
+  }
+
   const counts = new Map<string, number>();
   for (const c of commits) {
     const k = keyFor(c.iso, bucket);

@@ -7,6 +7,10 @@ import { CategoryChipToolbar } from "./components/category-chip-toolbar";
 import { CategoryColorSettings } from "./components/category-color-settings";
 import { CategoryAvatarRow } from "./components/category-avatar-row";
 
+export { autoColorKey } from "./internal/colors";
+export type { ColorKey } from "./internal/colors";
+export { useCategoryColors } from "./internal/use-category-colors";
+
 export default {
   id: "conversation-category",
   name: "Conversation: Category",

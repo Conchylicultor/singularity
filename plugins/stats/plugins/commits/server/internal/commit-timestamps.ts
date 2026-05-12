@@ -13,6 +13,7 @@ export interface CommitInfo {
   sha: string;
   iso: string;
   pushId: string | null;
+  conversationId: string | null;
   added: number;
   removed: number;
   byExt: Record<string, { added: number; removed: number }>;
@@ -24,7 +25,7 @@ async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
   const proc = Bun.spawn(
     [
       GIT, "-C", root, "log",
-      "--format=__C__%H %cI %(trailers:key=Singularity-Push,valueonly)",
+      "--format=__C__%H\x1f%cI\x1f%(trailers:key=Singularity-Push,valueonly)\x1f%(trailers:key=Singularity-Conversation,valueonly)",
       "--numstat", "--reverse", ...args,
     ],
     { stdout: "pipe", stderr: "pipe" },
@@ -32,21 +33,23 @@ async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
   const text = await new Response(proc.stdout).text();
   await proc.exited;
 
+  // Split on __C__ markers — each chunk is one commit's header + numstat.
+  // Trailer values append newlines, so the \x1f-delimited header may span
+  // multiple lines; splitting on __C__ captures the full record.
+  const chunks = text.split("__C__").filter(Boolean);
   const commits: CommitInfo[] = [];
-  let current: CommitInfo | null = null;
-  for (const line of text.split("\n")) {
-    if (line.startsWith("__C__")) {
-      if (current) commits.push(current);
-      const header = line.slice(5).trim();
-      const firstSpace = header.indexOf(" ");
-      const sha = firstSpace === -1 ? header : header.slice(0, firstSpace);
-      const rest = firstSpace === -1 ? "" : header.slice(firstSpace + 1);
-      const secondSpace = rest.indexOf(" ");
-      const iso = secondSpace === -1 ? rest : rest.slice(0, secondSpace);
-      const rawPushId = secondSpace === -1 ? "" : rest.slice(secondSpace + 1).trim();
-      const pushId = rawPushId || null;
-      current = { sha, iso, pushId, added: 0, removed: 0, byExt: {} };
-    } else if (current && line.trim()) {
+  for (const chunk of chunks) {
+    const fields = chunk.split("\x1f");
+    const sha = (fields[0] ?? "").trim();
+    const iso = (fields[1] ?? "").trim();
+    const pushId = (fields[2] ?? "").trim() || null;
+    const rest = fields[3] ?? "";
+    const restLines = rest.split("\n");
+    const conversationId = (restLines[0] ?? "").trim() || null;
+
+    const current: CommitInfo = { sha, iso, pushId, conversationId, added: 0, removed: 0, byExt: {} };
+    for (const line of restLines.slice(1)) {
+      if (!line.trim()) continue;
       const parts = line.split("\t");
       if (parts.length >= 3) {
         const ins = parts[0] === "-" ? 0 : parseInt(parts[0], 10) || 0;
@@ -62,8 +65,8 @@ async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
         current.byExt[ext] = e;
       }
     }
+    commits.push(current);
   }
-  if (current) commits.push(current);
   lastGitLogMs = Math.round(performance.now() - t0);
   lastGitLogCached = false;
   return commits;
@@ -120,6 +123,9 @@ export function deduplicateByPushId(commits: CommitInfo[]): CommitInfo[] {
       result.push(merged);
     } else {
       existing.iso = commit.iso;
+      if (!existing.conversationId && commit.conversationId) {
+        existing.conversationId = commit.conversationId;
+      }
       existing.added += commit.added;
       existing.removed += commit.removed;
       for (const [ext, stats] of Object.entries(commit.byExt)) {
