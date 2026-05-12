@@ -35,6 +35,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`shell`** — App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.
     - **`forge`** — Forge app — plugin graph inspection and publish workflows.
       - Plugins:
+        - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
         - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
@@ -195,7 +196,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
         - **`source-path`** — Displays the plugin's source path in the plugin detail pane.
         - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.
-    - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:

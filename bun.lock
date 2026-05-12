@@ -154,6 +154,10 @@
       "name": "@singularity/plugin-apps-forge",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/forge/plugins/publish": {
+      "name": "@singularity/plugin-apps-forge-publish",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/forge/plugins/shell": {
       "name": "@singularity/plugin-apps-forge-shell",
       "version": "0.0.1",
@@ -657,10 +661,6 @@
     },
     "plugins/plugin-meta/plugins/plugin-view/plugins/sub-plugins": {
       "name": "@singularity/plugin-plugin-meta-plugin-view-sub-plugins",
-      "version": "0.0.1",
-    },
-    "plugins/plugin-meta/plugins/publish": {
-      "name": "@singularity/plugin-plugin-meta-publish",
       "version": "0.0.1",
     },
     "plugins/primitives": {
@@ -1571,6 +1571,8 @@
 
     "@singularity/plugin-apps-forge": ["@singularity/plugin-apps-forge@workspace:plugins/apps/plugins/forge"],
 
+    "@singularity/plugin-apps-forge-publish": ["@singularity/plugin-apps-forge-publish@workspace:plugins/apps/plugins/forge/plugins/publish"],
+
     "@singularity/plugin-apps-forge-shell": ["@singularity/plugin-apps-forge-shell@workspace:plugins/apps/plugins/forge/plugins/shell"],
 
     "@singularity/plugin-attempt-view": ["@singularity/plugin-attempt-view@workspace:plugins/attempt-view"],
@@ -1818,8 +1820,6 @@
     "@singularity/plugin-plugin-meta-plugin-view-source-path": ["@singularity/plugin-plugin-meta-plugin-view-source-path@workspace:plugins/plugin-meta/plugins/plugin-view/plugins/source-path"],
 
     "@singularity/plugin-plugin-meta-plugin-view-sub-plugins": ["@singularity/plugin-plugin-meta-plugin-view-sub-plugins@workspace:plugins/plugin-meta/plugins/plugin-view/plugins/sub-plugins"],
-
-    "@singularity/plugin-plugin-meta-publish": ["@singularity/plugin-plugin-meta-publish@workspace:plugins/plugin-meta/plugins/publish"],
 
     "@singularity/plugin-primitives": ["@singularity/plugin-primitives@workspace:plugins/primitives"],
 

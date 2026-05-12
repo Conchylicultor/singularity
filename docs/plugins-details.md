@@ -121,7 +121,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `DebugApp`
           - Contributes:
             - `Apps.App` "Debug" → `DebugLayout`
-          - Imported by: `agents`, `auth`, `blocked-by`, `blocking`, `build`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `publish`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
+          - Imported by: `agents`, `auth`, `blocked-by`, `blocking`, `build`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -162,6 +162,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Apps.App` "File Explorer" → `FileExplorerLayout`
     - **`forge`** — Forge app — plugin graph inspection and publish workflows.
       - Plugins:
+        - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
+          - Contributes:
+            - `Pane.Register` "publish"
+            - `Forge.Sidebar` "Publish"
         - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
           - Exports (web):
             - Values: `Forge`
@@ -1124,10 +1128,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.
           - Contributes:
             - `PluginViewSlots.Section` "sub-plugins" → `SubPluginsSection`
-    - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
-      - Contributes:
-        - `Pane.Register` "publish"
-        - `Shell.Sidebar` "Publish"
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
