@@ -174,10 +174,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - Exports (web):
-    - Values: `attemptConversationPane`, `attemptPane`
+    - Values: `attemptPane`
   - Contributes:
     - `Pane.Register` "attempt"
-    - `Pane.Register` "attempt-conversation"
     - `Conversation.ActionBar` → `AttemptSwitchButton`
   - Imported by: `attempt`
 
