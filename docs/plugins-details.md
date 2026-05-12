@@ -449,7 +449,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Conversation.PromptBar` "Exit" → `DropAndExitButton`
           - Server:
-            - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.listPushesForAttempt`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`, `tasks-core.updateTask`
+            - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.listActiveConversations`, `tasks-core.listPushesForAttempt`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/drop-and-exit`
         - **`exit`** — Toolbar button that closes the conversation without changing any task state.
           - Contributes:

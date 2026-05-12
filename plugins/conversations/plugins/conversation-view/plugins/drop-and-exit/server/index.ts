@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@server/types";
 import { deleteConversation } from "@plugins/conversations/server";
 import {
   getConversation,
+  listActiveConversations,
   listPushesForAttempt,
   markConversationClosed,
   recentConversationsResource,
@@ -25,7 +26,12 @@ export default {
         : [];
       const hasPush = pushes.length > 0;
 
-      if (!hasPush) {
+      const activeConversations = await listActiveConversations();
+      const hasOtherActive = activeConversations.some(
+        (c) => c.taskId === conversation.taskId && c.id !== id,
+      );
+
+      if (!hasPush && !hasOtherActive) {
         await updateTask(conversation.taskId, { drop: true });
       }
 
@@ -33,7 +39,7 @@ export default {
       await deleteConversation(id);
       recentConversationsResource.notify();
 
-      return Response.json({ ok: true, dropped: !hasPush });
+      return Response.json({ ok: true, dropped: !hasPush && !hasOtherActive });
     },
   },
 } satisfies ServerPluginDefinition;
