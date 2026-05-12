@@ -34,7 +34,7 @@ export function SidebarPaneSection({
         />
       </SidebarGroupLabel>
       {isOpen && (
-        <SidebarGroupContent className="min-h-0 overflow-auto">
+        <SidebarGroupContent className="min-h-0 flex flex-1 flex-col overflow-hidden">
           {children}
         </SidebarGroupContent>
       )}
