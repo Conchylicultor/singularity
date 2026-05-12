@@ -8,14 +8,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Defines:
     - Slots: `ActiveData.Tag`
     - DB schema: `plugins/active-data/server/internal/tables.ts`
+  - Exports (core):
+    - Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`
+    - Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `inlineBoundary`
   - Exports (web):
     - Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataCodeContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`, `CodeReplaceContrib`
     - Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
   - Exports (server):
     - Values: `_activeDataBindings`, `activeDataBindingsResource`
-  - Exports (shared):
-    - Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`
-    - Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `inlineBoundary`
   - Server:
     - Uses: `database.db`, `tasks-core._conversations`
     - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
@@ -123,7 +123,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `addServerPane`, `serverDetailPane`, `serversResource`, `serversRootPane`
           - Exports (server):
             - Values: `_deployServers`, `serversResource`
-          - Exports (shared):
+          - Exports (internal):
             - Types: `Server`, `ServerStatus`
             - Values: `ServerSchema`, `serversResource`, `ServerStatusSchema`
           - Contributes:
@@ -165,15 +165,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Defines:
     - Slots: `Auth.Provider`
+  - Exports (core):
+    - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
+    - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`
   - Exports (web):
     - Types: `AuthProviderContribution`, `AuthProviderRowProps`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`
     - Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
   - Exports (central):
     - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
     - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `readGlobalConfig`, `registerAuthProvider`
-  - Exports (shared):
-    - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
-    - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`
   - Contributes:
     - `Pane.Register` `accounts`
     - `Shell.Sidebar` "Accounts" (group `System`)
@@ -189,7 +189,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Endpoint callers: `setup-wizard`
   - Plugins:
     - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
-      - Exports (shared):
+      - Exports (internal):
         - Values: `GOOGLE_DEFAULT_SCOPES`, `googleAuthConfig`
       - Contributes:
         - `Auth.Provider`
@@ -207,7 +207,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Pane.Register` `google-setup`
     - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
-      - Exports (shared):
+      - Exports (internal):
         - Values: `notionAuthConfig`
       - Contributes:
         - `Auth.Provider`
@@ -263,14 +263,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Defines:
     - Slots: `Config.Spec`, `Config.Section`
     - DB schema: `plugins/config/server/internal/tables.ts`
+  - Exports (core):
+    - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `Schema`, `ValueOf`, `Values`
+    - Values: `defineConfig`, `fullKey`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `validateKind`
   - Exports (web):
     - Types: `SecretFieldState`, `SectionWithPlugin`, `SpecWithPlugin`
     - Values: `Config`, `configResource`, `configSecretsResource`, `resetConfigValue`, `setConfigValue`, `settingsPane`, `useConfigValues`, `useSecretFieldSet`, `useSectionsWithPlugin`, `useSpecsWithPlugin`
   - Exports (server):
     - Values: `Config`, `configResource`, `configSecretsResource`, `readConfig`
-  - Exports (shared):
-    - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `Schema`, `ValueOf`, `Values`
-    - Values: `defineConfig`, `fullKey`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `validateKind`
   - Contributes:
     - `Pane.Register` `settings`
     - `Shell.Sidebar` "Settings" (group `System`)
@@ -289,15 +289,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/conversations/server/internal/tables-created-event.ts`
     - DB schema: `plugins/conversations/server/internal/tables-turn-completed-event.ts`
     - DB schema: `plugins/conversations/server/internal/tables-user-turn-sent-event.ts`
+  - Exports (core):
+    - Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `ForkError`
+    - Values: `ConversationStatusSchema`, `forkErrorsResource`, `hasLiveProcess`, `isActiveStatus`, `recentConversationsResource`
   - Exports (web):
     - Types: `ConversationActionOpts`
     - Values: `GonePageSchema`, `useConversation`, `useConversationAction`, `useConversationById`, `useConversations`
   - Exports (server):
     - Types: `ConversationCreatedPayload`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`, `UserTurnSentPayload`
     - Values: `afterTurn`, `conversationCreated`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `getConversationRow`, `hasLiveProcess`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`, `userTurnSent`
-  - Exports (shared):
-    - Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `ForkError`
-    - Values: `ConversationStatusSchema`, `forkErrorsResource`, `hasLiveProcess`, `isActiveStatus`, `recentConversationsResource`
   - Server:
     - Register: `maybeLaunchTaskJob`, `maybeLaunchDependentsJob`, `conversationCreated`, `conversationTurnCompleted`, `userTurnSent`
     - Uses: `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.recentConversationsResource`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
@@ -320,7 +320,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Entity extension of: `tasks-core` (table `conversations_ext_category`)
       - Exports (server):
         - Values: `_conversationCategoryColors`, `categoryColorsResource`, `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`
-      - Exports (shared):
+      - Exports (internal):
         - Types: `ConversationCategoriesPayload`, `ConversationCategory`
         - Values: `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`
       - Contributes:
@@ -380,11 +380,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Conversation.PromptBar` → `BlockedByButton`
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
-          - Exports (web):
-            - Values: `useEditedFiles`
-          - Exports (shared):
+          - Exports (core):
             - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`
             - Values: `editedFilesResource`
+          - Exports (web):
+            - Values: `useEditedFiles`
           - Server:
             - Uses: `tasks-core.getConversation`
             - Resources: `edited-files` (invalidate)
@@ -419,7 +419,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - Contributes:
                     - `FilePane.Renderer` "Raw" → `RawView`
             - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file. Toolbar button and full-screen view to review all worktree changes file-by-file.
-              - Exports (shared):
+              - Exports (internal):
                 - Values: `reviewConfig`
               - Contributes:
                 - `Pane.Register` `conv-review`
@@ -427,7 +427,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Server:
                 - Uses: `config.Config`
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
-          - Exports (shared):
+          - Exports (internal):
             - Types: `CommitDelta`, `CommitRow`, `CommitsGraph`
             - Values: `commitDeltaResource`, `CommitDeltaSchema`, `CommitRowSchema`, `commitsGraphResource`, `CommitsGraphSchema`
           - Contributes:
@@ -464,12 +464,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
           - Defines:
             - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.RowAction`, `JsonlViewer.Overlay`
+          - Exports (core):
+            - Types: `JsonlEventsResponse`
+            - Values: `JsonlEventsPayloadSchema`, `jsonlEventsResource`
           - Exports (web):
             - Types: `EventRendererContribution`, `OverlayContribution`, `RowActionContribution`
             - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`
-          - Exports (shared):
-            - Types: `JsonlEventsResponse`
-            - Values: `JsonlEventsPayloadSchema`, `jsonlEventsResource`
           - Contributes:
             - `JsonlViewer.RowAction` → `RawJsonAction`
           - Server:
@@ -497,11 +497,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
               - Defines:
                 - Slots: `JsonlViewerTool.Renderer`
+              - Exports (core):
+                - Types: `ToolCallEvent`, `ToolRendererProps`
               - Exports (web):
                 - Types: `ToolRendererContribution`
                 - Values: `JsonlViewerTool`, `ToolCallCard`, `ToolFilePath`, `toRelativePath`
-              - Exports (shared):
-                - Types: `ToolCallEvent`, `ToolRendererProps`
               - Contributes:
                 - `JsonlViewer.EventRenderer` → `ToolCallRow`
                 - `JsonlViewer.RowAction` → `CopyToolResultAction`
@@ -553,7 +553,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Entity extension of: `tasks-core` (table `conversations_ext_notes`)
           - Exports (server):
             - Values: `conversationNotes`, `conversationNotesResource`
-          - Exports (shared):
+          - Exports (internal):
             - Types: `ConversationNote`, `ConversationNotesPayload`
             - Values: `ConversationNoteSchema`, `ConversationNotesPayloadSchema`, `conversationNotesResource`
           - Contributes:
@@ -641,7 +641,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Entity extension of: `tasks-core` (table `conversations_ext_turn_summary`)
           - Exports (server):
             - Values: `generateTurnSummaryJob`, `turnSummaries`, `turnSummariesResource`
-          - Exports (shared):
+          - Exports (internal):
             - Types: `TurnSummariesPayload`, `TurnSummary`
             - Values: `TurnSummariesPayloadSchema`, `turnSummariesResource`, `turnSummaryConfig`, `TurnSummarySchema`
           - Contributes:
@@ -669,7 +669,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
           - Exports (server):
             - Values: `_conversationGroupMembers`, `_conversationGroups`, `addMemberToGroup`, `conversationGroupsResource`
-          - Exports (shared):
+          - Exports (internal):
             - Types: `ConversationGroup`, `ConversationGroupMember`, `ConversationGroupsPayload`
             - Values: `ConversationGroupMemberSchema`, `ConversationGroupSchema`, `ConversationGroupsPayloadSchema`, `conversationGroupsResource`
           - Contributes:
@@ -703,7 +703,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `POST /api/conversations-queue/rerank`
           - Endpoint callers: `blocked-by`
     - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
-      - Exports (shared):
+      - Exports (core):
         - Types: `ConversationModel`, `ModelMeta`
         - Values: `ConversationModelSchema`, `DEFAULT_MODEL`, `MODEL_REGISTRY`
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
@@ -731,11 +731,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `tasks-core.getConversationClaudeSessionId`
         - `GET /api/conversations/:id/transcript`
     - **`transcript-watcher`** — Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
-      - Exports (server):
-        - Values: `findTranscriptPath`, `readJsonlEvents`, `watchTranscript`
-      - Exports (shared):
+      - Exports (core):
         - Types: `JsonlEvent`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`
         - Values: `JsonlEventSchema`, `TokenUsageSchema`
+      - Exports (server):
+        - Values: `findTranscriptPath`, `readJsonlEvents`, `watchTranscript`
       - Server:
         - Uses: `tasks-core.getConversationClaudeSessionId`
 
@@ -772,11 +772,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `ErrorBoundary.Action` → `LaunchFixButton`
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
-  - Exports (server):
-    - Values: `awaitDbReady`, `db`, `isTransientDbError`
-  - Exports (shared):
+  - Exports (core):
     - Types: `DatabaseConfig`, `DatabaseProvider`
     - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
+  - Exports (server):
+    - Values: `awaitDbReady`, `db`, `isTransientDbError`
   - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `grouped`, `groups`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
@@ -786,7 +786,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
       - Exports (server):
         - Values: `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
-      - Exports (shared):
+      - Exports (internal):
         - Values: `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Exports (server):
@@ -970,12 +970,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
       - Defines:
         - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
+      - Exports (core):
+        - Types: `ClaudeCliCall`
+        - Values: `ClaudeCliCallSchema`, `claudeCliCallsResource`
       - Exports (server):
         - Types: `ClaudePrintModel`, `RunClaudePrintInput`
         - Values: `_claudeCliCalls`, `claudeCliCallsResource`, `ClaudeCliError`, `runClaudePrint`
-      - Exports (shared):
-        - Types: `ClaudeCliCall`
-        - Values: `ClaudeCliCallSchema`, `claudeCliCallsResource`
       - Server:
         - Uses: `database.db`
         - Resources: `claude-cli-calls` (push)
@@ -991,12 +991,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Defines:
         - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`
         - DB schema: `plugins/infra/plugins/events/server/internal/tables.ts`
+      - Exports (core):
+        - Types: `EmissionRow`, `EmissionsPayload`, `TriggerRow`, `TriggersPayload`
+        - Values: `EmissionRowSchema`, `EmissionsPayloadSchema`, `eventEmissionsResource`, `eventTriggersResource`, `TriggerRowSchema`, `TriggersPayloadSchema`
       - Exports (server):
         - Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`, `UnsafeTriggerByNameSpec`
         - Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `eventEmissionsResource`, `eventTriggersResource`, `trigger`, `Trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
-      - Exports (shared):
-        - Types: `EmissionRow`, `EmissionsPayload`, `TriggerRow`, `TriggersPayload`
-        - Values: `EmissionRowSchema`, `EmissionsPayloadSchema`, `eventEmissionsResource`, `eventTriggersResource`, `TriggerRowSchema`, `TriggersPayloadSchema`
       - Server:
         - Register: `eventsDispatchJob`, `jobsHooksRegistration`
         - Uses: `database.db`
@@ -1017,12 +1017,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
       - Defines:
         - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
+      - Exports (core):
+        - Types: `JobRow`, `JobsPayload`, `JobState`
+        - Values: `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`
       - Exports (server):
         - Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`
         - Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
-      - Exports (shared):
-        - Types: `JobRow`, `JobsPayload`, `JobState`
-        - Values: `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`
       - Server:
         - Register: `jobsResumeJob`
         - Uses: `database.db`
@@ -1041,15 +1041,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `CRASHES_DIR`, `GIT`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PGREP`, `PLUGINS_DIR`, `REPO_ROOT`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`
     - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
+      - Exports (core):
+        - Types: `SecretMetadata`, `SecretRef`
+        - Values: `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`
       - Exports (server):
         - Types: `SecretMetadata`, `SecretRef`
         - Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`, `setSecret`
       - Exports (central):
         - Types: `SecretMetadata`, `SecretRef`
         - Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `setSecret`
-      - Exports (shared):
-        - Types: `SecretMetadata`, `SecretRef`
-        - Values: `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`
       - Central:
         - `POST /api/secrets/get`
         - `POST /api/secrets/set`
@@ -1086,22 +1086,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
     - **`retry`**
-      - Exports (shared):
+      - Exports (core):
         - Types: `DelayStrategy`
         - Values: `exponential`, `fixed`, `RetryDeadlineError`, `retryUntil`, `withJitter`
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
     - **`plugin-tree`**
-      - Exports (shared):
+      - Exports (core):
         - Types: `BarrelExport`, `CommandDef`, `Contribution`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`
         - Values: `buildPluginTree`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
+      - Exports (core):
+        - Types: `BarrelExport`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`
       - Exports (web):
         - Types: `PluginNode`, `PluginTreePayload`
         - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
-      - Exports (shared):
-        - Types: `BarrelExport`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`
       - Contributes:
         - `Pane.Register` `plugin-view`
       - Server:
@@ -1176,12 +1176,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `LaunchButtonsProps`, `LaunchRequest`
         - Values: `LaunchButtons`, `useLaunchConversation`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
+      - Exports (core):
+        - Types: `ResourceDescriptor`, `ResourceOrigin`
+        - Values: `centralResourceDescriptor`, `resourceDescriptor`
       - Exports (web):
         - Types: `ChannelStatuses`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`
         - Values: `centralResourceDescriptor`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useNotificationsChannelStatuses`, `useNotificationsStatus`, `useResource`
-      - Exports (shared):
-        - Types: `ResourceDescriptor`, `ResourceOrigin`
-        - Values: `centralResourceDescriptor`, `resourceDescriptor`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Defines:
         - Slots: `Markdown.Extension`
@@ -1200,21 +1200,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `buildChainUrl`, `getChain`, `Outlet`, `Pane`, `PaneActionsSlot`, `PaneChrome`, `PaneDepthContext`, `PaneHistoryButtons`, `PaneIconAction`, `PaneLayoutContext`, `PaneLevel`, `PaneMatchContext`, `PaneRouter`, `parseUrl`, `syncChainFromUrl`, `type`, `useCurrentPane`, `useMatchForPath`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
       - Slot contributors: `agents`, `attempt-view`, `auth`, `broadcasts`, `build`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
+      - Exports (core):
+        - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `rewriteAttachmentMarkdown`
       - Exports (web):
         - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `PromptEditor`, `rewriteAttachmentMarkdown`
-      - Exports (shared):
-        - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `rewriteAttachmentMarkdown`
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
       - Exports (web):
         - Values: `useDraft`
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
+      - Exports (core):
+        - Values: `Rank`, `RankSchema`, `rankText`
       - Exports (web):
         - Values: `Rank`, `RankSchema`
       - Exports (server):
         - Types: `RankExecutor`
         - Values: `nextRankIn`, `nextRankUnder`, `rankText`
-      - Exports (shared):
-        - Values: `Rank`, `RankSchema`, `rankText`
       - Server:
         - Uses: `database.db`
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
@@ -1228,12 +1228,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `KbdProps`, `WithTooltipProps`
         - Values: `Kbd`, `TooltipProvider`, `WithTooltip`
     - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
+      - Exports (core):
+        - Types: `DropZone`, `TreeNode`
+        - Values: `buildTree`, `computeDrop`, `isDescendant`
       - Exports (web):
         - Types: `RenameInputProps`, `RowChromeMenuHelpers`, `RowChromeProps`, `RowControls`, `RowMenuItem`, `TreeItem`, `TreeListContextValue`, `TreeListProps`
         - Values: `RenameInput`, `RowChrome`, `TreeList`, `useTreeListContext`, `useTreeRow`
-      - Exports (shared):
-        - Types: `DropZone`, `TreeNode`
-        - Values: `buildTree`, `computeDrop`, `isDescendant`
 
 - **`reorder`** — Generic reorder primitive. Slot owners opt in via Reorder.area; hosts render with Reorder.useArea. Generic reorder primitive: per-worktree storage of slot contribution ranks.
   - Defines:
@@ -1244,7 +1244,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `isGroupEntry`, `isSpacer`, `Reorder`, `setEditMode`, `SPACER_PREFIX`, `useEditMode`
   - Exports (server):
     - Values: `_reorderPrefs`, `reorderPrefsResource`
-  - Exports (shared):
+  - Exports (internal):
     - Types: `ReorderSlotPrefs`
     - Values: `reorderPrefsResource`, `ReorderSlotPrefsSchema`
   - Server:
@@ -1263,11 +1263,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Defines:
         - DB schema: `plugins/reorder/plugins/groups/server/internal/tables.ts`
         - DB schema: `plugins/reorder/plugins/groups/server/schema.ts`
-      - Exports (server):
-        - Values: `_reorderGroupMembers`, `_reorderGroups`, `reorderGroupsResource`
-      - Exports (shared):
+      - Exports (core):
         - Types: `ReorderGroup`, `ReorderGroupMember`, `ReorderGroupsPayload`
         - Values: `ReorderGroupMemberSchema`, `ReorderGroupSchema`, `ReorderGroupsPayloadSchema`, `reorderGroupsResource`
+      - Exports (server):
+        - Values: `_reorderGroupMembers`, `_reorderGroups`, `reorderGroupsResource`
       - Server:
         - Uses: `database.db`
         - `POST /api/reorder/:slotId/groups`
@@ -1368,14 +1368,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Imported by: `blocked-by`, `side-task`, `task-dependencies`, `task-description`, `task-detail`, `task-header`, `task-list`, `tasks-panel`
 
 - **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
+  - Exports (core):
+    - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
+    - Values: `attemptsResource`, `pushesResource`, `tasksResource`
   - Exports (web):
     - Types: `AutoStartModel`, `TaskPatch`
     - Values: `deleteTask`, `patchTask`, `setAutoStart`, `useTask`
   - Exports (server):
     - Values: `armTaskAutoStart`
-  - Exports (shared):
-    - Types: `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `Push`, `Task`
-    - Values: `attemptsResource`, `pushesResource`, `tasksResource`
   - Server:
     - Register: `addTaskTool`, `pushIngestJob`
     - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.taskAttachments`, `tasks-core.updateTask`
@@ -1401,7 +1401,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`, `useTaskAutoStart`
       - Exports (server):
         - Values: `claimAutoStart`, `getTaskAutoStart`, `setTaskAutoStart`, `tasksAutoStartResource`
-      - Exports (shared):
+      - Exports (internal):
         - Types: `TaskAutoStartRow`
         - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`
       - Server:
@@ -1426,12 +1426,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Shell.Sidebar` "Tasks" (group `System`)
         - `tasksRootPane.open`
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
+      - Exports (core):
+        - Types: `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelate`, `TaskChainRelateMode`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`
+        - Values: `TaskChainCardSchema`, `TaskChainLaunchSchema`, `TaskChainRelateModeSchema`, `TaskChainRelateSchema`, `TaskChainSubmitBodySchema`, `TaskChainSubmitResponseSchema`, `TaskChainTargetSchema`
       - Exports (web):
         - Types: `ActiveRelateContext`, `CaptureKind`, `CardDraft`, `ChainModel`, `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelateMode`, `TaskChainRelateSpec`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`, `TaskDraftPopoverProps`, `TaskDraftRelate`
         - Values: `setActiveRelateContext`, `TaskDraftPopover`, `useActiveRelateContext`
-      - Exports (shared):
-        - Types: `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelate`, `TaskChainRelateMode`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`
-        - Values: `TaskChainCardSchema`, `TaskChainLaunchSchema`, `TaskChainRelateModeSchema`, `TaskChainRelateSchema`, `TaskChainSubmitBodySchema`, `TaskChainSubmitResponseSchema`, `TaskChainTargetSchema`
     - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens taskConversationPane.
       - Contributes:
         - `TaskDetailSlots.Section` "Events" → `TaskEvents`
@@ -1467,12 +1467,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/tasks-core/server/internal/schema.ts`
     - DB schema: `plugins/tasks-core/server/internal/tables-events.ts`
     - DB schema: `plugins/tasks-core/server/internal/tables.ts`
+  - Exports (core):
+    - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
+    - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Exports (server):
     - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskStatus`, `TaskStatusChangedPayload`, `UpdateConversationPatch`, `UpdateTaskPatch`
     - Values: `_attempts`, `_conversations`, `_pushLandedTriggers`, `_tasks`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `conversationAttachments`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteAttempt`, `deleteConversationRow`, `deleteTask`, `emitStatusChangeIfChanged`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listArmedDependentsOf`, `listAttempts`, `listAttemptsForTask`, `listBlockingDepIds`, `listConversationsForDisplay`, `listConversationsForInfra`, `listGoneConversations`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `markConversationGone`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskAttachments`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `updateConversation`, `updateConversationsTitleForTask`, `updateTask`, `updateTaskTitle`
-  - Exports (shared):
-    - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
-    - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Server:
     - Register: `pushLanded`, `taskStatusChanged`
     - Uses: `database.db`
@@ -1496,12 +1496,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Defines:
         - Slots: `SegmentedProgressBar.Variant`
+      - Exports (core):
+        - Types: `SegmentedProgressBarProps`, `Step`
+        - Values: `segmentedProgressBarConfig`
       - Exports (web):
         - Types: `SegmentedProgressBarProps`, `SegmentedProgressBarVariantContribution`, `Step`
         - Values: `SegmentedProgressBar`, `SegmentedProgressBarSlots`
-      - Exports (shared):
-        - Types: `SegmentedProgressBarProps`, `Step`
-        - Values: `segmentedProgressBarConfig`
       - Contributes:
         - `ThemeEngine.VariantGroup` → `VariantPicker`
       - Server:
@@ -1516,12 +1516,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
       - Defines:
         - Slots: `ThemeEngine.VariantGroup`, `ThemeEngine.TokenGroup`, `ThemeEngine.GlobalPreset`
+      - Exports (core):
+        - Types: `TokenGroupDescriptor`, `TokenGroupField`, `TokenGroupSchema`
+        - Values: `defineTokenGroup`, `themeEngineConfig`
       - Exports (web):
         - Types: `GlobalPresetContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`
         - Values: `ThemeEngine`, `ThemeScope`
-      - Exports (shared):
-        - Types: `TokenGroupDescriptor`, `TokenGroupField`, `TokenGroupSchema`
-        - Values: `defineTokenGroup`, `themeEngineConfig`
       - Contributes:
         - `Core.Root` → `ThemeInjector`
         - `Config.Section` "UI Themes" → `VariantSettings`
@@ -1540,7 +1540,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (web):
             - Types: `ColorPalettePresetContribution`
             - Values: `ColorPalette`
-          - Exports (shared):
+          - Exports (internal):
             - Types: `ColorPaletteTokenValues`
             - Values: `colorPaletteConfig`, `colorPaletteGroup`
           - Contributes:
@@ -1554,7 +1554,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (web):
             - Types: `ShapePresetContribution`
             - Values: `Shape`
-          - Exports (shared):
+          - Exports (internal):
             - Types: `ShapeTokenValues`
             - Values: `shapeConfig`, `shapeGroup`
           - Contributes:
@@ -1568,7 +1568,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (web):
             - Types: `SidebarPalettePresetContribution`
             - Values: `SidebarPalette`
-          - Exports (shared):
+          - Exports (internal):
             - Types: `SidebarPaletteTokenValues`
             - Values: `sidebarPaletteConfig`, `sidebarPaletteGroup`
           - Contributes:

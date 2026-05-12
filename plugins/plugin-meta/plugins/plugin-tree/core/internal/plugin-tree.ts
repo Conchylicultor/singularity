@@ -386,7 +386,7 @@ function parsePaneDefinitions(webDir: string): Map<string, PaneDefinition> {
   return out;
 }
 
-function parseServerApiUses(serverDir: string, selfName: string, runtime: "web" | "server" | "central" | "shared" = "server"): string[] {
+function parseServerApiUses(serverDir: string, selfName: string, runtime: "web" | "server" | "central" | "core" | "internal" = "server"): string[] {
   const files: string[] = [];
   walkFiles(serverDir, files);
   const uses = new Set<string>();
