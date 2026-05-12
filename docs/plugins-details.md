@@ -132,7 +132,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `addServerPane`, `serverDetailPane`, `serversResource`, `serversRootPane`
           - Exports (server):
             - Values: `_deployServers`, `serversResource`
-          - Exports (internal):
+          - Exports (shared):
             - Types: `Server`, `ServerStatus`
             - Values: `ServerSchema`, `serversResource`, `ServerStatusSchema`
           - Contributes:
@@ -196,7 +196,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Endpoint callers: `setup-wizard`
   - Plugins:
     - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
-      - Exports (internal):
+      - Exports (shared):
         - Values: `GOOGLE_DEFAULT_SCOPES`, `googleAuthConfig`
       - Contributes:
         - `Auth.Provider` "Google"
@@ -213,7 +213,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Pane.Register` "google-setup"
     - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
-      - Exports (internal):
+      - Exports (shared):
         - Values: `notionAuthConfig`
       - Contributes:
         - `Auth.Provider` "Notion"
@@ -325,7 +325,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Entity extension of: `tasks-core` (table `conversations_ext_category`)
       - Exports (server):
         - Values: `_conversationCategoryColors`, `categoryColorsResource`, `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`
-      - Exports (internal):
+      - Exports (shared):
         - Types: `ConversationCategoriesPayload`, `ConversationCategory`
         - Values: `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`
       - Contributes:
@@ -428,7 +428,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - Contributes:
                     - `FilePane.Renderer` "Raw" → `RawView`
             - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file. Toolbar button and full-screen view to review all worktree changes file-by-file.
-              - Exports (internal):
+              - Exports (shared):
                 - Values: `reviewConfig`
               - Contributes:
                 - `Pane.Register` "conv-review"
@@ -437,7 +437,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Server:
                 - Uses: `config.Config`
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
-          - Exports (internal):
+          - Exports (shared):
             - Types: `CommitDelta`, `CommitRow`, `CommitsGraph`
             - Values: `commitDeltaResource`, `CommitDeltaSchema`, `CommitRowSchema`, `commitsGraphResource`, `CommitsGraphSchema`
           - Contributes:
@@ -567,7 +567,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Entity extension of: `tasks-core` (table `conversations_ext_notes`)
           - Exports (server):
             - Values: `conversationNotes`, `conversationNotesResource`
-          - Exports (internal):
+          - Exports (shared):
             - Types: `ConversationNote`, `ConversationNotesPayload`
             - Values: `ConversationNoteSchema`, `ConversationNotesPayloadSchema`, `conversationNotesResource`
           - Contributes:
@@ -655,7 +655,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Entity extension of: `tasks-core` (table `conversations_ext_turn_summary`)
           - Exports (server):
             - Values: `generateTurnSummaryJob`, `turnSummaries`, `turnSummariesResource`
-          - Exports (internal):
+          - Exports (shared):
             - Types: `TurnSummariesPayload`, `TurnSummary`
             - Values: `TurnSummariesPayloadSchema`, `turnSummariesResource`, `turnSummaryConfig`, `TurnSummarySchema`
           - Contributes:
@@ -684,7 +684,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
           - Exports (server):
             - Values: `_conversationGroupMembers`, `_conversationGroups`, `addMemberToGroup`, `conversationGroupsResource`
-          - Exports (internal):
+          - Exports (shared):
             - Types: `ConversationGroup`, `ConversationGroupMember`, `ConversationGroupsPayload`
             - Values: `ConversationGroupMemberSchema`, `ConversationGroupSchema`, `ConversationGroupsPayloadSchema`, `conversationGroupsResource`
           - Contributes:
@@ -800,7 +800,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
       - Exports (server):
         - Values: `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
-      - Exports (internal):
+      - Exports (shared):
         - Values: `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Exports (server):
@@ -1243,7 +1243,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `isGroupEntry`, `isSpacer`, `Reorder`, `setEditMode`, `SPACER_PREFIX`, `useEditMode`
   - Exports (server):
     - Values: `_reorderPrefs`, `reorderPrefsResource`
-  - Exports (internal):
+  - Exports (shared):
     - Types: `ReorderSlotPrefs`
     - Values: `reorderPrefsResource`, `ReorderSlotPrefsSchema`
   - Server:
@@ -1401,7 +1401,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`, `useTaskAutoStart`
       - Exports (server):
         - Values: `claimAutoStart`, `getTaskAutoStart`, `setTaskAutoStart`, `tasksAutoStartResource`
-      - Exports (internal):
+      - Exports (shared):
         - Types: `TaskAutoStartRow`
         - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`
       - Server:
@@ -1539,7 +1539,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (web):
             - Types: `ColorPalettePresetContribution`
             - Values: `ColorPalette`
-          - Exports (internal):
+          - Exports (shared):
             - Types: `ColorPaletteTokenValues`
             - Values: `colorPaletteConfig`, `colorPaletteGroup`
           - Contributes:
@@ -1556,7 +1556,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (web):
             - Types: `ShapePresetContribution`
             - Values: `Shape`
-          - Exports (internal):
+          - Exports (shared):
             - Types: `ShapeTokenValues`
             - Values: `shapeConfig`, `shapeGroup`
           - Contributes:
@@ -1574,7 +1574,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (web):
             - Types: `SidebarPalettePresetContribution`
             - Values: `SidebarPalette`
-          - Exports (internal):
+          - Exports (shared):
             - Types: `SidebarPaletteTokenValues`
             - Values: `sidebarPaletteConfig`, `sidebarPaletteGroup`
           - Contributes:
