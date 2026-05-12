@@ -30,6 +30,7 @@ RULES:
 Agents have access to MCP tools provided by the Singularity server. Key tools:
 
 - `query_db` — Read-only SQL query against the worktree's PostgreSQL database. For **debugging and inspection only** — mutations are rejected at the DB level. Defaults to the agent's own worktree DB; pass `database` to query another worktree or `"singularity"` for main.
+- `add_task` — **When the user asks to "add a task", always use this MCP tool.** Never use the TaskCreate tool (that is for the agent's own internal task tracking during implementation, not for adding tasks to the Singularity task system).
 
 ## Architecture
 
