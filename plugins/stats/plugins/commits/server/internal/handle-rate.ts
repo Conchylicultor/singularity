@@ -1,7 +1,16 @@
 import { readConfig } from "@plugins/config/server";
 import { commitsConfig } from "../../shared/config";
-import { deduplicateByPushId, getCommits, getCommitsExcludingPaths } from "./commit-timestamps";
+import { deduplicateByPushId, getCommits, getCommitsExcludingPaths, getGitLogTiming } from "./commit-timestamps";
 import { activeExcludedPaths } from "./excluded-paths";
+
+function commitsTimingHeader(handlerMs: number): string {
+  const git = getGitLogTiming();
+  const parts = [`total;dur=${handlerMs}`];
+  if (git) {
+    parts.push(git.cached ? "gitLog;dur=0;desc=\"cached\"" : `gitLog;dur=${git.ms}`);
+  }
+  return parts.join(", ");
+}
 
 function shouldDedup(req: Request): boolean {
   return new URL(req.url).searchParams.get("dedup") === "1";
@@ -51,6 +60,7 @@ function parseBucket(req: Request): Bucket {
 }
 
 export async function handleRate(req: Request): Promise<Response> {
+  const t0 = performance.now();
   const bucket = parseBucket(req);
   let commits = await getCommits();
   if (shouldDedup(req)) commits = deduplicateByPushId(commits);
@@ -62,10 +72,13 @@ export async function handleRate(req: Request): Promise<Response> {
   const points = [...counts.entries()]
     .sort((a, b) => (a[0] < b[0] ? -1 : 1))
     .map(([k, v]) => ({ bucket: k, count: v }));
-  return Response.json({ bucket, points });
+  const resp = Response.json({ bucket, points });
+  resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
+  return resp;
 }
 
 export async function handleLinesRate(req: Request): Promise<Response> {
+  const t0 = performance.now();
   const bucket = parseBucket(req);
   const breakdown = new URL(req.url).searchParams.get("breakdown") === "ext";
   const commits = await resolveCommits(req);
@@ -86,7 +99,9 @@ export async function handleLinesRate(req: Request): Promise<Response> {
     const points = [...counts.entries()]
       .sort((a, b) => (a[0] < b[0] ? -1 : 1))
       .map(([k, v]) => ({ bucket: k, byExt: v }));
-    return Response.json({ bucket, points });
+    const resp = Response.json({ bucket, points });
+    resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
+    return resp;
   }
 
   const counts = new Map<string, { added: number; removed: number }>();
@@ -100,5 +115,7 @@ export async function handleLinesRate(req: Request): Promise<Response> {
   const points = [...counts.entries()]
     .sort((a, b) => (a[0] < b[0] ? -1 : 1))
     .map(([k, v]) => ({ bucket: k, added: v.added, removed: v.removed }));
-  return Response.json({ bucket, points });
+  const resp = Response.json({ bucket, points });
+  resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
+  return resp;
 }

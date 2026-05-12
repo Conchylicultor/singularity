@@ -1,6 +1,7 @@
 import { listTasks, CONVERSATIONS_META_TASK_ID } from "@plugins/tasks-core/server";
 
 export async function handleDaily(_req: Request): Promise<Response> {
+  const t0 = performance.now();
   const allTasks = await listTasks({ excludeId: CONVERSATIONS_META_TASK_ID });
 
   const toDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
@@ -40,5 +41,7 @@ export async function handleDaily(_req: Request): Promise<Response> {
     // net > 0 = more resolved than added that day = active count shrank
     .map((p) => ({ ...p, net: p.completed + p.dropped - p.added }));
 
-  return Response.json({ points });
+  const resp = Response.json({ points });
+  resp.headers.set("Server-Timing", `total;dur=${Math.round(performance.now() - t0)}`);
+  return resp;
 }

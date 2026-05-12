@@ -1,0 +1,16 @@
+import type { PluginDefinition } from "@core";
+import { Profiling } from "@plugins/debug/plugins/profiling/web";
+import { StatsSection } from "./components/stats-section";
+
+export default {
+  id: "debug-profiling-stats",
+  name: "Stats Profiling",
+  description: "Stats endpoint profiling for the Gantt debug pane.",
+  contributions: [
+    Profiling.Section({
+      id: "stats",
+      order: 2,
+      component: StatsSection,
+    }),
+  ],
+} satisfies PluginDefinition;

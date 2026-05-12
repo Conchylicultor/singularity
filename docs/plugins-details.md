@@ -832,7 +832,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - `GET /api/debug/broadcasts`
         - `PUT /api/debug/broadcasts`
-      - Endpoint callers: `boot`, `build`, `db-backup`, `memory`, `worktree-cleanup`
+      - Endpoint callers: `boot`, `build`, `db-backup`, `memory`, `stats`, `worktree-cleanup`
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
       - Exports (web):
         - Values: `claudeCliCallsPane`
@@ -879,7 +879,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` "debug-profiling"
         - `DebugApp.Sidebar` "Profiling" → `component`
-      - Slot contributors: `boot`, `build`
+      - Slot contributors: `boot`, `build`, `stats`
       - Plugins:
         - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
           - Contributes:
@@ -891,6 +891,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Profiling.Section` → `BuildSection`
           - Server:
             - `GET /api/debug/profiling/build`
+        - **`stats`** — Stats endpoint profiling for the Gantt debug pane. Stats endpoint profiling data endpoint.
+          - Contributes:
+            - `Profiling.Section` → `StatsSection`
+          - Server:
+            - `GET /api/debug/profiling/stats`
+          - Imported by: `commits`, `cost`, `tasks`
     - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
       - Exports (web):
         - Values: `queuePane`
@@ -1323,7 +1329,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Pane.Register` "stats"
     - `Shell.Sidebar` "Stats" → `component`
-  - Imported by: `commits`, `cost`, `tasks`
   - Plugins:
     - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
       - Defines:
@@ -1344,7 +1349,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `GET /api/stats/commits/excluded-path-state`
         - `PATCH /api/stats/commits/excluded-path-state`
         - `DELETE /api/stats/commits/excluded-path-state/:path`
-      - Endpoint callers: `cost`, `tasks`
+      - Endpoint callers: `cost`, `stats`, `tasks`
     - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, sourced from ccusage.
       - Exports (web):
         - Values: `costConvSidePane`

@@ -55,6 +55,7 @@ import debugLogsPlugin from "@plugins/debug/plugins/logs/server";
 import debugMemoryPlugin from "@plugins/debug/plugins/memory/server";
 import debugProfilingBootPlugin from "@plugins/debug/plugins/profiling/plugins/boot/server";
 import debugProfilingBuildPlugin from "@plugins/debug/plugins/profiling/plugins/build/server";
+import debugProfilingStatsPlugin from "@plugins/debug/plugins/profiling/plugins/stats/server";
 import debugWorktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/server";
 import eventsTestPlugin from "@plugins/events-test/server";
 import healthPlugin from "@plugins/health/server";
@@ -211,6 +212,7 @@ export const plugins: ServerPluginDefinition[] = [
   debugMemoryPlugin,
   debugProfilingBootPlugin,
   debugProfilingBuildPlugin,
+  debugProfilingStatsPlugin,
   debugWorktreeCleanupPlugin,
   eventsTestPlugin,
   healthPlugin,

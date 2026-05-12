@@ -17,7 +17,13 @@ function StatsContent() {
   return (
     <div className="h-full overflow-auto p-6">
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <a
+            href="/debug/profiling"
+            className="rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            Profiling
+          </a>
           <button
             type="button"
             onClick={() => setShowEmptyDays(!showEmptyDays)}

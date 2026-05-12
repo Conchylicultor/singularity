@@ -10,7 +10,6 @@
 - Contributes:
   - `Pane.Register` "stats"
   - `Shell.Sidebar` "Stats" → `component`
-- Imported by: `commits`, `cost`, `tasks`
 - Sub-plugins:
   - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
   - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, sourced from ccusage.

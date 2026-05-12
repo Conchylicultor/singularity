@@ -12,6 +12,7 @@ const StatsContext = createContext<StatsContextValue>({
 
 export function StatsProvider({ children }: { children: ReactNode }) {
   const [showEmptyDays, setShowEmptyDays] = useState(false);
+
   return (
     <StatsContext.Provider value={{ showEmptyDays, setShowEmptyDays }}>
       {children}

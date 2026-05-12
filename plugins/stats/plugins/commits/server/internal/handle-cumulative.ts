@@ -1,7 +1,16 @@
 import { readConfig } from "@plugins/config/server";
 import { commitsConfig } from "../../shared/config";
-import { deduplicateByPushId, getCommits, getCommitsExcludingPaths } from "./commit-timestamps";
+import { deduplicateByPushId, getCommits, getCommitsExcludingPaths, getGitLogTiming } from "./commit-timestamps";
 import { activeExcludedPaths } from "./excluded-paths";
+
+function commitsTimingHeader(handlerMs: number): string {
+  const git = getGitLogTiming();
+  const parts = [`total;dur=${handlerMs}`];
+  if (git) {
+    parts.push(git.cached ? "gitLog;dur=0;desc=\"cached\"" : `gitLog;dur=${git.ms}`);
+  }
+  return parts.join(", ");
+}
 
 function shouldDedup(req: Request): boolean {
   return new URL(req.url).searchParams.get("dedup") === "1";
@@ -16,6 +25,7 @@ async function resolveCommits(req: Request): Promise<Awaited<ReturnType<typeof g
 }
 
 export async function handleCumulative(req: Request): Promise<Response> {
+  const t0 = performance.now();
   let commits = await getCommits();
   if (shouldDedup(req)) commits = deduplicateByPushId(commits);
   const perDay = new Map<string, number>();
@@ -29,10 +39,13 @@ export async function handleCumulative(req: Request): Promise<Response> {
     running += perDay.get(date)!;
     return { date, count: running };
   });
-  return Response.json({ points });
+  const resp = Response.json({ points });
+  resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
+  return resp;
 }
 
 export async function handleLinesCumulative(req: Request): Promise<Response> {
+  const t0 = performance.now();
   const breakdown = new URL(req.url).searchParams.get("breakdown") === "ext";
   const commits = await resolveCommits(req);
 
@@ -60,7 +73,9 @@ export async function handleLinesCumulative(req: Request): Promise<Response> {
       }
       return { date, byExt: Object.fromEntries(Object.entries(running).map(([k, v]) => [k, { ...v }])) };
     });
-    return Response.json({ points });
+    const resp = Response.json({ points });
+    resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
+    return resp;
   }
 
   const perDay = new Map<string, { added: number; removed: number }>();
@@ -80,5 +95,7 @@ export async function handleLinesCumulative(req: Request): Promise<Response> {
     removed += e.removed;
     return { date, added, removed };
   });
-  return Response.json({ points });
+  const resp = Response.json({ points });
+  resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
+  return resp;
 }

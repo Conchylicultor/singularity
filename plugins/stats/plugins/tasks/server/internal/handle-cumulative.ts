@@ -1,6 +1,7 @@
 import { listTasks, CONVERSATIONS_META_TASK_ID } from "@plugins/tasks-core/server";
 
 export async function handleCumulative(_req: Request): Promise<Response> {
+  const t0 = performance.now();
   const allTasks = await listTasks({ excludeId: CONVERSATIONS_META_TASK_ID });
 
   const toDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
@@ -49,5 +50,7 @@ export async function handleCumulative(_req: Request): Promise<Response> {
     byKey.set(key, { date: key, total, active, completed, dropped });
   }
   const points = [...byKey.values()];
-  return Response.json({ points });
+  const resp = Response.json({ points });
+  resp.headers.set("Server-Timing", `total;dur=${Math.round(performance.now() - t0)}`);
+  return resp;
 }

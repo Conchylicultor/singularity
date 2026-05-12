@@ -134,6 +134,8 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
           - `/api/debug/profiling/boot (GET)`
         - **`build`** — Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
           - `/api/debug/profiling/build (GET)`
+        - **`stats`** — Stats endpoint profiling for the Gantt debug pane. Stats endpoint profiling data endpoint.
+          - `/api/debug/profiling/stats (GET)`
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
       - `/api/debug/worktrees (GET)`
       - `/api/debug/worktrees/bulk-delete (POST)`

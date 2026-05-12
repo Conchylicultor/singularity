@@ -110,6 +110,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "debug/plugins/memory", loader: () => import("@plugins/debug/plugins/memory/web") },
   { name: "debug/plugins/profiling/plugins/boot", loader: () => import("@plugins/debug/plugins/profiling/plugins/boot/web") },
   { name: "debug/plugins/profiling/plugins/build", loader: () => import("@plugins/debug/plugins/profiling/plugins/build/web") },
+  { name: "debug/plugins/profiling/plugins/stats", loader: () => import("@plugins/debug/plugins/profiling/plugins/stats/web") },
   { name: "debug/plugins/profiling", loader: () => import("@plugins/debug/plugins/profiling/web") },
   { name: "debug/plugins/queue", loader: () => import("@plugins/debug/plugins/queue/web") },
   { name: "debug/plugins/worktree-cleanup", loader: () => import("@plugins/debug/plugins/worktree-cleanup/web") },

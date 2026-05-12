@@ -545,6 +545,10 @@
       "name": "@singularity/plugin-debug-profiling-build",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/profiling/plugins/stats": {
+      "name": "@singularity/plugin-debug-profiling-stats",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/queue": {
       "name": "@singularity/plugin-debug-queue",
       "version": "0.0.1",
@@ -1768,6 +1772,8 @@
     "@singularity/plugin-debug-profiling-boot": ["@singularity/plugin-debug-profiling-boot@workspace:plugins/debug/plugins/profiling/plugins/boot"],
 
     "@singularity/plugin-debug-profiling-build": ["@singularity/plugin-debug-profiling-build@workspace:plugins/debug/plugins/profiling/plugins/build"],
+
+    "@singularity/plugin-debug-profiling-stats": ["@singularity/plugin-debug-profiling-stats@workspace:plugins/debug/plugins/profiling/plugins/stats"],
 
     "@singularity/plugin-debug-queue": ["@singularity/plugin-debug-queue@workspace:plugins/debug/plugins/queue"],
 

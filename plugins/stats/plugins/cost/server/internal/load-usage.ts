@@ -47,23 +47,57 @@ interface AggregateBundle {
 let cache: { ts: number; bundle: AggregateBundle } | null = null;
 let inflight: Promise<AggregateBundle> | null = null;
 
+export interface BundleTiming {
+  totalMs: number;
+  loadDailyMs: number;
+  classifyMs: number;
+  convBySessionMs: number;
+  walkSessionsMs: number;
+  cached: boolean;
+}
+
+let lastBundleTiming: BundleTiming | null = null;
+
+export function getBundleTiming(): BundleTiming | null {
+  return lastBundleTiming;
+}
+
+async function timed<T>(fn: () => Promise<T>): Promise<[T, number]> {
+  const t0 = performance.now();
+  const result = await fn();
+  return [result, Math.round(performance.now() - t0)];
+}
+
 async function buildBundle(): Promise<AggregateBundle> {
+  const t0 = performance.now();
   const mainRoot = await ensureMainWorktreeRoot();
-  const [daily, projectIsSingularity, convBySession] = await Promise.all([
-    loadDailyUsageData({ groupByProject: true }),
-    classifyProjects(mainRoot),
-    loadConvBySession(),
-  ]);
-  const sessions = await walkPerSession({
-    daily,
-    projectIsSingularity,
-  });
+
+  const [[daily, loadDailyMs], [projectIsSingularity, classifyMs], [convBySession, convBySessionMs]] =
+    await Promise.all([
+      timed(() => loadDailyUsageData({ groupByProject: true })),
+      timed(() => classifyProjects(mainRoot)),
+      timed(() => loadConvBySession()),
+    ]);
+  const [sessions, walkSessionsMs] = await timed(() =>
+    walkPerSession({ daily, projectIsSingularity }),
+  );
+  lastBundleTiming = {
+    totalMs: Math.round(performance.now() - t0),
+    loadDailyMs,
+    classifyMs,
+    convBySessionMs,
+    walkSessionsMs,
+    cached: false,
+  };
   return { daily, sessions, projectIsSingularity, convBySession };
 }
 
 export async function loadBundle(): Promise<AggregateBundle> {
   const now = Date.now();
-  if (cache && now - cache.ts < TTL_MS) return cache.bundle;
+  if (cache && now - cache.ts < TTL_MS) {
+    if (lastBundleTiming) lastBundleTiming = { ...lastBundleTiming, cached: true };
+    return cache.bundle;
+  }
   if (inflight) return inflight;
   inflight = (async () => {
     try {
