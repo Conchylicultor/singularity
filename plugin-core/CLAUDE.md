@@ -172,8 +172,10 @@ plugins/
     │   └── internal/     # Handler implementations, business logic (never imported externally)
     ├── core/             # Public API — types/utils importable cross-plugin (@plugins/foo/core)
     │   └── index.ts      # Barrel re-exporting public types and values
-    └── internal/         # Private DRY — shared within this plugin only (intra-plugin @plugins/foo/internal)
-        └── protocol.ts   # e.g. WebSocket message types, resource descriptors
+    ├── internal/         # Private DRY — shared within this plugin only (intra-plugin @plugins/foo/internal)
+    │   └── protocol.ts   # e.g. WebSocket message types, resource descriptors
+    └── scripts/          # Standalone entry points invoked outside the server/web build
+        └── start.ts      # e.g. DB lifecycle, future: server bootstrap, CLI entry points
 
 web/src/
 ├── plugins.ts            # Hardcoded plugin registry (static imports)
