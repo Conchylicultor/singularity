@@ -332,8 +332,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables-colors.ts`
         - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
         - Entity extension of: `tasks-core` (table `conversations_ext_category`)
+      - Exports (web):
+        - Types: `ColorKey`
+        - Values: `autoColorKey`, `useCategoryColors`
       - Exports (server):
-        - Values: `_conversationCategoryColors`, `categoryColorsResource`, `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`
+        - Values: `_conversationCategoryColors`, `categoryColorsResource`, `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`, `conversationCategoryConfig`
       - Exports (shared):
         - Types: `ConversationCategoriesPayload`, `ConversationCategory`
         - Values: `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`
