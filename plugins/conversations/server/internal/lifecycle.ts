@@ -201,6 +201,10 @@ export async function resumeConversation(id: string): Promise<Conversation> {
   // still exists. Clear any stale pane before re-spawning.
   await runtime.delete(id);
 
+  // Reset status so the poller can track the new session. Without this,
+  // "done" rows are skipped and the conversation stays stuck as done.
+  await updateConversation(id, { status: "starting", endedAt: null });
+
   await runtime.create(id, row.worktreePath, {
     resumeSessionId: row.claudeSessionId,
     model: row.model,
