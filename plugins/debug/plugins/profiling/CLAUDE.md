@@ -12,7 +12,7 @@
   - Values: `formatDuration`, `GanttSection`, `groupByPhase`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `useProfilingContext`
 - Contributes:
   - `Pane.Register` "debug-profiling"
-  - `DebugApp.Sidebar` "Profiling"
+  - `DebugApp.Sidebar` "Profiling" → `component`
 - Slot contributors: `boot`, `build`
 - Sub-plugins:
   - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.

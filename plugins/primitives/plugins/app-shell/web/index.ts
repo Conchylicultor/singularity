@@ -5,6 +5,8 @@ export type {
   AppShellSidebarItem,
   AppShellToolbarItem,
 } from "./components/app-shell-layout";
+export { SidebarNavItem, sidebarNavItem } from "./components/sidebar-nav-item";
+export { SidebarPaneSection } from "./components/sidebar-pane-section";
 
 export default {
   id: "app-shell",

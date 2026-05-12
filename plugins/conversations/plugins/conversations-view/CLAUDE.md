@@ -11,7 +11,7 @@
   - Types: `ViewContribution`, `ViewProps`
   - Values: `ConversationsView`
 - Contributes:
-  - `Shell.Sidebar` "Conversations" → `ConversationList`
+  - `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
   - `Core.Root` → `ForkErrorWatcher`
   - `Core.Root` → `AutoLaunchWatcher`
 - Slot contributors: `grouped`, `history`, `queue`

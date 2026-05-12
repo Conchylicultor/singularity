@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Shell } from "@plugins/shell/web";
 import { MdInsights } from "react-icons/md";
 import { statsPane } from "./panes";
@@ -16,10 +17,7 @@ export default {
     Pane.Register({ pane: statsPane }),
     Shell.Sidebar({
       id: "stats",
-      title: "Stats",
-      icon: MdInsights,
-      group: "System",
-      onClick: () => statsPane.open({}),
+      ...sidebarNavItem({ title: "Stats", icon: MdInsights, onClick: () => statsPane.open({}) }),
     }),
   ],
 } satisfies PluginDefinition;

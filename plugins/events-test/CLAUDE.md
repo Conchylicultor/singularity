@@ -11,7 +11,7 @@
   - Values: `eventsTestPane`
 - Contributes:
   - `Pane.Register` "events-test"
-  - `DebugApp.Sidebar` "Events Test"
+  - `DebugApp.Sidebar` "Events Test" → `component`
 - Server:
   - Register: `defineJob('events_test.log')`, `defineTriggerEvent('events_test.pinged')`
   - Uses: `database.db`

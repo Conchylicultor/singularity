@@ -11,7 +11,7 @@
   - Values: `Stats`, `statsPane`, `useShowEmptyDays`
 - Contributes:
   - `Pane.Register` "stats"
-  - `Shell.Sidebar` "Stats"
+  - `Shell.Sidebar` "Stats" → `component`
 - Imported by: `commits`, `cost`, `tasks`
 - Slot contributors: `commits`, `cost`, `tasks`
 - Sub-plugins:

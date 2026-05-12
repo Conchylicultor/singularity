@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
+import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { MdTerminal } from "react-icons/md";
 import { logsPane, logChannelPane } from "./panes";
 
@@ -15,9 +16,7 @@ export default {
     Pane.Register({ pane: logChannelPane }),
     DebugApp.Sidebar({
       id: "logs",
-      title: "Logs",
-      icon: MdTerminal,
-      onClick: () => logsPane.open({}),
+      ...sidebarNavItem({ title: "Logs", icon: MdTerminal, onClick: () => logsPane.open({}) }),
     }),
   ],
 } satisfies PluginDefinition;

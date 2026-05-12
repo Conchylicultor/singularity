@@ -94,7 +94,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
   - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `readGlobalConfig`, `registerAuthProvider`
 - Contributes:
   - `Pane.Register` "accounts"
-  - `Shell.Sidebar` "Accounts"
+  - `Shell.Sidebar` "Accounts" → `component`
 - Central:
   - `GET /api/auth/start/:provider`
   - `GET /api/auth/callback/:provider`

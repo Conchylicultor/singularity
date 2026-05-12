@@ -2,8 +2,7 @@ import type { PluginDefinition } from "@core";
 import { Core } from "@core";
 import { Shell } from "@plugins/shell/web";
 import { MdForum } from "react-icons/md";
-import { ConversationList } from "./components/conversation-list";
-import { ConvCountLabel } from "./components/conv-count-label";
+import { ConversationsSidebar } from "./components/conversations-sidebar";
 import { ForkErrorWatcher } from "./components/fork-error-watcher";
 import { AutoLaunchWatcher } from "./components/auto-launch-watcher";
 
@@ -19,9 +18,7 @@ export default {
       id: "conversations",
       title: "Conversations",
       icon: MdForum,
-      component: ConversationList,
-      labelExtra: ConvCountLabel,
-      scroll: true,
+      component: ConversationsSidebar,
     }),
     Core.Root({ component: ForkErrorWatcher }),
     Core.Root({ component: AutoLaunchWatcher }),

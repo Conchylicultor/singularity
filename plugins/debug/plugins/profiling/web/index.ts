@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
+import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { MdSpeed } from "react-icons/md";
 import { profilingPane } from "./panes";
 
@@ -24,9 +25,7 @@ export default {
     Pane.Register({ pane: profilingPane }),
     DebugApp.Sidebar({
       id: "profiling",
-      title: "Profiling",
-      icon: MdSpeed,
-      onClick: () => profilingPane.open({}),
+      ...sidebarNavItem({ title: "Profiling", icon: MdSpeed, onClick: () => profilingPane.open({}) }),
     }),
   ],
 } satisfies PluginDefinition;

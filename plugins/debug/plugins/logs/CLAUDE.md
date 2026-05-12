@@ -13,7 +13,7 @@
 - Contributes:
   - `Pane.Register` "logs"
   - `Pane.Register` "logs-channel"
-  - `DebugApp.Sidebar` "Logs"
+  - `DebugApp.Sidebar` "Logs" → `component`
 - Server:
   - `GET /api/logs/channels`
   - `WS /ws/logs`

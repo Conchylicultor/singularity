@@ -9,7 +9,7 @@
   - Values: `dbBackupPane`
 - Contributes:
   - `Pane.Register` "db-backup"
-  - `DebugApp.Sidebar` "DB Backup"
+  - `DebugApp.Sidebar` "DB Backup" → `component`
 - Server:
   - `GET /api/debug/backup-db`
   - `POST /api/debug/backup-db`

@@ -24,7 +24,7 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
   - Values: `memoryPane`
 - Contributes:
   - `Pane.Register` "debug-memory"
-  - `DebugApp.Sidebar` "Memory"
+  - `DebugApp.Sidebar` "Memory" → `component`
 - Server:
   - `GET /api/debug/memory`
   - `GET /api/debug/memory/:name`

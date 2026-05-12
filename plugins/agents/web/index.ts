@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Shell } from "@plugins/shell/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
@@ -42,10 +43,7 @@ export default {
     Pane.Register({ pane: agentSidePane }),
     Shell.Sidebar({
       id: "agents",
-      title: "Agents",
-      icon: MdPrecisionManufacturing,
-      group: "System",
-      onClick: () => agentsRootPane.open({}),
+      ...sidebarNavItem({ title: "Agents", icon: MdPrecisionManufacturing, onClick: () => agentsRootPane.open({}) }),
     }),
     Item.Avatar({
       match: (conv) => conv.kind === "agent",

@@ -9,7 +9,7 @@
   - Values: `recoveryPane`
 - Contributes:
   - `Pane.Register` "conversations-recover"
-  - `DebugApp.Sidebar` "Recovery"
+  - `DebugApp.Sidebar` "Recovery" → `component`
 - Server:
   - Uses: `conversations.resumeConversation`, `tasks-core.recentConversationsResource`
   - `POST /api/conversations-recover/restore-batch`

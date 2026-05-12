@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
+import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { MdMemory } from "react-icons/md";
 import { memoryPane } from "./panes";
 
@@ -14,9 +15,7 @@ export default {
     Pane.Register({ pane: memoryPane }),
     DebugApp.Sidebar({
       id: "memory",
-      title: "Memory",
-      icon: MdMemory,
-      onClick: () => memoryPane.open({}),
+      ...sidebarNavItem({ title: "Memory", icon: MdMemory, onClick: () => memoryPane.open({}) }),
     }),
   ],
 } satisfies PluginDefinition;

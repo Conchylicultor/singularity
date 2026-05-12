@@ -10,7 +10,7 @@
 - Contributes:
   - `Pane.Register` "global-file-tree"
   - `Pane.Register` "conv-file-tree"
-  - `Shell.Sidebar` "Explorer"
+  - `Shell.Sidebar` "Explorer" → `component`
   - `Conversation.ActionBar` → `ConvTreeButton`
 - Server:
   - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`

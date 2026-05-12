@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
+import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { MdBackup } from "react-icons/md";
 import { dbBackupPane } from "./panes";
 
@@ -14,9 +15,7 @@ export default {
     Pane.Register({ pane: dbBackupPane }),
     DebugApp.Sidebar({
       id: "db-backup",
-      title: "DB Backup",
-      icon: MdBackup,
-      onClick: () => dbBackupPane.open({}),
+      ...sidebarNavItem({ title: "DB Backup", icon: MdBackup, onClick: () => dbBackupPane.open({}) }),
     }),
   ],
 } satisfies PluginDefinition;

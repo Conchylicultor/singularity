@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Shell } from "@plugins/shell/web";
 import { MdKey } from "react-icons/md";
 import { accountsPane } from "./panes";
@@ -26,10 +27,7 @@ export default {
     Pane.Register({ pane: accountsPane }),
     Shell.Sidebar({
       id: "accounts",
-      title: "Accounts",
-      icon: MdKey,
-      group: "System",
-      onClick: () => accountsPane.open({}),
+      ...sidebarNavItem({ title: "Accounts", icon: MdKey, onClick: () => accountsPane.open({}) }),
     }),
   ],
 } satisfies PluginDefinition;

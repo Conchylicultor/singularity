@@ -22,7 +22,7 @@
   - `Pane.Register` "agent-conversation"
   - `Pane.Register` "agent-system-detail"
   - `Pane.Register` "agent-side"
-  - `Shell.Sidebar` "Agents"
+  - `Shell.Sidebar` "Agents" → `component`
   - `Item.Avatar` → `AgentAvatarRow`
   - `Conversation.TitlePrefix` → `AgentAvatarTitlePrefix`
   - `Agents.AgentActions` "expand-collapse-all" → `ExpandCollapseAllAction`
