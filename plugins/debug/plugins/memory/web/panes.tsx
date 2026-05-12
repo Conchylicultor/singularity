@@ -4,7 +4,7 @@ import { MemoryPanel } from "./components/memory-panel";
 export const memoryPane = Pane.define({
   id: "debug-memory",
   after: [null],
-  segment: "debug/memory",
+  segment: "memory",
   component: MemoryBody,
 });
 

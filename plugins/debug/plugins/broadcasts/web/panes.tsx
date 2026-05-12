@@ -4,7 +4,7 @@ import { BroadcastsPanel } from "./components/broadcasts-panel";
 export const broadcastsPane = Pane.define({
   id: "debug-broadcasts",
   after: [null],
-  segment: "debug/broadcasts",
+  segment: "broadcasts",
   component: BroadcastsBody,
 });
 

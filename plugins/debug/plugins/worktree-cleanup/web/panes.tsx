@@ -4,7 +4,7 @@ import { WorktreeCleanupPanel } from "./components/worktree-cleanup-panel";
 export const worktreeCleanupPane = Pane.define({
   id: "worktree-cleanup",
   after: [null],
-  segment: "debug/worktree-cleanup",
+  segment: "worktree-cleanup",
   component: WorktreeCleanupBody,
 });
 

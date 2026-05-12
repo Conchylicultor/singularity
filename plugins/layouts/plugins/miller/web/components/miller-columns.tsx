@@ -1,8 +1,11 @@
-import { Fragment, useLayoutEffect, useRef, type ReactNode } from "react";
+import { Fragment, useContext, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
+  PaneBasePathContext,
   PaneDepthContext,
   PaneMatchContext,
+  setBasePath,
+  stripBasePath,
   useMatchForPath,
   usePathname,
   useSyncPaneRegistry,
@@ -13,7 +16,13 @@ export function MillerColumns() {
   // Must run before useMatchForPath so the matcher sees the current
   // contribution set on first render.
   useSyncPaneRegistry();
-  const pathname = usePathname();
+
+  const basePath = useContext(PaneBasePathContext);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- synchronous write before useMatchForPath
+  useMemo(() => { setBasePath(basePath); }, [basePath]);
+
+  const rawPathname = usePathname();
+  const pathname = stripBasePath(rawPathname, basePath);
   const match = useMatchForPath(pathname);
 
   const ref = useRef<HTMLDivElement>(null);

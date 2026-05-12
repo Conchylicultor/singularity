@@ -1,6 +1,7 @@
 import { useSyncExternalStore, type ComponentType, type ReactNode } from "react";
 import { Reorder } from "@plugins/reorder/web";
 import { TooltipProvider } from "@plugins/primitives/plugins/tooltip/web";
+import { PaneBasePathContext } from "@plugins/primitives/plugins/pane/web";
 import { Apps } from "../slots";
 import { AppRail } from "./app-rail";
 
@@ -37,6 +38,8 @@ export function AppsLayout() {
     console.error(`No app matches pathname: ${pathname}`);
   }
 
+  const basePath = activeApp?.path === "/" ? "" : (activeApp?.path ?? "");
+
   return (
     <TooltipProvider delay={300}>
       <div
@@ -50,7 +53,11 @@ export function AppsLayout() {
           ReorderItem={appsArea.ReorderItem as ComponentType<{ item: (typeof appsArea.items)[number]; children: ReactNode }>}
         />
         <div className="min-w-0 flex-1">
-          {activeApp && <activeApp.component />}
+          {activeApp && (
+            <PaneBasePathContext.Provider value={basePath}>
+              <activeApp.component />
+            </PaneBasePathContext.Provider>
+          )}
         </div>
       </div>
     </TooltipProvider>

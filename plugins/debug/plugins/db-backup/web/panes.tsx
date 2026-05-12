@@ -4,7 +4,7 @@ import { DbBackupPanel } from "./components/db-backup-panel";
 export const dbBackupPane = Pane.define({
   id: "db-backup",
   after: [null],
-  segment: "debug/db-backup",
+  segment: "db-backup",
   component: DbBackupBody,
 });
 

@@ -456,16 +456,49 @@ export function useCurrentPane(): PaneInternal | null {
 }
 
 // ---------------------------------------------------------------------------
+// App-scoped basePath. The active app's path (e.g. "/debug") is an implicit
+// URL prefix: navigate() prepends it, MillerColumns strips it before matching.
+// Pane segments stay app-local — no manual prefix needed.
+// ---------------------------------------------------------------------------
+
+export const PaneBasePathContext = createContext<string>("");
+
+let currentBasePath = "";
+
+export function setBasePath(basePath: string): void {
+  currentBasePath = basePath === "/" ? "" : basePath.replace(/\/+$/, "");
+}
+
+export function getBasePath(): string {
+  return currentBasePath;
+}
+
+export function stripBasePath(pathname: string, basePath: string): string {
+  const bp = basePath === "/" ? "" : basePath.replace(/\/+$/, "");
+  if (!bp) return pathname;
+  if (pathname === bp) return "/";
+  if (pathname.startsWith(bp + "/")) return pathname.slice(bp.length);
+  return pathname;
+}
+
+function applyBasePath(rawUrl: string): string {
+  if (!currentBasePath) return rawUrl;
+  if (rawUrl === "/") return currentBasePath;
+  return currentBasePath + rawUrl;
+}
+
+// ---------------------------------------------------------------------------
 // Navigation + location hook.
 // ---------------------------------------------------------------------------
 
 function navigate(url: string, replace = false): void {
   if (typeof window === "undefined") return;
-  if (window.location.pathname === url) return;
+  const fullUrl = applyBasePath(url);
+  if (window.location.pathname === fullUrl) return;
   if (replace) {
-    window.history.replaceState({}, "", url);
+    window.history.replaceState({}, "", fullUrl);
   } else {
-    window.history.pushState({}, "", url);
+    window.history.pushState({}, "", fullUrl);
   }
   window.dispatchEvent(new PopStateEvent("popstate"));
   window.dispatchEvent(new CustomEvent("shell:navigate"));
