@@ -18,7 +18,7 @@ import { pickCategory } from "./pick-category";
 // First few turns are enough signal — the conversation's intent is set by
 // then and Haiku gets a small enough prompt to stay under the timeout.
 const TRANSCRIPT_TURN_LIMIT = 6;
-const HAIKU_TIMEOUT_MS = 12_000;
+const HAIKU_TIMEOUT_MS = 30_000;
 
 function buildSystemPrompt(categories: readonly string[]): string {
   const list = categories.map((c) => `- ${c}`).join("\n");

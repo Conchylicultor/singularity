@@ -1,3 +1,4 @@
+import { reportServerError } from "@server/error-reporter";
 import { CLAUDE as CLAUDE_BIN } from "@plugins/infra/plugins/paths/server";
 import { recordClaudeCliCall } from "./record-call";
 
@@ -94,6 +95,13 @@ export async function runClaudePrint(input: RunClaudePrintInput): Promise<string
     throw err;
   } finally {
     const durationMs = Math.round(performance.now() - startedAt);
+    if (caughtError) {
+      reportServerError({
+        message: `[claude-cli] ${input.source.name}: ${caughtError.message}`,
+        stack: caughtError.stack,
+        errorType: caughtError.name,
+      });
+    }
     void recordClaudeCliCall({
       model: input.model,
       sourceName: input.source.name,
