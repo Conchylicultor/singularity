@@ -214,16 +214,22 @@ const ROUTES_HEADER =
   "All HTTP and WebSocket routes exposed by server and central plugins. " +
   "Only plugins with at least one route (directly or in a descendant) are shown.\n\n";
 
-export function renderCompactDoc({ root }: GenerateDocsOptions): string {
-  return renderCompactDocFromTree(buildPluginTree(resolve(root, "plugins")), root);
+export async function buildEnrichedTree(root: string): Promise<PluginTree> {
+  const tree = buildPluginTree(resolve(root, "plugins"));
+  await enrichPluginTreeDocs(tree, root);
+  return tree;
 }
 
-export function renderDetailsDoc({ root }: GenerateDocsOptions): string {
-  return renderDetailsDocFromTree(buildPluginTree(resolve(root, "plugins")), root);
+export async function renderCompactDoc({ root }: GenerateDocsOptions): Promise<string> {
+  return renderCompactDocFromTree(await buildEnrichedTree(root), root);
 }
 
-export function renderRoutesDoc({ root }: GenerateDocsOptions): string {
-  return renderRoutesDocFromTree(buildPluginTree(resolve(root, "plugins")), root);
+export async function renderDetailsDoc({ root }: GenerateDocsOptions): Promise<string> {
+  return renderDetailsDocFromTree(await buildEnrichedTree(root), root);
+}
+
+export async function renderRoutesDoc({ root }: GenerateDocsOptions): Promise<string> {
+  return renderRoutesDocFromTree(await buildEnrichedTree(root), root);
 }
 
 function renderPluginClaudeAutogen(p: PluginNode, root: string): string {
@@ -287,8 +293,7 @@ function legacyPluginDocsPath(root: string): string {
 }
 
 export async function generatePluginDocs({ root }: GenerateDocsOptions): Promise<void> {
-  const tree = buildPluginTree(resolve(root, "plugins"));
-  await enrichPluginTreeDocs(tree, root);
+  const tree = await buildEnrichedTree(root);
 
   const writeIfChanged = (file: string, next: string) => {
     const existing = readIfExists(file) ?? "";

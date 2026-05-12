@@ -1,8 +1,7 @@
 import { existsSync, readFileSync } from "fs";
-import { join } from "path";
 import type { Check } from "./types";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
+  buildEnrichedTree,
   pluginClaudeMdPath,
   pluginCompactDocPath,
   pluginDetailsDocPath,
@@ -45,14 +44,14 @@ export const pluginsDocInSync: Check = {
       };
     }
 
-    if (readFileSync(compactFile, "utf8") !== renderCompactDoc({ root })) {
+    if (readFileSync(compactFile, "utf8") !== await renderCompactDoc({ root })) {
       return {
         ok: false,
         message: "docs/plugins-compact.md is out of sync with plugin source",
         hint: "Run `./singularity build` and commit the regenerated file.",
       };
     }
-    if (readFileSync(detailsFile, "utf8") !== renderDetailsDoc({ root })) {
+    if (readFileSync(detailsFile, "utf8") !== await renderDetailsDoc({ root })) {
       return {
         ok: false,
         message: "docs/plugins-details.md is out of sync with plugin source",
@@ -68,7 +67,7 @@ export const pluginsDocInSync: Check = {
         hint: "Run `./singularity build` to generate it.",
       };
     }
-    if (readFileSync(routesFile, "utf8") !== renderRoutesDoc({ root })) {
+    if (readFileSync(routesFile, "utf8") !== await renderRoutesDoc({ root })) {
       return {
         ok: false,
         message: "docs/routes.md is out of sync with plugin source",
@@ -76,7 +75,7 @@ export const pluginsDocInSync: Check = {
       };
     }
 
-    const tree = buildPluginTree(join(root, "plugins"));
+    const tree = await buildEnrichedTree(root);
     for (const info of tree.byDir.values()) {
       const file = pluginClaudeMdPath(info);
       const existing = existsSync(file) ? readFileSync(file, "utf8") : null;
