@@ -13,11 +13,12 @@
 - Contributes:
   - `Pane.Register` "conversation"
   - `Conversation.ActionBar` → `ExpandConversationButton`
-- Slot contributors: `agents`, `attempt-view`, `blocked-by`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+- Slot contributors: `agents`, `attempt-view`, `blocked-by`, `blocking`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
 - Sub-plugins:
   - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
   - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
   - **`blocked-by`** — Prompt-bar button to mark this conversation's task as blocked by another conversation's task, creating a dependency and re-ordering the queue.
+  - **`blocking`** — Prompt-bar button to mark this conversation's task as blocking another conversation's task, creating a dependency and re-ordering the queue.
   - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
   - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
   - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.

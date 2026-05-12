@@ -63,6 +63,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
         - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
         - **`blocked-by`** — Prompt-bar button to mark this conversation's task as blocked by another conversation's task, creating a dependency and re-ordering the queue.
+        - **`blocking`** — Prompt-bar button to mark this conversation's task as blocking another conversation's task, creating a dependency and re-ordering the queue.
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Plugins:
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.

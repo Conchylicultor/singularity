@@ -43,6 +43,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "conversations/plugins/conversation-view/plugins/action-bar", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/action-bar/web") },
   { name: "conversations/plugins/conversation-view/plugins/allow-monitor", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/allow-monitor/web") },
   { name: "conversations/plugins/conversation-view/plugins/blocked-by", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/blocked-by/web") },
+  { name: "conversations/plugins/conversation-view/plugins/blocking", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/blocking/web") },
   { name: "conversations/plugins/conversation-view/plugins/code/plugins/docs-button", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/code/plugins/docs-button/web") },
   { name: "conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web") },
   { name: "conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/image", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/image/web") },

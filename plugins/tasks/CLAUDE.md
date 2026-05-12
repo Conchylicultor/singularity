@@ -28,7 +28,7 @@
   - `POST /api/tasks/:id/dependencies`
   - `DELETE /api/tasks/:id/dependencies/:depId`
   - `GET /api/repo-info`
-- Endpoint callers: `blocked-by`, `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-header`, `task-list`
+- Endpoint callers: `blocked-by`, `blocking`, `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-header`, `task-list`
 - Sub-plugins:
   - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
   - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.

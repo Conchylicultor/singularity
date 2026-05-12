@@ -121,7 +121,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `DebugApp`
           - Contributes:
             - `Apps.App` "Debug" → `DebugLayout`
-          - Imported by: `agents`, `auth`, `blocked-by`, `build`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `publish`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
+          - Imported by: `agents`, `auth`, `blocked-by`, `blocking`, `build`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `publish`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -315,7 +315,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/conversations/:id/stop`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
-  - Imported by: `agents`, `blocked-by`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `grouped`, `history`, `hold-and-exit`, `improve`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `runtime-api`, `runtime-tmux`, `side-conversation`, `summary`, `task-header`, `task-title`, `tasks`, `turn-summary`, `welcome`
+  - Imported by: `agents`, `blocked-by`, `blocking`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `grouped`, `history`, `hold-and-exit`, `improve`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `runtime-api`, `runtime-tmux`, `side-conversation`, `summary`, `task-header`, `task-title`, `tasks`, `turn-summary`, `welcome`
   - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `grouped`, `history`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `transcript-api`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
@@ -371,7 +371,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` "conversation"
         - `Conversation.ActionBar` → `ExpandConversationButton`
-      - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+      - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `blocking`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Exports (web):
@@ -385,6 +385,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`blocked-by`** — Prompt-bar button to mark this conversation's task as blocked by another conversation's task, creating a dependency and re-ordering the queue.
           - Contributes:
             - `Conversation.PromptBar` "Deps" → `BlockedByButton`
+        - **`blocking`** — Prompt-bar button to mark this conversation's task as blocking another conversation's task, creating a dependency and re-ordering the queue.
+          - Contributes:
+            - `Conversation.PromptBar` "Deps" → `BlockingButton`
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Exports (core):
             - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`
@@ -713,7 +716,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `POST /api/conversations-queue/demote`
             - `POST /api/conversations-queue/step-down`
             - `POST /api/conversations-queue/rerank`
-          - Endpoint callers: `blocked-by`
+          - Endpoint callers: `blocked-by`, `blocking`
     - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
       - Exports (core):
         - Types: `ConversationModel`, `ModelMeta`
@@ -1362,7 +1365,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.listTasks`
         - `GET /api/stats/tasks/cumulative`
         - `GET /api/stats/tasks/daily`
-      - Imported by: `blocked-by`, `side-task`, `task-dependencies`, `task-description`, `task-detail`, `task-header`, `task-list`, `tasks-panel`
+      - Imported by: `blocked-by`, `blocking`, `side-task`, `task-dependencies`, `task-description`, `task-detail`, `task-header`, `task-list`, `tasks-panel`
 
 - **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
   - Exports (core):
@@ -1388,7 +1391,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/tasks/:id/dependencies`
     - `DELETE /api/tasks/:id/dependencies/:depId`
     - `GET /api/repo-info`
-  - Endpoint callers: `blocked-by`, `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-header`, `task-list`
+  - Endpoint callers: `blocked-by`, `blocking`, `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-header`, `task-list`
   - Plugins:
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
       - Defines:
