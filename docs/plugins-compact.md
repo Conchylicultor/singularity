@@ -33,6 +33,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`file-explorer`** — File explorer app.
       - Plugins:
         - **`shell`** — App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.
+    - **`forge`** — Forge app — plugin graph inspection and publish workflows.
+      - Plugins:
+        - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
 

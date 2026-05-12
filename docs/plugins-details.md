@@ -160,6 +160,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `FileExplorer`
           - Contributes:
             - `Apps.App` "File Explorer" → `FileExplorerLayout`
+    - **`forge`** — Forge app — plugin graph inspection and publish workflows.
+      - Plugins:
+        - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
+          - Exports (web):
+            - Values: `Forge`
+          - Contributes:
+            - `Apps.App` "Forge" → `ForgeLayout`
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - Exports (web):
