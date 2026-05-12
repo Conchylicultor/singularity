@@ -28,6 +28,16 @@ const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
 
 const VALID_RUNTIMES = new Set(["web", "server", "central", "core", "internal"]);
 
+// Every top-level subdirectory inside a plugin must be one of these.
+// Anything else (typos like "serrver/", ad-hoc folders like "utils/") is flagged.
+const KNOWN_PLUGIN_DIRS = new Set([
+  ...VALID_RUNTIMES,
+  "plugins",
+  "lint",
+  "check",
+  "scripts",
+]);
+
 const PUSH_BACK_HINT =
   "Do NOT work around these violations by editing `plugin-boundaries.ts`, expanding the skip list, " +
   "or adding ad-hoc exceptions. Plugin module boundaries are load-bearing infrastructure. " +
@@ -65,7 +75,7 @@ interface Violation {
 export const pluginBoundaries: Check = {
   id: "plugin-boundaries",
   description:
-    "Plugin module boundaries: barrel purity, cross-plugin import grammar, DAG, package naming",
+    "Plugin module boundaries: barrel purity, cross-plugin import grammar, DAG, package naming, directory structure",
   async run(): Promise<CheckResult> {
     const root = await getRoot();
     const pluginsRoot = join(root, "plugins");
@@ -85,6 +95,12 @@ export const pluginBoundaries: Check = {
     for (const p of plugins) {
       if (skippedSet.has(p.relPath)) continue;
       checkPackageNaming(p, violations);
+    }
+
+    // R11: reject unrecognized top-level directories inside plugin folders
+    for (const p of plugins) {
+      if (skippedSet.has(p.relPath)) continue;
+      checkUnknownDirs(p, plugins, violations);
     }
 
     // R3: barrel purity for every index.ts under each plugin's runtime folders
@@ -370,6 +386,61 @@ function checkPackageNaming(p: PluginDir, violations: Violation[]) {
       fix: `set \`"name": "${expected}"\` in ${relPkg}`,
     });
   }
+}
+
+// ============================================================================
+// R11: unknown directories
+// ============================================================================
+
+function checkUnknownDirs(p: PluginDir, allPlugins: PluginDir[], violations: Violation[]) {
+  // Child plugins live at `<plugin>/plugins/<child>` — their names appear as
+  // direct subdirs of `<plugin>/plugins/`, not of `<plugin>/` itself, so they
+  // won't trigger false positives here.
+  const childPluginNames = new Set(
+    allPlugins
+      .filter((other) => {
+        const prefix = `${p.relPath}/plugins/`;
+        return other.relPath.startsWith(prefix) && !other.relPath.slice(prefix.length).includes("/");
+      })
+      .map((other) => other.name),
+  );
+
+  let entries;
+  try {
+    entries = readdirSync(p.absPath, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const e of entries) {
+    if (!e.isDirectory()) continue;
+    if (KNOWN_PLUGIN_DIRS.has(e.name)) continue;
+    if (e.name === "node_modules") continue;
+    if (e.name.startsWith(".")) continue;
+    if (childPluginNames.has(e.name)) continue;
+    // Only flag directories that contain TS source files — non-code asset
+    // directories (SQL migrations, shell scripts, etc.) are fine.
+    if (!dirContainsTsFiles(join(p.absPath, e.name))) continue;
+    violations.push({
+      rule: "unknown-dir",
+      file: `plugins/${p.relPath}/${e.name}/`,
+      message: `unrecognized directory \`${e.name}/\` contains TypeScript files but is not a recognized zone`,
+      fix: `plugin code must live in one of: ${[...KNOWN_PLUGIN_DIRS].join(", ")}. If this is a typo, rename it. If it's private shared code, use \`internal/\`.`,
+    });
+  }
+}
+
+function dirContainsTsFiles(dir: string): boolean {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+  for (const e of entries) {
+    if (e.isFile() && (e.name.endsWith(".ts") || e.name.endsWith(".tsx"))) return true;
+    if (e.isDirectory() && e.name !== "node_modules" && dirContainsTsFiles(join(dir, e.name))) return true;
+  }
+  return false;
 }
 
 // ============================================================================
