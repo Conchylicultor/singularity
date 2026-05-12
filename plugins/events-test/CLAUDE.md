@@ -11,7 +11,7 @@
   - Values: `eventsTestPane`
 - Contributes:
   - `Pane.Register` "events-test"
-  - `Debug.Item` "Events Test"
+  - `DebugApp.Sidebar` "Events Test"
 - Server:
   - Register: `events_test.log`, `events_test.pinged`
   - Uses: `database.db`

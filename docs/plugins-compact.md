@@ -23,6 +23,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
         - **`shell`** — App shell for the agent manager. Registers the / app entry and renders the main Shell layout.
+    - **`debug`** — Debug app.
+      - Plugins:
+        - **`shell`** — App shell for the debug tools. Registers the /debug app entry and defines DebugApp.Sidebar/Toolbar slots.
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -135,7 +138,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
 
-- **`debug`** — Debug tools sidebar group.
+- **`debug`** — Debug tools umbrella plugin.
   - Plugins:
     - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.

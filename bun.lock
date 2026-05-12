@@ -122,6 +122,14 @@
       "name": "@singularity/plugin-apps-agent-manager-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/debug": {
+      "name": "@singularity/plugin-apps-debug",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/debug/plugins/shell": {
+      "name": "@singularity/plugin-apps-debug-shell",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy": {
       "name": "@singularity/plugin-apps-deploy",
       "version": "0.0.1",
@@ -1530,6 +1538,10 @@
     "@singularity/plugin-apps-agent-manager": ["@singularity/plugin-apps-agent-manager@workspace:plugins/apps/plugins/agent-manager"],
 
     "@singularity/plugin-apps-agent-manager-shell": ["@singularity/plugin-apps-agent-manager-shell@workspace:plugins/apps/plugins/agent-manager/plugins/shell"],
+
+    "@singularity/plugin-apps-debug": ["@singularity/plugin-apps-debug@workspace:plugins/apps/plugins/debug"],
+
+    "@singularity/plugin-apps-debug-shell": ["@singularity/plugin-apps-debug-shell@workspace:plugins/apps/plugins/debug/plugins/shell"],
 
     "@singularity/plugin-apps-deploy": ["@singularity/plugin-apps-deploy@workspace:plugins/apps/plugins/deploy"],
 

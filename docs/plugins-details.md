@@ -114,6 +114,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`shell`** — App shell for the agent manager. Registers the / app entry and renders the main Shell layout.
           - Contributes:
             - `Apps.App` "Agent Manager" → `AgentManagerLayout`
+    - **`debug`** — Debug app.
+      - Plugins:
+        - **`shell`** — App shell for the debug tools. Registers the /debug app entry and defines DebugApp.Sidebar/Toolbar slots.
+          - Exports (web):
+            - Values: `DebugApp`
+          - Contributes:
+            - `Apps.App` "Debug" → `DebugLayout`
+          - Imported by: `agents`, `auth`, `blocked-by`, `build`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `publish`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -152,7 +160,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `FileExplorer`
           - Contributes:
             - `Apps.App` "File Explorer" → `FileExplorerLayout`
-          - Imported by: `agents`, `auth`, `blocked-by`, `build`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `debug`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `publish`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - Exports (web):
@@ -749,7 +756,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `recoveryPane`
   - Contributes:
     - `Pane.Register` "conversations-recover"
-    - `Debug.Item` "Recovery"
+    - `DebugApp.Sidebar` "Recovery"
   - Server:
     - Uses: `conversations.resumeConversation`, `tasks-core.recentConversationsResource`
     - `POST /api/conversations-recover/restore-batch`
@@ -800,22 +807,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register: `query_db`
         - Uses: `tasks-core.getConversation`
 
-- **`debug`** — Debug tools sidebar group.
-  - Defines:
-    - Slots: `Debug.Item`
-  - Exports (web):
-    - Values: `Debug`
-  - Contributes:
-    - `Shell.Sidebar` "Debug" → `DebugSidebar`
-  - Imported by: `broadcasts`, `claude-cli-calls`, `conversations-recover`, `db-backup`, `events-test`, `logs`, `memory`, `profiling`, `queue`, `worktree-cleanup`
-  - Slot contributors: `broadcasts`, `claude-cli-calls`, `conversations-recover`, `db-backup`, `events-test`, `logs`, `memory`, `profiling`, `queue`, `worktree-cleanup`
+- **`debug`** — Debug tools umbrella plugin.
   - Plugins:
     - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
       - Exports (web):
         - Values: `broadcastsPane`
       - Contributes:
         - `Pane.Register` "debug-broadcasts"
-        - `Debug.Item` "Broadcasts"
+        - `DebugApp.Sidebar` "Broadcasts"
       - Server:
         - `GET /api/debug/broadcasts`
         - `PUT /api/debug/broadcasts`
@@ -825,13 +824,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `claudeCliCallsPane`
       - Contributes:
         - `Pane.Register` "claude-cli-calls"
-        - `Debug.Item` "Claude CLI Calls"
+        - `DebugApp.Sidebar` "Claude CLI Calls"
     - **`db-backup`** — Backup non-worktree Postgres databases to ~/.backups/singularity/. Backup non-worktree Postgres databases to ~/.backups/singularity/.
       - Exports (web):
         - Values: `dbBackupPane`
       - Contributes:
         - `Pane.Register` "db-backup"
-        - `Debug.Item` "DB Backup"
+        - `DebugApp.Sidebar` "DB Backup"
       - Server:
         - `GET /api/debug/backup-db`
         - `POST /api/debug/backup-db`
@@ -844,7 +843,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` "logs"
         - `Pane.Register` "logs-channel"
-        - `Debug.Item` "Logs"
+        - `DebugApp.Sidebar` "Logs"
       - Server:
         - `GET /api/logs/channels`
         - `WS /ws/logs`
@@ -853,7 +852,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `memoryPane`
       - Contributes:
         - `Pane.Register` "debug-memory"
-        - `Debug.Item` "Memory"
+        - `DebugApp.Sidebar` "Memory"
       - Server:
         - `GET /api/debug/memory`
         - `GET /api/debug/memory/:name`
@@ -865,7 +864,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `formatDuration`, `GanttSection`, `groupByPhase`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `useProfilingContext`
       - Contributes:
         - `Pane.Register` "debug-profiling"
-        - `Debug.Item` "Profiling"
+        - `DebugApp.Sidebar` "Profiling"
       - Slot contributors: `boot`, `build`
       - Plugins:
         - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
@@ -883,13 +882,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `queuePane`
       - Contributes:
         - `Pane.Register` "queue"
-        - `Debug.Item` "Queue"
+        - `DebugApp.Sidebar` "Queue"
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
       - Exports (web):
         - Values: `worktreeCleanupPane`
       - Contributes:
         - `Pane.Register` "worktree-cleanup"
-        - `Debug.Item` "Worktree Cleanup"
+        - `DebugApp.Sidebar` "Worktree Cleanup"
       - Server:
         - Uses: `tasks-core.getAttempt`, `tasks-core.listAttempts`, `tasks-core.listTasks`
         - `GET /api/debug/worktrees`
@@ -903,7 +902,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `eventsTestPane`
   - Contributes:
     - `Pane.Register` "events-test"
-    - `Debug.Item` "Events Test"
+    - `DebugApp.Sidebar` "Events Test"
   - Server:
     - Register: `events_test.log`, `events_test.pinged`
     - Uses: `database.db`

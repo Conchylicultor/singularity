@@ -9,7 +9,7 @@
   - Values: `broadcastsPane`
 - Contributes:
   - `Pane.Register` "debug-broadcasts"
-  - `Debug.Item` "Broadcasts"
+  - `DebugApp.Sidebar` "Broadcasts"
 - Server:
   - `GET /api/debug/broadcasts`
   - `PUT /api/debug/broadcasts`

@@ -13,6 +13,7 @@
 - Imported by: `shell`
 - Sub-plugins:
   - **`agent-manager`** — Agent manager app shell and layout.
+  - **`debug`** — Debug app.
   - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
   - **`file-explorer`** — File explorer app.
 

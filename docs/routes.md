@@ -116,7 +116,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
 - **`crashes`** — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
   - `/api/crashes (POST)`
 
-- **`debug`** — Debug tools sidebar group.
+- **`debug`** — Debug tools umbrella plugin.
   - Plugins:
     - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
       - `/api/debug/broadcasts (GET, PUT)`

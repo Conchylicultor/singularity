@@ -22,6 +22,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "agents/plugins/auto-launch/plugins/toggle", loader: () => import("@plugins/agents/plugins/auto-launch/plugins/toggle/web") },
   { name: "agents", loader: () => import("@plugins/agents/web") },
   { name: "apps/plugins/agent-manager/plugins/shell", loader: () => import("@plugins/apps/plugins/agent-manager/plugins/shell/web") },
+  { name: "apps/plugins/debug/plugins/shell", loader: () => import("@plugins/apps/plugins/debug/plugins/shell/web") },
   { name: "apps/plugins/deploy/plugins/servers", loader: () => import("@plugins/apps/plugins/deploy/plugins/servers/web") },
   { name: "apps/plugins/deploy/plugins/shell", loader: () => import("@plugins/apps/plugins/deploy/plugins/shell/web") },
   { name: "apps/plugins/file-explorer/plugins/shell", loader: () => import("@plugins/apps/plugins/file-explorer/plugins/shell/web") },

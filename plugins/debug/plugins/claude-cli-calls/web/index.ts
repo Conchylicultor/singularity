@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { Debug } from "@plugins/debug/web";
+import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { MdAutoAwesome } from "react-icons/md";
 import { claudeCliCallsPane } from "./panes";
 
@@ -13,7 +13,7 @@ export default {
     "Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.",
   contributions: [
     Pane.Register({ pane: claudeCliCallsPane }),
-    Debug.Item({
+    DebugApp.Sidebar({
       id: "claude-cli-calls",
       title: "Claude CLI Calls",
       icon: MdAutoAwesome,

@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { Debug } from "@plugins/debug/web";
+import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { MdSpeed } from "react-icons/md";
 import { profilingPane } from "./panes";
 
@@ -22,7 +22,7 @@ export default {
   description: "Gantt chart of build steps and server startup phases.",
   contributions: [
     Pane.Register({ pane: profilingPane }),
-    Debug.Item({
+    DebugApp.Sidebar({
       id: "profiling",
       title: "Profiling",
       icon: MdSpeed,

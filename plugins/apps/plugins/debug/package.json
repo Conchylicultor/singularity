@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-debug",
+  "description": "Debug app.",
+  "private": true,
+  "version": "0.0.1"
+}

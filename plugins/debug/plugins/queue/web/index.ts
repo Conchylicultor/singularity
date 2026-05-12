@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { Debug } from "@plugins/debug/web";
+import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { MdQueue } from "react-icons/md";
 import { queuePane } from "./panes";
 
@@ -13,7 +13,7 @@ export default {
     "Inspect and debug the jobs queue, events emission log, and active triggers.",
   contributions: [
     Pane.Register({ pane: queuePane }),
-    Debug.Item({
+    DebugApp.Sidebar({
       id: "queue",
       title: "Queue",
       icon: MdQueue,

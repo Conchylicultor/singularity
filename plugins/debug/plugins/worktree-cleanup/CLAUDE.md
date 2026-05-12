@@ -9,7 +9,7 @@
   - Values: `worktreeCleanupPane`
 - Contributes:
   - `Pane.Register` "worktree-cleanup"
-  - `Debug.Item` "Worktree Cleanup"
+  - `DebugApp.Sidebar` "Worktree Cleanup"
 - Server:
   - Uses: `tasks-core.getAttempt`, `tasks-core.listAttempts`, `tasks-core.listTasks`
   - `GET /api/debug/worktrees`
