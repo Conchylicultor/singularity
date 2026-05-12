@@ -150,6 +150,14 @@
       "name": "@singularity/plugin-apps-file-explorer-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/forge": {
+      "name": "@singularity/plugin-apps-forge",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/forge/plugins/shell": {
+      "name": "@singularity/plugin-apps-forge-shell",
+      "version": "0.0.1",
+    },
     "plugins/attempt-view": {
       "name": "@singularity/plugin-attempt-view",
       "version": "0.0.1",
@@ -1560,6 +1568,10 @@
     "@singularity/plugin-apps-file-explorer": ["@singularity/plugin-apps-file-explorer@workspace:plugins/apps/plugins/file-explorer"],
 
     "@singularity/plugin-apps-file-explorer-shell": ["@singularity/plugin-apps-file-explorer-shell@workspace:plugins/apps/plugins/file-explorer/plugins/shell"],
+
+    "@singularity/plugin-apps-forge": ["@singularity/plugin-apps-forge@workspace:plugins/apps/plugins/forge"],
+
+    "@singularity/plugin-apps-forge-shell": ["@singularity/plugin-apps-forge-shell@workspace:plugins/apps/plugins/forge/plugins/shell"],
 
     "@singularity/plugin-attempt-view": ["@singularity/plugin-attempt-view@workspace:plugins/attempt-view"],
 
