@@ -169,7 +169,7 @@ export function GoogleSetupPane() {
         <Step
           number={5}
           title="Enter credentials"
-          active={hasProject}
+          active={true}
           done={credentialsSaved}
         >
           <div className="flex flex-col gap-2">
@@ -185,21 +185,17 @@ export function GoogleSetupPane() {
                   placeholder="Client ID"
                   value={clientId}
                   onChange={(e) => setClientId(e.target.value)}
-                  disabled={!hasProject}
                 />
                 <Input
                   type="password"
                   placeholder="Client Secret"
                   value={clientSecret}
                   onChange={(e) => setClientSecret(e.target.value)}
-                  disabled={!hasProject}
                 />
                 <Button
                   variant="default"
                   size="sm"
-                  disabled={
-                    !hasProject || (!clientId && !clientSecret) || saving
-                  }
+                  disabled={(!clientId && !clientSecret) || saving}
                   onClick={handleSaveCredentials}
                 >
                   {saving ? "Saving…" : "Save"}
