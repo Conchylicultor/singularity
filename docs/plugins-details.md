@@ -1254,8 +1254,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `formatRelativeTime`, `RelativeTime`
     - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
       - Exports (web):
-        - Types: `RenderSlot`, `RenderSlotConfig`, `ReorderConfig`, `SlotItemMiddleware`, `SlotListMiddleware`
-        - Values: `defineRenderSlot`, `getRenderSlotConfig`, `isRenderSlot`, `registerSlotItemMiddleware`, `registerSlotListMiddleware`, `RenderSlotSubIdContext`
+        - Types: `RenderSlot`, `RenderSlotConfig`, `SlotItemMiddleware`, `SlotListMiddleware`
+        - Values: `defineRenderSlot`, `registerSlotItemMiddleware`, `registerSlotListMiddleware`, `RenderSlotSubIdContext`
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
       - Exports (web):
         - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
@@ -1271,13 +1271,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `RenameInputProps`, `RowChromeMenuHelpers`, `RowChromeProps`, `RowControls`, `RowMenuItem`, `TreeItem`, `TreeListContextValue`, `TreeListProps`
         - Values: `RenameInput`, `RowChrome`, `TreeList`, `useTreeListContext`, `useTreeRow`
 
-- **`reorder`** — Generic reorder primitive. Slot owners opt in via Reorder.area; hosts render with Reorder.useArea. Generic reorder primitive: per-worktree storage of slot contribution ranks.
+- **`reorder`** — Generic reorder primitive. Slots opt in via defineRenderSlot reorder config; DnD is automatic via middleware. Generic reorder primitive: per-worktree storage of slot contribution ranks.
   - Defines:
     - DB schema: `plugins/reorder/server/internal/tables.ts`
     - DB schema: `plugins/reorder/server/schema.ts`
   - Exports (web):
-    - Types: `GroupEntry`, `HostOverride`, `ReorderableSlot`, `ReorderConfig`, `ReorderGroup`, `SpacerItem`, `TopLevelEntry`, `UseAreaResult`
-    - Values: `isGroupEntry`, `isSpacer`, `itemKey`, `Reorder`, `setEditMode`, `SPACER_PREFIX`, `useEditMode`
+    - Values: `setEditMode`, `useEditMode`
   - Exports (server):
     - Values: `_reorderPrefs`, `reorderPrefsResource`
   - Exports (shared):
@@ -1288,7 +1287,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/reorder/:slotId`
     - `PATCH /api/reorder/:slotId`
     - `DELETE /api/reorder/:slotId/:contributionId`
-  - Imported by: `app-shell`, `apps`, `conversation-view`, `detail-sections`, `edit-mode`, `shell`
+  - Imported by: `edit-mode`
   - Endpoint callers: `groups`
   - Plugins:
     - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
