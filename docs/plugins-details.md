@@ -204,7 +204,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `config.Config`
       - Central:
-        - Register: `googleAuthRegistration`
         - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
       - Plugins:
         - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
@@ -221,7 +220,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `config.Config`
       - Central:
-        - Register: `notionAuthRegistration`
         - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
 
 - **`build`** — Trigger `./singularity build` from the toolbar.
@@ -232,7 +230,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Config.Spec`
     - `Pane.Register` "build"
   - Server:
-    - Register: `buildRunJob`
     - Uses: `config.Config`, `config.readConfig`, `database.db`
     - Resources: `build.history` (push), `build.mainAheadCount` (push)
     - `POST /api/build`
@@ -333,7 +330,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Config.Spec`
         - `Config.Section` "Category colors" → `CategoryColorSettings`
       - Server:
-        - Register: `classifyConversationJob`
         - Uses: `config.Config`, `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
         - `POST /api/conversation-category/:conversationId/classify`
         - `POST /api/conversation-category/:conversationId`
@@ -662,7 +658,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Conversation.AbovePromptInput` → `TurnSummaryCard`
             - `Config.Spec`
           - Server:
-            - Register: `generateTurnSummaryJob`
             - Uses: `config.Config`, `config.readConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:
@@ -723,11 +718,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `ConversationModelSchema`, `DEFAULT_MODEL`, `MODEL_REGISTRY`
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
       - Server:
-        - Register: `Runtime.define(apiRuntime)`
         - Uses: `conversations.Runtime`
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
       - Server:
-        - Register: `Runtime.define(tmuxRuntime)`
         - Uses: `conversations.Runtime`
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
       - Defines:

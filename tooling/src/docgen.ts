@@ -85,15 +85,12 @@ function renderPluginBody(
     }
   }
 
-  const serverRuntimeRegs = p.runtimeRegistrations?.filter((r) => r.runtime === "server");
+  const serverRuntimeRegs = p.runtimeRegistrations?.filter((r) => r.runtime === "server") ?? [];
   const serverEntries = [...p.server.httpRoutes, ...p.server.wsRoutes.map((r) => `WS ${r}`)];
-  const hasServerRegs = serverRuntimeRegs ? serverRuntimeRegs.length > 0 : p.server.registerTokens.length > 0;
-  if (serverEntries.length > 0 || p.server.apiUses.length > 0 || p.server.resources.length > 0 || hasServerRegs) {
+  if (serverEntries.length > 0 || p.server.apiUses.length > 0 || p.server.resources.length > 0 || serverRuntimeRegs.length > 0) {
     lines.push(`${bodyIndent}- Server:`);
-    if (serverRuntimeRegs && serverRuntimeRegs.length > 0) {
+    if (serverRuntimeRegs.length > 0) {
       lines.push(`${subIndent}- Register: ${serverRuntimeRegs.map((r) => `\`${r.doc.label ?? r.kind}\``).join(", ")}`);
-    } else if (p.server.registerTokens.length > 0) {
-      lines.push(`${subIndent}- Register: ${p.server.registerTokens.map((r) => `\`${r}\``).join(", ")}`);
     }
     if (p.server.apiUses.length > 0) {
       lines.push(`${subIndent}- Uses: ${p.server.apiUses.map((n) => `\`${n}\``).join(", ")}`);
@@ -106,20 +103,17 @@ function renderPluginBody(
     for (const r of serverEntries) lines.push(`${subIndent}- \`${r}\``);
   }
 
-  const centralRuntimeRegs = p.runtimeRegistrations?.filter((r) => r.runtime === "central");
+  const centralRuntimeRegs = p.runtimeRegistrations?.filter((r) => r.runtime === "central") ?? [];
   const centralEntries = [...p.central.httpRoutes, ...p.central.wsRoutes.map((r) => `WS ${r}`)];
-  const hasCentralRegs = centralRuntimeRegs ? centralRuntimeRegs.length > 0 : p.central.registerTokens.length > 0;
   if (
     centralEntries.length > 0 ||
     p.central.apiUses.length > 0 ||
     p.central.resources.length > 0 ||
-    hasCentralRegs
+    centralRuntimeRegs.length > 0
   ) {
     lines.push(`${bodyIndent}- Central:`);
-    if (centralRuntimeRegs && centralRuntimeRegs.length > 0) {
+    if (centralRuntimeRegs.length > 0) {
       lines.push(`${subIndent}- Register: ${centralRuntimeRegs.map((r) => `\`${r.doc.label ?? r.kind}\``).join(", ")}`);
-    } else if (p.central.registerTokens.length > 0) {
-      lines.push(`${subIndent}- Register: ${p.central.registerTokens.map((t) => `\`${t}\``).join(", ")}`);
     }
     if (p.central.apiUses.length > 0) {
       lines.push(`${subIndent}- Uses: ${p.central.apiUses.map((n) => `\`${n}\``).join(", ")}`);

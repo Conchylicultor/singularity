@@ -13,7 +13,6 @@
 - Server:
   - Uses: `config.Config`
 - Central:
-  - Register: `googleAuthRegistration`
   - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
 - Sub-plugins:
   - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.

@@ -38,7 +38,6 @@ export interface RuntimeDetail {
   httpRoutes: string[];
   wsRoutes: string[];
   resources: { key: string; mode: string }[];
-  registerTokens: string[];
   apiUses: string[];
 }
 
@@ -477,33 +476,6 @@ function parseResources(serverDir: string): { key: string; mode: string }[] {
   return out.sort((a, b) => a.key.localeCompare(b.key));
 }
 
-function parseRegisterTokens(src: string): string[] {
-  const idx = src.search(/\bregister\s*:\s*\[/);
-  if (idx < 0) return [];
-  const start = src.indexOf("[", idx);
-  const end = matchBracket(src, start, "[", "]");
-  if (end < 0) return [];
-  const body = src.slice(start + 1, end).trim();
-  if (!body) return [];
-  const tokens: string[] = [];
-  let depth = 0;
-  let cur = "";
-  for (let i = 0; i < body.length; i++) {
-    const c = body[i]!;
-    if (c === "(" || c === "[" || c === "{") depth++;
-    else if (c === ")" || c === "]" || c === "}") depth--;
-    else if (c === "," && depth === 0) {
-      const t = cur.trim();
-      if (t) tokens.push(t);
-      cur = "";
-      continue;
-    }
-    cur += c;
-  }
-  const t = cur.trim();
-  if (t) tokens.push(t);
-  return tokens;
-}
 
 function parseEntityExtensionCalls(dbFiles: string[]): RawExtRef[] {
   const out: RawExtRef[] = [];
@@ -703,13 +675,11 @@ function collectPlugin(dir: string, pluginsRoot: string): CollectedPlugin {
   const serverDir = join(dir, "server");
   const serverApiUses = existsSync(serverDir) ? parseServerApiUses(serverDir, basename(dir)) : [];
   const serverResources = existsSync(serverDir) ? parseResources(serverDir) : [];
-  const serverRegister = serverSrc ? parseRegisterTokens(serverSrc) : [];
   const centralDir = join(dir, "central");
   const centralApiUses = existsSync(centralDir)
     ? parseServerApiUses(centralDir, basename(dir), "central")
     : [];
   const centralResources = existsSync(centralDir) ? parseResources(centralDir) : [];
-  const centralRegister = centralSrc ? parseRegisterTokens(centralSrc) : [];
   const webDir = join(dir, "web");
   const coreDir = join(dir, "core");
   const sharedDir = join(dir, "shared");
@@ -756,14 +726,12 @@ function collectPlugin(dir: string, pluginsRoot: string): CollectedPlugin {
         httpRoutes: serverHttpRoutes,
         wsRoutes: serverWsRoutes,
         resources: serverResources,
-        registerTokens: serverRegister,
         apiUses: serverApiUses,
       },
       central: {
         httpRoutes: centralHttpRoutes,
         wsRoutes: centralWsRoutes,
         resources: centralResources,
-        registerTokens: centralRegister,
         apiUses: centralApiUses,
       },
       webApiUses,
