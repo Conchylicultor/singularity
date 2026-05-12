@@ -3,15 +3,12 @@ import type { PluginDefinition } from "@core";
 export { defineRenderSlot, RenderSlotSubIdContext } from "./internal/render-slot";
 export type { RenderSlot, RenderSlotConfig } from "./internal/render-slot";
 export type {
-  ReorderConfig,
   SlotItemMiddleware,
   SlotListMiddleware,
 } from "./internal/types";
 export {
   registerSlotItemMiddleware,
   registerSlotListMiddleware,
-  isRenderSlot,
-  getRenderSlotConfig,
 } from "./internal/registry";
 
 export default {

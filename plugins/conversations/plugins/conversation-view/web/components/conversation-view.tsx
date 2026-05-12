@@ -1,75 +1,13 @@
-import { useMemo } from "react";
-import type { ComponentType } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
-import { Reorder, type UseAreaResult } from "@plugins/reorder/web";
 import { ActionBarView } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
-import { Conversation, type ConversationRecord } from "../slots";
+import { Conversation } from "../slots";
 import { conversationPane } from "../panes";
 import { PromptInsertProvider } from "../prompt-insert-context";
 import { JsonlPane } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
-type PromptBarItem = {
-  id: string;
-  excludeFromReorder?: boolean;
-  section: string;
-  sectionOrder?: number;
-  component: ComponentType<{ conversation: ConversationRecord }>;
-};
-
-function PromptBar({
-  area,
-  conversation,
-}: {
-  area: UseAreaResult<PromptBarItem>;
-  conversation: ConversationRecord;
-}) {
-  // Sections inside the PromptBar are externally ordered by `sectionOrder`;
-  // items within a section are reorderable by user via the rank.
-  const sections = useMemo(() => {
-    const map = new Map<string, { order: number; items: typeof area.items }>();
-    for (const item of area.items) {
-      const entry = map.get(item.section) ?? {
-        order: item.sectionOrder ?? 0,
-        items: [],
-      };
-      entry.items.push(item);
-      map.set(item.section, entry);
-    }
-    return [...map.entries()].sort(([, a], [, b]) => a.order - b.order);
-  }, [area]);
-
-  return (
-    <area.DndWrapper>
-      <div className="flex items-center gap-2">
-        {sections.map(([section, { items: sectionItems }], idx) => (
-          <div key={section} className="flex items-center gap-1.5">
-            {idx > 0 && <div className="h-5 w-px bg-border" />}
-            {sectionItems.map((item) => {
-              const Component = item.component;
-              return (
-                <area.ReorderItem key={item.id} item={item}>
-                  <PluginErrorBoundary slot={Conversation.PromptBar.id}>
-                    <Component conversation={conversation} />
-                  </PluginErrorBoundary>
-                </area.ReorderItem>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    </area.DndWrapper>
-  );
-}
-
-/**
- * Visual body of the conversation pane. Reads the loaded conversation from
- * `conversationPane.useData()` (provided by `ConversationProvide` either at
- * the chain level via Miller or wrapped explicitly by an embedding host).
- */
 export function ConversationView() {
   const { conversation } = conversationPane.useData();
-  const promptBar = Reorder.useArea(Conversation.PromptBar);
+  const promptBarItems = Conversation.PromptBar.useContributions();
   const promptInputItems = Conversation.PromptInput.useContributions();
   const abovePromptInputItems = Conversation.AbovePromptInput.useContributions();
   const titlePrefixItems = Conversation.TitlePrefix.useContributions();
@@ -77,7 +15,7 @@ export function ConversationView() {
 
   const showBottomBar =
     !!PromptInputComponent ||
-    promptBar.items.length > 0 ||
+    promptBarItems.length > 0 ||
     abovePromptInputItems.length > 0;
 
   return (
@@ -110,9 +48,16 @@ export function ConversationView() {
                   {PromptInputComponent && (
                     <PromptInputComponent conversation={conversation} />
                   )}
-                  {promptBar.items.length > 0 && (
+                  {promptBarItems.length > 0 && (
                     <div className="flex justify-end">
-                      <PromptBar area={promptBar} conversation={conversation} />
+                      <div className="flex items-center gap-1.5">
+                        <Conversation.PromptBar.Render>
+                          {(item) => {
+                            const Component = item.component;
+                            return <Component conversation={conversation} />;
+                          }}
+                        </Conversation.PromptBar.Render>
+                      </div>
                     </div>
                   )}
                 </div>

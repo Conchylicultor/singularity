@@ -1,5 +1,4 @@
 import {
-  createContext,
   Fragment,
   useCallback,
   useContext,
@@ -9,15 +8,12 @@ import {
 } from "react";
 import { defineSlot, PluginRuntimeContext, type Slot } from "@core";
 import type { Contribution } from "@core";
-import type { ReorderConfig } from "./types";
 import {
   getSlotItemMiddlewares,
   getSlotListMiddlewares,
-  registerRenderSlotConfig,
 } from "./registry";
 
 export interface RenderSlotConfig<P> {
-  reorder?: ReorderConfig<P & { id: string }>;
   docLabel?: (props: P & { id: string }) => string | undefined;
 }
 
@@ -26,11 +22,14 @@ interface RenderProps<P> {
   subId?: string;
 }
 
-export interface RenderSlot<P> extends Slot<P & { id: string }> {
-  Render: ComponentType<RenderProps<P & { id: string }>>;
-  readonly reorderConfig: ReorderConfig<P & { id: string }>;
+export interface RenderSlot<P>
+  extends Slot<P & { id: string; excludeFromReorder?: boolean }> {
+  Render: ComponentType<
+    RenderProps<P & { id: string; excludeFromReorder?: boolean }>
+  >;
 }
 
+import { createContext } from "react";
 export const RenderSlotSubIdContext = createContext<string | undefined>(
   undefined,
 );
@@ -39,17 +38,12 @@ export function defineRenderSlot<P>(
   id: string,
   config?: RenderSlotConfig<P>,
 ): RenderSlot<P> {
-  const slot = defineSlot<P & { id: string }>(id, {
-    docLabel: config?.docLabel,
-  });
+  const slot = defineSlot<P & { id: string; excludeFromReorder?: boolean }>(
+    id,
+    { docLabel: config?.docLabel },
+  );
 
   const renderSlot = slot as unknown as RenderSlot<P>;
-  (renderSlot as { reorderConfig: ReorderConfig<P & { id: string }> }).reorderConfig =
-    config?.reorder ?? {};
-  registerRenderSlotConfig(
-    id,
-    renderSlot.reorderConfig as ReorderConfig<unknown>,
-  );
 
   renderSlot.Render = function SlotRender({
     children,

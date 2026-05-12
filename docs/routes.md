@@ -193,7 +193,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - `/api/plugin-view/tree (GET)`
 
-- **`reorder`** — Generic reorder primitive. Slot owners opt in via Reorder.area; hosts render with Reorder.useArea. Generic reorder primitive: per-worktree storage of slot contribution ranks.
+- **`reorder`** — Generic reorder primitive. Slots opt in via defineRenderSlot reorder config; DnD is automatic via middleware. Generic reorder primitive: per-worktree storage of slot contribution ranks.
   - `/api/reorder/:slotId (GET, PATCH)`
   - `/api/reorder/:slotId/:contributionId (DELETE)`
   - Plugins:

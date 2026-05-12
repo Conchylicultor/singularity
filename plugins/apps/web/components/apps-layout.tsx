@@ -1,5 +1,4 @@
-import { useSyncExternalStore, type ComponentType, type ReactNode } from "react";
-import { Reorder } from "@plugins/reorder/web";
+import { useSyncExternalStore } from "react";
 import { TooltipProvider } from "@plugins/primitives/plugins/tooltip/web";
 import { PaneBasePathContext } from "@plugins/primitives/plugins/pane/web";
 import { Apps } from "../slots";
@@ -26,10 +25,10 @@ function appMatchesPath(appPath: string, pathname: string): boolean {
 }
 
 export function AppsLayout() {
-  const appsArea = Reorder.useArea(Apps.App);
+  const allApps = Apps.App.useContributions();
   const pathname = usePathname();
 
-  const sorted = [...appsArea.items].sort(
+  const sorted = [...allApps].sort(
     (a, b) => b.path.length - a.path.length,
   );
   const activeApp = sorted.find((a) => appMatchesPath(a.path, pathname));
@@ -46,12 +45,7 @@ export function AppsLayout() {
         className="flex h-full min-h-0"
         style={{ "--app-rail-width": "2.5rem" } as React.CSSProperties}
       >
-        <AppRail
-          items={appsArea.items}
-          activeAppId={activeApp?.id}
-          DndWrapper={appsArea.DndWrapper}
-          ReorderItem={appsArea.ReorderItem as ComponentType<{ item: (typeof appsArea.items)[number]; children: ReactNode }>}
-        />
+        <AppRail activeAppId={activeApp?.id} />
         <div className="min-w-0 flex-1">
           {activeApp && (
             <PaneBasePathContext.Provider value={basePath}>
