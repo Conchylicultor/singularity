@@ -23,6 +23,7 @@ export interface UpdateConversationPatch {
   waitingFor?: string | null;
   endedAt?: Date | null;
   updatedAt?: Date;
+  closeRequested?: boolean;
 }
 
 // Resolve the task id of the attempt that owns this conversation. Returns
@@ -108,6 +109,7 @@ export async function updateConversation(
   if (patch.claudeSessionId !== undefined) dbPatch.claudeSessionId = patch.claudeSessionId;
   if (patch.waitingFor !== undefined) dbPatch.waitingFor = patch.waitingFor;
   if (patch.endedAt !== undefined) dbPatch.endedAt = patch.endedAt;
+  if (patch.closeRequested !== undefined) dbPatch.closeRequested = patch.closeRequested;
 
   await db.update(_conversations).set(dbPatch).where(eq(_conversations.id, id));
   if (taskId) await emitStatusChangeIfChanged(taskId, before);

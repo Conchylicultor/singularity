@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
+import { updateConversation } from "@plugins/tasks-core/server";
 import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
 import { setStatus } from "./state";
 
@@ -26,6 +27,7 @@ Only call this in response to the push-and-exit prompt. If anything went wrong o
   inputSchema: {},
   async handler(_args, { conversationId }) {
     await setStatus(conversationId, "clean", null);
+    await updateConversation(conversationId, { closeRequested: true });
     await exitCleanFinalizeJob.enqueue(
       { conversationId },
       { jobKey: conversationId },

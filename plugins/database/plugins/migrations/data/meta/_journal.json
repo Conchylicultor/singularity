@@ -610,6 +610,13 @@
       "tag": "20260512_181603_2623faba__merged_20260512_1816",
       "hash": "2623faba",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1778620657000,
+      "tag": "20260512_211737_17a17f5b__add_close_requested",
+      "hash": "17a17f5b",
+      "breakpoints": true
     }
   ]
 }

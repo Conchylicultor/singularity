@@ -119,5 +119,6 @@ export const _conversations = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     endedAt: timestamp("ended_at", { withTimezone: true }),
+    closeRequested: boolean("close_requested").notNull().default(false),
   },
 );
