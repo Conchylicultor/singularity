@@ -2,6 +2,7 @@ import { defineSlot } from "@core";
 import type { ComponentType } from "react";
 import type { Conversation as ConversationRecord } from "@plugins/tasks-core/core";
 import { Reorder } from "@plugins/reorder/web";
+import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 
 export type { Conversation as ConversationRecord } from "@plugins/tasks-core/core";
 
@@ -17,11 +18,9 @@ export const Conversation = {
   PromptInput: defineSlot<{
     component: ComponentType<{ conversation: ConversationRecord }>;
   }>("conversation.prompt-input"),
-  AbovePromptInput: Reorder.area(
-    defineSlot<{
-      component: ComponentType<{ conversation: ConversationRecord }>;
-    }>("conversation.above-prompt-input"),
-  ),
+  AbovePromptInput: defineRenderSlot<{
+    component: ComponentType<{ conversation: ConversationRecord }>;
+  }>("conversation.above-prompt-input"),
   // Renders inline before the conversation pane title (e.g. agent avatar).
   // Multiple contributions render in the order they were registered.
   TitlePrefix: defineSlot<{

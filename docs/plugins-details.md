@@ -1315,15 +1315,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Core.Root` → `ToasterRoot`
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
-  - Defines:
-    - Slots: `Stats.Chart`
   - Exports (web):
     - Values: `Stats`, `statsPane`, `useShowEmptyDays`
   - Contributes:
     - `Pane.Register` "stats"
     - `Shell.Sidebar` "Stats" → `component`
   - Imported by: `commits`, `cost`, `tasks`
-  - Slot contributors: `commits`, `cost`, `tasks`
   - Plugins:
     - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
       - Defines:

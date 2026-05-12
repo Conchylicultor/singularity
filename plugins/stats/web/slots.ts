@@ -1,9 +1,8 @@
-import { defineSlot } from "@core";
+import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { ComponentType } from "react";
 
 export const Stats = {
-  Chart: defineSlot<{
-    id: string;
+  Chart: defineRenderSlot<{
     title: string;
     component: ComponentType;
   }>("stats.chart", { docLabel: (p) => p.title }),

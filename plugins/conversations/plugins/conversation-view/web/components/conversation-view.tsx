@@ -71,14 +71,14 @@ export function ConversationView() {
   const { conversation } = conversationPane.useData();
   const promptBar = Reorder.useArea(Conversation.PromptBar);
   const promptInputItems = Conversation.PromptInput.useContributions();
-  const abovePromptInput = Reorder.useArea(Conversation.AbovePromptInput);
+  const abovePromptInputItems = Conversation.AbovePromptInput.useContributions();
   const titlePrefixItems = Conversation.TitlePrefix.useContributions();
   const PromptInputComponent = promptInputItems[0]?.component ?? null;
 
   const showBottomBar =
     !!PromptInputComponent ||
     promptBar.items.length > 0 ||
-    abovePromptInput.items.length > 0;
+    abovePromptInputItems.length > 0;
 
   return (
     <PaneChrome
@@ -104,18 +104,9 @@ export function ConversationView() {
             {showBottomBar && (
               <PromptInsertProvider>
                 <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-1.5 pb-2">
-                  <abovePromptInput.DndWrapper>
-                    {abovePromptInput.items.map((item) => {
-                      const Cmp = item.component;
-                      return (
-                        <abovePromptInput.ReorderItem key={item.id} item={item}>
-                          <PluginErrorBoundary slot={Conversation.AbovePromptInput.id}>
-                            <Cmp conversation={conversation} />
-                          </PluginErrorBoundary>
-                        </abovePromptInput.ReorderItem>
-                      );
-                    })}
-                  </abovePromptInput.DndWrapper>
+                  <Conversation.AbovePromptInput.Render>
+                    {(item) => <item.component conversation={conversation} />}
+                  </Conversation.AbovePromptInput.Render>
                   {PromptInputComponent && (
                     <PromptInputComponent conversation={conversation} />
                   )}

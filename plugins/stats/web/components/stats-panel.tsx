@@ -39,15 +39,14 @@ function StatsContent() {
         {charts.length === 0 ? (
           <div className="text-muted-foreground text-sm">No stats available.</div>
         ) : (
-          charts.map((c) => (
-            <section
-              key={c.id}
-              className="bg-card rounded-lg border p-4"
-            >
-              <h2 className="mb-4 text-sm font-medium">{c.title}</h2>
-              <c.component />
-            </section>
-          ))
+          <Stats.Chart.Render>
+            {(item) => (
+              <section className="bg-card rounded-lg border p-4">
+                <h2 className="mb-4 text-sm font-medium">{item.title}</h2>
+                <item.component />
+              </section>
+            )}
+          </Stats.Chart.Render>
         )}
       </div>
     </div>
