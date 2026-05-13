@@ -400,7 +400,7 @@ function parsePaneDefinitions(webDir: string): Map<string, PaneDefinition> {
       if (closeIdx < 0) continue;
       const body = src.slice(openIdx + 1, closeIdx);
       const id = parseStringField(body, "id");
-      const path = parseStringField(body, "path");
+      const path = parseStringField(body, "path") ?? parseStringField(body, "segment");
       if (id) out.set(varName, { id, path });
     }
   }

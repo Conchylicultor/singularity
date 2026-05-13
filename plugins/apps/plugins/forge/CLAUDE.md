@@ -8,6 +8,7 @@ Plugin graph inspection and publish workflows.
 
 - Description: Forge app — plugin graph inspection and publish workflows.
 - Sub-plugins:
+  - **`catalog`** — Central view of all plugin contributions aggregated by type.
   - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
   - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
 

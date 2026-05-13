@@ -26,6 +26,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "apps/plugins/deploy/plugins/servers", loader: () => import("@plugins/apps/plugins/deploy/plugins/servers/web") },
   { name: "apps/plugins/deploy/plugins/shell", loader: () => import("@plugins/apps/plugins/deploy/plugins/shell/web") },
   { name: "apps/plugins/file-explorer/plugins/shell", loader: () => import("@plugins/apps/plugins/file-explorer/plugins/shell/web") },
+  { name: "apps/plugins/forge/plugins/catalog", loader: () => import("@plugins/apps/plugins/forge/plugins/catalog/web") },
   { name: "apps/plugins/forge/plugins/publish", loader: () => import("@plugins/apps/plugins/forge/plugins/publish/web") },
   { name: "apps/plugins/forge/plugins/shell", loader: () => import("@plugins/apps/plugins/forge/plugins/shell/web") },
   { name: "apps", loader: () => import("@plugins/apps/web") },

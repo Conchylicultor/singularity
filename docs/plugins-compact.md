@@ -35,6 +35,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`shell`** — App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.
     - **`forge`** — Forge app — plugin graph inspection and publish workflows.
       - Plugins:
+        - **`catalog`** — Central view of all plugin contributions aggregated by type.
         - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
         - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
 

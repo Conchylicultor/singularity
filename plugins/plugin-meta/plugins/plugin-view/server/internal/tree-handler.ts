@@ -76,6 +76,17 @@ function toApiNode(node: TreePluginNode, symbolConsumers: Map<string, Map<string
         callers: node.endpointCallers.sort(),
       })),
       resources: [...node.server.resources, ...node.central.resources],
+      contributions: node.contributions.map((c) => ({
+        slot: c.slot,
+        id: c.props["id"]?.replace(/^["'`]|["'`]$/g, ""),
+        paneId: c.paneId,
+        panePath: c.panePath,
+      })),
+      commands: node.commands.map((c) => ({
+        groupName: c.groupName,
+        memberName: c.memberName,
+        commandId: c.commandId,
+      })),
     },
   };
 }

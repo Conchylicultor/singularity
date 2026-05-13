@@ -22,12 +22,27 @@ export interface ResourceInfo {
   mode: string;
 }
 
+export interface ContributionInfo {
+  slot: string;
+  id?: string;
+  paneId?: string;
+  panePath?: string;
+}
+
+export interface CommandInfo {
+  groupName: string;
+  memberName: string;
+  commandId: string;
+}
+
 export interface PublicApi {
   exports: Record<"web" | "server" | "central" | "core" | "shared", BarrelExport[]>;
   importedBy: string[];
   slots: SlotInfo[];
   routes: RouteInfo[];
   resources: ResourceInfo[];
+  contributions: ContributionInfo[];
+  commands: CommandInfo[];
 }
 
 export interface PluginNode {

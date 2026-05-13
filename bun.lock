@@ -154,6 +154,10 @@
       "name": "@singularity/plugin-apps-forge",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/forge/plugins/catalog": {
+      "name": "@singularity/plugin-apps-forge-catalog",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/forge/plugins/publish": {
       "name": "@singularity/plugin-apps-forge-publish",
       "version": "0.0.1",
@@ -1582,6 +1586,8 @@
     "@singularity/plugin-apps-file-explorer-shell": ["@singularity/plugin-apps-file-explorer-shell@workspace:plugins/apps/plugins/file-explorer/plugins/shell"],
 
     "@singularity/plugin-apps-forge": ["@singularity/plugin-apps-forge@workspace:plugins/apps/plugins/forge"],
+
+    "@singularity/plugin-apps-forge-catalog": ["@singularity/plugin-apps-forge-catalog@workspace:plugins/apps/plugins/forge/plugins/catalog"],
 
     "@singularity/plugin-apps-forge-publish": ["@singularity/plugin-apps-forge-publish@workspace:plugins/apps/plugins/forge/plugins/publish"],
 

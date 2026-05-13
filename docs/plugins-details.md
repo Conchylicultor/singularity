@@ -162,6 +162,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Apps.App` "File Explorer" → `FileExplorerLayout`
     - **`forge`** — Forge app — plugin graph inspection and publish workflows.
       - Plugins:
+        - **`catalog`** — Central view of all plugin contributions aggregated by type.
+          - Defines:
+            - Slots: `Catalog.Category`
+          - Exports (web):
+            - Values: `Catalog`
+          - Contributes:
+            - `Pane.Register` "catalog"
+            - `Forge.Sidebar` "Catalog" → `component`
+            - `Catalog.Category` "Routes" → `RoutesTable`
+            - `Catalog.Category` "Panes" → `PanesTable`
+            - `Catalog.Category` "Slots" → `SlotsTable`
+            - `Catalog.Category` "Resources" → `ResourcesTable`
+            - `Catalog.Category` "Contributions" → `ContributionsTable`
         - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
           - Contributes:
             - `Pane.Register` "publish"
@@ -1135,7 +1148,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `buildPluginTree`, `enrichPluginTreeDocs`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Exports (core):
-        - Types: `BarrelExport`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`
+        - Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`
       - Exports (web):
         - Types: `PluginNode`, `PluginTreePayload`
         - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
@@ -1143,7 +1156,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Pane.Register` "plugin-view"
       - Server:
         - `GET /api/plugin-view/tree`
-      - Endpoint callers: `plugin-link`, `publish`
+      - Endpoint callers: `catalog`, `plugin-link`, `publish`
       - Plugins:
         - **`public-api`** — Displays the plugin's public exports, slots, routes, and consumer relationships.
           - Contributes:
@@ -1230,7 +1243,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneSlot`, `TypeMarker`
         - Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Outlet`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneDepthContext`, `PaneHistoryButtons`, `PaneIconAction`, `PaneLayoutContext`, `PaneLevel`, `PaneMatchContext`, `PaneRouter`, `parseUrl`, `setBasePath`, `stripBasePath`, `syncChainFromUrl`, `type`, `useCurrentPane`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `broadcasts`, `build`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
       - Exports (core):
         - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `rewriteAttachmentMarkdown`

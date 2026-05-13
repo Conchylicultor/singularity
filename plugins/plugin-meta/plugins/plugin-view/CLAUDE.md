@@ -14,7 +14,7 @@ sibling plugins (e.g. publish's tree component).
 
 - Description: Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
 - Exports (core):
-  - Types: `BarrelExport`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`
+  - Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`
 - Exports (web):
   - Types: `PluginNode`, `PluginTreePayload`
   - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
@@ -22,7 +22,7 @@ sibling plugins (e.g. publish's tree component).
   - `Pane.Register` "plugin-view"
 - Server:
   - `GET /api/plugin-view/tree`
-- Endpoint callers: `plugin-link`, `publish`
+- Endpoint callers: `catalog`, `plugin-link`, `publish`
 - Sub-plugins:
   - **`public-api`** — Displays the plugin's public exports, slots, routes, and consumer relationships.
   - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
