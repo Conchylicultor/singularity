@@ -11,19 +11,9 @@ Companion to [`2026-05-04-plugins-foreign-table-handle.md`](./2026-05-04-plugins
 
 ## Caveats
 
-### 1. `_tasksAutoStartExt` is still hand-rolled
+### 1. ~~`_tasksAutoStartExt` is still hand-rolled~~ — **Resolved**
 
-The plan's Batch 2.8 (adopt `_tasksAutoStartExt` into `defineExtension`) is **partial**. The barrel re-export was dropped and `mutations.ts` no longer calls `getExtension`/`upsertExtension` (those helpers are gone), but the table itself is still a raw `pgTable("tasks_ext_auto_start", …)` rather than a handle.
-
-**Why it can't move yet.** `plugins/tasks/plugins/auto-start/server/internal/tables.ts` carries this comment from before the refactor:
-
-> N.B.: The FK to tasks.id is NOT declared here — importing `@plugins/tasks-core/server` would pull `generate-title.ts → claude-cli → paths/bins → Bun.which` at module level, which crashes drizzle-kit's Node.js evaluator.
-
-`defineExtension(_tasks, "auto_start", …)` requires importing `_tasks` from `@plugins/tasks-core/server`, which trips the same crash. Until that import chain is detoxified (move `Bun.which` out of module-load time, or split the barrel so `_tasks` doesn't pull `claude-cli` transitively), `_tasksAutoStartExt` can't go through the factory.
-
-**Current state.** `mutations.ts` does the get/upsert as inlined raw drizzle on `_tasksAutoStartExt`. The table is no longer barrel-exported, so the leak is closed even though the API isn't unified. From the outside, callers go through `getTaskAutoStart` / `setTaskAutoStart` / `claimAutoStart`, not the table — so the contract is already protocol-shaped, just not via the shared primitive.
-
-**What to fix later.** Detoxify the `tasks-core` server-barrel module-load surface (no `Bun.which` or other host probing at import time). Once `_tasks` can be imported safely, replace the hand-rolled pgTable with `defineExtension`.
+**Resolved (2026-05-13).** drizzle-kit switched to `bunx`, eliminating the `Bun.which` crash. `tables.ts` now uses `defineExtension(_tasks, "auto_start", …)` and `mutations.ts` uses the handle's `.get()`, `.upsert()`, and `.delete()` methods. The only raw-drizzle query remaining is `claimAutoStart`, which needs `.returning()` on delete for atomic CAS — a legitimate use of the `.table` escape hatch.
 
 ### 2. `EntityExtension.upsert` is call-site generic on the patch type
 
@@ -77,15 +67,9 @@ Each consumer must add `export const _xxxTable = handle.table` to its `tables.ts
 
 **Possible follow-up.** Add a built-in check that scans every call to `Attachments.defineLink` / `EntityExtensions.defineExtension` and verifies the same module exports `<handle>.table`. Trivial to implement; closes the foot-gun.
 
-### 5. `auto-start/CLAUDE.md` carries stale prose
+### 5. ~~`auto-start/CLAUDE.md` carries stale prose~~ — **Resolved**
 
-The plugin's autogen description says:
-
-> Owns the tasks_ext_auto_start side-table via the entity-extensions primitive.
-
-That was true before this refactor. It isn't anymore — the table is hand-rolled (see caveat #1) and `mutations.ts` uses raw drizzle, not `getExtension`/`upsertExtension`. Cosmetic; doesn't affect runtime, but a future reader will be misled.
-
-**Fix.** Update the `description` field in the plugin's `package.json` (or wherever the autogen pulls from) to "Owns the tasks_ext_auto_start side-table; uses raw drizzle pending the entity-extensions adoption (see research/2026-05-04-infra-plugins-foreign-table-handle-caveats.md)". Once caveat #1 is resolved, revert the description.
+**Resolved (2026-05-13).** Caveat #1 is resolved — the description is now accurate.
 
 ### 6. `InferSelectModel<T>` / `InferInsertModel<T>` casts inside handle methods
 
@@ -117,11 +101,11 @@ This was deliberate (the agreed answer was to expose `.table` rather than grow t
 
 | Caveat | Impact | Effort to fix |
 |---|---|---|
-| `_tasksAutoStartExt` not migrated | API inconsistency (intra-plugin) | High — needs `tasks-core` barrel detoxification |
+| ~~`_tasksAutoStartExt` not migrated~~ | ~~API inconsistency~~ | **Resolved** |
 | `upsert<U>` call-site generic | Reader confusion | Low — investigate type alternatives |
 | `.table` escape behavioral, not enforced | Future drift | Medium — new ESLint rule or check |
 | `_xxxTable` re-export manual | Silent migration drop on omission | Low — new check on factory call sites |
-| `auto-start` CLAUDE.md prose | Stale doc | Trivial |
+| ~~`auto-start` CLAUDE.md prose~~ | ~~Stale doc~~ | **Resolved** |
 | Drizzle inference casts in methods | Hidden drift on drizzle upgrade | Low — re-typecheck without casts on next bump |
 | No `remove` on AttachmentLink | None today | Trivial when needed |
 | No `entries` on EntityExtension | `.table` escape used in 6 resource loaders | Low — add one method |

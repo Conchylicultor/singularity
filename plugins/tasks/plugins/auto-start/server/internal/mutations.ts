@@ -2,18 +2,12 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _tasks } from "@plugins/tasks-core/server";
 import { tasksAutoStartResource } from "./resource";
-import { _tasksAutoStartExt } from "./tables";
+import { tasksAutoStart, _tasksAutoStartExt } from "./tables";
 
 export async function getTaskAutoStart(id: string) {
-  const rows = await db
-    .select()
-    .from(_tasksAutoStartExt)
-    .where(eq(_tasksAutoStartExt.parentId, id))
-    .limit(1);
-  return rows[0];
+  return tasksAutoStart.get(id);
 }
 
-// Write or clear the auto-start ext-table row. Pass `null` to clear.
 export async function setTaskAutoStart(
   id: string,
   autoStart: { model: "opus" | "sonnet" } | null,
@@ -27,20 +21,12 @@ export async function setTaskAutoStart(
   if (!task) return false;
   if (autoStart) {
     const now = new Date();
-    await db
-      .insert(_tasksAutoStartExt)
-      .values({
-        parentId: id,
-        autoStartAt: now,
-        autoStartModel: autoStart.model,
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: _tasksAutoStartExt.parentId,
-        set: { autoStartAt: now, autoStartModel: autoStart.model, updatedAt: now },
-      });
+    await tasksAutoStart.upsert(id, {
+      autoStartAt: now,
+      autoStartModel: autoStart.model,
+    });
   } else {
-    await db.delete(_tasksAutoStartExt).where(eq(_tasksAutoStartExt.parentId, id));
+    await tasksAutoStart.delete(id);
   }
   tasksAutoStartResource.notify();
   return true;
