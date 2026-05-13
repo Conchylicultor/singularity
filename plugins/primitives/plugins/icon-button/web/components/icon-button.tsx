@@ -4,6 +4,7 @@ import {
   WithTooltip,
   Kbd,
 } from "@plugins/primitives/plugins/tooltip/web";
+import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 
 export interface IconButtonProps
   extends Omit<ComponentProps<typeof Button>, "children"> {
@@ -27,7 +28,7 @@ export function IconButton({
   const content = shortcut ? (
     <>
       {tooltip ?? label}
-      <Kbd>{shortcut}</Kbd>
+      <Kbd>{formatShortcutLabel(shortcut)}</Kbd>
     </>
   ) : (
     tooltip ?? label

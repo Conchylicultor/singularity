@@ -149,6 +149,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "primitives/plugins/rank", loader: () => import("@plugins/primitives/plugins/rank/web") },
   { name: "primitives/plugins/relative-time", loader: () => import("@plugins/primitives/plugins/relative-time/web") },
   { name: "primitives/plugins/search", loader: () => import("@plugins/primitives/plugins/search/web") },
+  { name: "primitives/plugins/shortcuts", loader: () => import("@plugins/primitives/plugins/shortcuts/web") },
   { name: "primitives/plugins/slot-render", loader: () => import("@plugins/primitives/plugins/slot-render/web") },
   { name: "primitives/plugins/syntax-highlight", loader: () => import("@plugins/primitives/plugins/syntax-highlight/web") },
   { name: "primitives/plugins/tooltip", loader: () => import("@plugins/primitives/plugins/tooltip/web") },

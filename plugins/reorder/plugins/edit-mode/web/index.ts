@@ -1,7 +1,8 @@
-import { Core, type PluginDefinition } from "@core";
+import { type PluginDefinition } from "@core";
 import { Shell } from "@plugins/shell/web";
+import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
+import { getEditMode, setEditMode } from "@plugins/reorder/web";
 import { PenButton } from "./internal/pen-button";
-import { EscHandler } from "./internal/esc-handler";
 
 export default {
   id: "reorder-edit-mode",
@@ -15,6 +16,13 @@ export default {
       component: PenButton,
       group: "actions",
     }),
-    Core.Root({ component: EscHandler }),
+    defineShortcut({
+      id: "reorder.exit-edit-mode",
+      keys: "escape",
+      label: "Exit edit mode",
+      group: "Reorder",
+      handler: () => setEditMode(false),
+      when: () => getEditMode(),
+    }),
   ],
 } satisfies PluginDefinition;

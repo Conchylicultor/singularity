@@ -7,7 +7,11 @@ import { ReorderListMiddleware } from "./internal/dnd-list-middleware";
 import { ReorderItemMiddleware } from "./internal/dnd-item-middleware";
 import "./styles.css";
 
-export { setEditMode, useEditMode } from "./internal/edit-mode-store";
+export {
+  getEditMode,
+  setEditMode,
+  useEditMode,
+} from "./internal/edit-mode-store";
 
 export default {
   id: "reorder",

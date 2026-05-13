@@ -9,6 +9,10 @@ export function setEditMode(value: boolean): void {
   for (const l of listeners) l();
 }
 
+export function getEditMode(): boolean {
+  return editMode;
+}
+
 export function useEditMode(): boolean {
   return useSyncExternalStore(
     (cb) => {

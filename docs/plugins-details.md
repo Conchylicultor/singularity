@@ -1272,6 +1272,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `SearchInputProps`, `TextFilterHandle`, `UseTextFilterOptions`
         - Values: `collectAllIds`, `filterTree`, `SearchInput`, `useTextFilter`
+    - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
+      - Defines:
+        - Slots: `Shortcuts.Shortcut`
+      - Exports (web):
+        - Types: `ShortcutDescriptor`
+        - Values: `defineShortcut`, `formatShortcutLabel`, `Shortcuts`
+      - Contributes:
+        - `Core.Root` → `ShortcutManager`
     - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
       - Exports (web):
         - Types: `RenderSlot`, `RenderSlotConfig`, `SlotItemMiddleware`, `SlotListMiddleware`
@@ -1296,7 +1304,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/reorder/server/internal/tables.ts`
     - DB schema: `plugins/reorder/server/schema.ts`
   - Exports (web):
-    - Values: `setEditMode`, `useEditMode`
+    - Values: `getEditMode`, `setEditMode`, `useEditMode`
   - Exports (server):
     - Values: `_reorderPrefs`, `reorderPrefsResource`
   - Exports (shared):
@@ -1313,7 +1321,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
       - Contributes:
         - `Shell.Toolbar` → `PenButton`
-        - `Core.Root` → `EscHandler`
+        - `Shortcuts.Shortcut` "reorder.exit-edit-mode (escape)"
     - **`groups`** — User-created groups within reorderable areas. Drag items onto each other to form groups.
       - Defines:
         - DB schema: `plugins/reorder/plugins/groups/server/internal/tables.ts`

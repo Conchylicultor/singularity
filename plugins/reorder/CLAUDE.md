@@ -51,7 +51,7 @@ Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The
   - DB schema: `plugins/reorder/server/internal/tables.ts`
   - DB schema: `plugins/reorder/server/schema.ts`
 - Exports (web):
-  - Values: `setEditMode`, `useEditMode`
+  - Values: `getEditMode`, `setEditMode`, `useEditMode`
 - Exports (server):
   - Values: `_reorderPrefs`, `reorderPrefsResource`
 - Exports (shared):
