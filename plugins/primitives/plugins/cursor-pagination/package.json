@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-cursor-pagination",
+  "description": "Cursor-pagination primitive: useCursorPagination hook with frozen-cursor capture, useInfiniteQuery wiring, IntersectionObserver auto-fetch, and ScrollSentinel component.",
+  "private": true,
+  "version": "0.0.1"
+}

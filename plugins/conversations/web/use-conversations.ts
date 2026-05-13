@@ -1,13 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { z } from "zod";
 import { ConversationSchema } from "@plugins/tasks-core/core";
+import { cursorPageSchema } from "@plugins/primitives/plugins/cursor-pagination/core";
 import { recentConversationsResource, type ConversationEntry } from "../core/resources";
 
-export const GonePageSchema = z.object({
-  items: z.array(ConversationSchema),
-  hasMore: z.boolean(),
-});
+export const GonePageSchema = cursorPageSchema(ConversationSchema);
 
 export function useConversations(): {
   active: ConversationEntry[];

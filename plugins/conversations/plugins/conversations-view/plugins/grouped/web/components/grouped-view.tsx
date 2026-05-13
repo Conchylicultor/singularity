@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { MdVisibility, MdVisibilityOff } from "react-icons/md";
 import {
   useConversations,
   GonePageSchema,
 } from "@plugins/conversations/web";
+import {
+  useCursorPagination,
+  ScrollSentinel,
+} from "@plugins/primitives/plugins/cursor-pagination/web";
 import { cn } from "@/lib/utils";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { GroupedConversationList } from "./grouped-conversation-list";
@@ -38,65 +41,42 @@ export function GroupedView({
     });
   };
 
-  // Capture initial cursor once; never update after first assignment to keep
-  // the infinite query page chain stable even as recentGone updates in real-time.
-  const cursorRef = useRef<string | null>(null);
-  if (hasMoreGone && recentGone.length > 0 && cursorRef.current === null) {
-    const tail = recentGone[recentGone.length - 1]!;
-    cursorRef.current = (tail.endedAt ?? tail.createdAt).toISOString();
-  }
-
-  const {
-    data: paginatedData,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
-    queryKey: ["conversations-gone-paginated", cursorRef.current],
-    queryFn: async ({ pageParam }) => {
-      const params = new URLSearchParams({
-        before: pageParam as string,
-        limit: String(PAGE_SIZE),
-      });
-      const res = await fetch(`/api/conversations/gone?${params}`);
-      if (!res.ok) throw new Error("Failed to fetch gone conversations");
-      return GonePageSchema.parse(await res.json());
-    },
-    initialPageParam: cursorRef.current ?? "",
-    getNextPageParam: (lastPage) => {
-      if (!lastPage.hasMore) return undefined;
-      const tail = lastPage.items[lastPage.items.length - 1];
-      return (tail?.endedAt ?? tail?.createdAt)?.toISOString();
-    },
-    enabled: hasMoreGone && cursorRef.current !== null,
-    staleTime: Infinity,
-  });
+  const cursor =
+    hasMoreGone && recentGone.length > 0
+      ? (
+          recentGone[recentGone.length - 1]!.endedAt ??
+          recentGone[recentGone.length - 1]!.createdAt
+        ).toISOString()
+      : null;
 
   const liveIds = useMemo(
     () => new Set([...active, ...recentGone].map((c) => c.id)),
     [active, recentGone],
   );
 
-  const paginatedItems = useMemo(
-    () =>
-      (paginatedData?.pages ?? [])
-        .flatMap((p) => p.items)
-        .filter((c) => !liveIds.has(c.id)),
-    [paginatedData, liveIds],
-  );
-
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(([entry]) => {
-      if (entry?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        void fetchNextPage();
-      }
-    });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const {
+    items: paginatedItems,
+    hasNextPage,
+    isFetchingNextPage,
+    sentinelRef,
+  } = useCursorPagination({
+    queryKey: ["conversations-gone-paginated"],
+    fetchPage: async (before, limit) => {
+      const params = new URLSearchParams({
+        before,
+        limit: String(limit),
+      });
+      const res = await fetch(`/api/conversations/gone?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch gone conversations");
+      return GonePageSchema.parse(await res.json());
+    },
+    cursor,
+    enabled: hasMoreGone,
+    pageSize: PAGE_SIZE,
+    getCursor: (c) => (c.endedAt ?? c.createdAt).toISOString(),
+    liveIds,
+    getId: (c) => c.id,
+  });
 
   const isEmpty = active.length === 0 && recentGone.length === 0;
 
@@ -135,7 +115,7 @@ export function GroupedView({
       {isFetchingNextPage && (
         <div className="px-4 py-2 text-xs text-muted-foreground">Loading...</div>
       )}
-      {hasMoreGone && <div ref={sentinelRef} className="h-1" />}
+      <ScrollSentinel sentinelRef={sentinelRef} show={hasNextPage} />
       {isEmpty && !isLoading && (
         <div className="px-4 py-2 text-xs text-muted-foreground">
           No conversations

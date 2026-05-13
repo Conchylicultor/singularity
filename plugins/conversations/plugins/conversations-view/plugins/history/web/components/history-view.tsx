@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useRef } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { useConversations, GonePageSchema } from "@plugins/conversations/web";
+import {
+  useCursorPagination,
+  ScrollSentinel,
+} from "@plugins/primitives/plugins/cursor-pagination/web";
 import { cn } from "@/lib/utils";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import type { Conversation } from "@plugins/tasks-core/core";
@@ -23,70 +26,47 @@ export function HistoryView({
   const { active, recentGone, hasMoreGone, system, isLoading } =
     useConversations();
 
-  // Merge active + system + recentGone sorted by createdAt desc.
   const liveItems = useMemo(() => {
     const all: Conversation[] = [...active, ...system, ...recentGone];
     return all.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }, [active, system, recentGone]);
 
-  // Capture the pagination cursor once from the tail of recentGone.
-  const cursorRef = useRef<string | null>(null);
-  if (hasMoreGone && recentGone.length > 0 && cursorRef.current === null) {
-    const tail = recentGone[recentGone.length - 1]!;
-    cursorRef.current = (tail.endedAt ?? tail.createdAt).toISOString();
-  }
-
-  const {
-    data: paginatedData,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery({
-    queryKey: ["conversations-gone-paginated", cursorRef.current],
-    queryFn: async ({ pageParam }) => {
-      const params = new URLSearchParams({
-        before: pageParam as string,
-        limit: String(PAGE_SIZE),
-      });
-      const res = await fetch(`/api/conversations/gone?${params}`);
-      if (!res.ok) throw new Error("Failed to fetch gone conversations");
-      return GonePageSchema.parse(await res.json());
-    },
-    initialPageParam: cursorRef.current ?? "",
-    getNextPageParam: (lastPage) => {
-      if (!lastPage.hasMore) return undefined;
-      const tail = lastPage.items[lastPage.items.length - 1];
-      return (tail?.endedAt ?? tail?.createdAt)?.toISOString();
-    },
-    enabled: hasMoreGone && cursorRef.current !== null,
-    staleTime: Infinity,
-  });
+  const cursor =
+    hasMoreGone && recentGone.length > 0
+      ? (
+          recentGone[recentGone.length - 1]!.endedAt ??
+          recentGone[recentGone.length - 1]!.createdAt
+        ).toISOString()
+      : null;
 
   const liveIds = useMemo(
     () => new Set(liveItems.map((c) => c.id)),
     [liveItems],
   );
 
-  const paginatedItems = useMemo(
-    () =>
-      (paginatedData?.pages ?? [])
-        .flatMap((p) => p.items)
-        .filter((c) => !liveIds.has(c.id)),
-    [paginatedData, liveIds],
-  );
-
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(([entry]) => {
-      if (entry?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        void fetchNextPage();
-      }
-    });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const {
+    items: paginatedItems,
+    hasNextPage,
+    isFetchingNextPage,
+    sentinelRef,
+  } = useCursorPagination({
+    queryKey: ["conversations-gone-paginated"],
+    fetchPage: async (before, limit) => {
+      const params = new URLSearchParams({
+        before,
+        limit: String(limit),
+      });
+      const res = await fetch(`/api/conversations/gone?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch gone conversations");
+      return GonePageSchema.parse(await res.json());
+    },
+    cursor,
+    enabled: hasMoreGone,
+    pageSize: PAGE_SIZE,
+    getCursor: (c) => (c.endedAt ?? c.createdAt).toISOString(),
+    liveIds,
+    getId: (c) => c.id,
+  });
 
   const isEmpty = liveItems.length === 0 && paginatedItems.length === 0;
 
@@ -129,7 +109,7 @@ export function HistoryView({
           Loading...
         </div>
       )}
-      {hasMoreGone && <div ref={sentinelRef} className="h-1" />}
+      <ScrollSentinel sentinelRef={sentinelRef} show={hasNextPage} />
     </div>
   );
 }
