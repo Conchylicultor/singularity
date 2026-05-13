@@ -1193,6 +1193,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `CommandPalette`, `CommandPaletteCommands`
       - Contributes:
         - `Core.Root` → `CommandPaletteRoot`
+    - **`cursor-pagination`** — Cursor-pagination primitive: useCursorPagination hook with frozen-cursor capture, useInfiniteQuery wiring, IntersectionObserver auto-fetch, and ScrollSentinel component.
+      - Exports (core):
+        - Types: `CursorPage`
+        - Values: `cursorPageSchema`
+      - Exports (web):
+        - Types: `CursorPage`, `CursorPaginationHandle`, `ScrollSentinelProps`, `UseCursorPaginationOptions`
+        - Values: `cursorPageSchema`, `ScrollSentinel`, `useCursorPagination`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
       - Exports (web):
         - Types: `ColumnDef`, `DataTableProps`

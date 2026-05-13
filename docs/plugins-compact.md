@@ -207,6 +207,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
     - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
     - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
+    - **`cursor-pagination`** — Cursor-pagination primitive: useCursorPagination hook with frozen-cursor capture, useInfiniteQuery wiring, IntersectionObserver auto-fetch, and ScrollSentinel component.
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
     - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.
     - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
