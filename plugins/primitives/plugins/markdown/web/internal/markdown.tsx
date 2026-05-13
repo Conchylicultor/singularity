@@ -18,7 +18,6 @@ function MarkdownRenderer({ children }: { children: string }) {
   const { transforms, components: overrides, inlineCodeHandlers } = useContext(
     MarkdownEnhancementContext,
   );
-
   const components = useMemo(() => {
     const transform = (c: ReactNode) =>
       transforms.reduce((acc, fn) => fn(acc), c);

@@ -99,7 +99,7 @@ export function useActiveDataLinkify(): (children: ReactNode) => ReactNode {
     [contributions],
   );
   return useMemo(() => {
-    if (contribs.length === 0) return (c) => c;
+    if (contribs.length === 0) return (c: ReactNode) => c;
     return (children: ReactNode) => walk(children, contribs);
   }, [contribs]);
 }
