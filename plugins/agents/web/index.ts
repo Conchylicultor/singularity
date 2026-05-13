@@ -14,6 +14,7 @@ import {
 import { AgentAvatarRow } from "./components/agent-avatar-row";
 import { AgentAvatarTitlePrefix } from "./components/agent-avatar-title-prefix";
 import { DeleteAgentAction } from "./components/delete-agent-action";
+import { ExpandAgentButton } from "./components/expand-agent-button";
 import { ExpandCollapseAllAction } from "./components/expand-collapse-all-action";
 import { Agents as AgentsSlots } from "./slots";
 
@@ -38,6 +39,7 @@ export default {
     Pane.Register({ pane: agentDetailPane }),
     Pane.Register({ pane: systemAgentDetailPane }),
     Pane.Register({ pane: agentSidePane }),
+    agentSidePane.Actions({ component: ExpandAgentButton }),
     Shell.Sidebar({
       id: "agents",
       ...sidebarNavItem({ title: "Agents", icon: MdPrecisionManufacturing, onClick: () => openPane(agentsRootPane, {}) }),

@@ -67,6 +67,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Pane.Register` "agent-detail"
     - `Pane.Register` "agent-system-detail"
     - `Pane.Register` "agent-side"
+    - `agentSidePane.Actions` → `ExpandAgentButton`
     - `Shell.Sidebar` "Agents" → `component`
     - `Item.Avatar` → `AgentAvatarRow`
     - `Conversation.TitlePrefix` → `AgentAvatarTitlePrefix`
@@ -394,7 +395,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
       - Contributes:
         - `Pane.Register` "conversation"
-        - `Conversation.ActionBar` → `ExpandConversationButton`
       - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `blocking`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
@@ -658,6 +658,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `taskSidePane`
           - Contributes:
             - `Pane.Register` "task-side"
+            - `taskSidePane.Actions` → `ExpandTaskButton`
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Contributes:
             - `conversationPane.Actions` → `StatusBadge`

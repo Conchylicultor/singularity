@@ -55,6 +55,7 @@ export function PaneChrome({ pane, title, actions, hideRightActions, children }:
   if (!chrome.enabled) return <>{children}</>;
   const resolvedTitle = title ?? fallbackTitle;
   const showClose = chrome.close && depth > 0;
+  const showPromote = chrome.promote && depth > 0;
   return (
     <div className="flex h-full flex-col">
       <div
@@ -71,12 +72,12 @@ export function PaneChrome({ pane, title, actions, hideRightActions, children }:
         ) : (
           <OverflowActionsBar pane={pane} extraActions={actions} />
         )}
-        {chrome.expand && (
+        {showPromote && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => pane.expand()}
-            aria-label="Expand"
+            onClick={() => pane.promote()}
+            aria-label="Promote"
           >
             <MdOpenInFull className="size-4" />
           </Button>

@@ -1,8 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "./panes";
-import { ExpandConversationButton } from "./components/expand-button";
-import { Conversation as ActionBarConversation } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 
 export { Conversation } from "./slots";
 export type { ConversationRecord } from "./slots";
@@ -17,7 +15,5 @@ export default {
   description: "Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.",
   contributions: [
     Pane.Register({ pane: conversationPane }),
-    // Pop out of an embedding split (Tasks/Agents) into /c/:convId.
-    ActionBarConversation.ActionBar({ id: "expand-conversation", component: ExpandConversationButton }),
   ],
 } satisfies PluginDefinition;

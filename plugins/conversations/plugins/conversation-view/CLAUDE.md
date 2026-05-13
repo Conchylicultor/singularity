@@ -12,7 +12,6 @@
   - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
 - Contributes:
   - `Pane.Register` "conversation"
-  - `Conversation.ActionBar` → `ExpandConversationButton`
 - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `blocking`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
 - Sub-plugins:
   - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.

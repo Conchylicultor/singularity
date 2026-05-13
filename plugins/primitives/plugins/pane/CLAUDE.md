@@ -164,6 +164,7 @@ children rendered via `<Outlet/>`), `provide` is optional — render
 ```
 
 `open(params)` pushes a new URL. `close()` navigates to the parent.
+`promote()` detaches from ancestors and makes this pane the root.
 `back()`/`forward()` walk browser history.
 
 ## Chrome
@@ -171,8 +172,9 @@ children rendered via `<Outlet/>`), `provide` is optional — render
 **Every pane should wrap its body in `<PaneChrome pane={…}>`** — that's
 the convention. PaneChrome renders a standard header: ‹ › history
 buttons, the title, optional left-side actions, optional right-side
-actions, an optional expand button, and a × close button on the far
-right (for panes with a parent). Panes whose body is its own UI
+actions, a promote button (detach from ancestors and make root), and
+a × close button on the far right. Both promote and close only show
+when `depth > 0`. Panes whose body is its own UI
 (sidebar lists, list of cards, etc.) and don't need a chrome header may
 opt out with `chrome: false` in `Pane.define`.
 
@@ -249,6 +251,21 @@ Pane.define({
 Use this when the close button doesn't belong (e.g. a pane that
 already navigates somewhere else on close, or one whose parent isn't
 a meaningful "back" target).
+
+### Hiding the promote button
+
+```ts
+Pane.define({
+  id: "agent-side",
+  after: [conversationPane],
+  segment: "agent/:agentId",
+  component: AgentSideBody,
+  chrome: { promote: false },
+});
+```
+
+Use this for compact side-panels that have their own expand action
+(e.g. an Action button that opens the full detail pane as root).
 
 ### Opting out
 

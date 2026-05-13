@@ -21,6 +21,7 @@
   - `Pane.Register` "agent-detail"
   - `Pane.Register` "agent-system-detail"
   - `Pane.Register` "agent-side"
+  - `agentSidePane.Actions` → `ExpandAgentButton`
   - `Shell.Sidebar` "Agents" → `component`
   - `Item.Avatar` → `AgentAvatarRow`
   - `Conversation.TitlePrefix` → `AgentAvatarTitlePrefix`

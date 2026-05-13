@@ -71,7 +71,13 @@ export interface PaneChromeConfig<Params> {
    * that render their own bespoke header).
    */
   close?: boolean;
-  expand?: (params: Params) => string;
+  /**
+   * Show a promote button that detaches this pane from its ancestors and
+   * makes it the root of a fresh chain. Defaults to `true`; only shown
+   * when `depth > 0`. Set to `false` for panes that should never be
+   * promoted (e.g. compact side-panels with their own expand action).
+   */
+  promote?: boolean;
   /**
    * When true, the layout renderer (Miller columns) keeps the pane's
    * component subtree mounted when the column is collapsed, hiding it via
@@ -86,7 +92,7 @@ interface NormalizedChrome {
   title?: string | ((params: Record<string, string>) => string);
   history: boolean;
   close: boolean;
-  expand?: (params: Record<string, string>) => string;
+  promote: boolean;
   keepMountedWhenCollapsed: boolean;
 }
 
@@ -570,7 +576,8 @@ export interface PaneObject<
   close(): void;
   /** Remove this pane from the chain while preserving its children. */
   unwrap(): void;
-  expand(): void;
+  /** Detach from ancestors and make this pane the root of a fresh chain. */
+  promote(): void;
   back(): void;
   forward(): void;
   Actions: Slot<{ component: ComponentType; position?: "left" | "right" }>;
@@ -644,7 +651,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     setChain(validateChain(newChain));
   }
 
-  function expand(): void {
+  function promote(): void {
     if (typeof window === "undefined") return;
     const chain = getChain();
     const idx = chain.findIndex((s) => s.paneId === internal.id);
@@ -653,8 +660,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     for (let i = 0; i <= idx; i++) {
       Object.assign(fullParams, chain[i]!.params);
     }
-    const target = internal.chrome.expand?.(fullParams);
-    if (target) navigate(target);
+    openPaneImpl(internal, fullParams, { root: true });
   }
 
   function back(): void {
@@ -673,7 +679,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     useDataMaybe,
     close,
     unwrap,
-    expand,
+    promote,
     back,
     forward,
     Actions: actionsSlot,
@@ -685,14 +691,14 @@ function normalizeChrome<Params>(
   chrome: PaneChromeConfig<Params> | false | undefined,
 ): NormalizedChrome {
   if (chrome === false) {
-    return { enabled: false, history: false, close: false, keepMountedWhenCollapsed: false };
+    return { enabled: false, history: false, close: false, promote: false, keepMountedWhenCollapsed: false };
   }
   return {
     enabled: true,
     title: chrome?.title as NormalizedChrome["title"],
     history: chrome?.history ?? true,
     close: chrome?.close ?? true,
-    expand: chrome?.expand as NormalizedChrome["expand"],
+    promote: chrome?.promote ?? true,
     keepMountedWhenCollapsed: chrome?.keepMountedWhenCollapsed ?? false,
   };
 }
@@ -797,7 +803,7 @@ export const Pane = { define, Register: PaneSlots.Register };
 // Registry sync — populates the module-local `registry` from the
 // `Pane.Register` slot. Called once from <PaneRouter/> at the start of
 // every render, synchronously via useMemo so parseUrl() and the
-// pane.close() / pane.expand() event handlers always see fresh state.
+// pane.close() event handlers always see fresh state.
 // ---------------------------------------------------------------------------
 
 export function useSyncPaneRegistry(): void {

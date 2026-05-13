@@ -9,6 +9,6 @@ export const taskSidePane = Pane.define({
   component: SideTaskBody,
   chrome: {
     history: false,
-    expand: ({ taskId }) => `/tasks/${taskId}`,
+    promote: false,
   },
 });

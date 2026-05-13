@@ -44,7 +44,7 @@ export const agentSidePane = Pane.define({
   component: AgentSideBody,
   chrome: {
     history: false,
-    expand: ({ agentId }) => `/agents/${agentId}`,
+    promote: false,
   },
 });
 
