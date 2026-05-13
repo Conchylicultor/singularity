@@ -45,7 +45,6 @@ async function queuePost(path: string, body: Record<string, unknown>) {
 
 const WORKING_EXPANDED_KEY = "queue-view:working:expanded";
 const QUEUE_EXPANDED_KEY = "queue-view:queue:expanded";
-const BLOCKED_EXPANDED_KEY = "queue-view:blocked:expanded";
 const UNRANKED_EXPANDED_KEY = "queue-view:unranked:expanded";
 const DISCONNECTED_EXPANDED_KEY = "queue-view:disconnected:expanded";
 const GONE_EXPANDED_KEY = "queue-view:gone:expanded";
@@ -113,29 +112,27 @@ export function QueueView({
     [active],
   );
 
-  const { deck, blockedDeck, unranked } = useMemo(() => {
+  const { deck, blockedIds, unranked } = useMemo(() => {
     const ranks = new Map(rankRows.map((r) => [r.conversationId, r.rank]));
     const taskStatusMap = new Map(taskRows.map((t) => [t.id, t.status]));
     const ranked: Array<Conversation & { rank: Rank }> = [];
-    const blocked: Array<Conversation & { rank: Rank }> = [];
+    const blocked = new Set<string>();
     const noRank: Conversation[] = [];
     for (const c of active) {
       if (c.status !== "waiting") continue;
-      const isBlocked = taskStatusMap.get(c.taskId) === "blocked";
+      if (taskStatusMap.get(c.taskId) === "blocked") {
+        blocked.add(c.id);
+      }
       const rank = ranks.get(c.id);
       if (rank) {
-        if (isBlocked) {
-          blocked.push({ ...c, rank });
-        } else {
-          ranked.push({ ...c, rank });
-        }
+        ranked.push({ ...c, rank });
       } else {
         noRank.push(c);
       }
     }
     return {
       deck: ranked.sort((a, b) => Rank.compare(a.rank, b.rank)),
-      blockedDeck: blocked.sort((a, b) => Rank.compare(a.rank, b.rank)),
+      blockedIds: blocked,
       unranked: noRank,
     };
   }, [active, rankRows, taskRows]);
@@ -170,24 +167,6 @@ export function QueueView({
       const next = !prev;
       try {
         localStorage.setItem(QUEUE_EXPANDED_KEY, next ? "1" : "0");
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      } catch {}
-      return next;
-    });
-  }, []);
-
-  const [blockedExpanded, setBlockedExpanded] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem(BLOCKED_EXPANDED_KEY) !== "0";
-    } catch {
-      return true;
-    }
-  });
-  const toggleBlockedExpanded = useCallback(() => {
-    setBlockedExpanded((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(BLOCKED_EXPANDED_KEY, next ? "1" : "0");
       // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {}
       return next;
@@ -280,7 +259,7 @@ export function QueueView({
     [deck, pinnedConv, pinnedConversationId],
   );
 
-  if (!isLoading && deck.length === 0 && blockedDeck.length === 0 && working.length === 0 && unranked.length === 0 && disconnected.length === 0 && recentGone.length === 0) {
+  if (!isLoading && deck.length === 0 && working.length === 0 && unranked.length === 0 && disconnected.length === 0 && recentGone.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-xs text-muted-foreground">
         All clear — no conversations are waiting on you.
@@ -299,9 +278,6 @@ export function QueueView({
   const hasTopItem = queueExpanded && pinnedConv != null;
   const topItemTop = nextTop;
   if (hasTopItem) nextTop += SECTION_H + 8;
-
-  const blockedTop = nextTop;
-  if (blockedDeck.length > 0) nextTop += SECTION_H;
 
   const workingTop = nextTop;
   nextTop += SECTION_H;
@@ -338,6 +314,7 @@ export function QueueView({
                 <QueueRow
                   conv={pinnedConv}
                   isTop
+                  isBlocked={blockedIds.has(pinnedConv.id)}
                   isBottom={restDeck.length === 0}
                   canStepDown={restDeck.length > 0}
                   isActive={pinnedConv.id === activeId}
@@ -359,6 +336,7 @@ export function QueueView({
                     key={conv.id}
                     conv={conv}
                     isTop={false}
+                    isBlocked={blockedIds.has(conv.id)}
                     isBottom={idx === restDeck.length - 1}
                     canStepDown={idx < restDeck.length - 1}
                     isActive={conv.id === activeId}
@@ -381,39 +359,6 @@ export function QueueView({
             ) : null}
           </DragOverlay>
         </DndContext>
-      )}
-
-      {/* Blocked */}
-      {blockedDeck.length > 0 && (
-        <>
-          <SectionHeader title="Blocked" count={blockedDeck.length} expanded={blockedExpanded} onToggleExpanded={toggleBlockedExpanded} stickyTop={blockedTop} />
-          {blockedExpanded && (
-            <div className="mt-0.5 pl-1">
-              <SidebarMenu>
-                {blockedDeck.map((conv) => (
-                  <li key={conv.id} className="group/menu-item relative list-none">
-                    <SidebarMenuButton
-                      className="h-auto py-2 opacity-60"
-                      isActive={conv.id === activeId}
-                      onClick={() => onNavigate(conv.id)}
-                    >
-                      <ConversationItem conv={conv} />
-                    </SidebarMenuButton>
-                    <SidebarMenuAction
-                      onClick={(e: React.MouseEvent) =>
-                        void onCloseConversation(conv.id, e)
-                      }
-                      className="opacity-0 group-hover/menu-item:opacity-100"
-                      aria-label="Close conversation"
-                    >
-                      <MdClose className="size-3.5" />
-                    </SidebarMenuAction>
-                  </li>
-                ))}
-              </SidebarMenu>
-            </div>
-          )}
-        </>
       )}
 
       {/* Working */}
@@ -554,6 +499,7 @@ export function QueueView({
 function QueueRow({
   conv,
   isTop,
+  isBlocked,
   isBottom,
   canStepDown,
   isActive,
@@ -566,6 +512,7 @@ function QueueRow({
 }: {
   conv: Conversation;
   isTop: boolean;
+  isBlocked: boolean;
   isBottom: boolean;
   canStepDown: boolean;
   isActive: boolean;
@@ -611,7 +558,7 @@ function QueueRow({
         <SidebarMenuButton
           className={cn(
             "h-auto py-2",
-            isTop && "",
+            isBlocked && "opacity-50",
           )}
           isActive={isActive}
           onClick={() => onNavigate(conv.id)}

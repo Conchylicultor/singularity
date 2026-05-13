@@ -638,6 +638,20 @@
       "tag": "20260513_142141_53737344__add_avatar_svg_nodes",
       "hash": "53737344",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1778691301000,
+      "tag": "20260513_165501_84da52fc__fix_task_blocked_status_priority",
+      "hash": "84da52fc",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1778691605000,
+      "tag": "20260513_170005_824133e8__fix_task_blocked_status_priority",
+      "hash": "824133e8",
+      "breakpoints": true
     }
   ]
 }

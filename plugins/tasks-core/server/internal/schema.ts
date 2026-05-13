@@ -119,6 +119,8 @@ export const tasks = pgView("tasks_v").as((qb) => {
       status: sql<"new" | "in_progress" | "need_action" | "attempted" | "done" | "held" | "dropped" | "blocked">`
         CASE
           WHEN ${facts.hasCompleted}                        THEN 'done'
+          WHEN ${facts.hasActive} AND ${facts.hasBlockingDep}
+                                                           THEN 'blocked'
           WHEN ${facts.hasActive} AND ${facts.hasWaiting}   THEN 'need_action'
           WHEN ${facts.hasActive}                           THEN 'in_progress'
           WHEN ${_tasks.droppedAt} IS NOT NULL              THEN 'dropped'
