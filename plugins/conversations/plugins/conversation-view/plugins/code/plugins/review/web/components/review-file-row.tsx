@@ -1,6 +1,6 @@
-import { MdWarning, MdContentCopy, MdCheck } from "react-icons/md";
+import { MdWarning } from "react-icons/md";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
-import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
+import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { useConfigValues } from "@plugins/config/web";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
@@ -64,8 +64,6 @@ export function ReviewFileRow({
   const from = file.from && file.from !== file.path ? file.from : null;
   const { safePaths, carefulPaths } = useConfigValues(reviewConfig, "conversation-code-review");
   const level = getFileWarningLevel(file.path, safePaths, carefulPaths);
-  const { copy, copied } = useCopyToClipboard(file.path);
-
   return (
     <div className="border-b border-border last:border-b-0">
       <button
@@ -90,15 +88,13 @@ export function ReviewFileRow({
           )}
           <span className="text-muted-foreground">{dir}</span>
           <span className="font-medium">{basename}</span>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); copy(); }}
+          <CopyButton
+            text={file.path}
             title="Copy path"
-            aria-label="Copy path"
-            className="ml-1 inline-flex translate-y-px items-center rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/path:opacity-100"
-          >
-            {copied ? <MdCheck className="size-3" /> : <MdContentCopy className="size-3" />}
-          </button>
+            className="ml-1 translate-y-px size-5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/path:opacity-100"
+            iconClassName="size-3"
+            onClick={(e) => e.stopPropagation()}
+          />
         </span>
         <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
           <span className="text-emerald-600 dark:text-emerald-400">+{file.additions}</span>

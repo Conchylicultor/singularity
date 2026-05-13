@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
+import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Input } from "@/components/ui/input";
 import {
   useAccountStatus,
@@ -11,7 +11,7 @@ import {
   setConfigValue,
   useSecretFieldSet,
 } from "@plugins/config/web";
-import { MdCheck, MdContentCopy, MdOpenInNew } from "react-icons/md";
+import { MdCheck, MdOpenInNew } from "react-icons/md";
 
 const REDIRECT_URI = "http://localhost:9000/api/auth/callback/google";
 
@@ -27,8 +27,6 @@ export function GoogleSetupPane() {
   const [saving, setSaving] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
-  const { copy: copyRedirectUri, copied } = useCopyToClipboard(REDIRECT_URI, 2000);
-
   const clientIdState = useSecretFieldSet("auth-google.clientId");
   const clientSecretState = useSecretFieldSet("auth-google.clientSecret");
   const credentialsSaved = clientIdState.set && clientSecretState.set;
@@ -142,18 +140,12 @@ export function GoogleSetupPane() {
               <code className="flex-1 rounded bg-muted px-2 py-1 text-xs break-all">
                 {REDIRECT_URI}
               </code>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="shrink-0"
-                onClick={copyRedirectUri}
-              >
-                {copied ? (
-                  <MdCheck className="h-4 w-4 text-emerald-600" />
-                ) : (
-                  <MdContentCopy className="h-4 w-4" />
-                )}
-              </Button>
+              <CopyButton
+                text={REDIRECT_URI}
+                title="Copy redirect URI"
+                className="shrink-0 size-8"
+                iconClassName="h-4 w-4"
+              />
             </div>
             <p className="text-xs text-muted-foreground">
               Add this as the Authorized redirect URI

@@ -7,6 +7,7 @@ export interface CopyButtonProps {
   title?: string;
   className?: string;
   iconClassName?: string;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
 export function CopyButton({
@@ -14,6 +15,7 @@ export function CopyButton({
   title,
   className,
   iconClassName = "size-3",
+  onClick,
 }: CopyButtonProps) {
   const { copy, copied } = useCopyToClipboard(text);
   return (
@@ -23,7 +25,7 @@ export function CopyButton({
       className={className}
       title={title}
       aria-label={title}
-      onClick={copy}
+      onClick={(e) => { onClick?.(e); copy(); }}
     >
       {copied ? (
         <MdCheck className={iconClassName} />
