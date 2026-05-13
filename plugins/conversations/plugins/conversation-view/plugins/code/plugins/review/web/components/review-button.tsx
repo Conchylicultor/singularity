@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { convReviewPane } from "../panes";
 import { getFileWarningLevel, type FileWarningLevel } from "../core-files";
-import { reviewConfig } from "../../shared/config";
+import { reviewConfig } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/shared/config";
 
 const BUTTON_TITLE: Record<FileWarningLevel, string> = {
   safe: "Review changes",

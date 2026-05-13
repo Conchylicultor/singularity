@@ -9,7 +9,7 @@ import {
   handleGetState,
   handlePatchState,
 } from "./internal/excluded-paths";
-import { commitsConfig } from "../shared/config";
+import { commitsConfig } from "@plugins/stats/plugins/commits/shared/config";
 
 export default {
   id: "stats-commits",

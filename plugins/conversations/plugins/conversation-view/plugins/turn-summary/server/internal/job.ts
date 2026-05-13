@@ -7,7 +7,7 @@ import {
   ClaudeCliError,
   runClaudePrint,
 } from "@plugins/infra/plugins/claude-cli/server";
-import { turnSummaryConfig } from "../../shared/config";
+import { turnSummaryConfig } from "@plugins/conversations/plugins/conversation-view/plugins/turn-summary/shared/config";
 import { turnSummaries } from "./tables";
 import { turnSummariesResource } from "./resource";
 import { parseMarkdownSections } from "./parse";

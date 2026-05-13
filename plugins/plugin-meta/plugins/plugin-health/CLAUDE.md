@@ -13,6 +13,8 @@
   - Values: `PluginHealthReviewSchema`, `PluginStalenessSchema`, `ReviewTaskSummarySchema`
 - Exports (server):
   - Values: `healthReviewExt`, `pluginHealthReviewsResource`
+- Exports (shared):
+  - Values: `pluginHealthReviewsDescriptor`
 - Contributes:
   - `PluginViewSlots.Section` "health" → `HealthSection`
 - Server:

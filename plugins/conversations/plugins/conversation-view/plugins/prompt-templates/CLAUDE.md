@@ -8,6 +8,9 @@
 - Defines:
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/prompt-templates/server/internal/tables-attachments.ts`
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/prompt-templates/server/internal/tables.ts`
+- Exports (shared):
+  - Types: `PromptTemplate`
+  - Values: `PromptTemplateSchema`, `promptTemplatesResource`
 - Contributes:
   - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
   - `Config.Section` "Prompt Templates" → `PromptTemplatesSettings`

@@ -6,7 +6,7 @@ import {
   CommitsGraphSchema,
   type CommitDelta,
   type CommitsGraph,
-} from "../../shared/protocol";
+} from "@plugins/conversations/plugins/conversation-view/plugins/commits-graph/shared/protocol";
 import { computeDelta, computeGraph } from "./compute-graph";
 
 type Params = { attemptId: string };

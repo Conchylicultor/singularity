@@ -5,7 +5,7 @@ import {
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { pluginHealthReviewsDescriptor } from "../../shared/schemas";
+import { pluginHealthReviewsDescriptor } from "@plugins/plugin-meta/plugins/plugin-health/shared/schemas";
 import type { PluginStaleness, ReviewTaskSummary } from "../../core";
 
 interface ReviewWithMeta {

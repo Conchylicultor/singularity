@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
 import { _notifications } from "./tables";
-import { NotificationSchema } from "../../shared/schema";
+import { NotificationSchema } from "@plugins/notifications/shared/schema";
 
 export const notificationsResource = defineResource({
   key: "notifications",

@@ -1,6 +1,6 @@
 import type { Contribution } from "@core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import type { ReorderSlotPrefs } from "../../shared/resource";
+import type { ReorderSlotPrefs } from "@plugins/reorder/shared/resource";
 import type { ReorderGroup } from "@plugins/reorder/plugins/groups/core";
 
 export const SPACER_PREFIX = "__spacer__";

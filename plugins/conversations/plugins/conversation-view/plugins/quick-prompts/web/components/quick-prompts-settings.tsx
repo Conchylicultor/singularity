@@ -4,7 +4,7 @@ import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { quickPromptsResource } from "../../shared/resources";
+import { quickPromptsResource } from "@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/shared/resources";
 
 function toastError(title: string, err: unknown) {
   ShellCommands.Toast({

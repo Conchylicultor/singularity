@@ -11,7 +11,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { conversationGroupsResource } from "../../shared";
+import { conversationGroupsResource } from "@plugins/conversations/plugins/conversations-view/plugins/grouped/shared";
 import type { Conversation } from "@plugins/tasks-core/core";
 import { tasksResource } from "@plugins/tasks/core";
 import { useTaskAutoGroups } from "./use-task-auto-groups";

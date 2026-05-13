@@ -3,7 +3,7 @@ import { defineResource } from "@server/resources";
 import {
   TurnSummariesPayloadSchema,
   type TurnSummariesPayload,
-} from "../../shared";
+} from "@plugins/conversations/plugins/conversation-view/plugins/turn-summary/shared";
 import { turnSummaries } from "./tables";
 
 export const turnSummariesResource = defineResource<TurnSummariesPayload>({

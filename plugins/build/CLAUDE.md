@@ -7,6 +7,9 @@
 - Description: Trigger `./singularity build` from the toolbar.
 - Defines:
   - DB schema: `plugins/build/server/internal/tables.ts`
+- Exports (shared):
+  - Types: `BuildRun`, `MainAheadCount`
+  - Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
 - Contributes:
   - `Shell.Toolbar` → `BuildButton`
   - `Config.Spec`

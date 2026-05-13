@@ -22,7 +22,7 @@ import {
   SelectionCheckbox,
   useMultiSelect,
 } from "@plugins/primitives/plugins/multi-select/web";
-import { agentsResource } from "../../shared/resources";
+import { agentsResource } from "@plugins/agents/shared/resources";
 import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";
 import { AgentStatus } from "./agent-status";

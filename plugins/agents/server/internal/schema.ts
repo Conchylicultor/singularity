@@ -10,12 +10,12 @@ export {
   AgentSchema,
   AgentLaunchSchema,
   AgentLaunchWithStatusSchema,
-} from "../../shared/schemas";
+} from "@plugins/agents/shared/schemas";
 export type {
   Agent,
   AgentLaunch,
   AgentLaunchWithStatus,
-} from "../../shared/schemas";
+} from "@plugins/agents/shared/schemas";
 
 export const agents = pgView("agents_v").as((qb) =>
   qb

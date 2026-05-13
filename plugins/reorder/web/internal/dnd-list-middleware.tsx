@@ -19,7 +19,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { RenderSlotSubIdContext } from "@plugins/primitives/plugins/slot-render/web";
 import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";
 import { reorderGroupsResource } from "@plugins/reorder/plugins/groups/core";
-import { reorderPrefsResource } from "../../shared/resource";
+import { reorderPrefsResource } from "@plugins/reorder/shared/resource";
 import { useEditMode } from "./edit-mode-store";
 import { ReorderGroupBox } from "./group-box";
 import {

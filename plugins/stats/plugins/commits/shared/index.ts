@@ -1,0 +1,1 @@
+export { commitsConfig } from "./config";

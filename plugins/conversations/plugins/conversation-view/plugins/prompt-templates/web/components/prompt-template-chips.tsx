@@ -6,7 +6,7 @@ import {
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { Button } from "@/components/ui/button";
-import { promptTemplatesResource } from "../../shared/resources";
+import { promptTemplatesResource } from "@plugins/conversations/plugins/conversation-view/plugins/prompt-templates/shared/resources";
 
 export function FloatingTemplateChips({ insertText }: PromptEditorActionProps) {
   const { data: templates } = useResource(promptTemplatesResource);

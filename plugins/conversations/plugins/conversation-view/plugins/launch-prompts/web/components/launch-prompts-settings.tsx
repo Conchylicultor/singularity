@@ -4,8 +4,8 @@ import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { launchPromptsResource } from "../../shared/resources";
-import type { LaunchPrompt } from "../../shared/resources";
+import { launchPromptsResource } from "@plugins/conversations/plugins/conversation-view/plugins/launch-prompts/shared/resources";
+import type { LaunchPrompt } from "@plugins/conversations/plugins/conversation-view/plugins/launch-prompts/shared/resources";
 
 function toastError(title: string, err: unknown) {
   ShellCommands.Toast({

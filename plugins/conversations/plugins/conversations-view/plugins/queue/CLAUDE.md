@@ -10,6 +10,9 @@
   - Entity extension of: `tasks-core` (table `conversations_ext_queue`)
 - Exports (server):
   - Values: `conversationsQueue`, `endRank`, `lockDeck`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `seedRankJob`
+- Exports (shared):
+  - Types: `QueueRankRow`
+  - Values: `QueueRankRowSchema`, `queueRanksResource`
 - Contributes:
   - `ConversationsView.View` "Queue" → `QueueView`
 - Server:

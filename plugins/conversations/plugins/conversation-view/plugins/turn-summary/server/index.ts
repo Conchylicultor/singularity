@@ -3,7 +3,7 @@ import { Resource } from "@server/resources";
 import { Config } from "@plugins/config/server";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { conversationTurnCompleted } from "@plugins/conversations/server";
-import { turnSummaryConfig } from "../shared/config";
+import { turnSummaryConfig } from "@plugins/conversations/plugins/conversation-view/plugins/turn-summary/shared/config";
 import { generateTurnSummaryJob } from "./internal/job";
 import { turnSummariesResource } from "./internal/resource";
 

@@ -5,7 +5,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { useConfigValues } from "@plugins/config/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { conversationCategoryConfig } from "../../shared";
+import { conversationCategoryConfig } from "@plugins/conversations/plugins/conversation-category/shared";
 import { useCategoryFor } from "../internal/use-category";
 import { colorClassFor } from "../internal/colors";
 import { reclassify, setCategory } from "../internal/api";

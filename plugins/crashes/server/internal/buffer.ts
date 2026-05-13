@@ -1,7 +1,7 @@
 import { appendFileSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { CRASHES_DIR } from "@plugins/infra/plugins/paths/server";
-import type { CrashReport, CrashSource } from "../../shared/types";
+import type { CrashReport, CrashSource } from "@plugins/crashes/shared/types";
 
 // Server crashes during `uncaughtException` can't write to Postgres (the
 // driver is async and the event loop is dying). We buffer to a JSONL file

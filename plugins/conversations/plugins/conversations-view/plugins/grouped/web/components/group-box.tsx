@@ -1,7 +1,7 @@
 import { MdDeleteOutline, MdDragIndicator } from "react-icons/md";
 import type { ReactNode } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import type { ConversationGroup } from "../../shared";
+import type { ConversationGroup } from "@plugins/conversations/plugins/conversations-view/plugins/grouped/shared";
 import { GroupContainer } from "./group-container";
 import { GroupRename } from "./group-rename";
 

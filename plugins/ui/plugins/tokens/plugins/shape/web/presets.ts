@@ -1,4 +1,4 @@
-import type { ShapeTokenValues } from "../shared";
+import type { ShapeTokenValues } from "@plugins/ui/plugins/tokens/plugins/shape/shared";
 
 interface Preset {
   id: string;

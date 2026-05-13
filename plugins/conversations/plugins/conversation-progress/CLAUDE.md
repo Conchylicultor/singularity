@@ -10,6 +10,9 @@
   - Entity extension of: `tasks-core` (table `conversations_ext_progress`)
 - Exports (server):
   - Values: `classifyProgressJob`, `conversationProgress`, `conversationProgressResource`, `markProgressPushedJob`
+- Exports (shared):
+  - Types: `ConversationPhase`, `ConversationProgress`, `ConversationProgressPayload`
+  - Values: `ConversationProgressPayloadSchema`, `conversationProgressResource`, `ConversationProgressSchema`, `PHASE_LABELS`, `PHASE_ORDER`
 - Contributes:
   - `conversationPane.Actions` → `ProgressBarToolbar`
   - `Item.Chips` → `ProgressBarRow`

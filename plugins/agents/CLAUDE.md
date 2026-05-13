@@ -16,6 +16,9 @@
 - Exports (server):
   - Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`
   - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
+- Exports (shared):
+  - Types: `Agent`, `AgentLaunch`, `AgentLaunchConversationRef`, `AgentLaunchWithStatus`
+  - Values: `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `AgentSchema`, `agentsResource`
 - Contributes:
   - `Pane.Register` "agents-root"
   - `Pane.Register` "agent-detail"

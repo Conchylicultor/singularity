@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
-import { sidebarPaletteGroup } from "../shared";
+import { sidebarPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/sidebar-palette/shared";
 import { sidebarPaletteConfig } from "./internal/config";
 import { SidebarPalette } from "./slots";
 import { SidebarPalettePicker } from "./components/sidebar-palette-picker";

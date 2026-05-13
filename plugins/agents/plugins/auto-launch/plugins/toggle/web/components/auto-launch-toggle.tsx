@@ -1,6 +1,6 @@
 import { MdRocketLaunch } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { agentAutoLaunchResource } from "../../shared/resources";
+import { agentAutoLaunchResource } from "@plugins/agents/plugins/auto-launch/plugins/toggle/shared/resources";
 import { cn } from "@/lib/utils";
 
 async function patchAutoLaunch(agentId: string, enabled: boolean) {

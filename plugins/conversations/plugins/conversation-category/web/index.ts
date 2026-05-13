@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@core";
 import { Config } from "@plugins/config/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { conversationCategoryConfig } from "../shared";
+import { conversationCategoryConfig } from "@plugins/conversations/plugins/conversation-category/shared";
 import { CategoryChipToolbar } from "./components/category-chip-toolbar";
 import { CategoryColorSettings } from "./components/category-color-settings";
 import { CategoryAvatarRow } from "./components/category-avatar-row";

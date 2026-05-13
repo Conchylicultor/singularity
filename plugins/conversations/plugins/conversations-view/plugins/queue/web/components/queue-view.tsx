@@ -18,7 +18,7 @@ import type { ViewProps } from "@plugins/conversations/plugins/conversations-vie
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import type { Conversation } from "@plugins/tasks-core/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { queueRanksResource } from "../../shared/resources";
+import { queueRanksResource } from "@plugins/conversations/plugins/conversations-view/plugins/queue/shared/resources";
 import { tasksResource } from "@plugins/tasks/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {

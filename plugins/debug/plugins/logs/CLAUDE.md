@@ -10,6 +10,8 @@
 - Exports (server):
   - Types: `LogChannel`, `LogStream`
   - Values: `Log`
+- Exports (shared):
+  - Types: `ClientMessage`, `EntryMsg`, `ErrorMsg`, `HistoryMsg`, `LogEntryWire`, `ServerMessage`, `SubscribeMsg`
 - Contributes:
   - `Pane.Register` "logs"
   - `Pane.Register` "logs-channel"

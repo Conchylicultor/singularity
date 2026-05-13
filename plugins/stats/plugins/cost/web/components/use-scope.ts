@@ -1,5 +1,5 @@
 import { setConfigValue, useConfigValues } from "@plugins/config/web";
-import { costConfig } from "../../shared/config";
+import { costConfig } from "@plugins/stats/plugins/cost/shared/config";
 
 export type Scope = "all" | "singularity";
 

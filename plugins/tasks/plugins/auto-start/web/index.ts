@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@core";
 
-export { taskAutoStartResource, TaskAutoStartRowSchema } from "../shared/resources";
-export type { TaskAutoStartRow } from "../shared/resources";
+export { taskAutoStartResource, TaskAutoStartRowSchema } from "@plugins/tasks/plugins/auto-start/shared/resources";
+export type { TaskAutoStartRow } from "@plugins/tasks/plugins/auto-start/shared/resources";
 export { useTaskAutoStart } from "./hooks";
 
 export default {

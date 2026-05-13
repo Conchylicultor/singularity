@@ -9,6 +9,9 @@
   - DB schema: `plugins/conversations/plugins/summary/server/internal/tables.ts`
 - Exports (server):
   - Values: `_conversationSummaries`, `conversationSummariesResource`
+- Exports (shared):
+  - Types: `ConversationSummary`, `Phase`
+  - Values: `conversationSummariesResource`, `ConversationSummarySchema`, `PhaseSchema`
 - Contributes:
   - `Pane.Register` "conv-summary"
 - Server:

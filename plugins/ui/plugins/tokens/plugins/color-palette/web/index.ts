@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
-import { colorPaletteGroup } from "../shared";
+import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-palette/shared";
 import { colorPaletteConfig } from "./internal/config";
 import { ColorPalette } from "./slots";
 import { ColorPalettePicker } from "./components/color-palette-picker";

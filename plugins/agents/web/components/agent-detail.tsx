@@ -13,7 +13,7 @@ import {
 } from "@plugins/primitives/plugins/avatar/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { Button } from "@/components/ui/button";
-import { agentLaunchesResource, agentsResource } from "../../shared/resources";
+import { agentLaunchesResource, agentsResource } from "@plugins/agents/shared/resources";
 import { AgentLaunches } from "./agent-launches";
 
 type Patch = Partial<{

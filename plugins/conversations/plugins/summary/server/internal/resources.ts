@@ -5,9 +5,9 @@ import { defineResource } from "@server/resources";
 import { _conversationSummaries } from "./tables";
 import {
   ConversationSummarySchema,
-} from "../../shared/resources";
-import type { Phase } from "../../shared/resources";
-import type { ConversationSummary } from "../../shared/resources";
+} from "@plugins/conversations/plugins/summary/shared/resources";
+import type { Phase } from "@plugins/conversations/plugins/summary/shared/resources";
+import type { ConversationSummary } from "@plugins/conversations/plugins/summary/shared/resources";
 
 function rowToSummary(
   row: typeof _conversationSummaries.$inferSelect,

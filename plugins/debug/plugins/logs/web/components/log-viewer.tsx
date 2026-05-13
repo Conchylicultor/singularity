@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { fetchWithRetry, ReconnectingEventSource, useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
-import type { ClientMessage, ServerMessage, LogEntryWire } from "../../shared/protocol";
+import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/debug/plugins/logs/shared/protocol";
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
 

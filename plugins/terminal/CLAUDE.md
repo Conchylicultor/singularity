@@ -7,6 +7,8 @@
 - Description: Exposes view factories for terminal panes; no web contributions yet.
 - Exports (web):
   - Values: `terminalPane`
+- Exports (shared):
+  - Types: `ClientMessage`, `ServerMessage`, `SessionCreatedMsg`, `SessionCreateMsg`, `SessionDestroyMsg`, `SessionErrorMsg`, `SessionExitedMsg`, `SessionInputMsg`, `SessionOutputMsg`, `SessionResizeMsg`
 - Server:
   - `WS /ws/terminal`
 - Imported by: `terminal-pane`

@@ -1,4 +1,4 @@
-import type { ColorPaletteTokenValues } from "../shared";
+import type { ColorPaletteTokenValues } from "@plugins/ui/plugins/tokens/plugins/color-palette/shared";
 
 interface Preset {
   id: string;

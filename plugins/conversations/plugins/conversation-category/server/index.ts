@@ -3,7 +3,7 @@ import { Resource } from "@server/resources";
 import { Config } from "@plugins/config/server";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { conversationTurnCompleted } from "@plugins/conversations/server";
-import { conversationCategoryConfig } from "../shared/config";
+import { conversationCategoryConfig } from "@plugins/conversations/plugins/conversation-category/shared/config";
 import { classifyConversationJob } from "./internal/classify-job";
 import { conversationCategoriesResource } from "./internal/resource";
 import { categoryColorsResource } from "./internal/colors-resource";
@@ -19,7 +19,7 @@ import {
 } from "./internal/colors-routes";
 import { backfillCategoryColorsSvgNodes } from "./internal/backfill-svg";
 
-export { conversationCategoryConfig } from "../shared/config";
+export { conversationCategoryConfig } from "@plugins/conversations/plugins/conversation-category/shared/config";
 export { conversationCategory } from "./internal/tables";
 export { _conversationCategoryColors } from "./internal/tables-colors";
 export { conversationCategoriesResource } from "./internal/resource";

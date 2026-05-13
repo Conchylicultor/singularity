@@ -5,7 +5,7 @@ import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { agentLaunchesResource } from "../../shared/resources";
+import { agentLaunchesResource } from "@plugins/agents/shared/resources";
 import { cn } from "@/lib/utils";
 
 function formatDate(value: Date | string): string {

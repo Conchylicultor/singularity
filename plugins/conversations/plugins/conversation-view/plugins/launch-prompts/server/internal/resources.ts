@@ -2,7 +2,7 @@ import { asc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
 import { launchPromptsTable } from "./tables";
-import type { LaunchPrompt } from "../../shared/resources";
+import type { LaunchPrompt } from "@plugins/conversations/plugins/conversation-view/plugins/launch-prompts/shared/resources";
 
 export const launchPromptsServerResource = defineResource<LaunchPrompt[]>({
   key: "launch-prompts",

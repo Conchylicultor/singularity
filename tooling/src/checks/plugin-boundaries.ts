@@ -103,12 +103,26 @@ export const pluginBoundaries: Check = {
       checkUnknownDirs(p, plugins, violations);
     }
 
-    // R3: barrel purity for every index.ts under each plugin's runtime folders
+    // R3: barrel purity + existence for every runtime folder
+    // web/server/core/shared must have index.ts when the directory contains TS files.
+    // central is optional (not all plugins target the central runtime).
     for (const p of plugins) {
       if (skippedSet.has(p.relPath)) continue;
       for (const runtime of ["web", "server", "central", "core", "shared"] as const) {
-        const barrel = join(p.absPath, runtime, "index.ts");
-        if (!existsSync(barrel)) continue;
+        const runtimeDir = join(p.absPath, runtime);
+        if (!existsSync(runtimeDir)) continue;
+        const barrel = join(runtimeDir, "index.ts");
+        if (!existsSync(barrel)) {
+          if (runtime !== "central" && dirContainsTsFiles(runtimeDir)) {
+            violations.push({
+              rule: "barrel-required",
+              file: `plugins/${p.relPath}/${runtime}/`,
+              message: `missing \`index.ts\` barrel in \`${runtime}/\``,
+              fix: `create \`plugins/${p.relPath}/${runtime}/index.ts\` — the barrel is the only legal cross-plugin entry point for this runtime`,
+            });
+          }
+          continue;
+        }
         checkBarrelPurity(barrel, relative(root, barrel), violations, p.relPath);
       }
     }
@@ -155,6 +169,31 @@ export const pluginBoundaries: Check = {
             message: `relative import \`${relImp}\` reaches into a different plugin (\`${targetPlugin}\`)`,
             fix: `cross-plugin imports must go through the barrel — replace with \`@plugins/${targetPlugin}/<runtime>\` and re-export the symbol from that plugin's \`index.ts\` if it isn't already public`,
           });
+        }
+      }
+
+      // R12: forbid relative imports into a plugin's top-level shared/ runtime from
+      // outside that directory. shared/ is the cross-runtime layer within a plugin;
+      // its barrel (shared/index.ts) is the only entry point. Use the
+      // @plugins/<name>/shared alias — which the intra-plugin early-return above
+      // allows — so the boundary system can see and enforce the import.
+      if (sourcePlugin) {
+        const relNorm = relFile.split(sep).join("/");
+        const sharedPrefix = `plugins/${sourcePlugin}/shared`;
+        const sourceIsInShared = relNorm.startsWith(sharedPrefix + "/");
+        if (!sourceIsInShared) {
+          for (const relImp of extractRelativeImports(src)) {
+            const resolvedAbs = resolve(dirname(absFile), relImp);
+            const resolvedRel = relative(root, resolvedAbs).split(sep).join("/");
+            if (resolvedRel === sharedPrefix || resolvedRel.startsWith(sharedPrefix + "/")) {
+              violations.push({
+                rule: "relative-into-shared",
+                file: relFile,
+                message: `relative import \`${relImp}\` bypasses the shared/ barrel`,
+                fix: `use \`@plugins/${sourcePlugin}/shared\` instead — relative paths into shared/ are forbidden even from within the same plugin`,
+              });
+            }
+          }
         }
       }
 
