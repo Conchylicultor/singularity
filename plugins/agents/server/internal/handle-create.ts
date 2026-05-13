@@ -12,6 +12,7 @@ export async function handleCreate(req: Request): Promise<Response> {
     model?: string | null;
     icon?: string | null;
     iconColor?: string | null;
+    iconSvgNodes?: string | null;
   };
   const id = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const parentId = body.parentId ?? null;
@@ -26,6 +27,7 @@ export async function handleCreate(req: Request): Promise<Response> {
       model: body.model ?? null,
       icon: body.icon ?? null,
       iconColor: body.iconColor ?? null,
+      iconSvgNodes: body.iconSvgNodes ?? null,
       rank: rank.toJSON(),
     })
     .returning();

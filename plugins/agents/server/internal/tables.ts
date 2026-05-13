@@ -27,6 +27,7 @@ export const _agents = pgTable(
     // null = use the default robot/violet avatar.
     icon: text("icon"),
     iconColor: text("icon_color"),
+    iconSvgNodes: text("icon_svg_nodes"),
     expanded: boolean("expanded").notNull().default(false),
     rank: rankText("rank").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

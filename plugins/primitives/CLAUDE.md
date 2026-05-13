@@ -8,7 +8,7 @@
 - Sub-plugins:
   - **`app-shell`** — Reusable sidebar + toolbar + miller-columns layout. Apps instantiate with their own slot set.
   - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
-  - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
+  - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
   - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
   - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
   - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.

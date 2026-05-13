@@ -12,9 +12,9 @@ import { buildTree, type TreeNode } from "@plugins/primitives/plugins/tree/core"
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   Avatar,
-  AVATAR_ICON_KEYS,
   AVATAR_COLOR_KEYS,
   DEFAULT_AGENT_AVATAR,
+  type SvgNode,
 } from "@plugins/primitives/plugins/avatar/web";
 import {
   MultiSelectProvider,
@@ -33,6 +33,7 @@ type Agent = TreeItem & {
   prompt: string | null;
   icon: string | null;
   iconColor: string | null;
+  iconSvgNodes: string | null;
 };
 
 type AgentPatch = {
@@ -54,6 +55,11 @@ function randomFrom<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)] as T;
 }
 
+function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
+  if (!raw) return null;
+  try { return JSON.parse(raw) as SvgNode[]; } catch { return null; }
+}
+
 async function createAgentRow(args: {
   parentId: string | null;
   rank?: Rank;
@@ -65,7 +71,6 @@ async function createAgentRow(args: {
       ...args,
       name: "New agent",
       prompt: "",
-      icon: randomFrom(AVATAR_ICON_KEYS),
       iconColor: randomFrom(AVATAR_COLOR_KEYS),
     }),
   });
@@ -131,6 +136,7 @@ function AgentRow({ node, depth }: { node: TreeNode<Agent>; depth: number }) {
       <Avatar
         icon={node.icon ?? DEFAULT_AGENT_AVATAR.icon}
         color={node.iconColor ?? DEFAULT_AGENT_AVATAR.color}
+        svgNodes={parseSvgNodes(node.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes}
         size="xs"
         fallbackKey={node.id}
       />

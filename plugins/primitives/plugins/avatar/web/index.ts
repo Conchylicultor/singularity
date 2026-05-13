@@ -9,17 +9,14 @@ export {
   type AvatarColor,
 } from "./internal/colors";
 export {
-  AVATAR_ICONS,
-  AVATAR_ICON_KEYS,
-  AVATAR_ICON_CATEGORIES_FLAT as AVATAR_ICON_CATEGORIES,
   DEFAULT_AGENT_AVATAR,
-  resolveAvatarIcon,
-  searchIcons,
+  extractSvgNodes,
   loadFullIconSet,
   type AvatarIconCategory,
   type FullIconSet,
   type FullIconEntry,
   type FullIconCategory,
+  type SvgNode,
 } from "./internal/icons";
 
 export default {

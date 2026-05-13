@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, type ReactNode } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
-import type { IconType } from "react-icons";
 import { MdClose, MdSearch } from "react-icons/md";
 import {
   Popover,
@@ -10,10 +9,9 @@ import {
 import { cn } from "@/lib/utils";
 import { AVATAR_COLOR_KEYS, AVATAR_COLORS, type AvatarColor } from "../internal/colors";
 import {
-  AVATAR_ICONS,
-  AVATAR_ICON_CATEGORIES_FLAT,
-  searchCuratedIcons,
   loadFullIconSet,
+  extractSvgNodes,
+  type SvgNode,
   type FullIconSet,
   type FullIconEntry,
 } from "../internal/icons";
@@ -21,6 +19,7 @@ import {
 export interface AvatarSpec {
   icon: string | null;
   color: string | null;
+  svgNodes: SvgNode[] | null;
 }
 
 export interface AvatarPickerProps {
@@ -43,34 +42,22 @@ export function AvatarPicker({
   const [fullSet, setFullSet] = useState<FullIconSet | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Start loading the full set as soon as the picker opens for the first time.
   useEffect(() => {
     if (!open) return;
     void loadFullIconSet().then(setFullSet);
   }, [open]);
 
-  const pickIcon = (icon: string) => void onChange({ ...value, icon });
+  const pickIcon = (entry: FullIconEntry) => {
+    const svgNodes = extractSvgNodes(entry.Icon);
+    void onChange({ ...value, icon: entry.key, svgNodes });
+  };
   const pickColor = (color: AvatarColor) => void onChange({ ...value, color });
 
-  // --- what to show in the icon area ---
   const isSearching = query.trim().length > 0;
 
-  const searchResults: FullIconEntry[] = isSearching
-    ? fullSet
-      ? fullSet.search(query)
-      : searchCuratedIcons(query).map((key) => ({
-          key,
-          Icon: AVATAR_ICONS[key]!,
-          label: key,
-        }))
+  const searchResults: FullIconEntry[] = isSearching && fullSet
+    ? fullSet.search(query)
     : [];
-
-  const displayCategories = fullSet
-    ? fullSet.categories
-    : AVATAR_ICON_CATEGORIES_FLAT.map((c) => ({
-        label: c.label,
-        entries: c.keys.map((k) => ({ key: k, Icon: AVATAR_ICONS[k]!, label: k })),
-      }));
 
   return (
     <Popover open={open} onOpenChange={(next) => { setOpen(next); if (!next) setQuery(""); }}>
@@ -134,11 +121,13 @@ export function AvatarPicker({
 
         {/* Icon grid */}
         <div className="max-h-64 overflow-y-auto px-1 pb-1 space-y-2">
-          {isSearching ? (
+          {!fullSet ? (
+            <p className="py-8 text-center text-xs text-muted-foreground">Loading icons…</p>
+          ) : isSearching ? (
             searchResults.length > 0 ? (
               <div className="grid grid-cols-9 gap-1">
-                {searchResults.map(({ key, Icon }) => (
-                  <IconBtn key={key} iconKey={key} Icon={Icon} selected={value.icon === key} onPick={pickIcon} />
+                {searchResults.map((entry) => (
+                  <IconBtn key={entry.key} entry={entry} selected={value.icon === entry.key} onPick={pickIcon} />
                 ))}
               </div>
             ) : (
@@ -147,14 +136,14 @@ export function AvatarPicker({
               </p>
             )
           ) : (
-            displayCategories.map((cat) => (
+            fullSet.categories.map((cat) => (
               <div key={cat.label}>
                 <SectionLabel className="mb-1 text-[9px] text-muted-foreground/60">
                   {cat.label}
                 </SectionLabel>
                 <div className="grid grid-cols-9 gap-1">
-                  {cat.entries.map(({ key, Icon }) => (
-                    <IconBtn key={key} iconKey={key} Icon={Icon} selected={value.icon === key} onPick={pickIcon} />
+                  {cat.entries.map((entry) => (
+                    <IconBtn key={entry.key} entry={entry} selected={value.icon === entry.key} onPick={pickIcon} />
                   ))}
                 </div>
               </div>
@@ -168,7 +157,7 @@ export function AvatarPicker({
             <div className="my-1 h-px bg-border" />
             <button
               type="button"
-              onClick={() => void onChange({ icon: null, color: null })}
+              onClick={() => void onChange({ icon: null, color: null, svgNodes: null })}
               className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-xs text-muted-foreground hover:bg-accent"
             >
               Clear
@@ -180,14 +169,15 @@ export function AvatarPicker({
   );
 }
 
-function IconBtn({ iconKey, Icon, selected, onPick }: { iconKey: string; Icon: IconType; selected: boolean; onPick: (k: string) => void }) {
+function IconBtn({ entry, selected, onPick }: { entry: FullIconEntry; selected: boolean; onPick: (e: FullIconEntry) => void }) {
+  const Icon = entry.Icon;
   return (
     <button
       type="button"
-      aria-label={iconKey}
+      aria-label={entry.key}
       aria-pressed={selected}
-      title={iconKey.replace(/_/g, " ")}
-      onClick={() => onPick(iconKey)}
+      title={entry.key.replace(/_/g, " ")}
+      onClick={() => onPick(entry)}
       className={cn(
         "flex size-7 items-center justify-center rounded-md text-foreground/80 hover:bg-accent",
         selected && "bg-accent text-foreground ring-1 ring-ring",

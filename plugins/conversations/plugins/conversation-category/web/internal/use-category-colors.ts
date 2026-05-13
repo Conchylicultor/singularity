@@ -4,6 +4,7 @@ import { resourceDescriptor, useResource } from "@plugins/primitives/plugins/liv
 const CategoryAvatarOverrideSchema = z.object({
   colorKey: z.string().nullable(),
   iconKey: z.string().nullable(),
+  iconSvgNodes: z.string().nullable(),
 });
 
 export type CategoryAvatarOverride = z.infer<typeof CategoryAvatarOverrideSchema>;

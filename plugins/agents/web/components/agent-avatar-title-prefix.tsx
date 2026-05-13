@@ -1,15 +1,16 @@
 import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Avatar, DEFAULT_AGENT_AVATAR } from "@plugins/primitives/plugins/avatar/web";
+import { Avatar, DEFAULT_AGENT_AVATAR, type SvgNode } from "@plugins/primitives/plugins/avatar/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { agentLaunchesResource, agentsResource } from "../../shared/resources";
 import { agentSidePane } from "../panes";
 import { cn } from "@/lib/utils";
 
-// Renders before the conversation pane title for agent-launched conversations.
-// Replaces the legacy violet "Agent" pill — the avatar already conveys both
-// "this is from an agent" and "which agent". Click toggles the side pane that
-// shows the agent's detail/history.
+function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
+  if (!raw) return null;
+  try { return JSON.parse(raw) as SvgNode[]; } catch { return null; }
+}
+
 export function AgentAvatarTitlePrefix({ conversation }: { conversation: ConversationRecord }) {
   const match = usePaneMatch();
   const openPane = useOpenPane();
@@ -43,6 +44,7 @@ export function AgentAvatarTitlePrefix({ conversation }: { conversation: Convers
       <Avatar
         icon={agent?.icon ?? DEFAULT_AGENT_AVATAR.icon}
         color={agent?.iconColor ?? DEFAULT_AGENT_AVATAR.color}
+        svgNodes={parseSvgNodes(agent?.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes}
         size="sm"
         fallbackKey={agent?.id}
       />

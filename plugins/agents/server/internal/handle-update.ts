@@ -18,6 +18,7 @@ export async function handleUpdate(
     model?: string | null;
     icon?: string | null;
     iconColor?: string | null;
+    iconSvgNodes?: string | null;
     expanded?: boolean;
     parentId?: string | null;
     rank?: string;
@@ -35,6 +36,9 @@ export async function handleUpdate(
   }
   if (body.iconColor === null || typeof body.iconColor === "string") {
     patch.iconColor = body.iconColor;
+  }
+  if (body.iconSvgNodes === null || typeof body.iconSvgNodes === "string") {
+    patch.iconSvgNodes = body.iconSvgNodes;
   }
   if (typeof body.expanded === "boolean") patch.expanded = body.expanded;
   if (body.parentId === null || typeof body.parentId === "string") {

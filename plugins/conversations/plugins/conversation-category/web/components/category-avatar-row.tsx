@@ -1,4 +1,4 @@
-import { Avatar } from "@plugins/primitives/plugins/avatar/web";
+import { Avatar, type SvgNode } from "@plugins/primitives/plugins/avatar/web";
 import {
   CONV_STATUS_DOT,
   type ConversationItemConv,
@@ -6,6 +6,11 @@ import {
 import { useCategoryFor } from "../internal/use-category";
 import { useCategoryColors } from "../internal/use-category-colors";
 import { autoColorKey } from "../internal/colors";
+
+function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
+  if (!raw) return null;
+  try { return JSON.parse(raw) as SvgNode[]; } catch { return null; }
+}
 
 export function CategoryAvatarRow({ conv }: { conv: ConversationItemConv }) {
   const category = useCategoryFor(conv.id);
@@ -17,6 +22,7 @@ export function CategoryAvatarRow({ conv }: { conv: ConversationItemConv }) {
     <Avatar
       icon={override?.iconKey ?? null}
       color={override?.colorKey ?? autoColor ?? null}
+      svgNodes={parseSvgNodes(override?.iconSvgNodes)}
       size="sm"
       statusDot={CONV_STATUS_DOT[conv.status]}
       fallbackKey={category ?? conv.id}

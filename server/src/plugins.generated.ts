@@ -73,6 +73,7 @@ import infraWorktreePlugin from "@plugins/infra/plugins/worktree/server";
 import notificationsPlugin from "@plugins/notifications/server";
 import pluginMetaPluginHealthPlugin from "@plugins/plugin-meta/plugins/plugin-health/server";
 import pluginMetaPluginViewPlugin from "@plugins/plugin-meta/plugins/plugin-view/server";
+import primitivesAvatarPlugin from "@plugins/primitives/plugins/avatar/server";
 import primitivesRankPlugin from "@plugins/primitives/plugins/rank/server";
 import reorderGroupsPlugin from "@plugins/reorder/plugins/groups/server";
 import reorderPlugin from "@plugins/reorder/server";
@@ -93,7 +94,7 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 
 (activeDataPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, tasksCorePlugin];
 (agentsAutoLaunchTogglePlugin as ServerPluginDefinition).dependsOn = [agentsPlugin, databasePlugin, infraEntityExtensionsPlugin];
-(agentsPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraAttachmentsPlugin, primitivesRankPlugin, tasksCorePlugin];
+(agentsPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraAttachmentsPlugin, primitivesAvatarPlugin, primitivesRankPlugin, tasksCorePlugin];
 (authGooglePlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (authNotionPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (buildPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, debugLogsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin, infraPathsPlugin];
@@ -101,7 +102,7 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (codeExplorerPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
 (configPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraPathsPlugin, infraSecretsPlugin];
 (conversationsRecoverPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, tasksCorePlugin];
-(conversationsConversationCategoryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, databasePlugin, infraClaudeCliPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
+(conversationsConversationCategoryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, databasePlugin, infraClaudeCliPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, primitivesAvatarPlugin, tasksCorePlugin];
 (conversationsConversationProgressPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, infraPathsPlugin, tasksCorePlugin];
 (conversationsConversationViewAllowMonitorPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
 (conversationsConversationViewCodeReviewPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
@@ -232,6 +233,7 @@ export const plugins: ServerPluginDefinition[] = [
   notificationsPlugin,
   pluginMetaPluginHealthPlugin,
   pluginMetaPluginViewPlugin,
+  primitivesAvatarPlugin,
   primitivesRankPlugin,
   reorderGroupsPlugin,
   reorderPlugin,

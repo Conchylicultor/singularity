@@ -1,13 +1,14 @@
-import { forwardRef } from "react";
+import { createElement, forwardRef } from "react";
 import { cn } from "@/lib/utils";
 import { avatarColorClass } from "../internal/colors";
-import { resolveAvatarIcon } from "../internal/icons";
+import type { SvgNode } from "../internal/icons";
 
 export type AvatarSize = "xs" | "sm" | "md" | "lg";
 
 export interface AvatarProps {
   icon?: string | null;
   color?: string | null;
+  svgNodes?: SvgNode[] | null;
   size?: AvatarSize;
   /** Tailwind bg class for an overlaid status dot (Slack-style presence). */
   statusDot?: string | null;
@@ -24,13 +25,23 @@ const SIZE_MAP: Record<AvatarSize, { box: string; icon: string; dot: string; rin
   lg: { box: "size-12 text-base", icon: "size-6", dot: "size-3 -right-0.5 -bottom-0.5", ring: "ring-2" },
 };
 
+function renderSvgNodes(nodes: SvgNode[]): React.ReactNode {
+  return nodes.map((node, i) =>
+    createElement(
+      node.tag,
+      { key: i, ...node.attr },
+      node.child.length > 0 ? renderSvgNodes(node.child) : undefined,
+    ),
+  );
+}
+
 export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
-  { icon, color, size = "sm", statusDot, fallbackKey, className, title },
+  { icon, color, svgNodes, size = "sm", statusDot, fallbackKey, className, title },
   ref,
 ) {
-  const Icon = resolveAvatarIcon(icon);
   const sz = SIZE_MAP[size];
-  const filled = Icon != null || color != null;
+  const hasSvg = svgNodes != null && svgNodes.length > 0;
+  const filled = hasSvg || color != null;
   const bg = filled ? avatarColorClass(color, fallbackKey ?? icon ?? undefined) : "bg-muted";
   return (
     <span
@@ -43,7 +54,16 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
         className,
       )}
     >
-      {Icon ? <Icon className={sz.icon} aria-hidden /> : null}
+      {hasSvg ? (
+        <svg
+          viewBox="0 0 24 24"
+          className={sz.icon}
+          fill="currentColor"
+          aria-hidden
+        >
+          {renderSvgNodes(svgNodes!)}
+        </svg>
+      ) : null}
       {statusDot ? (
         <span
           className={cn(

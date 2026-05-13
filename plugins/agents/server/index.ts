@@ -9,6 +9,7 @@ import { handleLaunch } from "./internal/handle-launch";
 import { handleListLaunches } from "./internal/handle-list-launches";
 import { agentLaunchesResource, agentsResource } from "./internal/resources";
 import { ensureAgentsMetaTask } from "./internal/meta-agents";
+import { backfillAgentSvgNodes } from "./internal/backfill-svg";
 
 export { _agent_launches, _agents } from "./internal/tables";
 export { agents, AgentSchema, AgentLaunchSchema, AgentLaunchWithStatusSchema } from "./internal/schema";
@@ -33,5 +34,6 @@ export default {
   contributions: [Resource.Declare(agentsResource), Resource.Declare(agentLaunchesResource)],
   onReady: async () => {
     await ensureAgentsMetaTask();
+    await backfillAgentSvgNodes();
   },
 } satisfies ServerPluginDefinition;

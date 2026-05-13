@@ -17,6 +17,7 @@ import {
   handleSetColor,
   handleDeleteColor,
 } from "./internal/colors-routes";
+import { backfillCategoryColorsSvgNodes } from "./internal/backfill-svg";
 
 export { conversationCategoryConfig } from "../shared/config";
 export { conversationCategory } from "./internal/tables";
@@ -43,6 +44,9 @@ export default {
     "GET /api/conversation-category/colors": handleGetColors,
     "POST /api/conversation-category/colors": handleSetColor,
     "DELETE /api/conversation-category/colors/:category": handleDeleteColor,
+  },
+  onReady: async () => {
+    await backfillCategoryColorsSvgNodes();
   },
   register: [classifyConversationJob],
 } satisfies ServerPluginDefinition;

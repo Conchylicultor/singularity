@@ -8,6 +8,7 @@ export const _conversationCategoryColors = pgTable(
     category: text("category").primaryKey(),
     colorKey: text("color_key"),
     iconKey: text("icon_key"),
+    iconSvgNodes: text("icon_svg_nodes"),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

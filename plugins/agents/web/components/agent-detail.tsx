@@ -9,6 +9,7 @@ import {
   Avatar,
   AvatarPicker,
   DEFAULT_AGENT_AVATAR,
+  type SvgNode,
 } from "@plugins/primitives/plugins/avatar/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ type Patch = Partial<{
   model: string | null;
   icon: string | null;
   iconColor: string | null;
+  iconSvgNodes: string | null;
 }>;
 
 const MODELS = [
@@ -35,6 +37,11 @@ async function patchAgent(id: string, patch: Patch) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
   });
+}
+
+function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
+  if (!raw) return null;
+  try { return JSON.parse(raw) as SvgNode[]; } catch { return null; }
 }
 
 export function AgentDetail({ agentId }: { agentId: string }) {
@@ -99,6 +106,8 @@ export function AgentDetail({ agentId }: { agentId: string }) {
     return <Placeholder>Loading…</Placeholder>;
   }
 
+  const agentSvgNodes = parseSvgNodes(agent.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes;
+
   return (
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center gap-3">
@@ -106,13 +115,19 @@ export function AgentDetail({ agentId }: { agentId: string }) {
           value={{
             icon: agent.icon ?? DEFAULT_AGENT_AVATAR.icon,
             color: agent.iconColor ?? DEFAULT_AGENT_AVATAR.color,
+            svgNodes: agentSvgNodes,
           }}
-          onChange={(next) => save({ icon: next.icon, iconColor: next.color })}
+          onChange={(next) => save({
+            icon: next.icon,
+            iconColor: next.color,
+            iconSvgNodes: next.svgNodes ? JSON.stringify(next.svgNodes) : null,
+          })}
           triggerLabel="Pick agent avatar"
         >
           <Avatar
             icon={agent.icon ?? DEFAULT_AGENT_AVATAR.icon}
             color={agent.iconColor ?? DEFAULT_AGENT_AVATAR.color}
+            svgNodes={agentSvgNodes}
             size="lg"
             statusDot={latestStatus ? CONV_STATUS_DOT[latestStatus] : null}
             fallbackKey={agent.id}

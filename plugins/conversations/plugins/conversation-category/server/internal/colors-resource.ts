@@ -6,6 +6,7 @@ import { _conversationCategoryColors } from "./tables-colors";
 export const CategoryAvatarOverrideSchema = z.object({
   colorKey: z.string().nullable(),
   iconKey: z.string().nullable(),
+  iconSvgNodes: z.string().nullable(),
 });
 
 export type CategoryAvatarOverride = z.infer<typeof CategoryAvatarOverrideSchema>;
@@ -17,7 +18,11 @@ export const categoryColorsResource = defineResource<Record<string, CategoryAvat
   loader: async () => {
     const rows = await db.select().from(_conversationCategoryColors);
     return Object.fromEntries(
-      rows.map((r) => [r.category, { colorKey: r.colorKey ?? null, iconKey: r.iconKey ?? null }]),
+      rows.map((r) => [r.category, {
+        colorKey: r.colorKey ?? null,
+        iconKey: r.iconKey ?? null,
+        iconSvgNodes: r.iconSvgNodes ?? null,
+      }]),
     );
   },
 });

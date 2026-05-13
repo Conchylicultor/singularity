@@ -631,6 +631,13 @@
       "tag": "20260512_222056_f7be4bb3__merged_20260512_2220",
       "hash": "f7be4bb3",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1778682101000,
+      "tag": "20260513_142141_53737344__add_avatar_svg_nodes",
+      "hash": "53737344",
+      "breakpoints": true
     }
   ]
 }
