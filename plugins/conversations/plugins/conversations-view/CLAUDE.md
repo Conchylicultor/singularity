@@ -9,7 +9,7 @@
   - Slots: `ConversationsView.View`
 - Exports (web):
   - Types: `ViewContribution`, `ViewProps`
-  - Values: `ConversationsView`
+  - Values: `ConversationsView`, `useGoneConversationsPagination`
 - Contributes:
   - `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
   - `Core.Root` → `ForkErrorWatcher`

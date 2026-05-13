@@ -1,11 +1,9 @@
 import { useMemo } from "react";
-import { useConversations, GonePageSchema } from "@plugins/conversations/web";
-import {
-  useCursorPagination,
-  ScrollSentinel,
-} from "@plugins/primitives/plugins/cursor-pagination/web";
+import { useConversations } from "@plugins/conversations/web";
+import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/web";
 import { cn } from "@/lib/utils";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
+import { useGoneConversationsPagination } from "@plugins/conversations/plugins/conversations-view/web";
 import type { Conversation } from "@plugins/tasks-core/core";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import {
@@ -15,8 +13,6 @@ import {
   SidebarMenuAction,
 } from "@/components/ui/sidebar";
 import { MdClose } from "react-icons/md";
-
-const PAGE_SIZE = 20;
 
 export function HistoryView({
   activeId,
@@ -31,14 +27,6 @@ export function HistoryView({
     return all.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }, [active, system, recentGone]);
 
-  const cursor =
-    hasMoreGone && recentGone.length > 0
-      ? (
-          recentGone[recentGone.length - 1]!.endedAt ??
-          recentGone[recentGone.length - 1]!.createdAt
-        ).toISOString()
-      : null;
-
   const liveIds = useMemo(
     () => new Set(liveItems.map((c) => c.id)),
     [liveItems],
@@ -49,24 +37,7 @@ export function HistoryView({
     hasNextPage,
     isFetchingNextPage,
     sentinelRef,
-  } = useCursorPagination({
-    queryKey: ["conversations-gone-paginated"],
-    fetchPage: async (before, limit) => {
-      const params = new URLSearchParams({
-        before,
-        limit: String(limit),
-      });
-      const res = await fetch(`/api/conversations/gone?${params}`);
-      if (!res.ok) throw new Error("Failed to fetch gone conversations");
-      return GonePageSchema.parse(await res.json());
-    },
-    cursor,
-    enabled: hasMoreGone,
-    pageSize: PAGE_SIZE,
-    getCursor: (c) => (c.endedAt ?? c.createdAt).toISOString(),
-    liveIds,
-    getId: (c) => c.id,
-  });
+  } = useGoneConversationsPagination({ recentGone, hasMoreGone, liveIds });
 
   const isEmpty = liveItems.length === 0 && paginatedItems.length === 0;
 
