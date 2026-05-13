@@ -2,7 +2,7 @@ import { asc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
 import { reviewSectionsTable } from "./tables";
-import type { ReviewSection } from "../../shared/resources";
+import type { ReviewSection } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/shared";
 
 export const reviewSectionsServerResource = defineResource<ReviewSection[]>({
   key: "review-sections",

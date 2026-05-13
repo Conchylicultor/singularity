@@ -127,7 +127,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `DebugApp`
           - Contributes:
             - `Apps.App` "Debug" → `DebugLayout`
-          - Imported by: `agents`, `auth`, `blocked-by`, `blocking`, `branch`, `build`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
+          - Imported by: `agents`, `auth`, `blocked-by`, `blocking`, `branch`, `build`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `review`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -317,7 +317,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
   - Imported by: `auth`, `build`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `launch-prompts`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shape`, `sidebar-palette`, `theme-engine`, `turn-summary`
-  - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `theme-engine`
+  - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `review`, `theme-engine`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:
@@ -467,14 +467,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - Contributes:
                     - `FilePane.Renderer` "Raw" → `RawView`
             - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file. Toolbar button and full-screen view to review all worktree changes file-by-file.
+              - Defines:
+                - DB schema: `plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/server/internal/tables.ts`
               - Exports (shared):
-                - Values: `reviewConfig`
+                - Types: `ReviewSection`
+                - Values: `reviewConfig`, `reviewSectionsResource`
               - Contributes:
                 - `Pane.Register` "conv-review"
                 - `Conversation.ActionBar` → `ReviewButton`
                 - `Config.Spec`
+                - `Config.Section` "Review Sections" → `ReviewSectionsSettings`
               - Server:
-                - Uses: `config.Config`
+                - Uses: `config.Config`, `database.db`
+                - `GET /api/review-sections`
+                - `POST /api/review-sections`
+                - `PATCH /api/review-sections/:id`
+                - `DELETE /api/review-sections/:id`
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
           - Exports (shared):
             - Types: `CommitDelta`, `CommitRow`, `CommitsGraph`
@@ -847,7 +855,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Exports (server):
     - Values: `awaitDbReady`, `db`, `isTransientDbError`
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `grouped`, `groups`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `grouped`, `groups`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `review`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Exports (server):

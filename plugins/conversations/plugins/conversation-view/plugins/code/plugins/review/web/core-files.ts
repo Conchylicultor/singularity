@@ -1,5 +1,5 @@
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
-import type { ReviewSection } from "../shared/resources";
+import type { ReviewSection } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/shared";
 
 export type FileWarningLevel = "safe" | "careful" | "critical";
 
