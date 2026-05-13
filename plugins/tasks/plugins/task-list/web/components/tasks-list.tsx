@@ -119,6 +119,7 @@ export function TasksList({
       dragOverlay={(t) => t.title || "Untitled"}
       toolbar={{
         expandAll: true,
+        search: { accessor: (t) => t.title },
         hideTerminal: {
           isTerminal: (t) => t.status === "done" || t.status === "dropped",
         },

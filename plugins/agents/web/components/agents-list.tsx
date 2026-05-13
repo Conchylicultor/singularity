@@ -131,6 +131,7 @@ export function AgentsList({
         dragOverlay={(a) => a.name || "Untitled"}
         toolbar={{
           expandAll: true,
+          search: { accessor: (a) => a.name },
           start: listActions.map((a) => <a.component key={a.id} />),
         }}
         addLabel="Agent"

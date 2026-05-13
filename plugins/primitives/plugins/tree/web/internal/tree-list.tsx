@@ -24,6 +24,7 @@ import {
   type TreeNode,
 } from "../../core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
+import { SearchInput, filterTree } from "@plugins/primitives/plugins/search/web";
 import { cn } from "@/lib/utils";
 import { pendingFocus } from "./pending-focus";
 import { TreeListProvider } from "./use-tree-row";
@@ -51,6 +52,7 @@ export type TreeListProps<T extends TreeItem> = {
   toolbar?: {
     expandAll?: boolean;
     hideTerminal?: { isTerminal: (row: T) => boolean };
+    search?: { accessor: (row: T) => string };
     /** Extra content rendered on the left side of the toolbar row. */
     start?: ReactNode;
   };
@@ -132,11 +134,27 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     [scopedBase, optimisticExpanded],
   );
   const tree = useMemo(() => buildTree(scoped), [scoped]);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchAccessor = toolbar?.search?.accessor;
+  const afterSearch = useMemo(() => {
+    const needle = searchQuery.trim().toLowerCase();
+    if (!needle || !searchAccessor) return tree;
+    return filterTree<TreeNode<T>>(
+      tree,
+      (n) => searchAccessor(n).toLowerCase().includes(needle),
+      (n) => n.children,
+      (n, children) => ({ ...n, expanded: true, children }),
+    );
+  }, [tree, searchQuery, searchAccessor]);
+
   const isTerminal = toolbar?.hideTerminal?.isTerminal;
   const visibleTree = useMemo(
     () =>
-      hideTerminal && isTerminal ? hideTerminalSubtrees(tree, isTerminal) : tree,
-    [tree, hideTerminal, isTerminal],
+      hideTerminal && isTerminal
+        ? hideTerminalSubtrees(afterSearch, isTerminal)
+        : afterSearch,
+    [afterSearch, hideTerminal, isTerminal],
   );
 
   const nodesWithChildren = useMemo(() => {
@@ -199,7 +217,8 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     [rows, onMove],
   );
 
-  const hasToolbar = showExpandAll || !!toolbar?.hideTerminal || !!toolbar?.start;
+  const hasToolbar =
+    showExpandAll || !!toolbar?.hideTerminal || !!toolbar?.start || !!toolbar?.search;
   const showRootAdd = !rootId && addLabel != null;
 
   const ctxValue = useMemo(
@@ -239,7 +258,23 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
         <div className="flex flex-col gap-0.5">
           {hasToolbar && (
             <div className="sticky top-0 z-10 bg-background mb-1 flex items-center gap-1">
-              <div className="flex items-center gap-1">{toolbar.start}</div>
+              <div className="flex items-center gap-1">
+                {toolbar.search && (
+                  <SearchInput
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setSearchQuery("");
+                        (e.target as HTMLInputElement).blur();
+                      }
+                    }}
+                    placeholder="Filter…"
+                    className="w-32"
+                  />
+                )}
+                {toolbar.start}
+              </div>
               <div className="ml-auto flex items-center gap-1">
                 {showExpandAll && (
                   <button
