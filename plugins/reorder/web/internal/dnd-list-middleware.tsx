@@ -263,6 +263,7 @@ function ReorderListMiddlewareInner({
     [storageId],
   );
 
+  /* eslint-disable @typescript-eslint/no-unnecessary-condition -- ref guards + Record key lookups can be undefined at runtime */
   const onGroupReorder = useCallback(
     (groupId: string, overId: string) => {
       const gd = groupsDataRef.current;
@@ -338,6 +339,7 @@ function ReorderListMiddlewareInner({
     },
     [storageId],
   );
+  /* eslint-enable @typescript-eslint/no-unnecessary-condition */
 
   const onDropRef = useRef(onDrop);
   onDropRef.current = onDrop;

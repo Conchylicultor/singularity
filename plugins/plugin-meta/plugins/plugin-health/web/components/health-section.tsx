@@ -66,6 +66,7 @@ export function HealthSection({ node }: { node: PluginNode }) {
         ),
       ]);
 
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- set to true in useEffect cleanup
       if (cancelled) return;
 
       const stalenessMap = new Map(

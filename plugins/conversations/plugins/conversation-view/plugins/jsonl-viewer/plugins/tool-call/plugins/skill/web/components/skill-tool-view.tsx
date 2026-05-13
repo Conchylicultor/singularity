@@ -5,6 +5,7 @@ type SkillInput = { skill: string; args?: string };
 
 export function SkillToolView({ event }: ToolRendererProps) {
   const input = event.input as SkillInput;
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; input is `as`-cast from unknown
   const skillName = input.skill ?? "";
   const args = typeof input.args === "string" ? input.args : "";
   const injected = event.injectedContext ?? [];

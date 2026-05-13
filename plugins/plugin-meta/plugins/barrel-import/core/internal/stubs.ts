@@ -82,6 +82,7 @@ export function registerBarrelStubs(_repoRoot: string): void {
     useMemo: (fn: () => unknown) => fn(),
     useCallback: identity,
     useRef: (init: unknown) => ({ current: init }),
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- ctx is untyped at runtime
     useContext: (ctx: { _currentValue?: unknown }) => ctx?._currentValue,
     useReducer: (_r: unknown, init: unknown) => [init, noop],
     useId: () => "stub",

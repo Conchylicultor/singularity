@@ -82,6 +82,7 @@ export function useCursorPagination<T>(
 
   return {
     items,
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- hasNextPage can be undefined before first fetch
     hasNextPage: hasNextPage ?? false,
     isFetchingNextPage,
     sentinelRef,

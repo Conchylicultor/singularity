@@ -10,6 +10,7 @@ export type SpacerItem = { readonly id: string; readonly _spacer: true };
 export function isSpacer(
   item: Contribution | SpacerItem,
 ): item is SpacerItem {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime discriminant check; TS narrows through the `as` cast
   return (item as SpacerItem)._spacer === true;
 }
 
@@ -22,12 +23,8 @@ export type GroupEntry = {
 export type TopLevelEntry = Contribution | SpacerItem | GroupEntry;
 
 export function isGroupEntry(entry: TopLevelEntry): entry is GroupEntry {
-  return (
-    typeof entry === "object" &&
-    entry !== null &&
-    "kind" in entry &&
-    (entry as GroupEntry).kind === "group"
-  );
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime discriminant check; TS narrows through the `as` cast
+  return "kind" in entry && (entry as GroupEntry).kind === "group";
 }
 
 export function contributionKey(c: Contribution): string | null {
@@ -43,7 +40,7 @@ export function entryKey(item: Contribution | SpacerItem): string {
 }
 
 export function contributionLabel(c: Contribution): string {
-  return (c._pluginName as string) ?? (c.id as string) ?? "Item";
+  return (c._pluginName as string | undefined) ?? (c.id as string | undefined) ?? "Item";
 }
 
 type GroupsData = {

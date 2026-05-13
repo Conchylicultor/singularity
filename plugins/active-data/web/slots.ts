@@ -39,6 +39,7 @@ export type ActiveDataContribution =
 
 export const ActiveData = {
   Tag: defineSlot<ActiveDataContribution>("active-data.tag", {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime discriminant; TS sees union as always having pattern
     docLabel: (p) => ("tag" in p ? p.tag : p.pattern?.source),
   }),
 };

@@ -10,6 +10,7 @@ export function AutoLaunchWatcher() {
 
   useEffect(() => {
     if (dataUpdatedAt === 0) return;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- data may be undefined before resource hydrates
     const active = data?.active ?? [];
     if (!initializedRef.current) {
       initializedRef.current = true;

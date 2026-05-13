@@ -49,7 +49,6 @@ export async function submitChain(args: SubmitArgs): Promise<SubmitOutcome> {
     const blob = await domToBlob(document.documentElement, {
       scale: window.devicePixelRatio || 1,
     });
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard on external library
     if (!blob) {
       return { ok: false, errorMessage: "Screenshot failed", launchedCount, totalCount };
     }

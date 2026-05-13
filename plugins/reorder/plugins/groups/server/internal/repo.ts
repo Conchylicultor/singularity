@@ -69,6 +69,7 @@ export async function addMembersToGroup(
       .from(_reorderGroups)
       .where(eq(_reorderGroups.id, groupId))
       .limit(1);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Drizzle types the destructured element as always defined
     if (!group) throw new Error(`Group ${groupId} not found`);
     for (const contributionId of contributionIds) {
       const rank = await nextRankUnder(
@@ -105,6 +106,7 @@ export async function removeMember(
       ),
     )
     .returning({ contributionId: _reorderGroupMembers.contributionId });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Drizzle types the destructured element as always defined
   if (!row) return false;
   reorderGroupsResource.notify({ slotId });
   return true;
@@ -130,6 +132,7 @@ export async function updateGroup(
     .set(dbPatch)
     .where(eq(_reorderGroups.id, id))
     .returning({ id: _reorderGroups.id });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Drizzle types the destructured element as always defined
   if (!row) return false;
   reorderGroupsResource.notify({ slotId });
   return true;
@@ -140,6 +143,7 @@ export async function deleteGroup(id: string, slotId: string): Promise<boolean> 
     .delete(_reorderGroups)
     .where(eq(_reorderGroups.id, id))
     .returning({ id: _reorderGroups.id });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- Drizzle types the destructured element as always defined
   if (!row) return false;
   reorderGroupsResource.notify({ slotId });
   return true;

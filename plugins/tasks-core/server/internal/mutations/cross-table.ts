@@ -90,13 +90,11 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
       inserted = !!row;
     });
   }
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; TS can't see mutation inside async transaction callback
   if (inserted) {
     tasksResource.notify();
     attemptsResource.notify();
     recentConversationsResource.notify();
   }
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; TS can't see mutation inside async transaction callback
   if (!inserted) return null;
   const [row] = await db
     .select()

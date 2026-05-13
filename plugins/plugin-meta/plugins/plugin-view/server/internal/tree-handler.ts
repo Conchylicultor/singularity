@@ -78,6 +78,7 @@ function toApiNode(node: TreePluginNode, symbolConsumers: Map<string, Map<string
       resources: [...node.server.resources, ...node.central.resources],
       contributions: node.contributions.map((c) => ({
         slot: c.slot,
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- props["id"] can be undefined at runtime
         id: c.props["id"]?.replace(/^["'`]|["'`]$/g, ""),
         paneId: c.paneId,
         panePath: c.panePath,

@@ -940,6 +940,7 @@ export function openPane(
   params: Record<string, string>,
   opts: { mode: "root" },
 ): void {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- overload narrows mode to "root" but the check keeps this future-proof for additional modes
   openPaneImpl(target._internal, params, { root: opts.mode === "root" });
 }
 
