@@ -25,9 +25,6 @@ export default {
   },
   register: [buildRunJob],
   onReady: async () => {
-    if (!isMain()) return;
-
-    // Mark orphaned builds as succeeded — if this server booted, the last build worked.
     const orphans = await db
       .update(_buildRuns)
       .set({ finishedAt: new Date(), exitCode: 0 })
@@ -36,6 +33,8 @@ export default {
     if (orphans.length > 0) {
       buildHistoryResource.notify();
     }
+
+    if (!isMain()) return;
 
     await deleteTriggersFor(buildRunJob);
     await trigger({
