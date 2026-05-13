@@ -5,7 +5,7 @@ import {
   adoptOrphanConversation,
   markConversationGone,
   markConversationClosed,
-  recentConversationsResource,
+  notifyConversationsChanged,
 } from "@plugins/tasks-core/server";
 import { recordCrash } from "@plugins/crashes/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
@@ -213,7 +213,7 @@ async function tick(): Promise<void> {
     }
   }
 
-  if (changed) recentConversationsResource.notify();
+  if (changed) notifyConversationsChanged();
 }
 
 function logTickError(label: string, err: unknown): void {

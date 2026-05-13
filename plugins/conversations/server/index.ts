@@ -63,7 +63,7 @@ export default {
     "GET /api/conversations/:id/turns": handleListTurns,
     "POST /api/conversations/:id/close": handleClose,
   },
-  // recentConversationsResource is now mounted on tasks-core; only fork-errors stays here.
+  // conversationsLiveResource is mounted on tasks-core; only fork-errors stays here.
   contributions: [
     Resource.Declare(forkErrorsResource),
     Trigger({ on: taskStatusChanged, do: maybeLaunchDependentsJob, with: {}, oneShot: false }),

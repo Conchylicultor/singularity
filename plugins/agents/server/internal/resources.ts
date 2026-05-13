@@ -4,7 +4,7 @@ import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
 import {
   listConversationsForDisplay,
-  recentConversationsResource,
+  conversationsLiveResource,
 } from "@plugins/tasks-core/server";
 import { _agent_launches } from "./tables";
 import {
@@ -30,7 +30,7 @@ export const agentLaunchesResource = defineResource({
   schema: z.array(AgentLaunchWithStatusSchema),
   // Re-notify whenever conversations change so `latestConversation` stays in
   // sync with the live status broadcast.
-  dependsOn: [{ resource: recentConversationsResource }],
+  dependsOn: [{ resource: conversationsLiveResource }],
   loader: async (): Promise<AgentLaunchWithStatus[]> => {
     const [launches, convRows] = await Promise.all([
       db.select().from(_agent_launches).orderBy(asc(_agent_launches.createdAt)),

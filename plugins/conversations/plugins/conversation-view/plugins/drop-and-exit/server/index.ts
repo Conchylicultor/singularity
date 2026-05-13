@@ -5,7 +5,7 @@ import {
   listActiveConversations,
   listPushesForAttempt,
   markConversationClosed,
-  recentConversationsResource,
+  notifyConversationsChanged,
   updateTask,
 } from "@plugins/tasks-core/server";
 
@@ -37,7 +37,7 @@ export default {
 
       await markConversationClosed(id);
       await deleteConversation(id);
-      recentConversationsResource.notify();
+      notifyConversationsChanged();
 
       return Response.json({ ok: true, dropped: !hasPush && !hasOtherActive });
     },

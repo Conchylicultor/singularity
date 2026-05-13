@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Button } from "@/components/ui/button";
-import { recentConversationsResource } from "@plugins/conversations/core";
+import { conversationsResource } from "@plugins/conversations/core";
 import { ConversationSchema, type Conversation } from "@plugins/tasks-core/core";
 
 const GONE_PAGE_SIZE = 50;
@@ -49,7 +49,7 @@ function formatTime(date: Date): string {
 type RestoreResult = { id: string; ok: true } | { id: string; ok: false; error: string };
 
 export function RecoveryView() {
-  const resource = useResource(recentConversationsResource);
+  const resource = useResource(conversationsResource);
   const queryClient = useQueryClient();
 
   const q = useQuery({

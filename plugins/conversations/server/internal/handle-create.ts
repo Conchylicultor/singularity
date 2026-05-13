@@ -1,4 +1,4 @@
-import { recentConversationsResource } from "@plugins/tasks-core/server";
+import { notifyConversationsChanged } from "@plugins/tasks-core/server";
 import { recordCrash } from "@plugins/crashes/server";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { createConversation } from "./lifecycle";
@@ -27,7 +27,7 @@ export async function handleCreate(req: Request): Promise<Response> {
       forkFromConversationId: body.forkFromConversationId,
     });
   } catch (err) {
-    recentConversationsResource.notify();
+    notifyConversationsChanged();
     const message = err instanceof Error ? err.message : String(err);
     console.error("[conversations] createConversation failed", err);
     // Caught errors don't reach the unhandledRejection hook, so feed them to
@@ -46,6 +46,6 @@ export async function handleCreate(req: Request): Promise<Response> {
     });
     return Response.json({ error: message }, { status: 500 });
   }
-  recentConversationsResource.notify();
+  notifyConversationsChanged();
   return Response.json(session);
 }

@@ -60,7 +60,7 @@ export function listConversationsForDisplay(): Promise<Conversation[]> {
   return queryConversations({}, { col: conversations.createdAt, dir: "desc" });
 }
 
-// User-visible + active=true. Used by recentConversationsResource.
+// User-visible + active=true. Used by conversationsLiveResource.
 export function listActiveConversations(): Promise<Conversation[]> {
   return queryConversations({ active: true }, { col: conversations.createdAt, dir: "desc" });
 }

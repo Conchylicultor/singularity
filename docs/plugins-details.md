@@ -74,7 +74,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Agents.AgentActions` "expand-collapse-all" → `ExpandCollapseAllAction`
     - `Agents.AgentActions` "delete" → `DeleteAgentAction`
   - Server:
-    - Uses: `conversations.createConversation`, `database.db`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.recentConversationsResource`
+    - Uses: `conversations.createConversation`, `database.db`, `tasks-core.conversationsLiveResource`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`
     - Resources: `agent-launches` (push)
     - `GET /api/agents`
     - `POST /api/agents`
@@ -317,7 +317,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/conversations/server/internal/tables-user-turn-sent-event.ts`
   - Exports (core):
     - Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `ForkError`
-    - Values: `ConversationStatusSchema`, `forkErrorsResource`, `hasLiveProcess`, `isActiveStatus`, `recentConversationsResource`
+    - Values: `conversationsResource`, `ConversationStatusSchema`, `forkErrorsResource`, `hasLiveProcess`, `isActiveStatus`
   - Exports (web):
     - Types: `ConversationActionOpts`
     - Values: `GonePageSchema`, `useConversation`, `useConversationAction`, `useConversationById`, `useConversations`
@@ -326,7 +326,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `afterTurn`, `conversationCreated`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `getConversationRow`, `hasLiveProcess`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`, `userTurnSent`
   - Server:
     - Register: `defineJob('tasks.maybe-launch')`, `defineJob('tasks.maybe-launch-dependents')`, `defineTriggerEvent('conversation.created')`, `defineTriggerEvent('conversation.turn-completed')`, `defineTriggerEvent('conversation.userTurnSent')`
-    - Uses: `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.recentConversationsResource`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
+    - Uses: `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.notifyConversationsChanged`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
     - `GET /api/conversations`
     - `GET /api/conversations/gone`
     - `GET /api/conversations/:id`
@@ -478,13 +478,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Conversation.PromptBar` "Exit" → `DropAndExitButton`
           - Server:
-            - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.listActiveConversations`, `tasks-core.listPushesForAttempt`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`, `tasks-core.updateTask`
+            - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.listActiveConversations`, `tasks-core.listPushesForAttempt`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/drop-and-exit`
         - **`exit`** — Toolbar button that closes the conversation without changing any task state.
           - Contributes:
             - `Conversation.PromptBar` "Exit" → `ExitButton`
           - Server:
-            - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`
+            - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`
             - `POST /api/conversations/:id/exit`
         - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
           - Contributes:
@@ -496,7 +496,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Conversation.PromptBar` "Exit" → `HoldAndExitButton`
           - Server:
-            - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`, `tasks-core.updateTask`
+            - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateTask`
             - `POST /api/conversations/:id/hold-and-exit`
         - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
           - Defines:
@@ -633,7 +633,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Conversation.PromptBar` "Exit" → `PushAndExitButton`
           - Server:
             - Register: `defineJob('push_and_exit.run')`, `defineJob('push_and_exit.exit_clean_finalize')`, `mcpTool('exit_clean')`, `mcpTool('flag_raise')`
-            - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.sendTurn`, `database.db`, `tasks-core.markConversationClosed`, `tasks-core.recentConversationsResource`, `tasks-core.updateConversation`
+            - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.sendTurn`, `database.db`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
             - Resources: `push-and-exit` (push)
             - `POST /api/conversations/:id/push-and-exit`
             - `DELETE /api/conversations/:id/push-and-exit`
@@ -654,7 +654,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Conversation.PromptBar` "Exit" → `ResumeButton`
           - Server:
-            - Uses: `conversations.resumeConversation`, `tasks-core.recentConversationsResource`
+            - Uses: `conversations.resumeConversation`, `tasks-core.notifyConversationsChanged`
             - `POST /api/conversations/:id/resume`
         - **`side-task`** — Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).
           - Exports (web):
@@ -784,7 +784,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Pane.Register` "conversations-recover"
     - `DebugApp.Sidebar` "Recovery" → `component`
   - Server:
-    - Uses: `conversations.resumeConversation`, `tasks-core.recentConversationsResource`
+    - Uses: `conversations.resumeConversation`, `tasks-core.notifyConversationsChanged`
     - `POST /api/conversations-recover/restore-batch`
 
 - **`crashes`** — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
@@ -1592,14 +1592,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/tasks-core/server/internal/tables.ts`
   - Exports (core):
     - Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationStatus`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`
-    - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationListPayloadSchema`, `ConversationSchema`, `ConversationStatusSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
+    - Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
   - Exports (server):
     - Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskStatus`, `TaskStatusChangedPayload`, `UpdateConversationPatch`, `UpdateTaskPatch`
-    - Values: `_attempts`, `_conversations`, `_pushLandedTriggers`, `_tasks`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `conversationAttachments`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `createAttempt`, `createTask`, `deleteAttempt`, `deleteConversationRow`, `deleteTask`, `emitStatusChangeIfChanged`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listArmedDependentsOf`, `listAttempts`, `listAttemptsForTask`, `listBlockingDepIds`, `listConversationsForDisplay`, `listConversationsForInfra`, `listGoneConversations`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `markConversationGone`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `recentConversationsResource`, `removeTaskDependency`, `taskAttachments`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `updateConversation`, `updateConversationsTitleForTask`, `updateTask`, `updateTaskTitle`
+    - Values: `_attempts`, `_conversations`, `_pushLandedTriggers`, `_tasks`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `conversationAttachments`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `conversationsLiveResource`, `createAttempt`, `createTask`, `deleteAttempt`, `deleteConversationRow`, `deleteTask`, `emitStatusChangeIfChanged`, `ensureMetaTask`, `findNextRankUnder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listArmedDependentsOf`, `listAttempts`, `listAttemptsForTask`, `listBlockingDepIds`, `listConversationsForDisplay`, `listConversationsForInfra`, `listGoneConversations`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `markConversationGone`, `notifyConversationsChanged`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `removeTaskDependency`, `taskAttachments`, `taskDependsOn`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `updateConversation`, `updateConversationsTitleForTask`, `updateTask`, `updateTaskTitle`
   - Server:
     - Register: `defineTriggerEvent('pushes.landed')`, `defineTriggerEvent('tasks.statusChanged')`
     - Uses: `database.db`
-    - Resources: `attempts` (push), `conversations` (push), `pushes` (push)
+    - Resources: `attempts` (push), `pushes` (push)
   - Imported by: `active-data`, `agents`, `allow-monitor`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
   - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`), `auto-start` (table `tasks_ext_auto_start`), `plugin-health` (table `tasks_ext_health_review`)
 

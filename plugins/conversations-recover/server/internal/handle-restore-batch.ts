@@ -1,5 +1,5 @@
 import { resumeConversation } from "@plugins/conversations/server";
-import { recentConversationsResource } from "@plugins/tasks-core/server";
+import { notifyConversationsChanged } from "@plugins/tasks-core/server";
 
 type RestoreResult = { id: string; ok: true } | { id: string; ok: false; error: string };
 
@@ -30,6 +30,6 @@ export async function handleRestoreBatch(req: Request): Promise<Response> {
       }
     }),
   );
-  recentConversationsResource.notify();
+  notifyConversationsChanged();
   return Response.json({ results });
 }

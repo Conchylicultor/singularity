@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { resumeConversation } from "@plugins/conversations/server";
-import { recentConversationsResource } from "@plugins/tasks-core/server";
+import { notifyConversationsChanged } from "@plugins/tasks-core/server";
 
 export default {
   id: "resume",
@@ -10,7 +10,7 @@ export default {
       if (!id) return new Response("Missing id", { status: 400 });
       try {
         await resumeConversation(id);
-        recentConversationsResource.notify();
+        notifyConversationsChanged();
         return Response.json({ ok: true });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

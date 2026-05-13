@@ -1,5 +1,5 @@
 import { deleteConversation } from "./lifecycle";
-import { markConversationClosed, recentConversationsResource } from "@plugins/tasks-core/server";
+import { markConversationClosed, notifyConversationsChanged } from "@plugins/tasks-core/server";
 
 export async function handleClose(
   _req: Request,
@@ -10,6 +10,6 @@ export async function handleClose(
 
   await markConversationClosed(id);
   await deleteConversation(id);
-  recentConversationsResource.notify();
+  notifyConversationsChanged();
   return Response.json({ ok: true });
 }

@@ -1,10 +1,10 @@
 import { useEffect, useRef } from "react";
-import { recentConversationsResource } from "@plugins/conversations/core";
+import { conversationsResource } from "@plugins/conversations/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 
 export function AutoLaunchWatcher() {
-  const { data, dataUpdatedAt } = useResource(recentConversationsResource);
+  const { data, dataUpdatedAt } = useResource(conversationsResource);
   const initializedRef = useRef(false);
   const seenIdsRef = useRef(new Set<string>());
 

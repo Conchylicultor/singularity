@@ -21,7 +21,7 @@ export type { ConversationStatus } from "./conversation-status";
 export {
   ConversationSummarySchema,
   AttemptWithConversationsSchema,
-  ConversationListPayloadSchema,
+  conversationsResource,
 } from "./schemas";
 export type {
   ConversationSummary,

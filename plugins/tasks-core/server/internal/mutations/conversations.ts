@@ -2,7 +2,7 @@ import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _attempts, _conversations } from "../tables";
 import { conversations } from "../schema";
-import { recentConversationsResource } from "../resources";
+import { conversationsLiveResource } from "../resources";
 import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
 
 export interface InsertConversationInput {
@@ -132,14 +132,14 @@ export async function updateConversationsTitleForTask(
     .set({ title, updatedAt: new Date() })
     .where(inArray(_conversations.id, rows.map((r) => r.id)));
 
-  recentConversationsResource.notify();
+  conversationsLiveResource.notify();
 }
 
 export async function deleteConversationRow(id: string): Promise<void> {
   const taskId = await taskIdForConversation(id);
   const before = taskId ? await readTaskStatus(taskId) : null;
   await db.delete(_conversations).where(eq(_conversations.id, id));
-  recentConversationsResource.notify();
+  conversationsLiveResource.notify();
   if (taskId) await emitStatusChangeIfChanged(taskId, before);
 }
 

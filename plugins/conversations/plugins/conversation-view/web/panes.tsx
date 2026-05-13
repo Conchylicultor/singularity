@@ -27,7 +27,7 @@ export function ConversationProvide({
   convId: string;
   children: ReactNode;
 }) {
-  // useConversation subscribes to the live WebSocket resource (recentConversationsResource),
+  // useConversation subscribes to the live WebSocket resource (conversationsResource),
   // so status updates are reflected in real time. Fall back to the point-lookup only for
   // older conversations outside the recent window.
   const live = useConversation(convId);

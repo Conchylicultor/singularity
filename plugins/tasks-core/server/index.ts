@@ -4,7 +4,7 @@ import {
   tasksResource,
   attemptsResource,
   pushesResource,
-  recentConversationsResource,
+  conversationsLiveResource,
 } from "./internal/resources";
 import { pushLanded, taskStatusChanged } from "./internal/tables-events";
 import { sweepOrphanedAttempts } from "./internal/sweep-orphaned-attempts";
@@ -43,8 +43,9 @@ export {
   tasksResource,
   attemptsResource,
   pushesResource,
-  recentConversationsResource,
+  conversationsLiveResource,
 } from "./internal/resources";
+export { notifyConversationsChanged } from "./internal/notify-conversations";
 export type {
   AttemptWithConversations,
   ConversationSummary,
@@ -154,7 +155,7 @@ export default {
   description:
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,
-  contributions: [Resource.Declare(tasksResource), Resource.Declare(attemptsResource), Resource.Declare(pushesResource), Resource.Declare(recentConversationsResource)],
+  contributions: [Resource.Declare(tasksResource), Resource.Declare(attemptsResource), Resource.Declare(pushesResource), Resource.Declare(conversationsLiveResource)],
   register: [pushLanded, taskStatusChanged],
   onReady: sweepOrphanedAttempts,
 } satisfies ServerPluginDefinition;

@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { deleteConversation } from "@plugins/conversations/server";
-import { getConversation, markConversationClosed, recentConversationsResource } from "@plugins/tasks-core/server";
+import { getConversation, markConversationClosed, notifyConversationsChanged } from "@plugins/tasks-core/server";
 
 export default {
   id: "exit",
@@ -16,7 +16,7 @@ export default {
 
       await markConversationClosed(id);
       await deleteConversation(id);
-      recentConversationsResource.notify();
+      notifyConversationsChanged();
 
       return Response.json({ ok: true });
     },

@@ -7,7 +7,7 @@ import { TaskSchema, PushSchema, type Task } from "./schema";
 import type { ConversationSummary } from "../../core";
 import {
   AttemptWithConversationsSchema,
-  ConversationListPayloadSchema,
+  conversationsResource,
 } from "../../core";
 import type { AttemptWithConversations, ConversationListPayload } from "../../core";
 import {
@@ -20,10 +20,10 @@ import {
 } from "./queries/conversations";
 import { z } from "zod";
 
-export const recentConversationsResource = defineResource({
-  key: "conversations",
+export const conversationsLiveResource = defineResource({
+  key: conversationsResource.key,
   mode: "push",
-  schema: ConversationListPayloadSchema,
+  schema: conversationsResource.schema,
   loader: async (): Promise<ConversationListPayload> => {
     const [active, goneRows, totalGoneCount, system] = await Promise.all([
       listActiveConversations(),
@@ -54,7 +54,7 @@ export const attemptsResource = defineResource({
   key: "attempts",
   mode: "push",
   schema: z.array(AttemptWithConversationsSchema),
-  dependsOn: [{ resource: recentConversationsResource }, { resource: pushesResource }],
+  dependsOn: [{ resource: conversationsLiveResource }, { resource: pushesResource }],
   loader: async (): Promise<AttemptWithConversations[]> => {
     const [attemptRows, convRows] = await Promise.all([
       db.select().from(attempts).orderBy(asc(attempts.createdAt)),
