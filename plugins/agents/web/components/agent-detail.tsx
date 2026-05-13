@@ -3,7 +3,6 @@ import { MdPlayArrow } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   Avatar,
   AvatarPicker,
@@ -11,7 +10,6 @@ import {
 } from "@plugins/primitives/plugins/avatar/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { Button } from "@/components/ui/button";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { agentLaunchesResource, agentsResource } from "../../shared/resources";
 import { AgentLaunches } from "./agent-launches";
 
@@ -41,8 +39,6 @@ export function AgentDetail({ agentId }: { agentId: string }) {
   const { data } = useResource(agentsResource);
   const agent = data.find((a) => a.id === agentId) ?? null;
   const launchesQ = useResource(agentLaunchesResource);
-  const openPane = useOpenPane();
-
   const [model, setModel] = useState<string | null>(agent?.model ?? null);
   const [launching, setLaunching] = useState(false);
 
@@ -92,12 +88,6 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         body: JSON.stringify({}),
       });
       if (!res.ok) return;
-      const { conversationId } = (await res.json()) as {
-        launchId: string;
-        taskId: string;
-        conversationId: string;
-      };
-      openPane(conversationPane, { convId: conversationId });
     } finally {
       setLaunching(false);
     }
