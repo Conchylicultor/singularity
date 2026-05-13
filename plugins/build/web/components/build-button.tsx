@@ -7,7 +7,7 @@ import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { mainAheadCountResource, buildHistoryResource } from "../../shared/resources";
 import { BuildPopoverContent } from "./build-popover-content";
 import { buildPane } from "../panes";
@@ -101,10 +101,11 @@ export function BuildButton() {
   const spinning = building || autoBuilding;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground"
-      >
+    <InlinePopover
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <button className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground">
           <Spinner spinning={spinning} className="size-4" />
           {spinning ? "Building…" : "Build"}
           {mainAheadCount > 0 ? (
@@ -127,25 +128,27 @@ export function BuildButton() {
               />
             </WithTooltip>
           )}
-      </PopoverTrigger>
-      <PopoverContent className="w-[480px] p-0" align="end">
-        <div className="flex items-center justify-between border-b px-3 py-2">
-          <span className="text-sm font-medium">Build</span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6"
-            onClick={() => {
-              setOpen(false);
-              openPane(buildPane, {});
-            }}
-            aria-label="Open in pane"
-          >
-            <MdOpenInFull className="size-3" />
-          </Button>
-        </div>
-        <BuildPopoverContent variant="popover" />
-      </PopoverContent>
-    </Popover>
+        </button>
+      }
+      align="end"
+      contentClassName="w-[480px] p-0"
+    >
+      <div className="flex items-center justify-between border-b px-3 py-2">
+        <span className="text-sm font-medium">Build</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-6"
+          onClick={() => {
+            setOpen(false);
+            openPane(buildPane, {});
+          }}
+          aria-label="Open in pane"
+        >
+          <MdOpenInFull className="size-3" />
+        </Button>
+      </div>
+      <BuildPopoverContent variant="popover" />
+    </InlinePopover>
   );
 }

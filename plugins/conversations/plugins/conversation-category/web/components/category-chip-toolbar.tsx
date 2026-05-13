@@ -4,11 +4,7 @@ import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { useConfigValues } from "@plugins/config/web";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { conversationCategoryConfig } from "../../shared";
 import { useCategoryFor } from "../internal/use-category";
 import { colorClassFor } from "../internal/colors";
@@ -61,17 +57,22 @@ export function CategoryChipToolbar() {
   const colorClass = colorClassFor(category ?? "");
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium hover:opacity-80 ${colorClass}`}
-        aria-label={`Conversation category: ${label}`}
-      >
-        {busy === "classify" ? (
-          <MdAutoAwesome className="size-3 animate-pulse" />
-        ) : null}
-        <span className={busy === "classify" ? "ml-1" : ""}>{label}</span>
-      </PopoverTrigger>
-      <PopoverContent className="w-56 p-1" align="start">
+    <InlinePopover
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <button
+          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium hover:opacity-80 ${colorClass}`}
+          aria-label={`Conversation category: ${label}`}
+        >
+          {busy === "classify" ? (
+            <MdAutoAwesome className="size-3 animate-pulse" />
+          ) : null}
+          <span className={busy === "classify" ? "ml-1" : ""}>{label}</span>
+        </button>
+      }
+      contentClassName="w-56 p-1"
+    >
         <SectionLabel className="px-2 py-1 text-[10px]">
           Set category
         </SectionLabel>
@@ -113,7 +114,6 @@ export function CategoryChipToolbar() {
           />
           {busy === "classify" ? "Re-classifying…" : "Re-classify with Haiku"}
         </button>
-      </PopoverContent>
-    </Popover>
+    </InlinePopover>
   );
 }

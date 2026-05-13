@@ -3,11 +3,7 @@ import { MdNotifications, MdNotificationsNone } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { notificationsResource } from "../../shared/resources";
 import type { Notification } from "../../shared/schema";
 
@@ -77,20 +73,26 @@ export function BellButton() {
   }
 
   return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger className="relative flex items-center justify-center size-8 cursor-default">
-        {unreadCount > 0 ? (
-          <MdNotifications className="size-5" />
-        ) : (
-          <MdNotificationsNone className="size-5 text-muted-foreground" />
-        )}
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center size-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold tabular-nums">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" side="bottom" align="end">
+    <InlinePopover
+      open={open}
+      onOpenChange={onOpenChange}
+      trigger={
+        <button className="relative flex items-center justify-center size-8 cursor-default">
+          {unreadCount > 0 ? (
+            <MdNotifications className="size-5" />
+          ) : (
+            <MdNotificationsNone className="size-5 text-muted-foreground" />
+          )}
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center size-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold tabular-nums">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </button>
+      }
+      align="end"
+      contentClassName="w-80 p-0"
+    >
         <div className="flex items-center justify-between px-3 py-2 border-b">
           <span className="text-sm font-semibold">Notifications</span>
           {list.length > 0 && (
@@ -158,7 +160,6 @@ export function BellButton() {
             </ul>
           </div>
         )}
-      </PopoverContent>
-    </Popover>
+    </InlinePopover>
   );
 }

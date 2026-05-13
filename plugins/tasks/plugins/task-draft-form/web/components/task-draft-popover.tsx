@@ -1,14 +1,9 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { tasksResource, type Task } from "@plugins/tasks/core";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import {
   TaskDraftForm,
   makeCard,
@@ -186,46 +181,42 @@ export function TaskDraftPopover({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      {tooltip ? (
-        <WithTooltip content={tooltip}>
-          <PopoverTrigger className={triggerClassName} title={triggerTitle} aria-label={triggerTitle}>
-            {trigger}
-          </PopoverTrigger>
-        </WithTooltip>
-      ) : (
-        <PopoverTrigger className={triggerClassName} title={triggerTitle} aria-label={triggerTitle}>
+    <InlinePopover
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <button className={triggerClassName} title={triggerTitle} aria-label={triggerTitle}>
           {trigger}
-        </PopoverTrigger>
-      )}
-      <PopoverContent>
-        <TaskDraftForm
-          cards={cards}
-          onCardsChange={setCards}
-          autoFocusId={autoFocusId}
-          onAutoFocusHandled={() => setAutoFocusId(null)}
-          submitting={submitting}
-          onSubmit={submit}
-          onCancel={() => setOpen(false)}
-          captures={captures}
-          parentTaskPreview={
-            parentTask ? { id: parentTask.id, title: parentTask.title } : null
-          }
-          relateMode={
-            relate ? relateMode : hasAmbientRelate ? ambientRelateMode : undefined
-          }
-          onRelateModeChange={
-            relate
-              ? setRelateMode
-              : hasAmbientRelate
-                ? setAmbientRelateMode
-                : undefined
-          }
-          showIndependentRelate={hasAmbientRelate}
-          heading={heading}
-          footerStart={footerStart}
-        />
-      </PopoverContent>
-    </Popover>
+        </button>
+      }
+      tooltip={tooltip}
+    >
+      <TaskDraftForm
+        cards={cards}
+        onCardsChange={setCards}
+        autoFocusId={autoFocusId}
+        onAutoFocusHandled={() => setAutoFocusId(null)}
+        submitting={submitting}
+        onSubmit={submit}
+        onCancel={() => setOpen(false)}
+        captures={captures}
+        parentTaskPreview={
+          parentTask ? { id: parentTask.id, title: parentTask.title } : null
+        }
+        relateMode={
+          relate ? relateMode : hasAmbientRelate ? ambientRelateMode : undefined
+        }
+        onRelateModeChange={
+          relate
+            ? setRelateMode
+            : hasAmbientRelate
+              ? setAmbientRelateMode
+              : undefined
+        }
+        showIndependentRelate={hasAmbientRelate}
+        heading={heading}
+        footerStart={footerStart}
+      />
+    </InlinePopover>
   );
 }

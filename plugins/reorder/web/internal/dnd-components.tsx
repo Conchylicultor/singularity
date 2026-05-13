@@ -2,11 +2,7 @@ import { createContext, useState, type ReactNode } from "react";
 import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { useEditMode } from "./edit-mode-store";
 
 const DRAG_PREFIX = "reorder-drag-";
@@ -258,20 +254,25 @@ export function RestoreButton({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        className="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-muted-foreground/40 px-2.5 text-xs text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground transition-colors"
-        aria-label="Add items"
-      >
-        <MdAdd className="size-3.5" />
-        {hasHidden
-          ? hiddenItems.length === 1
-            ? "1 hidden"
-            : `${hiddenItems.length} hidden`
-          : "Add"}
-      </PopoverTrigger>
-      <PopoverContent className="w-56 p-0" align="start">
-        {hasHidden && (
+    <InlinePopover
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <button
+          className="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-muted-foreground/40 px-2.5 text-xs text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground transition-colors"
+          aria-label="Add items"
+        >
+          <MdAdd className="size-3.5" />
+          {hasHidden
+            ? hiddenItems.length === 1
+              ? "1 hidden"
+              : `${hiddenItems.length} hidden`
+            : "Add"}
+        </button>
+      }
+      contentClassName="w-56 p-0"
+    >
+      {hasHidden && (
           <div className="p-1">
             {hiddenItems.map((item) => (
               <button
@@ -339,7 +340,6 @@ export function RestoreButton({
             Create custom plugin
           </button>
         </div>
-      </PopoverContent>
-    </Popover>
+      </InlinePopover>
   );
 }

@@ -10,11 +10,7 @@ import { SearchInput, useTextFilter } from "@plugins/primitives/plugins/search/w
 import { tasksResource } from "@plugins/tasks/core";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 
 export function BlockedByButton({
   conversation,
@@ -115,23 +111,27 @@ export function BlockedByButton({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        className={buttonVariants({
-          variant: "outline",
-          size: depTaskIds.size > 0 ? "xs" : "icon-sm",
-        })}
-        title="Blocked by…"
-        aria-label="Blocked by"
-      >
-        <Link2 className="size-3" />
-        {depTaskIds.size > 0 && (
-          <span className="text-[10px] tabular-nums">
-            {depTaskIds.size}
-          </span>
-        )}
-      </PopoverTrigger>
-      <PopoverContent className="w-96 p-2" align="end">
+    <InlinePopover
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
+        <button
+          className={buttonVariants({
+            variant: "outline",
+            size: depTaskIds.size > 0 ? "xs" : "icon-sm",
+          })}
+          title="Blocked by…"
+          aria-label="Blocked by"
+        >
+          <Link2 className="size-3" />
+          {depTaskIds.size > 0 && (
+            <span className="text-[10px] tabular-nums">{depTaskIds.size}</span>
+          )}
+        </button>
+      }
+      align="end"
+      contentClassName="w-96 p-2"
+    >
         <SectionLabel className="mb-1.5 text-[10px]">
           Blocked by
         </SectionLabel>
@@ -206,7 +206,6 @@ export function BlockedByButton({
             ))}
           </ul>
         )}
-      </PopoverContent>
-    </Popover>
+    </InlinePopover>
   );
 }
