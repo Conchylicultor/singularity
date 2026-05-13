@@ -2,7 +2,7 @@ import { Fragment, useContext, useLayoutEffect, useMemo, useRef, type ReactNode 
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
   PaneBasePathContext,
-  PaneDepthContext,
+  PaneInstanceContext,
   PaneMatchContext,
   setBasePath,
   stripBasePath,
@@ -45,19 +45,19 @@ export function MillerColumns() {
             let column: ReactNode = (
               <Column
                 entry={entry}
-                depth={i}
                 isLast={i === match.chain.length - 1}
               />
             );
-            // Wrap with providers from chain[0..i], innermost (i) wraps closest
+            // Wrap with providers from chain[0..i], innermost (i) wraps closest.
+            // Always wrap at j === i to set PaneInstanceContext for the column itself.
             for (let j = i; j >= 0; j--) {
               const chainEntry = match.chain[j]!;
               const Provide = chainEntry.pane.provide;
-              if (Provide) {
+              if (Provide || j === i) {
                 column = (
-                  <PaneDepthContext.Provider value={j}>
-                    <Provide>{column}</Provide>
-                  </PaneDepthContext.Provider>
+                  <PaneInstanceContext.Provider value={chainEntry.instanceId}>
+                    {Provide ? <Provide>{column}</Provide> : column}
+                  </PaneInstanceContext.Provider>
                 );
               }
             }

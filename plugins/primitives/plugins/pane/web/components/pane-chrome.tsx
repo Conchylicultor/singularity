@@ -10,7 +10,7 @@ import {
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { PaneDepthContext, PaneMatchContext, type PaneObject } from "../pane";
+import { PaneInstanceContext, PaneMatchContext, type PaneMatch, type PaneObject } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 
 interface PaneChromeProps {
@@ -49,13 +49,15 @@ interface PaneChromeProps {
  */
 export function PaneChrome({ pane, title, actions, hideRightActions, children }: PaneChromeProps) {
   const chrome = pane._internal.chrome;
-  const fallbackTitle = useChromeTitle(pane);
+  const match = useContext(PaneMatchContext);
+  const fallbackTitle = chromeTitle(pane, match);
   const layoutCtx = useContext(PaneLayoutContext);
-  const depth = useContext(PaneDepthContext);
+  const instanceId = useContext(PaneInstanceContext);
   if (!chrome.enabled) return <>{children}</>;
   const resolvedTitle = title ?? fallbackTitle;
-  const showClose = chrome.close && depth > 0;
-  const showPromote = chrome.promote && depth > 0;
+  const isRoot = instanceId !== undefined && match?.chain[0]?.instanceId === instanceId;
+  const showClose = chrome.close && !isRoot;
+  const showPromote = chrome.promote && !isRoot;
   return (
     <div className="flex h-full flex-col">
       <div
@@ -98,9 +100,8 @@ export function PaneChrome({ pane, title, actions, hideRightActions, children }:
   );
 }
 
-function useChromeTitle(pane: PaneObject<any, any>): ReactNode {
+function chromeTitle(pane: PaneObject<any, any>, match: PaneMatch | null): ReactNode {
   const chrome = pane._internal.chrome;
-  const match = useContext(PaneMatchContext);
   if (chrome.title === undefined) return null;
   if (typeof chrome.title === "string") return chrome.title;
   const entry = match?.chain.find((e) => e.pane === pane._internal);

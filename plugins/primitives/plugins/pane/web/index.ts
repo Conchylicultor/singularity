@@ -6,7 +6,7 @@ export {
   usePaneMatch,
   useCurrentPane,
   PaneMatchContext,
-  PaneDepthContext,
+  PaneInstanceContext,
   PaneBasePathContext,
   setBasePath,
   getBasePath,
@@ -31,8 +31,6 @@ export type {
   PaneSlot,
   PaneOpenMode,
 } from "./pane";
-export { Outlet, PaneLevel } from "./components/outlet";
-export { PaneRouter } from "./components/pane-router";
 export {
   PaneChrome,
   PaneHistoryButtons,
@@ -45,7 +43,7 @@ export default {
   id: "pane",
   name: "Pane",
   description:
-    "Unified pane primitive: Pane.define, <Outlet/>, <PaneRouter/>, and chrome components.",
+    "Unified pane primitive: Pane.define and chrome components.",
   loadBearing: true,
   contributions: [],
 } satisfies PluginDefinition;

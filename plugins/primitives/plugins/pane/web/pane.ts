@@ -118,7 +118,7 @@ export interface PaneInternal {
   actionsSlot: Slot<{ component: ComponentType; position?: "left" | "right" }>;
 }
 
-// Populated synchronously during <PaneRouter/> render via useSyncPaneRegistry.
+// Populated synchronously via useSyncPaneRegistry (called by MillerColumns).
 // pane.close / pane.expand / parseUrl read from it; nobody writes to it
 // outside the sync hook.
 const registry = new Map<string, PaneInternal>();
@@ -166,6 +166,7 @@ export function matchPath(
 }
 
 export interface MatchEntry {
+  instanceId: number;
   pane: PaneInternal;
   /** Own-only params (only `:name`s from this pane's `segment`). */
   params: Record<string, string>;
@@ -375,6 +376,7 @@ function resolveChain(chain: PaneSlot[]): PaneMatch | null {
     if (!pane) return null;
     Object.assign(accumulated, slot.params);
     entries.push({
+      instanceId: slot.instanceId,
       pane,
       params: { ...slot.params },
       fullParams: { ...accumulated },
@@ -486,7 +488,7 @@ function validateChain(chain: PaneSlot[]): PaneSlot[] {
 // ---------------------------------------------------------------------------
 
 export const PaneMatchContext = createContext<PaneMatch | null>(null);
-export const PaneDepthContext = createContext<number>(-1);
+export const PaneInstanceContext = createContext<number | undefined>(undefined);
 
 export function usePaneMatch(): PaneMatch | null {
   return useContext(PaneMatchContext);
@@ -494,9 +496,9 @@ export function usePaneMatch(): PaneMatch | null {
 
 export function useCurrentPane(): PaneInternal | null {
   const match = useContext(PaneMatchContext);
-  const depth = useContext(PaneDepthContext);
-  if (!match || depth < 0) return null;
-  return match.chain[depth]?.pane ?? null;
+  const instanceId = useContext(PaneInstanceContext);
+  if (!match || instanceId === undefined) return null;
+  return match.chain.find(e => e.instanceId === instanceId)?.pane ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -625,15 +627,15 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
 
   function useParams(): Record<string, string> {
     const match = useContext(PaneMatchContext);
-    const depth = useContext(PaneDepthContext);
+    const instanceId = useContext(PaneInstanceContext);
     if (!match) {
       throw new Error(
-        `Pane "${internal.id}".useParams() called outside <PaneRouter/>.`,
+        `Pane "${internal.id}".useParams() called outside the pane layout renderer.`,
       );
     }
-    // Prefer depth-based lookup (handles repeated pane IDs correctly)
-    if (depth >= 0 && match.chain[depth]?.pane === internal) {
-      return match.chain[depth]!.params;
+    if (instanceId !== undefined) {
+      const entry = match.chain.find(e => e.instanceId === instanceId);
+      if (entry?.pane === internal) return entry.params;
     }
     const entry = match.chain.find((e) => e.pane === internal);
     if (!entry) {
@@ -828,7 +830,7 @@ export const Pane = { define, Register: PaneSlots.Register };
 
 // ---------------------------------------------------------------------------
 // Registry sync — populates the module-local `registry` from the
-// `Pane.Register` slot. Called once from <PaneRouter/> at the start of
+// `Pane.Register` slot. Called once from <MillerColumns/> at the start of
 // every render, synchronously via useMemo so parseUrl() and the
 // pane.close() event handlers always see fresh state.
 // ---------------------------------------------------------------------------
@@ -856,7 +858,7 @@ export function useSyncPaneRegistry(): void {
 }
 
 // ---------------------------------------------------------------------------
-// Memoized match used by the router and Outlet.
+// Memoized match used by MillerColumns.
 // ---------------------------------------------------------------------------
 
 export function useMatchForPath(_pathname: string): PaneMatch | null {
@@ -953,10 +955,7 @@ export function useOpenPane(): (
   params: Record<string, string>,
   opts: { mode: PaneOpenMode },
 ) => void {
-  const depth = useContext(PaneDepthContext);
-  const chain = getChain();
-  const callerInstanceId =
-    depth >= 0 ? chain[depth]?.instanceId : undefined;
+  const callerInstanceId = useContext(PaneInstanceContext);
 
   return useCallback(
     (

@@ -1,6 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
 import {
-  PaneDepthContext,
   PaneLayoutContext,
   type MatchEntry,
 } from "@plugins/primitives/plugins/pane/web";
@@ -14,11 +13,10 @@ const DEFAULT_WIDTH = 400;
 
 interface ColumnProps {
   entry: MatchEntry;
-  depth: number;
   isLast: boolean;
 }
 
-export function Column({ entry, depth, isLast }: ColumnProps) {
+export function Column({ entry, isLast }: ColumnProps) {
   const [collapsed, toggleCollapse] = useColumnCollapse(entry.pane.id);
   const [isMaximized, toggleMaximize] = useColumnMaximize(entry.pane.id);
   const [width, setWidth] = useColumnWidth(
@@ -84,11 +82,9 @@ export function Column({ entry, depth, isLast }: ColumnProps) {
               : "flex h-full shrink-0 flex-col overflow-hidden"
         }
       >
-        <PaneDepthContext.Provider value={depth}>
-          <PaneLayoutContext.Provider value={{ onDoubleClickHeader: toggleMaximize }}>
-            <Component />
-          </PaneLayoutContext.Provider>
-        </PaneDepthContext.Provider>
+        <PaneLayoutContext.Provider value={{ onDoubleClickHeader: toggleMaximize }}>
+          <Component />
+        </PaneLayoutContext.Provider>
       </div>
       {isCollapsed ? (
         <CollapsedBar entry={entry} onExpand={toggleCollapse} />
