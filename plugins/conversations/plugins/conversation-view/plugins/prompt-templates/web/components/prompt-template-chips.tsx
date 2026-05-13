@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { PenLine } from "lucide-react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import type { PromptEditorActionProps } from "@plugins/primitives/plugins/paste-images/web";
+import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { Button } from "@/components/ui/button";
 import { promptTemplatesResource } from "../../shared/resources";
 

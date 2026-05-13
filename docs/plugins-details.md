@@ -1275,12 +1275,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneSlot`, `TypeMarker`
         - Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Outlet`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneDepthContext`, `PaneHistoryButtons`, `PaneIconAction`, `PaneLayoutContext`, `PaneLevel`, `PaneMatchContext`, `PaneRouter`, `parseUrl`, `setBasePath`, `stripBasePath`, `syncChainFromUrl`, `type`, `useCurrentPane`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
       - Slot contributors: `agents`, `attempt-view`, `auth`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
-    - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
-      - Exports (core):
-        - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `rewriteAttachmentMarkdown`
-      - Exports (web):
-        - Types: `PromptEditorActionProps`
-        - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `PromptEditor`, `PromptEditorSlots`, `rewriteAttachmentMarkdown`
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
       - Exports (web):
         - Values: `useDraft`
@@ -1288,6 +1282,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `PlaceholderProps`
         - Values: `Placeholder`
+    - **`prompt-editor`** — Lexical-based prompt editor primitive. An extensible shell where plugins inject features (image paste, templates, etc.) via the Plugin slot and registerNodeExtension.
+      - Exports (web):
+        - Types: `NodeExtension`, `PromptEditorActionProps`, `PromptEditorPluginProps`
+        - Values: `PromptEditor`, `PromptEditorSlots`, `registerNodeExtension`
+      - Plugins:
+        - **`paste-images`** — Image paste/drop support for the prompt editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
+          - Exports (core):
+            - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `rewriteAttachmentMarkdown`
+          - Exports (web):
+            - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `rewriteAttachmentMarkdown`
+          - Contributes:
+            - `PromptEditorSlots.Plugin` → `ImageUploadPlugin`
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
       - Exports (core):
         - Values: `Rank`, `RankSchema`, `rankText`

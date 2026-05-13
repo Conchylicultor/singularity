@@ -7,7 +7,7 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
+import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { Button } from "@/components/ui/button";
 

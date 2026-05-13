@@ -13,7 +13,7 @@ import { getAttachment } from "@plugins/infra/plugins/attachments/server";
 import {
   attachmentMarkdown,
   extractAttachmentIds,
-} from "@plugins/primitives/plugins/paste-images/core";
+} from "@plugins/primitives/plugins/prompt-editor/plugins/paste-images/core";
 import {
   TaskChainSubmitBodySchema,
   type TaskChainCard,

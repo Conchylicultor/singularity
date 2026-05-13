@@ -2,7 +2,7 @@ import { getAttachment } from "@plugins/infra/plugins/attachments/server";
 import {
   extractAttachmentIds,
   rewriteAttachmentMarkdown,
-} from "@plugins/primitives/plugins/paste-images/core";
+} from "@plugins/primitives/plugins/prompt-editor/plugins/paste-images/core";
 
 // Convert in-prompt attachment refs (`![alt](/api/attachments/<id>)`) into
 // Claude's disk-path syntax (`@<absolute-path>`). Missing attachments are

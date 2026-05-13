@@ -8,7 +8,6 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { $getRoot, $getSelection, $isRangeSelection } from "lexical";
 import { cn } from "@/lib/utils";
 import { buildInitialConfig } from "../internal/lexical-config";
-import { ImageUploadPlugin } from "../internal/image-upload-plugin";
 import { EnterKeyPlugin } from "../internal/enter-key-plugin";
 import { PromptEditorSlots } from "../slots";
 import {
@@ -16,19 +15,6 @@ import {
   serializeEditorToMarkdown,
 } from "../internal/markdown";
 
-// Drop-in replacement for a `<textarea>` that also supports pasting/dropping
-// images (rendered inline as rich thumbnails). The `value` prop is markdown
-// text — images are stored as `![alt](/api/attachments/<id>)` references and
-// the surrounding text is plain.
-//
-// Two-way sync between the controlled `value` prop and the Lexical editor is
-// guarded with a self-write flag so external updates and internal edits don't
-// echo into a feedback loop.
-//
-// `submitMode` controls the Enter-to-submit behavior:
-//   - "enter"     — Enter submits, Shift+Enter inserts newline (chat-style).
-//   - "cmd-enter" — Cmd/Ctrl+Enter submits, Enter inserts newline (textarea-style).
-//   - "none"      — onSubmit is never fired.
 export function PromptEditor({
   value,
   onChange,
@@ -68,8 +54,6 @@ export function PromptEditor({
     [namespace, onError],
   );
 
-  // Suppress the very-first deserialize echo so we don't fire onChange with
-  // the markdown re-serialization of our own initial input.
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <EditorShell
@@ -81,7 +65,7 @@ export function PromptEditor({
         maxHeight={maxHeight}
       />
       <ValueSyncPlugin value={value} onChange={onChange} />
-      <ImageUploadPlugin onError={onError} />
+      <PluginSlot onError={onError} />
       {onSubmit && submitMode !== "none" && (
         <EnterKeyPlugin onSubmit={onSubmit} submitMode={submitMode} />
       )}
@@ -172,6 +156,14 @@ function EditorShell({
       />
       <FloatingActionAnchor />
     </div>
+  );
+}
+
+function PluginSlot({ onError }: { onError?: (msg: string) => void }) {
+  return (
+    <PromptEditorSlots.Plugin.Render>
+      {(item) => <item.component onError={onError} />}
+    </PromptEditorSlots.Plugin.Render>
   );
 }
 

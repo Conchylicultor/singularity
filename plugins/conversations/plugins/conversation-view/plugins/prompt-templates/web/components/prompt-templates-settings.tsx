@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
+import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

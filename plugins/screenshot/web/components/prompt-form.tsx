@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { LaunchButtons, type LaunchRequest } from "@plugins/primitives/plugins/launch/web";
-import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
+import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 
 export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | null | Promise<Blob | null> }) {
   const [text, setText] = useState("");

@@ -1,5 +1,5 @@
 import type { InitialConfigType } from "@lexical/react/LexicalComposer";
-import { ImageNode } from "./image-node";
+import { getNodeExtensions } from "./node-extensions";
 
 export const PROMPT_EDITOR_THEME = {
   paragraph: "m-0",
@@ -13,7 +13,7 @@ export function buildInitialConfig(opts: {
   return {
     namespace: opts.namespace,
     theme: PROMPT_EDITOR_THEME,
-    nodes: [ImageNode],
+    nodes: getNodeExtensions().map((ext) => ext.node),
     onError: opts.onError,
   };
 }

@@ -1,4 +1,4 @@
-import { ATTACHMENT_MARKDOWN_RE } from "@plugins/primitives/plugins/paste-images/web";
+import { ATTACHMENT_MARKDOWN_RE } from "@plugins/primitives/plugins/prompt-editor/plugins/paste-images/web";
 
 export function isDraftEmpty(markdown: string): boolean {
   return markdown.trim().length === 0;

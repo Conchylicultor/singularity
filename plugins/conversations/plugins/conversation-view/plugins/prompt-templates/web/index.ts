@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@core";
-import { PromptEditorSlots } from "@plugins/primitives/plugins/paste-images/web";
+import { PromptEditorSlots } from "@plugins/primitives/plugins/prompt-editor/web";
 import { Config } from "@plugins/config/web";
 import { FloatingTemplateChips } from "./components/prompt-template-chips";
 import { PromptTemplatesSettings } from "./components/prompt-templates-settings";

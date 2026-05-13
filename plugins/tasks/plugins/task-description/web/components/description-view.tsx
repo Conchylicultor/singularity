@@ -1,11 +1,11 @@
 import { Fragment, useState } from "react";
 import { MdEdit } from "react-icons/md";
+import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import {
   AttachmentThumbnail,
   ATTACHMENT_MARKDOWN_RE,
   isAttachmentUrl,
-  PromptEditor,
-} from "@plugins/primitives/plugins/paste-images/web";
+} from "@plugins/primitives/plugins/prompt-editor/plugins/paste-images/web";
 import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
 import { Button } from "@/components/ui/button";
 

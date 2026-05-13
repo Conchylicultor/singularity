@@ -1,6 +1,6 @@
 import { flushSync } from "react-dom";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
-import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/web";
+import { extractAttachmentIds } from "@plugins/primitives/plugins/prompt-editor/plugins/paste-images/web";
 import type { CardDraft } from "../components/task-draft-form";
 import type {
   TaskChainRelate,

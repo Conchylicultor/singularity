@@ -1,5 +1,5 @@
 import { taskAttachments, updateTask } from "@plugins/tasks-core/server";
-import { extractAttachmentIds } from "@plugins/primitives/plugins/paste-images/core";
+import { extractAttachmentIds } from "@plugins/primitives/plugins/prompt-editor/plugins/paste-images/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 
 export async function handleUpdate(

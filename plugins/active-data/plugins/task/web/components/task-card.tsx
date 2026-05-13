@@ -1,7 +1,7 @@
 import { useId, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
+import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { taskSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
 import { useActiveDataBinding } from "@plugins/active-data/web";

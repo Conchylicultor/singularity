@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/plugin-primitives-paste-images",
+  "name": "@singularity/plugin-primitives-prompt-editor",
   "private": true,
   "version": "0.0.1",
   "dependencies": {
