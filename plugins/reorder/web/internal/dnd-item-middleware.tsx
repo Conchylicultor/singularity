@@ -19,12 +19,13 @@ export function ReorderItemMiddleware({
   if (!key) return <>{children}</>;
 
   const excluded = (contribution as Record<string, unknown>).excludeFromReorder;
-  if (!editMode || excluded) return <>{children}</>;
+  if (excluded) return <>{children}</>;
 
   return (
     <SortableReorderItem
       itemKey={key}
       storageId={ctx?.storageId ?? ""}
+      editMode={editMode}
     >
       {children}
     </SortableReorderItem>

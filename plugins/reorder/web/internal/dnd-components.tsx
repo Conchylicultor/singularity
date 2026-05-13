@@ -50,10 +50,12 @@ export function GroupingZone({ itemKey }: { itemKey: string }) {
 export function SortableReorderItem({
   itemKey,
   storageId,
+  editMode,
   children,
 }: {
   itemKey: string;
   storageId: string;
+  editMode: boolean;
   children: ReactNode;
 }) {
   function handleHide(e: React.MouseEvent) {
@@ -66,15 +68,17 @@ export function SortableReorderItem({
   }
 
   return (
-    <SortableItem id={itemKey} className="group/reorder-item relative">
+    <SortableItem
+      id={itemKey}
+      className={
+        editMode
+          ? "group/reorder-item relative cursor-grab rounded-md ring-1 ring-primary/50"
+          : undefined
+      }
+    >
       {({ isDragging }) => (
         <>
-          <div
-            className={cn(
-              "relative cursor-grab rounded-md ring-1 ring-primary/50",
-              isDragging && "opacity-40",
-            )}
-          >
+          {editMode && (
             <button
               className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover/reorder-item:opacity-80 hover:!opacity-100 transition-opacity"
               onPointerDown={(e) => e.stopPropagation()}
@@ -83,9 +87,17 @@ export function SortableReorderItem({
             >
               <MdClose className="size-2.5" />
             </button>
-            <div className="pointer-events-none">{children}</div>
+          )}
+          <div
+            className={
+              editMode
+                ? cn("pointer-events-none", isDragging && "opacity-40")
+                : undefined
+            }
+          >
+            {children}
           </div>
-          <GroupingZone itemKey={itemKey} />
+          {editMode && <GroupingZone itemKey={itemKey} />}
         </>
       )}
     </SortableItem>

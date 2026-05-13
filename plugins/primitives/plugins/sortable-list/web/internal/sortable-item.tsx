@@ -36,7 +36,7 @@ export function SortableItem({
     transition,
   };
 
-  const wrapperProps = handle ? {} : { ...attributes, ...listeners };
+  const wrapperProps = handle || !listeners ? {} : { ...attributes, ...listeners };
 
   const state: SortableItemState = {
     isDragging,
