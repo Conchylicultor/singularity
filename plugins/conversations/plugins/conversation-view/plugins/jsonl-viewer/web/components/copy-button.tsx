@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
 import { MdCheck, MdContentCopy } from "react-icons/md";
+import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { RowActionButton } from "./row-action-button";
 
 export function CopyTextAction({
@@ -9,15 +9,9 @@ export function CopyTextAction({
   text: string;
   title?: string;
 }) {
-  const [copied, setCopied] = useState(false);
-  const onClick = useCallback(() => {
-    void navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  }, [text]);
+  const { copy, copied } = useCopyToClipboard(text);
   return (
-    <RowActionButton title={title} onClick={onClick}>
+    <RowActionButton title={title} onClick={copy}>
       {copied ? <MdCheck className="size-3" /> : <MdContentCopy className="size-3" />}
     </RowActionButton>
   );

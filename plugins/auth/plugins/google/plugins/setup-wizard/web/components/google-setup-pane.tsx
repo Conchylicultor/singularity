@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Input } from "@/components/ui/input";
 import {
   useAccountStatus,
@@ -26,7 +27,7 @@ export function GoogleSetupPane() {
   const [saving, setSaving] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const { copy: copyRedirectUri, copied } = useCopyToClipboard(REDIRECT_URI, 2000);
 
   const clientIdState = useSecretFieldSet("auth-google.clientId");
   const clientSecretState = useSecretFieldSet("auth-google.clientSecret");
@@ -67,12 +68,6 @@ export function GoogleSetupPane() {
     } finally {
       setConnecting(false);
     }
-  }
-
-  async function handleCopyRedirectUri() {
-    await navigator.clipboard.writeText(REDIRECT_URI);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   }
 
   const hasProject = projectId.length > 0;
@@ -151,7 +146,7 @@ export function GoogleSetupPane() {
                 variant="ghost"
                 size="sm"
                 className="shrink-0"
-                onClick={handleCopyRedirectUri}
+                onClick={copyRedirectUri}
               >
                 {copied ? (
                   <MdCheck className="h-4 w-4 text-emerald-600" />

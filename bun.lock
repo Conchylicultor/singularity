@@ -703,6 +703,10 @@
       "name": "@singularity/plugin-primitives-command-palette",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/copy-to-clipboard": {
+      "name": "@singularity/plugin-primitives-copy-to-clipboard",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/cursor-pagination": {
       "name": "@singularity/plugin-primitives-cursor-pagination",
       "version": "0.0.1",
@@ -1888,6 +1892,8 @@
     "@singularity/plugin-primitives-collapsible": ["@singularity/plugin-primitives-collapsible@workspace:plugins/primitives/plugins/collapsible"],
 
     "@singularity/plugin-primitives-command-palette": ["@singularity/plugin-primitives-command-palette@workspace:plugins/primitives/plugins/command-palette"],
+
+    "@singularity/plugin-primitives-copy-to-clipboard": ["@singularity/plugin-primitives-copy-to-clipboard@workspace:plugins/primitives/plugins/copy-to-clipboard"],
 
     "@singularity/plugin-primitives-cursor-pagination": ["@singularity/plugin-primitives-cursor-pagination@workspace:plugins/primitives/plugins/cursor-pagination"],
 

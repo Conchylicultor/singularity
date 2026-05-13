@@ -133,6 +133,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "primitives/plugins/breadcrumb", loader: () => import("@plugins/primitives/plugins/breadcrumb/web") },
   { name: "primitives/plugins/collapsible", loader: () => import("@plugins/primitives/plugins/collapsible/web") },
   { name: "primitives/plugins/command-palette", loader: () => import("@plugins/primitives/plugins/command-palette/web") },
+  { name: "primitives/plugins/copy-to-clipboard", loader: () => import("@plugins/primitives/plugins/copy-to-clipboard/web") },
   { name: "primitives/plugins/cursor-pagination", loader: () => import("@plugins/primitives/plugins/cursor-pagination/web") },
   { name: "primitives/plugins/data-table", loader: () => import("@plugins/primitives/plugins/data-table/web") },
   { name: "primitives/plugins/detail-sections", loader: () => import("@plugins/primitives/plugins/detail-sections/web") },

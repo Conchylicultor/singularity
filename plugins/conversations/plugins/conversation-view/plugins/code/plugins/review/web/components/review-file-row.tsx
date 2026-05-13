@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
 import { MdWarning, MdContentCopy, MdCheck } from "react-icons/md";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
+import { useCopyToClipboard } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { useConfigValues } from "@plugins/config/web";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
@@ -64,14 +64,7 @@ export function ReviewFileRow({
   const from = file.from && file.from !== file.path ? file.from : null;
   const { safePaths, carefulPaths } = useConfigValues(reviewConfig, "conversation-code-review");
   const level = getFileWarningLevel(file.path, safePaths, carefulPaths);
-  const [copied, setCopied] = useState(false);
-  const copyPath = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    void navigator.clipboard.writeText(file.path).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  }, [file.path]);
+  const { copy, copied } = useCopyToClipboard(file.path);
 
   return (
     <div className="border-b border-border last:border-b-0">
@@ -99,7 +92,7 @@ export function ReviewFileRow({
           <span className="font-medium">{basename}</span>
           <button
             type="button"
-            onClick={copyPath}
+            onClick={(e) => { e.stopPropagation(); copy(); }}
             title="Copy path"
             aria-label="Copy path"
             className="ml-1 inline-flex translate-y-px items-center rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/path:opacity-100"

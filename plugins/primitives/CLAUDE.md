@@ -12,6 +12,7 @@
   - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
   - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
   - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
+  - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
   - **`cursor-pagination`** — Cursor-pagination primitive: useCursorPagination hook with frozen-cursor capture, useInfiniteQuery wiring, IntersectionObserver auto-fetch, and ScrollSentinel component.
   - **`data-table`** — Sortable/filterable flex-layout data table primitive.
   - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.
