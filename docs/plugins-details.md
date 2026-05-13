@@ -1325,7 +1325,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `buildTree`, `computeDrop`, `isDescendant`
       - Exports (web):
         - Types: `RenameInputProps`, `RowChromeMenuHelpers`, `RowChromeProps`, `RowControls`, `RowMenuItem`, `TreeItem`, `TreeListContextValue`, `TreeListProps`
-        - Values: `RenameInput`, `RowChrome`, `TreeList`, `useTreeListContext`, `useTreeRow`
+        - Values: `hideTerminalSubtrees`, `RenameInput`, `RowChrome`, `TreeList`, `useTreeListContext`, `useTreeRow`
 
 - **`reorder`** — Generic reorder primitive. Slots opt in via defineRenderSlot reorder config; DnD is automatic via middleware. Generic reorder primitive: per-worktree storage of slot contribution ranks.
   - Defines:

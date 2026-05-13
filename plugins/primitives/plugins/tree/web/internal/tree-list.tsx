@@ -51,7 +51,11 @@ export type TreeListProps<T extends TreeItem> = {
   dragOverlay?: (row: T) => ReactNode;
   toolbar?: {
     expandAll?: boolean;
-    hideTerminal?: { isTerminal: (row: T) => boolean };
+    hideTerminal?: {
+      isTerminal: (row: T) => boolean;
+      value?: boolean;
+      onValueChange?: (v: boolean) => void;
+    };
     search?: { accessor: (row: T) => string };
     /** Extra content rendered on the left side of the toolbar row. */
     start?: ReactNode;
@@ -75,7 +79,9 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     addLabel = "Add",
   } = props;
 
-  const [hideTerminal, setHideTerminal] = useState(true);
+  const [internalHide, setInternalHide] = useState(true);
+  const hideTerminal = toolbar?.hideTerminal?.value ?? internalHide;
+  const setHideTerminal = toolbar?.hideTerminal?.onValueChange ?? setInternalHide;
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(() =>
     pendingFocus.take(),
   );
@@ -294,7 +300,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                 {toolbar.hideTerminal && (
                   <button
                     type="button"
-                    onClick={() => setHideTerminal((v) => !v)}
+                    onClick={() => setHideTerminal(!hideTerminal)}
                     aria-pressed={hideTerminal}
                     title={hideTerminal ? "Show completed" : "Hide completed"}
                     className={cn(
@@ -339,7 +345,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
   );
 }
 
-function hideTerminalSubtrees<T extends TreeItem>(
+export function hideTerminalSubtrees<T extends TreeItem>(
   tree: TreeNode<T>[],
   isTerminal: (row: T) => boolean,
 ): TreeNode<T>[] {

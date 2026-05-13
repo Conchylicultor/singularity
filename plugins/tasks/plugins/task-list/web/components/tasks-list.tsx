@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { MdAdd } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
@@ -6,6 +6,7 @@ import {
   RenameInput,
   RowChrome,
   TreeList,
+  hideTerminalSubtrees,
   type TreeItem,
 } from "@plugins/primitives/plugins/tree/web";
 import { buildTree, type TreeNode } from "@plugins/primitives/plugins/tree/core";
@@ -104,9 +105,11 @@ function QueuedChip({ taskId, model }: { taskId: string; model: "opus" | "sonnet
 function deriveVisibleOrder(
   rows: readonly Task[],
   rootId?: string,
+  terminalFilter?: (row: Task) => boolean,
 ): string[] {
   const scoped = rootId ? rows.filter((r) => isInSubtree(rows, rootId, r.id)) : rows;
-  const tree = buildTree(scoped);
+  let tree = buildTree(scoped);
+  if (terminalFilter) tree = hideTerminalSubtrees(tree, terminalFilter);
   const ids: string[] = [];
   function walk(nodes: TreeNode<Task>[]) {
     for (const n of nodes) {
@@ -144,9 +147,14 @@ export function TasksList({
 }) {
   const { data: rows } = useResource(tasksResource);
   const listActions = TasksSlots.ListActions.useContributions();
+  const [hideTerminal, setHideTerminal] = useState(true);
+  const isTerminal = useCallback(
+    (t: Task) => t.status === "done" || t.status === "dropped",
+    [],
+  );
   const orderedIds = useMemo(
-    () => deriveVisibleOrder(rows, rootTaskId),
-    [rows, rootTaskId],
+    () => deriveVisibleOrder(rows, rootTaskId, hideTerminal ? isTerminal : undefined),
+    [rows, rootTaskId, hideTerminal, isTerminal],
   );
 
   return (
@@ -166,7 +174,9 @@ export function TasksList({
           expandAll: true,
           search: { accessor: (t) => t.title },
           hideTerminal: {
-            isTerminal: (t) => t.status === "done" || t.status === "dropped",
+            isTerminal,
+            value: hideTerminal,
+            onValueChange: setHideTerminal,
           },
           start: listActions.map((a) => <a.component key={a.id} />),
         }}

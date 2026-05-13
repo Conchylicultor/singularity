@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 
-export { TreeList } from "./internal/tree-list";
+export { TreeList, hideTerminalSubtrees } from "./internal/tree-list";
 export type { TreeListProps } from "./internal/tree-list";
 export { RowChrome } from "./internal/row-chrome";
 export type {
