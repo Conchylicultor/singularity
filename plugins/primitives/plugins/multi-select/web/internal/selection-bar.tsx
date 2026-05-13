@@ -10,41 +10,46 @@ export type SelectionBarProps = {
 export function SelectionBar({
   actions,
   className,
-}: SelectionBarProps): ReactElement | null {
+}: SelectionBarProps): ReactElement {
   const { selectedCount, isActive, selectAll, clearAll } = useMultiSelect();
 
-  if (!isActive) return null;
-
   return (
-    <div
-      className={cn(
-        "sticky top-0 z-20 flex items-center gap-2 border-b bg-background px-2 py-1.5 text-xs",
-        className,
-      )}
-    >
-      <span className="font-medium text-foreground">
-        {selectedCount} selected
-      </span>
-      <button
-        type="button"
-        onClick={selectAll}
-        className="text-muted-foreground hover:text-foreground"
+    <div className="sticky top-0 z-30 h-0 w-full">
+      <div
+        className={cn(
+          "absolute top-1 left-1/2 -translate-x-1/2",
+          "flex items-center gap-2.5 whitespace-nowrap rounded-lg border bg-background/95 px-4 py-2 text-sm shadow-lg backdrop-blur",
+          "transition-all duration-200",
+          isActive
+            ? "translate-y-0 opacity-100"
+            : "pointer-events-none -translate-y-2 opacity-0",
+          className,
+        )}
       >
-        Select all
-      </button>
-      <button
-        type="button"
-        onClick={clearAll}
-        className="text-muted-foreground hover:text-foreground"
-      >
-        Clear
-      </button>
-      {actions && (
-        <>
-          <div className="bg-border h-4 w-px" />
-          <div className="flex items-center gap-1">{actions}</div>
-        </>
-      )}
+        <span className="font-medium text-foreground">
+          {selectedCount} selected
+        </span>
+        <button
+          type="button"
+          onClick={selectAll}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          Select all
+        </button>
+        <button
+          type="button"
+          onClick={clearAll}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          Clear
+        </button>
+        {actions && (
+          <>
+            <div className="bg-border h-4 w-px" />
+            <div className="flex items-center gap-1">{actions}</div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
