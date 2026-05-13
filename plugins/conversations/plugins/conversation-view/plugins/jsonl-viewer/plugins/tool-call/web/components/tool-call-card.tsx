@@ -29,7 +29,7 @@ export function ToolCallCard({
     <div className={`group rounded-md border ${borderClass} ${bgClass} px-3 py-2`}>
       <button
         {...triggerProps}
-        className="flex w-full items-center gap-2 text-xs text-muted-foreground"
+        className="flex w-full items-center gap-2 text-left text-xs text-muted-foreground"
       >
         <span
           className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] ${

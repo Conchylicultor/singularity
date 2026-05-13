@@ -72,7 +72,7 @@ export function CollapsibleTrigger({
       aria-expanded={open}
       aria-controls={contentId}
       onClick={toggle}
-      className={cn("flex w-full items-center", className)}
+      className={cn("flex w-full items-center text-left", className)}
       {...props}
     />
   );
