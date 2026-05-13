@@ -58,14 +58,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/agents/server/internal/tables.ts`
   - Exports (web):
     - Types: `SystemAgentDescriptor`
-    - Values: `agentConversationPane`, `agentDetailPane`, `Agents`, `agentSidePane`, `agentsResource`, `agentsRootPane`, `defineSystemAgent`, `patchAgent`, `systemAgentDetailPane`
+    - Values: `agentDetailPane`, `Agents`, `agentSidePane`, `agentsResource`, `agentsRootPane`, `defineSystemAgent`, `patchAgent`, `systemAgentDetailPane`
   - Exports (server):
     - Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`
     - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
   - Contributes:
     - `Pane.Register` "agents-root"
     - `Pane.Register` "agent-detail"
-    - `Pane.Register` "agent-conversation"
     - `Pane.Register` "agent-system-detail"
     - `Pane.Register` "agent-side"
     - `Shell.Sidebar` "Agents" → `component`
@@ -336,7 +335,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/conversations/:id/stop`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
-  - Imported by: `agents`, `blocked-by`, `blocking`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `grouped`, `history`, `hold-and-exit`, `improve`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `runtime-api`, `runtime-tmux`, `side-conversation`, `summary`, `task-header`, `task-title`, `tasks`, `turn-summary`, `welcome`
+  - Imported by: `agents`, `blocked-by`, `blocking`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `grouped`, `history`, `hold-and-exit`, `improve`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `task-header`, `task-title`, `tasks`, `turn-summary`, `welcome`
   - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `grouped`, `history`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `transcript-api`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
@@ -654,11 +653,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `conversations.resumeConversation`, `tasks-core.recentConversationsResource`
             - `POST /api/conversations/:id/resume`
-        - **`side-conversation`** — Right side pane that shows a second conversation alongside the host (read-only viewer; expand to pop out).
-          - Exports (web):
-            - Values: `convSidePane`
-          - Contributes:
-            - `Pane.Register` "conv-side"
         - **`side-task`** — Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).
           - Exports (web):
             - Values: `taskSidePane`
@@ -1243,7 +1237,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneSlot`, `TypeMarker`
         - Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Outlet`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneDepthContext`, `PaneHistoryButtons`, `PaneIconAction`, `PaneLayoutContext`, `PaneLevel`, `PaneMatchContext`, `PaneRouter`, `parseUrl`, `setBasePath`, `stripBasePath`, `syncChainFromUrl`, `type`, `useCurrentPane`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
-      - Slot contributors: `agents`, `attempt-view`, `auth`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `cost`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-conversation`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
+      - Slot contributors: `agents`, `attempt-view`, `auth`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-task`, `stats`, `summary`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.
       - Exports (core):
         - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `rewriteAttachmentMarkdown`
@@ -1383,10 +1377,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `DELETE /api/stats/commits/excluded-path-state/:path`
       - Endpoint callers: `cost`, `stats`, `tasks`
     - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, sourced from ccusage.
-      - Exports (web):
-        - Values: `costConvSidePane`
       - Contributes:
-        - `Pane.Register` "stats-cost-conv-side"
         - `Config.Spec`
         - `Stats.Chart` "Cost & Tokens" → `CostSection`
         - `Stats.Chart` "Token mix per day" → `TokenMixChart`
@@ -1464,11 +1455,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `TaskDetailSlots.Section` "description" → `TaskDescription`
     - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.
       - Exports (web):
-        - Values: `taskConversationPane`, `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskNavigateProvider`, `tasksRootPane`, `TaskTreeDetail`, `useFlushAll`, `useRegisterFlush`, `useTaskNavigate`
+        - Values: `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskNavigateProvider`, `tasksRootPane`, `TaskTreeDetail`, `useFlushAll`, `useRegisterFlush`, `useTaskNavigate`
       - Contributes:
         - `Pane.Register` "tasks-root"
         - `Pane.Register` "task-detail"
-        - `Pane.Register` "task-conversation"
         - `Shell.Sidebar` "Tasks" → `component`
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Exports (core):
@@ -1477,7 +1467,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `ActiveRelateContext`, `CaptureKind`, `CardDraft`, `ChainModel`, `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelateMode`, `TaskChainRelateSpec`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`, `TaskDraftPopoverProps`, `TaskDraftRelate`
         - Values: `setActiveRelateContext`, `TaskDraftPopover`, `useActiveRelateContext`
-    - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens taskConversationPane.
+    - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens conversationPane.
       - Contributes:
         - `TaskDetailSlots.Section` "events" → `TaskEvents`
     - **`task-graph`** — Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.

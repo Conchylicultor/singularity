@@ -3,7 +3,6 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { attemptsResource } from "@plugins/tasks/core";
 import { cn } from "@/lib/utils";
 import { attemptPane } from "../panes";
