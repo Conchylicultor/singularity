@@ -293,6 +293,7 @@ export function registerPush(program: Command) {
             `git -c trailer.ifexists=replace commit --amend --no-edit --trailer Singularity-Push=${pushId}`,
           ]);
           const fromMainRoot = await getWorktreeRoot();
+          await exec(["bun", "install", "--frozen-lockfile"], fromMainRoot);
           await postRebaseNormalize(fromMainRoot, pushId);
           console.log("Running checks...");
           const ok = await runChecksSubprocess(fromMainRoot);
@@ -356,7 +357,11 @@ export function registerPush(program: Command) {
           process.exit(1);
         }
 
-        // 3b. Post-rebase normalize: regenerate auto-generated artifacts
+        // 3b. Ensure node_modules matches the rebased lockfile — main may
+        //     have added dependencies the worktree hasn't installed yet.
+        await exec(["bun", "install", "--frozen-lockfile"]);
+
+        // 3c. Post-rebase normalize: regenerate auto-generated artifacts
         //     (docs, drizzle migrations) from the rebased source tree and
         //     amend the head commit. The merge drivers in .gitattributes
         //     accepted the upstream side during the rebase; this step makes
