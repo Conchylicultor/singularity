@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdReplay, MdWorkOutline } from "react-icons/md";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { FilterChip, useChipFilter } from "@plugins/primitives/plugins/filter-chips/web";
 import { jobsListResource, type JobRow, type JobState } from "@plugins/infra/plugins/jobs/core";
 import { eventEmissionsResource, eventTriggersResource, type EmissionRow, type TriggerRow } from "@plugins/infra/plugins/events/core";
 import { Button } from "@/components/ui/button";
@@ -101,15 +102,15 @@ const STATE_STYLES: Record<JobState, string> = {
 };
 
 function JobsTab() {
-  const [filter, setFilter] = useState<JobState | "all">("all");
+  const chipFilter = useChipFilter<JobState | "all">("all");
   const [selected, setSelected] = useState<JobRow | null>(null);
   const { data, refetch } = useResource(jobsListResource);
 
   const counts = data.counts;
   const total = counts.pending + counts.running + counts.retrying + counts.dead;
   const visible = useMemo(
-    () => data.rows.filter((r) => filter === "all" || r.state === filter),
-    [data.rows, filter],
+    () => data.rows.filter((r) => chipFilter.matches(r.state)),
+    [data.rows, chipFilter],
   );
 
   async function retry(id: string) {
@@ -131,19 +132,19 @@ function JobsTab() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-1 border-b px-3 py-2">
-        <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
+        <FilterChip active={chipFilter.value === "all"} onClick={() => chipFilter.setValue("all")}>
           All <span className="opacity-60">{total}</span>
         </FilterChip>
-        <FilterChip active={filter === "pending"} onClick={() => setFilter("pending")}>
+        <FilterChip active={chipFilter.value === "pending"} onClick={() => chipFilter.setValue("pending")}>
           Pending <span className="opacity-60">{counts.pending}</span>
         </FilterChip>
-        <FilterChip active={filter === "running"} onClick={() => setFilter("running")}>
+        <FilterChip active={chipFilter.value === "running"} onClick={() => chipFilter.setValue("running")}>
           Running <span className="opacity-60">{counts.running}</span>
         </FilterChip>
-        <FilterChip active={filter === "retrying"} onClick={() => setFilter("retrying")}>
+        <FilterChip active={chipFilter.value === "retrying"} onClick={() => chipFilter.setValue("retrying")}>
           Retrying <span className="opacity-60">{counts.retrying}</span>
         </FilterChip>
-        <FilterChip active={filter === "dead"} onClick={() => setFilter("dead")}>
+        <FilterChip active={chipFilter.value === "dead"} onClick={() => chipFilter.setValue("dead")}>
           Dead <span className="opacity-60">{counts.dead}</span>
         </FilterChip>
         <div className="flex-1" />
@@ -492,31 +493,6 @@ function TriggersTab() {
 }
 
 // ─── Shared bits ─────────────────────────────────────────────────────────
-
-function FilterChip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors",
-        active
-          ? "bg-accent text-accent-foreground"
-          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (

@@ -5,6 +5,7 @@ import { useConversations } from "@plugins/conversations/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useTask } from "@plugins/tasks/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { SearchInput, useTextFilter } from "@plugins/primitives/plugins/search/web";
 import { tasksResource } from "@plugins/tasks/core";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { buttonVariants } from "@/components/ui/button";
@@ -20,7 +21,6 @@ export function BlockedByButton({
   conversation: ConversationRecord;
 }) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
 
   const task = useTask(conversation.taskId);
@@ -52,12 +52,18 @@ export function BlockedByButton({
     [depTaskIds, convByTaskId],
   );
 
-  const availableConvs = useMemo(() => {
-    const lc = search.toLowerCase();
-    return [...convByTaskId.values()]
-      .filter((c) => !depTaskIds.has(c.taskId!))
-      .filter((c) => !lc || (c.title ?? "").toLowerCase().includes(lc));
-  }, [convByTaskId, depTaskIds, search]);
+  const candidates = useMemo(
+    () => [...convByTaskId.values()].filter((c) => !depTaskIds.has(c.taskId!)),
+    [convByTaskId, depTaskIds],
+  );
+  const {
+    query: search,
+    setQuery: setSearch,
+    filtered: availableConvs,
+  } = useTextFilter({
+    items: candidates,
+    accessor: (c) => c.title ?? "",
+  });
 
   if (!conversation.taskId || !task) return null;
 
@@ -173,11 +179,11 @@ export function BlockedByButton({
           </ul>
         )}
 
-        <input
-          className="mb-1.5 w-full rounded border bg-transparent px-2 py-1 text-xs outline-none"
+        <SearchInput
           placeholder="Search conversations…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          wrapperClassName="mb-1.5"
         />
         {availableConvs.length === 0 ? (
           <div className="py-2 text-center text-xs text-muted-foreground">

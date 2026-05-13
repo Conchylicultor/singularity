@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { MdBolt, MdChevronRight, MdExpandMore } from "react-icons/md";
-import { Input } from "@/components/ui/input";
+import { SearchInput, filterTree, collectAllIds } from "@plugins/primitives/plugins/search/web";
 import { cn } from "@/lib/utils";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 
@@ -29,25 +29,32 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
   const filtered = useMemo(() => {
     const needle = filter.trim().toLowerCase();
     if (!needle) return plugins;
-    return plugins
-      .map((p) => filterNode(p, needle))
-      .filter((p): p is PluginNode => p !== null);
+    return filterTree(
+      plugins,
+      (n) => n.name.toLowerCase().includes(needle),
+      (n) => n.children,
+      (n, children) => ({ ...n, children }),
+    );
   }, [plugins, filter]);
 
   const effectiveExpanded = filter.trim()
-    ? new Set<string>(collectAllIds(filtered))
+    ? new Set<string>(
+        collectAllIds(
+          filtered,
+          (n) => n.hierarchyId,
+          (n) => n.children,
+        ),
+      )
     : expanded;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="px-3 py-2.5 border-b">
-        <Input
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder="Filter plugins"
-          className="h-7 text-xs"
-        />
-      </div>
+      <SearchInput
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder="Filter plugins"
+        wrapperClassName="px-3 py-2.5 border-b"
+      />
       <div className="flex-1 min-h-0 overflow-y-auto py-1">
         {filtered.map((p) => (
           <TreeRow
@@ -164,21 +171,3 @@ function TreeRow({
   );
 }
 
-function filterNode(node: PluginNode, needle: string): PluginNode | null {
-  const matches = node.name.toLowerCase().includes(needle);
-  const filteredChildren = node.children
-    .map((c) => filterNode(c, needle))
-    .filter((c): c is PluginNode => c !== null);
-  if (!matches && filteredChildren.length === 0) return null;
-  return { ...node, children: filteredChildren };
-}
-
-function collectAllIds(nodes: PluginNode[]): string[] {
-  const out: string[] = [];
-  function visit(n: PluginNode) {
-    out.push(n.hierarchyId);
-    for (const c of n.children) visit(c);
-  }
-  for (const n of nodes) visit(n);
-  return out;
-}

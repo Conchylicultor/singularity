@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
+import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import type {
   PluginNode,
   PluginTreePayload,
@@ -69,14 +71,9 @@ export function CatalogView() {
           const count = cat.getCount(plugins);
           const active = cat.id === activeId;
           return (
-            <button
+            <FilterChip
               key={cat.id}
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-colors",
-                active
-                  ? "bg-accent text-foreground"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-              )}
+              active={active}
               onClick={() => {
                 setSelectedId(cat.id);
                 setFilter("");
@@ -94,20 +91,17 @@ export function CatalogView() {
               >
                 {count}
               </span>
-            </button>
+            </FilterChip>
           );
         })}
       </div>
 
-      <div className="border-b px-3 py-2">
-        <input
-          type="text"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder="Filter…"
-          className="h-7 w-full rounded-md border bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-ring"
-        />
-      </div>
+      <SearchInput
+        value={filter}
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder="Filter…"
+        wrapperClassName="border-b px-3 py-2"
+      />
 
       <div className="flex-1 min-h-0 overflow-y-auto">
         {selected ? (

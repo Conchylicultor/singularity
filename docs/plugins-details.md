@@ -1206,6 +1206,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `FilepathBreadcrumbProps`
         - Values: `FilepathBreadcrumb`
+    - **`filter-chips`** — Toggle-chip filter primitive: FilterChip, FilterGroup, and useChipFilter hook for single-select enum filtering.
+      - Exports (web):
+        - Types: `ChipFilterHandle`, `FilterChipProps`, `FilterGroupProps`
+        - Values: `FilterChip`, `FilterGroup`, `useChipFilter`
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
       - Exports (web):
         - Types: `IconButtonProps`
@@ -1259,6 +1263,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
       - Exports (web):
         - Values: `formatRelativeTime`, `RelativeTime`
+    - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
+      - Exports (web):
+        - Types: `SearchInputProps`, `TextFilterHandle`, `UseTextFilterOptions`
+        - Values: `collectAllIds`, `filterTree`, `SearchInput`, `useTextFilter`
     - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
       - Exports (web):
         - Types: `RenderSlot`, `RenderSlotConfig`, `SlotItemMiddleware`, `SlotListMiddleware`
