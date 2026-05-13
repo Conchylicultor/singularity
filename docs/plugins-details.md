@@ -121,7 +121,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `DebugApp`
           - Contributes:
             - `Apps.App` "Debug" → `DebugLayout`
-          - Imported by: `agents`, `auth`, `blocked-by`, `blocking`, `build`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
+          - Imported by: `agents`, `auth`, `blocked-by`, `blocking`, `branch`, `build`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -395,7 +395,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
       - Contributes:
         - `Pane.Register` "conversation"
-      - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `blocking`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+      - Slot contributors: `agents`, `attempt-view`, `blocked-by`, `blocking`, `branch`, `code-explorer`, `commits-graph`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Exports (web):
@@ -412,6 +412,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`blocking`** — Prompt-bar button to mark this conversation's task as blocking another conversation's task, creating a dependency and re-ordering the queue.
           - Contributes:
             - `Conversation.PromptBar` "Deps" → `BlockingButton`
+        - **`branch`** — Forks the current Claude session into a background conversation with the typed draft as the opening prompt.
+          - Contributes:
+            - `Conversation.PromptBar` "Branch" → `BranchButtons`
         - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
           - Exports (core):
             - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`
