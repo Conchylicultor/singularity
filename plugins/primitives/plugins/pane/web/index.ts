@@ -30,6 +30,7 @@ export type {
   InferParams,
   PaneInternal,
   PaneSlot,
+  PaneOpenMode,
 } from "./pane";
 export { Outlet, PaneLevel } from "./components/outlet";
 export { PaneRouter } from "./components/pane-router";

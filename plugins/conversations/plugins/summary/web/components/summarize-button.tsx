@@ -25,7 +25,7 @@ export function SummarizeButton() {
   const onClick = () =>
     isOpen
       ? convSummaryPane.close()
-      : openPane(convSummaryPane, { convId: conversation.id });
+      : openPane(convSummaryPane, { convId: conversation.id }, { mode: "push" });
 
   if (!latest) {
     return (

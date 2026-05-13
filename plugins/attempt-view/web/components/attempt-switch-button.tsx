@@ -29,7 +29,7 @@ export function AttemptSwitchButton() {
         if (inAttemptView) {
           attemptPane.unwrap();
         } else {
-          openPane(attemptPane, { attemptId: conversation.attemptId });
+          openPane(attemptPane, { attemptId: conversation.attemptId }, { mode: "push" });
         }
       }}
       className="gap-1.5"

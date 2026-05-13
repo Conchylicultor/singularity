@@ -9,7 +9,7 @@ export function TaskDescription({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
   const openPane = useOpenPane();
   const openFile = (path: string) =>
-    openPane(filePeekPane, { worktree: "main", filePath: path });
+    openPane(filePeekPane, { worktree: "main", filePath: path }, { mode: "push" });
 
   const descField = useEditableField({
     value: task?.description ?? "",

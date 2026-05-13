@@ -25,7 +25,7 @@ export default {
     Pane.Register({ pane: profilingPane }),
     DebugApp.Sidebar({
       id: "profiling",
-      ...sidebarNavItem({ title: "Profiling", icon: MdSpeed, onClick: () => openPane(profilingPane, {}) }),
+      ...sidebarNavItem({ title: "Profiling", icon: MdSpeed, onClick: () => openPane(profilingPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

@@ -39,7 +39,7 @@ export function SystemFolder({
             <button
               key={d.id}
               type="button"
-              onClick={() => openPane(systemAgentDetailPane, { systemId: d.id })}
+              onClick={() => openPane(systemAgentDetailPane, { systemId: d.id }, { mode: "push" })}
               className={cn(
                 "flex items-center gap-2 rounded px-1 py-1 text-sm",
                 "hover:bg-accent",

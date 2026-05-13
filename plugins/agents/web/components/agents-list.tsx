@@ -168,7 +168,7 @@ export function AgentsList({
           rows={rows}
           selectedId={selectedId}
           onSelect={(id) =>
-            onSelect ? onSelect(id) : openPane(agentDetailPane, { id })
+            onSelect ? onSelect(id) : openPane(agentDetailPane, { id }, { mode: "push" })
           }
           onToggleExpanded={(id, next) => patchAgent(id, { expanded: next })}
           onMove={(id, dest) => patchAgent(id, dest)}

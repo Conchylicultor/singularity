@@ -48,7 +48,7 @@ export function CommitsChip() {
       onClick={() =>
         isOpen
           ? convCommitsGraphPane.close()
-          : openPane(convCommitsGraphPane, { convId: conversation.id })
+          : openPane(convCommitsGraphPane, { convId: conversation.id }, { mode: "push" })
       }
       className="gap-1 px-2 text-xs tabular-nums"
     >

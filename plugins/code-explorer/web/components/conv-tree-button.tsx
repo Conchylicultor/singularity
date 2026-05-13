@@ -21,7 +21,7 @@ export function ConvTreeButton() {
       onClick={() =>
         isOpen
           ? convFileTreePane.close()
-          : openPane(convFileTreePane, { convId: conversation.id })
+          : openPane(convFileTreePane, { convId: conversation.id }, { mode: "push" })
       }
     >
       <MdFolderOpen className="size-4" />

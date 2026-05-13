@@ -44,7 +44,7 @@ function TasksRoot(): ReactElement {
     <div className="h-full overflow-auto p-4">
       <TasksList
         selectedId={selectedId}
-        onSelect={(id) => openPane(taskDetailPane, { taskId: id })}
+        onSelect={(id) => openPane(taskDetailPane, { taskId: id }, { mode: "push" })}
       />
       {lists.length > 0 && (
         <div className="mt-6 flex flex-col gap-4">

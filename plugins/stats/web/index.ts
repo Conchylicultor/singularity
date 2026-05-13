@@ -17,7 +17,7 @@ export default {
     Pane.Register({ pane: statsPane }),
     Shell.Sidebar({
       id: "stats",
-      ...sidebarNavItem({ title: "Stats", icon: MdInsights, onClick: () => openPane(statsPane, {}) }),
+      ...sidebarNavItem({ title: "Stats", icon: MdInsights, onClick: () => openPane(statsPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

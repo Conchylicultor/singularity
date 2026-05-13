@@ -217,7 +217,7 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
                         if (activeConvId === c.id) {
                           conversationPane.close();
                         } else {
-                          openPane(conversationPane, { convId: c.id });
+                          openPane(conversationPane, { convId: c.id }, { mode: "push" });
                         }
                       }}
                       className={cn(
@@ -249,7 +249,7 @@ function TaskChip({ taskId }: { taskId: string }) {
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        openPane(taskSidePane, { convId: conversation.id, taskId });
+        openPane(taskSidePane, { convId: conversation.id, taskId }, { mode: "push" });
       }}
       className="bg-muted text-primary hover:bg-muted/80 inline-flex max-w-full items-center gap-1.5 rounded px-1.5 py-0.5 align-baseline text-xs hover:underline"
       title={title}

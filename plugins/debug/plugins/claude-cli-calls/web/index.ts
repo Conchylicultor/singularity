@@ -16,7 +16,7 @@ export default {
     Pane.Register({ pane: claudeCliCallsPane }),
     DebugApp.Sidebar({
       id: "claude-cli-calls",
-      ...sidebarNavItem({ title: "Claude CLI Calls", icon: MdAutoAwesome, onClick: () => openPane(claudeCliCallsPane, {}) }),
+      ...sidebarNavItem({ title: "Claude CLI Calls", icon: MdAutoAwesome, onClick: () => openPane(claudeCliCallsPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

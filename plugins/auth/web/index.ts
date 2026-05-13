@@ -27,7 +27,7 @@ export default {
     Pane.Register({ pane: accountsPane }),
     Shell.Sidebar({
       id: "accounts",
-      ...sidebarNavItem({ title: "Accounts", icon: MdKey, onClick: () => openPane(accountsPane, {}) }),
+      ...sidebarNavItem({ title: "Accounts", icon: MdKey, onClick: () => openPane(accountsPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

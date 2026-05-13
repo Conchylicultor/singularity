@@ -9,7 +9,7 @@ export function ExpandTaskButton() {
     <PaneIconAction
       label="Expand"
       icon={MdOpenInFull}
-      onClick={() => openPane(taskDetailPane, { taskId }, { root: true })}
+      onClick={() => openPane(taskDetailPane, { taskId }, { mode: "root" })}
     />
   );
 }

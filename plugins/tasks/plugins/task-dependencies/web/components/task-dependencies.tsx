@@ -104,7 +104,7 @@ function DepChip({
   const isTerminal = dep ? dep.status === "done" || dep.status === "dropped" : false;
   const openPane = useOpenPane();
 
-  const open = () => openPane(taskDetailPane, { taskId: depId }, { replace: true });
+  const open = () => openPane(taskDetailPane, { taskId: depId }, { mode: "swap" });
   const remove = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await fetch(`/api/tasks/${taskId}/dependencies/${depId}`, {

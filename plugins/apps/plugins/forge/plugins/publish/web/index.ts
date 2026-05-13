@@ -14,7 +14,7 @@ export default {
     Pane.Register({ pane: publishPane }),
     Forge.Sidebar({
       id: "publish",
-      ...sidebarNavItem({ title: "Publish", icon: MdPublish, onClick: () => openPane(publishPane, {}) }),
+      ...sidebarNavItem({ title: "Publish", icon: MdPublish, onClick: () => openPane(publishPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

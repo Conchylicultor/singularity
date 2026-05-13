@@ -18,7 +18,7 @@ export function ConvChip({ content }: { content: string; attrs: Record<string, s
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        openPane(conversationPane, { convId: sideConvId });
+        openPane(conversationPane, { convId: sideConvId }, { mode: "push" });
       }}
       className="inline-flex max-w-full items-center gap-1.5 rounded bg-muted px-1.5 py-0.5 align-baseline text-xs text-primary hover:bg-muted/80 hover:underline"
       title={title ? `${title} · ${sideConvId}` : sideConvId}

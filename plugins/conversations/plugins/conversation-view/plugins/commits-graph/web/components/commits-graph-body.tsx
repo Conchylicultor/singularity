@@ -163,7 +163,7 @@ function CommitRowItem({
     <li
       className="flex cursor-pointer items-center gap-2 border-b border-border/50 pl-2 pr-3 hover:bg-accent/50"
       style={{ height: COMMIT_ROW_HEIGHT }}
-      onClick={() => openPane(convCommitDiffPane, { convId, sha: commit.sha })}
+      onClick={() => openPane(convCommitDiffPane, { convId, sha: commit.sha }, { mode: "push" })}
     >
       <CommitRail isFirst={isFirst} isLast={isLast} color={color} />
       <span

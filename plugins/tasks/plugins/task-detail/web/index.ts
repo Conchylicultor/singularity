@@ -29,7 +29,7 @@ export default {
     Pane.Register({ pane: taskDetailPane }),
     Shell.Sidebar({
       id: "tasks",
-      ...sidebarNavItem({ title: "Tasks", icon: MdChecklist, onClick: () => openPane(tasksRootPane, {}) }),
+      ...sidebarNavItem({ title: "Tasks", icon: MdChecklist, onClick: () => openPane(tasksRootPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

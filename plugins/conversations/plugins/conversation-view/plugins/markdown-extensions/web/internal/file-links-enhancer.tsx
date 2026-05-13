@@ -31,7 +31,7 @@ export function FileLinksEnhancer({ children }: { children: ReactNode }) {
       openPane(filePeekPane, {
         worktree,
         filePath: line != null ? `${path}:${line}` : path,
-      });
+      }, { mode: "push" });
   }, [worktree, openPane]);
 
   const enhancement = useMemo((): MarkdownEnhancement | null => {

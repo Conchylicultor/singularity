@@ -79,7 +79,7 @@ export function PublishView() {
         <PluginTree
           plugins={plugins}
           selected={selectedId}
-          onSelect={(id) => openPane(pluginViewPane, { pluginId: id })}
+          onSelect={(id) => openPane(pluginViewPane, { pluginId: id }, { mode: "push" })}
         />
       </div>
     </div>

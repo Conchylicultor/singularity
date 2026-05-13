@@ -28,7 +28,7 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
   const onFileOpen = useMemo(() => {
     if (!worktree) return undefined;
     return (path: string) =>
-      openPane(filePeekPane, { worktree, filePath: path });
+      openPane(filePeekPane, { worktree, filePath: path }, { mode: "push" });
   }, [worktree, openPane]);
 
   const enhancement = useMemo((): MarkdownEnhancement | null => {

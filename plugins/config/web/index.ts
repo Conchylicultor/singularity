@@ -28,7 +28,7 @@ export default {
     Pane.Register({ pane: settingsPane }),
     Shell.Sidebar({
       id: "settings",
-      ...sidebarNavItem({ title: "Settings", icon: MdSettings, onClick: () => openPane(settingsPane, {}) }),
+      ...sidebarNavItem({ title: "Settings", icon: MdSettings, onClick: () => openPane(settingsPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

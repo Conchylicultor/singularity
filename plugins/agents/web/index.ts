@@ -42,7 +42,7 @@ export default {
     agentSidePane.Actions({ component: ExpandAgentButton }),
     Shell.Sidebar({
       id: "agents",
-      ...sidebarNavItem({ title: "Agents", icon: MdPrecisionManufacturing, onClick: () => openPane(agentsRootPane, {}) }),
+      ...sidebarNavItem({ title: "Agents", icon: MdPrecisionManufacturing, onClick: () => openPane(agentsRootPane, {}, { mode: "root" }) }),
     }),
     Item.Avatar({
       match: (conv) => conv.kind === "agent",

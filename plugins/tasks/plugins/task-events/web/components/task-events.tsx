@@ -193,7 +193,7 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                                 } else {
                                   openPane(conversationPane, {
                                     convId: c.id,
-                                  });
+                                  }, { mode: "push" });
                                 }
                               }}
                               className={cn(

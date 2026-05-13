@@ -37,7 +37,7 @@ export function TasksButton() {
       onClick={() =>
         isOpen
           ? convTasksPane.close()
-          : openPane(convTasksPane, { convId: conversation.id })
+          : openPane(convTasksPane, { convId: conversation.id }, { mode: "push" })
       }
       className="gap-1.5"
     >

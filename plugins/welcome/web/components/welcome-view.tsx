@@ -27,7 +27,7 @@ export function WelcomeView() {
 
   const openPane = useOpenPane();
   const openConversation = (name: string) => {
-    openPane(conversationPane, { convId: name }, { root: true });
+    openPane(conversationPane, { convId: name }, { mode: "root" });
   };
 
   const recentConversations = conversations.slice(0, 5);

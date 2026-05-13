@@ -15,7 +15,7 @@ export default {
     Pane.Register({ pane: memoryPane }),
     DebugApp.Sidebar({
       id: "memory",
-      ...sidebarNavItem({ title: "Memory", icon: MdMemory, onClick: () => openPane(memoryPane, {}) }),
+      ...sidebarNavItem({ title: "Memory", icon: MdMemory, onClick: () => openPane(memoryPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

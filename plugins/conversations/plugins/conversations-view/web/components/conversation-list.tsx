@@ -59,7 +59,7 @@ export function ConversationList() {
   };
 
   const navigate = (id: string) => {
-    openPane(conversationPane, { convId: id }, { root: true });
+    openPane(conversationPane, { convId: id }, { mode: "root" });
     setActiveId(id);
   };
 

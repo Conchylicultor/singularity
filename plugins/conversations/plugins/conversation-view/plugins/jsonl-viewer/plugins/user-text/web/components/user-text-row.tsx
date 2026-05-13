@@ -82,7 +82,7 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
     openPane(filePeekPane, {
       worktree: conversation.attemptId,
       filePath: path,
-    });
+    }, { mode: "push" });
 
   return (
     <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2">

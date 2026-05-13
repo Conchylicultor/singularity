@@ -15,7 +15,7 @@ export default {
     Pane.Register({ pane: broadcastsPane }),
     DebugApp.Sidebar({
       id: "broadcasts",
-      ...sidebarNavItem({ title: "Broadcasts", icon: MdAnnouncement, onClick: () => openPane(broadcastsPane, {}) }),
+      ...sidebarNavItem({ title: "Broadcasts", icon: MdAnnouncement, onClick: () => openPane(broadcastsPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

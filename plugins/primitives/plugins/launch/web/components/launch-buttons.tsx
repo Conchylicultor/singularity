@@ -55,7 +55,7 @@ export function useLaunchConversation({
       }
       const conversation = ConversationSchema.parse(await res.json());
       onLaunched?.(conversation);
-      if (openAfterLaunch) openPane(conversationPane, { convId: conversation.id });
+      if (openAfterLaunch) openPane(conversationPane, { convId: conversation.id }, { mode: "push" });
     } finally {
       setLaunching(null);
     }

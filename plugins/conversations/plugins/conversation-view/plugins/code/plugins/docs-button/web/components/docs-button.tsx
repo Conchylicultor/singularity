@@ -38,7 +38,7 @@ export function DocsButton() {
       onClick={() =>
         isOpen
           ? convDocsPane.close()
-          : openPane(convDocsPane, { convId: conversation.id })
+          : openPane(convDocsPane, { convId: conversation.id }, { mode: "push" })
       }
       className="gap-1.5"
     >

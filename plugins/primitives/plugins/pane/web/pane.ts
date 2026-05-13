@@ -840,27 +840,27 @@ export function useMatchForPath(pathname: string): PaneMatch | null {
 function openPaneImpl(
   internal: PaneInternal,
   params: Record<string, string>,
-  opts?: { root?: boolean; append?: boolean },
+  opts?: { root?: boolean },
 ): void {
   const replace = internal.chrome.enabled && !internal.chrome.history;
   const chain = getChain();
   const ownParams = extractOwnParams(internal, params);
 
-  // If already in chain, update params or no-op (unless root or append is forced)
-  const existingIdx = chain.findIndex((s) => s.paneId === internal.id);
-  if (existingIdx >= 0 && !opts?.root && !opts?.append) {
-    const existing = chain[existingIdx]!.params;
-    const same =
-      Object.keys(ownParams).length === Object.keys(existing).length &&
-      Object.keys(ownParams).every((k) => ownParams[k] === existing[k]);
-    if (same) return;
-    const newChain = chain.slice(0, existingIdx + 1);
-    newChain[existingIdx] = createSlot(internal.id, ownParams);
-    setChain(newChain, replace);
-    return;
-  }
-
   if (!opts?.root) {
+    // If already in chain, update params or no-op
+    const existingIdx = chain.findIndex((s) => s.paneId === internal.id);
+    if (existingIdx >= 0) {
+      const existing = chain[existingIdx]!.params;
+      const same =
+        Object.keys(ownParams).length === Object.keys(existing).length &&
+        Object.keys(ownParams).every((k) => ownParams[k] === existing[k]);
+      if (same) return;
+      const newChain = chain.slice(0, existingIdx + 1);
+      newChain[existingIdx] = createSlot(internal.id, ownParams);
+      setChain(newChain, replace);
+      return;
+    }
+
     // Try insertion into current chain
     const positions = findValidPositions(internal, chain);
     if (positions.length > 0) {
@@ -898,16 +898,18 @@ function openPaneImpl(
     }
   }
 
-  // No valid position, root forced, or no matching params — build fresh chain
+  // root forced, or no valid insertion position — build fresh chain
   setChain(buildFreshChain(internal, params), replace);
 }
+
+export type PaneOpenMode = "root" | "push" | "swap";
 
 export function openPane(
   target: PaneObject<any, any, any>,
   params: Record<string, string>,
-  opts?: { root?: boolean; append?: boolean },
+  opts: { mode: "root" },
 ): void {
-  openPaneImpl(target._internal, params, opts);
+  openPaneImpl(target._internal, params, { root: opts.mode === "root" });
 }
 
 // ---------------------------------------------------------------------------
@@ -917,7 +919,7 @@ export function openPane(
 export function useOpenPane(): (
   target: PaneObject<any, any, any>,
   params: Record<string, string>,
-  opts?: { root?: boolean; append?: boolean; replace?: boolean },
+  opts: { mode: PaneOpenMode },
 ) => void {
   const depth = useContext(PaneDepthContext);
   const chain = getChain();
@@ -928,12 +930,12 @@ export function useOpenPane(): (
     (
       target: PaneObject<any, any, any>,
       params: Record<string, string>,
-      opts?: { root?: boolean; append?: boolean; replace?: boolean },
+      opts: { mode: PaneOpenMode },
     ) => {
       const targetInternal = target._internal;
 
-      if (opts?.root || opts?.append || callerInstanceId === undefined) {
-        openPaneImpl(targetInternal, params, opts);
+      if (opts.mode === "root" || callerInstanceId === undefined) {
+        openPaneImpl(targetInternal, params, { root: opts.mode === "root" });
         return;
       }
 
@@ -942,7 +944,7 @@ export function useOpenPane(): (
         (s) => s.instanceId === callerInstanceId,
       );
       if (callerIndex < 0) {
-        openPaneImpl(targetInternal, params, opts);
+        openPaneImpl(targetInternal, params);
         return;
       }
 
@@ -952,11 +954,11 @@ export function useOpenPane(): (
       const replace =
         targetInternal.chrome.enabled && !targetInternal.chrome.history;
 
-      // replace: update the caller's slot in-place (same column), truncate
+      // swap: update the caller's slot in-place (same column), truncating
       // children. Used when internal navigation within a pane wants to swap
       // which entity is shown without growing the chain (e.g. clicking a
       // dependency chip switches the task detail to a different task).
-      if (opts?.replace && targetInternal.id === callerPaneId) {
+      if (opts.mode === "swap" && targetInternal.id === callerPaneId) {
         const existing = currentChain[callerIndex]!.params;
         const same =
           Object.keys(ownParams).length === Object.keys(existing).length &&
@@ -968,9 +970,10 @@ export function useOpenPane(): (
         return;
       }
 
-      // Wrap left: caller can follow target → insert target before caller.
-      // Skip if the target already exists as an ancestor — the after-
-      // dependency is already satisfied, so inserting another would duplicate.
+      // push: wrap left if caller depends on target as a prerequisite,
+      // otherwise open to the right (truncate after caller, append target).
+      // Wrap left: insert target immediately before the caller so its
+      // after-dependency is satisfied. Skip if already an ancestor.
       if (callerPane?.after.has(targetInternal.id)) {
         const alreadySatisfied = currentChain
           .slice(0, callerIndex)
@@ -986,7 +989,7 @@ export function useOpenPane(): (
         }
       }
 
-      // Open right (default): truncate after caller, append target
+      // Open right: truncate after caller, append target
       const newChain = [
         ...currentChain.slice(0, callerIndex + 1),
         createSlot(targetInternal.id, ownParams),

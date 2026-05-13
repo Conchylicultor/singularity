@@ -32,7 +32,7 @@ export function AgentAvatarTitlePrefix({ conversation }: { conversation: Convers
       onClick={() =>
         isOpen
           ? agentSidePane.close()
-          : openPane(agentSidePane, { convId: conversation.id, agentId: agentId! })
+          : openPane(agentSidePane, { convId: conversation.id, agentId: agentId! }, { mode: "push" })
       }
       className={cn(
         "rounded-full transition-opacity",

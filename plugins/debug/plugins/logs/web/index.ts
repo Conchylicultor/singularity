@@ -16,7 +16,7 @@ export default {
     Pane.Register({ pane: logChannelPane }),
     DebugApp.Sidebar({
       id: "logs",
-      ...sidebarNavItem({ title: "Logs", icon: MdTerminal, onClick: () => openPane(logsPane, {}) }),
+      ...sidebarNavItem({ title: "Logs", icon: MdTerminal, onClick: () => openPane(logsPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

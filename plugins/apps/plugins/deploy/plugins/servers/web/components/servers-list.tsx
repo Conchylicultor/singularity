@@ -20,7 +20,7 @@ export function ServersList() {
       <div className="flex items-center justify-between border-b px-4 py-3">
         <h2 className="text-sm font-semibold">Servers</h2>
         <button
-          onClick={() => openPane(addServerPane, {})}
+          onClick={() => openPane(addServerPane, {}, { mode: "push" })}
           className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
             addingServer
               ? "bg-accent text-accent-foreground"
@@ -55,7 +55,7 @@ function ServerRow({ server, selected }: { server: Server; selected: boolean }) 
   const openPane = useOpenPane();
   return (
     <button
-      onClick={() => openPane(serverDetailPane, { serverId: server.id })}
+      onClick={() => openPane(serverDetailPane, { serverId: server.id }, { mode: "push" })}
       className={`flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
         selected ? "bg-accent" : "hover:bg-accent/50"
       }`}

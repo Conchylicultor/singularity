@@ -16,7 +16,7 @@ export default {
     Pane.Register({ pane: recoveryPane }),
     DebugApp.Sidebar({
       id: "conversations-recover",
-      ...sidebarNavItem({ title: "Recovery", icon: MdRestore, onClick: () => openPane(recoveryPane, {}) }),
+      ...sidebarNavItem({ title: "Recovery", icon: MdRestore, onClick: () => openPane(recoveryPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

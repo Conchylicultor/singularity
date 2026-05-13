@@ -233,7 +233,7 @@ export function TaskGraph({ taskId }: { taskId: string }) {
   const onNavigate = useCallback(
     (id: string) => {
       if (ctxNavigate) ctxNavigate(id);
-      else openPane(taskDetailPane, { taskId: id }, { replace: true });
+      else openPane(taskDetailPane, { taskId: id }, { mode: "swap" });
     },
     [ctxNavigate, openPane],
   );

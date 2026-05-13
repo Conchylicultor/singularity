@@ -12,7 +12,7 @@ export function ExpandToTasksAction() {
     <PaneIconAction
       label="Open in Tasks"
       icon={MdOpenInNew}
-      onClick={() => openPane(taskDetailPane, { taskId: ctx.selectedId })}
+      onClick={() => openPane(taskDetailPane, { taskId: ctx.selectedId }, { mode: "push" })}
     />
   );
 }

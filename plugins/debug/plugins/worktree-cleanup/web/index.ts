@@ -15,7 +15,7 @@ export default {
     Pane.Register({ pane: worktreeCleanupPane }),
     DebugApp.Sidebar({
       id: "worktree-cleanup",
-      ...sidebarNavItem({ title: "Worktree Cleanup", icon: MdFolderDelete, onClick: () => openPane(worktreeCleanupPane, {}) }),
+      ...sidebarNavItem({ title: "Worktree Cleanup", icon: MdFolderDelete, onClick: () => openPane(worktreeCleanupPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

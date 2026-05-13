@@ -62,7 +62,7 @@ function TopRow({ row }: { row: Row }) {
     row.cacheReadTokens;
   const isClickable = !!row.conversationId;
   const onClick = isClickable
-    ? () => openPane(conversationPane, { convId: row.conversationId! })
+    ? () => openPane(conversationPane, { convId: row.conversationId! }, { mode: "push" })
     : undefined;
   return (
     <tr

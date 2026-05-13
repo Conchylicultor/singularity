@@ -33,7 +33,7 @@ export default {
       ...sidebarNavItem({
         title: "Catalog",
         icon: MdLibraryBooks,
-        onClick: () => openPane(catalogPane, {}),
+        onClick: () => openPane(catalogPane, {}, { mode: "root" }),
       }),
     }),
     Catalog.Category({

@@ -8,7 +8,7 @@ export function ExpandAgentButton() {
     <PaneIconAction
       label="Expand"
       icon={MdOpenInFull}
-      onClick={() => openPane(agentDetailPane, { id: agentId }, { root: true })}
+      onClick={() => openPane(agentDetailPane, { id: agentId }, { mode: "root" })}
     />
   );
 }

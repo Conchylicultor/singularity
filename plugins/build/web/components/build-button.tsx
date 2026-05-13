@@ -141,7 +141,7 @@ export function BuildButton() {
           className="size-6"
           onClick={() => {
             setOpen(false);
-            openPane(buildPane, {});
+            openPane(buildPane, {}, { mode: "push" });
           }}
           aria-label="Open in pane"
         >

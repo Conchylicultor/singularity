@@ -15,7 +15,7 @@ export default {
     Pane.Register({ pane: dbBackupPane }),
     DebugApp.Sidebar({
       id: "db-backup",
-      ...sidebarNavItem({ title: "DB Backup", icon: MdBackup, onClick: () => openPane(dbBackupPane, {}) }),
+      ...sidebarNavItem({ title: "DB Backup", icon: MdBackup, onClick: () => openPane(dbBackupPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

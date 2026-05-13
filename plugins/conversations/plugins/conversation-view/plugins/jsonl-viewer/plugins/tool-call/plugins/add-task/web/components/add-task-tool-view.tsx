@@ -48,7 +48,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const openTask = (e: React.MouseEvent) => {
     if (!taskId) return;
     e.stopPropagation();
-    openPane(taskSidePane, { convId: conversation.id, taskId });
+    openPane(taskSidePane, { convId: conversation.id, taskId }, { mode: "push" });
   };
 
   return (

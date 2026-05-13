@@ -17,7 +17,7 @@ export default {
       name: "Google",
       icon: SiGoogle,
       helpUrl: "https://console.cloud.google.com/apis/credentials",
-      configureCredentials: () => openPane(googleSetupPane, {}),
+      configureCredentials: () => openPane(googleSetupPane, {}, { mode: "root" }),
     }),
     Config.Spec(googleAuthConfig),
   ],

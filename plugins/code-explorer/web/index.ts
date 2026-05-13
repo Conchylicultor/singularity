@@ -17,7 +17,7 @@ export default {
     Pane.Register({ pane: convFileTreePane }),
     Shell.Sidebar({
       id: "code-explorer",
-      ...sidebarNavItem({ title: "Explorer", icon: MdFolderOpen, onClick: () => openPane(globalFileTreePane, { worktree: "main" }, { root: true }) }),
+      ...sidebarNavItem({ title: "Explorer", icon: MdFolderOpen, onClick: () => openPane(globalFileTreePane, { worktree: "main" }, { mode: "root" }) }),
     }),
     Conversation.ActionBar({ id: "explorer", component: ConvTreeButton }),
   ],

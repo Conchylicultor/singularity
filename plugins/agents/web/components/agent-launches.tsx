@@ -57,7 +57,7 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
                     } else {
                       openPane(conversationPane, {
                         convId: primary.id,
-                      });
+                      }, { mode: "push" });
                     }
                   }}
                   disabled={!primary}

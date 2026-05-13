@@ -39,9 +39,9 @@ export function TaskLinkChip({ content }: { content: string; attrs: Record<strin
       onClick={(e) => {
         e.stopPropagation();
         if (conversation) {
-          openPane(taskSidePane, { convId: conversation.id, taskId });
+          openPane(taskSidePane, { convId: conversation.id, taskId }, { mode: "push" });
         } else {
-          openPane(taskDetailPane, { taskId });
+          openPane(taskDetailPane, { taskId }, { mode: "push" });
         }
       }}
       className="inline-flex max-w-full items-center gap-1.5 rounded bg-muted px-1.5 py-0.5 align-baseline text-xs text-primary hover:bg-muted/80 hover:underline"

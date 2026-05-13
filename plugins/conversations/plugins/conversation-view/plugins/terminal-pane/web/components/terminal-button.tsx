@@ -22,7 +22,7 @@ export function TerminalButton() {
     if (autoOpenedRef.current === conversation.id) return;
     if (!leafIsConv) return;
     autoOpenedRef.current = conversation.id;
-    openPane(convTerminalPane, { convId: conversation.id });
+    openPane(convTerminalPane, { convId: conversation.id }, { mode: "push" });
   }, [conversation.id, leafIsConv, openPane]);
 
   return (
@@ -35,7 +35,7 @@ export function TerminalButton() {
       onClick={() =>
         isOpen
           ? convTerminalPane.close()
-          : openPane(convTerminalPane, { convId: conversation.id })
+          : openPane(convTerminalPane, { convId: conversation.id }, { mode: "push" })
       }
       className="gap-1.5"
     >

@@ -61,7 +61,7 @@ export function ReviewButton() {
       onClick={() =>
         isOpen
           ? convReviewPane.close()
-          : openPane(convReviewPane, { convId: conversation.id })
+          : openPane(convReviewPane, { convId: conversation.id }, { mode: "push" })
       }
       className="gap-1.5"
     >

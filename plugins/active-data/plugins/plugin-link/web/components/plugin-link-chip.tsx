@@ -74,9 +74,9 @@ export function PluginLinkChip({
       onClick={(e) => {
         e.stopPropagation();
         if (conversation) {
-          openPane(pluginConvSidePane, { convId: conversation.id, pluginId: resolvedId });
+          openPane(pluginConvSidePane, { convId: conversation.id, pluginId: resolvedId }, { mode: "push" });
         } else {
-          openPane(pluginViewPane, { pluginId: resolvedId });
+          openPane(pluginViewPane, { pluginId: resolvedId }, { mode: "push" });
         }
       }}
       className="inline-flex max-w-full items-center gap-1 rounded bg-muted px-1.5 py-0.5 align-baseline text-xs text-primary hover:bg-muted/80 hover:underline"

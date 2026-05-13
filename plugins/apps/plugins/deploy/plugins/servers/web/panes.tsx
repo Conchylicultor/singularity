@@ -45,7 +45,7 @@ function AddServerBody() {
   return (
     <PaneChrome pane={addServerPane}>
       <AddServerForm
-        onSuccess={(id) => openPane(serverDetailPane, { serverId: id })}
+        onSuccess={(id) => openPane(serverDetailPane, { serverId: id }, { mode: "push" })}
       />
     </PaneChrome>
   );

@@ -120,7 +120,7 @@ export function DefaultProviderRow({ providerId }: Props) {
             onClick={() =>
               provider.configureCredentials
                 ? provider.configureCredentials()
-                : openPane(settingsPane, {})
+                : openPane(settingsPane, {}, { mode: "push" })
             }
           >
             Configure credentials

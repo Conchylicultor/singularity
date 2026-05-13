@@ -24,7 +24,7 @@ export function ToolFilePath({ filePath }: ToolFilePathProps) {
     openPane(filePeekPane, {
       worktree: conversation.attemptId,
       filePath,
-    });
+    }, { mode: "push" });
   };
 
   return (
