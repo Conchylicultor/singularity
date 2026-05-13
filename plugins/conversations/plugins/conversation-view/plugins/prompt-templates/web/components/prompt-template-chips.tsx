@@ -14,8 +14,11 @@ export function FloatingTemplateChips({ insertText }: PromptEditorActionProps) {
   if (templates.length === 0) return null;
 
   return (
-    <FloatingAction className="flex-row items-center gap-1 w-6 group-hover/fa:w-64 max-h-6 group-hover/fa:max-h-16 px-0.5 group-hover/fa:px-1.5 py-0.5 group-hover/fa:py-1">
-      <PenLine className="size-3.5 shrink-0 text-muted-foreground/40 group-hover/fa:text-muted-foreground transition-colors" />
+    <FloatingAction
+      variant="ghost"
+      panelClassName="flex-row flex-wrap items-center gap-1 p-1 group-data-hovered/fa:px-1.5 max-w-7 group-data-hovered/fa:max-w-sm max-h-7 group-data-hovered/fa:max-h-40"
+    >
+      <PenLine className="size-3.5 shrink-0 text-muted-foreground/40 group-data-hovered/fa:text-muted-foreground transition-colors" />
       <FloatingActionFadeIn className="flex flex-wrap items-center gap-1">
         {templates.map((t) => (
           <Button

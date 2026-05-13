@@ -1244,6 +1244,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `ChipFilterHandle`, `FilterChipProps`, `FilterGroupProps`
         - Values: `FilterChip`, `FilterGroup`, `useChipFilter`
+    - **`floating-action`** — Hover-intent floating action: single morphing panel with JS hover intent (close delay) and pointer-events-none on close to prevent flicker.
+      - Exports (web):
+        - Types: `FloatingActionFadeInProps`, `FloatingActionProps`
+        - Values: `FloatingAction`, `FloatingActionFadeIn`
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
       - Exports (web):
         - Types: `IconButtonProps`

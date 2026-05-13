@@ -13,6 +13,6 @@ export default {
   id: "floating-action",
   name: "Floating Action",
   description:
-    "CSS group-hover floating action that morphs from a collapsed pill to an expanded panel with animated dimensions, background, and shadow.",
+    "Hover-intent floating action: single morphing panel with JS hover intent (close delay) and pointer-events-none on close to prevent flicker.",
   contributions: [],
 } satisfies PluginDefinition;

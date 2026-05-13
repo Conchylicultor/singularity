@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: CSS group-hover floating action that morphs from a collapsed pill to an expanded panel with animated dimensions, background, and shadow.
+- Description: Hover-intent floating action: single morphing panel with JS hover intent (close delay) and pointer-events-none on close to prevent flicker.
 - Exports (web):
   - Types: `FloatingActionFadeInProps`, `FloatingActionProps`
   - Values: `FloatingAction`, `FloatingActionFadeIn`
