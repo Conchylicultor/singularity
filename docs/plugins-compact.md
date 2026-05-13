@@ -236,6 +236,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`section-label`** — Eyebrow/section-label typography primitive: small caps muted label for form sections and content headers.
     - **`shortcuts`** [load-bearing] — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
     - **`slot-render`** [load-bearing] — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
+    - **`sortable-list`** — Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components.
     - **`spinner`** — Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
     - **`status-dot`** — Colored status-indicator dot primitive. Composes a fixed-size rounded span with a caller-supplied Tailwind color class. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
