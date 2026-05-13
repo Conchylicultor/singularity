@@ -1197,6 +1197,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `CommandPalette`, `CommandPaletteCommands`
       - Contributes:
         - `Core.Root` → `CommandPaletteRoot`
+    - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
+      - Exports (web):
+        - Types: `CopyButtonProps`
+        - Values: `CopyButton`, `useCopyToClipboard`
     - **`cursor-pagination`** — Cursor-pagination primitive: useCursorPagination hook with frozen-cursor capture, useInfiniteQuery wiring, IntersectionObserver auto-fetch, and ScrollSentinel component.
       - Exports (core):
         - Types: `CursorPage`
