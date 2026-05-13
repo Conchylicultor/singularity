@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MdChevronRight } from "react-icons/md";
+import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
@@ -124,11 +124,7 @@ function CommitFileRow({
         className="sticky top-0 z-[1] flex w-full items-center gap-2 bg-muted px-3 py-1.5 text-left text-sm hover:bg-muted/80"
         aria-expanded={expanded}
       >
-        <MdChevronRight
-          className={`size-4 shrink-0 text-muted-foreground transition-transform ${
-            expanded ? "rotate-90" : ""
-          }`}
-        />
+        <CollapsibleChevron open={expanded} className="size-4 shrink-0 text-muted-foreground" />
         <span className="min-w-0 flex-1 truncate">
           {from && (
             <>

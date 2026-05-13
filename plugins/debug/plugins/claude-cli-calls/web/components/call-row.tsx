@@ -1,7 +1,7 @@
-import { useState } from "react";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/core";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { cn } from "@/lib/utils";
 
 const MODEL_STYLES: Record<ClaudeCliCall["model"], string> = {
@@ -11,7 +11,7 @@ const MODEL_STYLES: Record<ClaudeCliCall["model"], string> = {
 };
 
 export function CallRow({ call }: { call: ClaudeCliCall }) {
-  const [open, setOpen] = useState(false);
+  const { open, triggerProps, contentId } = useCollapsible();
   const isError = call.error !== null;
   const previewText = isError
     ? call.error ?? "<error>"
@@ -20,8 +20,7 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
   return (
     <li className="px-3 py-2">
       <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
+        {...triggerProps}
         className="flex w-full items-start gap-2 text-left"
       >
         <span className="mt-0.5 text-muted-foreground">
@@ -57,7 +56,7 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
         </div>
       </button>
       {open && (
-        <div className="mt-3 ml-6 space-y-3 text-sm">
+        <div id={contentId} className="mt-3 ml-6 space-y-3 text-sm">
           {call.sourceContext && Object.keys(call.sourceContext).length > 0 && (
             <Section label="Source context">
               <pre className="overflow-auto rounded bg-muted p-2 text-xs">

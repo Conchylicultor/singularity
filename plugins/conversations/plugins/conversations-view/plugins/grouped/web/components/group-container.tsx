@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { MdChevronRight } from "react-icons/md";
 import { cn } from "@/lib/utils";
+import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 
 export function GroupContainer({
   droppableId,
@@ -57,12 +57,7 @@ export function GroupContainer({
           aria-label={expanded ? "Collapse group" : "Expand group"}
           className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent"
         >
-          <MdChevronRight
-            className={cn(
-              "size-4 transition-transform",
-              effectiveExpanded && "rotate-90",
-            )}
-          />
+          <CollapsibleChevron open={effectiveExpanded} className="size-4" />
         </button>
         {leadingIcon}
         {title}

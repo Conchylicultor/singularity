@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
-import { MdChevronRight, MdWarning, MdContentCopy, MdCheck } from "react-icons/md";
+import { MdWarning, MdContentCopy, MdCheck } from "react-icons/md";
+import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { useConfigValues } from "@plugins/config/web";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
@@ -81,11 +82,7 @@ export function ReviewFileRow({
         aria-expanded={expanded}
         title={level !== "safe" ? LEVEL_TOOLTIP[level] : undefined}
       >
-        <MdChevronRight
-          className={`size-4 shrink-0 text-muted-foreground transition-transform ${
-            expanded ? "rotate-90" : ""
-          }`}
-        />
+        <CollapsibleChevron open={expanded} className="size-4 shrink-0 text-muted-foreground" />
         <span
           className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${STATUS_BADGE[file.status]}`}
         >

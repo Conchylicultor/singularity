@@ -1,9 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
 import {
-  MdChevronRight,
   MdClose,
   MdDragIndicator,
 } from "react-icons/md";
+import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import type { ReorderGroup } from "@plugins/reorder/plugins/groups/core";
@@ -94,12 +94,7 @@ export function ReorderGroupBox({
           onClick={handleToggleExpanded}
           className="flex size-4 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
         >
-          <MdChevronRight
-            className={cn(
-              "size-3.5 transition-transform",
-              effectiveExpanded && "rotate-90",
-            )}
-          />
+          <CollapsibleChevron open={effectiveExpanded} className="size-3.5" />
         </button>
         <GroupRename
           value={group.title}

@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
-import { MdChevronRight } from "react-icons/md";
 import { cn } from "@/lib/utils";
+import {
+  Collapsible,
+  CollapsibleChevron,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   Section,
@@ -132,8 +137,6 @@ function RuntimeGroup({
   exports: BarrelExport[];
   defaultOpen: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
-
   const sorted = useMemo(
     () =>
       [...exps].sort((a, b) => {
@@ -145,30 +148,20 @@ function RuntimeGroup({
   );
 
   return (
-    <div>
-      <button
-        className="flex w-full items-center gap-1 py-0.5 text-xs"
-        onClick={() => setOpen(!open)}
-      >
-        <MdChevronRight
-          className={cn(
-            "size-3.5 text-muted-foreground transition-transform",
-            open && "rotate-90",
-          )}
-        />
+    <Collapsible defaultOpen={defaultOpen}>
+      <CollapsibleTrigger className="gap-1 py-0.5 text-xs">
+        <CollapsibleChevron className="size-3.5 text-muted-foreground" />
         <span className={cn("font-mono font-medium", RUNTIME_COLORS[runtime])}>
           {runtime}
         </span>
         <span className="text-muted-foreground/50">({exps.length})</span>
-      </button>
-      {open && (
-        <div className="ml-1 flex flex-col gap-px border-l border-border/50 pl-3 pt-0.5">
-          {sorted.map((exp) => (
-            <SymbolRow key={exp.name} exp={exp} />
-          ))}
-        </div>
-      )}
-    </div>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="ml-1 flex flex-col gap-px border-l border-border/50 pl-3 pt-0.5">
+        {sorted.map((exp) => (
+          <SymbolRow key={exp.name} exp={exp} />
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -337,28 +330,17 @@ function SubHeading({
   count: number;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(true);
   return (
-    <div>
-      <button
-        className="flex w-full items-center gap-1 py-0.5 text-xs"
-        onClick={() => setOpen(!open)}
-      >
-        <MdChevronRight
-          className={cn(
-            "size-3.5 text-muted-foreground transition-transform",
-            open && "rotate-90",
-          )}
-        />
+    <Collapsible defaultOpen>
+      <CollapsibleTrigger className="gap-1 py-0.5 text-xs">
+        <CollapsibleChevron className="size-3.5 text-muted-foreground" />
         <span className="font-medium text-muted-foreground">{label}</span>
         <span className="text-muted-foreground/50">({count})</span>
-      </button>
-      {open && (
-        <div className="ml-1 border-l border-border/50 pl-3 pt-0.5">
-          {children}
-        </div>
-      )}
-    </div>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="ml-1 border-l border-border/50 pl-3 pt-0.5">
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

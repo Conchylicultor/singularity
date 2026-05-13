@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
-import { MdAdd, MdChevronRight, MdDragIndicator } from "react-icons/md";
+import { MdAdd, MdDragIndicator } from "react-icons/md";
+import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import type { IconType } from "react-icons";
 import {
   DropdownMenu,
@@ -115,12 +116,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
                 : "opacity-0 group-hover:opacity-60",
             )}
           >
-            <MdChevronRight
-              className={cn(
-                "size-4 transition-transform",
-                r.isOpen && "rotate-90",
-              )}
-            />
+            <CollapsibleChevron open={r.isOpen} className="size-4" />
           </button>
           {children}
           {actions && (

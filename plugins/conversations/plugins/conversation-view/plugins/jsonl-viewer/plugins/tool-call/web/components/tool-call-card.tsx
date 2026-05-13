@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
+import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import {
   TokenBadge,
   formatTime,
@@ -18,19 +19,18 @@ export function ToolCallCard({
   children,
   defaultOpen = false,
 }: ToolCallCardProps) {
-  const [open, setOpen] = useState(defaultOpen);
+  const { open, triggerProps, contentId } = useCollapsible({ defaultOpen });
   const hasError = event.result?.isError;
   const isRunning = !event.result;
   const borderClass = hasError ? "border-destructive/60" : "border-border/60";
   const bgClass = hasError ? "bg-destructive/5" : "bg-background";
 
   return (
-    <details
-      open={open}
-      onToggle={(ev) => setOpen((ev.target as HTMLDetailsElement).open)}
-      className={`group rounded-md border ${borderClass} ${bgClass} px-3 py-2`}
-    >
-      <summary className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+    <div className={`group rounded-md border ${borderClass} ${bgClass} px-3 py-2`}>
+      <button
+        {...triggerProps}
+        className="flex w-full items-center gap-2 text-xs text-muted-foreground"
+      >
         <span
           className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] ${
             hasError
@@ -60,8 +60,8 @@ export function ToolCallCard({
           {event.usage ? <TokenBadge usage={event.usage} /> : null}
           <span className="tabular-nums">{formatTime(event.at)}</span>
         </span>
-      </summary>
-      {children}
-    </details>
+      </button>
+      {open && <div id={contentId}>{children}</div>}
+    </div>
   );
 }

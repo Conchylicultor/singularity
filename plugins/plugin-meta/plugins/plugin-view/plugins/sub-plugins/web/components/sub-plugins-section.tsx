@@ -1,6 +1,9 @@
-import { useState } from "react";
-import { MdBolt, MdChevronRight } from "react-icons/md";
+import { MdBolt } from "react-icons/md";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import {
+  CollapsibleChevron,
+  useCollapsible,
+} from "@plugins/primitives/plugins/collapsible/web";
 import {
   Section,
   type PluginNode,
@@ -38,7 +41,7 @@ function PluginTreeNode({
   node: PluginNode;
   depth: number;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const { open: expanded, toggle } = useCollapsible();
   const openPane = useOpenPane();
   const hasChildren = node.children.length > 0;
 
@@ -53,15 +56,14 @@ function PluginTreeNode({
       >
         {hasChildren ? (
           <button
+            type="button"
             className="flex size-4 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
             onClick={(e) => {
               e.stopPropagation();
-              setExpanded(!expanded);
+              toggle();
             }}
           >
-            <MdChevronRight
-              className={`size-3.5 transition-transform ${expanded ? "rotate-90" : ""}`}
-            />
+            <CollapsibleChevron open={expanded} className="size-3.5" />
           </button>
         ) : (
           <span className="size-4 shrink-0" />

@@ -1,6 +1,9 @@
-import { useState } from "react";
-import { ChevronDown, ChevronRight, AlertTriangle, ArrowRight } from "lucide-react";
+import { AlertTriangle, ArrowRight } from "lucide-react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  CollapsibleChevron,
+  useCollapsible,
+} from "@plugins/primitives/plugins/collapsible/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { turnSummariesResource } from "../../shared";
 
@@ -39,7 +42,7 @@ export function TurnSummaryCard({
   conversation: ConversationRecord;
 }) {
   const { data } = useResource(turnSummariesResource);
-  const [collapsed, setCollapsed] = useState(false);
+  const { open, toggle } = useCollapsible({ defaultOpen: true });
   const summary = data[conversation.id];
   if (!summary) return null;
 
@@ -51,18 +54,14 @@ export function TurnSummaryCard({
     <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs">
       <button
         type="button"
-        onClick={() => hasDetail && setCollapsed((c) => !c)}
+        onClick={hasDetail ? toggle : undefined}
         className={`flex w-full items-start gap-1.5 text-left ${
           hasDetail ? "cursor-pointer" : "cursor-default"
         }`}
-        aria-expanded={hasDetail ? !collapsed : undefined}
+        aria-expanded={hasDetail ? open : undefined}
       >
         {hasDetail ? (
-          collapsed ? (
-            <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-          )
+          <CollapsibleChevron open={open} className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
         ) : (
           <span className="mt-0.5 size-3.5 shrink-0" />
         )}
@@ -70,7 +69,7 @@ export function TurnSummaryCard({
           {summary.summary || "(no summary)"}
         </span>
       </button>
-      {hasDetail && !collapsed && (
+      {hasDetail && open && (
         <div className="mt-2 ml-5 space-y-2">
           {caveats.length > 0 && (
             <BulletList
