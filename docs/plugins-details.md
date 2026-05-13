@@ -1282,6 +1282,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `PlaceholderProps`
         - Values: `Placeholder`
+    - **`popover`** — Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.
+      - Exports (web):
+        - Types: `InlinePopoverProps`
+        - Values: `InlinePopover`
     - **`prompt-editor`** — Lexical-based prompt editor primitive. An extensible shell where plugins inject features (image paste, templates, etc.) via the Plugin slot and registerNodeExtension.
       - Exports (web):
         - Types: `NodeExtension`, `PromptEditorActionProps`, `PromptEditorPluginProps`

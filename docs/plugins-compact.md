@@ -226,6 +226,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`pane`** [load-bearing] — Unified pane primitive: Pane.define, <Outlet/>, <PaneRouter/>, and chrome components.
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
     - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
+    - **`popover`** — Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.
     - **`prompt-editor`** — Lexical-based prompt editor primitive. An extensible shell where plugins inject features (image paste, templates, etc.) via the Plugin slot and registerNodeExtension.
       - Plugins:
         - **`paste-images`** — Image paste/drop support for the prompt editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
