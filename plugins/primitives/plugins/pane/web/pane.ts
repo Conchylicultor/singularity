@@ -346,6 +346,16 @@ function chainsEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
 }
 
 export function syncChainFromUrl(pathname: string): void {
+  // Guard: skip if the given pathname is stale. After a programmatic
+  // navigate (close/open), pushState updates the URL immediately but
+  // React's usePathname setState is batched. An unrelated re-render
+  // between those two moments would call us with the old pathname and
+  // overwrite the chain that close() just set — causing the "need to
+  // click X twice" bug.
+  if (typeof window !== "undefined") {
+    const actual = stripBasePath(window.location.pathname, currentBasePath);
+    if (pathname !== actual) return;
+  }
   const parsed = parseUrl(pathname);
   const newChain = parsed ?? [];
   if (chainsEqual(currentChain, newChain)) return;
