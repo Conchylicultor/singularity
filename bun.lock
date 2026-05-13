@@ -767,14 +767,6 @@
       "name": "@singularity/plugin-primitives-pane",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/paste-images": {
-      "name": "@singularity/plugin-primitives-paste-images",
-      "version": "0.0.1",
-      "dependencies": {
-        "@lexical/react": "^0.44.0",
-        "lexical": "^0.44.0",
-      },
-    },
     "plugins/primitives/plugins/persistent-draft": {
       "name": "@singularity/plugin-primitives-persistent-draft",
       "version": "0.0.1",
@@ -785,6 +777,18 @@
     },
     "plugins/primitives/plugins/popover": {
       "name": "@singularity/plugin-primitives-popover",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/prompt-editor": {
+      "name": "@singularity/plugin-primitives-prompt-editor",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
+    },
+    "plugins/primitives/plugins/prompt-editor/plugins/paste-images": {
+      "name": "@singularity/plugin-primitives-prompt-editor-paste-images",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/rank": {
@@ -1941,13 +1945,15 @@
 
     "@singularity/plugin-primitives-pane": ["@singularity/plugin-primitives-pane@workspace:plugins/primitives/plugins/pane"],
 
-    "@singularity/plugin-primitives-paste-images": ["@singularity/plugin-primitives-paste-images@workspace:plugins/primitives/plugins/paste-images"],
-
     "@singularity/plugin-primitives-persistent-draft": ["@singularity/plugin-primitives-persistent-draft@workspace:plugins/primitives/plugins/persistent-draft"],
 
     "@singularity/plugin-primitives-placeholder": ["@singularity/plugin-primitives-placeholder@workspace:plugins/primitives/plugins/placeholder"],
 
     "@singularity/plugin-primitives-popover": ["@singularity/plugin-primitives-popover@workspace:plugins/primitives/plugins/popover"],
+
+    "@singularity/plugin-primitives-prompt-editor": ["@singularity/plugin-primitives-prompt-editor@workspace:plugins/primitives/plugins/prompt-editor"],
+
+    "@singularity/plugin-primitives-prompt-editor-paste-images": ["@singularity/plugin-primitives-prompt-editor-paste-images@workspace:plugins/primitives/plugins/prompt-editor/plugins/paste-images"],
 
     "@singularity/plugin-primitives-rank": ["@singularity/plugin-primitives-rank@workspace:plugins/primitives/plugins/rank"],
 
