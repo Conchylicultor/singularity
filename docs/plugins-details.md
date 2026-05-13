@@ -1184,6 +1184,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `BreadcrumbProps`, `BreadcrumbSegment`
         - Values: `Breadcrumb`
+    - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
+      - Exports (web):
+        - Types: `CollapsibleChevronProps`, `CollapsibleContentProps`, `CollapsibleProps`, `CollapsibleTriggerProps`, `UseCollapsibleOptions`, `UseCollapsibleReturn`
+        - Values: `Collapsible`, `CollapsibleChevron`, `CollapsibleContent`, `CollapsibleTrigger`, `useCollapsible`
     - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
       - Defines:
         - Slots: `CommandPalette.Item`
