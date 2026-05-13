@@ -2,6 +2,7 @@ import type { ConversationKind } from "@plugins/tasks-core/core";
 import type { ConversationStatus } from "@plugins/conversations/core";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
+import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { cn } from "@/lib/utils";
 import { Item } from "../slots";
 
@@ -62,14 +63,7 @@ export type ConversationItemProps = {
 };
 
 export function ConvStatusDot({ conv }: { conv: ConversationItemConv }) {
-  return (
-    <span
-      className={cn(
-        "inline-block size-1.5 shrink-0 rounded-full",
-        CONV_STATUS_DOT[conv.status],
-      )}
-    />
-  );
+  return <StatusDot colorClass={CONV_STATUS_DOT[conv.status]} className="inline-block" />;
 }
 
 export function ConvSysBadge({ conv }: { conv: ConversationItemConv }) {

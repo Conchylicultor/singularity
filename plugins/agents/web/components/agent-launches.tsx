@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { agentLaunchesResource } from "../../shared/resources";
@@ -67,14 +68,9 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
                   )}
                 >
                   {primary ? (
-                    <span
-                      className={cn(
-                        "size-1.5 shrink-0 rounded-full",
-                        CONV_STATUS_DOT[primary.status],
-                      )}
-                    />
+                    <StatusDot colorClass={CONV_STATUS_DOT[primary.status]} />
                   ) : (
-                    <span className="size-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
+                    <StatusDot colorClass="bg-muted-foreground/40" />
                   )}
                   <span className="flex-1 truncate">{title}</span>
                   {primary ? (

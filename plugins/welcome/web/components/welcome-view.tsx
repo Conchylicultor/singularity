@@ -3,6 +3,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useConversations } from "@plugins/conversations/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
+import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { cn } from "@/lib/utils";
 
 function formatRelativeTime(date: Date): string {
@@ -83,13 +84,8 @@ export function WelcomeView() {
                   className="flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent transition-colors"
                   onClick={() => openConversation(conversation.id)}
                 >
-                  <span
-                    className={cn(
-                      "size-1.5 shrink-0 rounded-full",
-                      !conversation.active
-                        ? "bg-muted-foreground/40"
-                        : "bg-[oklch(0.58_0.1_240)]",
-                    )}
+                  <StatusDot
+                    colorClass={conversation.active ? "bg-[oklch(0.58_0.1_240)]" : "bg-muted-foreground/40"}
                   />
                   <div className="flex flex-col gap-0.5 overflow-hidden flex-1">
                     <span

@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { agentLaunchesResource } from "../../shared/resources";
-import { cn } from "@/lib/utils";
 
 export function AgentStatus({ agentId, size = "sm" }: { agentId: string; size?: "sm" | "md" }) {
   const launchesQ = useResource(agentLaunchesResource);
@@ -18,7 +18,7 @@ export function AgentStatus({ agentId, size = "sm" }: { agentId: string; size?: 
   return (
     <span className="flex shrink-0 items-center justify-center" style={{ width: size === "md" ? 20 : 20, height: size === "md" ? 20 : 20 }}>
       {status && (
-        <span className={cn("rounded-full", size === "md" ? "size-2.5" : "size-2", CONV_STATUS_DOT[status])} />
+        <StatusDot colorClass={CONV_STATUS_DOT[status]} size={size === "md" ? "lg" : "md"} />
       )}
     </span>
   );

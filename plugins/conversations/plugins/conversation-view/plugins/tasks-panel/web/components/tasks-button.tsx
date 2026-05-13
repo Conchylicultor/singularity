@@ -3,6 +3,7 @@ import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web"
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import { useTask } from "@plugins/tasks/web";
+import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { convTasksPane } from "../panes";
 
 const STATUS_DOT: Record<string, string> = {
@@ -41,9 +42,7 @@ export function TasksButton() {
       className="gap-1.5"
     >
       <MdChecklist className="size-4" />
-      {dotClass && (
-        <span className={`size-1.5 rounded-full ${dotClass}`} />
-      )}
+      {dotClass && <StatusDot colorClass={dotClass} />}
     </Button>
   );
 }

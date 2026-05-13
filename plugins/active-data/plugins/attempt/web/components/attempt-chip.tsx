@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { attemptPane } from "@plugins/attempt-view/web";
 import { attemptsResource } from "@plugins/tasks/core";
 import type { AttemptStatus } from "@plugins/tasks-core/core";
@@ -38,7 +39,7 @@ export function AttemptChip({ content }: { content: string; attrs: Record<string
       className="inline-flex max-w-full items-center gap-1.5 rounded bg-muted px-1.5 py-0.5 align-baseline text-xs text-primary hover:bg-muted/80 hover:underline"
       title={attempt ? `${attempt.status} · ${attemptId}` : attemptId}
     >
-      <span className={`inline-block size-1.5 shrink-0 rounded-full ${statusClass}`} />
+      <StatusDot colorClass={statusClass} />
       <span className="truncate font-mono">{attemptId}</span>
       {attempt && attempt.conversations.length > 0 && (
         <span className="text-muted-foreground/70">{attempt.conversations.length}</span>

@@ -807,6 +807,10 @@
       "name": "@singularity/plugin-primitives-slot-render",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/status-dot": {
+      "name": "@singularity/plugin-primitives-status-dot",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/syntax-highlight": {
       "name": "@singularity/plugin-primitives-syntax-highlight",
       "version": "0.0.1",
@@ -1946,6 +1950,8 @@
     "@singularity/plugin-primitives-shortcuts": ["@singularity/plugin-primitives-shortcuts@workspace:plugins/primitives/plugins/shortcuts"],
 
     "@singularity/plugin-primitives-slot-render": ["@singularity/plugin-primitives-slot-render@workspace:plugins/primitives/plugins/slot-render"],
+
+    "@singularity/plugin-primitives-status-dot": ["@singularity/plugin-primitives-status-dot@workspace:plugins/primitives/plugins/status-dot"],
 
     "@singularity/plugin-primitives-syntax-highlight": ["@singularity/plugin-primitives-syntax-highlight@workspace:plugins/primitives/plugins/syntax-highlight"],
 

@@ -3,6 +3,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
+import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { attemptsResource } from "@plugins/tasks/core";
 import { cn } from "@/lib/utils";
 import { attemptPane } from "../panes";
@@ -57,12 +58,7 @@ export function AttemptPane() {
                       isActive && "bg-accent",
                     )}
                   >
-                    <span
-                      className={cn(
-                        "size-1.5 shrink-0 rounded-full",
-                        CONV_STATUS_DOT[c.status],
-                      )}
-                    />
+                    <StatusDot colorClass={CONV_STATUS_DOT[c.status]} />
                     <span className="flex-1 truncate">
                       {c.title ?? "Starting…"}
                     </span>

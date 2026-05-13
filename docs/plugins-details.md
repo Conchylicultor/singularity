@@ -1320,6 +1320,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `RenderSlot`, `RenderSlotConfig`, `SlotItemMiddleware`, `SlotListMiddleware`
         - Values: `defineRenderSlot`, `registerSlotItemMiddleware`, `registerSlotListMiddleware`, `RenderSlotSubIdContext`
+    - **`status-dot`** — Colored status-indicator dot primitive. Composes a fixed-size rounded span with a caller-supplied Tailwind color class. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
+      - Exports (web):
+        - Types: `StatusDotProps`
+        - Values: `StatusDot`
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
       - Exports (web):
         - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`

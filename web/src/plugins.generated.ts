@@ -158,6 +158,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "primitives/plugins/section-label", loader: () => import("@plugins/primitives/plugins/section-label/web") },
   { name: "primitives/plugins/shortcuts", loader: () => import("@plugins/primitives/plugins/shortcuts/web") },
   { name: "primitives/plugins/slot-render", loader: () => import("@plugins/primitives/plugins/slot-render/web") },
+  { name: "primitives/plugins/status-dot", loader: () => import("@plugins/primitives/plugins/status-dot/web") },
   { name: "primitives/plugins/syntax-highlight", loader: () => import("@plugins/primitives/plugins/syntax-highlight/web") },
   { name: "primitives/plugins/tooltip", loader: () => import("@plugins/primitives/plugins/tooltip/web") },
   { name: "primitives/plugins/tree", loader: () => import("@plugins/primitives/plugins/tree/web") },

@@ -5,6 +5,7 @@ import {
   CONV_STATUS_DOT,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 
 export function ConvChip({ content }: { content: string; attrs: Record<string, string> }) {
   const sideConvId = content.trim();
@@ -26,9 +27,7 @@ export function ConvChip({ content }: { content: string; attrs: Record<string, s
         <ConversationItem conv={conv} layout="inline" />
       ) : (
         <>
-          <span
-            className={`inline-block size-1.5 shrink-0 rounded-full ${CONV_STATUS_DOT.gone}`}
-          />
+          <StatusDot colorClass={CONV_STATUS_DOT.gone} />
           <span className="truncate font-mono">{sideConvId}</span>
         </>
       )}
