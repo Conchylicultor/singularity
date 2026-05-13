@@ -1,4 +1,5 @@
-import { MdAdd } from "react-icons/md";
+import { useMemo } from "react";
+import { MdAdd, MdDelete } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -7,7 +8,7 @@ import {
   TreeList,
   type TreeItem,
 } from "@plugins/primitives/plugins/tree/web";
-import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
+import { buildTree, type TreeNode } from "@plugins/primitives/plugins/tree/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   Avatar,
@@ -15,6 +16,12 @@ import {
   AVATAR_COLOR_KEYS,
   DEFAULT_AGENT_AVATAR,
 } from "@plugins/primitives/plugins/avatar/web";
+import {
+  MultiSelectProvider,
+  SelectionBar,
+  SelectionCheckbox,
+  useMultiSelect,
+} from "@plugins/primitives/plugins/multi-select/web";
 import { agentsResource } from "../../shared/resources";
 import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";
@@ -67,6 +74,41 @@ async function createAgentRow(args: {
   return agent.id;
 }
 
+function deriveVisibleOrder(rows: readonly Agent[]): string[] {
+  const tree = buildTree(rows);
+  const ids: string[] = [];
+  function walk(nodes: TreeNode<Agent>[]) {
+    for (const n of nodes) {
+      ids.push(n.id);
+      if (n.expanded) walk(n.children);
+    }
+  }
+  walk(tree);
+  return ids;
+}
+
+function DeleteSelectedAction() {
+  const { selectedIds, clearAll } = useMultiSelect();
+  const onClick = async () => {
+    await Promise.all(
+      [...selectedIds].map((id) =>
+        fetch(`/api/agents/${id}`, { method: "DELETE" }),
+      ),
+    );
+    clearAll();
+  };
+  return (
+    <button
+      type="button"
+      onClick={() => void onClick()}
+      className="inline-flex items-center gap-1 text-destructive hover:text-destructive/80"
+    >
+      <MdDelete className="size-3.5" />
+      Delete
+    </button>
+  );
+}
+
 function AgentRow({ node, depth }: { node: TreeNode<Agent>; depth: number }) {
   const actions = AgentsSlots.AgentActions.useContributions();
   const hasChildren = node.children.length > 0;
@@ -85,6 +127,7 @@ function AgentRow({ node, depth }: { node: TreeNode<Agent>; depth: number }) {
         <act.component key={act.id} agentId={node.id} hasChildren={hasChildren} />
       ))}
     >
+      <SelectionCheckbox id={node.id} />
       <Avatar
         icon={node.icon ?? DEFAULT_AGENT_AVATAR.icon}
         color={node.iconColor ?? DEFAULT_AGENT_AVATAR.color}
@@ -114,28 +157,32 @@ export function AgentsList({
   const rows = data;
   const listActions = AgentsSlots.ListActions.useContributions();
   const openPane = useOpenPane();
+  const orderedIds = useMemo(() => deriveVisibleOrder(rows), [rows]);
 
   return (
-    <div className="flex flex-col gap-1">
-      <SystemFolder selectedSystemId={selectedSystemId} />
-      <TreeList<Agent>
-        rows={rows}
-        selectedId={selectedId}
-        onSelect={(id) =>
-          onSelect ? onSelect(id) : openPane(agentDetailPane, { id })
-        }
-        onToggleExpanded={(id, next) => patchAgent(id, { expanded: next })}
-        onMove={(id, dest) => patchAgent(id, dest)}
-        onCreate={createAgentRow}
-        Row={AgentRow}
-        dragOverlay={(a) => a.name || "Untitled"}
-        toolbar={{
-          expandAll: true,
-          search: { accessor: (a) => a.name },
-          start: listActions.map((a) => <a.component key={a.id} />),
-        }}
-        addLabel="Agent"
-      />
-    </div>
+    <MultiSelectProvider orderedIds={orderedIds}>
+      <div className="flex flex-col gap-1">
+        <SelectionBar actions={<DeleteSelectedAction />} />
+        <SystemFolder selectedSystemId={selectedSystemId} />
+        <TreeList<Agent>
+          rows={rows}
+          selectedId={selectedId}
+          onSelect={(id) =>
+            onSelect ? onSelect(id) : openPane(agentDetailPane, { id })
+          }
+          onToggleExpanded={(id, next) => patchAgent(id, { expanded: next })}
+          onMove={(id, dest) => patchAgent(id, dest)}
+          onCreate={createAgentRow}
+          Row={AgentRow}
+          dragOverlay={(a) => a.name || "Untitled"}
+          toolbar={{
+            expandAll: true,
+            search: { accessor: (a) => a.name },
+            start: listActions.map((a) => <a.component key={a.id} />),
+          }}
+          addLabel="Agent"
+        />
+      </div>
+    </MultiSelectProvider>
   );
 }
