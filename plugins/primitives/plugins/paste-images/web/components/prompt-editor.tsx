@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { buildInitialConfig } from "../internal/lexical-config";
 import { ImageUploadPlugin } from "../internal/image-upload-plugin";
 import { EnterKeyPlugin } from "../internal/enter-key-plugin";
+import { PromptEditorSlots } from "../slots";
 import {
   applyMarkdownToEditor,
   serializeEditorToMarkdown,
@@ -169,6 +170,46 @@ function EditorShell({
         }
         ErrorBoundary={LexicalErrorBoundary}
       />
+      <FloatingActionAnchor />
+    </div>
+  );
+}
+
+function FloatingActionAnchor() {
+  const [editor] = useLexicalComposerContext();
+  const [editable, setEditable] = useState(() => editor.isEditable());
+  const items = PromptEditorSlots.FloatingAction.useContributions();
+
+  useEffect(() => {
+    return editor.registerEditableListener(setEditable);
+  }, [editor]);
+
+  const insertText = useCallback(
+    (text: string) => {
+      editor.update(() => {
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          selection.insertText(text);
+        } else {
+          $getRoot().selectStart();
+          const sel = $getSelection();
+          if ($isRangeSelection(sel)) sel.insertText(text);
+        }
+      });
+    },
+    [editor],
+  );
+
+  if (!editable || items.length === 0) return null;
+  return (
+    <div className="absolute bottom-1.5 right-1.5 z-10 pointer-events-none">
+      <PromptEditorSlots.FloatingAction.Render>
+        {(item) => (
+          <div className="pointer-events-auto">
+            <item.component insertText={insertText} />
+          </div>
+        )}
+      </PromptEditorSlots.FloatingAction.Render>
     </div>
   );
 }

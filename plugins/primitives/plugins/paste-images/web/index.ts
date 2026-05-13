@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@core";
 
 export { PromptEditor } from "./components/prompt-editor";
+export { PromptEditorSlots, type PromptEditorActionProps } from "./slots";
 export { AttachmentThumbnail } from "./components/attachment-thumbnail";
 export { Lightbox } from "./components/lightbox";
 

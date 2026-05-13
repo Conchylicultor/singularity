@@ -4,12 +4,12 @@
 
 ## Plugin reference
 
-- Description: Template chips above the prompt input that prepend text to the editor draft for editing before sending. Named template chips that prepend text to the conversation prompt editor for editing before sending.
+- Description: Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Named template chips that prepend text to the conversation prompt editor for editing before sending.
 - Defines:
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/prompt-templates/server/internal/tables-attachments.ts`
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/prompt-templates/server/internal/tables.ts`
 - Contributes:
-  - `Conversation.AbovePromptInput` → `PromptTemplateChips`
+  - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
   - `Config.Section` "Prompt Templates" → `PromptTemplatesSettings`
 - Server:
   - Uses: `database.db`
