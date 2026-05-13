@@ -38,7 +38,7 @@ Every feature is a **plugin**. The core app is thin plumbing that connects plugi
 
 Always READ the plugin architecture doc to understand design, caveats, and rules:
 
-- Frontend: [`plugin-core/CLAUDE.md`](../plugin-core/CLAUDE.md)
+- Frontend: [`plugins/framework/plugins/web-sdk/CLAUDE.md`](plugins/framework/plugins/web-sdk/CLAUDE.md)
 - Backend: [`server/CLAUDE.md`](../server/CLAUDE.md)
 
 Think carefully about the plugin's boundaries, APIs, etc. when designing plugins, as it is the load-bearing infra of the entire project.
@@ -56,8 +56,8 @@ Think carefully about the plugin's boundaries, APIs, etc. when designing plugins
 ### Folder Structure
 
 ```
-├── plugin-core/      # Plugin framework primitives (slots, contributions)
 ├── plugins/          # All features, each as a self-contained plugin
+│   ├── framework/    # Framework primitives (web-sdk: slots, contributions)
 │   └── {name}/
 │       ├── web/      # Frontend code
 │       ├── server/   # Backend code
@@ -193,7 +193,7 @@ Independent projects that live in `sidequests/`, not directly related to Singula
 When working on this project, follow these instructions thoughtfully:
 
 - Most features first require a thoughtful design phase. Use the project `plan` SKILL for this phase. This is important to correctly write the plan doc at the right location. Do NOT use `EnterPlanMode` tool.
-- New features should be implemented as plugins in `plugins/`. See [`plugin-core/CLAUDE.md`](plugin-core/CLAUDE.md) for how to create one.
+- New features should be implemented as plugins in `plugins/`. See [`plugins/framework/plugins/web-sdk/CLAUDE.md`](plugins/framework/plugins/web-sdk/CLAUDE.md) for how to create one.
 - When implementing a new feature or plugin, read the `structure-decision` SKILL ([`.claude/skills/structure-decision/SKILL.md`](.claude/skills/structure-decision/SKILL.md)) for rules on where to place code and how to structure it.
 - When creating a new top-level app, use the `create-app` SKILL ([`.claude/skills/create-app/SKILL.md`](.claude/skills/create-app/SKILL.md)).
 - Always edit files in your worktree, not the main branch.

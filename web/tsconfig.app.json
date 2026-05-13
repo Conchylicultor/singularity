@@ -18,8 +18,8 @@
     "noUncheckedIndexedAccess": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@core": ["../plugin-core"],
-      "@core/*": ["../plugin-core/*"],
+      "@core": ["../plugins/framework/plugins/web-sdk/core"],
+      "@core/*": ["../plugins/framework/plugins/web-sdk/core/*"],
       "@plugins/*": ["../plugins/*"],
       "@server/*": ["../server/src/*"]
     }
@@ -30,7 +30,7 @@
   ],
   "include": [
     "src",
-    "../plugin-core",
+    "../plugins/framework/plugins/web-sdk",
     "../plugins/*/web",
     "../plugins/*/core",
     "../plugins/*/shared",

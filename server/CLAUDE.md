@@ -2,7 +2,7 @@
 
 Shared backend for Singularity. A single Bun process that routes HTTP requests and WebSocket connections to handlers provided by plugins.
 
-See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`plugin-core/CLAUDE.md`](../plugin-core/CLAUDE.md) for the frontend plugin system.
+See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`plugins/framework/plugins/web-sdk/CLAUDE.md`](../plugins/framework/plugins/web-sdk/CLAUDE.md) for the frontend plugin system.
 
 ## How It Works
 
@@ -70,7 +70,7 @@ Call `tasksResource.notify()` from mutation handlers / pollers when server state
 
 **`push` vs `invalidate`.** Both deliver level state (never deltas). `push` sends the new value inline over the WS (one computation, N tabs). `invalidate` sends only a version stamp; each observing tab fires its own GET. Use `push` when the value is small (< ~4KB), the same for every subscriber, and almost always observed when notifications fire. Otherwise `invalidate`. See `research/2026-04-15-global-sse-lifecycle-mental-model-v3.md` §5 for the full decision rule.
 
-On the client, plugins consume resources with `useResource` from `@core` — see `plugin-core/CLAUDE.md`. No manual reconnect / reconcile code; TanStack Query + the leader-elected `NotificationsClient` handle it.
+On the client, plugins consume resources with `useResource` from `@core` — see `plugins/framework/plugins/web-sdk/CLAUDE.md`. No manual reconnect / reconcile code; TanStack Query + the leader-elected `NotificationsClient` handle it.
 
 ### WsHandler Interface
 

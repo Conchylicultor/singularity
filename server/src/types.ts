@@ -25,7 +25,7 @@ export type ResourceLike = { key: string };
 // biome-ignore lint/suspicious/noExplicitAny: descriptor is type-erased here.
 export type ConfigDescriptorLike = { schema: Record<string, any> };
 
-export type { DocMeta } from "../../plugin-core/types";
+export type { DocMeta } from "@core/types";
 
 /**
  * A lazy registry write. Returned by helpers like `Mcp.tool`, `Runtime.define`,
@@ -44,7 +44,7 @@ export interface Registration {
   readonly _kind?: string;
   /** Factory function name for docgen display (e.g. "defineJob", "mcpTool"). Auto-set. */
   readonly _factory?: string;
-  _doc?: import("../../plugin-core/types").DocMeta;
+  _doc?: import("@core/types").DocMeta;
 }
 
 export type { ServerContribution, ServerContributionToken } from "./contributions";

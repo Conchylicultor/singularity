@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { basename, join, relative } from "path";
-import type { DocMeta } from "../../../../../../plugin-core/types";
+import type { DocMeta } from "@core/types";
 import {
   registerBarrelStubs,
   importBarrel,
@@ -967,8 +967,8 @@ export async function enrichPluginTreeDocs(
   const slotDisplayNames = new Map<string, string>();
   const importedModules = new Map<string, { mod: Record<string, unknown>; runtime: "web" | "server" | "central" }[]>();
 
-  // Seed with plugin-core slots (Core.Root etc.)
-  const coreBarrelPath = join(repoRoot, "plugin-core", "index.ts");
+  // Seed with web-sdk slots (Core.Root etc.)
+  const coreBarrelPath = join(repoRoot, "plugins/framework/plugins/web-sdk/core/index.ts");
   if (existsSync(coreBarrelPath)) {
     const coreMod = await importBarrel(coreBarrelPath);
     for (const [id, name] of collectSlotDisplayNames(coreMod)) {

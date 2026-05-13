@@ -2,7 +2,6 @@ import { defineBoundaries, zone, allow } from "./tooling/src/boundaries/config";
 
 export default defineBoundaries({
   zones: [
-    zone("core", { match: "plugin-core" }),
     zone("server", { match: "server" }),
     zone("web", { match: "web" }),
     zone("central", { match: "central" }),
@@ -30,15 +29,11 @@ export default defineBoundaries({
     allow("** -> plugin.plugin-meta.plugin-tree"),
     allow("** -> plugin.packages.retry"),
 
-    // Top-level packages can import core
-    allow("server  -> core"),
-    allow("web     -> core"),
-    allow("central -> core"),
-    allow("cli     -> core"),
-    allow("tooling -> core"),
+    // Web entry point and tooling can import the web-sdk plugin (PluginProvider, PluginDefinition, etc.)
+    allow("web     -> plugin.framework.web-sdk"),
+    allow("tooling -> plugin.framework.web-sdk"),
 
-    // Plugins can import core and server/central frameworks
-    allow("plugin.** -> core"),
+    // Plugins can import server/central frameworks
     allow("plugin.** -> server"),
     allow("plugin.** -> central"),
 

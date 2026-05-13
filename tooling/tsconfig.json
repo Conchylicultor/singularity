@@ -12,7 +12,8 @@
     "types": ["@types/bun"],
     "paths": {
       "@plugins/*": ["../plugins/*"],
-      "@tooling/*": ["./src/*"]
+      "@tooling/*": ["./src/*"],
+      "@core/*": ["../plugins/framework/plugins/web-sdk/core/*"]
     }
   },
   "include": ["src", "../plugins/packages/plugins/*/shared"]

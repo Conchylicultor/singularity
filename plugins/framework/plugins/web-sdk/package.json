@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-framework-web-sdk",
+  "description": "Web plugin runtime: slots, commands, contributions, loader",
+  "private": true,
+  "version": "0.0.1",
+  "peerDependencies": {
+    "react": "^19.1.0"
+  }
+}

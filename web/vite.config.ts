@@ -16,7 +16,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@core": path.resolve(__dirname, "../plugin-core"),
+      "@core": path.resolve(__dirname, "../plugins/framework/plugins/web-sdk/core"),
       "@plugins": path.resolve(__dirname, "../plugins"),
       "@server": path.resolve(__dirname, "../server/src"),
     },

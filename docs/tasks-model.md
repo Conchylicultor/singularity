@@ -133,4 +133,4 @@ This is enforceable: a check rule forbids cross-plugin imports of `schema_intern
 - `research/2026-04-16-global-tasks-attempts-conversations-schema-v2.md` — the full schema redesign and migration plan.
 - `research/2026-04-16-global-derived-state-primitive-v2.md` — the `pgView` + `dependsOn` primitive that makes the derivation possible.
 - `server/CLAUDE.md` — resource / `dependsOn` conventions.
-- `plugin-core/CLAUDE.md` — plugin schema conventions.
+- `plugins/framework/plugins/web-sdk/CLAUDE.md` — plugin schema conventions.

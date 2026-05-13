@@ -162,6 +162,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
 
+- **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
+  - Plugins:
+    - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
+
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
 
 - **`improve`**

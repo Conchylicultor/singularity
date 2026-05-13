@@ -68,13 +68,6 @@
         "typescript": "~5.8.3",
       },
     },
-    "plugin-core": {
-      "name": "@singularity/plugin-core",
-      "version": "0.0.1",
-      "peerDependencies": {
-        "react": "^19.1.0",
-      },
-    },
     "plugins/active-data": {
       "name": "@singularity/plugin-active-data",
       "version": "0.0.1",
@@ -563,6 +556,17 @@
     "plugins/events-test": {
       "name": "@singularity/plugin-events-test",
       "version": "0.0.1",
+    },
+    "plugins/framework": {
+      "name": "@singularity/plugin-framework",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/web-sdk": {
+      "name": "@singularity/plugin-framework-web-sdk",
+      "version": "0.0.1",
+      "peerDependencies": {
+        "react": "^19.1.0",
+      },
     },
     "plugins/health": {
       "name": "@singularity/plugin-health",
@@ -1817,8 +1821,6 @@
 
     "@singularity/plugin-conversations-transcript-watcher": ["@singularity/plugin-conversations-transcript-watcher@workspace:plugins/conversations/plugins/transcript-watcher"],
 
-    "@singularity/plugin-core": ["@singularity/plugin-core@workspace:plugin-core"],
-
     "@singularity/plugin-crashes": ["@singularity/plugin-crashes@workspace:plugins/crashes"],
 
     "@singularity/plugin-crashes-launch-fix": ["@singularity/plugin-crashes-launch-fix@workspace:plugins/crashes/plugins/launch-fix"],
@@ -1858,6 +1860,10 @@
     "@singularity/plugin-debug-worktree-cleanup": ["@singularity/plugin-debug-worktree-cleanup@workspace:plugins/debug/plugins/worktree-cleanup"],
 
     "@singularity/plugin-events-test": ["@singularity/plugin-events-test@workspace:plugins/events-test"],
+
+    "@singularity/plugin-framework": ["@singularity/plugin-framework@workspace:plugins/framework"],
+
+    "@singularity/plugin-framework-web-sdk": ["@singularity/plugin-framework-web-sdk@workspace:plugins/framework/plugins/web-sdk"],
 
     "@singularity/plugin-health": ["@singularity/plugin-health@workspace:plugins/health"],
 

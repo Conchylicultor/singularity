@@ -5,7 +5,7 @@
       "@plugins/*": ["./plugins/*"],
       "@server/*": ["./server/src/*"],
       "@central/*": ["./central/src/*"],
-      "@core/*": ["./plugin-core/*"],
+      "@core/*": ["./plugins/framework/plugins/web-sdk/core/*"],
       "@tooling/*": ["./tooling/src/*"]
     }
   },

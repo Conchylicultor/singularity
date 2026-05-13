@@ -994,6 +994,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/events-test/wait-idle`
     - `POST /api/events-test/crash-recovery`
 
+- **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
+  - Plugins:
+    - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
+      - Exports (core):
+        - Types: `Contribution`, `DocMeta`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `Slot`
+        - Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`
+      - Exports (shared):
+        - Values: `topoSortPlugins`
+
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Exports (web):
     - Values: `getHealth`, `waitForRestart`

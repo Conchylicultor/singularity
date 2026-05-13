@@ -13,9 +13,12 @@
     "paths": {
       "@plugins/*": ["../plugins/*"],
       "@server/*": ["./src/*"],
-      "@core/*": ["../plugin-core/*"]
+      "@core/*": ["../plugins/framework/plugins/web-sdk/core/*"]
     }
   },
+  "exclude": [
+    "../plugins/framework/plugins/web-sdk/**"
+  ],
   "include": [
     "src",
     "../plugins/*/server",
