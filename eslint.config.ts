@@ -142,6 +142,7 @@ const baseConfigs: Linter.Config[] = [
       "**/dist/**",
       "**/build/**",
       "**/.git/**",
+      "**/.check-*/**",
       ".claude/worktrees/**",
       "web/dist/**",
     ],
