@@ -5,6 +5,7 @@ import { z } from "zod";
 import { _attempts, _conversations, _taskDependencies, _tasks, pushes } from "./tables";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
+import { ConversationStatusSchema } from "../../core/conversation-status";
 
 // Derived views + Zod schemas + types. All tables live in `./tables.ts` so
 // this file can import them without any cross-plugin dependency, eliminating
@@ -185,7 +186,6 @@ export const AttemptStatusSchema = z.enum([
 ]);
 export type AttemptStatus = z.infer<typeof AttemptStatusSchema>;
 
-const ConversationStatusSchema = z.enum(["starting", "working", "waiting", "gone", "done"]);
 export const ConversationKindSchema = z.enum(["user", "agent", "system"]);
 export type ConversationKind = z.infer<typeof ConversationKindSchema>;
 

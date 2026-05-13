@@ -16,6 +16,8 @@ export type {
   Conversation,
   ConversationKind,
 } from "../server/internal/schema";
+export { ConversationStatusSchema } from "./conversation-status";
+export type { ConversationStatus } from "./conversation-status";
 export {
   ConversationSummarySchema,
   AttemptWithConversationsSchema,

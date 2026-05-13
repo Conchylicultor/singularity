@@ -11,6 +11,7 @@ import {
 
 import { rankText } from "@plugins/primitives/plugins/rank/core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import type { ConversationStatus } from "../../core/conversation-status";
 
 // Physical tables only. This file is a load-order leaf: it must NOT import
 // from any other plugin's schema/tables file so that cross-plugin schemas can
@@ -93,8 +94,7 @@ export const pushes = pgTable(
 );
 
 // ConversationModel is imported from model-provider (zero-dep plugin, no cycle).
-// ConversationStatus and ConversationKind remain local — they have no shared registry.
-type ConversationStatus = "starting" | "working" | "waiting" | "gone" | "done";
+// ConversationStatus is imported from tasks-core/core/conversation-status (zero-dep leaf).
 // "user"   = manually created via the UI / default path
 // "agent"  = launched via the agents plugin (saved prompt + button click)
 // "system" = code-spawned by a job/trigger — hidden from user-facing
