@@ -11,7 +11,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { MdChevronRight, MdClose, MdKeyboardDoubleArrowDown, MdOutlineQueue, MdVerticalAlignBottom, MdVerticalAlignTop } from "react-icons/md";
+import { MdClose, MdKeyboardDoubleArrowDown, MdOutlineQueue, MdVerticalAlignBottom, MdVerticalAlignTop } from "react-icons/md";
+import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { useConversations } from "@plugins/conversations/web";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
@@ -72,12 +73,11 @@ function SectionHeader({
       <button
         type="button"
         onClick={onToggleExpanded}
+        aria-expanded={expanded}
         aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
         className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent"
       >
-        <MdChevronRight
-          className={cn("size-4 transition-transform", expanded && "rotate-90")}
-        />
+        <CollapsibleChevron open={expanded} className="size-4" />
       </button>
       <div className="min-w-0 flex-1 truncate px-1 py-0.5 text-xs font-semibold text-muted-foreground">
         {title}

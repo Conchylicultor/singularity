@@ -1,10 +1,13 @@
-import { useState, type ComponentType, type ReactNode } from "react";
-import { MdChevronRight } from "react-icons/md";
+import { type ComponentType, type ReactNode } from "react";
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
 } from "@/components/ui/sidebar";
+import {
+  useCollapsible,
+  CollapsibleChevron,
+} from "@plugins/primitives/plugins/collapsible/web";
 
 export function SidebarPaneSection({
   icon: Icon,
@@ -19,22 +22,25 @@ export function SidebarPaneSection({
   defaultOpen?: boolean;
   children: ReactNode;
 }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const { open, triggerProps, contentId } = useCollapsible({ defaultOpen });
   return (
     <SidebarGroup className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <SidebarGroupLabel
         className="group/label shrink-0 cursor-pointer select-none hover:text-sidebar-foreground"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={triggerProps.onClick}
+        aria-expanded={triggerProps["aria-expanded"]}
+        aria-controls={triggerProps["aria-controls"]}
       >
         <Icon className="mr-2 size-4" />
         {title}
         {LabelExtra && <LabelExtra />}
-        <MdChevronRight
-          className={`ml-auto size-4 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}
-        />
+        <CollapsibleChevron open={open} className="ml-auto size-4" />
       </SidebarGroupLabel>
-      {isOpen && (
-        <SidebarGroupContent className="min-h-0 flex flex-1 flex-col overflow-hidden">
+      {open && (
+        <SidebarGroupContent
+          id={contentId}
+          className="min-h-0 flex flex-1 flex-col overflow-hidden"
+        >
           {children}
         </SidebarGroupContent>
       )}

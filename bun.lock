@@ -695,16 +695,8 @@
       "name": "@singularity/plugin-primitives-breadcrumb",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/command-palette": {
-      "name": "@singularity/plugin-primitives-command-palette",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/cursor-pagination": {
-      "name": "@singularity/plugin-primitives-cursor-pagination",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/data-table": {
-      "name": "@singularity/plugin-primitives-data-table",
+    "plugins/primitives/plugins/collapsible": {
+      "name": "@singularity/plugin-primitives-collapsible",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/detail-sections": {
@@ -747,10 +739,6 @@
       "name": "@singularity/plugin-primitives-markdown",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/multi-select": {
-      "name": "@singularity/plugin-primitives-multi-select",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/networking": {
       "name": "@singularity/plugin-primitives-networking",
       "version": "0.0.1",
@@ -781,10 +769,6 @@
     },
     "plugins/primitives/plugins/search": {
       "name": "@singularity/plugin-primitives-search",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/shortcuts": {
-      "name": "@singularity/plugin-primitives-shortcuts",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/slot-render": {
@@ -1877,11 +1861,7 @@
 
     "@singularity/plugin-primitives-breadcrumb": ["@singularity/plugin-primitives-breadcrumb@workspace:plugins/primitives/plugins/breadcrumb"],
 
-    "@singularity/plugin-primitives-command-palette": ["@singularity/plugin-primitives-command-palette@workspace:plugins/primitives/plugins/command-palette"],
-
-    "@singularity/plugin-primitives-cursor-pagination": ["@singularity/plugin-primitives-cursor-pagination@workspace:plugins/primitives/plugins/cursor-pagination"],
-
-    "@singularity/plugin-primitives-data-table": ["@singularity/plugin-primitives-data-table@workspace:plugins/primitives/plugins/data-table"],
+    "@singularity/plugin-primitives-collapsible": ["@singularity/plugin-primitives-collapsible@workspace:plugins/primitives/plugins/collapsible"],
 
     "@singularity/plugin-primitives-detail-sections": ["@singularity/plugin-primitives-detail-sections@workspace:plugins/primitives/plugins/detail-sections"],
 
@@ -1903,8 +1883,6 @@
 
     "@singularity/plugin-primitives-markdown": ["@singularity/plugin-primitives-markdown@workspace:plugins/primitives/plugins/markdown"],
 
-    "@singularity/plugin-primitives-multi-select": ["@singularity/plugin-primitives-multi-select@workspace:plugins/primitives/plugins/multi-select"],
-
     "@singularity/plugin-primitives-networking": ["@singularity/plugin-primitives-networking@workspace:plugins/primitives/plugins/networking"],
 
     "@singularity/plugin-primitives-pane": ["@singularity/plugin-primitives-pane@workspace:plugins/primitives/plugins/pane"],
@@ -1918,8 +1896,6 @@
     "@singularity/plugin-primitives-relative-time": ["@singularity/plugin-primitives-relative-time@workspace:plugins/primitives/plugins/relative-time"],
 
     "@singularity/plugin-primitives-search": ["@singularity/plugin-primitives-search@workspace:plugins/primitives/plugins/search"],
-
-    "@singularity/plugin-primitives-shortcuts": ["@singularity/plugin-primitives-shortcuts@workspace:plugins/primitives/plugins/shortcuts"],
 
     "@singularity/plugin-primitives-slot-render": ["@singularity/plugin-primitives-slot-render@workspace:plugins/primitives/plugins/slot-render"],
 
