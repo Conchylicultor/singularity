@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-multi-select",
+  "description": "Checkbox multi-select primitive: provider, hooks, and SelectionBar for list plugins.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -22,6 +22,7 @@
   - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
   - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
   - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
+  - **`multi-select`** — Checkbox multi-select primitive: provider, hooks, and SelectionBar for list plugins.
   - **`networking`** — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
   - **`pane`** — Unified pane primitive: Pane.define, <Outlet/>, <PaneRouter/>, and chrome components.
   - **`paste-images`** — Lexical-based prompt editor with paste-image support and rich thumbnails (hover-× remove, click-to-expand lightbox). Pasted images upload to the attachments primitive; editor serializes to markdown with `![](/api/attachments/<id>)` refs.

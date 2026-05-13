@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { MdAdd } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
@@ -7,12 +8,17 @@ import {
   TreeList,
   type TreeItem,
 } from "@plugins/primitives/plugins/tree/web";
-import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
+import { buildTree, type TreeNode } from "@plugins/primitives/plugins/tree/core";
 import type { TaskStatus } from "@plugins/tasks-core/core";
 import { tasksResource } from "@plugins/tasks/core";
 import { patchTask, setAutoStart } from "@plugins/tasks/web";
 import { Tasks as TasksSlots } from "../slots";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
+import {
+  MultiSelectProvider,
+  SelectionBar,
+  SelectionCheckbox,
+} from "@plugins/primitives/plugins/multi-select/web";
 import { cn } from "@/lib/utils";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 
@@ -61,6 +67,7 @@ function TaskRow({ node, depth }: { node: TreeNode<Task>; depth: number }) {
         />
       ))}
     >
+      <SelectionCheckbox id={node.id} />
       <StatusIcon status={node.status} />
       <RenameInput
         nodeId={node.id}
@@ -94,6 +101,38 @@ function QueuedChip({ taskId, model }: { taskId: string; model: "opus" | "sonnet
   );
 }
 
+function deriveVisibleOrder(
+  rows: readonly Task[],
+  rootId?: string,
+): string[] {
+  const scoped = rootId ? rows.filter((r) => isInSubtree(rows, rootId, r.id)) : rows;
+  const tree = buildTree(scoped);
+  const ids: string[] = [];
+  function walk(nodes: TreeNode<Task>[]) {
+    for (const n of nodes) {
+      ids.push(n.id);
+      if (n.expanded) walk(n.children);
+    }
+  }
+  walk(tree);
+  return ids;
+}
+
+function isInSubtree(
+  rows: readonly Task[],
+  rootId: string,
+  candidateId: string,
+): boolean {
+  if (candidateId === rootId) return true;
+  const parents = new Map(rows.map((r) => [r.id, r.parentId] as const));
+  let cur: string | null = parents.get(candidateId) ?? null;
+  while (cur) {
+    if (cur === rootId) return true;
+    cur = parents.get(cur) ?? null;
+  }
+  return false;
+}
+
 export function TasksList({
   selectedId,
   rootTaskId,
@@ -105,27 +144,34 @@ export function TasksList({
 }) {
   const { data: rows } = useResource(tasksResource);
   const listActions = TasksSlots.ListActions.useContributions();
+  const orderedIds = useMemo(
+    () => deriveVisibleOrder(rows, rootTaskId),
+    [rows, rootTaskId],
+  );
 
   return (
-    <TreeList<Task>
-      rows={rows}
-      rootId={rootTaskId}
-      selectedId={selectedId}
-      onSelect={onSelect}
-      onToggleExpanded={(id, next) => patchTask(id, { expanded: next })}
-      onMove={(id, dest) => patchTask(id, dest)}
-      onCreate={createTaskRow}
-      Row={TaskRow}
-      dragOverlay={(t) => t.title || "Untitled"}
-      toolbar={{
-        expandAll: true,
-        search: { accessor: (t) => t.title },
-        hideTerminal: {
-          isTerminal: (t) => t.status === "done" || t.status === "dropped",
-        },
-        start: listActions.map((a) => <a.component key={a.id} />),
-      }}
-      addLabel={rootTaskId ? null : "Add"}
-    />
+    <MultiSelectProvider orderedIds={orderedIds}>
+      <SelectionBar />
+      <TreeList<Task>
+        rows={rows}
+        rootId={rootTaskId}
+        selectedId={selectedId}
+        onSelect={onSelect}
+        onToggleExpanded={(id, next) => patchTask(id, { expanded: next })}
+        onMove={(id, dest) => patchTask(id, dest)}
+        onCreate={createTaskRow}
+        Row={TaskRow}
+        dragOverlay={(t) => t.title || "Untitled"}
+        toolbar={{
+          expandAll: true,
+          search: { accessor: (t) => t.title },
+          hideTerminal: {
+            isTerminal: (t) => t.status === "done" || t.status === "dropped",
+          },
+          start: listActions.map((a) => <a.component key={a.id} />),
+        }}
+        addLabel={rootTaskId ? null : "Add"}
+      />
+    </MultiSelectProvider>
   );
 }

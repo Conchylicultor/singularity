@@ -1245,6 +1245,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `MarkdownEnhancement`
         - Values: `langFromClassName`, `Markdown`, `MarkdownEnhancementContext`, `MarkdownEnhancerSlot`, `nodeToText`, `useMarkdownEnhancement`
+    - **`multi-select`** — Checkbox multi-select primitive: provider, hooks, and SelectionBar for list plugins.
+      - Exports (web):
+        - Types: `MultiSelectHandle`, `MultiSelectItemHandle`, `MultiSelectProviderProps`, `SelectionBarProps`, `SelectionCheckboxProps`
+        - Values: `MultiSelectProvider`, `SelectionBar`, `SelectionCheckbox`, `useMultiSelect`, `useMultiSelectItem`
     - **`networking`** — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
       - Exports (web):
         - Types: `CrossTabElectionCallbacks`, `FetchWithRetryOptions`, `ReconnectingEventSourceOptions`, `ReconnectingWsHandle`, `ReconnectingWsOptions`, `WsStatus`, `WsStatusEvent`

@@ -143,6 +143,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "primitives/plugins/launch", loader: () => import("@plugins/primitives/plugins/launch/web") },
   { name: "primitives/plugins/live-state", loader: () => import("@plugins/primitives/plugins/live-state/web") },
   { name: "primitives/plugins/markdown", loader: () => import("@plugins/primitives/plugins/markdown/web") },
+  { name: "primitives/plugins/multi-select", loader: () => import("@plugins/primitives/plugins/multi-select/web") },
   { name: "primitives/plugins/networking", loader: () => import("@plugins/primitives/plugins/networking/web") },
   { name: "primitives/plugins/pane", loader: () => import("@plugins/primitives/plugins/pane/web") },
   { name: "primitives/plugins/paste-images", loader: () => import("@plugins/primitives/plugins/paste-images/web") },
