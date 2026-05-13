@@ -164,17 +164,20 @@ export async function addTaskDependency(
   if (await taskDependsOn(dependsOnTaskId, taskId)) {
     throw new Error("Cycle detected in dependencies");
   }
+  const prev = await readTaskStatus(taskId);
   await db
     .insert(_taskDependencies)
     .values({ taskId, dependsOnTaskId })
     .onConflictDoNothing();
   tasksResource.notify();
+  await emitStatusChangeIfChanged(taskId, prev);
 }
 
 export async function removeTaskDependency(
   taskId: string,
   dependsOnTaskId: string,
 ): Promise<boolean> {
+  const prev = await readTaskStatus(taskId);
   const [row] = await db
     .delete(_taskDependencies)
     .where(
@@ -187,6 +190,7 @@ export async function removeTaskDependency(
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
   tasksResource.notify();
+  await emitStatusChangeIfChanged(taskId, prev);
   return true;
 }
 

@@ -86,32 +86,19 @@ export function BlockingButton({
           description: (await res.text()) || "Failed to add dependency",
           variant: "error",
         });
-        return;
       }
-      await fetch("/api/conversations-queue/rerank", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId: selectedConv.id }),
-      });
     } finally {
       setBusy(null);
     }
   }
 
-  async function removeBlocked(blockedTaskId: string, blockedConvId?: string) {
+  async function removeBlocked(blockedTaskId: string) {
     setBusy(blockedTaskId);
     try {
       await fetch(
         `/api/tasks/${encodeURIComponent(blockedTaskId)}/dependencies/${encodeURIComponent(conversation.taskId)}`,
         { method: "DELETE" },
       );
-      if (blockedConvId) {
-        await fetch("/api/conversations-queue/rerank", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ conversationId: blockedConvId }),
-        });
-      }
     } finally {
       setBusy(null);
     }
@@ -152,7 +139,7 @@ export function BlockingButton({
                 </div>
                 <button
                   type="button"
-                  onClick={() => removeBlocked(c.taskId!, c.id)}
+                  onClick={() => removeBlocked(c.taskId!)}
                   disabled={busy === c.taskId}
                   className="hover:bg-destructive/10 hover:text-destructive shrink-0 rounded p-0.5"
                   aria-label="Remove"

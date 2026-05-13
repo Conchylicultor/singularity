@@ -6,6 +6,7 @@ import {
   conversationTurnCompleted,
   userTurnSent,
 } from "@plugins/conversations/server";
+import { taskStatusChanged } from "@plugins/tasks-core/server";
 import { handleReorder } from "./internal/handle-reorder";
 import { handlePromote } from "./internal/handle-promote";
 import { handleDemote } from "./internal/handle-demote";
@@ -14,6 +15,7 @@ import { handleRerank } from "./internal/handle-rerank";
 import { seedRankJob } from "./internal/seed-rank-job";
 import { validatePinJob } from "./internal/validate-pin-job";
 import { advancePinJob } from "./internal/advance-pin-job";
+import { taskStatusPinJob } from "./internal/task-status-pin-job";
 import { queueRanksResource } from "./internal/resource";
 
 export { conversationsQueue } from "./internal/tables";
@@ -31,8 +33,9 @@ export default {
     Trigger({ on: conversationCreated, do: seedRankJob, with: {}, oneShot: false }),
     Trigger({ on: conversationTurnCompleted, do: validatePinJob, with: {}, oneShot: false }),
     Trigger({ on: userTurnSent, do: advancePinJob, with: {}, oneShot: false }),
+    Trigger({ on: taskStatusChanged, do: taskStatusPinJob, with: {}, oneShot: false }),
   ],
-  register: [seedRankJob, validatePinJob, advancePinJob],
+  register: [seedRankJob, validatePinJob, advancePinJob, taskStatusPinJob],
   httpRoutes: {
     "POST /api/conversations-queue/reorder": handleReorder,
     "POST /api/conversations-queue/promote": handlePromote,

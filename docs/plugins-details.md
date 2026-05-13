@@ -734,15 +734,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `ConversationsView.View` "Queue" → `QueueView`
           - Server:
-            - Register: `defineJob('queue.seed-rank')`, `defineJob('queue.validate-pin')`, `defineJob('queue.advance-pin')`
-            - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `conversations.userTurnSent`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`
+            - Register: `defineJob('queue.seed-rank')`, `defineJob('queue.validate-pin')`, `defineJob('queue.advance-pin')`, `defineJob('queue.task-status-pin')`
+            - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `conversations.userTurnSent`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`, `tasks-core.taskStatusChanged`
             - Resources: `queue-ranks` (push)
             - `POST /api/conversations-queue/reorder`
             - `POST /api/conversations-queue/promote`
             - `POST /api/conversations-queue/demote`
             - `POST /api/conversations-queue/step-down`
             - `POST /api/conversations-queue/rerank`
-          - Endpoint callers: `blocked-by`, `blocking`
     - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
       - Exports (core):
         - Types: `ConversationModel`, `ModelMeta`

@@ -81,13 +81,7 @@ export function BlockedByButton({
           description: (await res.text()) || "Failed to add dependency",
           variant: "error",
         });
-        return;
       }
-      await fetch("/api/conversations-queue/rerank", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId: conversation.id }),
-      });
     } finally {
       setBusy(null);
     }
@@ -100,11 +94,6 @@ export function BlockedByButton({
         `/api/tasks/${encodeURIComponent(conversation.taskId)}/dependencies/${encodeURIComponent(depTaskId)}`,
         { method: "DELETE" },
       );
-      await fetch("/api/conversations-queue/rerank", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationId: conversation.id }),
-      });
     } finally {
       setBusy(null);
     }
