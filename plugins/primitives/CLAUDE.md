@@ -10,7 +10,11 @@
   - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
   - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
   - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
+<<<<<<< .merge_file_xElIlE
   - **`data-table`** — Sortable/filterable flex-layout data table primitive.
+=======
+  - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
+>>>>>>> .merge_file_JL7Jp9
   - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.
   - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
   - **`error-boundary`** — Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a registerBoundaryReporter() hook for opt-in crash reporting.
