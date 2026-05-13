@@ -1,4 +1,4 @@
-import { MdSearch } from "react-icons/md";
+import { MdClose, MdSearch } from "react-icons/md";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -12,10 +12,32 @@ export function SearchInput({
   wrapperClassName,
   ...props
 }: SearchInputProps) {
+  const hasValue = typeof props.value === "string" && props.value.length > 0;
+
+  const handleClear = () => {
+    props.onChange?.({
+      target: { value: "" },
+    } as React.ChangeEvent<HTMLInputElement>);
+  };
+
   return (
     <div className={cn("relative", wrapperClassName)}>
       <MdSearch className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-      <Input className={cn("h-7 pl-7 text-xs", className)} {...props} />
+      <Input
+        className={cn("h-7 pl-7 text-xs", hasValue && "pr-6", className)}
+        {...props}
+      />
+      {hasValue && (
+        <button
+          type="button"
+          onClick={handleClear}
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:text-foreground focus:outline-none"
+          tabIndex={-1}
+          aria-label="Clear filter"
+        >
+          <MdClose className="size-3" />
+        </button>
+      )}
     </div>
   );
 }
