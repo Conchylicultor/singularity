@@ -48,7 +48,7 @@ function PluginTreeNode({
         className="group flex min-h-7 cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-sm hover:bg-accent"
         style={{ paddingLeft: depth * 16 + 8 }}
         onClick={() =>
-          openPane(pluginViewPane, { pluginId: node.hierarchyId })
+          openPane(pluginViewPane, { pluginId: node.hierarchyId }, { replace: true })
         }
       >
         {hasChildren ? (

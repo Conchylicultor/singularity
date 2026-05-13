@@ -11,7 +11,7 @@ export function SideTaskBody() {
   const task = useTask(taskId);
   const openPane = useOpenPane();
   const navigate = useCallback(
-    (id: string) => openPane(taskSidePane, { convId: conversation.id, taskId: id }),
+    (id: string) => openPane(taskSidePane, { convId: conversation.id, taskId: id }, { replace: true }),
     [conversation.id, openPane],
   );
 

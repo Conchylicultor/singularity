@@ -917,7 +917,7 @@ export function openPane(
 export function useOpenPane(): (
   target: PaneObject<any, any, any>,
   params: Record<string, string>,
-  opts?: { root?: boolean; append?: boolean },
+  opts?: { root?: boolean; append?: boolean; replace?: boolean },
 ) => void {
   const depth = useContext(PaneDepthContext);
   const chain = getChain();
@@ -928,7 +928,7 @@ export function useOpenPane(): (
     (
       target: PaneObject<any, any, any>,
       params: Record<string, string>,
-      opts?: { root?: boolean; append?: boolean },
+      opts?: { root?: boolean; append?: boolean; replace?: boolean },
     ) => {
       const targetInternal = target._internal;
 
@@ -952,8 +952,11 @@ export function useOpenPane(): (
       const replace =
         targetInternal.chrome.enabled && !targetInternal.chrome.history;
 
-      // Self-reference: update params in-place, truncate children
-      if (targetInternal.id === callerPaneId) {
+      // replace: update the caller's slot in-place (same column), truncate
+      // children. Used when internal navigation within a pane wants to swap
+      // which entity is shown without growing the chain (e.g. clicking a
+      // dependency chip switches the task detail to a different task).
+      if (opts?.replace && targetInternal.id === callerPaneId) {
         const existing = currentChain[callerIndex]!.params;
         const same =
           Object.keys(ownParams).length === Object.keys(existing).length &&
@@ -965,15 +968,22 @@ export function useOpenPane(): (
         return;
       }
 
-      // Wrap left: caller can follow target → insert target before caller
+      // Wrap left: caller can follow target → insert target before caller.
+      // Skip if the target already exists as an ancestor — the after-
+      // dependency is already satisfied, so inserting another would duplicate.
       if (callerPane?.after.has(targetInternal.id)) {
-        const newChain = [
-          ...currentChain.slice(0, callerIndex),
-          createSlot(targetInternal.id, ownParams),
-          ...currentChain.slice(callerIndex),
-        ];
-        setChain(validateChain(newChain), replace);
-        return;
+        const alreadySatisfied = currentChain
+          .slice(0, callerIndex)
+          .some((s) => s.paneId === targetInternal.id);
+        if (!alreadySatisfied) {
+          const newChain = [
+            ...currentChain.slice(0, callerIndex),
+            createSlot(targetInternal.id, ownParams),
+            ...currentChain.slice(callerIndex),
+          ];
+          setChain(validateChain(newChain), replace);
+          return;
+        }
       }
 
       // Open right (default): truncate after caller, append target

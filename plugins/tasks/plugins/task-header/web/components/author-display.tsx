@@ -20,7 +20,7 @@ export function AuthorDisplay({ author }: { author: string | null }) {
   return (
     <button
       type="button"
-      onClick={() => openPane(taskDetailPane, { taskId: authorTask.id })}
+      onClick={() => openPane(taskDetailPane, { taskId: authorTask.id }, { replace: true })}
       className="hover:text-foreground text-sm underline underline-offset-2"
     >
       {authorTask.title}

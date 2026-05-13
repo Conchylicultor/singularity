@@ -369,7 +369,7 @@ function PluginLink({ name }: { name: string }) {
       className="font-medium text-muted-foreground hover:text-foreground hover:underline"
       onClick={(e) => {
         e.stopPropagation();
-        openPane(pluginViewPane, { pluginId: name });
+        openPane(pluginViewPane, { pluginId: name }, { replace: true });
       }}
     >
       {name}

@@ -43,7 +43,7 @@ function FilePeekPaneBody() {
       openPane(filePeekPane, {
         worktree,
         filePath: line != null ? `${fp}:${line}` : fp,
-      });
+      }, { replace: true });
     }
   }, [resolved, worktree, line, openPane]);
 
@@ -79,7 +79,7 @@ function FilePeekPaneBody() {
             openPane(filePeekPane, {
               worktree,
               filePath: line != null ? `${fp}:${line}` : fp,
-            })
+            }, { replace: true })
           }
         />
       </PaneChrome>
