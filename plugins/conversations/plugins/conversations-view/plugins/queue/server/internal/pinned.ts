@@ -14,7 +14,7 @@ const notBlocked = sql`NOT EXISTS (
    WHERE td.task_id = ${_attempts.taskId}
      AND dep.dropped_at IS NULL
      AND NOT EXISTS (
-       SELECT 1 FROM attempts a
+       SELECT 1 FROM attempts_v a
         WHERE a.task_id = dep.id AND a.status = 'completed'
      )
 )`;
