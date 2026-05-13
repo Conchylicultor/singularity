@@ -8,6 +8,7 @@ import {
   useDarkMode,
 } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useFileContent } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 
 const LINE_NUMBERS_TRANSFORMER: ShikiTransformer = {
   line(node, line) {
@@ -116,21 +117,5 @@ export function RawView({
       className="[&>pre]:m-0 [&>pre]:min-h-full [&>pre]:bg-transparent [&>pre]:p-3 [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5 [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
       dangerouslySetInnerHTML={{ __html: html }}
     />
-  );
-}
-
-function Placeholder({
-  children,
-  tone = "muted",
-}: {
-  children: React.ReactNode;
-  tone?: "muted" | "error";
-}) {
-  return (
-    <div
-      className={`px-3 py-2 text-sm ${tone === "error" ? "text-destructive" : "text-muted-foreground"}`}
-    >
-      {children}
-    </div>
   );
 }

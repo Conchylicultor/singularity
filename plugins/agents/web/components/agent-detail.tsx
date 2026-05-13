@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdPlayArrow } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
 import {
@@ -94,7 +95,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
   };
 
   if (!agent) {
-    return <div className="text-muted-foreground p-6 text-sm">Loading…</div>;
+    return <Placeholder>Loading…</Placeholder>;
   }
 
   return (

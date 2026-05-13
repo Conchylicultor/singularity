@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { MdDelete, MdFolderDelete, MdRefresh, MdWarning } from "react-icons/md";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Button } from "@/components/ui/button";
 
 type WorktreeEntry = {
@@ -224,11 +225,11 @@ export function WorktreeCleanupPanel() {
       {/* Content */}
       <div className="flex-1 overflow-auto">
         {listError ? (
-          <div className="p-6 text-sm text-destructive">{listError}</div>
+          <Placeholder tone="error">{listError}</Placeholder>
         ) : loading && !entries ? (
-          <div className="p-6 text-sm text-muted-foreground">Loading…</div>
+          <Placeholder>Loading…</Placeholder>
         ) : entries?.length === 0 ? (
-          <div className="p-6 text-sm text-muted-foreground">No worktrees found.</div>
+          <Placeholder>No worktrees found.</Placeholder>
         ) : (
           <table className="w-full text-sm">
             <thead>

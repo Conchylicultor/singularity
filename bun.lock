@@ -775,6 +775,10 @@
       "name": "@singularity/plugin-primitives-persistent-draft",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/placeholder": {
+      "name": "@singularity/plugin-primitives-placeholder",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/rank": {
       "name": "@singularity/plugin-primitives-rank",
       "version": "0.0.1",
@@ -1918,6 +1922,8 @@
     "@singularity/plugin-primitives-paste-images": ["@singularity/plugin-primitives-paste-images@workspace:plugins/primitives/plugins/paste-images"],
 
     "@singularity/plugin-primitives-persistent-draft": ["@singularity/plugin-primitives-persistent-draft@workspace:plugins/primitives/plugins/persistent-draft"],
+
+    "@singularity/plugin-primitives-placeholder": ["@singularity/plugin-primitives-placeholder@workspace:plugins/primitives/plugins/placeholder"],
 
     "@singularity/plugin-primitives-rank": ["@singularity/plugin-primitives-rank@workspace:plugins/primitives/plugins/rank"],
 

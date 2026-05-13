@@ -150,6 +150,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "primitives/plugins/pane", loader: () => import("@plugins/primitives/plugins/pane/web") },
   { name: "primitives/plugins/paste-images", loader: () => import("@plugins/primitives/plugins/paste-images/web") },
   { name: "primitives/plugins/persistent-draft", loader: () => import("@plugins/primitives/plugins/persistent-draft/web") },
+  { name: "primitives/plugins/placeholder", loader: () => import("@plugins/primitives/plugins/placeholder/web") },
   { name: "primitives/plugins/rank", loader: () => import("@plugins/primitives/plugins/rank/web") },
   { name: "primitives/plugins/relative-time", loader: () => import("@plugins/primitives/plugins/relative-time/web") },
   { name: "primitives/plugins/search", loader: () => import("@plugins/primitives/plugins/search/web") },

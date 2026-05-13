@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MdChevronRight } from "react-icons/md";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { useCommitFiles } from "../use-commit-files";
 
 export function CommitDiffView({
@@ -14,14 +15,10 @@ export function CommitDiffView({
   const state = useCommitFiles(worktree, sha);
 
   if (state.kind === "loading") {
-    return (
-      <div className="p-4 text-sm text-muted-foreground">Loading…</div>
-    );
+    return <Placeholder>Loading…</Placeholder>;
   }
   if (state.kind === "error") {
-    return (
-      <div className="p-4 text-sm text-destructive">{state.message}</div>
-    );
+    return <Placeholder tone="error">{state.message}</Placeholder>;
   }
 
   const { files, baseSha, headSha } = state.data;
@@ -58,11 +55,7 @@ function CommitFileList({
   }
 
   if (files.length === 0) {
-    return (
-      <div className="p-4 text-sm text-muted-foreground">
-        No changes in this commit.
-      </div>
-    );
+    return <Placeholder>No changes in this commit.</Placeholder>;
   }
 
   const totals = files.reduce(

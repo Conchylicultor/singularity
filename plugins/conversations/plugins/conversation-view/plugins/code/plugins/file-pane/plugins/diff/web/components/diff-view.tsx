@@ -11,6 +11,7 @@ import {
 import type { FileData, HunkData, TokenNode } from "react-diff-view";
 import "react-diff-view/style/index.css";
 import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { useFileDiff } from "../use-file-diff";
 import { useDiffTokens } from "../use-diff-tokens";
 import type { DiffTokens } from "../use-diff-tokens";
@@ -401,21 +402,5 @@ function renderShikiToken(
     <span key={i} style={style}>
       {typeof node.value === "string" ? node.value : null}
     </span>
-  );
-}
-
-function Placeholder({
-  children,
-  tone = "muted",
-}: {
-  children: React.ReactNode;
-  tone?: "muted" | "error";
-}) {
-  return (
-    <div
-      className={`px-3 py-2 text-sm ${tone === "error" ? "text-destructive" : "text-muted-foreground"}`}
-    >
-      {children}
-    </div>
   );
 }

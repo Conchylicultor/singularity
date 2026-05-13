@@ -1,6 +1,6 @@
-import type React from "react";
 import { useFileContent } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 
 export function MarkdownView({
   worktree,
@@ -29,22 +29,6 @@ export function MarkdownView({
   return (
     <div className="px-4 py-3 text-sm leading-6">
       <Markdown>{state.content}</Markdown>
-    </div>
-  );
-}
-
-function Placeholder({
-  children,
-  tone = "muted",
-}: {
-  children: React.ReactNode;
-  tone?: "muted" | "error";
-}) {
-  return (
-    <div
-      className={`px-3 py-2 text-sm ${tone === "error" ? "text-destructive" : "text-muted-foreground"}`}
-    >
-      {children}
     </div>
   );
 }

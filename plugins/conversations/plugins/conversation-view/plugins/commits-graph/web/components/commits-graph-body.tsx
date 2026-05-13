@@ -1,5 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { commitsGraphResource } from "../../shared/resources";
 import type { CommitRow } from "../../shared/protocol";
@@ -35,16 +36,14 @@ export function CommitsGraphBody() {
 
   if (error) {
     return (
-      <div className="p-4 text-sm text-destructive">
-        Failed to load commits: {String(error)}
-      </div>
+      <Placeholder tone="error">Failed to load commits: {String(error)}</Placeholder>
     );
   }
   if (data.mergeBase === null) {
     return (
-      <div className="p-4 text-sm text-muted-foreground">
+      <Placeholder>
         No shared history with <span className="font-mono">main</span>.
-      </div>
+      </Placeholder>
     );
   }
 

@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Pane, PaneChrome, type, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import {
   conversationPane,
@@ -121,9 +122,9 @@ function SystemAgentDetailBody(): ReactElement {
   if (!descriptor) {
     return (
       <PaneChrome pane={systemAgentDetailPane} title="Unknown system agent">
-        <div className="text-muted-foreground p-6 text-sm">
+        <Placeholder>
           No system agent registered with id <code>{systemId}</code>.
-        </div>
+        </Placeholder>
       </PaneChrome>
     );
   }

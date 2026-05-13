@@ -1279,6 +1279,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
       - Exports (web):
         - Values: `useDraft`
+    - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
+      - Exports (web):
+        - Types: `PlaceholderProps`
+        - Values: `Placeholder`
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
       - Exports (core):
         - Values: `Rank`, `RankSchema`, `rankText`

@@ -3,6 +3,7 @@ import { MdRefresh, MdRestore } from "react-icons/md";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Button } from "@/components/ui/button";
 import { recentConversationsResource } from "@plugins/conversations/core";
 import { ConversationSchema, type Conversation } from "@plugins/tasks-core/core";
@@ -144,11 +145,9 @@ export function RecoveryView() {
 
       <div className="flex-1 overflow-auto">
         {isLoading && items.length === 0 ? (
-          <div className="p-6 text-sm text-muted-foreground">Loading…</div>
+          <Placeholder>Loading…</Placeholder>
         ) : items.length === 0 ? (
-          <div className="p-6 text-sm text-muted-foreground">
-            No recently closed conversations.
-          </div>
+          <Placeholder>No recently closed conversations.</Placeholder>
         ) : (
           <div className="flex flex-col">
             {groups.map((group) => {

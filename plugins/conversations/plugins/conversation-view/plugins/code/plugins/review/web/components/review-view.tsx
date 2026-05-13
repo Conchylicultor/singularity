@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { pushesResource, type Push } from "@plugins/tasks/core";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
@@ -314,20 +315,4 @@ function ToolbarRow({
 
 function Body({ children }: { children: React.ReactNode }) {
   return <div className="min-h-0 flex-1 overflow-auto">{children}</div>;
-}
-
-function Placeholder({
-  children,
-  tone = "muted",
-}: {
-  children: React.ReactNode;
-  tone?: "muted" | "error";
-}) {
-  return (
-    <div
-      className={`px-4 py-3 text-sm ${tone === "error" ? "text-destructive" : "text-muted-foreground"}`}
-    >
-      {children}
-    </div>
-  );
 }
