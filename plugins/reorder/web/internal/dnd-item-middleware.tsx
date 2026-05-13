@@ -2,10 +2,7 @@ import { useContext, type ReactNode } from "react";
 import type { Contribution } from "@core";
 import { useEditMode } from "./edit-mode-store";
 import { contributionKey } from "./sorting";
-import {
-  ReorderAreaContext,
-  ReorderItemThreeZone,
-} from "./dnd-components";
+import { ReorderAreaContext, SortableReorderItem } from "./dnd-components";
 
 export function ReorderItemMiddleware({
   contribution,
@@ -25,13 +22,11 @@ export function ReorderItemMiddleware({
   if (!editMode || excluded) return <>{children}</>;
 
   return (
-    <ReorderItemThreeZone
+    <SortableReorderItem
       itemKey={key}
       storageId={ctx?.storageId ?? ""}
-      insertionIndicator={ctx?.insertionIndicator ?? null}
-      groupingIndicator={ctx?.groupingIndicator ?? null}
     >
       {children}
-    </ReorderItemThreeZone>
+    </SortableReorderItem>
   );
 }

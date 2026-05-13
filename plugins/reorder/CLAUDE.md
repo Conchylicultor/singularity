@@ -26,10 +26,10 @@ Hosts just use `<MySlot.Render>{(item) => ...}</MySlot.Render>` — the reorder 
 
 ## Architecture
 
-Two middlewares registered by the reorder plugin:
+Two middlewares registered by the reorder plugin, built on `@plugins/primitives/plugins/sortable-list/web` (`@dnd-kit/sortable`):
 
-1. **`ReorderListMiddleware`** (list, priority 0) — wraps the contribution list with `DndContext`, reads rank/group data from the server, sorts items via `computeReorderState()`, renders spacers/groups/restore button in edit mode.
-2. **`ReorderItemMiddleware`** (item, priority 50) — wraps each contribution with three-zone drag affordances (before/after for reorder, center for group creation).
+1. **`ReorderListMiddleware`** (list, priority 0) — wraps the contribution list with `SortableList`, reads rank/group data from the server, sorts items via `computeReorderState()`, renders spacers/groups/restore button in edit mode. Custom collision detection filters zone droppables from `closestCenter` (so displacement transforms work correctly) and appends zone hits from `pointerWithin` (for group create/join dispatch at drop time via `event.collisions`).
+2. **`ReorderItemMiddleware`** (item, priority 50) — wraps each contribution with `SortableItem` for smooth displacement animations during drag. In edit mode, also renders grouping zones (center zone for group creation, join zone for existing groups).
 
 ## Storage
 

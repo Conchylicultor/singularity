@@ -1,39 +1,17 @@
 import { createContext, useState, type ReactNode } from "react";
 import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
-import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { useDroppable } from "@dnd-kit/core";
 import { Input } from "@/components/ui/input";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
+import { cn } from "@/lib/utils";
 import { useEditMode } from "./edit-mode-store";
 
-const DRAG_PREFIX = "reorder-drag-";
-const DROP_PREFIX = "reorder-drop-";
-
-export { DRAG_PREFIX, DROP_PREFIX };
-
-export const DRAG_GROUP_PREFIX = "reorder-drag-group-";
-
-export function stripPrefix(prefix: string, s: string): string {
-  return s.startsWith(prefix) ? s.slice(prefix.length) : s;
-}
-
 // --- Area context ------------------------------------------------------------
-
-type InsertionIndicator = {
-  itemId: string;
-  position: "before" | "after";
-} | null;
-
-type GroupingIndicator = {
-  targetId: string;
-} | null;
-
-export type { InsertionIndicator, GroupingIndicator };
 
 export type ReorderAreaCtxValue = {
   storageId: string;
   hiddenItems: Array<{ key: string; label: string }>;
-  insertionIndicator: InsertionIndicator;
-  groupingIndicator: GroupingIndicator;
   addSpacer: () => void;
   addGroup: () => void;
   dragInProgress: boolean;
@@ -43,49 +21,35 @@ export const ReorderAreaContext = createContext<ReorderAreaCtxValue | null>(
   null,
 );
 
-// --- Reorder item (three zone) -----------------------------------------------
+// --- Grouping zone (center overlay for group-on-drop) ------------------------
 
-export function ReorderItemThreeZone({
+export function GroupingZone({ itemKey }: { itemKey: string }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `group-zone:${itemKey}`,
+    data: { zone: "child", targetId: itemKey },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        "absolute inset-x-0 top-[42.5%] bottom-[42.5%] z-10 rounded transition-colors",
+        isOver && "ring-2 ring-primary bg-accent/30",
+      )}
+    />
+  );
+}
+
+// --- Sortable reorder item ---------------------------------------------------
+
+export function SortableReorderItem({
   itemKey,
   storageId,
-  insertionIndicator,
-  groupingIndicator,
   children,
 }: {
   itemKey: string;
   storageId: string;
-  insertionIndicator: InsertionIndicator;
-  groupingIndicator: GroupingIndicator;
   children: ReactNode;
 }) {
-  const draggable = useDraggable({ id: `${DRAG_PREFIX}${itemKey}` });
-
-  const beforeDroppable = useDroppable({
-    id: `reorder-drop-before-${itemKey}`,
-    data: { zone: "before", targetId: itemKey },
-  });
-  const afterDroppable = useDroppable({
-    id: `reorder-drop-after-${itemKey}`,
-    data: { zone: "after", targetId: itemKey },
-  });
-  const childDroppable = useDroppable({
-    id: `reorder-drop-child-${itemKey}`,
-    data: { zone: "child", targetId: itemKey },
-  });
-
-  const transform = draggable.transform;
-  const isDragging = draggable.isDragging;
-
-  const style: React.CSSProperties = isDragging
-    ? {
-        transform: transform
-          ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
-          : undefined,
-        touchAction: "none",
-        zIndex: 50,
-      }
-    : { touchAction: "none" };
-
   function handleHide(e: React.MouseEvent) {
     e.stopPropagation();
     void fetch(`/api/reorder/${storageId}`, {
@@ -95,55 +59,30 @@ export function ReorderItemThreeZone({
     });
   }
 
-  const isGroupTarget = groupingIndicator?.targetId === itemKey;
-  const showBefore =
-    insertionIndicator?.itemId === itemKey &&
-    insertionIndicator.position === "before";
-  const showAfter =
-    insertionIndicator?.itemId === itemKey &&
-    insertionIndicator.position === "after";
-
   return (
-    <>
-      {showBefore && <div className="reorder-drop-indicator" />}
-      <div
-        ref={draggable.setNodeRef}
-        {...draggable.attributes}
-        {...draggable.listeners}
-        style={style}
-        className="group/reorder-item relative"
-      >
-        <div
-          ref={childDroppable.setNodeRef}
-          className={[
-            "relative cursor-grab rounded-md ring-1 ring-primary/50",
-            isDragging && "opacity-40",
-            isGroupTarget && "ring-2 ring-primary bg-accent/30",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-        >
-          <button
-            className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover/reorder-item:opacity-80 hover:!opacity-100 transition-opacity"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={handleHide}
-            aria-label="Hide item"
+    <SortableItem id={itemKey} className="group/reorder-item relative">
+      {({ isDragging }) => (
+        <>
+          <div
+            className={cn(
+              "relative cursor-grab rounded-md ring-1 ring-primary/50",
+              isDragging && "opacity-40",
+            )}
           >
-            <MdClose className="size-2.5" />
-          </button>
-          <div className="pointer-events-none">{children}</div>
-        </div>
-        <div
-          ref={beforeDroppable.setNodeRef}
-          className="pointer-events-none absolute inset-x-0 top-0 h-[8px]"
-        />
-        <div
-          ref={afterDroppable.setNodeRef}
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-[8px]"
-        />
-      </div>
-      {showAfter && <div className="reorder-drop-indicator" />}
-    </>
+            <button
+              className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover/reorder-item:opacity-80 hover:!opacity-100 transition-opacity"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={handleHide}
+              aria-label="Hide item"
+            >
+              <MdClose className="size-2.5" />
+            </button>
+            <div className="pointer-events-none">{children}</div>
+          </div>
+          <GroupingZone itemKey={itemKey} />
+        </>
+      )}
+    </SortableItem>
   );
 }
 
@@ -152,33 +91,15 @@ export function ReorderItemThreeZone({
 export function SpacerReorderItem({
   itemKey,
   storageId,
-  insertionIndicator,
 }: {
   itemKey: string;
   storageId: string;
-  insertionIndicator: InsertionIndicator;
 }) {
   const editMode = useEditMode();
-  const draggable = useDraggable({ id: `${DRAG_PREFIX}${itemKey}` });
-  const droppable = useDroppable({ id: `${DROP_PREFIX}${itemKey}` });
 
   if (!editMode) {
-    return (
-      <div ref={droppable.setNodeRef} className="flex-1" />
-    );
+    return <div className="flex-1" />;
   }
-
-  const transform = draggable.transform;
-  const isDragging = draggable.isDragging;
-  const style: React.CSSProperties = isDragging
-    ? {
-        transform: transform
-          ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
-          : undefined,
-        touchAction: "none",
-        zIndex: 50,
-      }
-    : { touchAction: "none" };
 
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
@@ -187,45 +108,29 @@ export function SpacerReorderItem({
     });
   }
 
-  const showBefore =
-    insertionIndicator?.itemId === itemKey &&
-    insertionIndicator.position === "before";
-  const showAfter =
-    insertionIndicator?.itemId === itemKey &&
-    insertionIndicator.position === "after";
-
   return (
-    <>
-      {showBefore && <div className="reorder-drop-indicator" />}
-      <div
-        ref={(node) => {
-          draggable.setNodeRef(node);
-          droppable.setNodeRef(node);
-        }}
-        {...draggable.attributes}
-        {...draggable.listeners}
-        style={style}
-        className={[
-          "group relative flex h-7 min-w-8 flex-1 cursor-grab items-center justify-center rounded-md border border-dashed border-muted-foreground/40 px-2",
-          isDragging && "opacity-40",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        <span className="text-[10px] text-muted-foreground/60 select-none">
-          ⇔
-        </span>
-        <button
-          className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={handleDelete}
-          aria-label="Remove spacer"
+    <SortableItem id={itemKey}>
+      {({ isDragging }) => (
+        <div
+          className={cn(
+            "group relative flex h-7 min-w-8 flex-1 cursor-grab items-center justify-center rounded-md border border-dashed border-muted-foreground/40 px-2",
+            isDragging && "opacity-40",
+          )}
         >
-          <MdClose className="size-2.5" />
-        </button>
-      </div>
-      {showAfter && <div className="reorder-drop-indicator" />}
-    </>
+          <span className="text-[10px] text-muted-foreground/60 select-none">
+            ⇔
+          </span>
+          <button
+            className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={handleDelete}
+            aria-label="Remove spacer"
+          >
+            <MdClose className="size-2.5" />
+          </button>
+        </div>
+      )}
+    </SortableItem>
   );
 }
 

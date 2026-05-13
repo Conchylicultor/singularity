@@ -243,7 +243,7 @@ export function registerBarrelStubs(_repoRoot: string): void {
       build.module("@dnd-kit/core", () => ({
         exports: {
           DndContext: noop, DragOverlay: noop, PointerSensor: noop,
-          pointerWithin: noop,
+          pointerWithin: noop, closestCenter: noop,
           useDraggable: () => dragReturn,
           useDroppable: () => ({ setNodeRef: noop, isOver: false }),
           useSensor: () => ({}), useSensors: () => [],

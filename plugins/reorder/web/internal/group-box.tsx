@@ -13,7 +13,6 @@ export function ReorderGroupBox({
   group,
   storageId,
   editMode,
-  dragInProgress,
   autoFocusRename,
   onRenameFocused,
   children,
@@ -21,7 +20,6 @@ export function ReorderGroupBox({
   group: ReorderGroup;
   storageId: string;
   editMode: boolean;
-  dragInProgress: boolean;
   autoFocusRename?: boolean;
   onRenameFocused?: () => void;
   children: ReactNode;
@@ -33,11 +31,11 @@ export function ReorderGroupBox({
   });
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: `reorder-drop-group-${group.id}`,
+    id: `group-join:${group.id}`,
     data: { zone: "group-join", groupId: group.id },
   });
 
-  const effectiveExpanded = (dragInProgress || isDragging) ? false : group.expanded;
+  const effectiveExpanded = isDragging ? false : group.expanded;
 
   function handleDelete() {
     void fetch(`/api/reorder/groups/${group.id}`, {

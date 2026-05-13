@@ -1,16 +1,15 @@
-import { useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useContext, useMemo, useRef, type ReactNode } from "react";
 import type { Contribution } from "@core";
 import {
-  DndContext,
-  PointerSensor,
+  closestCenter,
   pointerWithin,
-  useSensor,
-  useSensors,
+  type CollisionDetection,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { RenderSlotSubIdContext } from "@plugins/primitives/plugins/slot-render/web";
+import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";
 import { reorderGroupsResource } from "@plugins/reorder/plugins/groups/core";
 import { reorderPrefsResource } from "../../shared/resource";
 import { useEditMode } from "./edit-mode-store";
@@ -23,18 +22,38 @@ import {
   isGroupEntry,
   isSpacer,
   SPACER_PREFIX,
+  type SpacerItem,
+  type TopLevelEntry,
 } from "./sorting";
 import {
-  DRAG_GROUP_PREFIX,
-  DRAG_PREFIX,
   RestoreButton,
   SpacerReorderItem,
-  stripPrefix,
-  type InsertionIndicator,
-  type GroupingIndicator,
   ReorderAreaContext,
   type ReorderAreaCtxValue,
 } from "./dnd-components";
+
+const DRAG_GROUP_PREFIX = "reorder-drag-group-";
+
+const reorderCollisionDetection: CollisionDetection = (args) => {
+  const sortableContainers = args.droppableContainers.filter((c) => {
+    const id = String(c.id);
+    return !id.startsWith("group-zone:") && !id.startsWith("group-join:");
+  });
+  const sortableHits = closestCenter({
+    ...args,
+    droppableContainers: sortableContainers,
+  });
+
+  const withinHits = pointerWithin(args);
+  const zoneHits = withinHits.filter((c) => {
+    const zone = (
+      c.data?.droppableContainer?.data?.current as Record<string, unknown>
+    )?.zone;
+    return zone === "child" || zone === "group-join";
+  });
+
+  return [...sortableHits, ...zoneHits];
+};
 
 export function ReorderListMiddleware({
   slotId,
@@ -125,12 +144,39 @@ function ReorderListMiddlewareInner({
       )
         return;
 
+      const rm = rankMapRef.current;
+      const patch = (cId: string, rank: Rank) =>
+        void fetch(`/api/reorder/${storageId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contributionId: cId, rank: String(rank) }),
+        });
+
       const siblings = list.filter((x) => {
         if (entryKey(x) === draggedKey) return false;
         if (isSpacer(x)) return true;
         if ((x as Record<string, unknown>).excludeFromReorder) return false;
         return true;
       });
+
+      const hasUnranked = siblings.some(
+        (x) => !rm[entryKey(x)]?.rank,
+      );
+      if (hasUnranked) {
+        let prevR: Rank | null = null;
+        for (const item of siblings) {
+          const existing = rm[entryKey(item)]?.rank ?? null;
+          if (existing) {
+            prevR = existing;
+          } else {
+            const newR = Rank.between(prevR, null);
+            prevR = newR;
+            patch(entryKey(item), newR);
+            rm[entryKey(item)] = { ...rm[entryKey(item)], rank: newR };
+          }
+        }
+      }
+
       const tIdx = siblings.findIndex((x) => entryKey(x) === overKey);
       if (tIdx < 0) return;
 
@@ -138,7 +184,6 @@ function ReorderListMiddlewareInner({
       const prev = movingDown ? siblings[tIdx]! : (siblings[tIdx - 1] ?? null);
       const next = movingDown ? (siblings[tIdx + 1] ?? null) : siblings[tIdx]!;
 
-      const rm = rankMapRef.current;
       const prevRank = prev ? (rm[entryKey(prev)]?.rank ?? null) : null;
       const nextRank = next ? (rm[entryKey(next)]?.rank ?? null) : null;
 
@@ -157,11 +202,7 @@ function ReorderListMiddlewareInner({
         );
       }
 
-      void fetch(`/api/reorder/${storageId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contributionId: draggedKey, rank: newRank }),
-      });
+      patch(draggedKey, newRank);
     },
     [storageId],
   );
@@ -223,67 +264,68 @@ function ReorderListMiddlewareInner({
   );
 
   const onGroupReorder = useCallback(
-    (groupId: string, overData: Record<string, unknown>) => {
+    (groupId: string, overId: string) => {
       const gd = groupsDataRef.current;
       if (!gd) return;
-      if (gd.groups.findIndex((g) => g.id === groupId) < 0) return;
+      if (!gd.groups.some((g) => g.id === groupId)) return;
+      if (overId.startsWith("group-zone:")) return;
 
       const ge = groupedEntriesRef.current;
-      const zone = overData.zone as string | undefined;
-      const targetId = overData.targetId as string | undefined;
-      const targetGroupId = overData.groupId as string | undefined;
+      const rm = rankMapRef.current;
 
-      let prevRank: Rank | null = null;
-      let nextRank: Rank | null = null;
+      const draggedIdx = ge.findIndex(
+        (e) => isGroupEntry(e) && e.group.id === groupId,
+      );
 
-      if (zone === "before" || zone === "after") {
-        const topLevelIdx = ge.findIndex((e) => {
-          if (isGroupEntry(e)) return e.group.id === targetId;
-          return entryKey(e) === targetId;
-        });
-        if (topLevelIdx < 0) return;
-
-        if (zone === "before") {
-          const prev = topLevelIdx > 0 ? ge[topLevelIdx - 1] : null;
-          const next = ge[topLevelIdx];
-          prevRank = prev
-            ? isGroupEntry(prev)
-              ? prev.group.rank
-              : (rankMapRef.current?.[entryKey(prev)]?.rank ?? null)
-            : null;
-          nextRank = next
-            ? isGroupEntry(next)
-              ? next.group.rank
-              : (rankMapRef.current?.[entryKey(next)]?.rank ?? null)
-            : null;
-        } else {
-          const prev = ge[topLevelIdx];
-          const next =
-            topLevelIdx + 1 < ge.length ? ge[topLevelIdx + 1] : null;
-          prevRank = prev
-            ? isGroupEntry(prev)
-              ? prev.group.rank
-              : (rankMapRef.current?.[entryKey(prev)]?.rank ?? null)
-            : null;
-          nextRank = next
-            ? isGroupEntry(next)
-              ? next.group.rank
-              : (rankMapRef.current?.[entryKey(next)]?.rank ?? null)
-            : null;
-        }
-      } else if (targetGroupId) {
-        const groups = gd.groups;
-        const targetGroup = groups.find((g) => g.id === targetGroupId);
-        if (!targetGroup || targetGroup.id === groupId) return;
-        prevRank = targetGroup.rank;
-        const gIdx = groups.indexOf(targetGroup);
-        const nextGroup = groups[gIdx + 1];
-        nextRank = nextGroup ? nextGroup.rank : null;
+      let overIdx: number;
+      if (overId.startsWith("group-join:")) {
+        const tid = overId.slice("group-join:".length);
+        overIdx = ge.findIndex((e) => isGroupEntry(e) && e.group.id === tid);
+      } else {
+        overIdx = ge.findIndex(
+          (e) =>
+            !isGroupEntry(e) &&
+            entryKey(e as Contribution | SpacerItem) === overId,
+        );
       }
+      if (draggedIdx < 0 || overIdx < 0) return;
+
+      const siblings = ge.filter(
+        (e) => !(isGroupEntry(e) && e.group.id === groupId),
+      );
+
+      let targetIdx: number;
+      if (overId.startsWith("group-join:")) {
+        const tid = overId.slice("group-join:".length);
+        targetIdx = siblings.findIndex(
+          (e) => isGroupEntry(e) && e.group.id === tid,
+        );
+      } else {
+        targetIdx = siblings.findIndex(
+          (e) =>
+            !isGroupEntry(e) &&
+            entryKey(e as Contribution | SpacerItem) === overId,
+        );
+      }
+      if (targetIdx < 0) return;
+
+      const movingDown = draggedIdx < overIdx;
+      const prev = movingDown
+        ? siblings[targetIdx]
+        : (siblings[targetIdx - 1] ?? null);
+      const next = movingDown
+        ? (siblings[targetIdx + 1] ?? null)
+        : siblings[targetIdx];
+
+      const entryRank = (entry: TopLevelEntry | null | undefined): Rank | null => {
+        if (!entry) return null;
+        if (isGroupEntry(entry)) return entry.group.rank;
+        return rm[entryKey(entry as Contribution | SpacerItem)]?.rank ?? null;
+      };
 
       let newRank: Rank;
       try {
-        newRank = Rank.between(prevRank, nextRank);
+        newRank = Rank.between(entryRank(prev), entryRank(next));
       } catch {
         return;
       }
@@ -306,37 +348,69 @@ function ReorderListMiddlewareInner({
   const onGroupReorderRef = useRef(onGroupReorder);
   onGroupReorderRef.current = onGroupReorder;
 
-  // --- DndContext rendering --------------------------------------------------
+  // --- Sortable IDs ----------------------------------------------------------
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-  );
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [overId, setOverId] = useState<string | null>(null);
-  const [overData, setOverData] = useState<Record<string, unknown>>({});
-
-  let insertionIndicator: InsertionIndicator = null;
-  let groupingIndicator: GroupingIndicator = null;
-
-  if (activeId && overId && activeId !== overId) {
-    const zone = overData.zone as string | undefined;
-
-    if (zone) {
-      if (zone === "before") {
-        insertionIndicator = {
-          itemId: overData.targetId as string,
-          position: "before",
-        };
-      } else if (zone === "after") {
-        insertionIndicator = {
-          itemId: overData.targetId as string,
-          position: "after",
-        };
-      } else if (zone === "child") {
-        groupingIndicator = { targetId: overData.targetId as string };
+  const sortableIds = useMemo(() => {
+    const ids: string[] = [];
+    for (const entry of state.groupedEntries) {
+      if (isGroupEntry(entry)) {
+        for (const member of entry.members) {
+          if (isSpacer(member)) {
+            ids.push(member.id);
+          } else if (
+            !(member as Record<string, unknown>).excludeFromReorder
+          ) {
+            ids.push(entryKey(member));
+          }
+        }
+      } else if (isSpacer(entry)) {
+        ids.push(entry.id);
+      } else if (
+        !(entry as Record<string, unknown>).excludeFromReorder
+      ) {
+        ids.push(entryKey(entry));
       }
     }
-  }
+    return ids;
+  }, [state.groupedEntries]);
+
+  // --- onMove dispatch -------------------------------------------------------
+
+  const handleMove = useCallback(
+    (activeId: string, overId: string, event: DragEndEvent) => {
+      if (activeId.startsWith(DRAG_GROUP_PREFIX)) {
+        const gId = activeId.slice(DRAG_GROUP_PREFIX.length);
+        onGroupReorderRef.current(gId, overId);
+        return;
+      }
+
+      const zoneCollision = event.collisions?.find((c) => {
+        const zone = (
+          c.data?.droppableContainer?.data?.current as Record<string, unknown>
+        )?.zone;
+        return zone === "child" || zone === "group-join";
+      });
+
+      if (zoneCollision) {
+        const zoneId = String(zoneCollision.id);
+        if (zoneId.startsWith("group-zone:")) {
+          const targetKey = zoneId.slice("group-zone:".length);
+          onGroupCreateRef.current(activeId, targetKey);
+          return;
+        }
+        if (zoneId.startsWith("group-join:")) {
+          const groupId = zoneId.slice("group-join:".length);
+          onGroupJoinRef.current(activeId, groupId);
+          return;
+        }
+      }
+
+      onDropRef.current(activeId, overId);
+    },
+    [],
+  );
+
+  // --- Spacer / group helpers ------------------------------------------------
 
   function addSpacer() {
     const rm = rankMapRef.current;
@@ -376,74 +450,36 @@ function ReorderListMiddlewareInner({
   const ctxValue: ReorderAreaCtxValue = {
     storageId,
     hiddenItems,
-    insertionIndicator,
-    groupingIndicator,
     addSpacer,
     addGroup,
-    dragInProgress: activeId !== null,
+    dragInProgress: false,
   };
+
+  // --- Render with overlay ---------------------------------------------------
+
+  const renderOverlay = useCallback(
+    (activeId: string) => {
+      const contribution = entriesRef.current.find(
+        (x) => entryKey(x) === activeId,
+      );
+      if (!contribution || isSpacer(contribution)) return null;
+      return (
+        <div className="rounded-md border border-border bg-background/90 shadow-lg">
+          {renderItem(contribution as Contribution)}
+        </div>
+      );
+    },
+    [renderItem],
+  );
 
   return (
     <ReorderAreaContext.Provider value={ctxValue}>
-      <DndContext
-        sensors={sensors}
-        collisionDetection={pointerWithin}
-        onDragStart={(e) => {
-          const id = String(e.active.id);
-          if (id.startsWith(DRAG_GROUP_PREFIX)) {
-            setActiveId(id);
-          } else {
-            setActiveId(stripPrefix(DRAG_PREFIX, id));
-          }
-        }}
-        onDragOver={(e) => {
-          if (e.over) {
-            setOverId(String(e.over.id));
-            setOverData(
-              (e.over.data.current as Record<string, unknown>) ?? {},
-            );
-          } else {
-            setOverId(null);
-            setOverData({});
-          }
-        }}
-        onDragEnd={(e: DragEndEvent) => {
-          const activeIdStr = String(e.active.id);
-          const dropData =
-            (e.over?.data.current as Record<string, unknown>) ?? {};
-          const zone = dropData.zone as string | undefined;
-
-          if (activeIdStr.startsWith(DRAG_GROUP_PREFIX)) {
-            const gId = activeIdStr.slice(DRAG_GROUP_PREFIX.length);
-            if (e.over) {
-              onGroupReorderRef.current(gId, dropData);
-            }
-          } else {
-            const draggedKey = stripPrefix(DRAG_PREFIX, activeIdStr);
-
-            if (zone) {
-              if (zone === "before" || zone === "after") {
-                const tId = dropData.targetId as string;
-                if (tId) onDropRef.current(draggedKey, tId);
-              } else if (zone === "child") {
-                const tId = dropData.targetId as string;
-                if (tId) onGroupCreateRef.current(draggedKey, tId);
-              } else if (zone === "group-join") {
-                const gId = dropData.groupId as string;
-                if (gId) onGroupJoinRef.current(draggedKey, gId);
-              }
-            }
-          }
-
-          setActiveId(null);
-          setOverId(null);
-          setOverData({});
-        }}
-        onDragCancel={() => {
-          setActiveId(null);
-          setOverId(null);
-          setOverData({});
-        }}
+      <SortableList
+        items={sortableIds}
+        onMove={handleMove}
+        overlay={editMode ? renderOverlay : undefined}
+        disabled={!editMode}
+        collisionDetection={reorderCollisionDetection}
       >
         {state.groupedEntries.map((entry) => {
           if (isGroupEntry(entry)) {
@@ -453,7 +489,6 @@ function ReorderListMiddlewareInner({
                 group={entry.group}
                 storageId={storageId}
                 editMode={editMode}
-                dragInProgress={activeId !== null}
               >
                 {entry.members.map((member) => {
                   if (isSpacer(member)) {
@@ -462,7 +497,6 @@ function ReorderListMiddlewareInner({
                         key={member.id}
                         itemKey={member.id}
                         storageId={storageId}
-                        insertionIndicator={insertionIndicator}
                       />
                     );
                   }
@@ -477,7 +511,6 @@ function ReorderListMiddlewareInner({
                 key={entry.id}
                 itemKey={entry.id}
                 storageId={storageId}
-                insertionIndicator={insertionIndicator}
               />
             );
           }
@@ -491,7 +524,7 @@ function ReorderListMiddlewareInner({
             addGroup={addGroup}
           />
         )}
-      </DndContext>
+      </SortableList>
     </ReorderAreaContext.Provider>
   );
 }

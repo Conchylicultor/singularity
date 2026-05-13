@@ -409,6 +409,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-resume",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/side-conversation": {
+      "name": "@singularity/plugin-conversations-conversation-view-side-conversation",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/side-task": {
       "name": "@singularity/plugin-conversations-conversation-view-side-task",
       "version": "0.0.1",
@@ -695,26 +699,6 @@
       "name": "@singularity/plugin-primitives-breadcrumb",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/collapsible": {
-      "name": "@singularity/plugin-primitives-collapsible",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/command-palette": {
-      "name": "@singularity/plugin-primitives-command-palette",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/copy-to-clipboard": {
-      "name": "@singularity/plugin-primitives-copy-to-clipboard",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/cursor-pagination": {
-      "name": "@singularity/plugin-primitives-cursor-pagination",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/data-table": {
-      "name": "@singularity/plugin-primitives-data-table",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/detail-sections": {
       "name": "@singularity/plugin-primitives-detail-sections",
       "version": "0.0.1",
@@ -735,10 +719,6 @@
       "name": "@singularity/plugin-primitives-filepath-breadcrumb",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/filter-chips": {
-      "name": "@singularity/plugin-primitives-filter-chips",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/icon-button": {
       "name": "@singularity/plugin-primitives-icon-button",
       "version": "0.0.1",
@@ -755,10 +735,6 @@
       "name": "@singularity/plugin-primitives-markdown",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/multi-select": {
-      "name": "@singularity/plugin-primitives-multi-select",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/networking": {
       "name": "@singularity/plugin-primitives-networking",
       "version": "0.0.1",
@@ -767,28 +743,16 @@
       "name": "@singularity/plugin-primitives-pane",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/persistent-draft": {
-      "name": "@singularity/plugin-primitives-persistent-draft",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/placeholder": {
-      "name": "@singularity/plugin-primitives-placeholder",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/popover": {
-      "name": "@singularity/plugin-primitives-popover",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/prompt-editor": {
-      "name": "@singularity/plugin-primitives-prompt-editor",
+    "plugins/primitives/plugins/paste-images": {
+      "name": "@singularity/plugin-primitives-paste-images",
       "version": "0.0.1",
       "dependencies": {
         "@lexical/react": "^0.44.0",
         "lexical": "^0.44.0",
       },
     },
-    "plugins/primitives/plugins/prompt-editor/plugins/paste-images": {
-      "name": "@singularity/plugin-primitives-prompt-editor-paste-images",
+    "plugins/primitives/plugins/persistent-draft": {
+      "name": "@singularity/plugin-primitives-persistent-draft",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/rank": {
@@ -799,28 +763,12 @@
       "name": "@singularity/plugin-primitives-relative-time",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/search": {
-      "name": "@singularity/plugin-primitives-search",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/section-label": {
-      "name": "@singularity/plugin-primitives-section-label",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/shortcuts": {
-      "name": "@singularity/plugin-primitives-shortcuts",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/slot-render": {
       "name": "@singularity/plugin-primitives-slot-render",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/spinner": {
-      "name": "@singularity/plugin-primitives-spinner",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/status-dot": {
-      "name": "@singularity/plugin-primitives-status-dot",
+    "plugins/primitives/plugins/sortable-list": {
+      "name": "@singularity/plugin-primitives-sortable-list",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/syntax-highlight": {
@@ -1769,6 +1717,8 @@
 
     "@singularity/plugin-conversations-conversation-view-resume": ["@singularity/plugin-conversations-conversation-view-resume@workspace:plugins/conversations/plugins/conversation-view/plugins/resume"],
 
+    "@singularity/plugin-conversations-conversation-view-side-conversation": ["@singularity/plugin-conversations-conversation-view-side-conversation@workspace:plugins/conversations/plugins/conversation-view/plugins/side-conversation"],
+
     "@singularity/plugin-conversations-conversation-view-side-task": ["@singularity/plugin-conversations-conversation-view-side-task@workspace:plugins/conversations/plugins/conversation-view/plugins/side-task"],
 
     "@singularity/plugin-conversations-conversation-view-status": ["@singularity/plugin-conversations-conversation-view-status@workspace:plugins/conversations/plugins/conversation-view/plugins/status"],
@@ -1909,16 +1859,6 @@
 
     "@singularity/plugin-primitives-breadcrumb": ["@singularity/plugin-primitives-breadcrumb@workspace:plugins/primitives/plugins/breadcrumb"],
 
-    "@singularity/plugin-primitives-collapsible": ["@singularity/plugin-primitives-collapsible@workspace:plugins/primitives/plugins/collapsible"],
-
-    "@singularity/plugin-primitives-command-palette": ["@singularity/plugin-primitives-command-palette@workspace:plugins/primitives/plugins/command-palette"],
-
-    "@singularity/plugin-primitives-copy-to-clipboard": ["@singularity/plugin-primitives-copy-to-clipboard@workspace:plugins/primitives/plugins/copy-to-clipboard"],
-
-    "@singularity/plugin-primitives-cursor-pagination": ["@singularity/plugin-primitives-cursor-pagination@workspace:plugins/primitives/plugins/cursor-pagination"],
-
-    "@singularity/plugin-primitives-data-table": ["@singularity/plugin-primitives-data-table@workspace:plugins/primitives/plugins/data-table"],
-
     "@singularity/plugin-primitives-detail-sections": ["@singularity/plugin-primitives-detail-sections@workspace:plugins/primitives/plugins/detail-sections"],
 
     "@singularity/plugin-primitives-editable-field": ["@singularity/plugin-primitives-editable-field@workspace:plugins/primitives/plugins/editable-field"],
@@ -1929,8 +1869,6 @@
 
     "@singularity/plugin-primitives-filepath-breadcrumb": ["@singularity/plugin-primitives-filepath-breadcrumb@workspace:plugins/primitives/plugins/filepath-breadcrumb"],
 
-    "@singularity/plugin-primitives-filter-chips": ["@singularity/plugin-primitives-filter-chips@workspace:plugins/primitives/plugins/filter-chips"],
-
     "@singularity/plugin-primitives-icon-button": ["@singularity/plugin-primitives-icon-button@workspace:plugins/primitives/plugins/icon-button"],
 
     "@singularity/plugin-primitives-launch": ["@singularity/plugin-primitives-launch@workspace:plugins/primitives/plugins/launch"],
@@ -1939,37 +1877,21 @@
 
     "@singularity/plugin-primitives-markdown": ["@singularity/plugin-primitives-markdown@workspace:plugins/primitives/plugins/markdown"],
 
-    "@singularity/plugin-primitives-multi-select": ["@singularity/plugin-primitives-multi-select@workspace:plugins/primitives/plugins/multi-select"],
-
     "@singularity/plugin-primitives-networking": ["@singularity/plugin-primitives-networking@workspace:plugins/primitives/plugins/networking"],
 
     "@singularity/plugin-primitives-pane": ["@singularity/plugin-primitives-pane@workspace:plugins/primitives/plugins/pane"],
 
+    "@singularity/plugin-primitives-paste-images": ["@singularity/plugin-primitives-paste-images@workspace:plugins/primitives/plugins/paste-images"],
+
     "@singularity/plugin-primitives-persistent-draft": ["@singularity/plugin-primitives-persistent-draft@workspace:plugins/primitives/plugins/persistent-draft"],
-
-    "@singularity/plugin-primitives-placeholder": ["@singularity/plugin-primitives-placeholder@workspace:plugins/primitives/plugins/placeholder"],
-
-    "@singularity/plugin-primitives-popover": ["@singularity/plugin-primitives-popover@workspace:plugins/primitives/plugins/popover"],
-
-    "@singularity/plugin-primitives-prompt-editor": ["@singularity/plugin-primitives-prompt-editor@workspace:plugins/primitives/plugins/prompt-editor"],
-
-    "@singularity/plugin-primitives-prompt-editor-paste-images": ["@singularity/plugin-primitives-prompt-editor-paste-images@workspace:plugins/primitives/plugins/prompt-editor/plugins/paste-images"],
 
     "@singularity/plugin-primitives-rank": ["@singularity/plugin-primitives-rank@workspace:plugins/primitives/plugins/rank"],
 
     "@singularity/plugin-primitives-relative-time": ["@singularity/plugin-primitives-relative-time@workspace:plugins/primitives/plugins/relative-time"],
 
-    "@singularity/plugin-primitives-search": ["@singularity/plugin-primitives-search@workspace:plugins/primitives/plugins/search"],
-
-    "@singularity/plugin-primitives-section-label": ["@singularity/plugin-primitives-section-label@workspace:plugins/primitives/plugins/section-label"],
-
-    "@singularity/plugin-primitives-shortcuts": ["@singularity/plugin-primitives-shortcuts@workspace:plugins/primitives/plugins/shortcuts"],
-
     "@singularity/plugin-primitives-slot-render": ["@singularity/plugin-primitives-slot-render@workspace:plugins/primitives/plugins/slot-render"],
 
-    "@singularity/plugin-primitives-spinner": ["@singularity/plugin-primitives-spinner@workspace:plugins/primitives/plugins/spinner"],
-
-    "@singularity/plugin-primitives-status-dot": ["@singularity/plugin-primitives-status-dot@workspace:plugins/primitives/plugins/status-dot"],
+    "@singularity/plugin-primitives-sortable-list": ["@singularity/plugin-primitives-sortable-list@workspace:plugins/primitives/plugins/sortable-list"],
 
     "@singularity/plugin-primitives-syntax-highlight": ["@singularity/plugin-primitives-syntax-highlight@workspace:plugins/primitives/plugins/syntax-highlight"],
 
