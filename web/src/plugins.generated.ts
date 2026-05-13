@@ -143,6 +143,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "primitives/plugins/file-links", loader: () => import("@plugins/primitives/plugins/file-links/web") },
   { name: "primitives/plugins/filepath-breadcrumb", loader: () => import("@plugins/primitives/plugins/filepath-breadcrumb/web") },
   { name: "primitives/plugins/filter-chips", loader: () => import("@plugins/primitives/plugins/filter-chips/web") },
+  { name: "primitives/plugins/floating-action", loader: () => import("@plugins/primitives/plugins/floating-action/web") },
   { name: "primitives/plugins/icon-button", loader: () => import("@plugins/primitives/plugins/icon-button/web") },
   { name: "primitives/plugins/launch", loader: () => import("@plugins/primitives/plugins/launch/web") },
   { name: "primitives/plugins/live-state", loader: () => import("@plugins/primitives/plugins/live-state/web") },

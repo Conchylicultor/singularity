@@ -743,6 +743,10 @@
       "name": "@singularity/plugin-primitives-filter-chips",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/floating-action": {
+      "name": "@singularity/plugin-primitives-floating-action",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/icon-button": {
       "name": "@singularity/plugin-primitives-icon-button",
       "version": "0.0.1",
@@ -1940,6 +1944,8 @@
     "@singularity/plugin-primitives-filepath-breadcrumb": ["@singularity/plugin-primitives-filepath-breadcrumb@workspace:plugins/primitives/plugins/filepath-breadcrumb"],
 
     "@singularity/plugin-primitives-filter-chips": ["@singularity/plugin-primitives-filter-chips@workspace:plugins/primitives/plugins/filter-chips"],
+
+    "@singularity/plugin-primitives-floating-action": ["@singularity/plugin-primitives-floating-action@workspace:plugins/primitives/plugins/floating-action"],
 
     "@singularity/plugin-primitives-icon-button": ["@singularity/plugin-primitives-icon-button@workspace:plugins/primitives/plugins/icon-button"],
 

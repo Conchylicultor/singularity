@@ -21,6 +21,7 @@
   - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable buttons that fire onFileOpen. Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides.
   - **`filepath-breadcrumb`** — File-path breadcrumb with copy-to-clipboard and directory navigation. Wraps the generic Breadcrumb with filepath-specific behavior.
   - **`filter-chips`** — Toggle-chip filter primitive: FilterChip, FilterGroup, and useChipFilter hook for single-select enum filtering.
+  - **`floating-action`** — CSS group-hover floating action that morphs from a collapsed pill to an expanded panel with animated dimensions, background, and shadow.
   - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
   - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
   - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
