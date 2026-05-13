@@ -1184,6 +1184,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `BreadcrumbProps`, `BreadcrumbSegment`
         - Values: `Breadcrumb`
+    - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
+      - Defines:
+        - Slots: `CommandPalette.Item`
+        - Commands: `CommandPaletteCommands.Open`, `CommandPaletteCommands.Toggle`
+      - Exports (web):
+        - Types: `CommandPaletteItem`
+        - Values: `CommandPalette`, `CommandPaletteCommands`
+      - Contributes:
+        - `Core.Root` → `CommandPaletteRoot`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
       - Exports (web):
         - Types: `ColumnDef`, `DataTableProps`
