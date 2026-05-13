@@ -3,9 +3,8 @@ import {
   createElement,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ComponentType,
   type ReactNode,
 } from "react";
@@ -325,8 +324,22 @@ function notifyChainListeners(): void {
   for (const fn of chainListeners) fn();
 }
 
+function subscribeChain(cb: () => void): () => void {
+  chainListeners.add(cb);
+  return () => chainListeners.delete(cb);
+}
+
+function getChainSnapshot(): PaneSlot[] {
+  return currentChain;
+}
+
+function useChain(): PaneSlot[] {
+  return useSyncExternalStore(subscribeChain, getChainSnapshot, () => []);
+}
+
 function setChain(chain: PaneSlot[], replace = false): void {
   currentChain = chain;
+  notifyChainListeners();
   const url = buildChainUrl(chain);
   navigate(url, replace);
 }
@@ -346,16 +359,6 @@ function chainsEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
 }
 
 export function syncChainFromUrl(pathname: string): void {
-  // Guard: skip if the given pathname is stale. After a programmatic
-  // navigate (close/open), pushState updates the URL immediately but
-  // React's usePathname setState is batched. An unrelated re-render
-  // between those two moments would call us with the old pathname and
-  // overwrite the chain that close() just set — causing the "need to
-  // click X twice" bug.
-  if (typeof window !== "undefined") {
-    const actual = stripBasePath(window.location.pathname, currentBasePath);
-    if (pathname !== actual) return;
-  }
   const parsed = parseUrl(pathname);
   const newChain = parsed ?? [];
   if (chainsEqual(currentChain, newChain)) return;
@@ -529,6 +532,21 @@ function applyBasePath(rawUrl: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// URL → chain sync (module-level listener, outside React render).
+// ---------------------------------------------------------------------------
+
+function handleLocationChange(): void {
+  if (typeof window === "undefined") return;
+  const pathname = stripBasePath(window.location.pathname, currentBasePath);
+  syncChainFromUrl(pathname);
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("popstate", handleLocationChange);
+  window.addEventListener("shell:navigate", handleLocationChange);
+}
+
+// ---------------------------------------------------------------------------
 // Navigation + location hook.
 // ---------------------------------------------------------------------------
 
@@ -546,19 +564,18 @@ function navigate(url: string, replace = false): void {
 }
 
 export function usePathname(): string {
-  const [pathname, setPathname] = useState(() =>
-    typeof window === "undefined" ? "/" : window.location.pathname,
+  return useSyncExternalStore(
+    (cb) => {
+      window.addEventListener("popstate", cb);
+      window.addEventListener("shell:navigate", cb);
+      return () => {
+        window.removeEventListener("popstate", cb);
+        window.removeEventListener("shell:navigate", cb);
+      };
+    },
+    () => window.location.pathname,
+    () => "/",
   );
-  useEffect(() => {
-    const onChange = () => setPathname(window.location.pathname);
-    window.addEventListener("popstate", onChange);
-    window.addEventListener("shell:navigate", onChange);
-    return () => {
-      window.removeEventListener("popstate", onChange);
-      window.removeEventListener("shell:navigate", onChange);
-    };
-  }, []);
-  return pathname;
 }
 
 // ---------------------------------------------------------------------------
@@ -830,6 +847,11 @@ export function useSyncPaneRegistry(): void {
       seen.add(internal.id);
       registry.set(internal.id, internal);
     }
+    // Re-sync the chain from the current URL now that the registry is
+    // populated. On initial load the module-level handleLocationChange()
+    // runs before any panes are registered, so the chain stays empty
+    // until this re-sync.
+    handleLocationChange();
   }, [contributions]);
 }
 
@@ -837,10 +859,9 @@ export function useSyncPaneRegistry(): void {
 // Memoized match used by the router and Outlet.
 // ---------------------------------------------------------------------------
 
-export function useMatchForPath(pathname: string): PaneMatch | null {
-  syncChainFromUrl(pathname);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- syncChainFromUrl mutates currentChain; pathname is the change signal
-  return useMemo(() => resolveChain(currentChain), [pathname]);
+export function useMatchForPath(_pathname: string): PaneMatch | null {
+  const chain = useChain();
+  return useMemo(() => resolveChain(chain), [chain]);
 }
 
 // ---------------------------------------------------------------------------

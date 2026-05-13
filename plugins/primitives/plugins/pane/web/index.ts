@@ -17,7 +17,6 @@ export {
   parseUrl,
   buildChainUrl,
   getChain,
-  syncChainFromUrl,
   openPane,
   useOpenPane,
 } from "./pane";
