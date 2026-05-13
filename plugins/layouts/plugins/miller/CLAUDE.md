@@ -6,6 +6,73 @@ nested `<Outlet/>` calls, Miller maps `match.chain` to a flat row of
 columns. Walking deeper in the URL appends a column on the right; closing
 a pane removes the rightmost column.
 
+## Mental model: the chain as a column stack
+
+The chain is an ordered list of panes (root → leaf, left → right). It is
+**the URL** — every pane is a URL segment, so the chain and the browser
+URL are always in sync. Miller renders each entry as one column.
+
+### Two ways to change the chain
+
+**Reset** — rebuild the chain from scratch. The new chain starts at the
+target pane's required ancestry (derived from its `after` declarations)
+and ignores whatever was on screen. Happens when there is no valid
+position for the target in the current chain.
+
+**Extend** — keep a prefix of the current chain and splice the target in.
+Always truncates everything to the right of the insertion point first.
+Three sub-cases, all handled by `useOpenPane` (caller-aware):
+
+| Case | Trigger | Result |
+|---|---|---|
+| **Open right** (default) | No special relationship | Truncate after caller, append target |
+| **Wrap left** | Caller declares `after: [target]` | Insert target before caller, validate right |
+| **Self-update** | Target is the caller | Update params in-place, truncate children |
+
+**Opening on the right always overwrites all columns to the right of the
+caller.** There is no way to open a column "beside" a sibling without
+affecting the columns further right.
+
+### Example walkthrough
+
+```
+Start:               conv1
+
+Open task pane       conv1 │ task          (open right from conv1)
+  from conv1 toolbar
+
+Click conv link      conv1 │ task │ conv2  (open right from task)
+  in task
+
+Click file link in   conv1 │ task │ conv2 │ file   (open right from conv2)
+  conv2
+
+Click file link in   conv1 │ file          (open right from conv1 — everything
+  conv1                                     right of conv1 is overwritten)
+
+Open attempt view    attempt │ conv1 │ file (wrap left — conv1 has after:[attempt],
+  from conv1                                 so attempt is inserted before conv1;
+                                             right side validated and kept)
+```
+
+The last step illustrates **wrap left**: because `conversationPane` declares
+`after: [attemptPane]`, `useOpenPane` detects that the caller (conv1) can
+follow the target (attempt), inserts attempt before conv1, then calls
+`validateChain` to keep the right side intact (`conv1 │ file` survives
+because it was already valid).
+
+### Implications for pane authors
+
+- **Buttons in a conversation toolbar open panes to the right.** They use
+  `useOpenPane` with no special options, so they always truncate the columns
+  to their right.
+- **To keep a pane's right context alive when inserting a parent**, declare
+  `after: [parentPane]` on the child. That lets `useOpenPane` detect the
+  wrap-left case and preserve the right side.
+- **To force a full reset** (e.g. switching to an unrelated top-level view),
+  call `openPane(target, params, { root: true })` or let the routing fall
+  through to `buildFreshChain`.
+
 ## Public API
 
 - `<MillerColumns/>` — the renderer. The shell mounts it once.
