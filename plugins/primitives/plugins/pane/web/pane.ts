@@ -953,7 +953,7 @@ export function openPane(
 export function useOpenPane(): (
   target: PaneObject<any, any, any>,
   params: Record<string, string>,
-  opts: { mode: PaneOpenMode },
+  opts: { mode: PaneOpenMode; side?: "left" | "right" },
 ) => void {
   const callerInstanceId = useContext(PaneInstanceContext);
 
@@ -961,7 +961,7 @@ export function useOpenPane(): (
     (
       target: PaneObject<any, any, any>,
       params: Record<string, string>,
-      opts: { mode: PaneOpenMode },
+      opts: { mode: PaneOpenMode; side?: "left" | "right" },
     ) => {
       const targetInternal = target._internal;
 
@@ -980,7 +980,6 @@ export function useOpenPane(): (
       }
 
       const callerPaneId = currentChain[callerIndex]!.paneId;
-      const callerPane = registry.get(callerPaneId);
       const ownParams = extractOwnParams(targetInternal, params);
       const replace =
         targetInternal.chrome.enabled && !targetInternal.chrome.history;
@@ -1001,15 +1000,11 @@ export function useOpenPane(): (
         return;
       }
 
-      // push: wrap left if caller depends on target as a prerequisite,
-      // otherwise open to the right (truncate after caller, append target).
-      // Wrap left: insert target immediately before the caller so its
-      // after-dependency is satisfied. Skip if already an ancestor.
-      if (callerPane?.after.has(targetInternal.id)) {
-        const alreadySatisfied = currentChain
+      if (opts.side === "left") {
+        const alreadyAncestor = currentChain
           .slice(0, callerIndex)
           .some((s) => s.paneId === targetInternal.id);
-        if (!alreadySatisfied) {
+        if (!alreadyAncestor) {
           const newChain = [
             ...currentChain.slice(0, callerIndex),
             createSlot(targetInternal.id, ownParams),
@@ -1020,7 +1015,7 @@ export function useOpenPane(): (
         }
       }
 
-      // Open right: truncate after caller, append target
+      // push right (default): truncate after caller, append target
       const newChain = [
         ...currentChain.slice(0, callerIndex + 1),
         createSlot(targetInternal.id, ownParams),

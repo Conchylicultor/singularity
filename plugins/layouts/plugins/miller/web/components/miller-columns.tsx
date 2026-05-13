@@ -61,7 +61,7 @@ export function MillerColumns() {
                 );
               }
             }
-            return <Fragment key={`${entry.pane.id}-${i}`}>{column}</Fragment>;
+            return <Fragment key={entry.instanceId}>{column}</Fragment>;
           })}
         </div>
       </PluginErrorBoundary>

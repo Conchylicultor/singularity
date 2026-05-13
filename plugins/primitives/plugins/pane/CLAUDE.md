@@ -70,8 +70,10 @@ Rules:
   - `[paneA]` — needs `paneA` somewhere above.
   - `[null, paneA]` — root or after `paneA`.
   - omitted — valid at **any** position (root or non-root).
-  Use `after` when the pane depends on ancestor-provided data (via
-  `useData()`) or when its segment collides with another pane's.
+  Use `after` only when the pane depends on ancestor-provided data (via
+  `useData()`) or when its segment collides with another pane's. Do NOT
+  use `after` to control insertion direction — use `side` on the
+  `openPane` call instead (see **Navigate** below).
 - `segment` is the pane's own URL fragment (no leading slash). Supports
   `:param` and `:rest*` (wildcard). Omit for "no URL segment of my own".
   **Segments with params must have a static prefix** (e.g. `t/:taskId`,
@@ -166,6 +168,29 @@ children rendered via `<Outlet/>`), `provide` is optional — render
 `open(params)` pushes a new URL. `close()` navigates to the parent.
 `promote()` detaches from ancestors and makes this pane the root.
 `back()`/`forward()` walk browser history.
+
+### `useOpenPane` — caller-aware navigation
+
+Inside a pane component, `useOpenPane()` returns a function that knows
+the caller's position in the chain:
+
+```tsx
+const openPane = useOpenPane();
+
+// Open to the right of me (default):
+openPane(taskDetailPane, { taskId }, { mode: "push" });
+
+// Insert to the left of me:
+openPane(attemptPane, { attemptId }, { mode: "push", side: "left" });
+```
+
+Modes:
+- `"root"` — replace the entire chain with a fresh one rooted at target.
+- `"push"` — insert target relative to the caller. `side: "right"`
+  (default) appends after the caller, truncating siblings to the right.
+  `side: "left"` inserts before the caller (skipped if already an ancestor).
+- `"swap"` — replace the caller's slot in-place (same pane type,
+  different params), truncating children.
 
 ## Chrome
 
