@@ -757,6 +757,13 @@ function define<
     : new Set<string | null>();
   const segment = (args.segment ?? "").replace(/^\/+/, "");
 
+  if (segment && segment.startsWith(":")) {
+    throw new Error(
+      `Pane "${args.id}": segment "${segment}" starts with a bare :param. ` +
+        `Add a static prefix (e.g. "x/${segment}") to avoid URL parsing ambiguity.`,
+    );
+  }
+
   const dataContext = createContext<unknown>(DATA_NOT_PROVIDED);
   dataContext.displayName = `PaneData(${args.id})`;
 
