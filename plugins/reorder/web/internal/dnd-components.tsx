@@ -70,10 +70,11 @@ export function SortableReorderItem({
   return (
     <SortableItem
       id={itemKey}
+      disabled={!editMode}
       className={
         editMode
           ? "group/reorder-item relative cursor-grab rounded-md ring-1 ring-primary/50"
-          : undefined
+          : "contents"
       }
     >
       {({ isDragging }) => (
@@ -92,7 +93,7 @@ export function SortableReorderItem({
             className={
               editMode
                 ? cn("pointer-events-none", isDragging && "opacity-40")
-                : undefined
+                : "contents"
             }
           >
             {children}
