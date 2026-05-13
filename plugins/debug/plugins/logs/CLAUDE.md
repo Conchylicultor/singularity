@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: System logs pane, opened from the Debug sidebar.
+- Exports (core):
+  - Types: `ClientMessage`, `EntryMsg`, `ErrorMsg`, `HistoryMsg`, `LogEntryWire`, `ServerMessage`, `SubscribeMsg`
 - Exports (web):
   - Values: `logChannelPane`, `logsPane`
 - Exports (server):

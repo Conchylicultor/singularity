@@ -337,7 +337,7 @@ function pluginForPath(relFile: string, pluginSet: Set<string>): string | null {
 // ============================================================================
 
 const SOURCE_ROOTS = ["plugins", "web/src", "server/src", "central/src"];
-const IGNORED_DIRS = new Set(["node_modules", "dist", "build", ".git"]);
+const IGNORED_DIRS = new Set(["node_modules", "dist", ".git"]);
 
 function findSourceFiles(root: string): string[] {
   const out: string[] = [];

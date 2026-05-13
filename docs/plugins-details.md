@@ -902,6 +902,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `GET /api/debug/backup-db`
         - `POST /api/debug/backup-db`
     - **`logs`** — System logs pane, opened from the Debug sidebar.
+      - Exports (core):
+        - Types: `ClientMessage`, `EntryMsg`, `ErrorMsg`, `HistoryMsg`, `LogEntryWire`, `ServerMessage`, `SubscribeMsg`
       - Exports (web):
         - Values: `logChannelPane`, `logsPane`
       - Exports (server):

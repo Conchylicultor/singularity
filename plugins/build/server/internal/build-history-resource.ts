@@ -1,7 +1,7 @@
 import { desc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
-import { BuildRunSchema } from "../../shared/resources";
+import { BuildRunSchema } from "@plugins/build/shared";
 import { _buildRuns } from "./tables";
 import { z } from "zod";
 

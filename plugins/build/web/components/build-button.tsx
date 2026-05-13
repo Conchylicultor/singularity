@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { mainAheadCountResource, buildHistoryResource } from "../../shared/resources";
+import { mainAheadCountResource, buildHistoryResource } from "@plugins/build/shared";
 import { BuildPopoverContent } from "./build-popover-content";
 import { buildPane } from "../panes";
 

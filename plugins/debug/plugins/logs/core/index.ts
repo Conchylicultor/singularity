@@ -6,4 +6,4 @@ export type {
   EntryMsg,
   ErrorMsg,
   ServerMessage,
-} from "@plugins/debug/plugins/logs/core";
+} from "./protocol";

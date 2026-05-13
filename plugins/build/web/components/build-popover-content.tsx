@@ -7,9 +7,9 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { useStickyScroll, JumpToBottomButton } from "@plugins/primitives/plugins/auto-scroll/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { buildHistoryResource } from "../../shared/resources";
-import type { BuildRun } from "../../shared/resources";
-import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/debug/plugins/logs/shared/protocol";
+import { buildHistoryResource } from "@plugins/build/shared";
+import type { BuildRun } from "@plugins/build/shared";
+import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/debug/plugins/logs/core";
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
 
