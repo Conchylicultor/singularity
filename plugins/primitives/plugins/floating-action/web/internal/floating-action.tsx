@@ -6,17 +6,27 @@ import {
 } from "react";
 import { cn } from "@/lib/utils";
 
+const TRANSITION_DURATION = 200;
+
 function useHoverIntent(closeDelay = 150) {
   const [hovered, setHovered] = useState(false);
   const timeout = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const closingRef = useRef(false);
 
   const onMouseEnter = useCallback(() => {
+    if (closingRef.current) return;
     clearTimeout(timeout.current);
     setHovered(true);
   }, []);
 
   const onMouseLeave = useCallback(() => {
-    timeout.current = setTimeout(() => setHovered(false), closeDelay);
+    timeout.current = setTimeout(() => {
+      setHovered(false);
+      closingRef.current = true;
+      setTimeout(() => {
+        closingRef.current = false;
+      }, TRANSITION_DURATION);
+    }, closeDelay);
   }, [closeDelay]);
 
   return { hovered, onMouseEnter, onMouseLeave };
