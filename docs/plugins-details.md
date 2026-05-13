@@ -1176,10 +1176,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `JumpToBottomButtonProps`, `StickyScrollHandle`, `UseStickyScrollOptions`
         - Values: `JumpToBottomButton`, `useStickyScroll`
-    - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
+    - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
       - Exports (web):
-        - Types: `AvatarColor`, `AvatarIconCategory`, `AvatarPickerProps`, `AvatarProps`, `AvatarSize`, `AvatarSpec`, `FullIconCategory`, `FullIconEntry`, `FullIconSet`
-        - Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `AVATAR_ICON_CATEGORIES`, `AVATAR_ICON_KEYS`, `AVATAR_ICONS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`, `loadFullIconSet`, `resolveAvatarIcon`, `searchIcons`
+        - Types: `AvatarColor`, `AvatarIconCategory`, `AvatarPickerProps`, `AvatarProps`, `AvatarSize`, `AvatarSpec`, `FullIconCategory`, `FullIconEntry`, `FullIconSet`, `SvgNode`
+        - Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`, `extractSvgNodes`, `loadFullIconSet`
+      - Exports (server):
+        - Values: `resolveIconSvgNodesJson`
     - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
       - Exports (web):
         - Types: `BreadcrumbProps`, `BreadcrumbSegment`
