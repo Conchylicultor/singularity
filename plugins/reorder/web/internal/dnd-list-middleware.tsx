@@ -1,4 +1,12 @@
-import { useCallback, useContext, useMemo, useRef, type ReactNode } from "react";
+import {
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { Contribution } from "@core";
 import {
   closestCenter,
@@ -86,6 +94,19 @@ function ReorderListMiddlewareInner({
   const subId = useContext(RenderSlotSubIdContext);
   const storageId = subId ? `${slotId}:${subId}` : slotId;
   const editMode = useEditMode();
+
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const [orientation, setOrientation] = useState<"horizontal" | "vertical">(
+    "vertical",
+  );
+  useLayoutEffect(() => {
+    const parent = sentinelRef.current?.parentElement;
+    if (!parent) return;
+    const dir = getComputedStyle(parent).flexDirection;
+    setOrientation(
+      dir === "row" || dir === "row-reverse" ? "horizontal" : "vertical",
+    );
+  }, []);
 
   const { data: rankMap } = useResource(reorderPrefsResource, {
     slotId: storageId,
@@ -455,6 +476,7 @@ function ReorderListMiddlewareInner({
     addSpacer,
     addGroup,
     dragInProgress: false,
+    orientation,
   };
 
   // --- Render with overlay ---------------------------------------------------
@@ -476,12 +498,14 @@ function ReorderListMiddlewareInner({
 
   return (
     <ReorderAreaContext.Provider value={ctxValue}>
+      <div ref={sentinelRef} style={{ display: "none" }} aria-hidden />
       <SortableList
         items={sortableIds}
         onMove={handleMove}
         overlay={editMode ? renderOverlay : undefined}
         disabled={!editMode}
         collisionDetection={reorderCollisionDetection}
+        orientation={orientation}
       >
         {state.groupedEntries.map((entry) => {
           if (isGroupEntry(entry)) {

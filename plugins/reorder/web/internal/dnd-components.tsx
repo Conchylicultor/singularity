@@ -1,4 +1,4 @@
-import { createContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
 import { useDroppable } from "@dnd-kit/core";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ export type ReorderAreaCtxValue = {
   addSpacer: () => void;
   addGroup: () => void;
   dragInProgress: boolean;
+  orientation: "horizontal" | "vertical";
 };
 
 export const ReorderAreaContext = createContext<ReorderAreaCtxValue | null>(
@@ -28,11 +29,16 @@ export function GroupingZone({ itemKey }: { itemKey: string }) {
     id: `group-zone:${itemKey}`,
     data: { zone: "child", targetId: itemKey },
   });
+  const ctx = useContext(ReorderAreaContext);
+  const isHorizontal = ctx?.orientation === "horizontal";
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "absolute inset-x-0 top-[42.5%] bottom-[42.5%] z-10 rounded transition-colors",
+        "absolute z-10 rounded transition-colors",
+        isHorizontal
+          ? "inset-y-0 left-[42.5%] right-[42.5%]"
+          : "inset-x-0 top-[42.5%] bottom-[42.5%]",
         isOver && "ring-2 ring-primary bg-accent/30",
       )}
     />

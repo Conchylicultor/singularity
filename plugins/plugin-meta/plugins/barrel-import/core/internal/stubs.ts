@@ -258,6 +258,7 @@ export function registerBarrelStubs(_repoRoot: string): void {
           useSortable: () => ({ ...dragReturn, transition: null }),
           arrayMove: (arr: unknown[]) => arr,
           verticalListSortingStrategy: {},
+          horizontalListSortingStrategy: {},
           __esModule: true,
         },
         loader: "object",

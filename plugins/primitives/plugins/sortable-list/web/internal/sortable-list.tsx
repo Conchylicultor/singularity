@@ -11,6 +11,7 @@ import {
 import {
   SortableContext,
   verticalListSortingStrategy,
+  horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 
 export interface SortableListProps {
@@ -19,6 +20,7 @@ export interface SortableListProps {
   overlay?: (activeId: string) => ReactNode;
   disabled?: boolean;
   collisionDetection?: CollisionDetection;
+  orientation?: "horizontal" | "vertical";
   children: ReactNode;
 }
 
@@ -28,6 +30,7 @@ export function SortableList({
   overlay,
   disabled,
   collisionDetection,
+  orientation,
   children,
 }: SortableListProps) {
   const sensors = useSensors(
@@ -48,7 +51,14 @@ export function SortableList({
       }}
       onDragCancel={() => setActiveId(null)}
     >
-      <SortableContext items={items} strategy={verticalListSortingStrategy}>
+      <SortableContext
+        items={items}
+        strategy={
+          orientation === "horizontal"
+            ? horizontalListSortingStrategy
+            : verticalListSortingStrategy
+        }
+      >
         {children}
       </SortableContext>
       {overlay && (
