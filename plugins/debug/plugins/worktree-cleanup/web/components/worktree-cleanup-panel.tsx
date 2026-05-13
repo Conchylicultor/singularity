@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { MdDelete, MdFolderDelete, MdRefresh, MdWarning } from "react-icons/md";
+import { MdDelete, MdFolderDelete, MdWarning } from "react-icons/md";
+import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Button } from "@/components/ui/button";
 
@@ -210,7 +211,7 @@ export function WorktreeCleanupPanel() {
             Delete {safeCount} safe
           </Button>
           <Button size="sm" variant="outline" onClick={load} disabled={loading}>
-            <MdRefresh className={`size-4 ${loading ? "animate-spin" : ""}`} />
+            <Spinner spinning={loading} className="size-4" />
           </Button>
         </div>
       </div>
@@ -335,7 +336,7 @@ function EntryRow({
             >
               {deletingStep != null ? (
                 <>
-                  <MdRefresh className="size-3.5 animate-spin mr-1" />
+                  <Spinner className="size-3.5 mr-1" />
                   {STEP_LABEL[deletingStep]}
                 </>
               ) : (

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MdRefresh, MdRestore } from "react-icons/md";
+import { MdRestore } from "react-icons/md";
+import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -204,7 +205,7 @@ function ClusterGroup({
           >
             {anyPending ? (
               <>
-                <MdRefresh className="size-3.5 animate-spin mr-1" />
+                <Spinner className="size-3.5 mr-1" />
                 Restoring…
               </>
             ) : (
@@ -261,7 +262,7 @@ function ConversationRow({
         >
           {pending ? (
             <>
-              <MdRefresh className="size-3.5 animate-spin mr-1" />
+              <Spinner className="size-3.5 mr-1" />
               Restoring…
             </>
           ) : (

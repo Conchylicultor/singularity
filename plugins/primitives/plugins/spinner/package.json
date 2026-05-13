@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-spinner",
+  "description": "Spinning refresh icon for loading states.",
+  "private": true,
+  "version": "0.0.1"
+}

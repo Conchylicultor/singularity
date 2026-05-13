@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { getHealth, waitForRestart } from "@plugins/health/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { MdRefresh, MdOpenInFull } from "react-icons/md";
+import { MdOpenInFull } from "react-icons/md";
+import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -104,7 +105,7 @@ export function BuildButton() {
       <PopoverTrigger
         className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground"
       >
-          <MdRefresh className={`size-4 ${spinning ? "animate-spin" : ""}`} />
+          <Spinner spinning={spinning} className="size-4" />
           {spinning ? "Building…" : "Build"}
           {mainAheadCount > 0 ? (
             <WithTooltip content={`main is ${mainAheadCount} commit${mainAheadCount !== 1 ? "s" : ""} ahead of this worktree`}>

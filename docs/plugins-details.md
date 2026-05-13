@@ -1321,6 +1321,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `RenderSlot`, `RenderSlotConfig`, `SlotItemMiddleware`, `SlotListMiddleware`
         - Values: `defineRenderSlot`, `registerSlotItemMiddleware`, `registerSlotListMiddleware`, `RenderSlotSubIdContext`
+    - **`spinner`** — Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
+      - Exports (web):
+        - Types: `SpinnerProps`
+        - Values: `Spinner`
     - **`status-dot`** — Colored status-indicator dot primitive. Composes a fixed-size rounded span with a caller-supplied Tailwind color class. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
       - Exports (web):
         - Types: `StatusDotProps`
