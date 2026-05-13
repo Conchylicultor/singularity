@@ -1,7 +1,44 @@
 import { useMemo } from "react";
 import type { PluginNode, ResourceInfo } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import {
+  DataTable,
+  type ColumnDef,
+} from "@plugins/primitives/plugins/data-table/web";
 import { flattenTree } from "../catalog-view";
 import { PluginChip } from "../plugin-chip";
+
+type ResourceRow = { item: ResourceInfo; plugin: PluginNode };
+
+const columns: ColumnDef<ResourceRow>[] = [
+  {
+    id: "key",
+    header: "Key",
+    width: "flex-1 min-w-0",
+    value: (row) => row.item.key,
+    cell: (row) => (
+      <code className="truncate font-mono text-foreground">
+        {row.item.key}
+      </code>
+    ),
+  },
+  {
+    id: "mode",
+    header: "Mode",
+    width: "w-12 shrink-0 text-center",
+    value: (row) => row.item.mode,
+    cell: (row) => (
+      <span className="font-mono text-[10px] text-muted-foreground/60">
+        {row.item.mode}
+      </span>
+    ),
+  },
+  {
+    id: "plugin",
+    header: "Plugin",
+    value: (row) => row.plugin.hierarchyId,
+    cell: (row) => <PluginChip hierarchyId={row.plugin.hierarchyId} />,
+  },
+];
 
 export function ResourcesTable({
   plugins,
@@ -10,58 +47,22 @@ export function ResourcesTable({
   plugins: PluginNode[];
   filter: string;
 }) {
-  const rows = useMemo(() => {
-    const all = flattenTree<ResourceInfo>(plugins, (p) => p.publicApi?.resources ?? []);
-    const lc = filter.toLowerCase();
-    return lc
-      ? all.filter(
-          ({ item, plugin }) =>
-            item.key.toLowerCase().includes(lc) ||
-            item.mode.toLowerCase().includes(lc) ||
-            plugin.hierarchyId.toLowerCase().includes(lc),
-        )
-      : all;
-  }, [plugins, filter]);
-
-  if (rows.length === 0) {
-    return <EmptyState />;
-  }
-
-  return (
-    <div className="flex flex-col">
-      <Header />
-      {rows.map(({ item, plugin }) => (
-        <div
-          key={`${plugin.hierarchyId}:${item.key}`}
-          className="flex items-center gap-2 border-b border-border/30 px-3 py-1.5 text-xs hover:bg-accent/30"
-        >
-          <code className="min-w-0 flex-1 truncate font-mono text-foreground">
-            {item.key}
-          </code>
-          <span className="w-12 shrink-0 text-center font-mono text-[10px] text-muted-foreground/60">
-            {item.mode}
-          </span>
-          <PluginChip hierarchyId={plugin.hierarchyId} />
-        </div>
-      ))}
-    </div>
+  const rows = useMemo(
+    () =>
+      flattenTree<ResourceInfo>(
+        plugins,
+        (p) => p.publicApi?.resources ?? [],
+      ),
+    [plugins],
   );
-}
 
-function Header() {
   return (
-    <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-      <span className="flex-1">Key</span>
-      <span className="w-12 shrink-0 text-center">Mode</span>
-      <span>Plugin</span>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="flex h-32 items-center justify-center text-xs text-muted-foreground">
-      No resources found
-    </div>
+    <DataTable
+      data={rows}
+      columns={columns}
+      filter={filter}
+      rowKey={(row) => `${row.plugin.hierarchyId}:${row.item.key}`}
+      emptyLabel="No resources found"
+    />
   );
 }

@@ -1,8 +1,14 @@
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import type { PluginNode, RouteInfo } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import {
+  DataTable,
+  type ColumnDef,
+} from "@plugins/primitives/plugins/data-table/web";
 import { flattenTree } from "../catalog-view";
 import { PluginChip } from "../plugin-chip";
+
+type RouteRow = { item: RouteInfo; plugin: PluginNode };
 
 const METHOD_COLORS: Record<string, string> = {
   GET: "text-emerald-600 dark:text-emerald-400",
@@ -19,6 +25,55 @@ function parseRoute(route: string) {
   return { method: route.slice(0, spaceIdx), path: route.slice(spaceIdx + 1) };
 }
 
+const columns: ColumnDef<RouteRow>[] = [
+  {
+    id: "method",
+    header: "Method",
+    width: "w-12 shrink-0",
+    value: (row) => parseRoute(row.item.route).method,
+    cell: (row) => {
+      const { method } = parseRoute(row.item.route);
+      return (
+        <span
+          className={cn(
+            "font-mono text-[10px] font-semibold",
+            METHOD_COLORS[method] ?? "text-muted-foreground",
+          )}
+        >
+          {method}
+        </span>
+      );
+    },
+  },
+  {
+    id: "path",
+    header: "Path",
+    width: "flex-1 min-w-0",
+    value: (row) => parseRoute(row.item.route).path,
+    cell: (row) => (
+      <code className="truncate font-mono text-foreground">
+        {parseRoute(row.item.route).path}
+      </code>
+    ),
+  },
+  {
+    id: "plugin",
+    header: "Plugin",
+    value: (row) => row.plugin.hierarchyId,
+    cell: (row) => <PluginChip hierarchyId={row.plugin.hierarchyId} />,
+  },
+  {
+    id: "callers",
+    cell: (row) =>
+      row.item.callers.length > 0 ? (
+        <span className="shrink-0 text-[10px] text-muted-foreground/60">
+          {row.item.callers.length} caller
+          {row.item.callers.length !== 1 ? "s" : ""}
+        </span>
+      ) : null,
+  },
+];
+
 export function RoutesTable({
   plugins,
   filter,
@@ -26,70 +81,18 @@ export function RoutesTable({
   plugins: PluginNode[];
   filter: string;
 }) {
-  const rows = useMemo(() => {
-    const all = flattenTree<RouteInfo>(plugins, (p) => p.publicApi?.routes ?? []);
-    const lc = filter.toLowerCase();
-    return lc
-      ? all.filter(
-          ({ item, plugin }) =>
-            item.route.toLowerCase().includes(lc) ||
-            plugin.hierarchyId.toLowerCase().includes(lc),
-        )
-      : all;
-  }, [plugins, filter]);
-
-  if (rows.length === 0) {
-    return <EmptyState />;
-  }
-
-  return (
-    <div className="flex flex-col">
-      <Header />
-      {rows.map(({ item, plugin }) => {
-        const { method, path } = parseRoute(item.route);
-        return (
-          <div
-            key={`${plugin.hierarchyId}:${item.route}`}
-            className="flex items-center gap-2 border-b border-border/30 px-3 py-1.5 text-xs hover:bg-accent/30"
-          >
-            <span
-              className={cn(
-                "w-12 shrink-0 font-mono text-[10px] font-semibold",
-                METHOD_COLORS[method] ?? "text-muted-foreground",
-              )}
-            >
-              {method}
-            </span>
-            <code className="min-w-0 flex-1 truncate font-mono text-foreground">
-              {path}
-            </code>
-            <PluginChip hierarchyId={plugin.hierarchyId} />
-            {item.callers.length > 0 && (
-              <span className="shrink-0 text-[10px] text-muted-foreground/60">
-                {item.callers.length} caller{item.callers.length !== 1 ? "s" : ""}
-              </span>
-            )}
-          </div>
-        );
-      })}
-    </div>
+  const rows = useMemo(
+    () => flattenTree<RouteInfo>(plugins, (p) => p.publicApi?.routes ?? []),
+    [plugins],
   );
-}
 
-function Header() {
   return (
-    <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-      <span className="w-12 shrink-0">Method</span>
-      <span className="flex-1">Path</span>
-      <span>Plugin</span>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="flex h-32 items-center justify-center text-xs text-muted-foreground">
-      No routes found
-    </div>
+    <DataTable
+      data={rows}
+      columns={columns}
+      filter={filter}
+      rowKey={(row) => `${row.plugin.hierarchyId}:${row.item.route}`}
+      emptyLabel="No routes found"
+    />
   );
 }

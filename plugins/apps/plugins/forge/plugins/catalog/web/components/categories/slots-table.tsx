@@ -1,7 +1,54 @@
 import { useMemo } from "react";
 import type { PluginNode, SlotInfo } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import {
+  DataTable,
+  type ColumnDef,
+} from "@plugins/primitives/plugins/data-table/web";
 import { flattenTree } from "../catalog-view";
 import { PluginChip } from "../plugin-chip";
+
+type SlotRow = { item: SlotInfo; plugin: PluginNode };
+
+const columns: ColumnDef<SlotRow>[] = [
+  {
+    id: "name",
+    header: "Group.Member",
+    width: "w-48 shrink-0",
+    value: (row) => `${row.item.groupName}.${row.item.memberName}`,
+    cell: (row) => (
+      <code className="truncate font-mono font-medium text-foreground">
+        {row.item.groupName}.{row.item.memberName}
+      </code>
+    ),
+  },
+  {
+    id: "slotId",
+    header: "Slot ID",
+    width: "flex-1 min-w-0",
+    value: (row) => row.item.slotId,
+    cell: (row) => (
+      <code className="truncate font-mono text-muted-foreground/60">
+        {row.item.slotId}
+      </code>
+    ),
+  },
+  {
+    id: "plugin",
+    header: "Plugin",
+    value: (row) => row.plugin.hierarchyId,
+    cell: (row) => <PluginChip hierarchyId={row.plugin.hierarchyId} />,
+  },
+  {
+    id: "contributors",
+    cell: (row) =>
+      row.item.contributors.length > 0 ? (
+        <span className="shrink-0 text-[10px] text-muted-foreground/60">
+          {row.item.contributors.length} contrib
+          {row.item.contributors.length !== 1 ? "s" : ""}
+        </span>
+      ) : null,
+  },
+];
 
 export function SlotsTable({
   plugins,
@@ -10,63 +57,18 @@ export function SlotsTable({
   plugins: PluginNode[];
   filter: string;
 }) {
-  const rows = useMemo(() => {
-    const all = flattenTree<SlotInfo>(plugins, (p) => p.publicApi?.slots ?? []);
-    const lc = filter.toLowerCase();
-    return lc
-      ? all.filter(
-          ({ item, plugin }) =>
-            `${item.groupName}.${item.memberName}`.toLowerCase().includes(lc) ||
-            item.slotId.toLowerCase().includes(lc) ||
-            plugin.hierarchyId.toLowerCase().includes(lc),
-        )
-      : all;
-  }, [plugins, filter]);
-
-  if (rows.length === 0) {
-    return <EmptyState />;
-  }
-
-  return (
-    <div className="flex flex-col">
-      <Header />
-      {rows.map(({ item, plugin }) => (
-        <div
-          key={`${plugin.hierarchyId}:${item.slotId}`}
-          className="flex items-center gap-2 border-b border-border/30 px-3 py-1.5 text-xs hover:bg-accent/30"
-        >
-          <code className="w-48 shrink-0 truncate font-mono font-medium text-foreground">
-            {item.groupName}.{item.memberName}
-          </code>
-          <code className="min-w-0 flex-1 truncate font-mono text-muted-foreground/60">
-            {item.slotId}
-          </code>
-          <PluginChip hierarchyId={plugin.hierarchyId} />
-          {item.contributors.length > 0 && (
-            <span className="shrink-0 text-[10px] text-muted-foreground/60">
-              {item.contributors.length} contrib{item.contributors.length !== 1 ? "s" : ""}
-            </span>
-          )}
-        </div>
-      ))}
-    </div>
+  const rows = useMemo(
+    () => flattenTree<SlotInfo>(plugins, (p) => p.publicApi?.slots ?? []),
+    [plugins],
   );
-}
 
-function Header() {
   return (
-    <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-      <span className="w-48 shrink-0">Group.Member</span>
-      <span className="flex-1">Slot ID</span>
-      <span>Plugin</span>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="flex h-32 items-center justify-center text-xs text-muted-foreground">
-      No slots found
-    </div>
+    <DataTable
+      data={rows}
+      columns={columns}
+      filter={filter}
+      rowKey={(row) => `${row.plugin.hierarchyId}:${row.item.slotId}`}
+      emptyLabel="No slots found"
+    />
   );
 }

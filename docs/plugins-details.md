@@ -1183,6 +1183,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `BreadcrumbProps`, `BreadcrumbSegment`
         - Values: `Breadcrumb`
+    - **`data-table`** — Sortable/filterable flex-layout data table primitive.
+      - Exports (web):
+        - Types: `ColumnDef`, `DataTableProps`
+        - Values: `DataTable`
     - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.
       - Exports (web):
         - Types: `DetailSections`

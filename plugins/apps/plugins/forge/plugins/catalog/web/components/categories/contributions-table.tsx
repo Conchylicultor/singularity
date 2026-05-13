@@ -1,7 +1,44 @@
 import { useMemo } from "react";
 import type { PluginNode, ContributionInfo } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import {
+  DataTable,
+  type ColumnDef,
+} from "@plugins/primitives/plugins/data-table/web";
 import { flattenTree } from "../catalog-view";
 import { PluginChip } from "../plugin-chip";
+
+type ContributionRow = { item: ContributionInfo; plugin: PluginNode };
+
+const columns: ColumnDef<ContributionRow>[] = [
+  {
+    id: "slot",
+    header: "Slot",
+    width: "w-48 shrink-0",
+    value: (row) => row.item.slot,
+    cell: (row) => (
+      <code className="truncate font-mono font-medium text-foreground">
+        {row.item.slot}
+      </code>
+    ),
+  },
+  {
+    id: "id",
+    header: "ID",
+    width: "flex-1 min-w-0",
+    value: (row) => row.item.id ?? "",
+    cell: (row) => (
+      <code className="truncate font-mono text-muted-foreground/60">
+        {row.item.id ?? "—"}
+      </code>
+    ),
+  },
+  {
+    id: "plugin",
+    header: "Plugin",
+    value: (row) => row.plugin.hierarchyId,
+    cell: (row) => <PluginChip hierarchyId={row.plugin.hierarchyId} />,
+  },
+];
 
 export function ContributionsTable({
   plugins,
@@ -10,61 +47,22 @@ export function ContributionsTable({
   plugins: PluginNode[];
   filter: string;
 }) {
-  const rows = useMemo(() => {
-    const all = flattenTree<ContributionInfo>(
-      plugins,
-      (p) => p.publicApi?.contributions ?? [],
-    );
-    const lc = filter.toLowerCase();
-    return lc
-      ? all.filter(
-          ({ item, plugin }) =>
-            item.slot.toLowerCase().includes(lc) ||
-            (item.id ?? "").toLowerCase().includes(lc) ||
-            plugin.hierarchyId.toLowerCase().includes(lc),
-        )
-      : all;
-  }, [plugins, filter]);
-
-  if (rows.length === 0) {
-    return <EmptyState />;
-  }
-
-  return (
-    <div className="flex flex-col">
-      <Header />
-      {rows.map(({ item, plugin }, i) => (
-        <div
-          key={`${plugin.hierarchyId}:${item.slot}:${item.id ?? i}`}
-          className="flex items-center gap-2 border-b border-border/30 px-3 py-1.5 text-xs hover:bg-accent/30"
-        >
-          <code className="w-48 shrink-0 truncate font-mono font-medium text-foreground">
-            {item.slot}
-          </code>
-          <code className="min-w-0 flex-1 truncate font-mono text-muted-foreground/60">
-            {item.id ?? "—"}
-          </code>
-          <PluginChip hierarchyId={plugin.hierarchyId} />
-        </div>
-      ))}
-    </div>
+  const rows = useMemo(
+    () =>
+      flattenTree<ContributionInfo>(
+        plugins,
+        (p) => p.publicApi?.contributions ?? [],
+      ),
+    [plugins],
   );
-}
 
-function Header() {
   return (
-    <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-      <span className="w-48 shrink-0">Slot</span>
-      <span className="flex-1">ID</span>
-      <span>Plugin</span>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="flex h-32 items-center justify-center text-xs text-muted-foreground">
-      No contributions found
-    </div>
+    <DataTable
+      data={rows}
+      columns={columns}
+      filter={filter}
+      rowKey={(row, i) => `${row.plugin.hierarchyId}:${row.item.slot}:${row.item.id ?? i}`}
+      emptyLabel="No contributions found"
+    />
   );
 }

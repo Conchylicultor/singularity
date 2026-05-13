@@ -131,6 +131,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "primitives/plugins/auto-scroll", loader: () => import("@plugins/primitives/plugins/auto-scroll/web") },
   { name: "primitives/plugins/avatar", loader: () => import("@plugins/primitives/plugins/avatar/web") },
   { name: "primitives/plugins/breadcrumb", loader: () => import("@plugins/primitives/plugins/breadcrumb/web") },
+  { name: "primitives/plugins/data-table", loader: () => import("@plugins/primitives/plugins/data-table/web") },
   { name: "primitives/plugins/detail-sections", loader: () => import("@plugins/primitives/plugins/detail-sections/web") },
   { name: "primitives/plugins/editable-field", loader: () => import("@plugins/primitives/plugins/editable-field/web") },
   { name: "primitives/plugins/error-boundary", loader: () => import("@plugins/primitives/plugins/error-boundary/web") },
