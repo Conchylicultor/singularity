@@ -1,10 +1,23 @@
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { _conversations } from "@plugins/tasks-core/server";
+import { _conversations, _attempts } from "@plugins/tasks-core/server";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { conversationsQueue, _queueState } from "./tables";
 
 const SINGLETON = "singleton";
+
+// Mirrors hasBlockingDep in tasks-core: true when the conversation's task has
+// at least one non-dropped dependency without a completed attempt.
+const notBlocked = sql`NOT EXISTS (
+  SELECT 1 FROM task_dependencies td
+    JOIN tasks dep ON dep.id = td.depends_on_task_id
+   WHERE td.task_id = ${_attempts.taskId}
+     AND dep.dropped_at IS NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM attempts a
+        WHERE a.task_id = dep.id AND a.status = 'completed'
+     )
+)`;
 
 export async function getPinnedId(executor: RankExecutor = db): Promise<string | null> {
   const [row] = await executor
@@ -31,7 +44,7 @@ export async function topWaitingByRank(
   excludeId?: string,
   executor: RankExecutor = db,
 ): Promise<string | null> {
-  const conditions = [eq(_conversations.status, "waiting" as const)];
+  const conditions = [eq(_conversations.status, "waiting" as const), notBlocked];
   if (excludeId) {
     conditions.push(ne(conversationsQueue.table.parentId, excludeId));
   }
@@ -39,6 +52,7 @@ export async function topWaitingByRank(
     .select({ id: conversationsQueue.table.parentId })
     .from(conversationsQueue.table)
     .innerJoin(_conversations, eq(_conversations.id, conversationsQueue.table.parentId))
+    .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
     .where(and(...conditions))
     .orderBy(asc(conversationsQueue.table.rank))
     .limit(1);
@@ -53,10 +67,12 @@ export async function validatePin(executor: RankExecutor = db): Promise<string |
       .select({ id: conversationsQueue.table.parentId })
       .from(conversationsQueue.table)
       .innerJoin(_conversations, eq(_conversations.id, conversationsQueue.table.parentId))
+      .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
       .where(
         and(
           eq(conversationsQueue.table.parentId, pinnedId),
           eq(_conversations.status, "waiting" as const),
+          notBlocked,
         ),
       )
       .limit(1);

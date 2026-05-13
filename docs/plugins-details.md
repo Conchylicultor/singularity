@@ -732,7 +732,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `ConversationsView.View` "Queue" → `QueueView`
           - Server:
             - Register: `defineJob('queue.seed-rank')`, `defineJob('queue.validate-pin')`, `defineJob('queue.advance-pin')`
-            - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `conversations.userTurnSent`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`
+            - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `conversations.userTurnSent`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`
             - Resources: `queue-ranks` (push)
             - `POST /api/conversations-queue/reorder`
             - `POST /api/conversations-queue/promote`
