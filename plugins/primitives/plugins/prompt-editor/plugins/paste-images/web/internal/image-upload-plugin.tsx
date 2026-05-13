@@ -33,9 +33,17 @@ export function ImageUploadPlugin({
       );
       if (imageItems.length === 0) return false;
 
+      // macOS clipboard provides multiple representations of the same image
+      // (e.g. PNG + TIFF). For paste, deduplicate to one item (prefer PNG).
+      // Drop keeps all items since each is an intentionally distinct file.
+      const items =
+        event instanceof DragEvent
+          ? imageItems
+          : [imageItems.find((it) => it.type === "image/png") ?? imageItems[0]!];
+
       event.preventDefault();
-      Promise.all(
-        imageItems.map(async (item) => {
+      void Promise.all(
+        items.map(async (item) => {
           const blob = item.getAsFile();
           if (!blob) return null;
           const ext = mimeToExt(blob.type);
