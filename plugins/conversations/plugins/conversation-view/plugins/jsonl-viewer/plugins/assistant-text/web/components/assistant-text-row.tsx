@@ -2,6 +2,7 @@ import {
   ActiveDataIdentityProvider,
   useActiveDataSegments,
 } from "@plugins/active-data/web";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import {
@@ -20,7 +21,7 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
 
   return (
     <div className="rounded-md border border-border/60 bg-background px-3 py-2">
-      <div className="mb-1 flex items-center gap-2 text-[10px] uppercase tracking-wide text-muted-foreground">
+      <SectionLabel className="mb-1 flex items-center gap-2 text-[10px]">
         <span>Assistant</span>
         <span className="tabular-nums">{formatTime(e.at)}</span>
         <div className="ml-auto flex items-center gap-2">
@@ -28,7 +29,7 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
             <span className="text-muted-foreground/70">{e.stopReason}</span>
           ) : null}
         </div>
-      </div>
+      </SectionLabel>
       {markdownMode ? (
         <div className="text-sm leading-6">
           {(() => {

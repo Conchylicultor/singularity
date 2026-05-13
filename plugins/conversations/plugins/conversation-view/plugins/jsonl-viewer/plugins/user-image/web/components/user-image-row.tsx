@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { formatTime } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
 type UserImageEvent = Extract<JsonlEvent, { kind: "user-image" }>;
@@ -10,11 +11,11 @@ export function UserImageRow({ event }: { event: JsonlEvent }) {
   const src = `data:${e.mime};base64,${e.data}`;
   return (
     <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2">
-      <div className="mb-1 flex items-center gap-2 text-[10px] uppercase tracking-wide text-muted-foreground">
+      <SectionLabel className="mb-1 flex items-center gap-2 text-[10px]">
         <span>User image</span>
         <span className="tabular-nums">{formatTime(e.at)}</span>
         <span>{e.mime}</span>
-      </div>
+      </SectionLabel>
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}

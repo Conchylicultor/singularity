@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { type Task } from "@plugins/tasks/core";
 import { patchTask, setAutoStart, useTask } from "@plugins/tasks/web";
 import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
@@ -70,9 +71,9 @@ export function TaskHeader({ taskId }: { taskId: string }) {
         </span>
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-muted-foreground text-xs uppercase tracking-wide">
+        <SectionLabel as="span">
           Status
-        </span>
+        </SectionLabel>
         <StatusBadge status={task.status} />
         <Button
           size="sm"
@@ -90,33 +91,33 @@ export function TaskHeader({ taskId }: { taskId: string }) {
         </Button>
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-muted-foreground text-xs uppercase tracking-wide">
+        <SectionLabel as="span">
           Author
-        </span>
+        </SectionLabel>
         <AuthorDisplay author={task.author ?? "user"} />
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-muted-foreground text-xs uppercase tracking-wide">
+        <SectionLabel as="span">
           Created
-        </span>
+        </SectionLabel>
         <span className="text-xs">
           <RelativeTime date={new Date(task.createdAt)} />
         </span>
       </div>
       {task.finishedAt != null && (
         <div className="flex items-center gap-3">
-          <span className="text-muted-foreground text-xs uppercase tracking-wide">
+          <SectionLabel as="span">
             Closed
-          </span>
+          </SectionLabel>
           <span className="text-xs">
             <RelativeTime date={new Date(task.finishedAt)} />
           </span>
         </div>
       )}
       <div className="flex items-center gap-3">
-        <span className="text-muted-foreground text-xs uppercase tracking-wide">
+        <SectionLabel as="span">
           Auto-start
-        </span>
+        </SectionLabel>
         <Select
           value={autoStart?.autoStartModel ?? "none"}
           onValueChange={(v: string | null) => {

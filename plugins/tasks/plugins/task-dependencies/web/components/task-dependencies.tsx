@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@/components/ui/button";
 import { tasksResource, type Task } from "@plugins/tasks/core";
@@ -49,9 +50,9 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
   return (
     <section className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+        <SectionLabel as="h3" className="font-medium">
           Dependencies
-        </h3>
+        </SectionLabel>
         <div className="flex items-center gap-1">
           {parentCandidate && (
             <Button size="xs" variant="outline" onClick={addParentAsDep}>

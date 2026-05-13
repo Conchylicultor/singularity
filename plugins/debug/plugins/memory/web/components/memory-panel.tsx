@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { MdRefresh } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -83,9 +84,9 @@ export function MemoryPanel() {
       {/* File list */}
       <div className="flex w-56 shrink-0 flex-col border-r">
         <div className="flex items-center justify-between border-b px-3 py-2">
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          <SectionLabel as="span" className="font-medium">
             Memory files
-          </span>
+          </SectionLabel>
           <Button
             variant="ghost"
             size="icon"

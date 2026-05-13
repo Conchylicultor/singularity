@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { listAttachments, type Attachment } from "@plugins/infra/plugins/attachments/web";
 import { ShellCommands } from "@plugins/shell/web";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -24,9 +25,7 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-muted-foreground text-xs uppercase tracking-wide">
-        Attachments
-      </span>
+      <SectionLabel as="span">Attachments</SectionLabel>
       <div className="flex flex-wrap gap-3">
         {attachments.map((a) =>
           a.mime.startsWith("image/") ? (

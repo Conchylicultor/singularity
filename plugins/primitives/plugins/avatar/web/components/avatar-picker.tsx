@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, type ReactNode } from "react";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import type { IconType } from "react-icons";
 import { MdClose, MdSearch } from "react-icons/md";
 import {
@@ -82,9 +83,9 @@ export function AvatarPicker({
       <PopoverContent className="w-80 p-2" align="start">
 
         {/* Color row */}
-        <div className="px-1 pt-1 pb-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+        <SectionLabel className="px-1 pt-1 pb-1.5 text-[10px]">
           Color
-        </div>
+        </SectionLabel>
         <div className="flex flex-wrap gap-1.5 px-1 pb-2">
           {AVATAR_COLOR_KEYS.map((key) => (
             <button
@@ -104,9 +105,9 @@ export function AvatarPicker({
 
         {/* Icon header + search */}
         <div className="flex items-center justify-between px-1 pt-1 pb-1.5">
-          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <SectionLabel as="span" className="text-[10px]">
             Icon{!fullSet && <span className="ml-1 opacity-50">· loading…</span>}
-          </span>
+          </SectionLabel>
           {fullSet && (
             <span className="text-[10px] text-muted-foreground/50">{Object.keys(fullSet.categories).length > 0 ? "2 160 icons" : ""}</span>
           )}
@@ -148,9 +149,9 @@ export function AvatarPicker({
           ) : (
             displayCategories.map((cat) => (
               <div key={cat.label}>
-                <div className="mb-1 text-[9px] uppercase tracking-wide text-muted-foreground/60">
+                <SectionLabel className="mb-1 text-[9px] text-muted-foreground/60">
                   {cat.label}
-                </div>
+                </SectionLabel>
                 <div className="grid grid-cols-9 gap-1">
                   {cat.entries.map(({ key, Icon }) => (
                     <IconBtn key={key} iconKey={key} Icon={Icon} selected={value.icon === key} onPick={pickIcon} />

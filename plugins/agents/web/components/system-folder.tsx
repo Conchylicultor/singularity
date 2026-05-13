@@ -1,6 +1,7 @@
 import { MdSmartToy } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import {
   Collapsible,
   CollapsibleChevron,
@@ -26,9 +27,9 @@ export function SystemFolder({
         <span className="flex size-5 shrink-0 items-center justify-center">
           <CollapsibleChevron className="size-4" />
         </span>
-        <span className="text-muted-foreground text-xs uppercase tracking-wide">
+        <SectionLabel as="span">
           System
-        </span>
+        </SectionLabel>
       </CollapsibleTrigger>
       <CollapsibleContent className="flex flex-col">
         {descriptors.map((d) => {

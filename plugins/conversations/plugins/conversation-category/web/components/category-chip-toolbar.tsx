@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MdAutoAwesome, MdCheck } from "react-icons/md";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { useConfigValues } from "@plugins/config/web";
@@ -71,9 +72,9 @@ export function CategoryChipToolbar() {
         <span className={busy === "classify" ? "ml-1" : ""}>{label}</span>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-1" align="start">
-        <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+        <SectionLabel className="px-2 py-1 text-[10px]">
           Set category
-        </div>
+        </SectionLabel>
         <ul className="space-y-px">
           {categories.map((c) => {
             const selected = c === category;

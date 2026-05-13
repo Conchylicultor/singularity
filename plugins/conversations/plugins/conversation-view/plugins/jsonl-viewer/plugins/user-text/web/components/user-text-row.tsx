@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -85,10 +86,10 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
 
   return (
     <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2">
-      <div className="mb-1 flex items-center gap-2 text-[10px] uppercase tracking-wide text-muted-foreground">
+      <SectionLabel className="mb-1 flex items-center gap-2 text-[10px]">
         <span>User</span>
         <span className="tabular-nums">{formatTime(e.at)}</span>
-      </div>
+      </SectionLabel>
       <div
         className={showCollapsed ? "max-h-48 overflow-hidden" : ""}
         style={showCollapsed ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}

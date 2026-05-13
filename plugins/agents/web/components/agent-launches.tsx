@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { agentLaunchesResource } from "../../shared/resources";
@@ -33,9 +34,9 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
 
   return (
     <section className="flex flex-col gap-2">
-      <h3 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+      <SectionLabel as="h3" className="font-medium">
         Attempts
-      </h3>
+      </SectionLabel>
       {launches.length === 0 ? (
         <p className="text-muted-foreground text-sm">No attempts yet.</p>
       ) : (

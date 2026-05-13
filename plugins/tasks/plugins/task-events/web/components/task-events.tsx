@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { MdOpenInNew } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -94,9 +95,9 @@ export function TaskEvents({ taskId }: { taskId: string }) {
   return (
     <div className="flex flex-col gap-6">
       <section className="flex flex-col gap-2">
-        <h3 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+        <SectionLabel as="h3" className="font-medium">
           Pushes
-        </h3>
+        </SectionLabel>
         {pushes.length === 0 ? (
           <p className="text-muted-foreground text-sm">No pushes yet.</p>
         ) : (
@@ -144,9 +145,9 @@ export function TaskEvents({ taskId }: { taskId: string }) {
       </section>
 
       <section className="flex flex-col gap-2">
-        <h3 className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+        <SectionLabel as="h3" className="font-medium">
           Attempts
-        </h3>
+        </SectionLabel>
         {attempts.length === 0 ? (
           <p className="text-muted-foreground text-sm">No attempts yet.</p>
         ) : (

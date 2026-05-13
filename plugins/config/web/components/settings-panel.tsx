@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   useSpecsWithPlugin,
@@ -139,9 +140,9 @@ export function SettingsPanel() {
           {/* TOC */}
           <nav className="w-40 shrink-0">
             <div className="sticky top-0 space-y-0.5">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+              <SectionLabel as="p" className="mb-2 font-semibold tracking-wider text-muted-foreground/60">
                 Plugins
-              </p>
+              </SectionLabel>
               {groups.map((g) => {
                 const sectionId = `section-${g.pluginId}`;
                 return (

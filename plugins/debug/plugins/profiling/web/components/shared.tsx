@@ -1,4 +1,5 @@
 import { createContext, useContext, type ReactElement } from "react";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { cn } from "@/lib/utils";
 
 export interface Span {
@@ -123,9 +124,9 @@ function TimeAxis({
   return (
     <div className="relative flex h-6 border-b px-4">
       <div className="flex w-40 shrink-0 items-center gap-1.5">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        <SectionLabel as="span" className="text-[10px] font-medium tracking-wider">
           {title}
-        </span>
+        </SectionLabel>
         <span className="text-[10px] font-medium tabular-nums text-foreground">
           {formatDuration(totalMs)}
         </span>

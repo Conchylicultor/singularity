@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdPlayArrow } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { PromptEditor } from "@plugins/primitives/plugins/paste-images/web";
 import {
@@ -127,9 +128,9 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-muted-foreground text-xs uppercase tracking-wide">
+        <SectionLabel as="label">
           Model
-        </label>
+        </SectionLabel>
         <select
           value={model ?? ""}
           onChange={(e) => void onModelChange(e.target.value)}
@@ -143,9 +144,9 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         </select>
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-muted-foreground text-xs tracking-wide uppercase">
+        <SectionLabel as="label">
           Prompt
-        </label>
+        </SectionLabel>
         <div
           onFocus={promptField.onFocus}
           onBlur={(e) => {

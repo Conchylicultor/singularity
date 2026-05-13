@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link, X } from "lucide-react";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations } from "@plugins/conversations/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
@@ -136,9 +137,9 @@ export function BlockingButton({
         )}
       </PopoverTrigger>
       <PopoverContent className="w-96 p-2" align="end">
-        <div className="mb-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+        <SectionLabel className="mb-1.5 text-[10px]">
           Blocking
-        </div>
+        </SectionLabel>
 
         {(blockedConvs.length > 0 || orphanBlockedIds.length > 0) && (
           <ul className="mb-2 space-y-px">

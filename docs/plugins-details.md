@@ -1304,6 +1304,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `SearchInputProps`, `TextFilterHandle`, `UseTextFilterOptions`
         - Values: `collectAllIds`, `filterTree`, `SearchInput`, `useTextFilter`
+    - **`section-label`** — Eyebrow/section-label typography primitive: small caps muted label for form sections and content headers.
+      - Exports (web):
+        - Types: `SectionLabelProps`
+        - Values: `SectionLabel`
     - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
       - Defines:
         - Slots: `Shortcuts.Shortcut`

@@ -795,6 +795,10 @@
       "name": "@singularity/plugin-primitives-search",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/section-label": {
+      "name": "@singularity/plugin-primitives-section-label",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/shortcuts": {
       "name": "@singularity/plugin-primitives-shortcuts",
       "version": "0.0.1",
@@ -1936,6 +1940,8 @@
     "@singularity/plugin-primitives-relative-time": ["@singularity/plugin-primitives-relative-time@workspace:plugins/primitives/plugins/relative-time"],
 
     "@singularity/plugin-primitives-search": ["@singularity/plugin-primitives-search@workspace:plugins/primitives/plugins/search"],
+
+    "@singularity/plugin-primitives-section-label": ["@singularity/plugin-primitives-section-label@workspace:plugins/primitives/plugins/section-label"],
 
     "@singularity/plugin-primitives-shortcuts": ["@singularity/plugin-primitives-shortcuts@workspace:plugins/primitives/plugins/shortcuts"],
 
