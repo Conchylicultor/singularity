@@ -12,14 +12,13 @@
   - DB schema: `plugins/agents/server/internal/tables.ts`
 - Exports (web):
   - Types: `SystemAgentDescriptor`
-  - Values: `agentConversationPane`, `agentDetailPane`, `Agents`, `agentSidePane`, `agentsResource`, `agentsRootPane`, `defineSystemAgent`, `patchAgent`, `systemAgentDetailPane`
+  - Values: `agentDetailPane`, `Agents`, `agentSidePane`, `agentsResource`, `agentsRootPane`, `defineSystemAgent`, `patchAgent`, `systemAgentDetailPane`
 - Exports (server):
   - Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`
   - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
 - Contributes:
   - `Pane.Register` "agents-root"
   - `Pane.Register` "agent-detail"
-  - `Pane.Register` "agent-conversation"
   - `Pane.Register` "agent-system-detail"
   - `Pane.Register` "agent-side"
   - `Shell.Sidebar` "Agents" → `component`

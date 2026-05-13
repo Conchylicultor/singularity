@@ -6,7 +6,7 @@ import { PluginDetail } from "./components/plugin-detail";
 export const pluginViewPane = Pane.define({
   id: "plugin-view",
   after: ["publish", "plugin-view", "catalog"],
-  segment: ":pluginId",
+  segment: "p/:pluginId",
   component: PluginViewBody,
   width: 600,
 });

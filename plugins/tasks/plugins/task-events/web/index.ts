@@ -6,7 +6,7 @@ export default {
   id: "task-events",
   name: "Task: Events",
   description:
-    "Lists pushes, attempts, and conversations for a task. Clicking a conversation opens taskConversationPane.",
+    "Lists pushes, attempts, and conversations for a task. Clicking a conversation opens conversationPane.",
   contributions: [
     TaskDetailSlots.Section({ id: "events", label: "Events", component: TaskEvents }),
   ],

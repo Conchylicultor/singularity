@@ -229,7 +229,7 @@ export function parseUrl(pathname: string): PaneSlot[] | null {
   const urlSegments = normalized ? normalized.split("/") : [];
 
   let cursor = 0;
-  let predecessorId: string | null = null;
+  const ancestorIds = new Set<string>();
   const chain: PaneSlot[] = [];
 
   while (cursor < urlSegments.length) {
@@ -240,8 +240,7 @@ export function parseUrl(pathname: string): PaneSlot[] | null {
     } | null = null;
 
     for (const pane of registry.values()) {
-      if (predecessorId === null && !pane.after.has(null)) continue;
-      if (predecessorId !== null && !pane.after.has(predecessorId)) continue;
+      if (!isAfterSatisfied(pane, chain.length === 0, ancestorIds)) continue;
 
       const result = matchSegmentParts(pane.segment, urlSegments, cursor);
       if (!result) continue;
@@ -254,7 +253,7 @@ export function parseUrl(pathname: string): PaneSlot[] | null {
 
     chain.push(createSlot(bestMatch.pane.id, bestMatch.params));
     cursor += bestMatch.consumed;
-    predecessorId = bestMatch.pane.id;
+    ancestorIds.add(bestMatch.pane.id);
   }
 
   // Root URL ("/") — find panes with empty/root segment that can be root.
@@ -383,7 +382,7 @@ function buildFreshChain(
 ): PaneSlot[] {
   const path: PaneInternal[] = [target];
   let current = target;
-  while (!current.after.has(null)) {
+  while (!current.after.has(null) && current.after.size > 0) {
     let found = false;
     for (const predId of current.after) {
       if (predId === null) continue;
@@ -414,20 +413,37 @@ function buildFreshChain(
   });
 }
 
+function isAfterSatisfied(
+  pane: PaneInternal,
+  isRoot: boolean,
+  ancestorIds: Set<string>,
+): boolean {
+  if (pane.after.size === 0) return true;
+  if (isRoot) return pane.after.has(null);
+  for (const a of pane.after) {
+    if (a !== null && ancestorIds.has(a)) return true;
+  }
+  return false;
+}
+
 function findValidPositions(
   target: PaneInternal,
   chain: PaneSlot[],
 ): number[] {
   const positions: number[] = [];
   for (let i = 0; i <= chain.length; i++) {
-    const leftOk =
-      i === 0
-        ? target.after.has(null)
-        : target.after.has(chain[i - 1]!.paneId);
+    const ancestorIds = new Set(chain.slice(0, i).map((s) => s.paneId));
+    const leftOk = isAfterSatisfied(target, i === 0, ancestorIds);
     const rightOk =
       i === chain.length
         ? true
-        : (registry.get(chain[i]!.paneId)?.after.has(target.id) ?? false);
+        : i > 0
+          ? true
+          : (() => {
+              const rightPane = registry.get(chain[0]!.paneId);
+              if (!rightPane) return false;
+              return isAfterSatisfied(rightPane, false, new Set([target.id]));
+            })();
     if (leftOk && rightOk) positions.push(i);
   }
   return positions;
@@ -435,15 +451,13 @@ function findValidPositions(
 
 function validateChain(chain: PaneSlot[]): PaneSlot[] {
   const result: PaneSlot[] = [];
+  const ancestorIds = new Set<string>();
   for (let i = 0; i < chain.length; i++) {
     const pane = registry.get(chain[i]!.paneId);
     if (!pane) break;
-    if (i === 0) {
-      if (!pane.after.has(null)) break;
-    } else {
-      if (!pane.after.has(result[i - 1]!.paneId)) break;
-    }
+    if (!isAfterSatisfied(pane, i === 0, ancestorIds)) break;
     result.push(chain[i]!);
+    ancestorIds.add(pane.id);
   }
   return result;
 }
@@ -740,7 +754,7 @@ function define<
           return p._internal.id;
         }),
       )
-    : new Set<string | null>([null]);
+    : new Set<string | null>();
   const segment = (args.segment ?? "").replace(/^\/+/, "");
 
   const dataContext = createContext<unknown>(DATA_NOT_PROVIDED);

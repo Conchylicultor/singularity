@@ -12,7 +12,7 @@ export const logsPane = Pane.define({
 export const logChannelPane = Pane.define({
   id: "logs-channel",
   after: [logsPane],
-  segment: ":channel",
+  segment: "ch/:channel",
   component: LogsChannelBody,
 });
 

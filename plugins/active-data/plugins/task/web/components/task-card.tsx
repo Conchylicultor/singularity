@@ -13,7 +13,6 @@ import {
   tasksResource,
   type Attempt,
 } from "@plugins/tasks/core";
-import { taskConversationPane } from "@plugins/tasks/plugins/task-detail/web";
 import { TaskSchema, type Task } from "@plugins/tasks-core/core";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -165,9 +164,14 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
   const attemptsQ = useResource(attemptsResource);
   const match = usePaneMatch();
   const openPane = useOpenPane();
-  const activeConvId = match?.chain.find(
-    (e) => e.pane === taskConversationPane._internal,
-  )?.params.convId;
+  // Find the last conversationPane in the chain — if there are multiple
+  // (host + nested), the last one is the one the user opened from here.
+  const convEntries = match?.chain.filter(
+    (e) => e.pane === conversationPane._internal,
+  ) ?? [];
+  const activeConvId = convEntries.length > 1
+    ? convEntries[convEntries.length - 1]!.params.convId
+    : undefined;
 
   const attempts = useMemo(() => {
     const rows = attemptsQ.data;
@@ -211,9 +215,9 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
                       type="button"
                       onClick={() => {
                         if (activeConvId === c.id) {
-                          taskConversationPane.close();
+                          conversationPane.close();
                         } else {
-                          openPane(taskConversationPane, { taskId, convId: c.id });
+                          openPane(conversationPane, { convId: c.id });
                         }
                       }}
                       className={cn(

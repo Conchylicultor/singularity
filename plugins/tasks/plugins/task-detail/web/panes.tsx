@@ -1,10 +1,6 @@
 import { type ReactElement } from "react";
 import { Pane, PaneChrome, type, usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
-  ConversationProvide,
-  ConversationView,
-} from "@plugins/conversations/plugins/conversation-view/web";
-import {
   Tasks as TasksSlots,
   TasksList,
 } from "@plugins/tasks/plugins/task-list/web";
@@ -30,19 +26,10 @@ export const tasksRootPane = Pane.define({
 export const taskDetailPane = Pane.define({
   id: "task-detail",
   after: [tasksRootPane],
-  segment: ":taskId",
+  segment: "t/:taskId",
   component: TaskDetailBody,
   provides: type<{ task: Task }>(),
   width: 480,
-});
-
-export const taskConversationPane = Pane.define({
-  id: "task-conversation",
-  after: [taskDetailPane],
-  segment: "c/:convId",
-  component: TaskConversationBody,
-  // ConversationView owns its own PaneChrome (via conversationPane).
-  chrome: false,
 });
 
 function TasksRoot(): ReactElement {
@@ -96,11 +83,3 @@ function TaskDetailBody(): ReactElement {
   );
 }
 
-function TaskConversationBody(): ReactElement {
-  const { convId } = taskConversationPane.useParams();
-  return (
-    <ConversationProvide key={convId} convId={convId}>
-      <ConversationView />
-    </ConversationProvide>
-  );
-}

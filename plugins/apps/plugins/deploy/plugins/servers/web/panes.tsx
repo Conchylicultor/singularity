@@ -27,7 +27,7 @@ export const addServerPane = Pane.define({
 export const serverDetailPane = Pane.define({
   id: "deploy-server-detail",
   after: [serversRootPane],
-  segment: ":serverId",
+  segment: "s/:serverId",
   component: ServerDetailBody,
   provides: type<{ server: Server }>(),
 });

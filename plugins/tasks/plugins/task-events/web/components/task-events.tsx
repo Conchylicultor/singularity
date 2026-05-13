@@ -4,13 +4,11 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { convSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-conversation/web";
 import {
   attemptsResource,
   pushesResource,
   type Attempt,
 } from "@plugins/tasks/core";
-import { taskConversationPane } from "@plugins/tasks/plugins/task-detail/web";
 import { cn } from "@/lib/utils";
 
 type RepoInfo = { githubBase: string | null };
@@ -70,14 +68,14 @@ export function TaskEvents({ taskId }: { taskId: string }) {
   const githubBase = useGithubBase();
   const match = usePaneMatch();
   const openPane = useOpenPane();
-  const isInsideConversation = match?.chain.some(
+  // Find the last conversationPane in the chain — if there are multiple
+  // (host + nested), the last one is the one the user opened from here.
+  const convEntries = match?.chain.filter(
     (e) => e.pane === conversationPane._internal,
-  ) ?? false;
-  const activeConvId = isInsideConversation
-    ? match?.chain.find((e) => e.pane === convSidePane._internal)?.params
-        .sideConvId
-    : match?.chain.find((e) => e.pane === taskConversationPane._internal)
-        ?.params.convId;
+  ) ?? [];
+  const activeConvId = convEntries.length > 1
+    ? convEntries[convEntries.length - 1]!.params.convId
+    : undefined;
 
   const attempts = useMemo(() => {
     return attemptsQ.data
@@ -190,18 +188,9 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                               type="button"
                               onClick={() => {
                                 if (activeConvId === c.id) {
-                                  if (isInsideConversation) {
-                                    convSidePane.close();
-                                  } else {
-                                    taskConversationPane.close();
-                                  }
-                                } else if (isInsideConversation) {
-                                  openPane(convSidePane, {
-                                    sideConvId: c.id,
-                                  });
+                                  conversationPane.close();
                                 } else {
-                                  openPane(taskConversationPane, {
-                                    taskId,
+                                  openPane(conversationPane, {
                                     convId: c.id,
                                   });
                                 }

@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { agentLaunchesResource } from "../../shared/resources";
-import { agentConversationPane } from "../panes";
 import { cn } from "@/lib/utils";
 
 function formatDate(value: Date | string): string {
@@ -21,7 +21,7 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
   const match = usePaneMatch();
   const openPane = useOpenPane();
   const activeConvId = match?.chain.find(
-    (e) => e.pane === agentConversationPane._internal,
+    (e) => e.pane === conversationPane._internal,
   )?.params.convId;
 
   const launches = useMemo(() => {
@@ -51,10 +51,9 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
                   onClick={() => {
                     if (!primary) return;
                     if (isActive) {
-                      agentConversationPane.close();
+                      conversationPane.close();
                     } else {
-                      openPane(agentConversationPane, {
-                        id: agentId,
+                      openPane(conversationPane, {
                         convId: primary.id,
                       });
                     }

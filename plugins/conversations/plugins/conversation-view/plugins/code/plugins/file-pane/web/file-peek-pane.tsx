@@ -14,7 +14,7 @@ import { useFileRenderers } from "./components/use-file-renderers";
 
 export const filePeekPane = Pane.define({
   id: "file-peek",
-  after: [conversationPane, taskDetailPane, "task-side", "conv-side", "plugin-conv-side"],
+  after: [conversationPane, taskDetailPane],
   segment: "file/:worktree/:filePath*",
   component: FilePeekPaneBody,
   chrome: { history: false },

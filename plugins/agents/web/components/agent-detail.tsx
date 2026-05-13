@@ -11,8 +11,8 @@ import {
 } from "@plugins/primitives/plugins/avatar/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { Button } from "@/components/ui/button";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { agentLaunchesResource, agentsResource } from "../../shared/resources";
-import { agentConversationPane } from "../panes";
 import { AgentLaunches } from "./agent-launches";
 
 type Patch = Partial<{
@@ -97,7 +97,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         taskId: string;
         conversationId: string;
       };
-      openPane(agentConversationPane, { id: agentId, convId: conversationId });
+      openPane(conversationPane, { convId: conversationId });
     } finally {
       setLaunching(false);
     }

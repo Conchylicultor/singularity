@@ -1,6 +1,5 @@
 import type { PluginDefinition } from "@core";
 import { Config } from "@plugins/config/web";
-import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Stats } from "@plugins/stats/web";
 import { costConfig } from "../shared/config";
 import { AvgCostPerConversationChart } from "./components/avg-cost-per-conversation-chart";
@@ -8,9 +7,6 @@ import { CostDistributionChart } from "./components/cost-distribution-chart";
 import { CostSection } from "./components/cost-section";
 import { TokenMixChart } from "./components/token-mix-chart";
 import { TopConversationsTable } from "./components/top-conversations-table";
-import { costConvSidePane } from "./panes";
-
-export { costConvSidePane } from "./panes";
 
 export default {
   id: "stats-cost",
@@ -18,7 +14,6 @@ export default {
   description:
     "Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown.",
   contributions: [
-    Pane.Register({ pane: costConvSidePane }),
     Config.Spec(costConfig),
     Stats.Chart({
       id: "cost-overview",

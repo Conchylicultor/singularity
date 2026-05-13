@@ -14,7 +14,7 @@ export const convCommitsGraphPane = Pane.define({
 export const convCommitDiffPane = Pane.define({
   id: "conv-commit-diff",
   after: [convCommitsGraphPane],
-  segment: ":sha",
+  segment: "d/:sha",
   component: ConvCommitDiffBody,
   width: 720,
 });

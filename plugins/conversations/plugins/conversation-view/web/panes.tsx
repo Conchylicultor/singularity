@@ -7,7 +7,6 @@ import { ActiveRelateSync } from "./components/active-relate-sync";
 
 export const conversationPane = Pane.define({
   id: "conversation",
-  after: [null, "attempt", "task-detail"],
   segment: "c/:convId",
   component: ConversationView,
   provides: type<{ conversation: ConversationRecord }>(),

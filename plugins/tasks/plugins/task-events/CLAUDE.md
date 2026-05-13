@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Lists pushes, attempts, and conversations for a task. Clicking a conversation opens taskConversationPane.
+- Description: Lists pushes, attempts, and conversations for a task. Clicking a conversation opens conversationPane.
 - Contributes:
   - `TaskDetailSlots.Section` "events" → `TaskEvents`
 

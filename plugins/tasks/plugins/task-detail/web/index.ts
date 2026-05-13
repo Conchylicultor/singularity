@@ -6,7 +6,6 @@ import { MdChecklist } from "react-icons/md";
 import {
   tasksRootPane,
   taskDetailPane,
-  taskConversationPane,
 } from "./panes";
 
 export { TaskDetail as TaskDetailSlots } from "./slots";
@@ -18,7 +17,7 @@ export {
 } from "./context";
 export { TaskDetail } from "./components/task-detail";
 export { TaskTreeDetail } from "./components/task-tree-detail";
-export { tasksRootPane, taskDetailPane, taskConversationPane } from "./panes";
+export { tasksRootPane, taskDetailPane } from "./panes";
 
 export default {
   id: "task-detail",
@@ -28,7 +27,6 @@ export default {
   contributions: [
     Pane.Register({ pane: tasksRootPane }),
     Pane.Register({ pane: taskDetailPane }),
-    Pane.Register({ pane: taskConversationPane }),
     Shell.Sidebar({
       id: "tasks",
       ...sidebarNavItem({ title: "Tasks", icon: MdChecklist, onClick: () => openPane(tasksRootPane, {}) }),

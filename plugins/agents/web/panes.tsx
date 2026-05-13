@@ -3,8 +3,6 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, type, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
 import {
   conversationPane,
-  ConversationProvide,
-  ConversationView,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { AgentSideBody } from "./components/agent-side-body";
 import { agentsResource, type Agent } from "../shared/resources";
@@ -26,19 +24,10 @@ export const agentsRootPane = Pane.define({
 export const agentDetailPane = Pane.define({
   id: "agent-detail",
   after: [agentsRootPane],
-  segment: ":id",
+  segment: "a/:id",
   component: AgentDetailBody,
   provides: type<{ agent: Agent }>(),
   width: 360,
-});
-
-export const agentConversationPane = Pane.define({
-  id: "agent-conversation",
-  after: [agentDetailPane],
-  segment: "c/:convId",
-  component: AgentConversationBody,
-  // ConversationView owns its own PaneChrome (via conversationPane).
-  chrome: false,
 });
 
 export const systemAgentDetailPane = Pane.define({
@@ -121,15 +110,6 @@ function AgentDetailBody(): ReactElement {
     <agentDetailPane.Provider value={{ agent }}>
       {wrapped}
     </agentDetailPane.Provider>
-  );
-}
-
-function AgentConversationBody(): ReactElement {
-  const { convId } = agentConversationPane.useParams();
-  return (
-    <ConversationProvide key={convId} convId={convId}>
-      <ConversationView />
-    </ConversationProvide>
   );
 }
 

@@ -8,7 +8,6 @@ import { MdPrecisionManufacturing } from "react-icons/md";
 import {
   agentsRootPane,
   agentDetailPane,
-  agentConversationPane,
   systemAgentDetailPane,
   agentSidePane,
 } from "./panes";
@@ -21,7 +20,6 @@ import { Agents as AgentsSlots } from "./slots";
 export {
   agentsRootPane,
   agentDetailPane,
-  agentConversationPane,
   systemAgentDetailPane,
   agentSidePane,
 } from "./panes";
@@ -38,7 +36,6 @@ export default {
   contributions: [
     Pane.Register({ pane: agentsRootPane }),
     Pane.Register({ pane: agentDetailPane }),
-    Pane.Register({ pane: agentConversationPane }),
     Pane.Register({ pane: systemAgentDetailPane }),
     Pane.Register({ pane: agentSidePane }),
     Shell.Sidebar({

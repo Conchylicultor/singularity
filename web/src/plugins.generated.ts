@@ -87,7 +87,6 @@ export const pluginEntries: PluginEntry[] = [
   { name: "conversations/plugins/conversation-view/plugins/push-and-exit", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/web") },
   { name: "conversations/plugins/conversation-view/plugins/quick-prompts", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/web") },
   { name: "conversations/plugins/conversation-view/plugins/resume", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/resume/web") },
-  { name: "conversations/plugins/conversation-view/plugins/side-conversation", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/side-conversation/web") },
   { name: "conversations/plugins/conversation-view/plugins/side-task", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/side-task/web") },
   { name: "conversations/plugins/conversation-view/plugins/status", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/status/web") },
   { name: "conversations/plugins/conversation-view/plugins/tasks-panel", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/tasks-panel/web") },
