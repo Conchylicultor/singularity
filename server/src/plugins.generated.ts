@@ -105,7 +105,7 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (conversationsConversationCategoryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, databasePlugin, infraClaudeCliPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, primitivesAvatarPlugin, tasksCorePlugin];
 (conversationsConversationProgressPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, infraPathsPlugin, tasksCorePlugin];
 (conversationsConversationViewAllowMonitorPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
-(conversationsConversationViewCodeReviewPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
+(conversationsConversationViewCodeReviewPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, primitivesRankPlugin];
 (conversationsConversationViewCodePlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, tasksCorePlugin];
 (conversationsConversationViewCommitsGraphPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, tasksCorePlugin];
 (conversationsConversationViewDropAndExitPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, tasksCorePlugin];

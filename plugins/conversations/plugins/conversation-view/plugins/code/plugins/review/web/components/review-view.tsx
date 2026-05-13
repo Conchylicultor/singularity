@@ -1,11 +1,14 @@
 import { useMemo, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent, CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { pushesResource, type Push } from "@plugins/tasks/core";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
+import { reviewSectionsResource } from "../../shared/resources";
+import { groupBySection, type FileSection } from "../core-files";
 import { usePushFiles } from "../use-push-files";
 import { ReviewFileRow } from "./review-file-row";
 
@@ -184,6 +187,17 @@ function PushBody({ pushId }: { pushId: string }) {
   );
 }
 
+function sumStats(files: EditedFile[]) {
+  return files.reduce(
+    (acc, f) => ({
+      count: acc.count + 1,
+      additions: acc.additions + f.additions,
+      deletions: acc.deletions + f.deletions,
+    }),
+    { count: 0, additions: 0, deletions: 0 },
+  );
+}
+
 function FileList({
   files,
   worktree,
@@ -198,25 +212,25 @@ function FileList({
   emptyLabel: string;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const { data: reviewSections } = useResource(reviewSectionsResource);
 
   const sorted = useMemo(() => {
     if (!files) return null;
     return [...files].sort((a, b) => a.path.localeCompare(b.path));
   }, [files]);
 
-  const totals = useMemo(() => {
-    if (!sorted) return { count: 0, additions: 0, deletions: 0 };
-    return sorted.reduce(
-      (acc, f) => ({
-        count: acc.count + 1,
-        additions: acc.additions + f.additions,
-        deletions: acc.deletions + f.deletions,
-      }),
-      { count: 0, additions: 0, deletions: 0 },
-    );
-  }, [sorted]);
+  const sections = useMemo((): FileSection[] | null => {
+    if (!sorted) return null;
+    return groupBySection(sorted, reviewSections);
+  }, [sorted, reviewSections]);
 
-  const allExpanded = sorted != null && sorted.length > 0 && expanded.size === sorted.length;
+  const totals = useMemo(
+    () => (sorted ? sumStats(sorted) : { count: 0, additions: 0, deletions: 0 }),
+    [sorted],
+  );
+
+  const allExpanded =
+    sorted != null && sorted.length > 0 && expanded.size === sorted.length;
 
   function toggleAll() {
     if (!sorted) return;
@@ -247,27 +261,72 @@ function FileList({
         onToggleAll={toggleAll}
       />
       <Body>
-        {sorted == null ? (
+        {sections == null ? (
           <Placeholder>Loading…</Placeholder>
-        ) : sorted.length === 0 ? (
+        ) : sorted!.length === 0 ? (
           <Placeholder>{emptyLabel}</Placeholder>
         ) : (
           <div className="flex flex-col">
-            {sorted.map((file) => (
-              <ReviewFileRow
-                key={file.path}
+            {sections.map((section) => (
+              <FileSectionBlock
+                key={section.id ?? "__default__"}
+                section={section}
                 worktree={worktree}
-                file={file}
-                expanded={expanded.has(file.path)}
-                onToggle={() => toggleOne(file.path)}
                 base={base}
                 head={head}
+                expanded={expanded}
+                onToggle={toggleOne}
               />
             ))}
           </div>
         )}
       </Body>
     </>
+  );
+}
+
+function FileSectionBlock({
+  section,
+  worktree,
+  base,
+  head,
+  expanded,
+  onToggle,
+}: {
+  section: FileSection;
+  worktree: string;
+  base: string;
+  head?: string;
+  expanded: Set<string>;
+  onToggle: (path: string) => void;
+}) {
+  const label = section.name ?? "Changes";
+  const totals = sumStats(section.files);
+
+  return (
+    <Collapsible defaultOpen>
+      <CollapsibleTrigger className="sticky top-0 z-[2] gap-2 border-b border-border bg-muted/60 px-3 py-2 text-xs font-medium text-muted-foreground backdrop-blur hover:bg-muted">
+        <CollapsibleChevron className="size-3.5" />
+        <span>{label}</span>
+        <span>·</span>
+        <span className="tabular-nums">{totals.count} files</span>
+        <span className="tabular-nums text-emerald-600 dark:text-emerald-400">+{totals.additions}</span>
+        <span className="tabular-nums text-red-600 dark:text-red-400">−{totals.deletions}</span>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        {section.files.map((file) => (
+          <ReviewFileRow
+            key={file.path}
+            worktree={worktree}
+            file={file}
+            expanded={expanded.has(file.path)}
+            onToggle={() => onToggle(file.path)}
+            base={base}
+            head={head}
+          />
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

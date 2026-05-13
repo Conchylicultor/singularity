@@ -71,6 +71,11 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
       - Plugins:
         - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
           - `/api/conversations/:id/allow-files (GET)`
+        - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
+          - Plugins:
+            - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file. Toolbar button and full-screen view to review all worktree changes file-by-file.
+              - `/api/review-sections (GET, POST)`
+              - `/api/review-sections/:id (PATCH, DELETE)`
         - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
           - `/api/conversations/:id/drop-and-exit (POST)`
         - **`exit`** — Toolbar button that closes the conversation without changing any task state.
