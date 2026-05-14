@@ -183,7 +183,10 @@ function FloatingActionAnchor() {
         if ($isRangeSelection(selection)) {
           selection.insertText(text);
         } else {
-          $getRoot().selectStart();
+          // No selection means the editor was never focused. Insert at the end
+          // rather than selectStart() — selectStart() triggers scroll-into-view
+          // at position 0 and shifts the visible area unexpectedly.
+          $getRoot().selectEnd();
           const sel = $getSelection();
           if ($isRangeSelection(sel)) sel.insertText(text);
         }
