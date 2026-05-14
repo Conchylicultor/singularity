@@ -13,13 +13,14 @@ import {
 import { Column } from "./column";
 
 export function MillerColumns() {
-  // Must run before useMatchForPath so the matcher sees the current
-  // contribution set on first render.
-  useSyncPaneRegistry();
-
   const basePath = useContext(PaneBasePathContext);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- synchronous write before useMatchForPath
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- synchronous write before useSyncPaneRegistry
   useMemo(() => { setBasePath(basePath); }, [basePath]);
+
+  // Must run before useMatchForPath so the matcher sees the current
+  // contribution set on first render. Must run AFTER setBasePath so that
+  // handleLocationChange() strips the base path correctly on initial load.
+  useSyncPaneRegistry();
 
   const rawPathname = usePathname();
   const pathname = stripBasePath(rawPathname, basePath);
