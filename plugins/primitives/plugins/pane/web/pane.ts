@@ -360,6 +360,16 @@ function chainsEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
   return true;
 }
 
+export function restoreChain(
+  slots: Array<{ paneId: string; params: Record<string, string> }>,
+): void {
+  if (typeof window === "undefined") return;
+  const chain: PaneSlot[] = slots.map((s) => createSlot(s.paneId, s.params));
+  const valid = validateChain(chain);
+  if (valid.length === 0) return;
+  setChain(valid);
+}
+
 export function syncChainFromUrl(pathname: string): void {
   const parsed = parseUrl(pathname);
   const newChain = parsed ?? [];

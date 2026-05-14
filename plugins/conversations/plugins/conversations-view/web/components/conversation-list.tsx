@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { loadChainForConversation } from "@plugins/conversations/plugins/pane-restore/web";
+import { restoreChain, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { cn } from "@/lib/utils";
 import { ConversationsView } from "../slots";
@@ -59,7 +60,12 @@ export function ConversationList() {
   };
 
   const navigate = (id: string) => {
-    openPane(conversationPane, { convId: id }, { mode: "root" });
+    const saved = loadChainForConversation(id);
+    if (saved && saved.length > 1) {
+      restoreChain(saved);
+    } else {
+      openPane(conversationPane, { convId: id }, { mode: "root" });
+    }
     setActiveId(id);
   };
 

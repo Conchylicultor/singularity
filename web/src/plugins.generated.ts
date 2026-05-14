@@ -107,6 +107,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "conversations/plugins/conversations-view/plugins/queue", loader: () => import("@plugins/conversations/plugins/conversations-view/plugins/queue/web") },
   { name: "conversations/plugins/conversations-view", loader: () => import("@plugins/conversations/plugins/conversations-view/web") },
   { name: "conversations/plugins/model-provider", loader: () => import("@plugins/conversations/plugins/model-provider/web") },
+  { name: "conversations/plugins/pane-restore", loader: () => import("@plugins/conversations/plugins/pane-restore/web") },
   { name: "conversations/plugins/summary", loader: () => import("@plugins/conversations/plugins/summary/web") },
   { name: "conversations", loader: () => import("@plugins/conversations/web") },
   { name: "crashes/plugins/launch-fix", loader: () => import("@plugins/crashes/plugins/launch-fix/web") },

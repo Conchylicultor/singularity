@@ -135,6 +135,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`history`** — All conversations in historical order of creation.
         - **`queue`** — Stable-rank global priority queue of conversations awaiting user input. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
     - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
+    - **`pane-restore`** — Saves and restores the miller pane chain per conversation using localStorage.
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
