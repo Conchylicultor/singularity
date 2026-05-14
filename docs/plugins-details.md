@@ -376,6 +376,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `code-explorer.resolveWorktreePath`
         - `GET /api/code/:worktree/resolve`
 
+- **`collections`** — Typed collection primitive: defineCollection for managed user-editable lists.
+  - Exports (core):
+    - Types: `CollectionDefinition`, `CollectionOptions`, `CollectionSchemas`, `CollectionTable`, `FieldInstance`, `FieldsRecord`, `InferCreateInput`, `InferRow`, `InferUpdatePatch`
+    - Values: `createFieldInstance`, `defineCollection`
+
 - **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
   - Defines:
     - Slots: `Config.Spec`, `Config.Section`
