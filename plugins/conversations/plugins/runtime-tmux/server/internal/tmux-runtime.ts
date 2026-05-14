@@ -294,10 +294,22 @@ export const tmuxRuntime: ConversationRuntime = {
         `tmux load-buffer for ${conversationId} failed (exit ${loadExit}): ${stderr.trim() || "<no stderr>"}`,
       );
     }
-    await Bun.spawn(
+    const pasteProc = Bun.spawn(
       [TMUX, "paste-buffer", "-d", "-p", "-b", bufferName, "-t", conversationId],
       { stdout: "pipe", stderr: "pipe" },
-    ).exited;
+    );
+    const pasteExit = await pasteProc.exited;
+    if (pasteExit !== 0) {
+      const stderr = await new Response(pasteProc.stderr).text();
+      throw new Error(
+        `tmux paste-buffer for ${conversationId} failed (exit ${pasteExit}): ${stderr.trim() || "<no stderr>"}`,
+      );
+    }
+    // Give Claude's input parser time to process the paste-end marker
+    // (\e[201~) and exit bracketed-paste mode before Enter arrives.
+    // Without this, Enter sometimes lands while the parser is still in
+    // paste mode and gets swallowed as a literal newline.
+    await Bun.sleep(50);
     await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Enter"], {
       stdout: "pipe",
       stderr: "pipe",
