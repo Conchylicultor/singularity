@@ -163,7 +163,7 @@ Take screenshots of the app using Playwright (Chromium is pre-installed).
 For a single static snapshot:
 
 ```bash
-bunx playwright screenshot --wait-for-timeout 3000 --viewport-size "1280,800" http://<worktree>.localhost:9000 /tmp/screenshot.png
+bun run playwright screenshot --wait-for-timeout 3000 --viewport-size "1280,800" http://<worktree>.localhost:9000 /tmp/screenshot.png
 ```
 
 If you need to **verify behavior** (click a button, confirm state, capture a
