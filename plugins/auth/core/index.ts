@@ -19,3 +19,10 @@ export {
   AuthCredentialsMissingError,
 } from "./internal/errors";
 export { authStateResource } from "./resources";
+export type {
+  GetAccessTokenArgs,
+  TokenResponse,
+  TokenSuccess,
+  TokenNeedsConsent,
+  TokenFailure,
+} from "./internal/token-types";

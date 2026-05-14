@@ -3,19 +3,20 @@ import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
 import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { MdBackup } from "react-icons/md";
-import { dbBackupPane } from "./panes";
+import { backupPane } from "./panes";
 
-export { dbBackupPane } from "./panes";
+export { backupPane } from "./panes";
 
 export default {
-  id: "debug-db-backup",
-  name: "DB Backup",
-  description: "Backup non-worktree Postgres databases to ~/.backups/singularity/.",
+  id: "backup",
+  name: "Backup",
+  description:
+    "Backup orchestrator UI: run backups, view history, configure targets.",
   contributions: [
-    Pane.Register({ pane: dbBackupPane }),
+    Pane.Register({ pane: backupPane }),
     DebugApp.Sidebar({
-      id: "db-backup",
-      ...sidebarNavItem({ title: "DB Backup", icon: MdBackup, onClick: () => openPane(dbBackupPane, {}, { mode: "root" }) }),
+      id: "backup",
+      ...sidebarNavItem({ title: "Backup", icon: MdBackup, onClick: () => openPane(backupPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

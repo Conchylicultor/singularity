@@ -4,6 +4,7 @@ import { handleOAuthCallback } from "./internal/handlers/oauth-callback";
 import { handleDisconnect } from "./internal/handlers/disconnect";
 import { handleSetApiKey } from "./internal/handlers/api-key";
 import { handleGetState } from "./internal/handlers/state";
+import { handleGetToken } from "./internal/handlers/token";
 import { authStateResource } from "./internal/auth-resource";
 import { onReady } from "./internal/boot";
 
@@ -27,6 +28,11 @@ export type {
   ResolvedCredentials,
   ParsedTokenResponse,
   AuthEnvAccessor,
+  GetAccessTokenArgs,
+  TokenResponse,
+  TokenSuccess,
+  TokenNeedsConsent,
+  TokenFailure,
 } from "@plugins/auth/core";
 export {
   AuthError,
@@ -47,6 +53,7 @@ export default {
     "POST /api/auth/disconnect/:provider": handleDisconnect,
     "POST /api/auth/api-key/:provider": handleSetApiKey,
     "GET /api/auth/state": handleGetState,
+    "POST /api/auth/token": handleGetToken,
   },
   resources: [authStateResource],
   onReady,

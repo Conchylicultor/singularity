@@ -8,7 +8,6 @@
 - Sub-plugins:
   - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
   - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
-  - **`db-backup`** — Backup non-worktree Postgres databases to ~/.backups/singularity/. Backup non-worktree Postgres databases to ~/.backups/singularity/.
   - **`logs`** — System logs pane, opened from the Debug sidebar.
   - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
   - **`profiling`** — Gantt chart of build steps and server startup phases.

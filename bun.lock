@@ -203,6 +203,18 @@
       "name": "@singularity/plugin-auth-notion",
       "version": "0.0.1",
     },
+    "plugins/backup": {
+      "name": "@singularity/plugin-backup",
+      "version": "0.0.1",
+    },
+    "plugins/backup/plugins/google-drive": {
+      "name": "@singularity/plugin-backup-google-drive",
+      "version": "0.0.1",
+    },
+    "plugins/backup/plugins/local": {
+      "name": "@singularity/plugin-backup-local",
+      "version": "0.0.1",
+    },
     "plugins/build": {
       "name": "@singularity/plugin-build",
       "version": "0.0.1",
@@ -548,10 +560,6 @@
     },
     "plugins/debug/plugins/claude-cli-calls": {
       "name": "@singularity/plugin-debug-claude-cli-calls",
-      "version": "0.0.1",
-    },
-    "plugins/debug/plugins/db-backup": {
-      "name": "@singularity/plugin-debug-db-backup",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/logs": {
@@ -1723,6 +1731,12 @@
 
     "@singularity/plugin-auth-notion": ["@singularity/plugin-auth-notion@workspace:plugins/auth/plugins/notion"],
 
+    "@singularity/plugin-backup": ["@singularity/plugin-backup@workspace:plugins/backup"],
+
+    "@singularity/plugin-backup-google-drive": ["@singularity/plugin-backup-google-drive@workspace:plugins/backup/plugins/google-drive"],
+
+    "@singularity/plugin-backup-local": ["@singularity/plugin-backup-local@workspace:plugins/backup/plugins/local"],
+
     "@singularity/plugin-build": ["@singularity/plugin-build@workspace:plugins/build"],
 
     "@singularity/plugin-code-explorer": ["@singularity/plugin-code-explorer@workspace:plugins/code-explorer"],
@@ -1892,8 +1906,6 @@
     "@singularity/plugin-debug-broadcasts": ["@singularity/plugin-debug-broadcasts@workspace:plugins/debug/plugins/broadcasts"],
 
     "@singularity/plugin-debug-claude-cli-calls": ["@singularity/plugin-debug-claude-cli-calls@workspace:plugins/debug/plugins/claude-cli-calls"],
-
-    "@singularity/plugin-debug-db-backup": ["@singularity/plugin-debug-db-backup@workspace:plugins/debug/plugins/db-backup"],
 
     "@singularity/plugin-debug-logs": ["@singularity/plugin-debug-logs@workspace:plugins/debug/plugins/logs"],
 

@@ -49,12 +49,17 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
 
-- **`auth`** [load-bearing] — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- **`auth`** [load-bearing] — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Plugins:
     - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
       - Plugins:
         - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
     - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
+
+- **`backup`** — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.
+  - Plugins:
+    - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
+    - **`local`** — Config UI for local backup target. Stores backup archives on the local filesystem.
 
 - **`build`** — Trigger `./singularity build` from the toolbar.
 
@@ -159,7 +164,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
-    - **`db-backup`** — Backup non-worktree Postgres databases to ~/.backups/singularity/. Backup non-worktree Postgres databases to ~/.backups/singularity/.
     - **`logs`** — System logs pane, opened from the Debug sidebar.
     - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
     - **`profiling`** — Gantt chart of build steps and server startup phases.

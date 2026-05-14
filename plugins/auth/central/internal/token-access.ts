@@ -6,11 +6,9 @@ import {
 } from "./token-store";
 import { resolveCredentials } from "./credentials";
 import { refreshAccessToken } from "./oauth-flow";
-import type {
-  AuthIdentity,
-  AuthProviderDescriptor,
-} from "@plugins/auth/core";
+import type { AuthIdentity, AuthProviderDescriptor } from "@plugins/auth/core";
 import { AuthNeedsConsentError } from "@plugins/auth/core";
+import type { GetAccessTokenArgs, TokenResponse } from "@plugins/auth/core";
 
 const REFRESH_LEAD_MS = 60_000;
 const inFlightRefreshes = new Map<string, Promise<StoredAccount>>();
@@ -90,35 +88,13 @@ async function refreshAccount(
   return promise;
 }
 
-export interface GetAccessTokenArgs {
-  providerId: string;
-  accountId?: string;
-  scopes?: string[];
-}
-
-export interface TokenSuccess {
-  ok: true;
-  accessToken: string;
-  expiresAt: number;
-  scopes: string[];
-  identity: AuthIdentity;
-}
-
-export interface TokenNeedsConsent {
-  ok: false;
-  needsConsent: true;
-  reason: "no-account" | "needs-reconsent" | "missing-scopes";
-  missingScopes?: string[];
-}
-
-export interface TokenFailure {
-  ok: false;
-  needsConsent?: false;
-  message: string;
-  code?: string;
-}
-
-export type TokenResponse = TokenSuccess | TokenNeedsConsent | TokenFailure;
+export type {
+  GetAccessTokenArgs,
+  TokenResponse,
+  TokenSuccess,
+  TokenNeedsConsent,
+  TokenFailure,
+} from "@plugins/auth/core";
 
 /** Token resolver. Returns a structured TokenResponse. */
 export async function getAccessTokenInternal(

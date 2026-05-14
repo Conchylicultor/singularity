@@ -17,6 +17,10 @@ import appsForgeCatalogTablesRowCountPlugin from "@plugins/apps/plugins/forge/pl
 import appsForgeCatalogTablesSampleRowsPlugin from "@plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/sample-rows/server";
 import authGooglePlugin from "@plugins/auth/plugins/google/server";
 import authNotionPlugin from "@plugins/auth/plugins/notion/server";
+import authPlugin from "@plugins/auth/server";
+import backupGoogleDrivePlugin from "@plugins/backup/plugins/google-drive/server";
+import backupLocalPlugin from "@plugins/backup/plugins/local/server";
+import backupPlugin from "@plugins/backup/server";
 import buildPlugin from "@plugins/build/server";
 import codeExplorerFileResolvePlugin from "@plugins/code-explorer/plugins/file-resolve/server";
 import codeExplorerPlugin from "@plugins/code-explorer/server";
@@ -55,7 +59,6 @@ import databaseMigrationsPlugin from "@plugins/database/plugins/migrations/serve
 import databaseQueryPlugin from "@plugins/database/plugins/query/server";
 import databasePlugin from "@plugins/database/server";
 import debugBroadcastsPlugin from "@plugins/debug/plugins/broadcasts/server";
-import debugDbBackupPlugin from "@plugins/debug/plugins/db-backup/server";
 import debugLogsPlugin from "@plugins/debug/plugins/logs/server";
 import debugMemoryPlugin from "@plugins/debug/plugins/memory/server";
 import debugProfilingBootPlugin from "@plugins/debug/plugins/profiling/plugins/boot/server";
@@ -107,6 +110,9 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (appsForgeCatalogTablesSampleRowsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (authGooglePlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (authNotionPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
+(backupGoogleDrivePlugin as ServerPluginDefinition).dependsOn = [authPlugin, backupPlugin, configPlugin];
+(backupLocalPlugin as ServerPluginDefinition).dependsOn = [backupPlugin, configPlugin, infraPathsPlugin];
+(backupPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databaseAdminPlugin, databasePlugin, infraJobsPlugin, infraPathsPlugin];
 (buildPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, debugLogsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin, infraPathsPlugin];
 (codeExplorerFileResolvePlugin as ServerPluginDefinition).dependsOn = [codeExplorerPlugin, infraPathsPlugin];
 (codeExplorerPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
@@ -142,7 +148,6 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (databaseQueryPlugin as ServerPluginDefinition).dependsOn = [databaseAdminPlugin, infraMcpPlugin, tasksCorePlugin];
 (databasePlugin as ServerPluginDefinition).dependsOn = [databaseMigrationsPlugin];
 (debugBroadcastsPlugin as ServerPluginDefinition).dependsOn = [infraWorktreePlugin];
-(debugDbBackupPlugin as ServerPluginDefinition).dependsOn = [databaseAdminPlugin, infraPathsPlugin];
 (debugMemoryPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, infraWorktreePlugin];
 (debugProfilingBuildPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
 (debugWorktreeCleanupPlugin as ServerPluginDefinition).dependsOn = [databaseAdminPlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
@@ -187,6 +192,10 @@ export const plugins: ServerPluginDefinition[] = [
   appsForgeCatalogTablesSampleRowsPlugin,
   authGooglePlugin,
   authNotionPlugin,
+  authPlugin,
+  backupGoogleDrivePlugin,
+  backupLocalPlugin,
+  backupPlugin,
   buildPlugin,
   codeExplorerFileResolvePlugin,
   codeExplorerPlugin,
@@ -225,7 +234,6 @@ export const plugins: ServerPluginDefinition[] = [
   databaseQueryPlugin,
   databasePlugin,
   debugBroadcastsPlugin,
-  debugDbBackupPlugin,
   debugLogsPlugin,
   debugMemoryPlugin,
   debugProfilingBootPlugin,

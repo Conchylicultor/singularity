@@ -233,17 +233,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Conversation.ActionBar` → `AttemptSwitchButton`
   - Imported by: `attempt`
 
-- **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Defines:
     - Slots: `Auth.Provider`
   - Exports (core):
-    - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
+    - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `GetAccessTokenArgs`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`
     - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`
   - Exports (web):
     - Types: `AuthProviderContribution`, `AuthProviderRowProps`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`
     - Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
+  - Exports (server):
+    - Types: `GetAccessTokenArgs`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`
+    - Values: `AuthCentralOfflineError`, `getTokenFromCentral`
   - Exports (central):
-    - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
+    - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `GetAccessTokenArgs`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`
     - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `readGlobalConfig`, `registerAuthProvider`
   - Contributes:
     - `Pane.Register` "accounts"
@@ -254,7 +257,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/auth/disconnect/:provider`
     - `POST /api/auth/api-key/:provider`
     - `GET /api/auth/state`
-  - Imported by: `google`, `notion`, `setup-wizard`
+    - `POST /api/auth/token`
+  - Imported by: `google`, `google-drive`, `notion`, `setup-wizard`
   - Slot contributors: `google`, `notion`
   - Endpoint callers: `setup-wizard`
   - Plugins:
@@ -284,6 +288,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config.Config`
       - Central:
         - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
+
+- **`backup`** — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.
+  - Defines:
+    - DB schema: `plugins/backup/server/internal/tables.ts`
+  - Exports (core):
+    - Types: `BackupArchive`, `BackupManifest`, `BackupTargetResult`
+  - Exports (web):
+    - Values: `backupPane`
+  - Exports (server):
+    - Values: `_backupRuns`, `BackupTarget`
+  - Contributes:
+    - `Pane.Register` "backup"
+    - `DebugApp.Sidebar` "Backup" → `component`
+  - Server:
+    - Register: `defineJob('backup.run')`
+    - Uses: `config.Config`, `config.readConfig`, `database.db`
+    - `POST /api/backup/run`
+    - `GET /api/backup/runs`
+  - Imported by: `google-drive`, `local`
+  - Plugins:
+    - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
+      - Contributes:
+        - `Config.Spec`
+      - Server:
+        - Uses: `auth.getTokenFromCentral`, `backup.BackupTarget`, `config.Config`, `config.readConfig`
+    - **`local`** — Config UI for local backup target. Stores backup archives on the local filesystem.
+      - Contributes:
+        - `Config.Spec`
+      - Server:
+        - Uses: `backup.BackupTarget`, `config.Config`, `config.readConfig`
 
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Defines:
@@ -350,7 +384,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/config/specs`
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
-  - Imported by: `auth`, `build`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `launch-prompts`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shape`, `sidebar-palette`, `theme-engine`, `turn-summary`
+  - Imported by: `auth`, `backup`, `build`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shape`, `sidebar-palette`, `theme-engine`, `turn-summary`
   - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `review`, `theme-engine`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
@@ -870,7 +904,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Exports (server):
     - Values: `awaitDbReady`, `db`, `isTransientDbError`
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `review`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `claude-cli`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `review`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Exports (server):
@@ -900,22 +934,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - `GET /api/debug/broadcasts`
         - `PUT /api/debug/broadcasts`
-      - Endpoint callers: `boot`, `build`, `db-backup`, `memory`, `stats`, `worktree-cleanup`
+      - Endpoint callers: `boot`, `build`, `memory`, `stats`, `worktree-cleanup`
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
       - Exports (web):
         - Values: `claudeCliCallsPane`
       - Contributes:
         - `Pane.Register` "claude-cli-calls"
         - `DebugApp.Sidebar` "Claude CLI Calls" → `component`
-    - **`db-backup`** — Backup non-worktree Postgres databases to ~/.backups/singularity/. Backup non-worktree Postgres databases to ~/.backups/singularity/.
-      - Exports (web):
-        - Values: `dbBackupPane`
-      - Contributes:
-        - `Pane.Register` "db-backup"
-        - `DebugApp.Sidebar` "DB Backup" → `component`
-      - Server:
-        - `GET /api/debug/backup-db`
-        - `POST /api/debug/backup-db`
     - **`logs`** — System logs pane, opened from the Debug sidebar.
       - Exports (core):
         - Types: `ClientMessage`, `EntryMsg`, `ErrorMsg`, `HistoryMsg`, `LogEntryWire`, `ServerMessage`, `SubscribeMsg`
@@ -1347,7 +1372,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `TypeMarker`
         - Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `parseUrl`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
-      - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
+      - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
       - Exports (web):
         - Values: `useDraft`

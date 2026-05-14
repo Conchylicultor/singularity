@@ -42,12 +42,17 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
                 - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
                   - `/api/catalog/tables/:tableName/sample (GET)`
 
-- **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - `/api/auth/start/:provider (GET)` _(central)_
   - `/api/auth/callback/:provider (GET)` _(central)_
   - `/api/auth/disconnect/:provider (POST)` _(central)_
   - `/api/auth/api-key/:provider (POST)` _(central)_
   - `/api/auth/state (GET)` _(central)_
+  - `/api/auth/token (POST)` _(central)_
+
+- **`backup`** — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.
+  - `/api/backup/run (POST)`
+  - `/api/backup/runs (GET)`
 
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - `/api/build (POST)`
@@ -142,8 +147,6 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
   - Plugins:
     - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
       - `/api/debug/broadcasts (GET, PUT)`
-    - **`db-backup`** — Backup non-worktree Postgres databases to ~/.backups/singularity/. Backup non-worktree Postgres databases to ~/.backups/singularity/.
-      - `/api/debug/backup-db (GET, POST)`
     - **`logs`** — System logs pane, opened from the Debug sidebar.
       - `/api/logs/channels (GET)`
       - `/ws/logs (WS)`

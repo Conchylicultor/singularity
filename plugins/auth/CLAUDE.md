@@ -79,18 +79,21 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 
 ## Plugin reference
 
-- Description: Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- Description: Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 - Load-bearing: yes
 - Defines:
   - Slots: `Auth.Provider`
 - Exports (core):
-  - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
+  - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `GetAccessTokenArgs`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`
   - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`
 - Exports (web):
   - Types: `AuthProviderContribution`, `AuthProviderRowProps`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`
   - Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
+- Exports (server):
+  - Types: `GetAccessTokenArgs`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`
+  - Values: `AuthCentralOfflineError`, `getTokenFromCentral`
 - Exports (central):
-  - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`
+  - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `GetAccessTokenArgs`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`
   - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `readGlobalConfig`, `registerAuthProvider`
 - Contributes:
   - `Pane.Register` "accounts"
@@ -101,7 +104,8 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
   - `POST /api/auth/disconnect/:provider`
   - `POST /api/auth/api-key/:provider`
   - `GET /api/auth/state`
-- Imported by: `google`, `notion`, `setup-wizard`
+  - `POST /api/auth/token`
+- Imported by: `google`, `google-drive`, `notion`, `setup-wizard`
 - Slot contributors: `google`, `notion`
 - Endpoint callers: `setup-wizard`
 - Sub-plugins:
