@@ -25,6 +25,7 @@ export type {
   PaneMatch,
   MatchEntry,
   PaneChromeConfig,
+  PaneToggleOpts,
   TypeMarker,
   InferParams,
   PaneInternal,

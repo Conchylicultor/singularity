@@ -1,4 +1,3 @@
-import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Avatar, DEFAULT_AGENT_AVATAR, type SvgNode } from "@plugins/primitives/plugins/avatar/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
@@ -12,17 +11,18 @@ function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
 }
 
 export function AgentAvatarTitlePrefix({ conversation }: { conversation: ConversationRecord }) {
-  const match = usePaneMatch();
-  const openPane = useOpenPane();
   const { data: launches } = useResource(agentLaunchesResource);
   const { data: agents } = useResource(agentsResource);
 
-  if (conversation.kind !== "agent") return null;
-
-  const isOpen = match?.chain.some((e) => e.pane === agentSidePane._internal) ?? false;
   const launch = launches.find((l) => l.taskId === conversation.taskId);
   const agent = launch ? agents.find((a) => a.id === launch.agentId) : null;
   const agentId = launch?.agentId;
+
+  const { isOpen, toggle } = agentSidePane.useToggle({
+    agentId: agentId ?? "",
+  });
+
+  if (conversation.kind !== "agent") return null;
 
   return (
     <button
@@ -30,11 +30,7 @@ export function AgentAvatarTitlePrefix({ conversation }: { conversation: Convers
       disabled={!agentId}
       aria-pressed={isOpen}
       title={agent?.name ?? "Agent"}
-      onClick={() =>
-        isOpen
-          ? agentSidePane.close()
-          : openPane(agentSidePane, { convId: conversation.id, agentId: agentId! }, { mode: "push" })
-      }
+      onClick={toggle}
       className={cn(
         "rounded-full transition-opacity",
         isOpen ? "opacity-100 ring-2 ring-ring ring-offset-1 ring-offset-background" : "hover:opacity-80",

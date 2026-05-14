@@ -1,5 +1,4 @@
 import { MdChecklist } from "react-icons/md";
-import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import { useTask } from "@plugins/tasks/web";
@@ -19,10 +18,7 @@ const STATUS_DOT: Record<string, string> = {
 
 export function TasksButton() {
   const { conversation } = conversationPane.useData();
-  const match = usePaneMatch();
-  const openPane = useOpenPane();
-  const isOpen =
-    match?.chain.some((e) => e.pane === convTasksPane._internal) ?? false;
+  const { isOpen, toggle } = convTasksPane.useToggle({ convId: conversation.id });
 
   const task = useTask(conversation.taskId);
   const dotClass = task ? STATUS_DOT[task.status] : undefined;
@@ -34,11 +30,7 @@ export function TasksButton() {
       title={task ? `Tasks · ${task.status.replace(/_/g, " ")}` : "Tasks"}
       aria-label="Tasks"
       aria-pressed={isOpen}
-      onClick={() =>
-        isOpen
-          ? convTasksPane.close()
-          : openPane(convTasksPane, { convId: conversation.id }, { mode: "push" })
-      }
+      onClick={toggle}
       className="gap-1.5"
     >
       <MdChecklist className="size-4" />

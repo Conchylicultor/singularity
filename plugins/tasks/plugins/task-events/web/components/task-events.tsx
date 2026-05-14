@@ -74,9 +74,10 @@ export function TaskEvents({ taskId }: { taskId: string }) {
   const convEntries = match?.chain.filter(
     (e) => e.pane === conversationPane._internal,
   ) ?? [];
-  const activeConvId = convEntries.length > 1
-    ? convEntries[convEntries.length - 1]!.params.convId
-    : undefined;
+  const activeConvEntry = convEntries.length > 1
+    ? convEntries[convEntries.length - 1]!
+    : null;
+  const activeConvId = activeConvEntry?.params.convId;
 
   const attempts = useMemo(() => {
     return attemptsQ.data
@@ -188,8 +189,8 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                             <button
                               type="button"
                               onClick={() => {
-                                if (activeConvId === c.id) {
-                                  conversationPane.close();
+                                if (activeConvId === c.id && activeConvEntry) {
+                                  conversationPane.close(activeConvEntry.instanceId);
                                 } else {
                                   openPane(conversationPane, {
                                     convId: c.id,

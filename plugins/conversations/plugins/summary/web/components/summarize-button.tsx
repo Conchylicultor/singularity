@@ -1,7 +1,6 @@
 import { MdAutoAwesome } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   conversationSummariesResource,
@@ -17,22 +16,14 @@ export function SummarizeButton() {
     byConversation[conversation.id];
   const latest = summaries?.[0];
 
-  const match = usePaneMatch();
-  const openPane = useOpenPane();
-  const isOpen =
-    match?.chain.some((e) => e.pane === convSummaryPane._internal) ?? false;
-
-  const onClick = () =>
-    isOpen
-      ? convSummaryPane.close()
-      : openPane(convSummaryPane, { convId: conversation.id }, { mode: "push" });
+  const { isOpen, toggle } = convSummaryPane.useToggle({ convId: conversation.id });
 
   if (!latest) {
     return (
       <Button
         variant={isOpen ? "secondary" : "ghost"}
         size="sm"
-        onClick={onClick}
+        onClick={toggle}
         className="gap-1.5 text-xs"
         title="Summary"
         aria-label="Summary"
@@ -47,7 +38,7 @@ export function SummarizeButton() {
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={toggle}
       className={`${buttonVariants({ variant: isOpen ? "secondary" : "ghost", size: "sm" })} gap-1.5`}
       title={`Summary: ${PHASE_LABEL[latest.phase]}`}
       aria-label={`Summary: ${PHASE_LABEL[latest.phase]}`}

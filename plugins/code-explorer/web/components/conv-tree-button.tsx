@@ -1,15 +1,11 @@
 import { MdFolderOpen } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@/components/ui/button";
 import { convFileTreePane } from "../panes";
 
 export function ConvTreeButton() {
   const { conversation } = conversationPane.useData();
-  const match = usePaneMatch();
-  const openPane = useOpenPane();
-  const isOpen =
-    match?.chain.some((e) => e.pane === convFileTreePane._internal) ?? false;
+  const { isOpen, toggle } = convFileTreePane.useToggle({ convId: conversation.id });
 
   return (
     <Button
@@ -18,11 +14,7 @@ export function ConvTreeButton() {
       title="File explorer"
       aria-label="File explorer"
       aria-pressed={isOpen}
-      onClick={() =>
-        isOpen
-          ? convFileTreePane.close()
-          : openPane(convFileTreePane, { convId: conversation.id }, { mode: "push" })
-      }
+      onClick={toggle}
     >
       <MdFolderOpen className="size-4" />
     </Button>

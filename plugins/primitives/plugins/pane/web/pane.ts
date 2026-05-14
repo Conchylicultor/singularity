@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useSyncExternalStore,
   type ComponentType,
   type ReactNode,
@@ -592,6 +593,12 @@ export function usePathname(): string {
  * `segment` — what `useParams()` returns. Keeping them separate matches
  * design decision 6 ("params are own-only").
  */
+export interface PaneToggleOpts {
+  action?: "close" | "unwrap";
+  side?: "left" | "right";
+  mode?: PaneOpenMode;
+}
+
 export interface PaneObject<
   FullParams = {},
   Provides = void,
@@ -602,11 +609,20 @@ export interface PaneObject<
   useParams(): OwnParams;
   useData(): Provides;
   useDataMaybe(): Provides | null;
-  close(): void;
+  close(instanceId: number): void;
   /** Remove this pane from the chain while preserving its children. */
-  unwrap(): void;
+  unwrap(instanceId: number): void;
   /** Detach from ancestors and make this pane the root of a fresh chain. */
-  promote(): void;
+  promote(instanceId: number): void;
+  /** Hook: returns a bound close function for the current instance, or null if root/not in chain. */
+  useClose(): (() => void) | null;
+  /** Hook: returns a bound promote function for the current instance, or null if root/not in chain. */
+  usePromote(): (() => void) | null;
+  /** Hook: toggle this pane open/closed relative to the caller's position in the chain. */
+  useToggle(
+    params: FullParams,
+    opts?: PaneToggleOpts,
+  ): { isOpen: boolean; toggle: () => void };
   back(): void;
   forward(): void;
   Actions: Slot<{ component: ComponentType; position?: "left" | "right" }>;
@@ -661,29 +677,29 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     return value === DATA_NOT_PROVIDED ? null : value;
   }
 
-  function close(): void {
+  function close(instanceId: number): void {
     if (typeof window === "undefined") return;
     const chain = getChain();
-    const idx = chain.findIndex((s) => s.paneId === internal.id);
+    const idx = chain.findIndex((s) => s.instanceId === instanceId);
     if (idx <= 0) return;
     const newChain = chain.slice(0, idx);
     const replace = internal.chrome.enabled && !internal.chrome.history;
     setChain(newChain, replace);
   }
 
-  function unwrap(): void {
+  function unwrap(instanceId: number): void {
     if (typeof window === "undefined") return;
     const chain = getChain();
-    const idx = chain.findIndex((s) => s.paneId === internal.id);
+    const idx = chain.findIndex((s) => s.instanceId === instanceId);
     if (idx < 0) return;
     const newChain = [...chain.slice(0, idx), ...chain.slice(idx + 1)];
     setChain(validateChain(newChain));
   }
 
-  function promote(): void {
+  function promote(instanceId: number): void {
     if (typeof window === "undefined") return;
     const chain = getChain();
-    const idx = chain.findIndex((s) => s.paneId === internal.id);
+    const idx = chain.findIndex((s) => s.instanceId === instanceId);
     if (idx < 0) return;
     const fullParams: Record<string, string> = {};
     for (let i = 0; i <= idx; i++) {
@@ -700,7 +716,68 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     if (typeof window !== "undefined") window.history.forward();
   }
 
-  return {
+  function useClose(): (() => void) | null {
+    const instanceId = useContext(PaneInstanceContext);
+    const chain = useChain();
+    return useMemo(() => {
+      if (instanceId === undefined) return null;
+      const idx = chain.findIndex((s) => s.instanceId === instanceId);
+      if (idx <= 0) return null;
+      return () => close(instanceId);
+    }, [instanceId, chain]);
+  }
+
+  function usePromote(): (() => void) | null {
+    const instanceId = useContext(PaneInstanceContext);
+    const chain = useChain();
+    return useMemo(() => {
+      if (instanceId === undefined) return null;
+      const idx = chain.findIndex((s) => s.instanceId === instanceId);
+      if (idx < 0) return null;
+      if (idx === 0) return null;
+      return () => promote(instanceId);
+    }, [instanceId, chain]);
+  }
+
+  function useToggle(
+    params: Record<string, string>,
+    opts?: PaneToggleOpts,
+  ): { isOpen: boolean; toggle: () => void } {
+    const callerInstanceId = useContext(PaneInstanceContext);
+    const chain = useChain();
+    const openPaneFn = useOpenPane();
+    const paramsRef = useRef(params);
+    paramsRef.current = params;
+
+    const action = opts?.action ?? "close";
+    const mode = opts?.mode ?? "push";
+    const side = opts?.side;
+
+    const callerIndex =
+      callerInstanceId !== undefined
+        ? chain.findIndex((s) => s.instanceId === callerInstanceId)
+        : -1;
+    const searchFrom = callerIndex >= 0 ? callerIndex + 1 : 0;
+    const targetSlot =
+      chain.slice(searchFrom).find((s) => s.paneId === internal.id) ?? null;
+    const isOpen = targetSlot !== null;
+
+    const toggle = useCallback(() => {
+      if (targetSlot) {
+        if (action === "unwrap") {
+          unwrap(targetSlot.instanceId);
+        } else {
+          close(targetSlot.instanceId);
+        }
+      } else {
+        openPaneFn(paneObject, paramsRef.current, { mode, side });
+      }
+    }, [targetSlot, action, openPaneFn, mode, side]);
+
+    return { isOpen, toggle };
+  }
+
+  const paneObject: PaneObject<any, any, any> = {
     id: internal.id,
     Provider: Provider as ComponentType<{ value: unknown; children: ReactNode }>,
     useParams,
@@ -709,11 +786,15 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     close,
     unwrap,
     promote,
+    useClose,
+    usePromote,
+    useToggle,
     back,
     forward,
     Actions: actionsSlot,
     _internal: internal,
   };
+  return paneObject;
 }
 
 function normalizeChrome<Params>(

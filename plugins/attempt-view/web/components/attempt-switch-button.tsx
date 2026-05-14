@@ -1,6 +1,5 @@
 import { MdSplitscreen } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { attemptsResource } from "@plugins/tasks/core";
 import { Button } from "@/components/ui/button";
@@ -9,29 +8,23 @@ import { attemptPane } from "../panes";
 export function AttemptSwitchButton() {
   const { conversation } = conversationPane.useData();
   const { data } = useResource(attemptsResource);
-  const match = usePaneMatch();
-  const openPane = useOpenPane();
 
   const attempt = data.find((a) => a.id === conversation.attemptId) ?? null;
   const count = attempt?.conversations.length ?? 0;
 
-  const inAttemptView =
-    match?.chain.some((e) => e.pane === attemptPane._internal) ?? false;
+  const { isOpen, toggle } = attemptPane.useToggle(
+    { attemptId: conversation.attemptId },
+    { action: "unwrap", side: "left" },
+  );
 
   return (
     <Button
-      variant={inAttemptView ? "secondary" : "ghost"}
+      variant={isOpen ? "secondary" : "ghost"}
       size="sm"
-      title={inAttemptView ? "Close attempt view" : "Open attempt view"}
-      aria-label={inAttemptView ? "Close attempt view" : "Open attempt view"}
-      aria-pressed={inAttemptView}
-      onClick={() => {
-        if (inAttemptView) {
-          attemptPane.unwrap();
-        } else {
-          openPane(attemptPane, { attemptId: conversation.attemptId }, { mode: "push", side: "left" });
-        }
-      }}
+      title={isOpen ? "Close attempt view" : "Open attempt view"}
+      aria-label={isOpen ? "Close attempt view" : "Open attempt view"}
+      aria-pressed={isOpen}
+      onClick={toggle}
       className="gap-1.5"
     >
       <MdSplitscreen className="size-4" />

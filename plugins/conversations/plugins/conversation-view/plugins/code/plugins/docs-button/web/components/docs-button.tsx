@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { MdArticle } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { convDocsPane, isDocFile } from "../panes";
@@ -11,10 +10,7 @@ export function DocsButton() {
   const { conversation } = conversationPane.useData();
   const { files } = useEditedFiles(conversation.id);
   const pushedDocs = usePushedDocFiles(conversation.attemptId);
-  const match = usePaneMatch();
-  const openPane = useOpenPane();
-  const isOpen =
-    match?.chain.some((e) => e.pane === convDocsPane._internal) ?? false;
+  const { isOpen, toggle } = convDocsPane.useToggle({ convId: conversation.id });
 
   const workingDocs = useMemo(() => files.filter((f) => isDocFile(f.path)), [files]);
 
@@ -35,11 +31,7 @@ export function DocsButton() {
       aria-label="Design docs"
       aria-pressed={isOpen}
       disabled={disabled}
-      onClick={() =>
-        isOpen
-          ? convDocsPane.close()
-          : openPane(convDocsPane, { convId: conversation.id }, { mode: "push" })
-      }
+      onClick={toggle}
       className="gap-1.5"
     >
       <MdArticle className="size-4" />

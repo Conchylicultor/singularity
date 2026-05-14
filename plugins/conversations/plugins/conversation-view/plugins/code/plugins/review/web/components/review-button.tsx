@@ -1,7 +1,6 @@
 import { MdRateReview, MdWarning } from "react-icons/md";
 import { useMemo } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useConfigValues } from "@plugins/config/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pushesResource } from "@plugins/tasks/core";
@@ -25,10 +24,7 @@ const WARNING_ICON_CLASS: Record<"careful" | "critical", string> = {
 export function ReviewButton() {
   const { conversation } = conversationPane.useData();
   const { files } = useEditedFiles(conversation.id);
-  const match = usePaneMatch();
-  const openPane = useOpenPane();
-  const isOpen =
-    match?.chain.some((e) => e.pane === convReviewPane._internal) ?? false;
+  const { isOpen, toggle } = convReviewPane.useToggle({ convId: conversation.id });
   const { safePaths, carefulPaths } = useConfigValues(reviewConfig, "conversation-code-review");
 
   const pushesQ = useResource(pushesResource);
@@ -58,11 +54,7 @@ export function ReviewButton() {
       aria-label="Review changes"
       aria-pressed={isOpen}
       disabled={disabled}
-      onClick={() =>
-        isOpen
-          ? convReviewPane.close()
-          : openPane(convReviewPane, { convId: conversation.id }, { mode: "push" })
-      }
+      onClick={toggle}
       className="gap-1.5"
     >
       <MdRateReview className="size-4" />

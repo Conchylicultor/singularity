@@ -10,7 +10,7 @@ import {
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { PaneInstanceContext, PaneMatchContext, type PaneMatch, type PaneObject } from "../pane";
+import { PaneMatchContext, type PaneMatch, type PaneObject } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 
 interface PaneChromeProps {
@@ -52,12 +52,10 @@ export function PaneChrome({ pane, title, actions, hideRightActions, children }:
   const match = useContext(PaneMatchContext);
   const fallbackTitle = chromeTitle(pane, match);
   const layoutCtx = useContext(PaneLayoutContext);
-  const instanceId = useContext(PaneInstanceContext);
+  const doClose = pane.useClose();
+  const doPromote = pane.usePromote();
   if (!chrome.enabled) return <>{children}</>;
   const resolvedTitle = title ?? fallbackTitle;
-  const isRoot = instanceId !== undefined && match?.chain[0]?.instanceId === instanceId;
-  const showClose = chrome.close && !isRoot;
-  const showPromote = chrome.promote && !isRoot;
   return (
     <div className="flex h-full flex-col">
       <div
@@ -74,21 +72,21 @@ export function PaneChrome({ pane, title, actions, hideRightActions, children }:
         ) : (
           <OverflowActionsBar pane={pane} extraActions={actions} />
         )}
-        {showPromote && (
+        {chrome.promote && doPromote && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => pane.promote()}
+            onClick={doPromote}
             aria-label="Promote"
           >
             <MdOpenInFull className="size-4" />
           </Button>
         )}
-        {showClose && (
+        {chrome.close && doClose && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => pane.close()}
+            onClick={doClose}
             aria-label="Close"
           >
             <MdClose className="size-4" />

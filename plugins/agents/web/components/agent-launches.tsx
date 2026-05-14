@@ -22,9 +22,10 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
   const launchesQ = useResource(agentLaunchesResource);
   const match = usePaneMatch();
   const openPane = useOpenPane();
-  const activeConvId = match?.chain.find(
+  const convEntry = match?.chain.find(
     (e) => e.pane === conversationPane._internal,
-  )?.params.convId;
+  ) ?? null;
+  const activeConvId = convEntry?.params.convId;
 
   const launches = useMemo(() => {
     const rows = launchesQ.data;
@@ -52,8 +53,8 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
                   type="button"
                   onClick={() => {
                     if (!primary) return;
-                    if (isActive) {
-                      conversationPane.close();
+                    if (isActive && convEntry) {
+                      conversationPane.close(convEntry.instanceId);
                     } else {
                       openPane(conversationPane, {
                         convId: primary.id,

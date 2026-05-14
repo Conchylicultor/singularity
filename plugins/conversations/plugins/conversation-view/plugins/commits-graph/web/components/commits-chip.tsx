@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { MdAltRoute, MdPublish } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import { pushesResource } from "@plugins/tasks/core";
@@ -18,13 +17,8 @@ export function CommitsChip() {
     () => pushes.filter((p) => p.attemptId === conversation.attemptId).length,
     [pushes, conversation.attemptId],
   );
-  const match = usePaneMatch();
-  const openPane = useOpenPane();
-  const isOpen =
-    match?.chain.some((e) => e.pane === convCommitsGraphPane._internal) ?? false;
+  const { isOpen, toggle } = convCommitsGraphPane.useToggle({ convId: conversation.id });
 
-  // Hide the chip until we know there is a relationship with main. `null`
-  // mergeBase means the worktree has no shared history (e.g. detached).
   if (data.mergeBase === null) return null;
 
   const ahead = data.ahead;
@@ -45,11 +39,7 @@ export function CommitsChip() {
       title={title}
       aria-label={title}
       aria-pressed={isOpen}
-      onClick={() =>
-        isOpen
-          ? convCommitsGraphPane.close()
-          : openPane(convCommitsGraphPane, { convId: conversation.id }, { mode: "push" })
-      }
+      onClick={toggle}
       className="gap-1 px-2 text-xs tabular-nums"
     >
       <MdAltRoute className="size-4" />
