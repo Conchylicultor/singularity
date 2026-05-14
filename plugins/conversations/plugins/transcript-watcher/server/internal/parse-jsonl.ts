@@ -2,9 +2,6 @@ import type { JsonlEvent, TokenUsage, ToolCallResult } from "../../core";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 
-// Matches `@/absolute/path.ext` patterns for common image formats.
-const AT_IMAGE_RE = /@(\/\S+\.(?:png|jpg|jpeg|gif|webp|svg|bmp|tiff))/gi;
-
 const IMAGE_MIME: Record<string, string> = {
   png: "image/png",
   jpg: "image/jpeg",
@@ -19,14 +16,17 @@ const IMAGE_MIME: Record<string, string> = {
 type Segment = { kind: "text"; value: string } | { kind: "image"; mime: string; data: string };
 
 async function pushTextWithImages(text: string, at: string, out: JsonlEvent[]): Promise<void> {
-  AT_IMAGE_RE.lastIndex = 0;
+  // Local regex instance — the g flag stores match state in lastIndex, so a
+  // shared module-level regex gets corrupted when concurrent async calls
+  // (from the file watcher) interleave at await points.
+  const re = /@(\/\S+\.(?:png|jpg|jpeg|gif|webp|svg|bmp|tiff))/gi;
 
   const segments: Segment[] = [];
   let last = 0;
   let hasImages = false;
   let m: RegExpExecArray | null;
 
-  while ((m = AT_IMAGE_RE.exec(text)) !== null) {
+  while ((m = re.exec(text)) !== null) {
     const before = text.slice(last, m.index);
     if (before) segments.push({ kind: "text", value: before });
 
