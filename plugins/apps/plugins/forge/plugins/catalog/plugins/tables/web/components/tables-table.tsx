@@ -7,13 +7,8 @@ import {
   flattenTree,
   PluginChip,
 } from "@plugins/apps/plugins/forge/plugins/catalog/web";
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-  CollapsibleChevron,
-} from "@plugins/primitives/plugins/collapsible/web";
-import { TableDetail } from "../slots";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { tableDetailPane } from "../panes";
 
 type TableRow = { item: TableInfo; plugin: PluginNode };
 
@@ -52,7 +47,6 @@ export function TablesTable({
     <div className="flex flex-col text-sm">
       {/* Sticky header */}
       <div className="sticky top-0 z-10 flex items-center gap-3 border-b bg-background/80 px-3 py-1.5 text-[11px] font-medium text-muted-foreground backdrop-blur-sm">
-        <span className="w-4 shrink-0" />
         <span className="w-48 shrink-0">SQL Name</span>
         <span className="flex-1 min-w-0">TS Var</span>
         <span className="shrink-0">Plugin</span>
@@ -69,24 +63,25 @@ export function TablesTable({
 }
 
 function TableRow({ row }: { row: TableRow }) {
+  const openPane = useOpenPane();
   return (
-    <Collapsible>
-      <CollapsibleTrigger className="flex items-center gap-3 border-b px-3 py-2 hover:bg-accent/50">
-        <CollapsibleChevron className="size-3.5 text-muted-foreground" />
-        <code className="w-48 shrink-0 truncate font-mono text-foreground">
-          {row.item.name}
-        </code>
-        <span className="flex-1 min-w-0 truncate font-mono text-xs text-muted-foreground">
-          {row.item.varName}
-        </span>
-        <PluginChip hierarchyId={row.plugin.hierarchyId} />
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <TableDetail.Host
-          tableName={row.item.name}
-          pluginId={row.plugin.hierarchyId}
-        />
-      </CollapsibleContent>
-    </Collapsible>
+    <button
+      className="flex w-full items-center gap-3 border-b px-3 py-2 text-left hover:bg-accent/50"
+      onClick={() =>
+        openPane(
+          tableDetailPane,
+          { tableName: row.item.name, pluginId: row.plugin.hierarchyId },
+          { mode: "push" },
+        )
+      }
+    >
+      <code className="w-48 shrink-0 truncate font-mono text-foreground">
+        {row.item.name}
+      </code>
+      <span className="flex-1 min-w-0 truncate font-mono text-xs text-muted-foreground">
+        {row.item.varName}
+      </span>
+      <PluginChip hierarchyId={row.plugin.hierarchyId} />
+    </button>
   );
 }
