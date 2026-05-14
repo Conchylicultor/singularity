@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdTableChart } from "react-icons/md";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Catalog, countFlat } from "@plugins/apps/plugins/forge/plugins/catalog/web";

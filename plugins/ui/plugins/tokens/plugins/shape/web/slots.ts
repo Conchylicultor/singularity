@@ -1,5 +1,5 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-import type { ShapeTokenValues } from "@plugins/ui/plugins/tokens/plugins/shape/shared";
+import type { ShapeTokenValues } from "../shared";
 
 export interface ShapePresetContribution {
   id: string;

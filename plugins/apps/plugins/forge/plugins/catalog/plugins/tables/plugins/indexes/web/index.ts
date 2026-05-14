@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { TableDetail } from "@plugins/apps/plugins/forge/plugins/catalog/plugins/tables/web";
 import { IndexesSection } from "./components/indexes-section";
 

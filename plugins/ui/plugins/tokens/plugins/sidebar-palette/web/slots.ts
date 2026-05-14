@@ -1,5 +1,5 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-import type { SidebarPaletteTokenValues } from "@plugins/ui/plugins/tokens/plugins/sidebar-palette/shared";
+import type { SidebarPaletteTokenValues } from "../shared";
 
 export interface SidebarPalettePresetContribution {
   id: string;
