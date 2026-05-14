@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { MdArticle } from "react-icons/md";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
+import { agentReportPane } from "../panes";
 
 interface AgentInput {
   prompt: string;
@@ -43,9 +45,17 @@ export function AgentToolView({ event }: ToolRendererProps) {
   const description = input.description ?? "";
   const prompt = input.prompt ?? "";
   const result = event.result;
-  const isRunning = !result;
 
-  const [promptOpen, setPromptOpen] = useState(isRunning);
+  const openPane = useOpenPane();
+
+  const openReport = (e: React.MouseEvent | React.KeyboardEvent) => {
+    e.stopPropagation();
+    openPane(
+      agentReportPane,
+      { toolUseId: event.toolUseId },
+      { mode: "push" },
+    );
+  };
 
   const summary = (
     <span className="flex min-w-0 items-center gap-2">
@@ -60,57 +70,44 @@ export function AgentToolView({ event }: ToolRendererProps) {
           {description}
         </span>
       )}
+      {result && (
+        <span
+          role="button"
+          tabIndex={0}
+          className="shrink-0 cursor-pointer rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          onClick={openReport}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              openReport(e);
+            }
+          }}
+        >
+          <MdArticle className="size-3.5" />
+        </span>
+      )}
     </span>
   );
 
   return (
     <ToolCallCard event={event} summary={summary}>
       <div className="mt-2 space-y-2">
-        {/* Prompt section — collapsible */}
-        <div className="rounded-md border border-border/40">
-          <button
-            onClick={() => setPromptOpen((o) => !o)}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted/40"
-          >
-            <span
-              className="text-[10px] transition-transform"
-              style={{ transform: promptOpen ? "rotate(90deg)" : undefined }}
-            >
-              ▶
-            </span>
-            <span className="font-medium">Prompt</span>
-          </button>
-          {promptOpen && (
-            <div className="border-t border-border/30 px-3 py-2">
-              <div className="prose-xs max-h-96 overflow-auto text-xs">
-                <Markdown>{prompt}</Markdown>
-              </div>
-            </div>
-          )}
+        {/* Prompt */}
+        <div className="prose-xs max-h-96 overflow-auto px-3 py-2 text-xs">
+          <Markdown>{prompt}</Markdown>
         </div>
 
-        {/* Report section */}
+        {/* Report link */}
         {result && (
-          <div className="rounded-md border border-border/40">
-            <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
-              Report
-            </div>
-            <div className="border-t border-border/30 px-3 py-2">
-              <div
-                className={`prose-xs max-h-[32rem] overflow-auto text-xs ${
-                  result.isError ? "text-destructive" : ""
-                }`}
-              >
-                {result.isError ? (
-                  <pre className="whitespace-pre-wrap break-words">
-                    {result.content}
-                  </pre>
-                ) : (
-                  <Markdown>{result.content}</Markdown>
-                )}
-              </div>
-            </div>
-          </div>
+          <button
+            onClick={openReport}
+            className="flex w-full items-center gap-1.5 rounded-md border border-border/40 px-3 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted/40"
+          >
+            <MdArticle className="size-3.5 shrink-0" />
+            <span className="font-medium">
+              {result.isError ? "View error" : "View report"}
+            </span>
+          </button>
         )}
       </div>
     </ToolCallCard>
