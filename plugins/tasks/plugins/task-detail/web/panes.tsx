@@ -1,5 +1,5 @@
 import { type ReactElement } from "react";
-import { Pane, PaneChrome, type, usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome, type, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   Tasks as TasksSlots,
   TasksList,
@@ -34,11 +34,8 @@ export const taskDetailPane = Pane.define({
 
 function TasksRoot(): ReactElement {
   const lists = TasksSlots.List.useContributions();
-  const match = usePaneMatch();
   const openPane = useOpenPane();
-  const selectedId = match?.chain.find(
-    (e) => e.pane === taskDetailPane._internal,
-  )?.params.taskId;
+  const selectedId = taskDetailPane.useChainEntry()?.params.taskId;
 
   return (
     <div className="h-full overflow-auto p-4">

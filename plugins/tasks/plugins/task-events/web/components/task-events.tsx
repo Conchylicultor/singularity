@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MdOpenInNew } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
-import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
@@ -67,13 +67,10 @@ export function TaskEvents({ taskId }: { taskId: string }) {
   const attemptsQ = useResource(attemptsResource);
   const pushesQ = useResource(pushesResource);
   const githubBase = useGithubBase();
-  const match = usePaneMatch();
   const openPane = useOpenPane();
   // Find the last conversationPane in the chain — if there are multiple
   // (host + nested), the last one is the one the user opened from here.
-  const convEntries = match?.chain.filter(
-    (e) => e.pane === conversationPane._internal,
-  ) ?? [];
+  const convEntries = conversationPane.useChainEntries();
   const activeConvEntry = convEntries.length > 1
     ? convEntries[convEntries.length - 1]!
     : null;

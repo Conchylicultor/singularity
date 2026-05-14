@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  usePaneMatch,
-  useOpenPane,
-} from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import type { PluginTreePayload } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { PluginTree } from "./plugin-tree";
@@ -15,11 +12,9 @@ type LoadState =
 export function PublishView() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
 
-  const match = usePaneMatch();
   const openPane = useOpenPane();
   const selectedId =
-    match?.chain.find((e) => e.pane === pluginViewPane._internal)?.params
-      .pluginId ?? null;
+    pluginViewPane.useChainEntry()?.params.pluginId ?? null;
 
   useEffect(() => {
     let cancelled = false;

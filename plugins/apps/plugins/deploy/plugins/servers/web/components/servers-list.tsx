@@ -1,19 +1,14 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { serversResource, type Server } from "@plugins/apps/plugins/deploy/plugins/servers/shared";
 import { addServerPane, serverDetailPane } from "../panes";
 import { ServerStatusBadge } from "./server-status-badge";
 
 export function ServersList() {
   const { data: servers } = useResource(serversResource);
-  const match = usePaneMatch();
   const openPane = useOpenPane();
-  const selectedId = match?.chain.find(
-    (e) => e.pane === serverDetailPane._internal,
-  )?.params.serverId;
-  const addingServer = match?.chain.some(
-    (e) => e.pane === addServerPane._internal,
-  );
+  const selectedId = serverDetailPane.useChainEntry()?.params.serverId;
+  const addingServer = addServerPane.useChainEntry() !== null;
 
   return (
     <div className="flex h-full flex-col">

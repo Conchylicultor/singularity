@@ -6,7 +6,7 @@ import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { taskSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
 import { useActiveDataBinding } from "@plugins/active-data/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import {
   attemptsResource,
@@ -162,13 +162,10 @@ export function TaskCard({
 
 function LaunchedAttempts({ taskId }: { taskId: string }) {
   const attemptsQ = useResource(attemptsResource);
-  const match = usePaneMatch();
   const openPane = useOpenPane();
   // Find the last conversationPane in the chain — if there are multiple
   // (host + nested), the last one is the one the user opened from here.
-  const convEntries = match?.chain.filter(
-    (e) => e.pane === conversationPane._internal,
-  ) ?? [];
+  const convEntries = conversationPane.useChainEntries();
   const activeConvEntry = convEntries.length > 1
     ? convEntries[convEntries.length - 1]!
     : null;

@@ -103,6 +103,28 @@ function SomeDescendant() {
 pane's `path`, not any inherited from ancestors. Reading an ancestor's
 params is explicit: `ancestorPane.useParams()`.
 
+## Query the chain from outside a pane
+
+Use `useChainEntry()` / `useChainEntries()` to check whether a pane
+is present in the current chain and read its params — without reaching
+into `_internal` or importing `usePaneMatch()`:
+
+```tsx
+// Single entry (first match, or null if absent):
+const selectedId = taskDetailPane.useChainEntry()?.params.taskId;
+
+// Boolean presence check:
+const isOpen = addServerPane.useChainEntry() !== null;
+
+// Multiple instances (e.g. conversationPane can appear more than once):
+const convEntries = conversationPane.useChainEntries();
+const lastConv = convEntries.at(-1);
+```
+
+Each entry exposes `{ instanceId, params, fullParams }`. Use
+`instanceId` with `pane.close(instanceId)` when you need to close the
+specific instance you found.
+
 ## Provide data
 
 When a pane declares `provides: type<T>()` AND any descendant pane reads
@@ -340,7 +362,7 @@ See "Open questions" in the design doc.
 - Defines:
   - Slots: `Pane.Register`
 - Exports (web):
-  - Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `TypeMarker`
+  - Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `TypeMarker`
   - Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `parseUrl`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
 - Slot contributors: `agents`, `attempt-view`, `auth`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `db-backup`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
 

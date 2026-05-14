@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Pane, PaneChrome, usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
@@ -22,12 +22,8 @@ export const filePeekPane = Pane.define({
 });
 
 function FilePeekPaneBody() {
-  const match = usePaneMatch();
   const openPane = useOpenPane();
-  const convEntry = match?.chain.find(
-    (e) => e.pane === conversationPane._internal,
-  );
-  const convId = convEntry?.params.convId as string | undefined;
+  const convId = conversationPane.useChainEntry()?.params.convId;
 
   const { worktree, filePath: rawFilePath } = filePeekPane.useParams();
 

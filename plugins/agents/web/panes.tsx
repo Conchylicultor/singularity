@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
-import { Pane, PaneChrome, type, usePaneMatch } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
 import {
   conversationPane,
 } from "@plugins/conversations/plugins/conversation-view/web";
@@ -51,13 +51,8 @@ export const agentSidePane = Pane.define({
 
 function AgentsRoot(): ReactElement {
   const lists = AgentsSlots.List.useContributions();
-  const match = usePaneMatch();
-  const selectedUserId = match?.chain.find(
-    (e) => e.pane === agentDetailPane._internal,
-  )?.params.id;
-  const selectedSystemId = match?.chain.find(
-    (e) => e.pane === systemAgentDetailPane._internal,
-  )?.params.systemId;
+  const selectedUserId = agentDetailPane.useChainEntry()?.params.id;
+  const selectedSystemId = systemAgentDetailPane.useChainEntry()?.params.systemId;
 
   return (
     <div className="h-full overflow-auto p-4">

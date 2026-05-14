@@ -22,6 +22,7 @@ export {
 } from "./pane";
 export type {
   PaneObject,
+  PaneChainEntry,
   PaneMatch,
   MatchEntry,
   PaneChromeConfig,

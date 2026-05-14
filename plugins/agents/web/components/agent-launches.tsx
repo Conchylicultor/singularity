@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { usePaneMatch, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
@@ -20,11 +20,8 @@ function formatDate(value: Date | string): string {
 
 export function AgentLaunches({ agentId }: { agentId: string }) {
   const launchesQ = useResource(agentLaunchesResource);
-  const match = usePaneMatch();
   const openPane = useOpenPane();
-  const convEntry = match?.chain.find(
-    (e) => e.pane === conversationPane._internal,
-  ) ?? null;
+  const convEntry = conversationPane.useChainEntry();
   const activeConvId = convEntry?.params.convId;
 
   const launches = useMemo(() => {

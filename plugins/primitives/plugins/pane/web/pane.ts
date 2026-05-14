@@ -599,6 +599,12 @@ export interface PaneToggleOpts {
   mode?: PaneOpenMode;
 }
 
+export interface PaneChainEntry<OwnParams = Record<string, string>> {
+  instanceId: number;
+  params: OwnParams;
+  fullParams: Record<string, string>;
+}
+
 export interface PaneObject<
   FullParams = {},
   Provides = void,
@@ -609,6 +615,10 @@ export interface PaneObject<
   useParams(): OwnParams;
   useData(): Provides;
   useDataMaybe(): Provides | null;
+  /** Find this pane in the current chain. Returns its params or null if absent. */
+  useChainEntry(): PaneChainEntry<OwnParams> | null;
+  /** Find all instances of this pane in the current chain (for panes that can appear multiple times). */
+  useChainEntries(): PaneChainEntry<OwnParams>[];
   close(instanceId: number): void;
   /** Remove this pane from the chain while preserving its children. */
   unwrap(instanceId: number): void;
@@ -660,6 +670,22 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
       );
     }
     return entry.params;
+  }
+
+  function useChainEntry(): PaneChainEntry | null {
+    const match = useContext(PaneMatchContext);
+    if (!match) return null;
+    const entry = match.chain.find((e) => e.pane === internal);
+    if (!entry) return null;
+    return { instanceId: entry.instanceId, params: entry.params, fullParams: entry.fullParams };
+  }
+
+  function useChainEntries(): PaneChainEntry[] {
+    const match = useContext(PaneMatchContext);
+    if (!match) return [];
+    return match.chain
+      .filter((e) => e.pane === internal)
+      .map((e) => ({ instanceId: e.instanceId, params: e.params, fullParams: e.fullParams }));
   }
 
   function useData(): unknown {
@@ -783,6 +809,8 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     useParams,
     useData,
     useDataMaybe,
+    useChainEntry,
+    useChainEntries,
     close,
     unwrap,
     promote,
