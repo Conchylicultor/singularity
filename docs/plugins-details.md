@@ -341,6 +341,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Resources: `build.history` (push), `build.mainAheadCount` (push)
     - `POST /api/build`
     - `GET /api/build/status`
+  - Endpoint callers: `build-profiling`
   - Plugins:
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
       - Contributes:
@@ -348,6 +349,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`build-logs`** — Live log stream section in the build detail pane.
       - Contributes:
         - `BuildDetailSlots.Section` "logs" → `BuildLogSection`
+    - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane. Per-run build profiling data endpoint.
+      - Contributes:
+        - `BuildDetailSlots.Section` "profiling" → `BuildProfilingSection`
+      - Server:
+        - `GET /api/build/runs/:id/profile`
 
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Exports (server):
@@ -1004,7 +1010,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Profiling.Section` → `BuildSection`
           - Server:
             - `GET /api/debug/profiling/build`
-          - Imported by: `build-info`, `build-logs`
+          - Imported by: `build-info`, `build-logs`, `build-profiling`
         - **`stats`** — Stats endpoint profiling for the Gantt debug pane. Stats endpoint profiling data endpoint.
           - Contributes:
             - `Profiling.Section` → `StatsSection`

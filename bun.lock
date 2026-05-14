@@ -227,6 +227,10 @@
       "name": "@singularity/plugin-build-build-logs",
       "version": "0.0.1",
     },
+    "plugins/build/plugins/build-profiling": {
+      "name": "@singularity/plugin-build-build-profiling",
+      "version": "0.0.1",
+    },
     "plugins/code-explorer": {
       "name": "@singularity/plugin-code-explorer",
       "version": "0.0.1",
@@ -1762,6 +1766,8 @@
     "@singularity/plugin-build-build-info": ["@singularity/plugin-build-build-info@workspace:plugins/build/plugins/build-info"],
 
     "@singularity/plugin-build-build-logs": ["@singularity/plugin-build-build-logs@workspace:plugins/build/plugins/build-logs"],
+
+    "@singularity/plugin-build-build-profiling": ["@singularity/plugin-build-build-profiling@workspace:plugins/build/plugins/build-profiling"],
 
     "@singularity/plugin-code-explorer": ["@singularity/plugin-code-explorer@workspace:plugins/code-explorer"],
 

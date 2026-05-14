@@ -57,6 +57,9 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - `/api/build (POST)`
   - `/api/build/status (GET)`
+  - Plugins:
+    - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane. Per-run build profiling data endpoint.
+      - `/api/build/runs/:id/profile (GET)`
 
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
   - `/api/code/:worktree/tree (GET)`

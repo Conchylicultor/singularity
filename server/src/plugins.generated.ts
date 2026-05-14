@@ -21,6 +21,7 @@ import authPlugin from "@plugins/auth/server";
 import backupGoogleDrivePlugin from "@plugins/backup/plugins/google-drive/server";
 import backupLocalPlugin from "@plugins/backup/plugins/local/server";
 import backupPlugin from "@plugins/backup/server";
+import buildBuildProfilingPlugin from "@plugins/build/plugins/build-profiling/server";
 import buildPlugin from "@plugins/build/server";
 import codeExplorerFileResolvePlugin from "@plugins/code-explorer/plugins/file-resolve/server";
 import codeExplorerPlugin from "@plugins/code-explorer/server";
@@ -115,6 +116,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (backupGoogleDrivePlugin as ServerPluginDefinition).dependsOn = [authPlugin, backupPlugin, configPlugin];
 (backupLocalPlugin as ServerPluginDefinition).dependsOn = [backupPlugin, configPlugin, infraPathsPlugin];
 (backupPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databaseAdminPlugin, databasePlugin, infraJobsPlugin, infraPathsPlugin];
+(buildBuildProfilingPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
 (buildPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, debugLogsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin, infraPathsPlugin];
 (codeExplorerFileResolvePlugin as ServerPluginDefinition).dependsOn = [codeExplorerPlugin, infraPathsPlugin];
 (codeExplorerPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
@@ -200,6 +202,7 @@ export const plugins: ServerPluginDefinition[] = [
   backupGoogleDrivePlugin,
   backupLocalPlugin,
   backupPlugin,
+  buildBuildProfilingPlugin,
   buildPlugin,
   codeExplorerFileResolvePlugin,
   codeExplorerPlugin,

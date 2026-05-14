@@ -46,6 +46,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "backup", loader: () => import("@plugins/backup/web") },
   { name: "build/plugins/build-info", loader: () => import("@plugins/build/plugins/build-info/web") },
   { name: "build/plugins/build-logs", loader: () => import("@plugins/build/plugins/build-logs/web") },
+  { name: "build/plugins/build-profiling", loader: () => import("@plugins/build/plugins/build-profiling/web") },
   { name: "build", loader: () => import("@plugins/build/web") },
   { name: "code-explorer/plugins/file-resolve", loader: () => import("@plugins/code-explorer/plugins/file-resolve/web") },
   { name: "code-explorer", loader: () => import("@plugins/code-explorer/web") },
