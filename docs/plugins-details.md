@@ -1644,6 +1644,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the parent task when applicable.
       - Contributes:
         - `TaskDetailSlots.Section` "dependencies" → `TaskDependencies`
+        - `TaskDetailSlots.Section` "dependents" → `TaskDependents`
     - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.
       - Contributes:
         - `TaskDetailSlots.Section` "description" → `TaskDescription`
