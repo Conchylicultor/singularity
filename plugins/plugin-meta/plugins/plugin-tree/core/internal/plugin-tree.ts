@@ -53,6 +53,11 @@ export interface EntityExtensionRef {
   tableName: string;
 }
 
+export interface TableDef {
+  name: string;      // SQL table name, e.g. "conversations"
+  varName: string;   // TS variable name, e.g. "_conversations"
+}
+
 export interface DocMetaContribution {
   slotId: string;
   slotDisplayName?: string;
@@ -88,6 +93,7 @@ export interface PluginNode {
   coreApiUses: string[];
   sharedApiUses: string[];
   dbFiles: string[];
+  tables: TableDef[];
 
   importedBy: string[];
   slotContributors: string[];
@@ -740,6 +746,7 @@ function collectPlugin(dir: string, pluginsRoot: string): CollectedPlugin {
       coreApiUses,
       sharedApiUses,
       dbFiles,
+      tables: [],
       importedBy: [],
       slotContributors: [],
       endpointCallers: [],
@@ -839,7 +846,9 @@ function computeRelationships(byDir: Map<string, PluginNode>): void {
 
   const pluginVarToTable = new Map<string, Map<string, string>>();
   for (const info of byDir.values()) {
-    pluginVarToTable.set(info.name, parseTableNamesFromDbFiles(info.dbFiles));
+    const names = parseTableNamesFromDbFiles(info.dbFiles);
+    pluginVarToTable.set(info.name, names);
+    info.tables = [...names.entries()].map(([varName, name]) => ({ name, varName }));
   }
   const pluginModuleRe = /@plugins\/([^/"'`]+)\/(?:server|central|shared|core)/;
   for (const info of byDir.values()) {

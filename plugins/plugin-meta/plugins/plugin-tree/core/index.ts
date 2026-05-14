@@ -8,6 +8,7 @@ export type {
   RuntimeDetail,
   EntityExtension,
   EntityExtensionRef,
+  TableDef,
   DocMetaContribution,
   DocMetaRegistration,
   PluginNode,

@@ -88,6 +88,17 @@ function toApiNode(node: TreePluginNode, symbolConsumers: Map<string, Map<string
         memberName: c.memberName,
         commandId: c.commandId,
       })),
+      tables: node.tables.map((t) => ({ name: t.name, varName: t.varName })),
+      entityExtensions: node.entityExtensions.map((e) => ({
+        parentPlugin: e.parentPlugin,
+        extName: e.extName,
+        tableName: e.tableName,
+      })),
+      extendedBy: node.extendedBy.map((e) => ({
+        childPlugin: e.childPlugin,
+        extName: e.extName,
+        tableName: e.tableName,
+      })),
     },
   };
 }

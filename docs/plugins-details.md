@@ -172,7 +172,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Defines:
             - Slots: `Catalog.Category`
           - Exports (web):
-            - Values: `Catalog`
+            - Values: `Catalog`, `countFlat`, `flattenTree`, `PluginChip`
           - Contributes:
             - `Pane.Register` "catalog"
             - `Forge.Sidebar` "Catalog" → `component`
@@ -181,6 +181,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Catalog.Category` "Slots" → `SlotsTable`
             - `Catalog.Category` "Resources" → `ResourcesTable`
             - `Catalog.Category` "Contributions" → `ContributionsTable`
+          - Slot contributors: `tables`
+          - Plugins:
+            - **`tables`** — DB tables catalog tab with an extensible per-table detail slot.
+              - Exports (web):
+                - Values: `TableDetail`
+              - Contributes:
+                - `Catalog.Category` "Tables" → `TablesTable`
         - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
           - Contributes:
             - `Pane.Register` "publish"
@@ -1209,11 +1216,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `GET /api/plugin-health/tasks/:reviewId`
     - **`plugin-tree`**
       - Exports (core):
-        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`
+        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`
         - Values: `buildPluginTree`, `enrichPluginTreeDocs`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Exports (core):
-        - Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`
+        - Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `EntityExtensionInfo`, `EntityExtensionRef`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`, `TableInfo`
       - Exports (web):
         - Types: `PluginNode`, `PluginTreePayload`
         - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`

@@ -35,6 +35,23 @@ export interface CommandInfo {
   commandId: string;
 }
 
+export interface TableInfo {
+  name: string;
+  varName: string;
+}
+
+export interface EntityExtensionInfo {
+  parentPlugin: string;
+  extName: string;
+  tableName: string;
+}
+
+export interface EntityExtensionRef {
+  childPlugin: string;
+  extName: string;
+  tableName: string;
+}
+
 export interface PublicApi {
   exports: Record<"web" | "server" | "central" | "core" | "shared", BarrelExport[]>;
   importedBy: string[];
@@ -43,6 +60,9 @@ export interface PublicApi {
   resources: ResourceInfo[];
   contributions: ContributionInfo[];
   commands: CommandInfo[];
+  tables: TableInfo[];
+  entityExtensions: EntityExtensionInfo[];
+  extendedBy: EntityExtensionRef[];
 }
 
 export interface PluginNode {

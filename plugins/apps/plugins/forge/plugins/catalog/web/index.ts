@@ -19,6 +19,9 @@ import { SlotsTable } from "./components/categories/slots-table";
 import { ResourcesTable } from "./components/categories/resources-table";
 import { ContributionsTable } from "./components/categories/contributions-table";
 
+export { flattenTree } from "./components/catalog-view";
+export { countFlat } from "./count";
+export { PluginChip } from "./components/plugin-chip";
 export { Catalog } from "./slots";
 
 export default {

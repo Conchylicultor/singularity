@@ -151,6 +151,10 @@
       "name": "@singularity/plugin-apps-forge-catalog",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/forge/plugins/catalog/plugins/tables": {
+      "name": "@singularity/plugin-apps-forge-catalog-tables",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/forge/plugins/publish": {
       "name": "@singularity/plugin-apps-forge-publish",
       "version": "0.0.1",
@@ -1660,6 +1664,8 @@
     "@singularity/plugin-apps-forge": ["@singularity/plugin-apps-forge@workspace:plugins/apps/plugins/forge"],
 
     "@singularity/plugin-apps-forge-catalog": ["@singularity/plugin-apps-forge-catalog@workspace:plugins/apps/plugins/forge/plugins/catalog"],
+
+    "@singularity/plugin-apps-forge-catalog-tables": ["@singularity/plugin-apps-forge-catalog-tables@workspace:plugins/apps/plugins/forge/plugins/catalog/plugins/tables"],
 
     "@singularity/plugin-apps-forge-publish": ["@singularity/plugin-apps-forge-publish@workspace:plugins/apps/plugins/forge/plugins/publish"],
 
