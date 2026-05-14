@@ -11,7 +11,7 @@ export interface SortableItemProps {
   id: string;
   handle?: boolean;
   disabled?: boolean;
-  className?: string;
+  className?: string | ((state: SortableItemState) => string);
   children: (state: SortableItemState) => ReactNode;
 }
 
@@ -43,8 +43,11 @@ export function SortableItem({
     ...(handle ? { handleProps: { ...attributes, ...listeners } } : {}),
   };
 
+  const resolvedClassName =
+    typeof className === "function" ? className(state) : className;
+
   return (
-    <div ref={setNodeRef} style={style} className={className} {...wrapperProps}>
+    <div ref={setNodeRef} style={style} className={resolvedClassName} {...wrapperProps}>
       {children(state)}
     </div>
   );

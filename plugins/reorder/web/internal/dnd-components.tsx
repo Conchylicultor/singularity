@@ -51,11 +51,13 @@ export function SortableReorderItem({
   itemKey,
   storageId,
   editMode,
+  wrapperClassName,
   children,
 }: {
   itemKey: string;
   storageId: string;
   editMode: boolean;
+  wrapperClassName?: string;
   children: ReactNode;
 }) {
   function handleHide(e: React.MouseEvent) {
@@ -73,11 +75,16 @@ export function SortableReorderItem({
       disabled={!editMode}
       className={
         editMode
-          ? "group/reorder-item relative cursor-grab rounded-md ring-1 ring-primary/50"
+          ? ({ isDragging }) =>
+              cn(
+                "group/reorder-item relative cursor-grab rounded-md ring-1 ring-primary/50",
+                wrapperClassName,
+                isDragging && "opacity-40",
+              )
           : "contents"
       }
     >
-      {({ isDragging }) => (
+      {() => (
         <>
           {editMode && (
             <button
@@ -89,13 +96,7 @@ export function SortableReorderItem({
               <MdClose className="size-2.5" />
             </button>
           )}
-          <div
-            className={
-              editMode
-                ? cn("pointer-events-none", isDragging && "opacity-40")
-                : "contents"
-            }
-          >
+          <div className={cn("contents", editMode && "pointer-events-none")}>
             {children}
           </div>
           {editMode && <GroupingZone itemKey={itemKey} />}
@@ -128,7 +129,7 @@ export function SpacerReorderItem({
   }
 
   return (
-    <SortableItem id={itemKey}>
+    <SortableItem id={itemKey} className="flex-1">
       {({ isDragging }) => (
         <div
           className={cn(

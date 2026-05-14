@@ -23,9 +23,9 @@ interface RenderProps<P> {
 }
 
 export interface RenderSlot<P>
-  extends Slot<P & { id: string; excludeFromReorder?: boolean }> {
+  extends Slot<P & { id: string; excludeFromReorder?: boolean; reorderWrapperClassName?: string }> {
   Render: ComponentType<
-    RenderProps<P & { id: string; excludeFromReorder?: boolean }>
+    RenderProps<P & { id: string; excludeFromReorder?: boolean; reorderWrapperClassName?: string }>
   >;
 }
 
@@ -38,7 +38,7 @@ export function defineRenderSlot<P>(
   id: string,
   config?: RenderSlotConfig<P>,
 ): RenderSlot<P> {
-  const slot = defineSlot<P & { id: string; excludeFromReorder?: boolean }>(
+  const slot = defineSlot<P & { id: string; excludeFromReorder?: boolean; reorderWrapperClassName?: string }>(
     id,
     { docLabel: config?.docLabel },
   );

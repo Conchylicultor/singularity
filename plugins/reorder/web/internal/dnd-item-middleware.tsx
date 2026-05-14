@@ -21,11 +21,15 @@ export function ReorderItemMiddleware({
   const excluded = (contribution as Record<string, unknown>).excludeFromReorder;
   if (excluded) return <>{children}</>;
 
+  const wrapperClassName = (contribution as Record<string, unknown>)
+    .reorderWrapperClassName as string | undefined;
+
   return (
     <SortableReorderItem
       itemKey={key}
       storageId={ctx?.storageId ?? ""}
       editMode={editMode}
+      wrapperClassName={wrapperClassName}
     >
       {children}
     </SortableReorderItem>

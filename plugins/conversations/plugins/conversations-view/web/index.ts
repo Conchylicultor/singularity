@@ -20,6 +20,7 @@ export default {
       title: "Conversations",
       icon: MdForum,
       component: ConversationsSidebar,
+      reorderWrapperClassName: "flex flex-col flex-1 min-h-0",
     }),
     Core.Root({ component: ForkErrorWatcher }),
     Core.Root({ component: AutoLaunchWatcher }),
