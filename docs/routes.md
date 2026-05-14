@@ -25,6 +25,22 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
           - `/api/deploy/servers (GET, POST)`
           - `/api/deploy/servers/:id (GET, PATCH, DELETE)`
+    - **`forge`** — Forge app — plugin graph inspection and publish workflows.
+      - Plugins:
+        - **`catalog`** — Central view of all plugin contributions aggregated by type.
+          - Plugins:
+            - **`tables`** — DB tables catalog tab with an extensible per-table detail slot.
+              - Plugins:
+                - **`columns`** — Table column definitions section in the table detail view.
+                  - `/api/catalog/tables/:tableName/columns (GET)`
+                - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
+                  - `/api/catalog/tables/:tableName/foreign-keys (GET)`
+                - **`indexes`** — Table indexes section in the table detail view.
+                  - `/api/catalog/tables/:tableName/indexes (GET)`
+                - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
+                  - `/api/catalog/tables/:tableName/row-count (GET)`
+                - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
+                  - `/api/catalog/tables/:tableName/sample (GET)`
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - `/api/auth/start/:provider (GET)` _(central)_

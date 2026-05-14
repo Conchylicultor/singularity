@@ -188,6 +188,38 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Values: `TableDetail`
               - Contributes:
                 - `Catalog.Category` "Tables" → `TablesTable`
+              - Plugins:
+                - **`columns`** — Table column definitions section in the table detail view.
+                  - Contributes:
+                    - `TableDetail.Section` "columns" → `ColumnsSection`
+                  - Server:
+                    - Uses: `database.db`
+                    - `GET /api/catalog/tables/:tableName/columns`
+                - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
+                  - Contributes:
+                    - `TableDetail.Section` "foreign-keys" → `ForeignKeysSection`
+                  - Server:
+                    - Uses: `database.db`
+                    - `GET /api/catalog/tables/:tableName/foreign-keys`
+                  - Endpoint callers: `columns`, `indexes`, `row-count`, `sample-rows`
+                - **`indexes`** — Table indexes section in the table detail view.
+                  - Contributes:
+                    - `TableDetail.Section` "indexes" → `IndexesSection`
+                  - Server:
+                    - Uses: `database.db`
+                    - `GET /api/catalog/tables/:tableName/indexes`
+                - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
+                  - Contributes:
+                    - `TableDetail.Section` "row-count" → `RowCountSection`
+                  - Server:
+                    - Uses: `database.db`
+                    - `GET /api/catalog/tables/:tableName/row-count`
+                - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
+                  - Contributes:
+                    - `TableDetail.Section` "sample-rows" → `SampleRowsSection`
+                  - Server:
+                    - Uses: `database.db`
+                    - `GET /api/catalog/tables/:tableName/sample`
         - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
           - Contributes:
             - `Pane.Register` "publish"
@@ -862,7 +894,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Exports (server):
     - Values: `awaitDbReady`, `db`, `isTransientDbError`
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `grouped`, `groups`, `improve`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `review`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `build`, `claude-cli`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `review`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Exports (server):

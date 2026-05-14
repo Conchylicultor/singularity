@@ -155,6 +155,26 @@
       "name": "@singularity/plugin-apps-forge-catalog-tables",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/columns": {
+      "name": "@singularity/plugin-apps-forge-catalog-tables-columns",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/foreign-keys": {
+      "name": "@singularity/plugin-apps-forge-catalog-tables-foreign-keys",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/indexes": {
+      "name": "@singularity/plugin-apps-forge-catalog-tables-indexes",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/row-count": {
+      "name": "@singularity/plugin-apps-forge-catalog-tables-row-count",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/sample-rows": {
+      "name": "@singularity/plugin-apps-forge-catalog-tables-sample-rows",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/forge/plugins/publish": {
       "name": "@singularity/plugin-apps-forge-publish",
       "version": "0.0.1",
@@ -1666,6 +1686,16 @@
     "@singularity/plugin-apps-forge-catalog": ["@singularity/plugin-apps-forge-catalog@workspace:plugins/apps/plugins/forge/plugins/catalog"],
 
     "@singularity/plugin-apps-forge-catalog-tables": ["@singularity/plugin-apps-forge-catalog-tables@workspace:plugins/apps/plugins/forge/plugins/catalog/plugins/tables"],
+
+    "@singularity/plugin-apps-forge-catalog-tables-columns": ["@singularity/plugin-apps-forge-catalog-tables-columns@workspace:plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/columns"],
+
+    "@singularity/plugin-apps-forge-catalog-tables-foreign-keys": ["@singularity/plugin-apps-forge-catalog-tables-foreign-keys@workspace:plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/foreign-keys"],
+
+    "@singularity/plugin-apps-forge-catalog-tables-indexes": ["@singularity/plugin-apps-forge-catalog-tables-indexes@workspace:plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/indexes"],
+
+    "@singularity/plugin-apps-forge-catalog-tables-row-count": ["@singularity/plugin-apps-forge-catalog-tables-row-count@workspace:plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/row-count"],
+
+    "@singularity/plugin-apps-forge-catalog-tables-sample-rows": ["@singularity/plugin-apps-forge-catalog-tables-sample-rows@workspace:plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/sample-rows"],
 
     "@singularity/plugin-apps-forge-publish": ["@singularity/plugin-apps-forge-publish@workspace:plugins/apps/plugins/forge/plugins/publish"],
 

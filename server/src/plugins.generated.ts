@@ -10,6 +10,11 @@ import activeDataPlugin from "@plugins/active-data/server";
 import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/plugins/toggle/server";
 import agentsPlugin from "@plugins/agents/server";
 import appsDeployServersPlugin from "@plugins/apps/plugins/deploy/plugins/servers/server";
+import appsForgeCatalogTablesColumnsPlugin from "@plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/columns/server";
+import appsForgeCatalogTablesForeignKeysPlugin from "@plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/foreign-keys/server";
+import appsForgeCatalogTablesIndexesPlugin from "@plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/indexes/server";
+import appsForgeCatalogTablesRowCountPlugin from "@plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/row-count/server";
+import appsForgeCatalogTablesSampleRowsPlugin from "@plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/sample-rows/server";
 import authGooglePlugin from "@plugins/auth/plugins/google/server";
 import authNotionPlugin from "@plugins/auth/plugins/notion/server";
 import buildPlugin from "@plugins/build/server";
@@ -95,6 +100,11 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (activeDataPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, tasksCorePlugin];
 (agentsAutoLaunchTogglePlugin as ServerPluginDefinition).dependsOn = [agentsPlugin, databasePlugin, infraEntityExtensionsPlugin];
 (agentsPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraAttachmentsPlugin, primitivesAvatarPlugin, primitivesRankPlugin, tasksCorePlugin];
+(appsForgeCatalogTablesColumnsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(appsForgeCatalogTablesForeignKeysPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(appsForgeCatalogTablesIndexesPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(appsForgeCatalogTablesRowCountPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(appsForgeCatalogTablesSampleRowsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (authGooglePlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (authNotionPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (buildPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, debugLogsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin, infraPathsPlugin];
@@ -170,6 +180,11 @@ export const plugins: ServerPluginDefinition[] = [
   agentsAutoLaunchTogglePlugin,
   agentsPlugin,
   appsDeployServersPlugin,
+  appsForgeCatalogTablesColumnsPlugin,
+  appsForgeCatalogTablesForeignKeysPlugin,
+  appsForgeCatalogTablesIndexesPlugin,
+  appsForgeCatalogTablesRowCountPlugin,
+  appsForgeCatalogTablesSampleRowsPlugin,
   authGooglePlugin,
   authNotionPlugin,
   buildPlugin,

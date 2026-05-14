@@ -38,6 +38,12 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`catalog`** — Central view of all plugin contributions aggregated by type.
           - Plugins:
             - **`tables`** — DB tables catalog tab with an extensible per-table detail slot.
+              - Plugins:
+                - **`columns`** — Table column definitions section in the table detail view.
+                - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
+                - **`indexes`** — Table indexes section in the table detail view.
+                - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
+                - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
         - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
         - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
 
