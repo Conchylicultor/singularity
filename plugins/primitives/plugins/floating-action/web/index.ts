@@ -7,6 +7,7 @@ export {
 export type {
   FloatingActionProps,
   FloatingActionFadeInProps,
+  FloatingAnchor,
 } from "./internal/floating-action";
 
 export default {

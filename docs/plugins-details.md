@@ -691,6 +691,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `POST /api/prompt-templates`
             - `PATCH /api/prompt-templates/:id`
             - `DELETE /api/prompt-templates/:id`
+            - `POST /api/prompt-templates/:id/use`
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables.ts`
@@ -1352,7 +1353,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `FilterChip`, `FilterGroup`, `useChipFilter`
     - **`floating-action`** — Hover-intent floating action: single morphing panel with JS hover intent (close delay) and pointer-events-none on close to prevent flicker.
       - Exports (web):
-        - Types: `FloatingActionFadeInProps`, `FloatingActionProps`
+        - Types: `FloatingActionFadeInProps`, `FloatingActionProps`, `FloatingAnchor`
         - Values: `FloatingAction`, `FloatingActionFadeIn`
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
       - Exports (web):

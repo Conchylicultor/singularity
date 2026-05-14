@@ -106,6 +106,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
         - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Named template chips that prepend text to the conversation prompt editor for editing before sending.
           - `/api/prompt-templates (GET, POST)`
           - `/api/prompt-templates/:id (PATCH, DELETE)`
+          - `/api/prompt-templates/:id/use (POST)`
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
           - `/api/conversations/:id/push-and-exit (POST, DELETE)`
         - **`quick-prompts`** — Named prompt chips in the conversation floating bar. Click to send a preset message to the active conversation. Named prompts that appear as chips in the conversation toolbar. Click to send a preset message.

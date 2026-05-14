@@ -1,6 +1,7 @@
 import {
   type ComponentProps,
   useCallback,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -32,12 +33,26 @@ function useHoverIntent(closeDelay = 150) {
   return { hovered, onMouseEnter, onMouseLeave };
 }
 
+export type FloatingAnchor =
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right";
+
+const anchorClasses: Record<FloatingAnchor, string> = {
+  "top-left": "top-0 left-0",
+  "top-right": "top-0 right-0",
+  "bottom-left": "bottom-0 left-0",
+  "bottom-right": "bottom-0 right-0",
+};
+
 export interface FloatingActionProps
   extends Omit<ComponentProps<"div">, "className"> {
   variant?: "outlined" | "ghost";
   className?: string;
   panelClassName?: string;
   closeDelay?: number;
+  anchor?: FloatingAnchor;
 }
 
 export function FloatingAction({
@@ -45,10 +60,22 @@ export function FloatingAction({
   panelClassName,
   variant = "outlined",
   closeDelay,
+  anchor = "bottom-right",
   children,
   ...props
 }: FloatingActionProps) {
   const { hovered, onMouseEnter, onMouseLeave } = useHoverIntent(closeDelay);
+  const sizerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const sizer = sizerRef.current;
+    const panel = panelRef.current;
+    if (!sizer || !panel) return;
+    const { width, height } = panel.getBoundingClientRect();
+    sizer.style.width = `${width}px`;
+    sizer.style.height = `${height}px`;
+  }, []);
 
   return (
     <div
@@ -57,25 +84,30 @@ export function FloatingAction({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <div
-        className={cn(
-          "flex overflow-hidden rounded-md",
-          "transition-[width,max-width,max-height,padding,background-color,box-shadow,border-color] duration-200 ease-out",
-          !hovered && "pointer-events-none",
-          variant === "outlined" && [
-            "border border-border/60 backdrop-blur",
-            "bg-background/80 group-data-hovered/fa:bg-background/90",
-            "shadow-sm group-data-hovered/fa:shadow-md",
-          ],
-          variant === "ghost" && [
-            "border border-transparent group-data-hovered/fa:border-border/60",
-            "group-data-hovered/fa:bg-background/90 group-data-hovered/fa:shadow-md group-data-hovered/fa:backdrop-blur",
-          ],
-          panelClassName,
-        )}
-        {...props}
-      >
-        {children}
+      <div ref={sizerRef} className="relative">
+        <div className={cn("absolute w-max", anchorClasses[anchor])}>
+          <div
+            ref={panelRef}
+            className={cn(
+              "flex overflow-hidden rounded-md",
+              "transition-[width,max-width,max-height,padding,background-color,box-shadow,border-color] duration-200 ease-out",
+              !hovered && "pointer-events-none",
+              variant === "outlined" && [
+                "border border-border/60 backdrop-blur",
+                "bg-background/80 group-data-hovered/fa:bg-background/90",
+                "shadow-sm group-data-hovered/fa:shadow-md",
+              ],
+              variant === "ghost" && [
+                "border border-transparent group-data-hovered/fa:border-border/60",
+                "group-data-hovered/fa:bg-background/90 group-data-hovered/fa:shadow-md group-data-hovered/fa:backdrop-blur",
+              ],
+              panelClassName,
+            )}
+            {...props}
+          >
+            {children}
+          </div>
+        </div>
       </div>
     </div>
   );

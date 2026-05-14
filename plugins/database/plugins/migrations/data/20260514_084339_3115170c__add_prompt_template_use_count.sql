@@ -1,0 +1,1 @@
+ALTER TABLE "prompt_templates" ADD COLUMN "use_count" integer DEFAULT 0 NOT NULL;

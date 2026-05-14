@@ -7,6 +7,7 @@ export const PromptTemplateSchema = z.object({
   title: z.string(),
   prompt: z.string(),
   rank: RankSchema,
+  useCount: z.number(),
 });
 
 export type PromptTemplate = z.infer<typeof PromptTemplateSchema>;
