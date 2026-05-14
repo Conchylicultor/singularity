@@ -166,6 +166,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "primitives/plugins/relative-time", loader: () => import("@plugins/primitives/plugins/relative-time/web") },
   { name: "primitives/plugins/search", loader: () => import("@plugins/primitives/plugins/search/web") },
   { name: "primitives/plugins/section-label", loader: () => import("@plugins/primitives/plugins/section-label/web") },
+  { name: "primitives/plugins/select-scope", loader: () => import("@plugins/primitives/plugins/select-scope/web") },
   { name: "primitives/plugins/shortcuts", loader: () => import("@plugins/primitives/plugins/shortcuts/web") },
   { name: "primitives/plugins/slot-render", loader: () => import("@plugins/primitives/plugins/slot-render/web") },
   { name: "primitives/plugins/sortable-list", loader: () => import("@plugins/primitives/plugins/sortable-list/web") },

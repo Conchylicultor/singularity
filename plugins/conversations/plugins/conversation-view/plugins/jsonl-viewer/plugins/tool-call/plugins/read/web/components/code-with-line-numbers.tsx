@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ShikiTransformer } from "shiki";
+import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import {
   getHighlighter,
   languageForPath,
@@ -100,16 +101,20 @@ export function CodeWithLineNumbers({
 
   if (html === null) {
     return (
-      <pre className="max-h-[280px] overflow-auto rounded bg-muted p-3 font-mono text-xs leading-5">
-        <code>{code}</code>
-      </pre>
+      <ContentScope>
+        <pre className="max-h-[280px] overflow-auto rounded bg-muted p-3 font-mono text-xs leading-5">
+          <code>{code}</code>
+        </pre>
+      </ContentScope>
     );
   }
 
   return (
-    <div
-      className="max-h-[280px] overflow-auto [&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5 [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <ContentScope>
+      <div
+        className="max-h-[280px] overflow-auto [&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5 [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </ContentScope>
   );
 }

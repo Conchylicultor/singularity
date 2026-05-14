@@ -122,28 +122,23 @@ export function DiffRenderer({
 
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if ((e.ctrlKey || e.metaKey) && e.key === "a" && containerRef.current) {
-      e.preventDefault();
       const sel = window.getSelection();
       if (!sel) return;
 
       const side = fixedSide ?? lastClickedSide.current ?? getSideFromNode(sel.anchorNode);
+      if (!side) return;
 
+      e.preventDefault();
       sel.removeAllRanges();
-      if (side) {
-        if (!fixedSide) containerRef.current.setAttribute("data-active-side", side);
-        const nth = fixedSide ? CODE_NTH_MONO : CODE_NTH_SPLIT[side];
-        const cells = containerRef.current.querySelectorAll(`.diff-line > td:nth-child(${nth})`);
-        const first = cells[0];
-        const last = cells[cells.length - 1];
-        if (first && last) {
-          const range = document.createRange();
-          range.setStartBefore(first);
-          range.setEndAfter(last);
-          sel.addRange(range);
-        }
-      } else {
+      if (!fixedSide) containerRef.current.setAttribute("data-active-side", side);
+      const nth = fixedSide ? CODE_NTH_MONO : CODE_NTH_SPLIT[side];
+      const cells = containerRef.current.querySelectorAll(`.diff-line > td:nth-child(${nth})`);
+      const first = cells[0];
+      const last = cells[cells.length - 1];
+      if (first && last) {
         const range = document.createRange();
-        range.selectNodeContents(containerRef.current);
+        range.setStartBefore(first);
+        range.setEndAfter(last);
         sel.addRange(range);
       }
     }

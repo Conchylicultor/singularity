@@ -1,5 +1,6 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 
 interface BashInput {
   command: string;
@@ -22,6 +23,7 @@ export function BashToolView({ event }: ToolRendererProps) {
       event={event}
       summary={input.description || `$ ${input.command}`}
     >
+      <ContentScope>
       <div className="mt-2 overflow-hidden rounded-md border border-border/40 bg-muted font-mono text-xs leading-5">
         <div className="flex items-start gap-2 px-3 py-2">
           <span className="select-none text-muted-foreground/40">$</span>
@@ -44,6 +46,7 @@ export function BashToolView({ event }: ToolRendererProps) {
           </>
         )}
       </div>
+      </ContentScope>
     </ToolCallCard>
   );
 }

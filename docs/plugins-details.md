@@ -1436,6 +1436,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `SectionLabelProps`
         - Values: `SectionLabel`
+    - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope> to prevent page-wide selection when focus is inside it.
+      - Exports (web):
+        - Values: `ContentScope`
     - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
       - Defines:
         - Slots: `Shortcuts.Shortcut`

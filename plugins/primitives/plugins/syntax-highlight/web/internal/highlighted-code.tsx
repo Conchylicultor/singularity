@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { BundledLanguage } from "shiki";
+import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { getHighlighter, themeForMode } from "./highlighter";
 import { resolveLang } from "./lang";
 import { useDarkMode } from "./use-dark-mode";
@@ -44,18 +45,22 @@ export function HighlightedCode({
 
   if (!resolved || html === null) {
     return (
-      <pre
-        className={`my-2 overflow-auto rounded bg-muted p-3 font-mono text-xs leading-5 ${className ?? ""}`}
-      >
-        <code>{code}</code>
-      </pre>
+      <ContentScope>
+        <pre
+          className={`my-2 overflow-auto rounded bg-muted p-3 font-mono text-xs leading-5 ${className ?? ""}`}
+        >
+          <code>{code}</code>
+        </pre>
+      </ContentScope>
     );
   }
 
   return (
-    <div
-      className={`my-2 ${wrapper} ${className ?? ""}`}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <ContentScope>
+      <div
+        className={`my-2 ${wrapper} ${className ?? ""}`}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </ContentScope>
   );
 }

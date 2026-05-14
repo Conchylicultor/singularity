@@ -1,3 +1,4 @@
+import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import type { ResolvedRenderer } from "../slots";
 
 export function FileContent({
@@ -19,5 +20,9 @@ export function FileContent({
     );
   }
   const Component = active.contribution.component;
-  return <Component worktree={worktree} path={path} line={line} />;
+  return (
+    <ContentScope>
+      <Component worktree={worktree} path={path} line={line} />
+    </ContentScope>
+  );
 }

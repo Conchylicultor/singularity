@@ -248,6 +248,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
     - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
     - **`section-label`** — Eyebrow/section-label typography primitive: small caps muted label for form sections and content headers.
+    - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope> to prevent page-wide selection when focus is inside it.
     - **`shortcuts`** [load-bearing] — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
     - **`slot-render`** [load-bearing] — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
     - **`sortable-list`** — Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components.
