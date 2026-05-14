@@ -121,7 +121,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `DebugApp`
           - Contributes:
             - `Apps.App` "Debug" → `DebugLayout`
-          - Imported by: `agents`, `auth`, `blocked-by`, `blocking`, `branch`, `build`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `review`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
+          - Imported by: `agents`, `auth`, `blocked-by`, `blocking`, `branch`, `build`, `build-logs`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `review`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -322,6 +322,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Defines:
     - DB schema: `plugins/build/server/internal/tables.ts`
+  - Exports (core):
+    - Types: `BuildRun`, `MainAheadCount`
+    - Values: `buildHistoryResource`, `BuildRunSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
+  - Exports (web):
+    - Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`
   - Exports (shared):
     - Types: `BuildRun`, `MainAheadCount`
     - Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
@@ -329,12 +334,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Toolbar` → `BuildButton`
     - `Config.Spec`
     - `Pane.Register` "build"
+    - `Pane.Register` "build-detail"
   - Server:
     - Register: `defineJob('build.run')`
     - Uses: `config.Config`, `config.readConfig`, `database.db`
     - Resources: `build.history` (push), `build.mainAheadCount` (push)
     - `POST /api/build`
     - `GET /api/build/status`
+  - Plugins:
+    - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
+      - Contributes:
+        - `BuildDetailSlots.Section` "info" → `BuildInfo`
+    - **`build-logs`** — Live log stream section in the build detail pane.
+      - Contributes:
+        - `BuildDetailSlots.Section` "logs" → `BuildLogSection`
 
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Exports (server):
@@ -986,6 +999,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Profiling.Section` → `BuildSection`
           - Server:
             - `GET /api/debug/profiling/build`
+          - Imported by: `build-info`, `build-logs`
         - **`stats`** — Stats endpoint profiling for the Gantt debug pane. Stats endpoint profiling data endpoint.
           - Contributes:
             - `Profiling.Section` → `StatsSection`

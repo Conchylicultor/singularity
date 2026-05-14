@@ -151,7 +151,15 @@ function StatusDot({ run }: { run: BuildRun }) {
   return <span className="block size-2 shrink-0 rounded-full bg-destructive" />;
 }
 
-function BuildHistoryList({ variant }: { variant: "popover" | "pane" }) {
+function BuildHistoryList({
+  variant,
+  selectedRunId,
+  onRunClick,
+}: {
+  variant: "popover" | "pane";
+  selectedRunId?: string;
+  onRunClick?: (runId: string) => void;
+}) {
   const { data } = useResource(buildHistoryResource);
   const runs = data ?? [];
   const limit = variant === "popover" ? 10 : 50;
@@ -167,7 +175,13 @@ function BuildHistoryList({ variant }: { variant: "popover" | "pane" }) {
         {visible.map((run) => (
           <div
             key={run.id}
-            className="flex items-center gap-2 rounded px-1 py-0.5 text-xs hover:bg-accent"
+            role={onRunClick ? "button" : undefined}
+            onClick={onRunClick ? () => onRunClick(run.id) : undefined}
+            className={cn(
+              "flex items-center gap-2 rounded px-1 py-0.5 text-xs hover:bg-accent",
+              onRunClick && "cursor-pointer",
+              selectedRunId === run.id && "bg-accent",
+            )}
           >
             <StatusDot run={run} />
             <span className="text-muted-foreground">
@@ -193,7 +207,15 @@ function BuildHistoryList({ variant }: { variant: "popover" | "pane" }) {
   );
 }
 
-export function BuildPopoverContent({ variant }: { variant: "popover" | "pane" }) {
+export function BuildPopoverContent({
+  variant,
+  selectedRunId,
+  onRunClick,
+}: {
+  variant: "popover" | "pane";
+  selectedRunId?: string;
+  onRunClick?: (runId: string) => void;
+}) {
   const { data: historyData } = useResource(buildHistoryResource);
   const runs = historyData ?? [];
   const latestRun = runs[0];
@@ -216,7 +238,7 @@ export function BuildPopoverContent({ variant }: { variant: "popover" | "pane" }
     <div className={cn("flex flex-col", variant === "pane" && "h-full")}>
       <BuildControls building={building} onBuild={handleBuild} />
       <BuildLogView variant={variant} />
-      <BuildHistoryList variant={variant} />
+      <BuildHistoryList variant={variant} selectedRunId={selectedRunId} onRunClick={onRunClick} />
     </div>
   );
 }

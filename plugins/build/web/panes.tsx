@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { BuildPopoverContent } from "./components/build-popover-content";
+import { BuildDetail } from "./slots";
 
 export const buildPane = Pane.define({
   id: "build",
@@ -9,10 +10,37 @@ export const buildPane = Pane.define({
   component: BuildPaneBody,
 });
 
+export const buildDetailPane = Pane.define({
+  id: "build-detail",
+  after: [buildPane],
+  segment: "r/:runId",
+  component: BuildDetailBody,
+  width: 480,
+});
+
 function BuildPaneBody(): ReactElement {
+  const openPane = useOpenPane();
+  const selectedRunId = buildDetailPane.useChainEntry()?.params.runId;
+
   return (
     <PaneChrome pane={buildPane} title="Build">
-      <BuildPopoverContent variant="pane" />
+      <BuildPopoverContent
+        variant="pane"
+        selectedRunId={selectedRunId}
+        onRunClick={(runId) => openPane(buildDetailPane, { runId }, { mode: "push" })}
+      />
+    </PaneChrome>
+  );
+}
+
+function BuildDetailBody(): ReactElement {
+  const { runId } = buildDetailPane.useParams();
+
+  return (
+    <PaneChrome pane={buildDetailPane} title="Build Run">
+      <div className="h-full overflow-auto">
+        <BuildDetail.Host runId={runId} />
+      </div>
     </PaneChrome>
   );
 }

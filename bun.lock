@@ -219,6 +219,14 @@
       "name": "@singularity/plugin-build",
       "version": "0.0.1",
     },
+    "plugins/build/plugins/build-info": {
+      "name": "@singularity/plugin-build-build-info",
+      "version": "0.0.1",
+    },
+    "plugins/build/plugins/build-logs": {
+      "name": "@singularity/plugin-build-build-logs",
+      "version": "0.0.1",
+    },
     "plugins/code-explorer": {
       "name": "@singularity/plugin-code-explorer",
       "version": "0.0.1",
@@ -1738,6 +1746,10 @@
     "@singularity/plugin-backup-local": ["@singularity/plugin-backup-local@workspace:plugins/backup/plugins/local"],
 
     "@singularity/plugin-build": ["@singularity/plugin-build@workspace:plugins/build"],
+
+    "@singularity/plugin-build-build-info": ["@singularity/plugin-build-build-info@workspace:plugins/build/plugins/build-info"],
+
+    "@singularity/plugin-build-build-logs": ["@singularity/plugin-build-build-logs@workspace:plugins/build/plugins/build-logs"],
 
     "@singularity/plugin-code-explorer": ["@singularity/plugin-code-explorer@workspace:plugins/code-explorer"],
 

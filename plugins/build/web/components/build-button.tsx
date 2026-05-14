@@ -10,7 +10,7 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { mainAheadCountResource, buildHistoryResource } from "../../shared";
 import { BuildPopoverContent } from "./build-popover-content";
-import { buildPane } from "../panes";
+import { buildPane, buildDetailPane } from "../panes";
 
 interface BuildStatus {
   frontendHash: string;
@@ -148,7 +148,14 @@ export function BuildButton() {
           <MdOpenInFull className="size-3" />
         </Button>
       </div>
-      <BuildPopoverContent variant="popover" />
+      <BuildPopoverContent
+        variant="popover"
+        onRunClick={(runId) => {
+          setOpen(false);
+          openPane(buildPane, {}, { mode: "root" });
+          openPane(buildDetailPane, { runId }, { mode: "push" });
+        }}
+      />
     </InlinePopover>
   );
 }

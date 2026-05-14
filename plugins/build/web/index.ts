@@ -4,7 +4,10 @@ import { Config } from "@plugins/config/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { buildConfig } from "../shared";
 import { BuildButton } from "./components/build-button";
-import { buildPane } from "./panes";
+import { buildPane, buildDetailPane } from "./panes";
+
+export { BuildDetail as BuildDetailSlots } from "./slots";
+export { buildPane, buildDetailPane } from "./panes";
 
 export default {
   id: "build",
@@ -18,5 +21,6 @@ export default {
     }),
     Config.Spec(buildConfig),
     Pane.Register({ pane: buildPane }),
+    Pane.Register({ pane: buildDetailPane }),
   ],
 } satisfies PluginDefinition;
