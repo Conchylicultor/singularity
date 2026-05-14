@@ -1067,6 +1067,10 @@
       "name": "@singularity/plugin-ui-tokens",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/chart": {
+      "name": "@singularity/plugin-ui-tokens-chart",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/color-palette": {
       "name": "@singularity/plugin-ui-tokens-color-palette",
       "version": "0.0.1",
@@ -1077,6 +1081,10 @@
     },
     "plugins/ui/plugins/tokens/plugins/sidebar-palette": {
       "name": "@singularity/plugin-ui-tokens-sidebar-palette",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/typography": {
+      "name": "@singularity/plugin-ui-tokens-typography",
       "version": "0.0.1",
     },
     "plugins/welcome": {
@@ -2153,11 +2161,15 @@
 
     "@singularity/plugin-ui-tokens": ["@singularity/plugin-ui-tokens@workspace:plugins/ui/plugins/tokens"],
 
+    "@singularity/plugin-ui-tokens-chart": ["@singularity/plugin-ui-tokens-chart@workspace:plugins/ui/plugins/tokens/plugins/chart"],
+
     "@singularity/plugin-ui-tokens-color-palette": ["@singularity/plugin-ui-tokens-color-palette@workspace:plugins/ui/plugins/tokens/plugins/color-palette"],
 
     "@singularity/plugin-ui-tokens-shape": ["@singularity/plugin-ui-tokens-shape@workspace:plugins/ui/plugins/tokens/plugins/shape"],
 
     "@singularity/plugin-ui-tokens-sidebar-palette": ["@singularity/plugin-ui-tokens-sidebar-palette@workspace:plugins/ui/plugins/tokens/plugins/sidebar-palette"],
+
+    "@singularity/plugin-ui-tokens-typography": ["@singularity/plugin-ui-tokens-typography@workspace:plugins/ui/plugins/tokens/plugins/typography"],
 
     "@singularity/plugin-welcome": ["@singularity/plugin-welcome@workspace:plugins/welcome"],
 

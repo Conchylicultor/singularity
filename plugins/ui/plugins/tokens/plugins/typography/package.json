@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-ui-tokens-typography",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Typography token group (fonts, letter-spacing) with switchable presets."
+}

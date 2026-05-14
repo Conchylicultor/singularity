@@ -402,7 +402,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/config/specs`
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
-  - Imported by: `auth`, `backup`, `build`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shape`, `sidebar-palette`, `theme-engine`, `turn-summary`
+  - Imported by: `auth`, `backup`, `build`, `chart`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shape`, `sidebar-palette`, `theme-engine`, `turn-summary`, `typography`
   - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `review`, `theme-engine`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
@@ -1757,13 +1757,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Config.Section` "UI Themes" → `VariantSettings`
       - Server:
         - Uses: `config.Config`
-      - Slot contributors: `color-palette`, `segmented-progress-bar`, `shape`, `sidebar-palette`, `tokens`
+      - Slot contributors: `chart`, `color-palette`, `segmented-progress-bar`, `shape`, `sidebar-palette`, `tokens`, `typography`
     - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
       - Contributes:
         - `ThemeEngine.GlobalPreset` "Default"
         - `ThemeEngine.GlobalPreset` "Ocean"
         - `ThemeEngine.GlobalPreset` "Warm"
       - Plugins:
+        - **`chart`** — Chart color token group with switchable presets.
+          - Defines:
+            - Slots: `Chart.Preset`
+          - Exports (web):
+            - Types: `ChartPresetContribution`
+            - Values: `Chart`
+          - Exports (shared):
+            - Types: `ChartTokenValues`
+            - Values: `chartConfig`, `chartGroup`
+          - Contributes:
+            - `Chart.Preset` "Default"
+            - `ThemeEngine.TokenGroup` "Chart"
+            - `ThemeEngine.VariantGroup` "Chart" → `ChartPicker`
+          - Server:
+            - Uses: `config.Config`
         - **`color-palette`** — Color palette token group with switchable presets.
           - Defines:
             - Slots: `ColorPalette.Preset`
@@ -1813,6 +1828,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `SidebarPalette.Preset` "Warm"
             - `ThemeEngine.TokenGroup` "Sidebar Palette"
             - `ThemeEngine.VariantGroup` "Sidebar Palette" → `SidebarPalettePicker`
+          - Server:
+            - Uses: `config.Config`
+        - **`typography`** — Typography token group (fonts, letter-spacing) with switchable presets.
+          - Defines:
+            - Slots: `Typography.Preset`
+          - Exports (web):
+            - Types: `TypographyPresetContribution`
+            - Values: `Typography`
+          - Exports (shared):
+            - Types: `TypographyTokenValues`
+            - Values: `typographyConfig`, `typographyGroup`
+          - Contributes:
+            - `Typography.Preset` "Default"
+            - `ThemeEngine.TokenGroup` "Typography"
+            - `ThemeEngine.VariantGroup` "Typography" → `TypographyPicker`
           - Server:
             - Uses: `config.Config`
 

@@ -16,6 +16,7 @@ export const colorPaletteGroup = defineTokenGroup("color-palette", {
   accent: { default: "oklch(0.97 0 0)", label: "Accent" },
   accentForeground: { default: "oklch(0.205 0 0)", label: "On accent" },
   destructive: { default: "oklch(0.577 0.245 27.325)", label: "Destructive" },
+  destructiveForeground: { default: "oklch(1 0 0)", label: "Destructive text" },
   border: { default: "oklch(0.922 0 0)", label: "Border" },
   input: { default: "oklch(0.922 0 0)", label: "Input border" },
   ring: { default: "oklch(0.708 0 0)", label: "Focus ring" },

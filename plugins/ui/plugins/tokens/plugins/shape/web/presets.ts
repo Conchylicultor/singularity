@@ -14,25 +14,25 @@ function both(values: ShapeTokenValues): Pick<Preset, "light" | "dark"> {
 export const defaultPreset: Preset = {
   id: "default",
   label: "Default",
-  ...both({ radius: "0.625rem" }),
+  ...both({ radius: "0.625rem", spacing: "0.25rem" }),
 };
 
 export const sharpPreset: Preset = {
   id: "sharp",
   label: "Sharp",
-  ...both({ radius: "0rem" }),
+  ...both({ radius: "0rem", spacing: "0.25rem" }),
 };
 
 export const roundedPreset: Preset = {
   id: "rounded",
   label: "Rounded",
-  ...both({ radius: "0.75rem" }),
+  ...both({ radius: "0.75rem", spacing: "0.25rem" }),
 };
 
 export const pillPreset: Preset = {
   id: "pill",
   label: "Pill",
-  ...both({ radius: "9999px" }),
+  ...both({ radius: "9999px", spacing: "0.25rem" }),
 };
 
 export const builtInPresets: Preset[] = [

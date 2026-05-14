@@ -14,6 +14,8 @@ export default {
         "color-palette": "default",
         shape: "default",
         "sidebar-palette": "default",
+        chart: "default",
+        typography: "default",
       },
     }),
     ThemeEngine.GlobalPreset({
@@ -23,6 +25,8 @@ export default {
         "color-palette": "ocean",
         shape: "rounded",
         "sidebar-palette": "default",
+        chart: "default",
+        typography: "default",
       },
     }),
     ThemeEngine.GlobalPreset({
@@ -32,6 +36,8 @@ export default {
         "color-palette": "warm",
         shape: "default",
         "sidebar-palette": "warm",
+        chart: "default",
+        typography: "default",
       },
     }),
   ],

@@ -13,6 +13,8 @@ export const defaultPreset: Preset = {
   light: {
     sidebar: "oklch(0.965 0 0)",
     sidebarForeground: "oklch(0.145 0 0)",
+    sidebarPrimary: "oklch(0.205 0 0)",
+    sidebarPrimaryForeground: "oklch(0.985 0 0)",
     sidebarBorder: "oklch(0.902 0 0)",
     sidebarAccent: "oklch(0.94 0 0)",
     sidebarAccentForeground: "oklch(0.205 0 0)",
@@ -21,6 +23,8 @@ export const defaultPreset: Preset = {
   dark: {
     sidebar: "oklch(0.205 0 0)",
     sidebarForeground: "oklch(0.88 0 0)",
+    sidebarPrimary: "oklch(0.488 0.243 264.376)",
+    sidebarPrimaryForeground: "oklch(0.985 0 0)",
     sidebarBorder: "oklch(1 0 0 / 15%)",
     sidebarAccent: "oklch(0.269 0 0)",
     sidebarAccentForeground: "oklch(0.88 0 0)",
@@ -34,6 +38,8 @@ export const warmPreset: Preset = {
   light: {
     sidebar: "oklch(0.93 0.06 75)",
     sidebarForeground: "oklch(0.18 0.04 55)",
+    sidebarPrimary: "oklch(0.205 0 0)",
+    sidebarPrimaryForeground: "oklch(0.985 0 0)",
     sidebarBorder: "oklch(0.82 0.10 75)",
     sidebarAccent: "oklch(0.88 0.08 70)",
     sidebarAccentForeground: "oklch(0.22 0.04 55)",
@@ -42,6 +48,8 @@ export const warmPreset: Preset = {
   dark: {
     sidebar: "oklch(0.25 0.05 60)",
     sidebarForeground: "oklch(0.90 0.03 70)",
+    sidebarPrimary: "oklch(0.488 0.243 264.376)",
+    sidebarPrimaryForeground: "oklch(0.985 0 0)",
     sidebarBorder: "oklch(0.45 0.10 60)",
     sidebarAccent: "oklch(0.32 0.06 60)",
     sidebarAccentForeground: "oklch(0.90 0.03 70)",

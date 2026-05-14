@@ -3,6 +3,11 @@ import { defineTokenGroup } from "@plugins/ui/plugins/theme-engine/core";
 export const sidebarPaletteGroup = defineTokenGroup("sidebar-palette", {
   sidebar: { default: "oklch(0.965 0 0)", label: "Sidebar" },
   sidebarForeground: { default: "oklch(0.145 0 0)", label: "Sidebar text" },
+  sidebarPrimary: { default: "oklch(0.205 0 0)", label: "Sidebar primary" },
+  sidebarPrimaryForeground: {
+    default: "oklch(0.985 0 0)",
+    label: "Sidebar primary text",
+  },
   sidebarBorder: { default: "oklch(0.902 0 0)", label: "Sidebar border" },
   sidebarAccent: { default: "oklch(0.94 0 0)", label: "Sidebar accent" },
   sidebarAccentForeground: {

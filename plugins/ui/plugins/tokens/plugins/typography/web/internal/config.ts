@@ -1,0 +1,1 @@
+export { typographyConfig } from "../../shared";

@@ -1,0 +1,1 @@
+export { chartConfig } from "../../shared";
