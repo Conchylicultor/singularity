@@ -1,4 +1,4 @@
-import type { Contribution } from "@core";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType, ReactNode } from "react";
 
 export interface SlotItemMiddleware {

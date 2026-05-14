@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { useCursorPagination } from "./internal/use-cursor-pagination";
 export type {

@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdLowPriority } from "react-icons/md";
 import { ConversationsView } from "@plugins/conversations/plugins/conversations-view/web";
 import { QueueView } from "./components/queue-view";

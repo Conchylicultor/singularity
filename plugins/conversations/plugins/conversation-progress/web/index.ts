@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { ProgressBarToolbar } from "./components/progress-bar-toolbar";

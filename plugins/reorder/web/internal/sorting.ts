@@ -1,4 +1,4 @@
-import type { Contribution } from "@core";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { ReorderSlotPrefs } from "../../shared/resource";
 import type { ReorderGroup } from "@plugins/reorder/plugins/groups/core";

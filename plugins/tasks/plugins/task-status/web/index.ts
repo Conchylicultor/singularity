@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { STATUS_META, StatusIcon, StatusBadge } from "./components/task-status";
 

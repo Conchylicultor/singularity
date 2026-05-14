@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { AllowMonitorChip } from "./components/allow-monitor-chip";
 

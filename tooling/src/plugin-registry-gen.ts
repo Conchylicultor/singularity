@@ -16,7 +16,7 @@ const RUNTIMES: Record<Runtime, RuntimeConfig> = {
     registryFile: "web/src/plugins.ts",
     generatedFile: "web/src/plugins.generated.ts",
     typeName: "PluginDefinition",
-    typeImport: `import type { PluginDefinition } from "@core";`,
+    typeImport: `import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";`,
   },
   server: {
     registryFile: "server/src/plugins.ts",
@@ -184,7 +184,7 @@ export function renderPluginRegistry(opts: { root: string; runtime: Runtime }): 
   lines.push("");
 
   if (opts.runtime === "web") {
-    lines.push(`import type { PluginDefinition } from "@core";`);
+    lines.push(`import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";`);
     lines.push("");
     lines.push("export interface PluginEntry {");
     lines.push("  name: string;");

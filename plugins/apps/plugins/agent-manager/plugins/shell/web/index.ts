@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps/web";
 import { MdDashboard } from "react-icons/md";
 import { AgentManagerLayout } from "./components/agent-manager-layout";

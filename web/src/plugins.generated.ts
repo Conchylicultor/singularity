@@ -5,7 +5,7 @@
 // and rebuild — this file regenerates from the filesystem. The
 // `plugins-registry-in-sync` check fails on drift.
 
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export interface PluginEntry {
   name: string;

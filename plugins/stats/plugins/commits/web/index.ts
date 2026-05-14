@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Stats } from "@plugins/stats/web";
 import { Config } from "@plugins/config/web";
 import { CommitsSection } from "./components/commits-section";

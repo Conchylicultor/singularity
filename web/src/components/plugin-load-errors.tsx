@@ -1,4 +1,4 @@
-import type { PluginLoadError } from "@core";
+import type { PluginLoadError } from "@plugins/framework/plugins/web-sdk/core";
 
 export function PluginLoadErrors({ errors }: { errors: PluginLoadError[] }) {
   return (

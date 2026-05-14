@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { TooltipProvider } from "@/components/ui/tooltip";
 export { Kbd, type KbdProps } from "./components/kbd";

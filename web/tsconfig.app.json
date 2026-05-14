@@ -18,8 +18,6 @@
     "noUncheckedIndexedAccess": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@core": ["../plugins/framework/plugins/web-sdk/core"],
-      "@core/*": ["../plugins/framework/plugins/web-sdk/core/*"],
       "@plugins/*": ["../plugins/*"],
       "@server/*": ["../server/src/*"]
     }

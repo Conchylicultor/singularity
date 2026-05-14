@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { PromptEditorSlots } from "@plugins/primitives/plugins/prompt-editor/web";
 import { Config } from "@plugins/config/web";
 import { FloatingTemplateChips } from "./components/prompt-template-chips";

@@ -1,4 +1,4 @@
-import { Core, type PluginDefinition } from "@core";
+import { Core, type PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { CommandPaletteRoot } from "./internal/command-palette-root";
 
 export { CommandPalette, type CommandPaletteItem } from "./slots";

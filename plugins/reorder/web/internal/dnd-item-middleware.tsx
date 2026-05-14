@@ -1,5 +1,5 @@
 import { useContext, type ReactNode } from "react";
-import type { Contribution } from "@core";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { useEditMode } from "./edit-mode-store";
 import { contributionKey } from "./sorting";
 import { ReorderAreaContext, SortableReorderItem } from "./dnd-components";

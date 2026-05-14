@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { defineRenderSlot, RenderSlotSubIdContext } from "./internal/render-slot";
 export type { RenderSlot, RenderSlotConfig } from "./internal/render-slot";

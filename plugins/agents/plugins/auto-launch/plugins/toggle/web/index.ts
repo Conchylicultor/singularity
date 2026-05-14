@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Agents } from "@plugins/agents/web";
 import { AutoLaunchToggle } from "./components/auto-launch-toggle";
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { PluginProvider, Core, loadPlugins } from "@core";
-import type { PluginDefinition, PluginLoadError } from "@core";
+import { PluginProvider, Core, loadPlugins } from "@plugins/framework/plugins/web-sdk/core";
+import type { PluginDefinition, PluginLoadError } from "@plugins/framework/plugins/web-sdk/core";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { NotificationsProvider } from "@plugins/primitives/plugins/live-state/web";
 import { pluginEntries } from "./plugins";

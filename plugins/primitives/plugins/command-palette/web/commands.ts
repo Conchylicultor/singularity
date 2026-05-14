@@ -1,4 +1,4 @@
-import { defineCommand } from "@core";
+import { defineCommand } from "@plugins/framework/plugins/web-sdk/core";
 
 export const CommandPaletteCommands = {
   Open: defineCommand<{ open: boolean }, void>("command-palette.open"),

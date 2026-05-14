@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { LaunchFixButton } from "./components/launch-fix-button";
 

@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { PluginViewSlots } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { PublicApiSection } from "./components/public-api-section";
 

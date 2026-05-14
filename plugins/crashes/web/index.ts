@@ -1,5 +1,5 @@
-import type { PluginDefinition } from "@core";
-import { Core } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { Core } from "@plugins/framework/plugins/web-sdk/core";
 import { CrashReporter } from "./components/crash-reporter";
 
 export { report } from "./report";

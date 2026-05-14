@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { FILE_PATH_RE, URL_RE, parseFileLinks } from "./internal/parse";
 export type { FileLinkSegment } from "./internal/parse";

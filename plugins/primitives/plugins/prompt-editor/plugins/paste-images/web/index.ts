@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { PromptEditorSlots } from "@plugins/primitives/plugins/prompt-editor/web";
 import { ImageUploadPlugin } from "./internal/image-upload-plugin";
 import "./internal/register";

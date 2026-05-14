@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { SegmentedProgressBarSlots } from "@plugins/ui/plugins/segmented-progress-bar/web";
 import { DotsRenderer } from "./components/dots-renderer";
 

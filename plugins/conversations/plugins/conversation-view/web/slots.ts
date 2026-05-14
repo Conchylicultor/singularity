@@ -1,4 +1,4 @@
-import { defineSlot } from "@core";
+import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import type { Conversation as ConversationRecord } from "@plugins/tasks-core/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";

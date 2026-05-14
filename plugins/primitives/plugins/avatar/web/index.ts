@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { Avatar, type AvatarProps, type AvatarSize } from "./components/avatar";
 export { AvatarPicker, type AvatarPickerProps, type AvatarSpec } from "./components/avatar-picker";

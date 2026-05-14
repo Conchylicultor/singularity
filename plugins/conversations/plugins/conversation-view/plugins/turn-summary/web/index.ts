@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Config } from "@plugins/config/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { turnSummaryConfig } from "../shared/config";

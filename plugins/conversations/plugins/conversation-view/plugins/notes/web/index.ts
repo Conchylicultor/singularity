@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { NotesArea } from "./components/notes-area";
 import { NotesToggleButton } from "./components/notes-toggle-button";

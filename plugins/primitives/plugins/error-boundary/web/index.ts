@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { registerSlotItemMiddleware } from "@plugins/primitives/plugins/slot-render/web";
 import { ErrorBoundaryMiddleware } from "./internal/error-boundary-middleware";
 

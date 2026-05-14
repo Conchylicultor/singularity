@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Contribution } from "@core";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
   closestCenter,
   pointerWithin,

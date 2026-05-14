@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { useReconnectingWebSocket } from "./use-reconnecting-ws";
 export type { ReconnectingWsOptions, ReconnectingWsHandle } from "./use-reconnecting-ws";

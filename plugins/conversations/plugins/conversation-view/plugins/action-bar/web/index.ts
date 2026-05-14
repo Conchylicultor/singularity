@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { Conversation } from "./slots";
 export { ActionBarView } from "./components/action-bar";

@@ -1,4 +1,4 @@
-import type { Contribution } from "@core";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { ReactNode } from "react";
 import { PluginErrorBoundary } from "../components/plugin-error-boundary";
 

@@ -1,4 +1,4 @@
-import { defineCommand } from "@core";
+import { defineCommand } from "@plugins/framework/plugins/web-sdk/core";
 
 export interface OpenWithTextArgs {
   /** Initial markdown text for the head card (may include inline image refs). */

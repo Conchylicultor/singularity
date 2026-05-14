@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Auth } from "@plugins/auth/web";
 import { Config } from "@plugins/config/web";
 import { SiNotion } from "react-icons/si";

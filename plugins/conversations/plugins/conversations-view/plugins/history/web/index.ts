@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdHistory } from "react-icons/md";
 import { ConversationsView } from "@plugins/conversations/plugins/conversations-view/web";
 import { HistoryView } from "./components/history-view";

@@ -9,7 +9,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
-import { defineSlot, type Slot } from "@core";
+import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane as PaneSlots } from "./slots";
 
 // ---------------------------------------------------------------------------

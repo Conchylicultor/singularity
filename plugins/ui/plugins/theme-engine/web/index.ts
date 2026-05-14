@@ -1,4 +1,4 @@
-import { type PluginDefinition, Core } from "@core";
+import { type PluginDefinition, Core } from "@plugins/framework/plugins/web-sdk/core";
 import { Config } from "@plugins/config/web";
 import { ThemeInjector } from "./components/theme-injector";
 import { VariantSettings } from "./components/variant-settings";

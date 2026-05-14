@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MarkdownEnhancerSlot } from "@plugins/primitives/plugins/markdown/web";
 
 export { ActiveData } from "./slots";

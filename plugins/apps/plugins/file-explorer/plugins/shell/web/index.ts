@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps/web";
 import { MdFolder } from "react-icons/md";
 import { FileExplorerLayout } from "./components/file-explorer-layout";

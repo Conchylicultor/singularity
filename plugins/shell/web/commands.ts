@@ -1,4 +1,4 @@
-import { defineCommand } from "@core";
+import { defineCommand } from "@plugins/framework/plugins/web-sdk/core";
 
 export type ToastVariant = "default" | "success" | "error" | "warning" | "info";
 

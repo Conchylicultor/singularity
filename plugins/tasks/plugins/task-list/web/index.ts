@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Tasks as TasksSlots } from "./slots";
 import { DeleteTaskAction } from "./components/delete-task-action";
 import { ExpandCollapseAllAction } from "./components/expand-collapse-all-action";

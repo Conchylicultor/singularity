@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { defineSlot } from "@core";
+import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 
 export interface CommandPaletteItem {
   id: string;

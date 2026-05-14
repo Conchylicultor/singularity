@@ -1,4 +1,4 @@
-import { defineSlot } from "@core";
+import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import type { TokenGroupDescriptor } from "../core";
 import type { ConfigDescriptor } from "@plugins/config/core";

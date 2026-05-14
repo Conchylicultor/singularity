@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ActiveData } from "@plugins/active-data/web";
 import { TaskLinkChip } from "./components/task-link-chip";
 import { TASK_ID_RE } from "./internal/pattern";

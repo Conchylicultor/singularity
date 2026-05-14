@@ -1,7 +1,7 @@
 import { useContext, useMemo, type ReactNode } from "react";
 import ReactMarkdownLib from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { defineSlot, type Slot } from "@core";
+import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import { MarkdownEnhancementContext } from "./enhancement-context";
 import { buildBaseComponents } from "./base-components";

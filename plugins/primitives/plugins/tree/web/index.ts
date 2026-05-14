@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { TreeList, hideTerminalSubtrees } from "./internal/tree-list";
 export type { TreeListProps } from "./internal/tree-list";

@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { taskAutoStartResource, TaskAutoStartRowSchema } from "../shared/resources";
 export type { TaskAutoStartRow } from "../shared/resources";

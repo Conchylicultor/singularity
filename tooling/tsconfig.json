@@ -9,11 +9,11 @@
     "isolatedModules": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "jsx": "react-jsx",
     "types": ["@types/bun"],
     "paths": {
       "@plugins/*": ["../plugins/*"],
-      "@tooling/*": ["./src/*"],
-      "@core/*": ["../plugins/framework/plugins/web-sdk/core/*"]
+      "@tooling/*": ["./src/*"]
     }
   },
   "include": ["src", "../plugins/packages/plugins/*/shared"]

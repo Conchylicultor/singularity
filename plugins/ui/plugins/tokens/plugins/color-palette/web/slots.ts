@@ -1,5 +1,5 @@
-import { defineSlot } from "@core";
-import type { ColorPaletteTokenValues } from "../shared";
+import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import type { ColorPaletteTokenValues } from "@plugins/ui/plugins/tokens/plugins/color-palette/shared";
 
 export interface ColorPalettePresetContribution {
   id: string;

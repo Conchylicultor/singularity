@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ActiveData } from "@plugins/active-data/web";
 import { TaskCard } from "./components/task-card";
 

@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "fs";
 import { basename, join, relative } from "path";
-import type { DocMeta } from "@core/types";
+import type { DocMeta } from "@plugins/framework/plugins/web-sdk/core";
 import {
   registerBarrelStubs,
   importBarrel,

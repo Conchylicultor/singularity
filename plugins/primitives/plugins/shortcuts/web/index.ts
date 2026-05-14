@@ -1,4 +1,4 @@
-import { Core, type PluginDefinition } from "@core";
+import { Core, type PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ShortcutManager } from "./internal/shortcut-manager";
 
 export { Shortcuts } from "./slots";

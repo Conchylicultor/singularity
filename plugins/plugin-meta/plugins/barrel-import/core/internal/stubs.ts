@@ -4,7 +4,7 @@ let registered = false;
  * Registers Bun runtime stubs so web/server barrel files can be imported
  * outside the browser. Must be called once before any `importBarrel()` call.
  *
- * Uses build.module() for virtual modules (React, @core, DOM-heavy packages)
+ * Uses build.module() for virtual modules (React, web-sdk/core, DOM-heavy packages)
  * and build.onLoad() for CSS files. Path aliases (@/* → web/src/*) are
  * resolved via the root tsconfig.json.
  */
@@ -120,7 +120,7 @@ export function registerBarrelStubs(_repoRoot: string): void {
     Fragment: reactExports.Fragment,
   };
 
-  // Self-contained @core stub — mirrors plugin-core's defineSlot/defineCommand
+  // Self-contained web-sdk stub — mirrors plugin-core's defineSlot/defineCommand
   // without importing real React.
   function defineSlot(id: string, opts?: { docLabel?: (props: any) => string | undefined }) {
     const slot = (props: any) => ({
@@ -181,8 +181,8 @@ export function registerBarrelStubs(_repoRoot: string): void {
         loader: "object",
       }));
 
-      // ── @core — self-contained, avoids importing real React ───────
-      build.module("@core", () => ({
+      // ── @plugins/framework/plugins/web-sdk/core — self-contained, avoids importing real React ───────
+      build.module("@plugins/framework/plugins/web-sdk/core", () => ({
         exports: coreExports,
         loader: "object",
       }));

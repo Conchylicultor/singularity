@@ -1,5 +1,5 @@
-import type { PluginDefinition } from "@core";
-import { Core } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { Core } from "@plugins/framework/plugins/web-sdk/core";
 import { Shell } from "@plugins/shell/web";
 import { MdForum } from "react-icons/md";
 import { ConversationsSidebar } from "./components/conversations-sidebar";

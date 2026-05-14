@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { NotificationsProvider, useResource, useNotificationsStatus, useNotificationsChannelStatuses } from "./use-resource";
 export { NotificationsClient, queryKeyFor } from "./notifications-client";

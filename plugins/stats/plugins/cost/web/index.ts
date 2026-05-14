@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "@core";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Config } from "@plugins/config/web";
 import { Stats } from "@plugins/stats/web";
 import { costConfig } from "../shared/config";

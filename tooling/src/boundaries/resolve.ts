@@ -108,10 +108,6 @@ export function buildZoneMap(
       return { zone: `${pluginZoneName}.${bestHierarchy}`, runtime: null };
     }
 
-    if (specifier === "@core" || specifier.startsWith("@core/")) {
-      return { zone: "plugin.framework.web-sdk", runtime: "core" };
-    }
-
     if (specifier.startsWith("@server/")) {
       return { zone: "server", runtime: null };
     }

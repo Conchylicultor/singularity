@@ -1,5 +1,5 @@
 import { useContext, type ComponentType } from "react";
-import { PluginRuntimeContext, defineSlot } from "@core";
+import { PluginRuntimeContext, defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ConfigDescriptor } from "@plugins/config/core";
 
 export const Config = {

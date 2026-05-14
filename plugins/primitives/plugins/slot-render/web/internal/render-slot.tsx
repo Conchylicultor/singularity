@@ -6,8 +6,8 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
-import { defineSlot, PluginRuntimeContext, type Slot } from "@core";
-import type { Contribution } from "@core";
+import { defineSlot, PluginRuntimeContext, type Slot } from "@plugins/framework/plugins/web-sdk/core";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
   getSlotItemMiddlewares,
   getSlotListMiddlewares,
