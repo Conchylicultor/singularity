@@ -6,6 +6,10 @@ import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import { cn } from "@/lib/utils";
 import { ModelChip, type ChainModel } from "./model-chip";
 import { RelateModeChip } from "./relate-mode-chip";
+import {
+  InsertBeforeChildren,
+  type ChildEntry,
+} from "./insert-before-children";
 import type { TaskChainRelateMode } from "../../core/types";
 
 export interface ParentTaskPreview {
@@ -41,6 +45,10 @@ export interface TaskDraftCardProps {
   relateMode?: TaskChainRelateMode | undefined;
   onRelateModeChange?: (next: TaskChainRelateMode | undefined) => void;
   showIndependentRelate?: boolean;
+  // Insert-before-children (follow-up with children).
+  relateTaskChildren?: ChildEntry[];
+  insertBeforeIds?: Set<string>;
+  onInsertBeforeChange?: (next: Set<string>) => void;
 }
 
 function ContextRow({
@@ -134,6 +142,9 @@ export function TaskDraftCard({
   relateMode,
   onRelateModeChange,
   showIndependentRelate,
+  relateTaskChildren,
+  insertBeforeIds,
+  onInsertBeforeChange,
 }: TaskDraftCardProps) {
   const {
     attributes,
@@ -213,6 +224,17 @@ export function TaskDraftCard({
         parentTaskPreview={parentTaskPreview}
         disabled={disabled}
       />
+      {relateTaskChildren &&
+        relateTaskChildren.length > 0 &&
+        insertBeforeIds &&
+        onInsertBeforeChange && (
+          <InsertBeforeChildren
+            children={relateTaskChildren}
+            selectedIds={insertBeforeIds}
+            onChange={onInsertBeforeChange}
+            disabled={disabled}
+          />
+        )}
     </div>
   );
 }

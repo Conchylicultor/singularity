@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { TaskDraftCard, type ParentTaskPreview } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";
+import type { ChildEntry } from "./insert-before-children";
 import type { ChainModel } from "./model-chip";
 import type { TaskChainRelateMode } from "../../core/types";
 
@@ -44,6 +45,10 @@ export interface TaskDraftFormProps {
   relateMode?: TaskChainRelateMode | undefined;
   onRelateModeChange?: (next: TaskChainRelateMode | undefined) => void;
   showIndependentRelate?: boolean;
+  // Insert-before-children (follow-up mode with children).
+  relateTaskChildren?: ChildEntry[];
+  insertBeforeIds?: Set<string>;
+  onInsertBeforeChange?: (next: Set<string>) => void;
   heading?: string;
   footerStart?: ReactNode;
 }
@@ -75,6 +80,9 @@ export function TaskDraftForm({
   relateMode,
   onRelateModeChange,
   showIndependentRelate,
+  relateTaskChildren,
+  insertBeforeIds,
+  onInsertBeforeChange,
   heading,
   footerStart,
 }: TaskDraftFormProps) {
@@ -211,6 +219,13 @@ export function TaskDraftForm({
                     relateMode={isHead ? relateMode : undefined}
                     onRelateModeChange={isHead ? onRelateModeChange : undefined}
                     showIndependentRelate={isHead ? showIndependentRelate : undefined}
+                    relateTaskChildren={
+                      isHead && relateMode === "followup"
+                        ? relateTaskChildren
+                        : undefined
+                    }
+                    insertBeforeIds={isHead ? insertBeforeIds : undefined}
+                    onInsertBeforeChange={isHead ? onInsertBeforeChange : undefined}
                   />
                 </Fragment>
               );

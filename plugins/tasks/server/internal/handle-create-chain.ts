@@ -3,6 +3,7 @@ import {
   addTaskDependency,
   createTask,
   getTask,
+  updateTask,
   type Task,
 } from "@plugins/tasks-core/server";
 import {
@@ -54,6 +55,21 @@ export async function handleCreateChain(req: Request): Promise<Response> {
     const rel = await getTask(body.relate.taskId);
     if (!rel) {
       return new Response(`relate task ${body.relate.taskId} not found`, { status: 400 });
+    }
+  }
+
+  if (body.relate?.mode === "followup" && body.relate.insertBefore?.length) {
+    for (const childId of body.relate.insertBefore) {
+      const child = await getTask(childId);
+      if (!child) {
+        return new Response(`insertBefore: task ${childId} not found`, { status: 400 });
+      }
+      if (child.parentId !== body.relate.taskId) {
+        return new Response(
+          `insertBefore: task ${childId} is not a child of ${body.relate.taskId}`,
+          { status: 400 },
+        );
+      }
     }
   }
 
@@ -126,6 +142,13 @@ export async function handleCreateChain(req: Request): Promise<Response> {
 
     for (const dep of blockerIds) {
       await addTaskDependency(newTask.id, dep);
+    }
+
+    if (isHead && body.relate?.mode === "followup" && body.relate.insertBefore?.length) {
+      await updateTask(newTask.id, { parentId: body.relate.taskId });
+      for (const childId of body.relate.insertBefore) {
+        await updateTask(childId, { parentId: newTask.id });
+      }
     }
 
     if (card.launch !== null) {

@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
@@ -88,6 +88,9 @@ export function TaskDraftPopover({
   const [ambientRelateMode, setAmbientRelateMode] = useState<
     TaskChainRelateMode | undefined
   >(undefined);
+  const [insertBeforeIds, setInsertBeforeIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Resolve the parent task for "child" target so we can render the preview
   // ("Will include: <title>") next to the parent-task toggle.
@@ -95,6 +98,24 @@ export function TaskDraftPopover({
   const { data: tasks } = useResource(tasksResource);
   const parentTask: Task | null =
     parentTaskId ? tasks.find((t) => t.id === parentTaskId) ?? null : null;
+
+  const effectiveRelateTaskId =
+    relate?.taskId ?? (hasAmbientRelate ? activeRelate?.taskId : null) ?? null;
+  const effectiveRelateMode = relate ? relateMode : hasAmbientRelate ? ambientRelateMode : undefined;
+
+  const relateTaskChildren = useMemo(
+    () =>
+      effectiveRelateTaskId && effectiveRelateMode === "followup"
+        ? tasks
+            .filter((t) => t.parentId === effectiveRelateTaskId)
+            .map((t) => ({ id: t.id, title: t.title }))
+        : [],
+    [tasks, effectiveRelateTaskId, effectiveRelateMode],
+  );
+
+  useEffect(() => {
+    setInsertBeforeIds(new Set(relateTaskChildren.map((c) => c.id)));
+  }, [relateTaskChildren]);
 
   const seenIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
@@ -134,17 +155,29 @@ export function TaskDraftPopover({
     seenIdsRef.current = new Set();
     setRelateMode(relate?.defaultMode);
     setAmbientRelateMode(undefined);
+    setInsertBeforeIds(new Set());
   };
 
   const submit = async () => {
     if (submitting) return;
     setSubmitting(true);
     try {
+      const insertBefore =
+        insertBeforeIds.size > 0 ? Array.from(insertBeforeIds) : undefined;
+
       const effectiveRelate =
         relate && relateMode
-          ? { taskId: relate.taskId, mode: relateMode }
+          ? {
+              taskId: relate.taskId,
+              mode: relateMode,
+              insertBefore: relateMode === "followup" ? insertBefore : undefined,
+            }
           : hasAmbientRelate && ambientRelateMode
-            ? { taskId: activeRelate!.taskId, mode: ambientRelateMode }
+            ? {
+                taskId: activeRelate!.taskId,
+                mode: ambientRelateMode,
+                insertBefore: ambientRelateMode === "followup" ? insertBefore : undefined,
+              }
             : undefined;
 
       const effectiveTarget: TaskChainTarget =
@@ -214,6 +247,9 @@ export function TaskDraftPopover({
               : undefined
         }
         showIndependentRelate={hasAmbientRelate}
+        relateTaskChildren={relateTaskChildren}
+        insertBeforeIds={insertBeforeIds}
+        onInsertBeforeChange={setInsertBeforeIds}
         heading={heading}
         footerStart={footerStart}
       />

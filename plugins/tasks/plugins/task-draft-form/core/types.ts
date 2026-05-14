@@ -12,6 +12,7 @@ export type TaskChainRelateMode = z.infer<typeof TaskChainRelateModeSchema>;
 export const TaskChainRelateSchema = z.object({
   taskId: z.string().min(1),
   mode: TaskChainRelateModeSchema,
+  insertBefore: z.array(z.string().min(1)).optional(),
 });
 export type TaskChainRelate = z.infer<typeof TaskChainRelateSchema>;
 
