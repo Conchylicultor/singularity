@@ -15,9 +15,10 @@
 - Contributes:
   - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
   - `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
-- Slot contributors: `add-task`, `bash`, `edit`, `read`, `skill`, `write`
+- Slot contributors: `add-task`, `agent`, `bash`, `edit`, `read`, `skill`, `write`
 - Sub-plugins:
   - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
+  - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).
   - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
   - **`edit`** — Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
   - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.

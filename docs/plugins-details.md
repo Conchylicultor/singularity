@@ -590,11 +590,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Contributes:
                 - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
                 - `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
-              - Slot contributors: `add-task`, `bash`, `edit`, `read`, `skill`, `write`
+              - Slot contributors: `add-task`, `agent`, `bash`, `edit`, `read`, `skill`, `write`
               - Plugins:
                 - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
                   - Contributes:
                     - `JsonlViewerTool.Renderer` "add_task$" → `AddTaskToolView`
+                - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).
+                  - Contributes:
+                    - `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`
                 - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
                   - Contributes:
                     - `JsonlViewerTool.Renderer` "Bash" → `BashToolView`
