@@ -16,7 +16,7 @@ export function FloatingTemplateChips({ insertText }: PromptEditorActionProps) {
   return (
     <FloatingAction
       variant="ghost"
-      panelClassName="flex-row flex-wrap items-center gap-1 p-1 group-data-hovered/fa:px-1.5 max-w-7 group-data-hovered/fa:max-w-sm max-h-7 group-data-hovered/fa:max-h-40"
+      panelClassName="flex-col-reverse items-end gap-1 p-1 group-data-hovered/fa:px-1.5 max-w-7 group-data-hovered/fa:max-w-sm max-h-7 group-data-hovered/fa:max-h-40"
     >
       <PenLine className="size-3.5 shrink-0 text-muted-foreground/40 group-data-hovered/fa:text-muted-foreground transition-colors" />
       <FloatingActionFadeIn className="flex flex-wrap items-center gap-1">
