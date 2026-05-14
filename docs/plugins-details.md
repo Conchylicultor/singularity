@@ -800,7 +800,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `conversations.Runtime`
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
       - Server:
-        - Uses: `conversations.Runtime`
+        - Uses: `conversations.Runtime`, `crashes.recordCrash`
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
       - Defines:
         - DB schema: `plugins/conversations/plugins/summary/server/internal/tables.ts`
@@ -851,7 +851,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `database.db`, `notifications.recordNotification`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
     - Resources: `crashes` (push)
     - `POST /api/crashes`
-  - Imported by: `conversations`
+  - Imported by: `conversations`, `runtime-tmux`
   - Plugins:
     - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
       - Contributes:

@@ -45,6 +45,15 @@ async function collectLive(): Promise<{
       entries = await runtime.list();
     } catch (err) {
       console.error(`[conversations.poller] runtime "${runtime.id}" list failed`, err);
+      // eslint-disable-next-line promise-safety/no-bare-catch
+      await recordCrash({
+        source: "server-caught",
+        errorType: "RuntimeListError",
+        message: `Runtime "${runtime.id}" list failed: ${err instanceof Error ? err.message : String(err)}`,
+        label: "conversations.poller.runtimeList",
+      }).catch((e) => {
+        console.error("[conversations.poller] recordCrash failed", e);
+      });
       failedRuntimes.add(runtime.id);
       continue;
     }

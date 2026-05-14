@@ -4,6 +4,7 @@ import type {
 } from "@plugins/conversations/server";
 import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import { CLAUDE, TMUX } from "@plugins/infra/plugins/paths/server";
+import { recordCrash } from "@plugins/crashes/server";
 import { resolveSessionState, type SessionState } from "./claude-session";
 // Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename
 // legacy prefix kept so zombie sessions still get picked up by the poller.
@@ -131,8 +132,21 @@ export const tmuxRuntime: ConversationRuntime = {
   async list(): Promise<Map<string, RuntimeInfo>> {
     const panes = await listPanes();
     const ids = Array.from(panes.keys());
+    const NULL_SESSION: SessionState = { sessionId: null, status: null, waitingFor: null };
     const states = await Promise.all(
-      ids.map((id) => resolveSessionState(panes.get(id)!.panePid)),
+      ids.map(async (id) => {
+        try {
+          return await resolveSessionState(panes.get(id)!.panePid);
+        } catch (err) {
+          void recordCrash({
+            source: "server-caught",
+            errorType: "SessionStateError",
+            message: `resolveSessionState failed for pane "${id}": ${err instanceof Error ? err.message : String(err)}`,
+            label: "tmux-runtime.resolveSessionState",
+          });
+          return NULL_SESSION;
+        }
+      }),
     );
     const out = new Map<string, RuntimeInfo>();
     ids.forEach((id, i) => {

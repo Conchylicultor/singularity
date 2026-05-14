@@ -132,7 +132,7 @@ import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sid
 (conversationsConversationsViewGroupedPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, primitivesRankPlugin, tasksCorePlugin];
 (conversationsConversationsViewQueuePlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, primitivesRankPlugin, tasksCorePlugin];
 (conversationsRuntimeApiPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin];
-(conversationsRuntimeTmuxPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraPathsPlugin];
+(conversationsRuntimeTmuxPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, crashesPlugin, infraPathsPlugin];
 (conversationsSummaryPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraMcpPlugin, tasksCorePlugin];
 (conversationsTranscriptApiPlugin as ServerPluginDefinition).dependsOn = [conversationsTranscriptWatcherPlugin, tasksCorePlugin];
 (conversationsTranscriptWatcherPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, tasksCorePlugin];
