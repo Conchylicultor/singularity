@@ -1,5 +1,5 @@
 import { defineResource } from "@server/resources";
-import { RefHeadSchema } from "@plugins/infra/plugins/git-watcher/shared/types";
+import { RefHeadSchema } from "../../shared/types";
 import { readSha } from "./read-sha";
 
 type Params = { refName: string };

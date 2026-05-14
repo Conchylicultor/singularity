@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { agentLaunchesResource } from "@plugins/agents/shared/resources";
+import { agentLaunchesResource } from "../../shared/resources";
 
 export function AgentStatus({ agentId, size = "sm" }: { agentId: string; size?: "sm" | "md" }) {
   const launchesQ = useResource(agentLaunchesResource);

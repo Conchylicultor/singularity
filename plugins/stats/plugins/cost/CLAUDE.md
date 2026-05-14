@@ -19,8 +19,6 @@ fetch URL so `useFetchJson` re-fetches when the toggle flips.
 ## Plugin reference
 
 - Description: Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, sourced from ccusage.
-- Exports (shared):
-  - Values: `costConfig`
 - Contributes:
   - `Config.Spec`
   - `Stats.Chart` "Cost & Tokens" → `CostSection`

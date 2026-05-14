@@ -10,9 +10,6 @@
   - Entity extension of: `agents` (table `agents_ext_auto_launch`)
 - Exports (server):
   - Values: `agentAutoLaunch`, `agentAutoLaunchResource`
-- Exports (shared):
-  - Types: `AgentAutoLaunchRow`
-  - Values: `agentAutoLaunchResource`, `AgentAutoLaunchRowSchema`
 - Contributes:
   - `Agents.AgentActions` "auto-launch" → `AutoLaunchToggle`
 - Server:

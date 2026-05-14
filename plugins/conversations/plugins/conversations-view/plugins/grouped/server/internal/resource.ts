@@ -5,7 +5,7 @@ import { _conversationGroupMembers, _conversationGroups } from "./tables";
 import {
   ConversationGroupsPayloadSchema,
   type ConversationGroupsPayload,
-} from "@plugins/conversations/plugins/conversations-view/plugins/grouped/shared";
+} from "../../shared";
 
 export const conversationGroupsResource = defineResource<ConversationGroupsPayload>({
   key: "conversation-groups",

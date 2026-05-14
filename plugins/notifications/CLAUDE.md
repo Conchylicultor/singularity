@@ -10,9 +10,6 @@
 - Exports (server):
   - Types: `RecordNotificationInput`
   - Values: `_notifications`, `notificationsResource`, `recordNotification`
-- Exports (shared):
-  - Types: `Notification`, `NotificationVariant`
-  - Values: `NotificationSchema`, `notificationsResource`, `NotificationVariantSchema`
 - Contributes:
   - `Shell.Toolbar` → `BellButton`
 - Server:

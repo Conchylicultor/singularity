@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 
-export { PG_DATA_DIR, PG_DIR, PG_LOG_FILE, PG_PORT, PG_SOCKET_DIR, PG_USER } from "@plugins/database/plugins/embedded/shared";
+export { PG_DATA_DIR, PG_DIR, PG_LOG_FILE, PG_PORT, PG_SOCKET_DIR, PG_USER } from "../shared";
 
 // Server side has nothing to register — the embedded PG cluster is owned
 // by the gateway. We only ship a server barrel so sibling plugins can

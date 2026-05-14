@@ -7,9 +7,6 @@
 - Description: Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
 - Defines:
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables.ts`
-- Exports (shared):
-  - Types: `JobState`
-  - Values: `JobStateSchema`, `pushAndExitResource`
 - Contributes:
   - `Conversation.PromptBar` "Exit" → `PushAndExitButton`
 - Server:

@@ -4,8 +4,8 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { notificationsResource } from "@plugins/notifications/shared/resources";
-import type { Notification } from "@plugins/notifications/shared/schema";
+import { notificationsResource } from "../../shared/resources";
+import type { Notification } from "../../shared/schema";
 
 const VARIANT_BORDER: Record<Notification["variant"], string> = {
   error: "border-l-destructive",

@@ -8,7 +8,7 @@ import {
   CONV_STATUS_DOT,
   type ConversationItemConv,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { agentLaunchesResource, agentsResource } from "@plugins/agents/shared/resources";
+import { agentLaunchesResource, agentsResource } from "../../shared/resources";
 
 function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
   if (!raw) return null;

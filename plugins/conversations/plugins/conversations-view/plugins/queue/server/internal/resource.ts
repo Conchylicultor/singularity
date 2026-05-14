@@ -1,6 +1,6 @@
 import { db } from "@plugins/database/server";
 import { defineResource } from "@server/resources";
-import { QueueDataSchema, type QueueData, type QueueRankRow } from "@plugins/conversations/plugins/conversations-view/plugins/queue/shared/resources";
+import { QueueDataSchema, type QueueData, type QueueRankRow } from "../../shared/resources";
 import { conversationsQueue } from "./tables";
 import { validatePin } from "./pinned";
 

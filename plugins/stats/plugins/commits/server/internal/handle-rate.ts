@@ -1,5 +1,5 @@
 import { readConfig } from "@plugins/config/server";
-import { commitsConfig } from "@plugins/stats/plugins/commits/shared/config";
+import { commitsConfig } from "../../shared/config";
 import { deduplicateByPushId, getCommits, getCommitsExcludingPaths, getGitLogTiming } from "./commit-timestamps";
 import { activeExcludedPaths } from "./excluded-paths";
 import { buildCategoryMap, categoryFor, getConfigCategoryOrder } from "./category-map";

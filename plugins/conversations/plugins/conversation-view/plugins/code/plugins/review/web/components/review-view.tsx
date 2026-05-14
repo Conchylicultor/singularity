@@ -7,7 +7,7 @@ import { pushesResource, type Push } from "@plugins/tasks/core";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
-import { reviewSectionsResource } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/shared";
+import { reviewSectionsResource } from "../../shared";
 import { groupBySection, type FileSection } from "../core-files";
 import { usePushFiles } from "../use-push-files";
 import { ReviewFileRow } from "./review-file-row";

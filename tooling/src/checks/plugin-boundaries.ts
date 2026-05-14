@@ -104,11 +104,12 @@ export const pluginBoundaries: Check = {
     }
 
     // R3: barrel purity + existence for every runtime folder
-    // web/server/core/shared must have index.ts when the directory contains TS files.
+    // web/server/core must have index.ts when the directory contains TS files.
     // central is optional (not all plugins target the central runtime).
+    // shared/ is excluded — it uses relative imports, not barrels.
     for (const p of plugins) {
       if (skippedSet.has(p.relPath)) continue;
-      for (const runtime of ["web", "server", "central", "core", "shared"] as const) {
+      for (const runtime of ["web", "server", "central", "core"] as const) {
         const runtimeDir = join(p.absPath, runtime);
         if (!existsSync(runtimeDir)) continue;
         const barrel = join(runtimeDir, "index.ts");
@@ -172,25 +173,29 @@ export const pluginBoundaries: Check = {
         }
       }
 
-      // R12: forbid relative imports into a plugin's top-level shared/ runtime from
-      // outside that directory. shared/ is the cross-runtime layer within a plugin;
-      // its barrel (shared/index.ts) is the only entry point. Use the
-      // @plugins/<name>/shared alias — which the intra-plugin early-return above
-      // allows — so the boundary system can see and enforce the import.
+      // R12: shared/ is only importable from web/, server/, central/ within the
+      // same plugin. Relative imports into shared/ from core/, lint/, check/ are
+      // forbidden. (Cross-plugin shared/ imports are caught by R10 via the alias
+      // form and by R8 via relative paths.)
       if (sourcePlugin) {
-        const relNorm = relFile.split(sep).join("/");
-        const sharedPrefix = `plugins/${sourcePlugin}/shared`;
-        const sourceIsInShared = relNorm.startsWith(sharedPrefix + "/");
-        if (!sourceIsInShared) {
+        const sourceRuntime = runtimeForPath(relFile, pluginSet);
+        if (
+          sourceRuntime &&
+          sourceRuntime !== "web" &&
+          sourceRuntime !== "server" &&
+          sourceRuntime !== "central" &&
+          sourceRuntime !== "shared"
+        ) {
+          const sharedPrefix = `plugins/${sourcePlugin}/shared`;
           for (const relImp of extractRelativeImports(src)) {
             const resolvedAbs = resolve(dirname(absFile), relImp);
             const resolvedRel = relative(root, resolvedAbs).split(sep).join("/");
             if (resolvedRel === sharedPrefix || resolvedRel.startsWith(sharedPrefix + "/")) {
               violations.push({
-                rule: "relative-into-shared",
+                rule: "shared-wrong-runtime",
                 file: relFile,
-                message: `relative import \`${relImp}\` bypasses the shared/ barrel`,
-                fix: `use \`@plugins/${sourcePlugin}/shared\` instead — relative paths into shared/ are forbidden even from within the same plugin`,
+                message: `\`${sourceRuntime}/\` cannot import from shared/ — only web/, server/, central/ may`,
+                fix: `move the needed types/utils to \`core/\` if they must be shared with \`${sourceRuntime}/\``,
               });
             }
           }
@@ -222,8 +227,35 @@ export const pluginBoundaries: Check = {
         const resolved = resolveImport(imp.path, pluginSet);
         if (!resolved) continue;
 
-        // Intra-plugin imports (source is the same plugin) are unrestricted.
-        if (sourcePlugin === resolved.pluginPath) continue;
+        // Intra-plugin imports (source is the same plugin) are unrestricted,
+        // EXCEPT: shared/ must use relative paths, not the @plugins alias.
+        if (sourcePlugin === resolved.pluginPath) {
+          if (resolved.suffixHead === "shared") {
+            const sourceRuntime = runtimeForPath(relFile, pluginSet);
+            if (
+              sourceRuntime &&
+              sourceRuntime !== "web" &&
+              sourceRuntime !== "server" &&
+              sourceRuntime !== "central" &&
+              sourceRuntime !== "shared"
+            ) {
+              violations.push({
+                rule: "shared-wrong-runtime",
+                file: relFile,
+                message: `\`${sourceRuntime}/\` cannot import from shared/ — only web/, server/, central/ may`,
+                fix: `move the needed types/utils to \`core/\` if they must be shared with \`${sourceRuntime}/\``,
+              });
+            } else {
+              violations.push({
+                rule: "shared-use-relative",
+                file: relFile,
+                message: `use a relative import instead of \`${imp.path}\``,
+                fix: `shared/ is plugin-private — import via relative path (e.g. \`../shared${resolved.tail ? "/" + resolved.tail : ""}\`) instead of the @plugins alias`,
+              });
+            }
+          }
+          continue;
+        }
 
         const frameworkExempt = FRAMEWORK_FILES.has(relFile);
 

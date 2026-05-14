@@ -1,6 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { serversResource, type Server } from "@plugins/apps/plugins/deploy/plugins/servers/shared";
+import { serversResource, type Server } from "../../shared";
 import { addServerPane, serverDetailPane } from "../panes";
 import { ServerStatusBadge } from "./server-status-badge";
 

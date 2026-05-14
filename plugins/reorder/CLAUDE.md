@@ -54,9 +54,6 @@ Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The
   - Values: `getEditMode`, `setEditMode`, `useEditMode`
 - Exports (server):
   - Values: `_reorderPrefs`, `reorderPrefsResource`
-- Exports (shared):
-  - Types: `ReorderSlotPrefs`
-  - Values: `reorderPrefsResource`, `ReorderSlotPrefsSchema`
 - Server:
   - Uses: `database.db`
   - `GET /api/reorder/:slotId`

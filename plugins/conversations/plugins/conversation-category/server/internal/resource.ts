@@ -4,7 +4,7 @@ import { defineResource } from "@server/resources";
 import {
   ConversationCategoriesPayloadSchema,
   type ConversationCategoriesPayload,
-} from "@plugins/conversations/plugins/conversation-category/shared";
+} from "../../shared";
 import { conversationCategory } from "./tables";
 
 const t = conversationCategory.table;

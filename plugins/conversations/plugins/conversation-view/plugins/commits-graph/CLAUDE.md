@@ -9,9 +9,6 @@ Counts are computed server-side via `git rev-list --left-right --count main...HE
 ## Plugin reference
 
 - Description: Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
-- Exports (shared):
-  - Types: `CommitDelta`, `CommitRow`, `CommitsGraph`
-  - Values: `commitDeltaResource`, `CommitDeltaSchema`, `CommitRowSchema`, `commitsGraphResource`, `CommitsGraphSchema`
 - Contributes:
   - `Pane.Register` "conv-commits-graph"
   - `Pane.Register` "conv-commit-diff"

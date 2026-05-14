@@ -13,9 +13,6 @@
   - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`, `useTaskAutoStart`
 - Exports (server):
   - Values: `claimAutoStart`, `getTaskAutoStart`, `setTaskAutoStart`, `tasksAutoStartResource`
-- Exports (shared):
-  - Types: `TaskAutoStartRow`
-  - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`
 - Server:
   - Uses: `database.db`, `tasks-core._tasks`
   - Resources: `tasks-auto-start` (push)

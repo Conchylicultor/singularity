@@ -8,9 +8,6 @@
 - Defines:
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server/internal/tables-attachments.ts`
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server/internal/tables.ts`
-- Exports (shared):
-  - Types: `QuickPrompt`
-  - Values: `QuickPromptSchema`, `quickPromptsResource`
 - Contributes:
   - `Conversation.AbovePromptInput` → `QuickPromptChips`
   - `Config.Section` "Quick Prompts" → `QuickPromptsSettings`

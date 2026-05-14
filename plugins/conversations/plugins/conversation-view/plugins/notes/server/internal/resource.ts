@@ -3,7 +3,7 @@ import { defineResource } from "@server/resources";
 import {
   ConversationNotesPayloadSchema,
   type ConversationNotesPayload,
-} from "@plugins/conversations/plugins/conversation-view/plugins/notes/shared";
+} from "../../shared";
 import { conversationNotes } from "./tables";
 
 const t = conversationNotes.table;

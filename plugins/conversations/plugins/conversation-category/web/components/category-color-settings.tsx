@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { Avatar, AvatarPicker, type AvatarSpec, type SvgNode } from "@plugins/primitives/plugins/avatar/web";
 import { useConfigValues } from "@plugins/config/web";
-import { conversationCategoryConfig } from "@plugins/conversations/plugins/conversation-category/shared";
+import { conversationCategoryConfig } from "../../shared";
 import { useCategoryColors } from "../internal/use-category-colors";
 import { autoColorKey } from "../internal/colors";
 

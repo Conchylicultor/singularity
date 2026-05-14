@@ -1,4 +1,4 @@
-import type { ServerStatus } from "@plugins/apps/plugins/deploy/plugins/servers/shared";
+import type { ServerStatus } from "../../shared";
 
 const styles: Record<ServerStatus, { bg: string; label: string }> = {
   online: { bg: "bg-green-500", label: "Online" },

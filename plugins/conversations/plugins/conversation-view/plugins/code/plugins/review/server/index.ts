@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { Config } from "@plugins/config/server";
 import { Resource } from "@server/resources";
-import { reviewConfig } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/shared/config";
+import { reviewConfig } from "../shared/config";
 import { reviewSectionsServerResource } from "./internal/resources";
 import { handleList } from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";

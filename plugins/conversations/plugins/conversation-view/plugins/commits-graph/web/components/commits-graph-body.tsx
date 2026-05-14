@@ -2,8 +2,8 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { commitsGraphResource } from "@plugins/conversations/plugins/conversation-view/plugins/commits-graph/shared/resources";
-import type { CommitRow } from "@plugins/conversations/plugins/conversation-view/plugins/commits-graph/shared/protocol";
+import { commitsGraphResource } from "../../shared/resources";
+import type { CommitRow } from "../../shared/protocol";
 import { CommitRail, MergeBaseMarker, COMMIT_ROW_HEIGHT } from "./commit-rail";
 import { convCommitDiffPane } from "../panes";
 

@@ -7,8 +7,8 @@ import {
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { Button } from "@/components/ui/button";
-import { promptTemplatesResource } from "@plugins/conversations/plugins/conversation-view/plugins/prompt-templates/shared/resources";
-import type { PromptTemplate } from "@plugins/conversations/plugins/conversation-view/plugins/prompt-templates/shared/resources";
+import { promptTemplatesResource } from "../../shared/resources";
+import type { PromptTemplate } from "../../shared/resources";
 
 const MAX_PINNED = 3;
 

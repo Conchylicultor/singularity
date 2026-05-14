@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
-import { shapeGroup } from "@plugins/ui/plugins/tokens/plugins/shape/shared";
+import { shapeGroup } from "../shared";
 import { shapeConfig } from "./internal/config";
 import { Shape } from "./slots";
 import { ShapePicker } from "./components/shape-picker";

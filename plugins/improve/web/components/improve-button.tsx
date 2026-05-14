@@ -3,7 +3,7 @@ import { MdAdd } from "react-icons/md";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
 import { buttonVariants } from "@/components/ui/button";
 import { Improve } from "../commands";
-import { IMPROVEMENTS_META_TASK_ID } from "@plugins/improve/shared/constants";
+import { IMPROVEMENTS_META_TASK_ID } from "../../shared/constants";
 
 export function ImproveButton() {
   const [open, setOpen] = useState(false);

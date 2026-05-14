@@ -62,9 +62,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (server):
     - Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`
     - Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
-  - Exports (shared):
-    - Types: `Agent`, `AgentLaunch`, `AgentLaunchConversationRef`, `AgentLaunchWithStatus`
-    - Values: `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `AgentSchema`, `agentsResource`
   - Contributes:
     - `Pane.Register` "agents-root"
     - `Pane.Register` "agent-detail"
@@ -98,9 +95,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Entity extension of: `agents` (table `agents_ext_auto_launch`)
           - Exports (server):
             - Values: `agentAutoLaunch`, `agentAutoLaunchResource`
-          - Exports (shared):
-            - Types: `AgentAutoLaunchRow`
-            - Values: `agentAutoLaunchResource`, `AgentAutoLaunchRowSchema`
           - Contributes:
             - `Agents.AgentActions` "auto-launch" → `AutoLaunchToggle`
           - Server:
@@ -421,9 +415,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Entity extension of: `tasks-core` (table `conversations_ext_progress`)
       - Exports (server):
         - Values: `classifyProgressJob`, `conversationProgress`, `conversationProgressResource`, `markProgressPushedJob`
-      - Exports (shared):
-        - Types: `ConversationPhase`, `ConversationProgress`, `ConversationProgressPayload`
-        - Values: `ConversationProgressPayloadSchema`, `conversationProgressResource`, `ConversationProgressSchema`, `PHASE_LABELS`, `PHASE_ORDER`
       - Contributes:
         - `conversationPane.Actions` → `ProgressBarToolbar`
         - `Item.Chips` → `ProgressBarRow`
@@ -524,9 +515,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - `PATCH /api/review-sections/:id`
                 - `DELETE /api/review-sections/:id`
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
-          - Exports (shared):
-            - Types: `CommitDelta`, `CommitRow`, `CommitsGraph`
-            - Values: `commitDeltaResource`, `CommitDeltaSchema`, `CommitRowSchema`, `commitsGraphResource`, `CommitsGraphSchema`
           - Contributes:
             - `Pane.Register` "conv-commits-graph"
             - `Pane.Register` "conv-commit-diff"
@@ -633,9 +621,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/launch-prompts/server/internal/tables-attachments.ts`
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/launch-prompts/server/internal/tables.ts`
-          - Exports (shared):
-            - Types: `LaunchPrompt`
-            - Values: `LaunchPromptSchema`, `launchPromptsResource`
           - Contributes:
             - `Conversation.PromptBar` "Launch" → `LaunchPromptsButton`
             - `Config.Section` "Launch Prompts" → `LaunchPromptsSettings`
@@ -680,9 +665,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/prompt-templates/server/internal/tables-attachments.ts`
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/prompt-templates/server/internal/tables.ts`
-          - Exports (shared):
-            - Types: `PromptTemplate`
-            - Values: `PromptTemplateSchema`, `promptTemplatesResource`
           - Contributes:
             - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
             - `Config.Section` "Prompt Templates" → `PromptTemplatesSettings`
@@ -696,9 +678,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/internal/tables.ts`
-          - Exports (shared):
-            - Types: `JobState`
-            - Values: `JobStateSchema`, `pushAndExitResource`
           - Contributes:
             - `Conversation.PromptBar` "Exit" → `PushAndExitButton`
           - Server:
@@ -711,9 +690,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Defines:
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server/internal/tables-attachments.ts`
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server/internal/tables.ts`
-          - Exports (shared):
-            - Types: `QuickPrompt`
-            - Values: `QuickPromptSchema`, `quickPromptsResource`
           - Contributes:
             - `Conversation.AbovePromptInput` → `QuickPromptChips`
             - `Config.Section` "Quick Prompts" → `QuickPromptsSettings`
@@ -804,9 +780,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Entity extension of: `tasks-core` (table `conversations_ext_queue`)
           - Exports (server):
             - Values: `conversationsQueue`, `endRank`, `lockDeck`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `seedRankJob`
-          - Exports (shared):
-            - Types: `QueueRankRow`
-            - Values: `QueueRankRowSchema`, `queueRanksResource`
           - Contributes:
             - `ConversationsView.View` "Queue" → `QueueView`
           - Server:
@@ -833,9 +806,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/conversations/plugins/summary/server/internal/tables.ts`
       - Exports (server):
         - Values: `_conversationSummaries`, `conversationSummariesResource`
-      - Exports (shared):
-        - Types: `ConversationSummary`, `Phase`
-        - Values: `conversationSummariesResource`, `ConversationSummarySchema`, `PhaseSchema`
       - Contributes:
         - `Pane.Register` "conv-summary"
       - Server:
@@ -875,9 +845,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `report`
   - Exports (server):
     - Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `recordCrash`
-  - Exports (shared):
-    - Types: `CrashReport`, `CrashSource`
-    - Values: `fingerprint`
   - Contributes:
     - `Core.Root` → `CrashReporter`
   - Server:
@@ -950,8 +917,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Types: `LogChannel`, `LogStream`
         - Values: `Log`
-      - Exports (shared):
-        - Types: `ClientMessage`, `EntryMsg`, `ErrorMsg`, `HistoryMsg`, `LogEntryWire`, `ServerMessage`, `SubscribeMsg`
       - Contributes:
         - `Pane.Register` "logs"
         - `Pane.Register` "logs-channel"
@@ -1040,15 +1005,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
       - Exports (core):
         - Types: `Contribution`, `DocMeta`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `Slot`
-        - Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`
-      - Exports (shared):
-        - Values: `topoSortPlugins`
+        - Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Exports (web):
     - Values: `getHealth`, `waitForRestart`
-  - Exports (shared):
-    - Types: `HealthResponse`
   - Contributes:
     - `Core.Root` → `ReconnectWatcher`
     - `Shell.Toolbar` → `HealthDot`
@@ -1065,8 +1026,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ImproveCommands`
   - Exports (server):
     - Values: `_improve_config`, `_improvePendingGroups`, `IMPROVEMENTS_META_TASK_ID`
-  - Exports (shared):
-    - Values: `IMPROVEMENTS_META_TASK_ID`
   - Contributes:
     - `Shell.Toolbar` → `ImproveButton`
   - Server:
@@ -1086,8 +1045,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Types: `AttachmentLink`
         - Values: `_attachments`, `Attachments`, `deleteAttachment`, `getAttachment`
-      - Exports (shared):
-        - Types: `Attachment`
       - Server:
         - Uses: `database.db`
         - `POST /api/attachments`
@@ -1139,9 +1096,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Types: `RefAdvancedPayload`, `RefHead`
         - Values: `_refAdvancedTriggers`, `refAdvanced`, `refHeadResource`, `RefHeadSchema`
-      - Exports (shared):
-        - Types: `RefAdvancedPayload`, `RefHead`
-        - Values: `RefHeadSchema`
       - Server:
         - Register: `defineTriggerEvent('git.refAdvanced')`
     - **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
@@ -1203,9 +1157,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (server):
     - Types: `RecordNotificationInput`
     - Values: `_notifications`, `notificationsResource`, `recordNotification`
-  - Exports (shared):
-    - Types: `Notification`, `NotificationVariant`
-    - Values: `NotificationSchema`, `notificationsResource`, `NotificationVariantSchema`
   - Contributes:
     - `Shell.Toolbar` → `BellButton`
   - Server:
@@ -1237,8 +1188,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `PluginHealthReviewSchema`, `PluginStalenessSchema`, `ReviewTaskSummarySchema`
       - Exports (server):
         - Values: `healthReviewExt`, `pluginHealthReviewsResource`
-      - Exports (shared):
-        - Values: `pluginHealthReviewsDescriptor`
       - Contributes:
         - `PluginViewSlots.Section` "health" → `HealthSection`
       - Server:
@@ -1486,9 +1435,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `getEditMode`, `setEditMode`, `useEditMode`
   - Exports (server):
     - Values: `_reorderPrefs`, `reorderPrefsResource`
-  - Exports (shared):
-    - Types: `ReorderSlotPrefs`
-    - Values: `reorderPrefsResource`, `ReorderSlotPrefsSchema`
   - Server:
     - Uses: `database.db`
     - `GET /api/reorder/:slotId`
@@ -1561,8 +1507,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/stats/plugins/commits/server/internal/tables.ts`
       - Exports (web):
         - Values: `axisProps`, `barCursor`, `ChartState`, `fillGaps`, `gridProps`, `lineCursor`, `tooltipContentStyle`, `tooltipLabelStyle`, `tooltipNumberFormatter`, `useFetchJson`, `yAxisFormatter`
-      - Exports (shared):
-        - Values: `commitsConfig`
       - Contributes:
         - `Stats.Chart` "Commits" → `CommitsSection`
         - `Stats.Chart` "Lines changed" → `LinesChartsSection`
@@ -1579,8 +1523,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `DELETE /api/stats/commits/excluded-path-state/:path`
       - Endpoint callers: `cost`, `stats`, `tasks`
     - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, sourced from ccusage.
-      - Exports (shared):
-        - Values: `costConfig`
       - Contributes:
         - `Config.Spec`
         - `Stats.Chart` "Cost & Tokens" → `CostSection`
@@ -1642,9 +1584,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`, `useTaskAutoStart`
       - Exports (server):
         - Values: `claimAutoStart`, `getTaskAutoStart`, `setTaskAutoStart`, `tasksAutoStartResource`
-      - Exports (shared):
-        - Types: `TaskAutoStartRow`
-        - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`
       - Server:
         - Uses: `database.db`, `tasks-core._tasks`
         - Resources: `tasks-auto-start` (push)
@@ -1722,8 +1661,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - Exports (web):
     - Values: `terminalPane`
-  - Exports (shared):
-    - Types: `ClientMessage`, `ServerMessage`, `SessionCreatedMsg`, `SessionCreateMsg`, `SessionDestroyMsg`, `SessionErrorMsg`, `SessionExitedMsg`, `SessionInputMsg`, `SessionOutputMsg`, `SessionResizeMsg`
   - Server:
     - `WS /ws/terminal`
   - Imported by: `terminal-pane`

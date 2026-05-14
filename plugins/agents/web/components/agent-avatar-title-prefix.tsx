@@ -1,7 +1,7 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Avatar, DEFAULT_AGENT_AVATAR, type SvgNode } from "@plugins/primitives/plugins/avatar/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { agentLaunchesResource, agentsResource } from "@plugins/agents/shared/resources";
+import { agentLaunchesResource, agentsResource } from "../../shared/resources";
 import { agentSidePane } from "../panes";
 import { cn } from "@/lib/utils";
 

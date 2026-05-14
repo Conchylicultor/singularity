@@ -13,9 +13,6 @@
   - Values: `report`
 - Exports (server):
   - Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `recordCrash`
-- Exports (shared):
-  - Types: `CrashReport`, `CrashSource`
-  - Values: `fingerprint`
 - Contributes:
   - `Core.Root` → `CrashReporter`
 - Server:

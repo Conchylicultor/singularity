@@ -4,7 +4,7 @@ import { Conversation } from "@plugins/conversations/plugins/conversation-view/p
 import { Config } from "@plugins/config/web";
 import { ReviewButton } from "./components/review-button";
 import { ReviewSectionsSettings } from "./components/review-sections-settings";
-import { reviewConfig } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/shared/config";
+import { reviewConfig } from "../shared/config";
 import { convReviewPane } from "./panes";
 
 export default {

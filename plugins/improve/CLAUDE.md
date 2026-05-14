@@ -12,8 +12,6 @@
   - Values: `ImproveCommands`
 - Exports (server):
   - Values: `_improve_config`, `_improvePendingGroups`, `IMPROVEMENTS_META_TASK_ID`
-- Exports (shared):
-  - Values: `IMPROVEMENTS_META_TASK_ID`
 - Contributes:
   - `Shell.Toolbar` → `ImproveButton`
 - Server:

@@ -3,7 +3,7 @@ import { openPane } from "@plugins/primitives/plugins/pane/web";
 import { Auth } from "@plugins/auth/web";
 import { Config } from "@plugins/config/web";
 import { SiGoogle } from "react-icons/si";
-import { googleAuthConfig } from "@plugins/auth/plugins/google/shared";
+import { googleAuthConfig } from "../shared";
 import { googleSetupPane } from "@plugins/auth/plugins/google/plugins/setup-wizard/web";
 
 export default {

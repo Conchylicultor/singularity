@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { setConfigValue, useConfigValues } from "@plugins/config/web";
 import { cn } from "@/lib/utils";
-import { commitsConfig } from "@plugins/stats/plugins/commits/shared/config";
+import { commitsConfig } from "../../shared/config";
 import { CumulativeCommitsChart } from "./cumulative-chart";
 import { CommitsRateChart } from "./rate-chart";
 import { CumulativeCommitsCategoryChart, CommitsRateCategoryChart } from "./commits-category-charts";

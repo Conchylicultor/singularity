@@ -6,7 +6,7 @@ import {
   conversationPane,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { AgentSideBody } from "./components/agent-side-body";
-import { agentsResource, type Agent } from "@plugins/agents/shared/resources";
+import { agentsResource, type Agent } from "../shared/resources";
 import { Agents as AgentsSlots } from "./slots";
 import { AgentsList } from "./components/agents-list";
 import { AgentDetail } from "./components/agent-detail";

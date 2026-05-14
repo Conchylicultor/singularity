@@ -5,7 +5,7 @@ import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugin
 import { useConfigValues } from "@plugins/config/web";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import { getFileWarningLevel } from "../core-files";
-import { reviewConfig } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/shared/config";
+import { reviewConfig } from "../../shared/config";
 
 const STATUS_LABEL: Record<EditedFileStatus, string> = {
   modified: "modified",

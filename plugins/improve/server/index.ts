@@ -5,7 +5,7 @@ import { ensureImprovementsMetaTask } from "./internal/meta-improvements";
 import { applyGroupJob } from "./internal/apply-group-job";
 
 export { _improve_config, _improvePendingGroups } from "./internal/tables";
-export { IMPROVEMENTS_META_TASK_ID } from "@plugins/improve/shared/constants";
+export { IMPROVEMENTS_META_TASK_ID } from "../shared/constants";
 
 export default {
   id: "improve",

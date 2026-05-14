@@ -11,9 +11,6 @@
 - Exports (server):
   - Types: `RefAdvancedPayload`, `RefHead`
   - Values: `_refAdvancedTriggers`, `refAdvanced`, `refHeadResource`, `RefHeadSchema`
-- Exports (shared):
-  - Types: `RefAdvancedPayload`, `RefHead`
-  - Values: `RefHeadSchema`
 - Server:
   - Register: `defineTriggerEvent('git.refAdvanced')`
 

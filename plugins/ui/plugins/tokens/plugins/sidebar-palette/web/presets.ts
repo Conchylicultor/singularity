@@ -1,4 +1,4 @@
-import type { SidebarPaletteTokenValues } from "@plugins/ui/plugins/tokens/plugins/sidebar-palette/shared";
+import type { SidebarPaletteTokenValues } from "../shared";
 
 interface Preset {
   id: string;

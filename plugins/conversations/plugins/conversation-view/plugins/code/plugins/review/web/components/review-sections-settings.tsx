@@ -3,7 +3,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { reviewSectionsResource } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/shared";
+import { reviewSectionsResource } from "../../shared";
 
 function toastError(title: string, err: unknown) {
   ShellCommands.Toast({

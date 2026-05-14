@@ -1,5 +1,5 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { taskAutoStartResource, type TaskAutoStartRow } from "@plugins/tasks/plugins/auto-start/shared/resources";
+import { taskAutoStartResource, type TaskAutoStartRow } from "../shared/resources";
 
 export function useTaskAutoStart(taskId: string | null | undefined): TaskAutoStartRow | null {
   const { data } = useResource(taskAutoStartResource);

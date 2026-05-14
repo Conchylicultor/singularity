@@ -22,7 +22,7 @@ import {
 import {
   pushAndExitResource,
   type JobState,
-} from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/shared/resources";
+} from "../../shared/resources";
 
 type Mode = "send" | "push-and-exit" | "exit" | "drop-and-exit" | "go";
 

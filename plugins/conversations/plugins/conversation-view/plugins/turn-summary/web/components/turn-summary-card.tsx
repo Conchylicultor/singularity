@@ -5,7 +5,7 @@ import {
   useCollapsible,
 } from "@plugins/primitives/plugins/collapsible/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { turnSummariesResource } from "@plugins/conversations/plugins/conversation-view/plugins/turn-summary/shared";
+import { turnSummariesResource } from "../../shared";
 
 function parseBullets(text: string): string[] {
   if (!text.trim()) return [];

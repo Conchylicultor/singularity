@@ -1,7 +1,7 @@
 import { db } from "@plugins/database/server";
 import { _notifications } from "./tables";
 import { notificationsResource } from "./resources";
-import type { NotificationVariant } from "@plugins/notifications/shared/schema";
+import type { NotificationVariant } from "../../shared/schema";
 
 export interface RecordNotificationInput {
   type: string;

@@ -6,8 +6,8 @@ import { _crashes } from "./tables";
 import { crashesResource } from "./resources";
 import { bumpWindowAndCheck } from "./velocity";
 import { CRASHES_META_TASK_ID } from "./meta-crashes";
-import { fingerprint as fingerprintOf } from "@plugins/crashes/shared/fingerprint";
-import type { CrashReport } from "@plugins/crashes/shared/types";
+import { fingerprint as fingerprintOf } from "../../shared/fingerprint";
+import type { CrashReport } from "../../shared/types";
 
 export interface RecordCrashResult {
   taskId: string | null;

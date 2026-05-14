@@ -25,7 +25,7 @@ export {
   agentSidePane,
 } from "./panes";
 export { Agents } from "./slots";
-export { agentsResource } from "@plugins/agents/shared/resources";
+export { agentsResource } from "../shared/resources";
 export { defineSystemAgent } from "./system-agents";
 export type { SystemAgentDescriptor } from "./system-agents";
 export { patchAgent } from "./components/agents-list";

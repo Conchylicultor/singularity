@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "../core/types";
+import type { PluginDefinition } from "./types";
 
 /**
  * Topo-sort plugins by `dependsOn`. Throws on a cycle. Preserves input order

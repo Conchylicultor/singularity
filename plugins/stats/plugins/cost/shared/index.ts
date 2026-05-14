@@ -1,1 +1,0 @@
-export { costConfig } from "./config";

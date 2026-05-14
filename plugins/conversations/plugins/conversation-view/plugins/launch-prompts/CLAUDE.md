@@ -8,9 +8,6 @@
 - Defines:
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/launch-prompts/server/internal/tables-attachments.ts`
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/launch-prompts/server/internal/tables.ts`
-- Exports (shared):
-  - Types: `LaunchPrompt`
-  - Values: `LaunchPromptSchema`, `launchPromptsResource`
 - Contributes:
   - `Conversation.PromptBar` "Launch" → `LaunchPromptsButton`
   - `Config.Section` "Launch Prompts" → `LaunchPromptsSettings`

@@ -3,8 +3,8 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { serversRootPane, addServerPane, serverDetailPane } from "./panes";
 
 export { serversRootPane, addServerPane, serverDetailPane } from "./panes";
-export { serversResource } from "@plugins/apps/plugins/deploy/plugins/servers/shared";
-export type { Server } from "@plugins/apps/plugins/deploy/plugins/servers/shared";
+export { serversResource } from "../shared";
+export type { Server } from "../shared";
 
 export default {
   id: "deploy-servers",

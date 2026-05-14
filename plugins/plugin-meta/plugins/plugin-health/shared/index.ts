@@ -1,1 +1,0 @@
-export { pluginHealthReviewsDescriptor } from "./schemas";

@@ -1,7 +1,7 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, type, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Deploy } from "@plugins/apps/plugins/deploy/plugins/shell/web";
-import { serversResource, type Server } from "@plugins/apps/plugins/deploy/plugins/servers/shared";
+import { serversResource, type Server } from "../shared";
 import { ServersList } from "./components/servers-list";
 import { ServerDetail } from "./components/server-detail";
 import { AddServerForm } from "./components/add-server-form";

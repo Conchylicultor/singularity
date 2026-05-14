@@ -4,7 +4,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import { pushesResource } from "@plugins/tasks/core";
-import { commitDeltaResource } from "@plugins/conversations/plugins/conversation-view/plugins/commits-graph/shared/resources";
+import { commitDeltaResource } from "../../shared/resources";
 import { convCommitsGraphPane } from "../panes";
 
 export function CommitsChip() {
