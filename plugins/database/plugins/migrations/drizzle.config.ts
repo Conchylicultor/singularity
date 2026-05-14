@@ -18,11 +18,9 @@ const conn = {
 
 export default defineConfig({
   dialect: "postgresql",
-  // Glob discovery: drizzle-kit picks up every plugin's schema files directly.
-  // These files are pure drizzle-orm definitions with no Bun imports in their
-  // transitive closure, so drizzle-kit's loader can process them — whereas
-  // going through plugin index.ts files would pull in handlers that import
-  // `bun`, `bun-pty`, etc. and fail to resolve.
+  // Glob discovery: drizzle-kit picks up every plugin's tables.ts / schema.ts
+  // directly, not through plugin index.ts files (which would pull in handlers,
+  // routes, and other server init code that shouldn't run during codegen).
   schema: [
     "../../../../plugins/**/server/**/internal/tables.ts",
     "../../../../plugins/**/server/**/internal/tables-*.ts",
