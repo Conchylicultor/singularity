@@ -1,9 +1,9 @@
 import {
   taskAttachments,
   addTaskDependency,
+  removeTaskDependency,
   createTask,
   getTask,
-  updateTask,
   type Task,
 } from "@plugins/tasks-core/server";
 import {
@@ -59,14 +59,14 @@ export async function handleCreateChain(req: Request): Promise<Response> {
   }
 
   if (body.relate?.mode === "followup" && body.relate.insertBefore?.length) {
-    for (const childId of body.relate.insertBefore) {
-      const child = await getTask(childId);
-      if (!child) {
-        return new Response(`insertBefore: task ${childId} not found`, { status: 400 });
+    for (const depId of body.relate.insertBefore) {
+      const dep = await getTask(depId);
+      if (!dep) {
+        return new Response(`insertBefore: task ${depId} not found`, { status: 400 });
       }
-      if (child.parentId !== body.relate.taskId) {
+      if (!dep.dependencies.includes(body.relate.taskId)) {
         return new Response(
-          `insertBefore: task ${childId} is not a child of ${body.relate.taskId}`,
+          `insertBefore: task ${depId} does not depend on ${body.relate.taskId}`,
           { status: 400 },
         );
       }
@@ -145,9 +145,9 @@ export async function handleCreateChain(req: Request): Promise<Response> {
     }
 
     if (isHead && body.relate?.mode === "followup" && body.relate.insertBefore?.length) {
-      await updateTask(newTask.id, { parentId: body.relate.taskId });
-      for (const childId of body.relate.insertBefore) {
-        await updateTask(childId, { parentId: newTask.id });
+      for (const depId of body.relate.insertBefore) {
+        await removeTaskDependency(depId, body.relate.taskId);
+        await addTaskDependency(depId, newTask.id);
       }
     }
 

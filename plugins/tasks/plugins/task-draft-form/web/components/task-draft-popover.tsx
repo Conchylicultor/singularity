@@ -107,7 +107,7 @@ export function TaskDraftPopover({
     () =>
       effectiveRelateTaskId && effectiveRelateMode === "followup"
         ? tasks
-            .filter((t) => t.parentId === effectiveRelateTaskId)
+            .filter((t) => t.dependencies.includes(effectiveRelateTaskId))
             .map((t) => ({ id: t.id, title: t.title }))
         : [],
     [tasks, effectiveRelateTaskId, effectiveRelateMode],
