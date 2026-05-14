@@ -10,11 +10,11 @@ const SESSIONS_DIR = CLAUDE_SESSIONS_DIR;
 const pidCache = new Map<number, string>();
 
 // Claude CLI session status values (undocumented internal state from
-// ~/.claude/sessions/<pid>.json). Exhaustive as of CLI v2.1.132.
+// ~/.claude/sessions/<pid>.json). Exhaustive as of CLI v2.1.141.
 // Hard error on unknown values so new CLI statuses surface immediately.
-type CliSessionStatus = "busy" | "idle" | "waiting";
+type CliSessionStatus = "busy" | "idle" | "shell" | "waiting";
 
-const KNOWN_STATUSES = new Set<string>(["busy", "idle", "waiting"]);
+const KNOWN_STATUSES = new Set<string>(["busy", "idle", "shell", "waiting"]);
 
 export interface SessionState {
   sessionId: string | null;
