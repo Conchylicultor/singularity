@@ -46,6 +46,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
                 - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
         - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
         - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
+    - **`workflows`** — Workflows app.
+      - Plugins:
+        - **`shell`** — App shell for the workflows app. Registers the /workflows app entry and defines WorkflowsApp.Sidebar/Toolbar slots.
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
 

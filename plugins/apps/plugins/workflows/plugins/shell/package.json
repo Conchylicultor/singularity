@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-workflows-shell",
+  "description": "App shell for the workflows app. Registers the /workflows app entry and defines WorkflowsApp.Sidebar/Toolbar slots.",
+  "private": true,
+  "version": "0.0.1"
+}

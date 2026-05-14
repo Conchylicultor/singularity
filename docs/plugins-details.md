@@ -224,6 +224,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `Forge`
           - Contributes:
             - `Apps.App` "Forge" → `ForgeLayout`
+    - **`workflows`** — Workflows app.
+      - Plugins:
+        - **`shell`** — App shell for the workflows app. Registers the /workflows app entry and defines WorkflowsApp.Sidebar/Toolbar slots.
+          - Exports (web):
+            - Values: `WorkflowsApp`
+          - Contributes:
+            - `Apps.App` "Workflows" → `WorkflowsLayout`
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - Exports (web):
