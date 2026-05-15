@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { getConversation } from "@plugins/tasks-core/server";
-import { rankAdjacentTo } from "./queue-ranks";
-import { conversationsQueue } from "./tables";
+import { db } from "@plugins/database/server";
+import { lockDeck, rankAdjacentTo, reseatGroupMembers, upsertRank } from "./queue-ranks";
 import { queueRanksResource } from "./resource";
 import { validatePin } from "./pinned";
 
@@ -14,11 +13,15 @@ const Body = z.object({
 export async function handleReorder(req: Request): Promise<Response> {
   const { conversationId, targetId, zone } = Body.parse(await req.json());
   if (conversationId === targetId) return Response.json({ ok: true });
-  const conv = await getConversation(conversationId);
-  if (!conv) return new Response("Not found", { status: 404 });
-  const rank = await rankAdjacentTo(targetId, zone);
-  await conversationsQueue.upsert(conversationId, { rank: rank.toJSON() });
-  await validatePin();
+
+  await db.transaction(async (tx) => {
+    await lockDeck(tx);
+    const rank = await rankAdjacentTo(targetId, zone, tx);
+    await upsertRank(conversationId, rank, tx);
+    await reseatGroupMembers(conversationId, rank, tx);
+    await validatePin(tx);
+  });
+
   queueRanksResource.notify();
   return Response.json({ ok: true });
 }

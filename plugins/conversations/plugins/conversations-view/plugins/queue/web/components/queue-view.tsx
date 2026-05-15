@@ -30,9 +30,11 @@ import { cn } from "@/lib/utils";
 
 type RankedConversation = Conversation & { rank: Rank };
 
-type TaskCluster = {
-  representative: RankedConversation;
-  clusterSize: number;
+type TaskGroup = {
+  taskId: string;
+  selected: RankedConversation;
+  members: RankedConversation[];
+  count: number;
 };
 
 type DropData = { zone: "before" | "after"; targetId: string };
@@ -108,57 +110,70 @@ export function QueueView({
   const pinnedConversationId = queueData.pinnedConversationId;
   const { data: taskRows } = useResource(tasksResource);
 
-  const working = useMemo(
-    () =>
-      active.filter((c) => c.status === "working" || c.status === "starting"),
-    [active],
-  );
-
-  const disconnected = useMemo(
-    () => active.filter((c) => c.status === "gone"),
-    [active],
-  );
-
-  const { deck, clusteredDeck, blockedIds, unranked } = useMemo(() => {
+  // Unified task-group logic across all statuses.
+  const { waitingGroups, workingGroups, allWaitingCount, blockedIds, unranked } = useMemo(() => {
     const ranks = new Map(rankRows.map((r) => [r.conversationId, r.rank]));
     const taskStatusMap = new Map(taskRows.map((t) => [t.id, t.status]));
     const ranked: RankedConversation[] = [];
     const blocked = new Set<string>();
     const noRank: Conversation[] = [];
+
     for (const c of active) {
-      if (c.status !== "waiting") continue;
+      if (c.status !== "waiting" && c.status !== "working" && c.status !== "starting") continue;
       if (taskStatusMap.get(c.taskId) === "blocked") {
         blocked.add(c.id);
       }
       const rank = ranks.get(c.id);
       if (rank) {
         ranked.push({ ...c, rank });
-      } else {
+      } else if (c.status === "waiting") {
         noRank.push(c);
       }
     }
-    const sorted = ranked.sort((a, b) => Rank.compare(a.rank, b.rank));
+    ranked.sort((a, b) => Rank.compare(a.rank, b.rank));
 
-    const taskGroups = new Map<string, RankedConversation[]>();
-    for (const conv of sorted) {
-      const list = taskGroups.get(conv.taskId);
+    // Group by taskId
+    const taskMap = new Map<string, RankedConversation[]>();
+    for (const conv of ranked) {
+      const list = taskMap.get(conv.taskId);
       if (list) list.push(conv);
-      else taskGroups.set(conv.taskId, [conv]);
+      else taskMap.set(conv.taskId, [conv]);
     }
-    const clusters: TaskCluster[] = [];
-    for (const [, convs] of taskGroups) {
-      if (convs.length === 0) continue;
-      clusters.push({ representative: convs[0]!, clusterSize: convs.length });
+
+    const waiting: TaskGroup[] = [];
+    const working: TaskGroup[] = [];
+    let waitingCount = 0;
+    for (const [taskId, members] of taskMap) {
+      if (members.length === 0) continue;
+      const group: TaskGroup = {
+        taskId,
+        selected: members[0]!,
+        members,
+        count: members.length,
+      };
+      if (group.selected.status === "waiting") {
+        waiting.push(group);
+        waitingCount += members.filter((m) => m.status === "waiting").length;
+      } else {
+        working.push(group);
+      }
     }
-    clusters.sort((a, b) => Rank.compare(a.representative.rank, b.representative.rank));
+    waiting.sort((a, b) => Rank.compare(a.selected.rank, b.selected.rank));
+    working.sort((a, b) => Rank.compare(a.selected.rank, b.selected.rank));
 
     return {
-      deck: sorted,
-      clusteredDeck: clusters,
+      waitingGroups: waiting,
+      workingGroups: working,
+      allWaitingCount: waitingCount,
       blockedIds: blocked,
       unranked: noRank,
     };
   }, [active, rankRows, taskRows]);
+
+  const disconnected = useMemo(
+    () => active.filter((c) => c.status === "gone"),
+    [active],
+  );
 
   const [workingExpanded, setWorkingExpanded] = useState<boolean>(() => {
     try {
@@ -254,17 +269,24 @@ export function QueueView({
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
 
+  // Build a flat ranked list for drag overlay lookup
+  const allRanked = useMemo(() => {
+    const all: RankedConversation[] = [];
+    for (const g of waitingGroups) all.push(...g.members);
+    for (const g of workingGroups) all.push(...g.members);
+    return all;
+  }, [waitingGroups, workingGroups]);
+
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const draggingConv = useMemo(
-    () => (draggingId ? deck.find((c) => c.id === draggingId) : null),
-    [draggingId, deck],
+    () => (draggingId ? allRanked.find((c) => c.id === draggingId) : null),
+    [draggingId, allRanked],
   );
 
   const onDragStart = useCallback((event: DragStartEvent) => {
     setDraggingId(parseDragId(event.active.id));
   }, []);
 
-  // Server computes the new rank from targetId + zone — no stale deck reads here.
   const onDragEnd = useCallback(async (event: DragEndEvent) => {
     setDraggingId(null);
     const conversationId = parseDragId(event.active.id);
@@ -276,16 +298,16 @@ export function QueueView({
   const pinnedCluster = useMemo(
     () => {
       if (!pinnedConversationId) return null;
-      return clusteredDeck.find((cl) => cl.representative.id === pinnedConversationId) ?? null;
+      return waitingGroups.find((g) => g.selected.id === pinnedConversationId) ?? null;
     },
-    [pinnedConversationId, clusteredDeck],
+    [pinnedConversationId, waitingGroups],
   );
   const restClusters = useMemo(
-    () => (pinnedCluster ? clusteredDeck.filter((cl) => cl !== pinnedCluster) : clusteredDeck),
-    [clusteredDeck, pinnedCluster],
+    () => (pinnedCluster ? waitingGroups.filter((g) => g !== pinnedCluster) : waitingGroups),
+    [waitingGroups, pinnedCluster],
   );
 
-  if (!isLoading && clusteredDeck.length === 0 && working.length === 0 && unranked.length === 0 && disconnected.length === 0 && recentGone.length === 0) {
+  if (!isLoading && waitingGroups.length === 0 && workingGroups.length === 0 && unranked.length === 0 && disconnected.length === 0 && recentGone.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-xs text-muted-foreground">
         All clear — no conversations are waiting on you.
@@ -319,13 +341,13 @@ export function QueueView({
   return (
     <div className="flex flex-col">
       {/* Queue */}
-      <SectionHeader title="Queue" count={deck.length} expanded={queueExpanded} onToggleExpanded={toggleQueueExpanded} stickyTop={queueTop} />
-      {queueExpanded && clusteredDeck.length === 0 && (
+      <SectionHeader title="Queue" count={allWaitingCount} expanded={queueExpanded} onToggleExpanded={toggleQueueExpanded} stickyTop={queueTop} />
+      {queueExpanded && waitingGroups.length === 0 && (
         <div className="px-2 py-1 pl-2 text-[11px] italic text-muted-foreground">
           No conversations waiting
         </div>
       )}
-      {queueExpanded && clusteredDeck.length > 0 && (
+      {queueExpanded && waitingGroups.length > 0 && (
         <DndContext
           sensors={sensors}
           collisionDetection={pointerWithin}
@@ -338,13 +360,13 @@ export function QueueView({
             <div className="sticky z-10 bg-sidebar pt-px pb-1 pl-1" style={{ top: topItemTop }}>
               <SidebarMenu>
                 <QueueRow
-                  conv={pinnedCluster.representative}
-                  clusterSize={pinnedCluster.clusterSize}
+                  conv={pinnedCluster.selected}
+                  clusterSize={pinnedCluster.count}
                   isTop
-                  isBlocked={blockedIds.has(pinnedCluster.representative.id)}
+                  isBlocked={blockedIds.has(pinnedCluster.selected.id)}
                   isBottom={restClusters.length === 0}
                   canStepDown={restClusters.length > 0}
-                  isActive={pinnedCluster.representative.id === activeId}
+                  isActive={pinnedCluster.selected.id === activeId}
                   dragInProgress={dragInProgress}
                   onNavigate={onNavigate}
                   onClose={onCloseConversation}
@@ -358,16 +380,16 @@ export function QueueView({
           {restClusters.length > 0 && (
             <div className="pl-1">
               <SidebarMenu>
-                {restClusters.map((cluster, idx) => (
+                {restClusters.map((group, idx) => (
                   <QueueRow
-                    key={cluster.representative.id}
-                    conv={cluster.representative}
-                    clusterSize={cluster.clusterSize}
+                    key={group.selected.id}
+                    conv={group.selected}
+                    clusterSize={group.count}
                     isTop={false}
-                    isBlocked={blockedIds.has(cluster.representative.id)}
+                    isBlocked={blockedIds.has(group.selected.id)}
                     isBottom={idx === restClusters.length - 1}
                     canStepDown={idx < restClusters.length - 1}
-                    isActive={cluster.representative.id === activeId}
+                    isActive={group.selected.id === activeId}
                     dragInProgress={dragInProgress}
                     onNavigate={onNavigate}
                     onClose={onCloseConversation}
@@ -390,27 +412,32 @@ export function QueueView({
       )}
 
       {/* Working */}
-      <SectionHeader title="Working" count={working.length} expanded={workingExpanded} onToggleExpanded={toggleWorkingExpanded} stickyTop={workingTop} />
+      <SectionHeader title="Working" count={workingGroups.length} expanded={workingExpanded} onToggleExpanded={toggleWorkingExpanded} stickyTop={workingTop} />
       {workingExpanded && (
         <div className="mt-0.5 pl-1">
-          {working.length === 0 ? (
+          {workingGroups.length === 0 ? (
             <div className="px-2 py-1 text-[11px] italic text-muted-foreground">
               No agents working
             </div>
           ) : (
             <SidebarMenu>
-              {working.map((conv) => (
-                <li key={conv.id} className="group/menu-item relative list-none">
+              {workingGroups.map((group) => (
+                <li key={group.selected.id} className="group/menu-item relative list-none">
                   <SidebarMenuButton
                     className="h-auto py-2"
-                    isActive={conv.id === activeId}
-                    onClick={() => onNavigate(conv.id)}
+                    isActive={group.selected.id === activeId}
+                    onClick={() => onNavigate(group.selected.id)}
                   >
-                    <ConversationItem conv={conv} />
+                    <ConversationItem conv={group.selected} />
+                    {group.count > 1 && (
+                      <span className="ml-auto shrink-0 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-red-500">
+                        {group.count}
+                      </span>
+                    )}
                   </SidebarMenuButton>
                   <SidebarMenuAction
                     onClick={(e: React.MouseEvent) =>
-                      void onCloseConversation(conv.id, e)
+                      void onCloseConversation(group.selected.id, e)
                     }
                     className="opacity-0 group-hover/menu-item:opacity-100"
                     aria-label="Close conversation"

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getConversation } from "@plugins/tasks-core/server";
-import { rankForTop } from "./queue-ranks";
-import { conversationsQueue } from "./tables";
+import { db } from "@plugins/database/server";
+import { lockDeck, rankForTop, rankJoiningGroup, upsertRank } from "./queue-ranks";
 import { queueRanksResource } from "./resource";
 import { validatePin } from "./pinned";
 
@@ -12,9 +12,15 @@ export async function handleRerank(req: Request): Promise<Response> {
   const conv = await getConversation(conversationId);
   if (!conv) return new Response("Not found", { status: 404 });
 
-  const rank = await rankForTop(conversationId);
-  await conversationsQueue.upsert(conversationId, { rank: rank.toJSON() });
-  await validatePin();
+  await db.transaction(async (tx) => {
+    await lockDeck(tx);
+    // If the task already has a group in the queue, join it; otherwise go to top.
+    const groupRank = await rankJoiningGroup(conv.taskId, conversationId, tx);
+    const rank = groupRank ?? await rankForTop(conversationId, tx);
+    await upsertRank(conversationId, rank, tx);
+    await validatePin(tx);
+  });
+
   queueRanksResource.notify();
   return Response.json({ ok: true });
 }

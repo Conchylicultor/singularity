@@ -1,10 +1,9 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { findTaskIdForConversation } from "./queue-ranks";
 import { getPinnedId, setPinnedId, topWaitingByRank } from "./pinned";
 import { queueRanksResource } from "./resource";
 
-// Fired on `userTurnSent`. When the user sends a turn to the pinned
-// conversation, advance the pin to the next waiting conversation by rank.
 export const advancePinJob = defineJob({
   name: "queue.advance-pin",
   input: z.object({}).passthrough(),
@@ -17,7 +16,9 @@ export const advancePinJob = defineJob({
     const pinnedId = await getPinnedId();
     if (pinnedId !== conversationId) return;
 
-    const nextId = await topWaitingByRank(conversationId);
+    // Exclude the entire task group so the pin advances to a different group.
+    const taskId = await findTaskIdForConversation(conversationId);
+    const nextId = await topWaitingByRank(conversationId, taskId ?? undefined);
     await setPinnedId(nextId);
     queueRanksResource.notify();
   },

@@ -21,7 +21,7 @@ import { queueRanksResource } from "./internal/resource";
 export { conversationsQueue } from "./internal/tables";
 export { queueRanksResource } from "./internal/resource";
 export { seedRankJob } from "./internal/seed-rank-job";
-export { lockDeck, rankForTop, rankForBottom, rankAfterN, rankAdjacentTo, rankAfterBlockers, endRank } from "./internal/queue-ranks";
+export { lockDeck, rankForTop, rankForBottom, rankAfterN, rankAdjacentTo, rankAfterBlockers, endRank, findTaskIdForConversation, reseatGroupMembers, upsertRank, rankJoiningGroup } from "./internal/queue-ranks";
 
 export default {
   id: "conversations-queue",

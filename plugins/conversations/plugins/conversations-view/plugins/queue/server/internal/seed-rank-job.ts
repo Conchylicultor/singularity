@@ -1,18 +1,12 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { lockDeck, rankForTop } from "./queue-ranks";
-import { conversationsQueue } from "./tables";
+import { lockDeck, rankForTop, rankJoiningGroup, findTaskIdForConversation, upsertRank } from "./queue-ranks";
 import { queueRanksResource } from "./resource";
 import { validatePin } from "./pinned";
 import { db } from "@plugins/database/server";
+import { conversationsQueue } from "./tables";
 
-// Fired on `conversationCreated` only. Seeds the conversation's rank at the
-// top of the queue (newest first). Idempotent — if the conversation already
-// has a rank entry, no change is made.
-//
-// After seeding, calls `validatePin()` to set the pinned conversation if none
-// exists yet.
 export const seedRankJob = defineJob({
   name: "queue.seed-rank",
   input: z.object({}).passthrough(),
@@ -33,15 +27,16 @@ export const seedRankJob = defineJob({
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (existing) return;
 
-      const rank = await rankForTop(conversationId, tx);
-      const now = new Date();
-      await tx
-        .insert(conversationsQueue.table)
-        .values({ parentId: conversationId, rank: rank.toJSON(), updatedAt: now })
-        .onConflictDoUpdate({
-          target: conversationsQueue.table.parentId,
-          set: { rank: rank.toJSON(), updatedAt: now },
-        });
+      // If the task already has a group, join it rather than going to top.
+      const taskId = await findTaskIdForConversation(conversationId, tx);
+      let rank;
+      if (taskId) {
+        const groupRank = await rankJoiningGroup(taskId, conversationId, tx);
+        rank = groupRank ?? await rankForTop(conversationId, tx);
+      } else {
+        rank = await rankForTop(conversationId, tx);
+      }
+      await upsertRank(conversationId, rank, tx);
     });
 
     await validatePin();

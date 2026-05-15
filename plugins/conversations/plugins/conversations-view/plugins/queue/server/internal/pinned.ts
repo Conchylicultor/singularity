@@ -6,8 +6,7 @@ import { conversationsQueue, _queueState } from "./tables";
 
 const SINGLETON = "singleton";
 
-// Mirrors hasBlockingDep in tasks-core: true when the conversation's task has
-// at least one non-dropped dependency without a completed attempt.
+// True when the conversation's task has no non-dropped dependency without a completed attempt.
 const notBlocked = sql`NOT EXISTS (
   SELECT 1 FROM task_dependencies td
     JOIN tasks dep ON dep.id = td.depends_on_task_id
@@ -17,6 +16,17 @@ const notBlocked = sql`NOT EXISTS (
        SELECT 1 FROM attempts_v a
         WHERE a.task_id = dep.id AND a.status = 'completed'
      )
+)`;
+
+// True when no other live member of the same task has a better (lower) rank.
+const isGroupSelected = sql`NOT EXISTS (
+  SELECT 1 FROM conversations_ext_queue eq2
+    JOIN conversations c2 ON c2.id = eq2.parent_id
+    JOIN attempts a2 ON a2.id = c2.attempt_id
+   WHERE a2.task_id = ${_attempts.taskId}
+     AND eq2.parent_id != ${conversationsQueue.table.parentId}
+     AND c2.status IN ('waiting', 'working', 'starting')
+     AND eq2.rank < ${conversationsQueue.table.rank}
 )`;
 
 export async function getPinnedId(executor: RankExecutor = db): Promise<string | null> {
@@ -42,11 +52,19 @@ export async function setPinnedId(id: string | null, executor: RankExecutor = db
 
 export async function topWaitingByRank(
   excludeId?: string,
+  excludeTaskId?: string,
   executor: RankExecutor = db,
 ): Promise<string | null> {
-  const conditions = [eq(_conversations.status, "waiting" as const), notBlocked];
+  const conditions = [
+    eq(_conversations.status, "waiting" as const),
+    notBlocked,
+    isGroupSelected,
+  ];
   if (excludeId) {
     conditions.push(ne(conversationsQueue.table.parentId, excludeId));
+  }
+  if (excludeTaskId) {
+    conditions.push(ne(_attempts.taskId, excludeTaskId));
   }
   const [row] = await executor
     .select({ id: conversationsQueue.table.parentId })
@@ -73,13 +91,14 @@ export async function validatePin(executor: RankExecutor = db): Promise<string |
           eq(conversationsQueue.table.parentId, pinnedId),
           eq(_conversations.status, "waiting" as const),
           notBlocked,
+          isGroupSelected,
         ),
       )
       .limit(1);
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (valid) return pinnedId;
   }
-  const nextId = await topWaitingByRank(undefined, executor);
+  const nextId = await topWaitingByRank(undefined, undefined, executor);
   await setPinnedId(nextId, executor);
   return nextId;
 }
