@@ -77,7 +77,7 @@ export async function recordCrash(
     title: "Crash recorded",
     description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
     variant: "error",
-    linkTo: outcome.taskId ? `/tasks/${outcome.taskId}` : null,
+    linkTo: outcome.taskId ? `/tasks/t/${outcome.taskId}` : null,
     metadata: {
       crashId: row.id,
       taskId: outcome.taskId,
