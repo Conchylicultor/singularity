@@ -1087,8 +1087,16 @@
       "name": "@singularity/plugin-ui-tokens-chart",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/color-adjust": {
+      "name": "@singularity/plugin-ui-tokens-color-adjust",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/color-palette": {
       "name": "@singularity/plugin-ui-tokens-color-palette",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/shadow": {
+      "name": "@singularity/plugin-ui-tokens-shadow",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tokens/plugins/shape": {
@@ -2187,7 +2195,11 @@
 
     "@singularity/plugin-ui-tokens-chart": ["@singularity/plugin-ui-tokens-chart@workspace:plugins/ui/plugins/tokens/plugins/chart"],
 
+    "@singularity/plugin-ui-tokens-color-adjust": ["@singularity/plugin-ui-tokens-color-adjust@workspace:plugins/ui/plugins/tokens/plugins/color-adjust"],
+
     "@singularity/plugin-ui-tokens-color-palette": ["@singularity/plugin-ui-tokens-color-palette@workspace:plugins/ui/plugins/tokens/plugins/color-palette"],
+
+    "@singularity/plugin-ui-tokens-shadow": ["@singularity/plugin-ui-tokens-shadow@workspace:plugins/ui/plugins/tokens/plugins/shadow"],
 
     "@singularity/plugin-ui-tokens-shape": ["@singularity/plugin-ui-tokens-shape@workspace:plugins/ui/plugins/tokens/plugins/shape"],
 

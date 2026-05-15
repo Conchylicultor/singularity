@@ -9,6 +9,8 @@ export type {
   TokenGroupContribution,
   TokenGroupPreset,
   GlobalPresetContribution,
+  ColorAdjustment,
+  ColorTransformContribution,
 } from "./slots";
 export { ThemeScope } from "./components/theme-scope";
 

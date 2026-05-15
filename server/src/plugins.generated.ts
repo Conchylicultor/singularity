@@ -98,7 +98,9 @@ import terminalPlugin from "@plugins/terminal/server";
 import uiSegmentedProgressBarPlugin from "@plugins/ui/plugins/segmented-progress-bar/server";
 import uiThemeEnginePlugin from "@plugins/ui/plugins/theme-engine/server";
 import uiTokensChartPlugin from "@plugins/ui/plugins/tokens/plugins/chart/server";
+import uiTokensColorAdjustPlugin from "@plugins/ui/plugins/tokens/plugins/color-adjust/server";
 import uiTokensColorPalettePlugin from "@plugins/ui/plugins/tokens/plugins/color-palette/server";
+import uiTokensShadowPlugin from "@plugins/ui/plugins/tokens/plugins/shadow/server";
 import uiTokensShapePlugin from "@plugins/ui/plugins/tokens/plugins/shape/server";
 import uiTokensSidebarPalettePlugin from "@plugins/ui/plugins/tokens/plugins/sidebar-palette/server";
 import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typography/server";
@@ -181,7 +183,9 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (uiSegmentedProgressBarPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (uiThemeEnginePlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (uiTokensChartPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
+(uiTokensColorAdjustPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (uiTokensColorPalettePlugin as ServerPluginDefinition).dependsOn = [configPlugin];
+(uiTokensShadowPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (uiTokensShapePlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (uiTokensSidebarPalettePlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (uiTokensTypographyPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
@@ -279,7 +283,9 @@ export const plugins: ServerPluginDefinition[] = [
   uiSegmentedProgressBarPlugin,
   uiThemeEnginePlugin,
   uiTokensChartPlugin,
+  uiTokensColorAdjustPlugin,
   uiTokensColorPalettePlugin,
+  uiTokensShadowPlugin,
   uiTokensShapePlugin,
   uiTokensSidebarPalettePlugin,
   uiTokensTypographyPlugin,

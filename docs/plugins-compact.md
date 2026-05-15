@@ -325,7 +325,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
       - Plugins:
         - **`chart`** — Chart color token group with switchable presets.
+        - **`color-adjust`** — Cross-cutting color adjustment transform for all color token groups.
         - **`color-palette`** — Color palette token group with switchable presets.
+        - **`shadow`** — Shadow token group with switchable presets.
         - **`shape`** — Shape token group (border-radius) with switchable presets.
         - **`sidebar-palette`** — Sidebar palette token group with switchable presets.
         - **`typography`** — Typography token group (fonts, letter-spacing) with switchable presets.

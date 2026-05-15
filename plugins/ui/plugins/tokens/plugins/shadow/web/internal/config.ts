@@ -1,0 +1,1 @@
+export { shadowConfig } from "../../shared";

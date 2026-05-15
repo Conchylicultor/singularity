@@ -31,6 +31,16 @@ export interface GlobalPresetContribution {
   groups: Partial<Record<string, string>>;
 }
 
+export interface ColorAdjustment {
+  hueShift: number;
+  saturationScale: number;
+  lightnessScale: number;
+}
+
+export interface ColorTransformContribution {
+  useAdjustment: () => ColorAdjustment;
+}
+
 export const ThemeEngine = {
   VariantGroup: defineSlot<VariantGroupContribution>(
     "ui.theme-engine.variant-group",
@@ -43,5 +53,9 @@ export const ThemeEngine = {
   GlobalPreset: defineSlot<GlobalPresetContribution>(
     "ui.theme-engine.global-preset",
     { docLabel: (p) => p.label },
+  ),
+  ColorTransform: defineSlot<ColorTransformContribution>(
+    "ui.theme-engine.color-transform",
+    { docLabel: () => "Color Transform" },
   ),
 };

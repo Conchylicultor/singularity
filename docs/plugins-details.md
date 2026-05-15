@@ -415,7 +415,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/config/specs`
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
-  - Imported by: `auth`, `backup`, `build`, `chart`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shape`, `sidebar-palette`, `theme-engine`, `turn-summary`, `typography`
+  - Imported by: `auth`, `backup`, `build`, `chart`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-engine`, `turn-summary`, `typography`
   - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `review`, `theme-engine`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
@@ -1762,19 +1762,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `SegmentedProgressBarSlots.Variant` "Segmented" → `SegmentedRenderer`
     - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
       - Defines:
-        - Slots: `ThemeEngine.VariantGroup`, `ThemeEngine.TokenGroup`, `ThemeEngine.GlobalPreset`
+        - Slots: `ThemeEngine.VariantGroup`, `ThemeEngine.TokenGroup`, `ThemeEngine.GlobalPreset`, `ThemeEngine.ColorTransform`
       - Exports (core):
         - Types: `TokenGroupDescriptor`, `TokenGroupField`, `TokenGroupSchema`
         - Values: `defineTokenGroup`, `themeEngineConfig`
       - Exports (web):
-        - Types: `GlobalPresetContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`
+        - Types: `ColorAdjustment`, `ColorTransformContribution`, `GlobalPresetContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`
         - Values: `ThemeEngine`, `ThemeScope`
       - Contributes:
         - `Core.Root` → `ThemeInjector`
         - `Config.Section` "UI Themes" → `VariantSettings`
       - Server:
         - Uses: `config.Config`
-      - Slot contributors: `chart`, `color-palette`, `segmented-progress-bar`, `shape`, `sidebar-palette`, `tokens`, `typography`
+      - Slot contributors: `chart`, `color-adjust`, `color-palette`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `typography`
     - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
       - Contributes:
         - `ThemeEngine.GlobalPreset` "Default"
@@ -1796,6 +1796,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `ThemeEngine.VariantGroup` "Chart" → `ChartPicker`
           - Server:
             - Uses: `config.Config`
+        - **`color-adjust`** — Cross-cutting color adjustment transform for all color token groups.
+          - Defines:
+            - Slots: `ColorAdjust.Preset`
+          - Exports (web):
+            - Types: `ColorAdjustPresetContribution`
+            - Values: `ColorAdjust`
+          - Exports (shared):
+            - Values: `colorAdjustConfig`
+          - Contributes:
+            - `ColorAdjust.Preset` "Default"
+            - `ColorAdjust.Preset` "Grayscale"
+            - `ColorAdjust.Preset` "Muted"
+            - `ColorAdjust.Preset` "Vibrant"
+            - `ColorAdjust.Preset` "Dimmer"
+            - `ColorAdjust.Preset` "Brighter"
+            - `ColorAdjust.Preset` "Warm Shift"
+            - `ColorAdjust.Preset` "Hue +60"
+            - `ColorAdjust.Preset` "Hue -60"
+            - `ColorAdjust.Preset` "Hue +120"
+            - `ColorAdjust.Preset` "Hue -120"
+            - `ColorAdjust.Preset` "Invert Hue"
+            - `ThemeEngine.ColorTransform` "Color Transform"
+            - `ThemeEngine.VariantGroup` "Color Adjust" → `ColorAdjustPicker`
+          - Server:
+            - Uses: `config.Config`
         - **`color-palette`** — Color palette token group with switchable presets.
           - Defines:
             - Slots: `ColorPalette.Preset`
@@ -1811,6 +1836,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `ColorPalette.Preset` "Warm"
             - `ThemeEngine.TokenGroup` "Color Palette"
             - `ThemeEngine.VariantGroup` "Color Palette" → `ColorPalettePicker`
+          - Server:
+            - Uses: `config.Config`
+        - **`shadow`** — Shadow token group with switchable presets.
+          - Defines:
+            - Slots: `Shadow.Preset`
+          - Exports (web):
+            - Types: `ShadowPresetContribution`
+            - Values: `Shadow`
+          - Exports (shared):
+            - Types: `ShadowParams`, `ShadowTokenValues`
+            - Values: `buildShadowTiers`, `shadowConfig`, `shadowGroup`
+          - Contributes:
+            - `Shadow.Preset` "Default"
+            - `Shadow.Preset` "None"
+            - `Shadow.Preset` "Elevated"
+            - `Shadow.Preset` "Heavy"
+            - `ThemeEngine.TokenGroup` "Shadow"
+            - `ThemeEngine.VariantGroup` "Shadow" → `ShadowPicker`
           - Server:
             - Uses: `config.Config`
         - **`shape`** — Shape token group (border-radius) with switchable presets.

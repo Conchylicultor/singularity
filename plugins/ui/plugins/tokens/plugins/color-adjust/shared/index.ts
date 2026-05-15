@@ -1,0 +1,1 @@
+export { colorAdjustConfig } from "./config";

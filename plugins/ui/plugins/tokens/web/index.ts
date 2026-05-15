@@ -16,6 +16,8 @@ export default {
         "sidebar-palette": "default",
         chart: "default",
         typography: "default",
+        shadow: "default",
+        "color-adjust": "default",
       },
     }),
     ThemeEngine.GlobalPreset({
@@ -27,6 +29,8 @@ export default {
         "sidebar-palette": "default",
         chart: "default",
         typography: "default",
+        shadow: "default",
+        "color-adjust": "default",
       },
     }),
     ThemeEngine.GlobalPreset({
@@ -38,6 +42,8 @@ export default {
         "sidebar-palette": "warm",
         chart: "default",
         typography: "default",
+        shadow: "default",
+        "color-adjust": "default",
       },
     }),
   ],
