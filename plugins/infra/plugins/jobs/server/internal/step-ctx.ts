@@ -191,6 +191,7 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
       try {
         result = await fn();
       } catch (err) {
+        if (isSuspendSignal(err)) throw err;
         const msg = err instanceof Error ? err.message : String(err);
         await db
           .insert(_jobSteps)

@@ -37,7 +37,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
   - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
 - Exports (server):
   - Values: `awaitDbReady`, `db`, `isTransientDbError`
-- Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `claude-cli`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `review`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+- Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `claude-cli`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `review`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
 - Sub-plugins:
   - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
   - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.

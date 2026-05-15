@@ -41,6 +41,14 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
                   - `/api/catalog/tables/:tableName/row-count (GET)`
                 - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
                   - `/api/catalog/tables/:tableName/sample (GET)`
+    - **`workflows`** — Workflows app.
+      - Plugins:
+        - **`engine`** — Core engine infrastructure. Defines the Workflows.StepType slot. Core backend infrastructure for the workflows app. Owns DB tables, step executor registry, durable run job, trigger event, HTTP API, and live-state resources.
+          - `/api/workflows/definitions (GET, POST)`
+          - `/api/workflows/definitions/:id (GET, PATCH, DELETE)`
+          - `/api/workflows/executions (GET, POST)`
+          - `/api/workflows/executions/:id (GET, DELETE)`
+          - `/api/workflows/executions/:execId/steps/:stepId/submit (POST)`
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - `/api/auth/start/:provider (GET)` _(central)_

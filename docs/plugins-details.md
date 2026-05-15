@@ -226,6 +226,33 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Apps.App` "Forge" → `ForgeLayout`
     - **`workflows`** — Workflows app.
       - Plugins:
+        - **`engine`** — Core engine infrastructure. Defines the Workflows.StepType slot. Core backend infrastructure for the workflows app. Owns DB tables, step executor registry, durable run job, trigger event, HTTP API, and live-state resources.
+          - Defines:
+            - Slots: `Workflows.StepType`
+            - DB schema: `plugins/apps/plugins/workflows/plugins/engine/server/internal/tables-events.ts`
+            - DB schema: `plugins/apps/plugins/workflows/plugins/engine/server/internal/tables.ts`
+          - Exports (core):
+            - Types: `DefinitionStep`, `ExecutionStatus`, `ExecutionStepStatus`, `WorkflowDefinition`, `WorkflowExecution`, `WorkflowExecutionStep`
+            - Values: `DefinitionStepSchema`, `ExecutionStatusSchema`, `ExecutionStepStatusSchema`, `WorkflowDefinitionSchema`, `workflowDefinitionsDescriptor`, `WorkflowExecutionSchema`, `workflowExecutionsDescriptor`, `WorkflowExecutionStepSchema`
+          - Exports (web):
+            - Values: `Workflows`
+          - Exports (server):
+            - Types: `StepExecutorRunArgs`, `StepExecutorSpec`, `StepResult`
+            - Values: `_userInputSubmittedTriggers`, `_workflowDefinitions`, `_workflowExecutions`, `_workflowExecutionSteps`, `defineStepExecutor`, `getExecutor`, `userInputSubmitted`, `workflowDefinitionsResource`, `workflowExecutionsResource`
+          - Server:
+            - Register: `defineJob('workflows.run')`, `defineTriggerEvent('workflows.userInputSubmitted')`
+            - Uses: `database.db`
+            - Resources: `workflow-definitions` (push), `workflow-executions` (push)
+            - `GET /api/workflows/definitions`
+            - `POST /api/workflows/definitions`
+            - `GET /api/workflows/definitions/:id`
+            - `PATCH /api/workflows/definitions/:id`
+            - `DELETE /api/workflows/definitions/:id`
+            - `GET /api/workflows/executions`
+            - `POST /api/workflows/executions`
+            - `GET /api/workflows/executions/:id`
+            - `DELETE /api/workflows/executions/:id`
+            - `POST /api/workflows/executions/:execId/steps/:stepId/submit`
         - **`shell`** — App shell for the workflows app. Registers the /workflows app entry and defines WorkflowsApp.Sidebar/Toolbar slots.
           - Exports (web):
             - Values: `WorkflowsApp`
@@ -935,7 +962,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Exports (server):
     - Values: `awaitDbReady`, `db`, `isTransientDbError`
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `claude-cli`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `review`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `claude-cli`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `review`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Exports (server):

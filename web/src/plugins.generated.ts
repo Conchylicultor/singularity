@@ -35,6 +35,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "apps/plugins/forge/plugins/catalog", loader: () => import("@plugins/apps/plugins/forge/plugins/catalog/web") },
   { name: "apps/plugins/forge/plugins/publish", loader: () => import("@plugins/apps/plugins/forge/plugins/publish/web") },
   { name: "apps/plugins/forge/plugins/shell", loader: () => import("@plugins/apps/plugins/forge/plugins/shell/web") },
+  { name: "apps/plugins/workflows/plugins/engine", loader: () => import("@plugins/apps/plugins/workflows/plugins/engine/web") },
   { name: "apps/plugins/workflows/plugins/shell", loader: () => import("@plugins/apps/plugins/workflows/plugins/shell/web") },
   { name: "apps", loader: () => import("@plugins/apps/web") },
   { name: "attempt-view", loader: () => import("@plugins/attempt-view/web") },
