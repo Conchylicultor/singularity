@@ -20,6 +20,7 @@ import { tasksResource, type Task } from "@plugins/tasks/core";
 import { taskDetailPane, useTaskNavigate } from "@plugins/tasks/plugins/task-detail/web";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 import { cn } from "@/lib/utils";
+import { InsertableEdge, type InsertableEdgeData } from "./insertable-edge";
 
 const NODE_WIDTH = 200;
 const NODE_HEIGHT = 36;
@@ -62,7 +63,11 @@ function isNonBlocking(task: Task): boolean {
   return task.status === "done" || task.status === "dropped";
 }
 
-function layoutDag(closure: readonly Task[], selectedId: string) {
+function layoutDag(
+  closure: readonly Task[],
+  selectedId: string,
+  onNavigate: (taskId: string) => void,
+) {
   // Sort by id for a stable node-insertion order regardless of which task is
   // selected as root (dagre's crossing-minimization is order-sensitive).
   const sorted = [...closure].sort((a, b) => a.id.localeCompare(b.id));
@@ -94,7 +99,7 @@ function layoutDag(closure: readonly Task[], selectedId: string) {
   });
 
   const byId = new Map(sorted.map((t) => [t.id, t]));
-  const edges: Edge[] = [];
+  const edges: Edge<InsertableEdgeData>[] = [];
   for (const t of sorted) {
     for (const dep of t.dependencies) {
       if (!ids.has(dep)) continue;
@@ -107,7 +112,13 @@ function layoutDag(closure: readonly Task[], selectedId: string) {
         id: `${dep}->${t.id}`,
         source: dep,
         target: t.id,
-        type: "smoothstep",
+        type: "insertable",
+        data: {
+          sourceTaskId: dep,
+          targetTaskId: t.id,
+          targetParentId: byId.get(t.id)?.parentId ?? null,
+          onNavigate,
+        },
         markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 14, height: 14 },
         style: { stroke, strokeWidth: 1.5 },
       });
@@ -159,6 +170,7 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
 }
 
 const NODE_TYPES = { [NODE_TYPE]: TaskNode };
+const EDGE_TYPES = { insertable: InsertableEdge };
 
 function TaskGraphInner({
   taskId,
@@ -201,6 +213,7 @@ function TaskGraphInner({
         nodes={nodes}
         edges={edges}
         nodeTypes={NODE_TYPES}
+        edgeTypes={EDGE_TYPES}
         nodesDraggable={false}
         nodesConnectable={false}
         edgesFocusable={false}
@@ -224,10 +237,6 @@ function TaskGraphInner({
 export function TaskGraph({ taskId }: { taskId: string }) {
   const { data: allTasks } = useResource(tasksResource);
   const closure = useMemo(() => computeDagClosure(taskId, allTasks), [taskId, allTasks]);
-  const { nodes, edges } = useMemo(
-    () => layoutDag(closure, taskId),
-    [closure, taskId],
-  );
   const ctxNavigate = useTaskNavigate();
   const openPane = useOpenPane();
   const onNavigate = useCallback(
@@ -236,6 +245,10 @@ export function TaskGraph({ taskId }: { taskId: string }) {
       else openPane(taskDetailPane, { taskId: id }, { mode: "swap" });
     },
     [ctxNavigate, openPane],
+  );
+  const { nodes, edges } = useMemo(
+    () => layoutDag(closure, taskId, onNavigate),
+    [closure, taskId, onNavigate],
   );
 
   if (closure.length <= 1) return null;

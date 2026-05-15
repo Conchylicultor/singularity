@@ -1641,7 +1641,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/tasks/:id/dependencies`
     - `DELETE /api/tasks/:id/dependencies/:depId`
     - `GET /api/repo-info`
-  - Endpoint callers: `blocked-by`, `blocking`, `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-header`, `task-list`
+  - Endpoint callers: `blocked-by`, `blocking`, `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-graph`, `task-header`, `task-list`
   - Plugins:
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
       - Defines:
