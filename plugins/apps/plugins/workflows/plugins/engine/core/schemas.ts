@@ -5,6 +5,7 @@ export const DefinitionStepSchema = z.object({
   pluginId: z.string(),
   label: z.string(),
   config: z.record(z.unknown()).default({}),
+  next: z.string().nullable().default(null),
   nextStepMapping: z.record(z.string()).nullable().default(null),
 });
 export type DefinitionStep = z.infer<typeof DefinitionStepSchema>;
@@ -13,7 +14,8 @@ export const WorkflowDefinitionSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().nullable(),
-  steps: z.array(DefinitionStepSchema),
+  steps: z.record(z.string(), DefinitionStepSchema),
+  entryStepId: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -42,7 +44,7 @@ export const WorkflowExecutionStepSchema = z.object({
   id: z.string(),
   executionId: z.string(),
   definitionStepId: z.string(),
-  stepIndex: z.number(),
+  executionOrder: z.number(),
   stepPluginId: z.string(),
   label: z.string(),
   config: z.record(z.unknown()),

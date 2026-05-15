@@ -9,6 +9,7 @@ export interface StepExecutorRunArgs {
     stepPluginId: string;
     label: string;
     config: unknown;
+    next: string | null;
     nextStepMapping: Record<string, string> | null;
     input: unknown;
   };

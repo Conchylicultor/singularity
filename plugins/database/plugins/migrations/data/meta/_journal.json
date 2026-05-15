@@ -680,6 +680,13 @@
       "tag": "20260515_160508_725915cf__add_workflow_engine_tables",
       "hash": "725915cf",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1778868702000,
+      "tag": "20260515_181142_b3cc75fa__dag_schema",
+      "hash": "b3cc75fa",
+      "breakpoints": true
     }
   ]
 }

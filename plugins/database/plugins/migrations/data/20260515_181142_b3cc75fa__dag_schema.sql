@@ -1,0 +1,1 @@
+-- Snapshot-only migration (--custom). Actual DDL in dag_schema_apply.

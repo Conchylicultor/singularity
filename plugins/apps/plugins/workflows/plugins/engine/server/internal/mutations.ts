@@ -15,7 +15,8 @@ function generateId(prefix: string): string {
 export async function createDefinition(input: {
   name: string;
   description?: string | null;
-  steps?: DefinitionStep[];
+  steps?: Record<string, DefinitionStep>;
+  entryStepId?: string | null;
 }) {
   const id = generateId("wfdef");
   const [row] = await db
@@ -24,7 +25,8 @@ export async function createDefinition(input: {
       id,
       name: input.name,
       description: input.description ?? null,
-      steps: input.steps ?? [],
+      steps: input.steps ?? {},
+      entryStepId: input.entryStepId ?? null,
     })
     .returning();
   workflowDefinitionsResource.notify();
@@ -36,13 +38,15 @@ export async function updateDefinition(
   patch: {
     name?: string;
     description?: string | null;
-    steps?: DefinitionStep[];
+    steps?: Record<string, DefinitionStep>;
+    entryStepId?: string | null;
   },
 ) {
   const values: Record<string, unknown> = { updatedAt: new Date() };
   if (patch.name !== undefined) values.name = patch.name;
   if (patch.description !== undefined) values.description = patch.description;
   if (patch.steps !== undefined) values.steps = patch.steps;
+  if (patch.entryStepId !== undefined) values.entryStepId = patch.entryStepId;
 
   const [row] = await db
     .update(_workflowDefinitions)
@@ -72,24 +76,34 @@ export async function createExecution(definitionId: string) {
     .values({ id: executionId, definitionId })
     .returning();
 
-  const steps = (def.steps ?? []) as DefinitionStep[];
-  if (steps.length > 0) {
-    await db.insert(_workflowExecutionSteps).values(
-      steps.map((step, i) => ({
-        id: generateId("wfes"),
-        executionId,
-        definitionStepId: step.id,
-        stepIndex: i,
-        stepPluginId: step.pluginId,
-        label: step.label,
-        config: step.config ?? {},
-        nextStepMapping: step.nextStepMapping ?? null,
-      })),
-    );
-  }
-
   workflowExecutionsResource.notify();
   return execution;
+}
+
+export async function createExecutionStep(params: {
+  executionId: string;
+  stepDef: DefinitionStep;
+  executionOrder: number;
+  input: unknown;
+}) {
+  const id = generateId("wfes");
+  const [row] = await db
+    .insert(_workflowExecutionSteps)
+    .values({
+      id,
+      executionId: params.executionId,
+      definitionStepId: params.stepDef.id,
+      executionOrder: params.executionOrder,
+      stepPluginId: params.stepDef.pluginId,
+      label: params.stepDef.label,
+      config: params.stepDef.config ?? {},
+      next: params.stepDef.next ?? null,
+      nextStepMapping: params.stepDef.nextStepMapping ?? null,
+      input: params.input,
+    })
+    .returning();
+  workflowExecutionsResource.notify();
+  return row;
 }
 
 export async function cancelExecution(id: string) {

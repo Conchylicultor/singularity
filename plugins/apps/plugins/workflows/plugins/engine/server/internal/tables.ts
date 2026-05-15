@@ -12,7 +12,8 @@ export const _workflowDefinitions = pgTable("workflow_definitions", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  steps: jsonb("steps").$type<DefinitionStep[]>().notNull().default([]),
+  steps: jsonb("steps").$type<Record<string, DefinitionStep>>().notNull().default({}),
+  entryStepId: text("entry_step_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -37,10 +38,11 @@ export const _workflowExecutionSteps = pgTable(
       .notNull()
       .references(() => _workflowExecutions.id, { onDelete: "cascade" }),
     definitionStepId: text("definition_step_id").notNull(),
-    stepIndex: integer("step_index").notNull(),
+    executionOrder: integer("execution_order").notNull(),
     stepPluginId: text("step_plugin_id").notNull(),
     label: text("label").notNull(),
     config: jsonb("config").$type<Record<string, unknown>>().notNull().default({}),
+    next: text("next"),
     nextStepMapping: jsonb("next_step_mapping").$type<Record<string, string> | null>(),
     status: text("status").$type<ExecutionStepStatus>().notNull().default("pending"),
     input: jsonb("input"),
@@ -49,5 +51,5 @@ export const _workflowExecutionSteps = pgTable(
     startedAt: timestamp("started_at", { withTimezone: true }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
   },
-  (t) => [index("wf_exec_steps_exec_idx").on(t.executionId, t.stepIndex)],
+  (t) => [index("wf_exec_steps_exec_idx").on(t.executionId, t.executionOrder)],
 );

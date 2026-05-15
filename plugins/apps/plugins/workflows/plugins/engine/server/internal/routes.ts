@@ -29,7 +29,8 @@ export async function handleCreateDefinition(req: Request): Promise<Response> {
   const body = (await req.json().catch(() => ({}))) as {
     name?: string;
     description?: string;
-    steps?: unknown[];
+    steps?: Record<string, unknown>;
+    entryStepId?: string;
   };
   if (!body.name) {
     return Response.json({ error: "name is required" }, { status: 400 });
@@ -38,6 +39,7 @@ export async function handleCreateDefinition(req: Request): Promise<Response> {
     name: body.name,
     description: body.description,
     steps: body.steps as Parameters<typeof createDefinition>[0]["steps"],
+    entryStepId: body.entryStepId,
   });
   return Response.json(serializeDefinition(row), { status: 201 });
 }
@@ -61,12 +63,14 @@ export async function handleUpdateDefinition(
   const body = (await req.json().catch(() => ({}))) as {
     name?: string;
     description?: string | null;
-    steps?: unknown[];
+    steps?: Record<string, unknown>;
+    entryStepId?: string | null;
   };
   const row = await updateDefinition(params.id, {
     name: body.name,
     description: body.description,
     steps: body.steps as Parameters<typeof updateDefinition>[1]["steps"],
+    entryStepId: body.entryStepId,
   });
   if (!row) return new Response("Not found", { status: 404 });
   return Response.json(serializeDefinition(row));
@@ -102,7 +106,7 @@ export async function handleListExecutions(req: Request): Promise<Response> {
   const allSteps = await db
     .select()
     .from(_workflowExecutionSteps)
-    .orderBy(asc(_workflowExecutionSteps.stepIndex));
+    .orderBy(asc(_workflowExecutionSteps.executionOrder));
 
   const stepsByExec = new Map<string, (typeof _workflowExecutionSteps.$inferSelect)[]>();
   for (const step of allSteps) {
@@ -139,13 +143,7 @@ export async function handleCreateExecution(req: Request): Promise<Response> {
     { jobKey: execution.id },
   );
 
-  const steps = await db
-    .select()
-    .from(_workflowExecutionSteps)
-    .where(eq(_workflowExecutionSteps.executionId, execution.id))
-    .orderBy(asc(_workflowExecutionSteps.stepIndex));
-
-  return Response.json(serializeExecution(execution, steps), { status: 201 });
+  return Response.json(serializeExecution(execution, []), { status: 201 });
 }
 
 export async function handleGetExecution(
@@ -162,7 +160,7 @@ export async function handleGetExecution(
     .select()
     .from(_workflowExecutionSteps)
     .where(eq(_workflowExecutionSteps.executionId, params.id))
-    .orderBy(asc(_workflowExecutionSteps.stepIndex));
+    .orderBy(asc(_workflowExecutionSteps.executionOrder));
 
   return Response.json(serializeExecution(execution, steps));
 }

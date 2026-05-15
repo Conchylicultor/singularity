@@ -11,7 +11,8 @@ import { _workflowDefinitions, _workflowExecutions, _workflowExecutionSteps } fr
 function serializeDefinition(row: typeof _workflowDefinitions.$inferSelect) {
   return {
     ...row,
-    steps: row.steps ?? [],
+    steps: row.steps ?? {},
+    entryStepId: row.entryStepId ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -64,7 +65,7 @@ export const workflowExecutionsResource = defineResource({
     const allSteps = await db
       .select()
       .from(_workflowExecutionSteps)
-      .orderBy(asc(_workflowExecutionSteps.stepIndex));
+      .orderBy(asc(_workflowExecutionSteps.executionOrder));
 
     const stepsByExecution = new Map<string, (typeof _workflowExecutionSteps.$inferSelect)[]>();
     for (const step of allSteps) {

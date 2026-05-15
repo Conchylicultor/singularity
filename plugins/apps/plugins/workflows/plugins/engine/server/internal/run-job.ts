@@ -1,23 +1,21 @@
 import { z } from "zod";
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineJob, isSuspendSignal } from "@plugins/infra/plugins/jobs/server";
-import { _workflowExecutions, _workflowExecutionSteps } from "./tables";
+import { _workflowDefinitions, _workflowExecutions } from "./tables";
 import { getExecutor } from "./executor-registry";
-import { updateExecution, updateExecutionStep } from "./mutations";
+import {
+  createExecutionStep,
+  updateExecution,
+  updateExecutionStep,
+} from "./mutations";
+import type { DefinitionStep } from "../../core";
 import type { StepResult } from "./executor-registry";
 
 interface InitResult {
   definitionId: string;
-  execSteps: {
-    id: string;
-    definitionStepId: string;
-    stepIndex: number;
-    stepPluginId: string;
-    label: string;
-    config: Record<string, unknown>;
-    nextStepMapping: Record<string, string> | null;
-  }[];
+  stepsMap: Record<string, DefinitionStep>;
+  entryStepId: string | null;
 }
 
 export const workflowRunJob = defineJob({
@@ -33,46 +31,52 @@ export const workflowRunJob = defineJob({
       if (!execution) return null;
       if (execution.status === "completed" || execution.status === "failed") return null;
 
+      const [definition] = await db
+        .select()
+        .from(_workflowDefinitions)
+        .where(eq(_workflowDefinitions.id, execution.definitionId));
+      if (!definition) return null;
+
       if (execution.status === "pending") {
         await updateExecution(input.executionId, { status: "running" });
       }
 
-      // Steps are already created by createExecution in mutations.ts
-      const rows = await db
-        .select()
-        .from(_workflowExecutionSteps)
-        .where(eq(_workflowExecutionSteps.executionId, input.executionId))
-        .orderBy(asc(_workflowExecutionSteps.stepIndex));
-
       return {
         definitionId: execution.definitionId,
-        execSteps: rows.map((r) => ({
-          id: r.id,
-          definitionStepId: r.definitionStepId,
-          stepIndex: r.stepIndex,
-          stepPluginId: r.stepPluginId,
-          label: r.label,
-          config: (r.config ?? {}) as Record<string, unknown>,
-          nextStepMapping: r.nextStepMapping as Record<string, string> | null,
-        })),
+        stepsMap: (definition.steps ?? {}) as Record<string, DefinitionStep>,
+        entryStepId: definition.entryStepId,
       };
     });
 
     if (!initResult) return;
-    const { definitionId, execSteps } = initResult;
-    if (execSteps.length === 0) {
+    const { definitionId, stepsMap, entryStepId } = initResult;
+
+    if (!entryStepId) {
       await updateExecution(input.executionId, { status: "completed", completedAt: new Date() });
       return;
     }
 
+    let currentStepId: string | null = entryStepId;
+    let executionOrder = 0;
     let lastOutput: unknown = null;
-    let currentIndex = 0;
 
-    while (currentIndex < execSteps.length) {
-      const execStep = execSteps[currentIndex];
+    while (currentStepId !== null) {
+      const stepDef: DefinitionStep | undefined = stepsMap[currentStepId];
+      if (!stepDef) {
+        await updateExecution(input.executionId, { status: "failed", completedAt: new Date() });
+        return;
+      }
+
+      const execStep = await ctx.step(`create-${currentStepId}`, () =>
+        createExecutionStep({
+          executionId: input.executionId,
+          stepDef,
+          executionOrder: executionOrder++,
+          input: lastOutput,
+        }),
+      );
 
       await updateExecutionStep(execStep.id, {
-        input: lastOutput,
         status: "running",
         startedAt: new Date(),
       });
@@ -81,11 +85,11 @@ export const workflowRunJob = defineJob({
         status: "running",
       });
 
-      const executor = getExecutor(execStep.stepPluginId);
+      const executor = getExecutor(stepDef.pluginId);
       if (!executor) {
         await updateExecutionStep(execStep.id, {
           status: "failed",
-          error: `No executor registered for "${execStep.stepPluginId}"`,
+          error: `No executor registered for "${stepDef.pluginId}"`,
           completedAt: new Date(),
         });
         await updateExecution(input.executionId, {
@@ -130,22 +134,11 @@ export const workflowRunJob = defineJob({
       });
       lastOutput = result.output ?? null;
 
-      if (result.branchKey && execStep.nextStepMapping) {
-        const targetDefStepId = execStep.nextStepMapping[result.branchKey];
-        if (targetDefStepId) {
-          const targetIndex = execSteps.findIndex(
-            (s) => s.definitionStepId === targetDefStepId,
-          );
-          if (targetIndex >= 0) {
-            for (let i = currentIndex + 1; i < targetIndex; i++) {
-              await updateExecutionStep(execSteps[i].id, { status: "skipped" });
-            }
-            currentIndex = targetIndex;
-            continue;
-          }
-        }
+      if (result.branchKey && stepDef.nextStepMapping?.[result.branchKey]) {
+        currentStepId = stepDef.nextStepMapping[result.branchKey];
+      } else {
+        currentStepId = stepDef.next;
       }
-      currentIndex++;
     }
 
     await updateExecution(input.executionId, {

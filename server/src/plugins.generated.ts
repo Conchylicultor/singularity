@@ -16,6 +16,7 @@ import appsForgeCatalogTablesIndexesPlugin from "@plugins/apps/plugins/forge/plu
 import appsForgeCatalogTablesRowCountPlugin from "@plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/row-count/server";
 import appsForgeCatalogTablesSampleRowsPlugin from "@plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/sample-rows/server";
 import appsWorkflowsEnginePlugin from "@plugins/apps/plugins/workflows/plugins/engine/server";
+import appsWorkflowsStepsBranchPlugin from "@plugins/apps/plugins/workflows/plugins/steps/plugins/branch/server";
 import authGooglePlugin from "@plugins/auth/plugins/google/server";
 import authNotionPlugin from "@plugins/auth/plugins/notion/server";
 import authPlugin from "@plugins/auth/server";
@@ -115,6 +116,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (appsForgeCatalogTablesRowCountPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (appsForgeCatalogTablesSampleRowsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (appsWorkflowsEnginePlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEventsPlugin, infraJobsPlugin];
+(appsWorkflowsStepsBranchPlugin as ServerPluginDefinition).dependsOn = [appsWorkflowsEnginePlugin];
 (authGooglePlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (authNotionPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (backupGoogleDrivePlugin as ServerPluginDefinition).dependsOn = [authPlugin, backupPlugin, configPlugin];
@@ -203,6 +205,7 @@ export const plugins: ServerPluginDefinition[] = [
   appsForgeCatalogTablesRowCountPlugin,
   appsForgeCatalogTablesSampleRowsPlugin,
   appsWorkflowsEnginePlugin,
+  appsWorkflowsStepsBranchPlugin,
   authGooglePlugin,
   authNotionPlugin,
   authPlugin,

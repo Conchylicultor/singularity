@@ -253,11 +253,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `GET /api/workflows/executions/:id`
             - `DELETE /api/workflows/executions/:id`
             - `POST /api/workflows/executions/:execId/steps/:stepId/submit`
+          - Slot contributors: `branch`
         - **`shell`** — App shell for the workflows app. Registers the /workflows app entry and defines WorkflowsApp.Sidebar/Toolbar slots.
           - Exports (web):
             - Values: `WorkflowsApp`
           - Contributes:
             - `Apps.App` "Workflows" → `WorkflowsLayout`
+        - **`steps`** — Umbrella for workflow step type plugins.
+          - Plugins:
+            - **`branch`** — Branch step type for workflows. Routes execution based on a field value from the previous step's output. Branch step type for workflows. Routes execution based on a field value from the previous step's output.
+              - Contributes:
+                - `Workflows.StepType` "Branch"
+              - Server:
+                - Register: `defineStepExecutor('branch')`
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
   - Exports (web):
