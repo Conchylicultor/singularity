@@ -3,7 +3,6 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   getSmoothStepPath,
-  useReactFlow,
   type Edge,
   type EdgeProps,
 } from "@xyflow/react";
@@ -28,7 +27,6 @@ export function InsertableEdge({
   markerEnd,
   data,
 }: EdgeProps<InsertableEdgeType>) {
-  const { getZoom } = useReactFlow();
   const [hovered, setHovered] = useState(false);
   const [inserting, setInserting] = useState(false);
 
@@ -89,7 +87,7 @@ export function InsertableEdge({
         <div
           className="nodrag nopan pointer-events-auto absolute"
           style={{
-            transform: `translate(-50%, -50%) scale(${1 / getZoom()})`,
+            transform: `translate(-50%, -50%)`,
             left: labelX,
             top: labelY,
             opacity: hovered ? 1 : 0,
