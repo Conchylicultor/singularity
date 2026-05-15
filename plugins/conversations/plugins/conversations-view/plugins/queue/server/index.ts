@@ -17,6 +17,7 @@ import { validatePinJob } from "./internal/validate-pin-job";
 import { advancePinJob } from "./internal/advance-pin-job";
 import { taskStatusPinJob } from "./internal/task-status-pin-job";
 import { queueRanksResource } from "./internal/resource";
+import { repairBlockedOrder } from "./internal/repair-blocked-order";
 
 export { conversationsQueue } from "./internal/tables";
 export { queueRanksResource } from "./internal/resource";
@@ -43,4 +44,5 @@ export default {
     "POST /api/conversations-queue/step-down": handleStepDown,
     "POST /api/conversations-queue/rerank": handleRerank,
   },
+  onReady: repairBlockedOrder,
 } satisfies ServerPluginDefinition;
