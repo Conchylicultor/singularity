@@ -195,6 +195,10 @@
       "name": "@singularity/plugin-apps-workflows-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/workflows/plugins/steps": {
+      "name": "@singularity/plugin-apps-workflows-steps",
+      "version": "0.0.1",
+    },
     "plugins/attempt-view": {
       "name": "@singularity/plugin-attempt-view",
       "version": "0.0.1",
@@ -1774,6 +1778,8 @@
     "@singularity/plugin-apps-workflows-engine": ["@singularity/plugin-apps-workflows-engine@workspace:plugins/apps/plugins/workflows/plugins/engine"],
 
     "@singularity/plugin-apps-workflows-shell": ["@singularity/plugin-apps-workflows-shell@workspace:plugins/apps/plugins/workflows/plugins/shell"],
+
+    "@singularity/plugin-apps-workflows-steps": ["@singularity/plugin-apps-workflows-steps@workspace:plugins/apps/plugins/workflows/plugins/steps"],
 
     "@singularity/plugin-attempt-view": ["@singularity/plugin-attempt-view@workspace:plugins/attempt-view"],
 
