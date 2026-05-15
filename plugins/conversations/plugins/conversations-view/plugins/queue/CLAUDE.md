@@ -14,7 +14,7 @@
   - `ConversationsView.View` "Queue" → `QueueView`
 - Server:
   - Register: `defineJob('queue.seed-rank')`, `defineJob('queue.validate-pin')`, `defineJob('queue.advance-pin')`, `defineJob('queue.task-status-pin')`
-  - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `conversations.userTurnSent`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`, `tasks-core.listBlockingDepIds`, `tasks-core.taskStatusChanged`
+  - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `conversations.userTurnSent`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`, `tasks-core.listBlockingDepIds`, `tasks-core.listDependentIds`, `tasks-core.taskStatusChanged`
   - Resources: `queue-ranks` (push)
   - `POST /api/conversations-queue/reorder`
   - `POST /api/conversations-queue/promote`
