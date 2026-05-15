@@ -45,27 +45,17 @@ export function InsertableEdge({
       if (!data || inserting) return;
       setInserting(true);
       try {
-        const res = await fetch("/api/tasks", {
+        const res = await fetch("/api/tasks/insert-between", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            parentId: data.targetParentId,
-            dependencies: [data.sourceTaskId],
+            sourceTaskId: data.sourceTaskId,
+            targetTaskId: data.targetTaskId,
+            targetParentId: data.targetParentId,
           }),
         });
         if (!res.ok) return;
         const newTask = (await res.json()) as { id: string };
-
-        await fetch(
-          `/api/tasks/${data.targetTaskId}/dependencies/${data.sourceTaskId}`,
-          { method: "DELETE" },
-        );
-
-        await fetch(`/api/tasks/${data.targetTaskId}/dependencies`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ dependsOnTaskId: newTask.id }),
-        });
 
         data.onNavigate(newTask.id);
       } finally {

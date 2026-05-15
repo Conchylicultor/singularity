@@ -245,8 +245,29 @@ function sendJson(ws: ServerWebSocket<WsData>, obj: unknown): void {
 }
 
 let flushScheduled = false;
+let batchDepth = 0;
+
+export async function withNotifyBatch<T>(fn: () => Promise<T>): Promise<T> {
+  batchDepth++;
+  try {
+    return await fn();
+  } finally {
+    batchDepth--;
+    if (batchDepth === 0 && !flushScheduled) {
+      for (const entry of registry.values()) {
+        if (entry.pendingNotifies.size > 0) {
+          flushScheduled = true;
+          queueMicrotask(() => { void flushNotifies(); });
+          break;
+        }
+      }
+    }
+  }
+}
+
 function scheduleNotify(entry: RegistryEntry, params: ResourceParams): void {
   entry.pendingNotifies.set(paramsKey(params), params);
+  if (batchDepth > 0) return;
   if (flushScheduled) return;
   flushScheduled = true;
   queueMicrotask(() => { void flushNotifies(); });

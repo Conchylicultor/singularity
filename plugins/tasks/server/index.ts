@@ -11,6 +11,7 @@ import {
   handleAddDependency,
   handleRemoveDependency,
 } from "./internal/handle-dependencies";
+import { handleInsertBetween } from "./internal/handle-insert-between";
 import { handleRepoInfo } from "./internal/handle-repo-info";
 import { handleTaskAttachments } from "./internal/handle-task-attachments";
 import { pushIngestJob, runInitialReconcile } from "./internal/push-watcher";
@@ -32,6 +33,7 @@ export default {
     "GET /api/tasks": handleList,
     "POST /api/tasks": handleCreate,
     "POST /api/tasks/chain": handleCreateChain,
+    "POST /api/tasks/insert-between": handleInsertBetween,
     "GET /api/tasks/:id": handleGet,
     "PATCH /api/tasks/:id": handleUpdate,
     "DELETE /api/tasks/:id": handleDelete,

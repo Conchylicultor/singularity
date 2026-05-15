@@ -260,6 +260,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
 - **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
   - `/api/tasks (GET, POST)`
   - `/api/tasks/chain (POST)`
+  - `/api/tasks/insert-between (POST)`
   - `/api/tasks/:id (GET, PATCH, DELETE)`
   - `/api/tasks/:id/attachments (GET)`
   - `/api/tasks/:id/auto-start (POST, DELETE)`

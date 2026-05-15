@@ -19,6 +19,7 @@
   - `GET /api/tasks`
   - `POST /api/tasks`
   - `POST /api/tasks/chain`
+  - `POST /api/tasks/insert-between`
   - `GET /api/tasks/:id`
   - `PATCH /api/tasks/:id`
   - `DELETE /api/tasks/:id`
