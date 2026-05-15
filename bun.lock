@@ -771,6 +771,10 @@
       "name": "@singularity/plugin-primitives-collapsible",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/color-picker": {
+      "name": "@singularity/plugin-primitives-color-picker",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/command-palette": {
       "name": "@singularity/plugin-primitives-command-palette",
       "version": "0.0.1",
@@ -2038,6 +2042,8 @@
     "@singularity/plugin-primitives-breadcrumb": ["@singularity/plugin-primitives-breadcrumb@workspace:plugins/primitives/plugins/breadcrumb"],
 
     "@singularity/plugin-primitives-collapsible": ["@singularity/plugin-primitives-collapsible@workspace:plugins/primitives/plugins/collapsible"],
+
+    "@singularity/plugin-primitives-color-picker": ["@singularity/plugin-primitives-color-picker@workspace:plugins/primitives/plugins/color-picker"],
 
     "@singularity/plugin-primitives-command-palette": ["@singularity/plugin-primitives-command-palette@workspace:plugins/primitives/plugins/command-palette"],
 

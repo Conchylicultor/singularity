@@ -147,6 +147,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "primitives/plugins/avatar", loader: () => import("@plugins/primitives/plugins/avatar/web") },
   { name: "primitives/plugins/breadcrumb", loader: () => import("@plugins/primitives/plugins/breadcrumb/web") },
   { name: "primitives/plugins/collapsible", loader: () => import("@plugins/primitives/plugins/collapsible/web") },
+  { name: "primitives/plugins/color-picker", loader: () => import("@plugins/primitives/plugins/color-picker/web") },
   { name: "primitives/plugins/command-palette", loader: () => import("@plugins/primitives/plugins/command-palette/web") },
   { name: "primitives/plugins/copy-to-clipboard", loader: () => import("@plugins/primitives/plugins/copy-to-clipboard/web") },
   { name: "primitives/plugins/cursor-pagination", loader: () => import("@plugins/primitives/plugins/cursor-pagination/web") },

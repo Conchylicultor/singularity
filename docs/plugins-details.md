@@ -1314,6 +1314,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `CollapsibleChevronProps`, `CollapsibleContentProps`, `CollapsibleProps`, `CollapsibleTriggerProps`, `UseCollapsibleOptions`, `UseCollapsibleReturn`
         - Values: `Collapsible`, `CollapsibleChevron`, `CollapsibleContent`, `CollapsibleTrigger`, `useCollapsible`
+    - **`color-picker`** — Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.
+      - Exports (web):
+        - Types: `AlphaSliderProps`, `ColorAreaProps`, `ColorInputProps`, `ColorPickerPopoverProps`, `ColorPickerProps`, `HueSliderProps`, `SwatchGridProps`
+        - Values: `AlphaSlider`, `Color`, `ColorArea`, `ColorInput`, `ColorPicker`, `ColorPickerPopover`, `HueSlider`, `MAX_CHROMA`, `SwatchGrid`
     - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
       - Defines:
         - Slots: `CommandPalette.Item`
