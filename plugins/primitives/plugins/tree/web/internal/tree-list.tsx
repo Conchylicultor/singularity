@@ -177,7 +177,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     await Promise.all(
       nodesWithChildren
         .filter((r) => r.expanded !== next)
-        .map((r) => wrappedOnToggleExpanded(r.id, next)),
+        .map(async (r) => wrappedOnToggleExpanded(r.id, next)),
     );
   }, [nodesWithChildren, allExpanded, wrappedOnToggleExpanded]);
 

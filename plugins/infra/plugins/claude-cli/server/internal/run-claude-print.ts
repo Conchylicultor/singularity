@@ -64,13 +64,11 @@ export async function runClaudePrint(input: RunClaudePrintInput): Promise<string
     // replacement should already cover this).
     const proc = Bun.spawn([CLAUDE_BIN, ...args], {
       cwd: "/tmp",
-      stdin: "pipe",
+      stdin: Buffer.from(input.prompt),
       stdout: "pipe",
       stderr: "pipe",
       env: cleanEnv,
     });
-    await proc.stdin.write(input.prompt);
-    await proc.stdin.end();
 
     const timer = setTimeout(() => proc.kill(), timeoutMs);
     try {

@@ -127,6 +127,7 @@ const baseConfigs: Linter.Config[] = [
       "@typescript-eslint/no-unnecessary-condition": ["warn", {
         allowConstantLoopConditions: true,
       }],
+      "@typescript-eslint/await-thenable": "error",
       "promise-safety/no-floating-promises": "error",
       "promise-safety/no-bare-catch": "error",
       "react-hooks/rules-of-hooks": "error",

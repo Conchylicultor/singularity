@@ -339,13 +339,14 @@ export const tmuxRuntime: ConversationRuntime = {
     // deletes it after paste. tmux buffers are isolated from the system
     // clipboard.
     const bufferName = `singularity-send-${conversationId}`;
+    // Pass text as a Buffer — not a pipe. FileSink.write() returns a number
+    // (not a Promise), so `await sink.write()` is a no-op and data can be
+    // lost before end() closes the pipe. Buffer stdin is atomic.
     const load = Bun.spawn([TMUX, "load-buffer", "-b", bufferName, "-"], {
-      stdin: "pipe",
+      stdin: Buffer.from(text),
       stdout: "pipe",
       stderr: "pipe",
     });
-    await load.stdin.write(text);
-    await load.stdin.end();
     const loadExit = await load.exited;
     if (loadExit !== 0) {
       const stderr = await new Response(load.stderr).text();
