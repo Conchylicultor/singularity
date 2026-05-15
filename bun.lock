@@ -403,6 +403,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-agent",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-ask-user-question",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/bash": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-bash",
       "version": "0.0.1",
@@ -1880,6 +1884,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-add-task": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-add-task@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/add-task"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-agent": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-agent@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-ask-user-question": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-ask-user-question@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/ask-user-question"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-bash": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-bash@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/bash"],
 

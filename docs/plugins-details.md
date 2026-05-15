@@ -682,7 +682,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Contributes:
                 - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
                 - `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
-              - Slot contributors: `add-task`, `agent`, `bash`, `edit`, `read`, `skill`, `write`
+              - Slot contributors: `add-task`, `agent`, `ask-user-question`, `bash`, `edit`, `read`, `skill`, `write`
               - Plugins:
                 - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
                   - Contributes:
@@ -691,6 +691,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - Contributes:
                     - `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`
                     - `Pane.Register` "agent-report"
+                - **`ask-user-question`** — Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.
+                  - Contributes:
+                    - `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`
                 - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
                   - Contributes:
                     - `JsonlViewerTool.Renderer` "Bash" → `BashToolView`
