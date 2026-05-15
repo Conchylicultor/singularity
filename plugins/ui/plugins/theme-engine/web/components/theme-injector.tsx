@@ -1,4 +1,4 @@
-import { createContext, useContext, useLayoutEffect } from "react";
+import { createContext, useContext, useLayoutEffect, useMemo } from "react";
 import { useConfigValues } from "@plugins/config/web";
 import { ThemeEngine } from "../slots";
 import type {
@@ -13,7 +13,8 @@ const DEFAULT_ADJUSTMENT: ColorAdjustment = {
   saturationScale: 1,
   lightnessScale: 1,
 };
-const ColorAdjustContext = createContext<ColorAdjustment>(DEFAULT_ADJUSTMENT);
+export const ColorAdjustContext =
+  createContext<ColorAdjustment>(DEFAULT_ADJUSTMENT);
 
 function buildVarsBlock(
   descriptor: TokenGroupContribution["descriptor"],
@@ -49,12 +50,33 @@ function GroupStyle({ group }: { group: TokenGroupContribution }) {
   const presets = group.usePresets();
   const config = useConfigValues(group.configDescriptor, group.pluginId) as {
     preset: string;
+    overrides?: string;
   };
   const active =
     presets.find((p) => p.id === config.preset) ?? presets[0] ?? null;
 
+  const overrides = useMemo(() => {
+    try {
+      return JSON.parse(config.overrides || "{}") as {
+        light?: Record<string, string>;
+        dark?: Record<string, string>;
+      };
+    } catch {
+      return {};
+    }
+  }, [config.overrides]);
+
+  const mergedLight = useMemo(
+    () => (active ? { ...active.light, ...(overrides.light ?? {}) } : null),
+    [active, overrides.light],
+  );
+  const mergedDark = useMemo(
+    () => (active ? { ...active.dark, ...(overrides.dark ?? {}) } : null),
+    [active, overrides.dark],
+  );
+
   useLayoutEffect(() => {
-    if (!active) return;
+    if (!mergedLight || !mergedDark) return;
     const id = `theme-engine-${group.id}`;
     let el = document.getElementById(id) as HTMLStyleElement | null;
     if (!el) {
@@ -64,15 +86,15 @@ function GroupStyle({ group }: { group: TokenGroupContribution }) {
     }
     const light = buildVarsBlock(
       group.descriptor,
-      transformValues(active.light, adjustment),
+      transformValues(mergedLight, adjustment),
     );
     const dark = buildVarsBlock(
       group.descriptor,
-      transformValues(active.dark, adjustment),
+      transformValues(mergedDark, adjustment),
     );
     el.textContent = `:root {\n${light}\n}\n.dark {\n${dark}\n}`;
     return () => el.remove();
-  }, [active, group.descriptor, group.id, adjustment]);
+  }, [mergedLight, mergedDark, group.descriptor, group.id, adjustment]);
 
   return null;
 }

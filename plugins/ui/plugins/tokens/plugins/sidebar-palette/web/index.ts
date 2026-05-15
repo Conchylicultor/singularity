@@ -1,9 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { sidebarPaletteGroup } from "../shared";
 import { sidebarPaletteConfig } from "./internal/config";
 import { SidebarPalette } from "./slots";
 import { SidebarPalettePicker } from "./components/sidebar-palette-picker";
+import { SidebarPaletteSection } from "./components/sidebar-palette-section";
 import { builtInPresets } from "./presets";
 
 export { SidebarPalette } from "./slots";
@@ -27,6 +29,11 @@ export default {
       componentId: "sidebar-palette",
       componentLabel: "Sidebar Palette",
       component: SidebarPalettePicker,
+    }),
+    ThemeCustomizer.Section({
+      id: "sidebar-palette",
+      label: "Sidebar Palette",
+      component: SidebarPaletteSection,
     }),
   ],
 } satisfies PluginDefinition;

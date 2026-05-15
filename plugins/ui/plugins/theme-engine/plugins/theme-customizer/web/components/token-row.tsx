@@ -1,0 +1,114 @@
+import { useRef, useState } from "react";
+import { MdUndo } from "react-icons/md";
+import {
+  Color,
+  ColorPickerPopover,
+} from "@plugins/primitives/plugins/color-picker/web";
+
+export interface TokenRowProps {
+  label: string;
+  cssVar: string;
+  value: string;
+  isOverridden: boolean;
+  onValueChange: (newValue: string) => void;
+  onReset: () => void;
+  search: string;
+}
+
+export function TokenRow({
+  label,
+  cssVar,
+  value,
+  isOverridden,
+  onValueChange,
+  onReset,
+  search,
+}: TokenRowProps): React.ReactElement | null {
+  const [textValue, setTextValue] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Search filtering
+  if (search) {
+    const q = search.toLowerCase();
+    if (
+      !label.toLowerCase().includes(q) &&
+      !cssVar.toLowerCase().includes(q)
+    ) {
+      return null;
+    }
+  }
+
+  const color = Color.fromCss(value);
+  const isColor = color !== null;
+
+  const handleColorChange = (newHex: string) => {
+    const c = Color.fromCss(newHex);
+    if (!c) return;
+    onValueChange(c.toOklch());
+  };
+
+  const handleTextBlur = () => {
+    if (textValue !== value) {
+      onValueChange(textValue);
+    }
+  };
+
+  const handleTextKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      inputRef.current?.blur();
+    }
+  };
+
+  // Keep local text state in sync with external value changes
+  if (!isColor && textValue !== value) {
+    setTextValue(value);
+  }
+
+  return (
+    <div className="flex items-center gap-2 py-1 px-2 rounded-md hover:bg-muted/50 group">
+      {isColor ? (
+        <ColorPickerPopover
+          value={color.toHex()}
+          onChange={handleColorChange}
+        />
+      ) : null}
+
+      <div className="flex flex-col flex-1 min-w-0">
+        <span className="text-xs font-medium truncate">{label}</span>
+        <span className="text-[10px] text-muted-foreground truncate font-mono">
+          {cssVar}
+        </span>
+      </div>
+
+      {isColor ? (
+        <span className="text-xs font-mono text-muted-foreground tabular-nums">
+          {color.toHex()}
+        </span>
+      ) : (
+        <input
+          ref={inputRef}
+          type="text"
+          className="text-xs font-mono bg-transparent border border-transparent rounded px-1 py-0.5 text-right max-w-[160px] focus:border-border focus:bg-background focus:outline-none"
+          value={textValue}
+          onChange={(e) => setTextValue(e.target.value)}
+          onBlur={handleTextBlur}
+          onKeyDown={handleTextKeyDown}
+        />
+      )}
+
+      <button
+        type="button"
+        onClick={onReset}
+        title="Reset to preset value"
+        className={`shrink-0 text-muted-foreground hover:text-foreground transition-opacity ${
+          isOverridden
+            ? "opacity-100"
+            : "opacity-0 group-hover:opacity-30 pointer-events-none"
+        }`}
+        aria-hidden={!isOverridden}
+      >
+        <MdUndo size={14} />
+      </button>
+    </div>
+  );
+}

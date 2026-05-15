@@ -1,9 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { colorPaletteGroup } from "../shared";
 import { colorPaletteConfig } from "./internal/config";
 import { ColorPalette } from "./slots";
 import { ColorPalettePicker } from "./components/color-palette-picker";
+import { ColorPaletteSection } from "./components/color-palette-section";
 import { builtInPresets } from "./presets";
 
 export { ColorPalette } from "./slots";
@@ -27,6 +29,11 @@ export default {
       componentId: "color-palette",
       componentLabel: "Color Palette",
       component: ColorPalettePicker,
+    }),
+    ThemeCustomizer.Section({
+      id: "color-palette",
+      label: "Color Palette",
+      component: ColorPaletteSection,
     }),
   ],
 } satisfies PluginDefinition;

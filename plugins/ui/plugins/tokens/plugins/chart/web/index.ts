@@ -1,9 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { chartGroup } from "../shared";
 import { chartConfig } from "./internal/config";
 import { Chart } from "./slots";
 import { ChartPicker } from "./components/chart-picker";
+import { ChartSection } from "./components/chart-section";
 import { builtInPresets } from "./presets";
 
 export { Chart } from "./slots";
@@ -27,6 +29,11 @@ export default {
       componentId: "chart",
       componentLabel: "Chart",
       component: ChartPicker,
+    }),
+    ThemeCustomizer.Section({
+      id: "chart",
+      label: "Chart",
+      component: ChartSection,
     }),
   ],
 } satisfies PluginDefinition;

@@ -20,6 +20,7 @@
   - `Shadow.Preset` "Heavy"
   - `ThemeEngine.TokenGroup` "Shadow"
   - `ThemeEngine.VariantGroup` "Shadow" → `ShadowPicker`
+  - `ThemeCustomizer.Section` "shadow" → `ShadowSection`
 - Server:
   - Uses: `config.Config`
 

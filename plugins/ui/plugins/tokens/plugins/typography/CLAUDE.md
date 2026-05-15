@@ -17,6 +17,7 @@
   - `Typography.Preset` "Default"
   - `ThemeEngine.TokenGroup` "Typography"
   - `ThemeEngine.VariantGroup` "Typography" → `TypographyPicker`
+  - `ThemeCustomizer.Section` "typography" → `TypographySection`
 - Server:
   - Uses: `config.Config`
 

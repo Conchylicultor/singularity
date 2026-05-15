@@ -326,6 +326,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
         - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.
     - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
+      - Plugins:
+        - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
     - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
       - Plugins:
         - **`chart`** — Chart color token group with switchable presets.

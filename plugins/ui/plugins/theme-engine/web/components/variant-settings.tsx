@@ -1,4 +1,6 @@
+import { MdTune } from "react-icons/md";
 import { useConfigValues, setConfigValue } from "@plugins/config/web";
+import { getBasePath } from "@plugins/primitives/plugins/pane/web";
 import { themeEngineConfig } from "../../core";
 import { ThemeEngine } from "../slots";
 
@@ -62,7 +64,20 @@ export function VariantSettings() {
 
   return (
     <div className="flex flex-col gap-6">
-      <GlobalPresetPicker />
+      <div className="flex items-start justify-between gap-4">
+        <GlobalPresetPicker />
+        <button
+          className="flex items-center gap-1.5 px-3 py-1 text-sm rounded-md border border-border text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors shrink-0"
+          onClick={() => {
+            const url = `${getBasePath()}/theme-customizer`;
+            window.history.pushState(null, "", url);
+            window.dispatchEvent(new PopStateEvent("popstate"));
+          }}
+        >
+          <MdTune className="size-4" />
+          Customize
+        </button>
+      </div>
       {groups.length > 0 && (
         <div className="flex flex-col gap-4">
           {groups.map((g) => (

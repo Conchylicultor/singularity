@@ -1091,6 +1091,10 @@
       "name": "@singularity/plugin-ui-theme-engine",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/theme-engine/plugins/theme-customizer": {
+      "name": "@singularity/plugin-ui-theme-engine-theme-customizer",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens": {
       "name": "@singularity/plugin-ui-tokens",
       "version": "0.0.1",
@@ -2208,6 +2212,8 @@
     "@singularity/plugin-ui-segmented-progress-bar-segmented": ["@singularity/plugin-ui-segmented-progress-bar-segmented@workspace:plugins/ui/plugins/segmented-progress-bar/plugins/segmented"],
 
     "@singularity/plugin-ui-theme-engine": ["@singularity/plugin-ui-theme-engine@workspace:plugins/ui/plugins/theme-engine"],
+
+    "@singularity/plugin-ui-theme-engine-theme-customizer": ["@singularity/plugin-ui-theme-engine-theme-customizer@workspace:plugins/ui/plugins/theme-engine/plugins/theme-customizer"],
 
     "@singularity/plugin-ui-tokens": ["@singularity/plugin-ui-tokens@workspace:plugins/ui/plugins/tokens"],
 

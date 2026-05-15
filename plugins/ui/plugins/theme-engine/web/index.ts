@@ -13,6 +13,8 @@ export type {
   ColorTransformContribution,
 } from "./slots";
 export { ThemeScope } from "./components/theme-scope";
+export { ColorAdjustContext } from "./components/theme-injector";
+export { transformValues } from "./internal/transform";
 
 export default {
   id: "ui-theme-engine",

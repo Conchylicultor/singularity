@@ -1,9 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { useConfigValues } from "@plugins/config/web";
 import { colorAdjustConfig } from "./internal/config";
 import { ColorAdjust } from "./slots";
 import { ColorAdjustPicker } from "./components/color-adjust-picker";
+import { ColorAdjustSection } from "./components/color-adjust-section";
 import { builtInPresets } from "./presets";
 
 export { ColorAdjust } from "./slots";
@@ -33,6 +35,11 @@ export default {
       componentId: "color-adjust",
       componentLabel: "Color Adjust",
       component: ColorAdjustPicker,
+    }),
+    ThemeCustomizer.Section({
+      id: "color-adjust",
+      label: "Color Adjust",
+      component: ColorAdjustSection,
     }),
   ],
 } satisfies PluginDefinition;

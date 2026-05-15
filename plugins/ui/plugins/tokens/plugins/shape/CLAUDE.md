@@ -20,6 +20,7 @@
   - `Shape.Preset` "Pill"
   - `ThemeEngine.TokenGroup` "Shape"
   - `ThemeEngine.VariantGroup` "Shape" → `ShapePicker`
+  - `ThemeCustomizer.Section` "shape" → `ShapeSection`
 - Server:
   - Uses: `config.Config`
 

@@ -1,9 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { typographyGroup } from "../shared";
 import { typographyConfig } from "./internal/config";
 import { Typography } from "./slots";
 import { TypographyPicker } from "./components/typography-picker";
+import { TypographySection } from "./components/typography-section";
 import { builtInPresets } from "./presets";
 
 export { Typography } from "./slots";
@@ -27,6 +29,11 @@ export default {
       componentId: "typography",
       componentLabel: "Typography",
       component: TypographyPicker,
+    }),
+    ThemeCustomizer.Section({
+      id: "typography",
+      label: "Typography",
+      component: TypographySection,
     }),
   ],
 } satisfies PluginDefinition;

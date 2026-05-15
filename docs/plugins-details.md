@@ -450,7 +450,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/config/specs`
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
-  - Imported by: `auth`, `backup`, `build`, `chart`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-engine`, `turn-summary`, `typography`
+  - Imported by: `auth`, `backup`, `build`, `chart`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
   - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `review`, `theme-engine`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
@@ -1443,7 +1443,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `TypeMarker`
         - Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `parseUrl`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
-      - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `welcome`, `worktree-cleanup`
+      - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `worktree-cleanup`
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
       - Exports (web):
         - Values: `useDraft`
@@ -1804,13 +1804,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `defineTokenGroup`, `themeEngineConfig`
       - Exports (web):
         - Types: `ColorAdjustment`, `ColorTransformContribution`, `GlobalPresetContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`
-        - Values: `ThemeEngine`, `ThemeScope`
+        - Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `transformValues`
       - Contributes:
         - `Core.Root` → `ThemeInjector`
         - `Config.Section` "UI Themes" → `VariantSettings`
       - Server:
         - Uses: `config.Config`
       - Slot contributors: `chart`, `color-adjust`, `color-palette`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `typography`
+      - Plugins:
+        - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
+          - Exports (web):
+            - Types: `TokenRowProps`
+            - Values: `ThemeCustomizer`, `themeCustomizerPane`, `TokenRow`
+          - Contributes:
+            - `Pane.Register` "theme-customizer"
     - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
       - Contributes:
         - `ThemeEngine.GlobalPreset` "Default"
@@ -1830,6 +1837,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Chart.Preset` "Default"
             - `ThemeEngine.TokenGroup` "Chart"
             - `ThemeEngine.VariantGroup` "Chart" → `ChartPicker`
+            - `ThemeCustomizer.Section` "chart" → `ChartSection`
           - Server:
             - Uses: `config.Config`
         - **`color-adjust`** — Cross-cutting color adjustment transform for all color token groups.
@@ -1855,6 +1863,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `ColorAdjust.Preset` "Invert Hue"
             - `ThemeEngine.ColorTransform` "Color Transform"
             - `ThemeEngine.VariantGroup` "Color Adjust" → `ColorAdjustPicker`
+            - `ThemeCustomizer.Section` "color-adjust" → `ColorAdjustSection`
           - Server:
             - Uses: `config.Config`
         - **`color-palette`** — Color palette token group with switchable presets.
@@ -1872,6 +1881,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `ColorPalette.Preset` "Warm"
             - `ThemeEngine.TokenGroup` "Color Palette"
             - `ThemeEngine.VariantGroup` "Color Palette" → `ColorPalettePicker`
+            - `ThemeCustomizer.Section` "color-palette" → `ColorPaletteSection`
           - Server:
             - Uses: `config.Config`
         - **`shadow`** — Shadow token group with switchable presets.
@@ -1890,6 +1900,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Shadow.Preset` "Heavy"
             - `ThemeEngine.TokenGroup` "Shadow"
             - `ThemeEngine.VariantGroup` "Shadow" → `ShadowPicker`
+            - `ThemeCustomizer.Section` "shadow" → `ShadowSection`
           - Server:
             - Uses: `config.Config`
         - **`shape`** — Shape token group (border-radius) with switchable presets.
@@ -1908,6 +1919,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Shape.Preset` "Pill"
             - `ThemeEngine.TokenGroup` "Shape"
             - `ThemeEngine.VariantGroup` "Shape" → `ShapePicker`
+            - `ThemeCustomizer.Section` "shape" → `ShapeSection`
           - Server:
             - Uses: `config.Config`
         - **`sidebar-palette`** — Sidebar palette token group with switchable presets.
@@ -1924,6 +1936,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `SidebarPalette.Preset` "Warm"
             - `ThemeEngine.TokenGroup` "Sidebar Palette"
             - `ThemeEngine.VariantGroup` "Sidebar Palette" → `SidebarPalettePicker`
+            - `ThemeCustomizer.Section` "sidebar-palette" → `SidebarPaletteSection`
           - Server:
             - Uses: `config.Config`
         - **`typography`** — Typography token group (fonts, letter-spacing) with switchable presets.
@@ -1939,6 +1952,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Typography.Preset` "Default"
             - `ThemeEngine.TokenGroup` "Typography"
             - `ThemeEngine.VariantGroup` "Typography" → `TypographyPicker`
+            - `ThemeCustomizer.Section` "typography" → `TypographySection`
           - Server:
             - Uses: `config.Config`
 

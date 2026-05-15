@@ -18,6 +18,7 @@
   - `SidebarPalette.Preset` "Warm"
   - `ThemeEngine.TokenGroup` "Sidebar Palette"
   - `ThemeEngine.VariantGroup` "Sidebar Palette" → `SidebarPalettePicker`
+  - `ThemeCustomizer.Section` "sidebar-palette" → `SidebarPaletteSection`
 - Server:
   - Uses: `config.Config`
 

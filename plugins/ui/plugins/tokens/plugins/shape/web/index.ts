@@ -1,9 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { shapeGroup } from "../shared";
 import { shapeConfig } from "./internal/config";
 import { Shape } from "./slots";
 import { ShapePicker } from "./components/shape-picker";
+import { ShapeSection } from "./components/shape-section";
 import { builtInPresets } from "./presets";
 
 export { Shape } from "./slots";
@@ -27,6 +29,11 @@ export default {
       componentId: "shape",
       componentLabel: "Shape",
       component: ShapePicker,
+    }),
+    ThemeCustomizer.Section({
+      id: "shape",
+      label: "Shape",
+      component: ShapeSection,
     }),
   ],
 } satisfies PluginDefinition;

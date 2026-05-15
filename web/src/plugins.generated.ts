@@ -214,6 +214,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "ui/plugins/segmented-progress-bar/plugins/dots", loader: () => import("@plugins/ui/plugins/segmented-progress-bar/plugins/dots/web") },
   { name: "ui/plugins/segmented-progress-bar/plugins/segmented", loader: () => import("@plugins/ui/plugins/segmented-progress-bar/plugins/segmented/web") },
   { name: "ui/plugins/segmented-progress-bar", loader: () => import("@plugins/ui/plugins/segmented-progress-bar/web") },
+  { name: "ui/plugins/theme-engine/plugins/theme-customizer", loader: () => import("@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web") },
   { name: "ui/plugins/theme-engine", loader: () => import("@plugins/ui/plugins/theme-engine/web") },
   { name: "ui/plugins/tokens/plugins/chart", loader: () => import("@plugins/ui/plugins/tokens/plugins/chart/web") },
   { name: "ui/plugins/tokens/plugins/color-adjust", loader: () => import("@plugins/ui/plugins/tokens/plugins/color-adjust/web") },

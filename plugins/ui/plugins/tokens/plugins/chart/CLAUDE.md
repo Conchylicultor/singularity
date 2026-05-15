@@ -17,6 +17,7 @@
   - `Chart.Preset` "Default"
   - `ThemeEngine.TokenGroup` "Chart"
   - `ThemeEngine.VariantGroup` "Chart" → `ChartPicker`
+  - `ThemeCustomizer.Section` "chart" → `ChartSection`
 - Server:
   - Uses: `config.Config`
 

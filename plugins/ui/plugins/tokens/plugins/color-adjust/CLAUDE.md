@@ -27,6 +27,7 @@
   - `ColorAdjust.Preset` "Invert Hue"
   - `ThemeEngine.ColorTransform` "Color Transform"
   - `ThemeEngine.VariantGroup` "Color Adjust" → `ColorAdjustPicker`
+  - `ThemeCustomizer.Section` "color-adjust" → `ColorAdjustSection`
 - Server:
   - Uses: `config.Config`
 
