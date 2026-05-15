@@ -1,6 +1,7 @@
 import { useMemo } from "react";
+import { MdVerticalSplit } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { PaneInstanceContext, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
@@ -9,15 +10,34 @@ import { attemptsResource } from "@plugins/tasks/core";
 import { cn } from "@/lib/utils";
 import { attemptPane } from "../panes";
 
+function SideBySideButton({ convId }: { convId: string }) {
+  const openPane = useOpenPane();
+  return (
+    <button
+      type="button"
+      title="Open alongside"
+      onClick={(e) => {
+        e.stopPropagation();
+        openPane(conversationPane, { convId }, { mode: "push" });
+      }}
+      className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+    >
+      <MdVerticalSplit size={14} />
+    </button>
+  );
+}
+
 function AttemptSection({
   attempt,
   isCurrent,
   selectedConvId,
+  convInstanceId,
   onSelect,
 }: {
   attempt: AttemptWithConversations;
   isCurrent: boolean;
   selectedConvId: string | undefined;
+  convInstanceId: number | undefined;
   onSelect: (convId: string) => void;
 }) {
   const worktreeName = attempt.worktreePath.split("/").pop();
@@ -45,20 +65,30 @@ function AttemptSection({
           {attempt.conversations.map((c) => {
             const isActive = c.id === selectedConvId;
             return (
-              <li key={c.id}>
+              <li
+                key={c.id}
+                className={cn(
+                  "group flex items-center rounded",
+                  isActive ? "bg-accent" : "hover:bg-accent",
+                )}
+              >
                 <button
                   type="button"
                   onClick={() => onSelect(c.id)}
-                  className={cn(
-                    "hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm",
-                    isActive && "bg-accent",
-                  )}
+                  className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-sm"
                 >
                   <StatusDot colorClass={CONV_STATUS_DOT[c.status]} />
-                  <span className="flex-1 truncate">
+                  <span className="min-w-0 flex-1 truncate">
                     {c.title ?? "Starting…"}
                   </span>
                 </button>
+                {convInstanceId !== undefined && !isActive && (
+                  <div className="flex shrink-0 items-center pr-1 opacity-0 group-hover:opacity-100">
+                    <PaneInstanceContext.Provider value={convInstanceId}>
+                      <SideBySideButton convId={c.id} />
+                    </PaneInstanceContext.Provider>
+                  </div>
+                )}
               </li>
             );
           })}
@@ -84,6 +114,8 @@ export function AttemptPane() {
   }, [data, attempt]);
 
   const selectedConvId = conversationPane.useChainEntry()?.params.convId;
+  const convEntries = conversationPane.useChainEntries();
+  const convInstanceId = convEntries[convEntries.length - 1]?.instanceId;
 
   const handleSelect = (convId: string) =>
     openPane(conversationPane, { convId }, { mode: "push" });
@@ -125,6 +157,7 @@ export function AttemptPane() {
                 attempt={a}
                 isCurrent={a.id === attemptId}
                 selectedConvId={selectedConvId}
+                convInstanceId={convInstanceId}
                 onSelect={handleSelect}
               />
             ))}
