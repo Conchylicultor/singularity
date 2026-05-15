@@ -303,14 +303,6 @@
       "name": "@singularity/plugin-conversations-conversation-view-allow-monitor",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/conversation-view/plugins/blocked-by": {
-      "name": "@singularity/plugin-conversations-conversation-view-blocked-by",
-      "version": "0.0.1",
-    },
-    "plugins/conversations/plugins/conversation-view/plugins/blocking": {
-      "name": "@singularity/plugin-conversations-conversation-view-blocking",
-      "version": "0.0.1",
-    },
     "plugins/conversations/plugins/conversation-view/plugins/branch": {
       "name": "@singularity/plugin-conversations-conversation-view-branch",
       "version": "0.0.1",
@@ -349,6 +341,10 @@
     },
     "plugins/conversations/plugins/conversation-view/plugins/commits-graph": {
       "name": "@singularity/plugin-conversations-conversation-view-commits-graph",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/dependencies": {
+      "name": "@singularity/plugin-conversations-conversation-view-dependencies",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/drop-and-exit": {
@@ -1839,10 +1835,6 @@
 
     "@singularity/plugin-conversations-conversation-view-allow-monitor": ["@singularity/plugin-conversations-conversation-view-allow-monitor@workspace:plugins/conversations/plugins/conversation-view/plugins/allow-monitor"],
 
-    "@singularity/plugin-conversations-conversation-view-blocked-by": ["@singularity/plugin-conversations-conversation-view-blocked-by@workspace:plugins/conversations/plugins/conversation-view/plugins/blocked-by"],
-
-    "@singularity/plugin-conversations-conversation-view-blocking": ["@singularity/plugin-conversations-conversation-view-blocking@workspace:plugins/conversations/plugins/conversation-view/plugins/blocking"],
-
     "@singularity/plugin-conversations-conversation-view-branch": ["@singularity/plugin-conversations-conversation-view-branch@workspace:plugins/conversations/plugins/conversation-view/plugins/branch"],
 
     "@singularity/plugin-conversations-conversation-view-code": ["@singularity/plugin-conversations-conversation-view-code@workspace:plugins/conversations/plugins/conversation-view/plugins/code"],
@@ -1862,6 +1854,8 @@
     "@singularity/plugin-conversations-conversation-view-code-review": ["@singularity/plugin-conversations-conversation-view-code-review@workspace:plugins/conversations/plugins/conversation-view/plugins/code/plugins/review"],
 
     "@singularity/plugin-conversations-conversation-view-commits-graph": ["@singularity/plugin-conversations-conversation-view-commits-graph@workspace:plugins/conversations/plugins/conversation-view/plugins/commits-graph"],
+
+    "@singularity/plugin-conversations-conversation-view-dependencies": ["@singularity/plugin-conversations-conversation-view-dependencies@workspace:plugins/conversations/plugins/conversation-view/plugins/dependencies"],
 
     "@singularity/plugin-conversations-conversation-view-drop-and-exit": ["@singularity/plugin-conversations-conversation-view-drop-and-exit@workspace:plugins/conversations/plugins/conversation-view/plugins/drop-and-exit"],
 
