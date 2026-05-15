@@ -158,6 +158,12 @@ async function dispatch(
       // `jobs.resume` when the event fires or the timeout hits.
       return;
     }
+    const errObj = err instanceof Error ? err : new Error(String(err));
+    reportServerError({
+      message: `[jobs] ${payload.jobName} failed (attempt ${meta.attempt}): ${errObj.message}`,
+      stack: errObj.stack ?? null,
+      errorType: errObj.name,
+    });
     throw err;
   }
 

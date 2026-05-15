@@ -34,7 +34,19 @@ export function PushAndExitButton({
   const live = useConversation(conversation.id) ?? conversation;
   const { data: jobs } = useResource(pushAndExitResource);
   const job = jobs[conversation.id] as JobState | undefined;
-  const busy = job?.status === "running";
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (job) setPending(false);
+  }, [job]);
+
+  useEffect(() => {
+    if (!pending) return;
+    const timer = setTimeout(() => setPending(false), 10_000);
+    return () => clearTimeout(timer);
+  }, [pending]);
+
+  const busy = pending || job?.status === "running";
 
   const [draft, , clearDraft] = useDraft("conversation:prompt", "", { scope: conversation.id });
   const [sending, setSending] = useState(false);
@@ -145,15 +157,18 @@ export function PushAndExitButton({
         });
       }
     } else if (mode === "push-and-exit") {
+      setPending(true);
       try {
         const res = await fetch(
           `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
           { method: "POST" },
         );
         if (!res.ok && res.status !== 409) {
+          setPending(false);
           throw new Error(`HTTP ${res.status}`);
         }
       } catch (err) {
+        setPending(false);
         Shell.Toast({
           description: `Push & Exit failed: ${err instanceof Error ? err.message : String(err)}`,
           variant: "error",

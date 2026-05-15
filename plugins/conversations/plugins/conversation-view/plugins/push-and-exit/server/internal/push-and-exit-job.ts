@@ -58,63 +58,75 @@ export const pushAndExitJob = defineJob({
   event: z.never(),
   maxAttempts: 3,
   run: async ({ input: { conversationId }, ctx }) => {
-    await ctx.step("send-prompt", async () => {
-      await sendTurn(conversationId, PUSH_AND_EXIT_PROMPT);
-    });
+    try {
+      await ctx.step("send-prompt", async () => {
+        await sendTurn(conversationId, PUSH_AND_EXIT_PROMPT);
+      });
 
-    // Loop because `waitFor` resolves on the FIRST end_turn after registration:
-    // if Claude was mid-flow when push-and-exit was clicked, that end_turn
-    // belongs to the previous user input, not to our injected prompt. Skip
-    // any turn whose JSONL position precedes our prompt and wait again, until
-    // we see one written after the prompt landed (or the deadline expires).
-    const deadline = Date.now() + FINAL_TURN_TIMEOUT_MS;
-    let foundOurs = false;
-    let attempt = 0;
-    while (true) {
-      attempt++;
-      const remaining = deadline - Date.now();
-      if (remaining <= 0) break;
-      const candidate = await ctx.waitFor<ConversationTurnCompletedPayload>(
-        conversationTurnCompleted,
-        {
-          where: { conversationId },
-          timeoutMs: remaining,
-          name: `wait-turn-${attempt}`,
-        },
-      );
-      if (!candidate) break;
-      const isOurs = await ctx.step(`check-anchor-${attempt}`, () =>
-        endTurnIsAfterPushPrompt(conversationId, candidate.messageId),
-      );
-      if (isOurs) {
-        foundOurs = true;
-        break;
-      }
-    }
-
-    if (!foundOurs) {
-      await ctx.step("flag-timeout", () =>
-        setStatus(
-          conversationId,
-          "flag",
-          "Claude didn't end its turn within 10 minutes.",
-        ),
-      );
-      return;
-    }
-
-    // The model end_turned in response to our prompt. If a tool already
-    // fired, status is now "clean" or "flag" and we're done. If status is
-    // still "running", the model finished without calling either tool.
-    await ctx.step("verdict", async () => {
-      const current = await readStatus(conversationId);
-      if (current === "running") {
-        await setStatus(
-          conversationId,
-          "flag",
-          "Claude ended the turn without calling exit_clean or flag_raise.",
+      // Loop because `waitFor` resolves on the FIRST end_turn after registration:
+      // if Claude was mid-flow when push-and-exit was clicked, that end_turn
+      // belongs to the previous user input, not to our injected prompt. Skip
+      // any turn whose JSONL position precedes our prompt and wait again, until
+      // we see one written after the prompt landed (or the deadline expires).
+      const deadline = Date.now() + FINAL_TURN_TIMEOUT_MS;
+      let foundOurs = false;
+      let attempt = 0;
+      while (true) {
+        attempt++;
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) break;
+        const candidate = await ctx.waitFor<ConversationTurnCompletedPayload>(
+          conversationTurnCompleted,
+          {
+            where: { conversationId },
+            timeoutMs: remaining,
+            name: `wait-turn-${attempt}`,
+          },
         );
+        if (!candidate) break;
+        const isOurs = await ctx.step(`check-anchor-${attempt}`, () =>
+          endTurnIsAfterPushPrompt(conversationId, candidate.messageId),
+        );
+        if (isOurs) {
+          foundOurs = true;
+          break;
+        }
       }
-    });
+
+      if (!foundOurs) {
+        await ctx.step("flag-timeout", async () => {
+          const current = await readStatus(conversationId);
+          if (current === "running") {
+            await setStatus(
+              conversationId,
+              "flag",
+              "Claude didn't end its turn within 10 minutes.",
+            );
+          }
+        });
+        return;
+      }
+
+      // The model end_turned in response to our prompt. If a tool already
+      // fired, status is now "clean" or "flag" and we're done. If status is
+      // still "running", the model finished without calling either tool.
+      await ctx.step("verdict", async () => {
+        const current = await readStatus(conversationId);
+        if (current === "running") {
+          await setStatus(
+            conversationId,
+            "flag",
+            "Claude ended the turn without calling exit_clean or flag_raise.",
+          );
+        }
+      });
+    } catch (err) {
+      // On last attempt, transition to error so the UI isn't stuck at "Pushing..."
+      if (ctx.attempt >= 3) {
+        const msg = err instanceof Error ? err.message : String(err);
+        await setStatus(conversationId, "error", `Push failed: ${msg}`);
+      }
+      throw err;
+    }
   },
 });

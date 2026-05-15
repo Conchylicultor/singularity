@@ -12,6 +12,23 @@ export default {
   id: "push-and-exit",
   name: "Push and Exit",
   contributions: [Resource.Declare(pushAndExitResource)],
+  onReady: async () => {
+    const stale = await db
+      .select({ id: _pushAndExitJobs.conversationId })
+      .from(_pushAndExitJobs)
+      .where(eq(_pushAndExitJobs.status, "running"));
+    if (stale.length > 0) {
+      await db
+        .update(_pushAndExitJobs)
+        .set({
+          status: "error" as const,
+          detail: "Server restarted while push was in progress.",
+          updatedAt: new Date(),
+        })
+        .where(eq(_pushAndExitJobs.status, "running"));
+      pushAndExitResource.notify();
+    }
+  },
   httpRoutes: {
     "POST /api/conversations/:id/push-and-exit": async (_req, { id }) => {
       const existing = await db

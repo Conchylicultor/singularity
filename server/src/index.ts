@@ -4,6 +4,7 @@ import { plugins } from "./plugins";
 import { notificationsWsHandler, handleResourceHttp } from "./resources";
 import { topoSortPlugins } from "./topo";
 import { collectContributions } from "./contributions";
+import { reportServerError } from "./error-reporter";
 
 // Phase 1 — register: sequential, topo-sorted. Each plugin's `register`
 // array holds Registration tokens returned by helpers like `Mcp.tool`,
@@ -118,6 +119,25 @@ registerHttpRoute("GET /api/resources/:key", handleResourceHttp);
 const socketPath = Bun.env.SOCKET_PATH;
 if (!socketPath) throw new Error("SOCKET_PATH env var is required");
 
+async function safeHandle(
+  handler: HttpHandler,
+  req: Request,
+  params: Record<string, string>,
+  pathname: string,
+): Promise<Response> {
+  try {
+    return await handler(req, params);
+  } catch (err) {
+    const errObj = err instanceof Error ? err : new Error(String(err));
+    reportServerError({
+      message: `[http] ${req.method} ${pathname}: ${errObj.message}`,
+      stack: errObj.stack ?? null,
+      errorType: errObj.name,
+    });
+    return Response.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
 const endSocketBind = profilerStart("socketBind", "socketBind", "Socket Bind");
 Bun.serve<WsData>({
   unix: socketPath,
@@ -137,14 +157,14 @@ Bun.serve<WsData>({
     // HTTP routing: literal fast-path, then :param matcher.
     const literal = literalHttpRoutes[`${req.method} ${url.pathname}`];
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-    if (literal) return literal(req, {});
+    if (literal) return safeHandle(literal, req, {}, url.pathname);
 
     const matched = matchSegments(
       url.pathname,
       paramHttpRoutes,
       (r) => (r as HttpParamRoute).method === req.method,
     );
-    if (matched) return matched.handler(req, matched.params);
+    if (matched) return safeHandle(matched.handler, req, matched.params, url.pathname);
 
     return new Response("Not found", { status: 404 });
   },

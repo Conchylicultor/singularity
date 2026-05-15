@@ -69,7 +69,7 @@ export async function runClaudePrint(input: RunClaudePrintInput): Promise<string
       stderr: "pipe",
       env: cleanEnv,
     });
-    void proc.stdin.write(input.prompt);
+    await proc.stdin.write(input.prompt);
     await proc.stdin.end();
 
     const timer = setTimeout(() => proc.kill(), timeoutMs);
