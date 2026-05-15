@@ -5,6 +5,7 @@ import { PaneInstanceContext, useOpenPane } from "@plugins/primitives/plugins/pa
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import type { AttemptWithConversations } from "@plugins/tasks/core";
 import { attemptsResource } from "@plugins/tasks/core";
 import { cn } from "@/lib/utils";
@@ -46,7 +47,7 @@ function AttemptSection({
       <div className="flex items-center gap-1.5 px-2 py-1">
         <span
           className={cn(
-            "truncate font-mono text-[11px]",
+            "min-w-0 flex-1 truncate font-mono text-[11px]",
             isCurrent ? "font-medium text-foreground" : "text-muted-foreground",
           )}
         >
@@ -94,6 +95,12 @@ function AttemptSection({
           })}
         </ul>
       )}
+      <LaunchButtons
+        size="sm"
+        variant="outline"
+        className="px-2 pt-1"
+        getRequest={() => ({ attemptId: attempt.id })}
+      />
     </div>
   );
 }
