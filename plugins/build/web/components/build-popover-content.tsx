@@ -237,7 +237,7 @@ export function BuildPopoverContent({
   return (
     <div className={cn("flex flex-col", variant === "pane" && "h-full")}>
       <BuildControls building={building} onBuild={handleBuild} />
-      <BuildLogView variant={variant} />
+      {variant === "popover" && <BuildLogView variant={variant} />}
       <BuildHistoryList variant={variant} selectedRunId={selectedRunId} onRunClick={onRunClick} />
     </div>
   );
