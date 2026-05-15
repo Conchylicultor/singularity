@@ -28,6 +28,13 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
+type RankedConversation = Conversation & { rank: Rank };
+
+type TaskCluster = {
+  representative: RankedConversation;
+  clusterSize: number;
+};
+
 type DropData = { zone: "before" | "after"; targetId: string };
 
 function parseDragId(id: string | number): string | null {
@@ -112,10 +119,10 @@ export function QueueView({
     [active],
   );
 
-  const { deck, blockedIds, unranked } = useMemo(() => {
+  const { deck, clusteredDeck, blockedIds, unranked } = useMemo(() => {
     const ranks = new Map(rankRows.map((r) => [r.conversationId, r.rank]));
     const taskStatusMap = new Map(taskRows.map((t) => [t.id, t.status]));
-    const ranked: Array<Conversation & { rank: Rank }> = [];
+    const ranked: RankedConversation[] = [];
     const blocked = new Set<string>();
     const noRank: Conversation[] = [];
     for (const c of active) {
@@ -130,8 +137,24 @@ export function QueueView({
         noRank.push(c);
       }
     }
+    const sorted = ranked.sort((a, b) => Rank.compare(a.rank, b.rank));
+
+    const taskGroups = new Map<string, RankedConversation[]>();
+    for (const conv of sorted) {
+      const list = taskGroups.get(conv.taskId);
+      if (list) list.push(conv);
+      else taskGroups.set(conv.taskId, [conv]);
+    }
+    const clusters: TaskCluster[] = [];
+    for (const [, convs] of taskGroups) {
+      if (convs.length === 0) continue;
+      clusters.push({ representative: convs[0]!, clusterSize: convs.length });
+    }
+    clusters.sort((a, b) => Rank.compare(a.representative.rank, b.representative.rank));
+
     return {
-      deck: ranked.sort((a, b) => Rank.compare(a.rank, b.rank)),
+      deck: sorted,
+      clusteredDeck: clusters,
       blockedIds: blocked,
       unranked: noRank,
     };
@@ -250,16 +273,19 @@ export function QueueView({
     await queuePost("reorder", { conversationId, targetId: drop.targetId, zone: drop.zone });
   }, []);
 
-  const pinnedConv = useMemo(
-    () => (pinnedConversationId ? deck.find((c) => c.id === pinnedConversationId) ?? null : null),
-    [pinnedConversationId, deck],
+  const pinnedCluster = useMemo(
+    () => {
+      if (!pinnedConversationId) return null;
+      return clusteredDeck.find((cl) => cl.representative.id === pinnedConversationId) ?? null;
+    },
+    [pinnedConversationId, clusteredDeck],
   );
-  const restDeck = useMemo(
-    () => (pinnedConv ? deck.filter((c) => c.id !== pinnedConversationId) : deck),
-    [deck, pinnedConv, pinnedConversationId],
+  const restClusters = useMemo(
+    () => (pinnedCluster ? clusteredDeck.filter((cl) => cl !== pinnedCluster) : clusteredDeck),
+    [clusteredDeck, pinnedCluster],
   );
 
-  if (!isLoading && deck.length === 0 && working.length === 0 && unranked.length === 0 && disconnected.length === 0 && recentGone.length === 0) {
+  if (!isLoading && clusteredDeck.length === 0 && working.length === 0 && unranked.length === 0 && disconnected.length === 0 && recentGone.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-xs text-muted-foreground">
         All clear — no conversations are waiting on you.
@@ -275,7 +301,7 @@ export function QueueView({
   const queueTop = nextTop;
   nextTop += SECTION_H;
 
-  const hasTopItem = queueExpanded && pinnedConv != null;
+  const hasTopItem = queueExpanded && pinnedCluster != null;
   const topItemTop = nextTop;
   if (hasTopItem) nextTop += SECTION_H + 8;
 
@@ -294,12 +320,12 @@ export function QueueView({
     <div className="flex flex-col">
       {/* Queue */}
       <SectionHeader title="Queue" count={deck.length} expanded={queueExpanded} onToggleExpanded={toggleQueueExpanded} stickyTop={queueTop} />
-      {queueExpanded && deck.length === 0 && (
+      {queueExpanded && clusteredDeck.length === 0 && (
         <div className="px-2 py-1 pl-2 text-[11px] italic text-muted-foreground">
           No conversations waiting
         </div>
       )}
-      {queueExpanded && deck.length > 0 && (
+      {queueExpanded && clusteredDeck.length > 0 && (
         <DndContext
           sensors={sensors}
           collisionDetection={pointerWithin}
@@ -308,16 +334,17 @@ export function QueueView({
           onDragCancel={() => setDraggingId(null)}
         >
           {/* Pinned top item */}
-          {pinnedConv && (
+          {pinnedCluster && (
             <div className="sticky z-10 bg-sidebar pt-px pb-1 pl-1" style={{ top: topItemTop }}>
               <SidebarMenu>
                 <QueueRow
-                  conv={pinnedConv}
+                  conv={pinnedCluster.representative}
+                  clusterSize={pinnedCluster.clusterSize}
                   isTop
-                  isBlocked={blockedIds.has(pinnedConv.id)}
-                  isBottom={restDeck.length === 0}
-                  canStepDown={restDeck.length > 0}
-                  isActive={pinnedConv.id === activeId}
+                  isBlocked={blockedIds.has(pinnedCluster.representative.id)}
+                  isBottom={restClusters.length === 0}
+                  canStepDown={restClusters.length > 0}
+                  isActive={pinnedCluster.representative.id === activeId}
                   dragInProgress={dragInProgress}
                   onNavigate={onNavigate}
                   onClose={onCloseConversation}
@@ -328,18 +355,19 @@ export function QueueView({
               </SidebarMenu>
             </div>
           )}
-          {restDeck.length > 0 && (
+          {restClusters.length > 0 && (
             <div className="pl-1">
               <SidebarMenu>
-                {restDeck.map((conv, idx) => (
+                {restClusters.map((cluster, idx) => (
                   <QueueRow
-                    key={conv.id}
-                    conv={conv}
+                    key={cluster.representative.id}
+                    conv={cluster.representative}
+                    clusterSize={cluster.clusterSize}
                     isTop={false}
-                    isBlocked={blockedIds.has(conv.id)}
-                    isBottom={idx === restDeck.length - 1}
-                    canStepDown={idx < restDeck.length - 1}
-                    isActive={conv.id === activeId}
+                    isBlocked={blockedIds.has(cluster.representative.id)}
+                    isBottom={idx === restClusters.length - 1}
+                    canStepDown={idx < restClusters.length - 1}
+                    isActive={cluster.representative.id === activeId}
                     dragInProgress={dragInProgress}
                     onNavigate={onNavigate}
                     onClose={onCloseConversation}
@@ -498,6 +526,7 @@ export function QueueView({
 
 function QueueRow({
   conv,
+  clusterSize,
   isTop,
   isBlocked,
   isBottom,
@@ -511,6 +540,7 @@ function QueueRow({
   onStepDown,
 }: {
   conv: Conversation;
+  clusterSize: number;
   isTop: boolean;
   isBlocked: boolean;
   isBottom: boolean;
@@ -564,6 +594,11 @@ function QueueRow({
           onClick={() => onNavigate(conv.id)}
         >
           <ConversationItem conv={conv} />
+          {clusterSize > 1 && (
+            <span className="ml-auto shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
+              {clusterSize}
+            </span>
+          )}
         </SidebarMenuButton>
         <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 group-hover/menu-item:opacity-100">
           {!isTop && (
