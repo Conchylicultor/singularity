@@ -2,6 +2,7 @@ import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _attempts, _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../schema";
+import type { TaskStatus } from "../schema";
 import { tasksResource } from "../resources";
 import { findNextRankUnder, isDescendant, taskDependsOn } from "../queries/tasks";
 import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
@@ -134,10 +135,53 @@ export async function deleteTask(id: string): Promise<boolean> {
     .where(eq(_tasks.parentId, id))
     .limit(1);
   if (children.length > 0) throw new Error("Task has children");
+
+  // Collect edges to bridge before cascade wipes them.
+  const upstreamRows = await db
+    .select({ dependsOnTaskId: _taskDependencies.dependsOnTaskId })
+    .from(_taskDependencies)
+    .where(eq(_taskDependencies.taskId, id));
+  const downstreamRows = await db
+    .select({ taskId: _taskDependencies.taskId })
+    .from(_taskDependencies)
+    .where(eq(_taskDependencies.dependsOnTaskId, id));
+
+  const upstreamIds = upstreamRows.map((r) => r.dependsOnTaskId);
+  const downstreamIds = downstreamRows.map((r) => r.taskId);
+
+  // Snapshot statuses before cascade removes blocking edges.
+  const prevStatuses = new Map<string, TaskStatus | null>();
+  for (const downId of downstreamIds) {
+    prevStatuses.set(downId, await readTaskStatus(downId));
+  }
+
   const [row] = await db.delete(_tasks).where(eq(_tasks.id, id)).returning();
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
   tasksResource.notify();
+
+  // Bridge: for each downstream Z and upstream X, add Z depends-on X.
+  const bridgedDownstream = new Set<string>();
+  for (const downId of downstreamIds) {
+    for (const upId of upstreamIds) {
+      try {
+        await addTaskDependency(downId, upId);
+        bridgedDownstream.add(downId);
+      } catch (err) {
+        if (err instanceof Error && /Cycle detected|already depends/.test(err.message)) continue;
+        throw err;
+      }
+    }
+  }
+
+  // Emit status change for downstream tasks that got no bridge
+  // (their only blocker was the deleted task, they may now be unblocked).
+  for (const downId of downstreamIds) {
+    if (!bridgedDownstream.has(downId)) {
+      await emitStatusChangeIfChanged(downId, prevStatuses.get(downId) ?? null);
+    }
+  }
+
   return true;
 }
 

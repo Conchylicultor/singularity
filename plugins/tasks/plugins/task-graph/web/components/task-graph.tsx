@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dagre from "dagre";
 import {
   Background,
@@ -29,6 +29,7 @@ const NODE_TYPE = "task";
 type TaskNodeData = {
   task: Task;
   selected: boolean;
+  hasChildren: boolean;
 };
 
 type TaskFlowNode = Node<TaskNodeData, typeof NODE_TYPE>;
@@ -65,6 +66,7 @@ function isNonBlocking(task: Task): boolean {
 
 function layoutDag(
   closure: readonly Task[],
+  allTasks: readonly Task[],
   selectedId: string,
   onNavigate: (taskId: string) => void,
 ) {
@@ -72,6 +74,7 @@ function layoutDag(
   // selected as root (dagre's crossing-minimization is order-sensitive).
   const sorted = [...closure].sort((a, b) => a.id.localeCompare(b.id));
   const ids = new Set(sorted.map((t) => t.id));
+  const childIds = new Set(allTasks.filter((t) => t.parentId).map((t) => t.parentId!));
   const g = new dagre.graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
   g.setGraph({ rankdir: "LR", nodesep: 24, ranksep: 60, marginx: 12, marginy: 12 });
@@ -91,7 +94,7 @@ function layoutDag(
     return {
       id: task.id,
       type: NODE_TYPE,
-      data: { task, selected: task.id === selectedId },
+      data: { task, selected: task.id === selectedId, hasChildren: childIds.has(task.id) },
       position: { x: pos.x - NODE_WIDTH / 2, y: pos.y - NODE_HEIGHT / 2 },
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
@@ -129,15 +132,30 @@ function layoutDag(
 }
 
 function TaskNode({ data }: NodeProps<TaskFlowNode>) {
-  const { task, selected } = data;
+  const { task, selected, hasChildren } = data;
   const meta = STATUS_META[task.status];
   const Icon = meta.icon;
   const isTerminal = task.status === "done" || task.status === "dropped";
+  const [hovered, setHovered] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (hasChildren || deleting) return;
+      setDeleting(true);
+      void fetch(`/api/tasks/${task.id}`, { method: "DELETE" }).finally(() => {
+        setDeleting(false);
+      });
+    },
+    [task.id, hasChildren, deleting],
+  );
+
   return (
     <div
       title={`${task.title} — ${meta.label}`}
       className={cn(
-        "bg-card text-foreground flex h-9 cursor-pointer items-center gap-2 rounded-md border px-2 text-xs shadow-sm transition-colors",
+        "bg-card text-foreground relative flex h-9 cursor-pointer items-center gap-2 rounded-md border px-2 text-xs shadow-sm transition-colors",
         "hover:border-foreground/40 focus:outline-none",
         selected
           ? "border-primary ring-primary/30 ring-2"
@@ -145,6 +163,8 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
         isTerminal && "text-muted-foreground",
       )}
       style={{ width: NODE_WIDTH, height: NODE_HEIGHT }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <Handle
         type="target"
@@ -165,6 +185,27 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
         position={Position.Right}
         className="!bg-transparent !border-0 !w-1 !h-1"
       />
+      {!hasChildren && (
+        <div
+          className="nodrag nopan pointer-events-auto absolute"
+          style={{
+            top: -8,
+            right: -8,
+            opacity: hovered ? 1 : 0,
+            transition: "opacity 150ms",
+          }}
+        >
+          <button
+            type="button"
+            className="bg-background text-foreground hover:bg-destructive hover:text-destructive-foreground flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border shadow-sm disabled:opacity-50"
+            disabled={deleting}
+            onClick={handleDelete}
+            aria-label="Delete task"
+          >
+            <span className="text-xs font-medium leading-none">&times;</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -247,8 +288,8 @@ export function TaskGraph({ taskId }: { taskId: string }) {
     [ctxNavigate, openPane],
   );
   const { nodes, edges } = useMemo(
-    () => layoutDag(closure, taskId, onNavigate),
-    [closure, taskId, onNavigate],
+    () => layoutDag(closure, allTasks, taskId, onNavigate),
+    [closure, allTasks, taskId, onNavigate],
   );
 
   if (closure.length <= 1) return null;
