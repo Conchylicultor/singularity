@@ -14,6 +14,31 @@ const SPINNER_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈]\s*/;
 const READY_RE = /^✳\s*/;
 const STATUS_PREFIX_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈✳]\s*/;
 
+// CLI bug workaround: AskUserQuestion keeps spinner + status:"busy" despite
+// being idle. Probe pane content every PROBE_INTERVAL_MS to detect it.
+const PROBE_INTERVAL_MS = 5_000;
+const WAITING_PATTERN_RE = /Enter to select/;
+const probeCache = new Map<string, { at: number; waiting: boolean }>();
+
+async function probeWaiting(id: string): Promise<boolean> {
+  const proc = Bun.spawn(
+    [TMUX, "capture-pane", "-p", "-S", "-10", "-t", id],
+    { stdout: "pipe", stderr: "pipe" },
+  );
+  const stdout = await new Response(proc.stdout).text();
+  await proc.exited;
+  return WAITING_PATTERN_RE.test(stdout);
+}
+
+async function isProbeWaiting(id: string): Promise<boolean> {
+  const now = Date.now();
+  const cached = probeCache.get(id);
+  if (cached && now - cached.at < PROBE_INTERVAL_MS) return cached.waiting;
+  const waiting = await probeWaiting(id);
+  probeCache.set(id, { at: now, waiting });
+  return waiting;
+}
+
 interface ResolvedPaneStatus {
   title: string;
   working: boolean;
@@ -162,6 +187,26 @@ export const tmuxRuntime: ConversationRuntime = {
         waitingFor: dead ? null : resolved.waitingFor,
       });
     });
+
+    // Probe panes that look "working" — the CLI sometimes keeps the spinner
+    // during AskUserQuestion prompts. Throttled to one capture-pane per pane
+    // every PROBE_INTERVAL_MS.
+    const workingIds = ids.filter((id) => out.get(id)!.working && !out.get(id)!.dead);
+    if (workingIds.length > 0) {
+      const probeResults = await Promise.all(workingIds.map((id) => isProbeWaiting(id)));
+      workingIds.forEach((id, i) => {
+        if (probeResults[i]) {
+          const info = out.get(id)!;
+          out.set(id, { ...info, working: false, waitingFor: "question" });
+        }
+      });
+    }
+
+    // Evict stale probe cache entries.
+    for (const key of probeCache.keys()) {
+      if (!panes.has(key)) probeCache.delete(key);
+    }
+
     return out;
   },
 
