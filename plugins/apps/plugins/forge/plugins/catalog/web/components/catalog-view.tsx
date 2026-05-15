@@ -96,12 +96,13 @@ export function CatalogView() {
         })}
       </div>
 
-      <SearchInput
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        placeholder="Filter…"
-        wrapperClassName="border-b px-3 py-2"
-      />
+      <div className="border-b px-3 py-2">
+        <SearchInput
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Filter…"
+        />
+      </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
         {selected ? (
