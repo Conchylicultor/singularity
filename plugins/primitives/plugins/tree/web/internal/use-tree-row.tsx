@@ -2,7 +2,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 import {
@@ -114,6 +116,21 @@ export function useTreeRow<T extends TreeItem>(
     data: { zone: "child" as const, targetId: node.id },
   });
 
+  const scrollRef = useRef<HTMLElement | null>(null);
+  const wrappedChildRef = useCallback(
+    (el: HTMLElement | null) => {
+      scrollRef.current = el;
+      setChildRef(el);
+    },
+    [setChildRef],
+  );
+
+  useEffect(() => {
+    if (isSelected && scrollRef.current) {
+      scrollRef.current.scrollIntoView({ block: "nearest" });
+    }
+  }, [isSelected]);
+
   const select = useCallback(() => ctx.onSelect(node.id), [ctx, node.id]);
   const toggleExpanded = useCallback(
     () => void ctx.onToggleExpanded(node.id, !isOpen),
@@ -171,6 +188,6 @@ export function useTreeRow<T extends TreeItem>(
     dragHandleProps,
     beforeRef: setBeforeRef,
     afterRef: setAfterRef,
-    childRef: setChildRef,
+    childRef: wrappedChildRef,
   };
 }

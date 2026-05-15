@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   MdAdd,
   MdFilterAlt,
@@ -222,6 +222,26 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     },
     [rows, onMove],
   );
+
+  // Auto-expand collapsed ancestors when selectedId changes so the row is visible.
+  const lastRevealedId = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!selectedId) {
+      lastRevealedId.current = undefined;
+      return;
+    }
+    if (selectedId === lastRevealedId.current) return;
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    if (!byId.has(selectedId)) return;
+    lastRevealedId.current = selectedId;
+    let cur = byId.get(selectedId)!.parentId;
+    while (cur) {
+      const parent = byId.get(cur);
+      if (!parent) break;
+      if (!parent.expanded) void wrappedOnToggleExpanded(cur, true);
+      cur = parent.parentId;
+    }
+  }, [selectedId, rows, wrappedOnToggleExpanded]);
 
   const hasToolbar =
     showExpandAll || !!toolbar?.hideTerminal || !!toolbar?.start || !!toolbar?.search;
