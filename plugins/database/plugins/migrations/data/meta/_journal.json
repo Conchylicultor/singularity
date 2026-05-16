@@ -687,6 +687,13 @@
       "tag": "20260515_181142_b3cc75fa__dag_schema",
       "hash": "b3cc75fa",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1778968244000,
+      "tag": "20260516_215044_5ae5d7e3__dag_workflow_columns",
+      "hash": "5ae5d7e3",
+      "breakpoints": true
     }
   ]
 }

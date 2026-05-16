@@ -69,25 +69,30 @@ export async function generateMigration(opts: {
       SINGULARITY_WORKTREE: worktreeName,
     },
   });
-  // Send enough \r to auto-accept multiple select prompts. drizzle-kit shows
-  // one per ambiguous rename (column or table); a single \r only covers one
-  // prompt — if there are more, the second gets EOF and drizzle silently exits
-  // without generating. 10 covers any realistic schema change.
-  void proc.stdin.write(new Uint8Array(10).fill(0x0d));
-  void proc.stdin.end();
 
   // Capture stdout + stderr so we can detect silent aborts and diagnostics.
+  // We reactively write \r to stdin whenever a rename/create prompt appears in
+  // stdout. Sending all bytes upfront doesn't work: hanji's keypress handler
+  // processes the entire buffered chunk synchronously, so the first prompt's
+  // tearDown removes the listener before subsequent \r bytes fire — only one
+  // prompt ever gets answered.
   let stdoutBuf = "";
+  const PROMPT_RE = /created or renamed/;
   const stdoutDone = (async () => {
     const decoder = new TextDecoder();
     const reader = proc.stdout.getReader();
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
       process.stdout.write(value);
-      stdoutBuf += decoder.decode(value, { stream: true });
+      stdoutBuf += chunk;
+      if (PROMPT_RE.test(chunk)) {
+        void proc.stdin.write(new Uint8Array([0x0d]));
+      }
     }
     stdoutBuf += decoder.decode();
+    void proc.stdin.end();
   })();
 
   let stderrBuf = "";
@@ -118,7 +123,7 @@ export async function generateMigration(opts: {
 
   // Detect silent abort: drizzle-kit showed a rename prompt but exited without
   // generating. This happens when stdin EOF'd before all prompts were answered.
-  const showedPrompt = /renamed|created/.test(stdoutBuf);
+  const showedPrompt = PROMPT_RE.test(stdoutBuf);
   const generatedNothing = !readdirSync(migrationsDir).some(
     (f: string) => f.endsWith(".sql") && !before.has(f),
   );
