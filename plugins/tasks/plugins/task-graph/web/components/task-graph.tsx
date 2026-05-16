@@ -35,7 +35,7 @@ type TaskNodeData = {
 type TaskFlowNode = Node<TaskNodeData, typeof NODE_TYPE>;
 
 const GROUP_BG_TYPE = "groupBackground";
-type GroupBgData = { groupId: string };
+type GroupBgData = { groupId: string; label: string; depth: number };
 type GroupBgNode = Node<GroupBgData, typeof GROUP_BG_TYPE>;
 
 function computeDagClosure(rootId: string, allTasks: readonly Task[]): Task[] {
@@ -63,6 +63,20 @@ function computeDagClosure(rootId: string, allTasks: readonly Task[]): Task[] {
     if (t.groupId && byId.has(t.groupId)) stack.push(t.groupId);
   }
   return [...visited].map((id) => byId.get(id)).filter((t): t is Task => !!t);
+}
+
+function getGroupDepth(groupId: string, byId: Map<string, Task>): number {
+  let depth = 0;
+  let current = groupId;
+  const seen = new Set<string>();
+  while (true) {
+    const anchor = byId.get(current);
+    if (!anchor?.groupId || seen.has(anchor.groupId)) break;
+    seen.add(current);
+    current = anchor.groupId;
+    depth++;
+  }
+  return depth;
 }
 
 function isNonBlocking(task: Task): boolean {
@@ -148,24 +162,28 @@ function layoutDag(
   }
 
   const GROUP_PAD = 16;
+  const GROUP_LABEL_HEIGHT = 18;
   const bgNodes: GroupBgNode[] = [];
   for (const [groupId, memberIds] of groupMembers) {
     const positions = memberIds.map((id) => g.node(id)).filter(Boolean);
     if (positions.length === 0) continue;
+    const anchor = byId.get(groupId);
+    const depth = getGroupDepth(groupId, byId);
     const minX = Math.min(...positions.map((p) => p.x - NODE_WIDTH / 2)) - GROUP_PAD;
-    const minY = Math.min(...positions.map((p) => p.y - NODE_HEIGHT / 2)) - GROUP_PAD;
+    const minY = Math.min(...positions.map((p) => p.y - NODE_HEIGHT / 2)) - GROUP_PAD - GROUP_LABEL_HEIGHT;
     const maxX = Math.max(...positions.map((p) => p.x + NODE_WIDTH / 2)) + GROUP_PAD;
     const maxY = Math.max(...positions.map((p) => p.y + NODE_HEIGHT / 2)) + GROUP_PAD;
     bgNodes.push({
       id: `group-${groupId}`,
       type: GROUP_BG_TYPE,
-      data: { groupId },
+      data: { groupId, label: anchor?.title || "Group", depth },
       position: { x: minX, y: minY },
       style: { width: maxX - minX, height: maxY - minY },
       selectable: false,
       draggable: false,
     });
   }
+  bgNodes.sort((a, b) => a.data.depth - b.data.depth);
 
   return { nodes: [...bgNodes, ...nodes], edges };
 }
@@ -249,11 +267,32 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
   );
 }
 
-function GroupBackground() {
+const GROUP_PALETTE = [
+  { bg: "bg-sky-500/8", border: "border-sky-500/30", text: "text-sky-600/70" },
+  { bg: "bg-violet-500/8", border: "border-violet-500/30", text: "text-violet-600/70" },
+  { bg: "bg-amber-500/8", border: "border-amber-500/30", text: "text-amber-600/70" },
+  { bg: "bg-teal-500/8", border: "border-teal-500/30", text: "text-teal-600/70" },
+];
+
+function GroupBackground({ data }: NodeProps<GroupBgNode>) {
+  const palette = GROUP_PALETTE[data.depth % GROUP_PALETTE.length]!;
   return (
     <div
-      className="size-full rounded-lg border border-dashed border-border/50 bg-muted/15 pointer-events-none"
-    />
+      className={cn(
+        "relative size-full rounded-lg border border-dashed pointer-events-none",
+        palette.bg,
+        palette.border,
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-1 left-2 max-w-[calc(100%-16px)] truncate text-[10px] font-medium leading-tight",
+          palette.text,
+        )}
+      >
+        {data.label}
+      </span>
+    </div>
   );
 }
 
