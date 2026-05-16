@@ -32,16 +32,22 @@ function GlobalPresetPicker() {
   };
 
   return (
-    <div>
-      <h4 className="text-sm font-medium mb-2">Theme</h4>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          Theme
+        </span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
       <div className="flex flex-wrap gap-2">
         {globalPresets.map((p) => (
           <button
             key={p.id}
-            className={`px-3 py-1 text-sm rounded-md border transition-colors ${
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
               p.id === activeId
-                ? "border-primary bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:border-primary/50"
+                ? "border-2 border-primary bg-primary/10 text-primary"
+                : "border border-border text-muted-foreground hover:border-primary/50 bg-muted/20"
             }`}
             onClick={() => handleChange(p.id)}
           >

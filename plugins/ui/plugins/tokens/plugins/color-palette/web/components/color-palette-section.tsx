@@ -79,10 +79,6 @@ export function ColorPaletteSection({ search }: { search: string }) {
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold">Color Palette</h3>
-      </div>
-
       {/* Preset picker */}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {presets.map((p) => (
@@ -121,7 +117,7 @@ export function ColorPaletteSection({ search }: { search: string }) {
           if (visibleKeys.length === 0) return null;
 
           return (
-            <Collapsible key={group.label} defaultOpen>
+            <Collapsible key={group.label}>
               <CollapsibleTrigger className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50 text-xs text-muted-foreground uppercase tracking-wider font-medium">
                 <CollapsibleChevron className="size-3" />
                 {group.label}

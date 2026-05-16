@@ -67,10 +67,6 @@ export function TypographySection({ search }: { search: string }) {
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold">Typography</h3>
-      </div>
-
       {/* Preset picker */}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {presets.map((p) => (
