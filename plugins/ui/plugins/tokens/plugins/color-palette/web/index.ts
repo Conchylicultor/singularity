@@ -5,6 +5,7 @@ import { colorPaletteGroup } from "../shared";
 import { colorPaletteConfig } from "./internal/config";
 import { ColorPalette } from "./slots";
 import { ColorPalettePicker } from "./components/color-palette-picker";
+import { ColorPaletteHeaderDots } from "./components/color-palette-header-dots";
 import { ColorPaletteSection } from "./components/color-palette-section";
 import { builtInPresets } from "./presets";
 
@@ -34,6 +35,7 @@ export default {
       id: "color-palette",
       label: "Color Palette",
       component: ColorPaletteSection,
+      headerExtra: ColorPaletteHeaderDots,
     }),
   ],
 } satisfies PluginDefinition;

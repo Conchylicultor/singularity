@@ -5,6 +5,7 @@ import { sidebarPaletteGroup } from "../shared";
 import { sidebarPaletteConfig } from "./internal/config";
 import { SidebarPalette } from "./slots";
 import { SidebarPalettePicker } from "./components/sidebar-palette-picker";
+import { SidebarPaletteHeaderDots } from "./components/sidebar-palette-header-dots";
 import { SidebarPaletteSection } from "./components/sidebar-palette-section";
 import { builtInPresets } from "./presets";
 
@@ -34,6 +35,7 @@ export default {
       id: "sidebar-palette",
       label: "Sidebar Palette",
       component: SidebarPaletteSection,
+      headerExtra: SidebarPaletteHeaderDots,
     }),
   ],
 } satisfies PluginDefinition;

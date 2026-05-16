@@ -112,9 +112,21 @@ export function SidebarPaletteSection({ search }: { search: string }) {
 
           return (
             <Collapsible key={group.label}>
-              <CollapsibleTrigger className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50 text-xs text-muted-foreground uppercase tracking-wider font-medium">
+              <CollapsibleTrigger className="flex w-full items-center gap-1 px-2 py-1 rounded hover:bg-muted/50 text-xs text-muted-foreground uppercase tracking-wider font-medium">
                 <CollapsibleChevron className="size-3" />
                 {group.label}
+                <span className="ml-auto flex items-center gap-0.5">
+                  {group.keys.map((key) => (
+                    <span
+                      key={key as string}
+                      className="size-2 rounded-full border border-border/30"
+                      style={{
+                        backgroundColor:
+                          lightValues[key] ?? schema[key]?.default ?? "",
+                      }}
+                    />
+                  ))}
+                </span>
               </CollapsibleTrigger>
               <CollapsibleContent className="ml-2">
                 {visibleKeys.map((key) => {
