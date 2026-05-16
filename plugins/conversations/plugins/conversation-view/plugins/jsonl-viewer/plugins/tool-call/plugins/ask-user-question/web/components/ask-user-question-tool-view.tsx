@@ -31,6 +31,36 @@ function parseAnswerMap(content: string): Record<string, string> {
   return answers;
 }
 
+function parseSelectedLabels(
+  answer: string | undefined,
+  options: QuestionOption[],
+): { selected: Set<string>; otherText: string | null } {
+  if (answer == null) return { selected: new Set(), otherText: null };
+
+  if (options.some((o) => o.label === answer)) {
+    return { selected: new Set([answer]), otherText: null };
+  }
+
+  const parts = answer.split(", ");
+  const labelSet = new Set(options.map((o) => o.label));
+  const matched = new Set<string>();
+  const unmatched: string[] = [];
+
+  for (const part of parts) {
+    if (labelSet.has(part)) matched.add(part);
+    else unmatched.push(part);
+  }
+
+  if (matched.size > 0) {
+    return {
+      selected: matched,
+      otherText: unmatched.length > 0 ? unmatched.join(", ") : null,
+    };
+  }
+
+  return { selected: new Set(), otherText: answer };
+}
+
 function Indicator({
   selected,
   multi,
@@ -70,6 +100,15 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
       ? parseAnswerMap(resultContent)
       : null;
 
+  const questionSelections = questions.map((q) =>
+    parseSelectedLabels(answerMap?.[q.question], q.options),
+  );
+
+  const firstSel = questionSelections[0];
+  const firstAnswerParts = firstSel
+    ? [...firstSel.selected, ...(firstSel.otherText ? [firstSel.otherText] : [])]
+    : [];
+
   const summary = (
     <span className="flex min-w-0 items-center gap-1.5">
       {questions.length > 0 ? (
@@ -91,6 +130,14 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
           {questions[0].question}
         </span>
       )}
+      {firstAnswerParts.length > 0 && (
+        <>
+          <span className="shrink-0 text-muted-foreground/50">&rarr;</span>
+          <span className="min-w-0 truncate text-foreground">
+            {firstAnswerParts.join(", ")}
+          </span>
+        </>
+      )}
     </span>
   );
 
@@ -98,11 +145,11 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
     <ToolCallCard event={event} summary={summary} defaultOpen>
       <div className="mt-2 space-y-3">
         {questions.map((q, qi) => {
-          const selectedLabel = answerMap?.[q.question];
-          const matchedOption = q.options.find(
-            (o) => o.label === selectedLabel,
-          );
-          const isOther = selectedLabel != null && !matchedOption;
+          const { selected, otherText } = questionSelections[qi] ?? {
+            selected: new Set<string>(),
+            otherText: null,
+          };
+          const hasAnswer = selected.size > 0 || otherText != null;
 
           return (
             <div key={qi}>
@@ -114,11 +161,11 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
               <p className="mb-1.5 text-xs text-foreground">{q.question}</p>
               <div className="space-y-1">
                 {q.options.map((opt, oi) => {
-                  const isSelected = opt.label === selectedLabel;
+                  const isSelected = selected.has(opt.label);
                   return (
                     <div
                       key={oi}
-                      className={`flex gap-2 ${isSelected ? "rounded-md border-l-2 border-primary bg-primary/5 py-1 pl-2" : "pl-0.5"}`}
+                      className={`flex gap-2 ${isSelected ? "rounded-md border-l-2 border-primary bg-primary/5 py-1 pl-2" : hasAnswer ? "pl-0.5 opacity-60" : "pl-0.5"}`}
                     >
                       <Indicator selected={isSelected} multi={q.multiSelect} />
                       <div className="min-w-0 flex-1">
@@ -135,11 +182,11 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                     </div>
                   );
                 })}
-                {isOther && (
+                {otherText != null && (
                   <div className="flex gap-2 rounded-md border-l-2 border-primary bg-primary/5 py-1 pl-2">
                     <Indicator selected multi={q.multiSelect} />
                     <p className="text-xs italic text-foreground">
-                      {selectedLabel}
+                      {otherText}
                     </p>
                   </div>
                 )}
