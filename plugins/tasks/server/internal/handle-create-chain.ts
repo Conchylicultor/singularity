@@ -1,9 +1,9 @@
 import {
   taskAttachments,
   addTaskDependency,
-  removeTaskDependency,
   createTask,
   getTask,
+  getTaskDependencyIds,
   type Task,
 } from "@plugins/tasks-core/server";
 import {
@@ -21,7 +21,9 @@ import {
   type TaskChainSubmitBody,
   type TaskChainSubmitResponse,
 } from "@plugins/tasks/plugins/task-draft-form/core";
+import { withNotifyBatch } from "@server/resources";
 import { armTaskAutoStart } from "./arm-auto-start";
+import { rewireDependencies } from "./rewire-dependencies";
 
 export async function handleCreateChain(req: Request): Promise<Response> {
   let raw: unknown;
@@ -91,74 +93,77 @@ export async function handleCreateChain(req: Request): Promise<Response> {
   }
 
   const author = body.target.kind === "metaTask" ? "improve-plugin" : "user";
+  const groupId = body.relate ? body.relate.taskId : null;
   const taskIds: string[] = [];
 
-  for (let i = 0; i < body.cards.length; i++) {
-    const card = body.cards[i]!;
-    const isHead = i === 0;
-    const attachments = cardAttachments[i]!;
+  await withNotifyBatch(async () => {
+    for (let i = 0; i < body.cards.length; i++) {
+      const card = body.cards[i]!;
+      const isHead = i === 0;
+      const attachments = cardAttachments[i]!;
 
-    const description = renderTaskDescription({
-      text: card.text,
-      url: card.url ?? "",
-      attachments,
-      parentTaskRef:
-        isHead &&
-        card.includeParentTask &&
-        body.target.kind === "child"
-          ? parentTask
-          : null,
-    });
-
-    const fallbackTitle = synthesiseTitleFallback(card.text);
-    const newTask = await createTask({
-      parentId,
-      title: fallbackTitle,
-      description,
-      author,
-    });
-    scheduleTaskTitleUpdate(newTask.id, card.text, fallbackTitle);
-    taskIds.push(newTask.id);
-
-    if (attachments.length > 0) {
-      await taskAttachments.add(newTask.id, attachments.map((a) => a.id));
-    }
-
-    // Compute blockers for this card.
-    const blockerIds: string[] = [];
-    if (isHead && body.relate) {
-      if (body.relate.mode === "followup") {
-        // New task waits on the related (existing) task.
-        blockerIds.push(body.relate.taskId);
-      } else {
-        // Prerequisite: existing task waits on the new task.
-        await addTaskDependency(body.relate.taskId, newTask.id);
-        // No forward blocker for the new task from relate.
-      }
-    }
-    if (!isHead && card.linkedToPrev !== false) {
-      blockerIds.push(taskIds[i - 1]!);
-    }
-
-    for (const dep of blockerIds) {
-      await addTaskDependency(newTask.id, dep);
-    }
-
-    if (isHead && body.relate?.mode === "followup" && body.relate.insertBefore?.length) {
-      for (const depId of body.relate.insertBefore) {
-        await removeTaskDependency(depId, body.relate.taskId);
-        await addTaskDependency(depId, newTask.id);
-      }
-    }
-
-    if (card.launch !== null) {
-      await armTaskAutoStart({
-        taskId: newTask.id,
-        model: card.launch,
-        dependencies: blockerIds,
+      const description = renderTaskDescription({
+        text: card.text,
+        url: card.url ?? "",
+        attachments,
+        parentTaskRef:
+          isHead &&
+          card.includeParentTask &&
+          body.target.kind === "child"
+            ? parentTask
+            : null,
       });
+
+      const fallbackTitle = synthesiseTitleFallback(card.text);
+      const newTask = await createTask({
+        parentId,
+        groupId,
+        title: fallbackTitle,
+        description,
+        author,
+      });
+      scheduleTaskTitleUpdate(newTask.id, card.text, fallbackTitle);
+      taskIds.push(newTask.id);
+
+      if (attachments.length > 0) {
+        await taskAttachments.add(newTask.id, attachments.map((a) => a.id));
+      }
+
+      if (isHead && body.relate) {
+        const selective =
+          body.relate.mode === "followup" && body.relate.insertBefore?.length
+            ? body.relate.insertBefore
+            : undefined;
+        await rewireDependencies({
+          newTaskId: newTask.id,
+          targetId: body.relate.taskId,
+          relation: body.relate.mode,
+          selectiveInsertBefore: selective,
+        });
+      }
+      if (!isHead && card.linkedToPrev !== false) {
+        await addTaskDependency(newTask.id, taskIds[i - 1]!);
+      }
+
+      if (card.launch !== null) {
+        let depsForAutoStart: string[];
+        if (isHead && body.relate?.mode === "followup") {
+          depsForAutoStart = [body.relate.taskId];
+        } else if (isHead && body.relate?.mode === "prerequisite") {
+          depsForAutoStart = await getTaskDependencyIds(newTask.id);
+        } else if (!isHead && card.linkedToPrev !== false) {
+          depsForAutoStart = [taskIds[i - 1]!];
+        } else {
+          depsForAutoStart = [];
+        }
+        await armTaskAutoStart({
+          taskId: newTask.id,
+          model: card.launch,
+          dependencies: depsForAutoStart,
+        });
+      }
     }
-  }
+  });
 
   const res: TaskChainSubmitResponse = { taskIds };
   return Response.json(res);

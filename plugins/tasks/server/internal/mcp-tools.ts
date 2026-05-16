@@ -2,15 +2,13 @@ import { z } from "zod";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import {
   createTask,
-  addTaskDependency,
-  removeTaskDependency,
   getConversation,
   getTask,
-  listDependentIds,
   getTaskDependencyIds,
 } from "@plugins/tasks-core/server";
 import { withNotifyBatch } from "@server/resources";
 import { armTaskAutoStart } from "./arm-auto-start";
+import { rewireDependencies } from "./rewire-dependencies";
 
 export const addTaskTool = Mcp.tool({
   name: "add_task",
@@ -128,24 +126,11 @@ from the current conversation that an independent agent won't see.`,
       author: conversationId,
     });
 
-    await withNotifyBatch(async () => {
-      if (relation === "followup") {
-        await addTaskDependency(task.id, targetId);
-        const dependents = await listDependentIds(targetId);
-        for (const depId of dependents) {
-          if (depId === task.id) continue;
-          await removeTaskDependency(depId, targetId);
-          await addTaskDependency(depId, task.id);
-        }
-      } else if (relation === "prerequisite") {
-        const targetDeps = await getTaskDependencyIds(targetId);
-        for (const depId of targetDeps) {
-          await removeTaskDependency(targetId, depId);
-          await addTaskDependency(task.id, depId);
-        }
-        await addTaskDependency(targetId, task.id);
-      }
-    });
+    if (relation !== "independent") {
+      await withNotifyBatch(() =>
+        rewireDependencies({ newTaskId: task.id, targetId, relation }),
+      );
+    }
 
     if (autostart) {
       const deps = relation === "followup" ? [targetId]
