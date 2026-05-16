@@ -145,17 +145,15 @@ export function QueueView({
     let waitingCount = 0;
     for (const [taskId, members] of taskMap) {
       if (members.length === 0) continue;
-      const group: TaskGroup = {
-        taskId,
-        selected: members[0]!,
-        members,
-        count: members.length,
-      };
-      if (group.selected.status === "waiting") {
+      const workingMember = members.find((m) => m.status === "working" || m.status === "starting");
+      const mostRecent = members.reduce((a, b) => (b.createdAt > a.createdAt ? b : a));
+      const selected = workingMember ?? mostRecent;
+      const group: TaskGroup = { taskId, selected, members, count: members.length };
+      if (workingMember) {
+        working.push(group);
+      } else {
         waiting.push(group);
         waitingCount += members.filter((m) => m.status === "waiting").length;
-      } else {
-        working.push(group);
       }
     }
     waiting.sort((a, b) => Rank.compare(a.selected.rank, b.selected.rank));
@@ -298,7 +296,7 @@ export function QueueView({
   const pinnedCluster = useMemo(
     () => {
       if (!pinnedConversationId) return null;
-      return waitingGroups.find((g) => g.selected.id === pinnedConversationId) ?? null;
+      return waitingGroups.find((g) => g.members.some((m) => m.id === pinnedConversationId)) ?? null;
     },
     [pinnedConversationId, waitingGroups],
   );

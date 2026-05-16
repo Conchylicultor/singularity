@@ -18,7 +18,7 @@ const notBlocked = sql`NOT EXISTS (
      )
 )`;
 
-// True when no other live member of the same task has a better (lower) rank.
+// True when no other live member of the same task was created more recently.
 const isGroupSelected = sql`NOT EXISTS (
   SELECT 1 FROM conversations_ext_queue eq2
     JOIN conversations c2 ON c2.id = eq2.parent_id
@@ -26,7 +26,17 @@ const isGroupSelected = sql`NOT EXISTS (
    WHERE a2.task_id = ${_attempts.taskId}
      AND eq2.parent_id != ${conversationsQueue.table.parentId}
      AND c2.status IN ('waiting', 'working', 'starting')
-     AND eq2.rank < ${conversationsQueue.table.rank}
+     AND c2.created_at > (SELECT created_at FROM conversations WHERE id = ${conversationsQueue.table.parentId})
+)`;
+
+// True when no sibling in the same task group is currently working/starting.
+// A group with an active worker doesn't need user focus — the pin should advance.
+const noGroupMemberWorking = sql`NOT EXISTS (
+  SELECT 1 FROM conversations_ext_queue eq3
+    JOIN conversations c3 ON c3.id = eq3.parent_id
+    JOIN attempts a3 ON a3.id = c3.attempt_id
+   WHERE a3.task_id = ${_attempts.taskId}
+     AND c3.status IN ('working', 'starting')
 )`;
 
 export async function getPinnedId(executor: RankExecutor = db): Promise<string | null> {
@@ -59,6 +69,7 @@ export async function topWaitingByRank(
     eq(_conversations.status, "waiting" as const),
     notBlocked,
     isGroupSelected,
+    noGroupMemberWorking,
   ];
   if (excludeId) {
     conditions.push(ne(conversationsQueue.table.parentId, excludeId));
@@ -92,6 +103,7 @@ export async function validatePin(executor: RankExecutor = db): Promise<string |
           eq(_conversations.status, "waiting" as const),
           notBlocked,
           isGroupSelected,
+          noGroupMemberWorking,
         ),
       )
       .limit(1);
