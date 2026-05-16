@@ -20,12 +20,13 @@ interface AskUserQuestionInput {
 
 function parseAnswerMap(content: string): Record<string, string> {
   const answers: Record<string, string> = {};
-  const regex = /"([^"]+)"="([^"]+)"/g;
+  const regex = /"((?:[^"\\]|\\.)*)"="((?:[^"\\]|\\.)*)"/g;
   let match;
   while ((match = regex.exec(content)) !== null) {
     const key = match[1];
     const value = match[2];
-    if (key != null && value != null) answers[key] = value;
+    if (key != null && value != null)
+      answers[key.replace(/\\"/g, '"')] = value.replace(/\\"/g, '"');
   }
   return answers;
 }
