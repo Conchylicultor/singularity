@@ -1,3 +1,4 @@
+import { useContext } from "react";
 import { useConfigValues, setConfigValue } from "@plugins/config/web";
 import {
   Collapsible,
@@ -5,48 +6,77 @@ import {
   CollapsibleContent,
   CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { TokenRow } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
+import {
+  TokenRow,
+  TokenModeContext,
+  type TokenMode,
+} from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { typographyGroup } from "../../shared";
 import { typographyConfig } from "../internal/config";
 import { Typography } from "../slots";
 
 const PLUGIN_ID = "ui-tokens-typography";
 
-function setOverride(key: string, value: string, currentOverrides: string) {
+function setOverride(
+  key: string,
+  value: string,
+  currentOverrides: string,
+  mode: TokenMode,
+) {
   const current = JSON.parse(currentOverrides || "{}") as {
     light?: Record<string, string>;
     dark?: Record<string, string>;
   };
-  if (!current.light) current.light = {};
-  if (!current.dark) current.dark = {};
-  current.light[key] = value;
-  current.dark[key] = value;
+  if (mode === "both" || mode === "light") {
+    if (!current.light) current.light = {};
+    current.light[key] = value;
+  }
+  if (mode === "both" || mode === "dark") {
+    if (!current.dark) current.dark = {};
+    current.dark[key] = value;
+  }
   void setConfigValue(`${PLUGIN_ID}.overrides`, JSON.stringify(current));
 }
 
-function resetOverride(key: string, currentOverrides: string) {
+function resetOverride(
+  key: string,
+  currentOverrides: string,
+  mode: TokenMode,
+) {
   const current = JSON.parse(currentOverrides || "{}") as {
     light?: Record<string, string>;
     dark?: Record<string, string>;
   };
-  if (current.light) delete current.light[key];
-  if (current.dark) delete current.dark[key];
+  if (mode === "both" || mode === "light") {
+    if (current.light) delete current.light[key];
+  }
+  if (mode === "both" || mode === "dark") {
+    if (current.dark) delete current.dark[key];
+  }
   void setConfigValue(`${PLUGIN_ID}.overrides`, JSON.stringify(current));
 }
 
 export function TypographySection({ search }: { search: string }) {
   const config = useConfigValues(typographyConfig, PLUGIN_ID);
   const presets = Typography.Preset.useContributions();
+  const tokenMode = useContext(TokenModeContext);
 
   const active = presets.find((p) => p.id === config.preset) ?? presets[0];
   const overrides = JSON.parse((config.overrides as string) || "{}") as {
     light?: Record<string, string>;
     dark?: Record<string, string>;
   };
-  const lightValues: Record<string, string> = active
-    ? { ...active.light, ...(overrides.light ?? {}) }
+  const activeValues: Record<string, string> = active
+    ? {
+        ...(tokenMode === "dark" ? active.dark : active.light),
+        ...((tokenMode === "dark" ? overrides.dark : overrides.light) ?? {}),
+      }
     : {};
-  const lightOverrideKeys = new Set(Object.keys(overrides.light ?? {}));
+  const activeOverrideKeys = new Set(
+    Object.keys(
+      tokenMode === "dark" ? (overrides.dark ?? {}) : (overrides.light ?? {}),
+    ),
+  );
 
   const schema = typographyGroup.schema;
   const vars = typographyGroup.vars;
@@ -102,10 +132,10 @@ export function TypographySection({ search }: { search: string }) {
             const label = schema[key]?.label ?? (key as string);
             const cssVar = vars[key] ?? `--${key as string}`;
             const value =
-              lightValues[key as string] ??
+              activeValues[key as string] ??
               schema[key]?.default ??
               "";
-            const isOverridden = lightOverrideKeys.has(key as string);
+            const isOverridden = activeOverrideKeys.has(key as string);
 
             return (
               <TokenRow
@@ -120,10 +150,15 @@ export function TypographySection({ search }: { search: string }) {
                     key as string,
                     newValue,
                     config.overrides as string,
+                    tokenMode,
                   )
                 }
                 onReset={() =>
-                  resetOverride(key as string, config.overrides as string)
+                  resetOverride(
+                    key as string,
+                    config.overrides as string,
+                    tokenMode,
+                  )
                 }
               />
             );

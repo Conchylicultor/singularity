@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MdTune } from "react-icons/md";
 import { PaneChrome, openPane } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
@@ -7,6 +7,10 @@ import { themeEngineConfig } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { themeCustomizerPane } from "../panes";
 import { ThemeCustomizer } from "../slots";
+import {
+  TokenModeContext,
+  type TokenMode,
+} from "../internal/token-mode-context";
 
 const PLUGIN_ID = "ui-theme-engine";
 
@@ -98,21 +102,76 @@ export function VariantSettings() {
   );
 }
 
+const TOKEN_MODES: { id: TokenMode; label: string }[] = [
+  { id: "both", label: "Both" },
+  { id: "light", label: "Light" },
+  { id: "dark", label: "Dark" },
+];
+
+function TokenModeSelector({
+  mode,
+  onChange,
+}: {
+  mode: TokenMode;
+  onChange: (m: TokenMode) => void;
+}) {
+  return (
+    <div className="flex gap-1">
+      {TOKEN_MODES.map(({ id, label }) => (
+        <button
+          key={id}
+          type="button"
+          onClick={() => onChange(id)}
+          className={`flex-1 py-1 text-xs font-medium rounded-md border transition-colors ${
+            mode === id
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border text-muted-foreground hover:border-primary/50"
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function ThemeCustomizerBody() {
   const [search, setSearch] = useState("");
+  const [tokenMode, setTokenMode] = useState<TokenMode>("both");
+  const originalDark = useRef(
+    document.documentElement.classList.contains("dark"),
+  );
+
+  useEffect(() => {
+    if (tokenMode === "dark") {
+      document.documentElement.classList.add("dark");
+    } else if (tokenMode === "light") {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [tokenMode]);
+
+  useEffect(() => {
+    const wasDark = originalDark.current;
+    return () => {
+      document.documentElement.classList.toggle("dark", wasDark);
+    };
+  }, []);
 
   return (
     <PaneChrome pane={themeCustomizerPane} title="Theme Customizer">
       <div className="flex flex-col gap-4 overflow-y-auto h-full">
         <div className="px-6 pt-4 flex flex-col gap-4">
           <GlobalPresetPicker />
+          <TokenModeSelector mode={tokenMode} onChange={setTokenMode} />
           <SearchInput
             placeholder="Filter sections..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <ThemeCustomizer.Host search={search} />
+        <TokenModeContext.Provider value={tokenMode}>
+          <ThemeCustomizer.Host search={search} />
+        </TokenModeContext.Provider>
       </div>
     </PaneChrome>
   );

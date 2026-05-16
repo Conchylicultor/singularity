@@ -10,6 +10,7 @@ export interface TokenRowProps {
   cssVar: string;
   value: string;
   isOverridden: boolean;
+  isSplit?: boolean;
   onValueChange: (newValue: string) => void;
   onReset: () => void;
   search: string;
@@ -20,6 +21,7 @@ export function TokenRow({
   cssVar,
   value,
   isOverridden,
+  isSplit,
   onValueChange,
   onReset,
   search,
@@ -93,6 +95,17 @@ export function TokenRow({
           onChange={(e) => setTextValue(e.target.value)}
           onBlur={handleTextBlur}
           onKeyDown={handleTextKeyDown}
+        />
+      )}
+
+      {isSplit && (
+        <span
+          title="Light and dark values differ"
+          className="shrink-0 size-3 rounded-full border border-muted-foreground/40 overflow-hidden"
+          style={{
+            background:
+              "linear-gradient(to right, oklch(0.95 0 0) 50%, oklch(0.25 0 0) 50%)",
+          }}
         />
       )}
 

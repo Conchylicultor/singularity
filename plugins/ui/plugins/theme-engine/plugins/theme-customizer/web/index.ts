@@ -10,6 +10,10 @@ import { VariantSettings } from "./components/theme-customizer";
 export { ThemeCustomizer } from "./slots";
 export { themeCustomizerPane } from "./panes";
 export { TokenRow, type TokenRowProps } from "./components/token-row";
+export {
+  TokenModeContext,
+  type TokenMode,
+} from "./internal/token-mode-context";
 
 export default {
   id: "ui-theme-customizer",

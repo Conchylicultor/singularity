@@ -6,8 +6,8 @@
 
 - Description: Extensible theme customization pane with global preset picker, search, and contributed sections.
 - Exports (web):
-  - Types: `TokenRowProps`
-  - Values: `ThemeCustomizer`, `themeCustomizerPane`, `TokenRow`
+  - Types: `TokenMode`, `TokenRowProps`
+  - Values: `ThemeCustomizer`, `themeCustomizerPane`, `TokenModeContext`, `TokenRow`
 - Contributes:
   - `Pane.Register` "theme-customizer"
   - `Config.Section` "UI Themes" → `VariantSettings`
