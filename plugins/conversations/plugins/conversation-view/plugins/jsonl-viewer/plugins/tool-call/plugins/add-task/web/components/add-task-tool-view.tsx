@@ -11,16 +11,16 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 type AddTaskInput = {
   title: string;
   description?: string;
-  parent?: string;
-  dependencies?: string[];
-  autoStart?: { model: string };
+  relation?: "followup" | "prerequisite" | "independent";
+  target?: string;
+  autostart: "sonnet" | "opus" | null;
 };
 
 type AddTaskResult = {
   task_id: string;
-  parent_id?: string;
-  dependencies?: string[];
-  auto_start?: boolean;
+  relation: string;
+  group_id?: string | null;
+  autostart: string | null;
 };
 
 function parseResult(event: ToolRendererProps["event"]): AddTaskResult | null {

@@ -30,6 +30,9 @@ export const _tasks = pgTable(
     parentId: text("parent_id").references((): AnyPgColumn => _tasks.id, {
       onDelete: "cascade",
     }),
+    groupId: text("group_id").references((): AnyPgColumn => _tasks.id, {
+      onDelete: "set null",
+    }),
     title: text("title").notNull(),
     description: text("description"),
     // "user" for UI-created tasks, a conversation id for agent-created ones.
@@ -41,7 +44,10 @@ export const _tasks = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index("tasks_parent_rank_idx").on(t.parentId, t.rank)],
+  (t) => [
+    index("tasks_parent_rank_idx").on(t.parentId, t.rank),
+    index("tasks_group_id_idx").on(t.groupId),
+  ],
 );
 
 export const _attempts = pgTable("attempts", {

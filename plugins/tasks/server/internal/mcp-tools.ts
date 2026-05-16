@@ -3,8 +3,13 @@ import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import {
   createTask,
   addTaskDependency,
+  removeTaskDependency,
   getConversation,
+  getTask,
+  listDependentIds,
+  getTaskDependencyIds,
 } from "@plugins/tasks-core/server";
+import { withNotifyBatch } from "@server/resources";
 import { armTaskAutoStart } from "./arm-auto-start";
 
 export const addTaskTool = Mcp.tool({
@@ -17,111 +22,132 @@ The agent that picks up the task will design and plan the solution itself.
 Good: "Login button unresponsive on mobile". Bad: "Fix login button by
 adding a touchstart handler in auth.tsx".
 
-\`parent\` places the task in the tree (containment / hierarchy). By default
-the new task is created as a child of the current conversation's task.
+## relation
 
-\`dependencies\` is the orthogonal blocking relationship: a list of task IDs
-that must finish (reach \`done\` or \`dropped\`) before this task can proceed.
-A task with any non-terminal dependency is shown as \`blocked\` and is not
-active. Use \`dependencies\` when one task must wait on others — don't
-encode that by nesting.
+Controls how the new task connects to the target:
+
+- \`followup\` (default): the new task depends on the target AND the
+  target's existing dependents are rewired to wait on the new task instead.
+  This inserts the new task into the chain: anything that was waiting on
+  the target now waits on the new task. Use for "next step" decomposition.
+
+- \`prerequisite\`: the target depends on the new task AND the target's
+  existing dependencies transfer to the new task. The new task inherits
+  the target's upstream position. Use when you discover something must
+  happen before the current work.
+
+- \`independent\`: no dependency wiring at all. A standalone task that
+  doesn't gate or wait on anything. Use for unrelated side work.
+
+## Examples
+
+**Follow-up (the common case):**
+
+  { "title": "Run integration tests", "autostart": "sonnet" }
+
+**Linear chain** — use \`target\` to chain off the previous task:
+
+  { "title": "Step 1", "autostart": "sonnet" }              → id: "X1"
+  { "title": "Step 2", "target": "X1", "autostart": "sonnet" }  → id: "X2"
+  { "title": "Step 3", "target": "X2", "autostart": "opus" }    → id: "X3"
+
+If B was waiting on A, the chain auto-rewires: B → X3 → X2 → X1 → A.
+
+**Prerequisite** — insert before the current task:
+
+  { "title": "Write design doc", "relation": "prerequisite", "autostart": "opus" }
+
+A now depends on the new task. A's old deps are rewired to the new task.
+
+**Independent** — side work, doesn't gate anything:
+
+  { "title": "Refactor later", "relation": "independent", "autostart": null }
+
+## Guidelines
 
 Prefer **linear chains** over fan-out. Each downstream task picks up cold
 from the prior task's outcome, and intermediate work frequently surfaces
 issues that should reshape what comes after — a linear chain lets the next
-agent see the actual outcome instead of executing a stale plan. Branch
-only when the steps are genuinely independent.
-
-**Follow-up tasks (the default case):** any task you create as a next
-step should ALWAYS have both fields set:
-- \`dependencies: ["current"]\` — blocks the task until your conversation
-  is reviewed and marked done. This is mandatory for every follow-up;
-  omitting it means the task races ahead before the user has seen your
-  work.
-- \`autoStart\` — queue it to launch automatically once unblocked. Pick
-  the model by task nature: \`opus\` for new features or anything that
-  requires design/planning; \`sonnet\` for mechanical refactoring,
-  well-scoped fixes, and routine execution.
-
-Chain subsequent follow-ups off the *first* follow-up's task ID, not off
-\`"current"\`, so the chain stays linear.
-
-Do NOT create a meta "holder" task to group follow-ups under. Every task
-gets executed — a holder would just auto-launch an empty agent with
-nothing to do. Chain follow-ups linearly off the current task instead of
-inventing a parent for them.
-
-The response always includes the new task's \`task_id\` so it can be passed
-as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
+agent see the actual outcome instead of executing a stale plan.`,
   inputSchema: {
     title: z.string().min(1).describe("Short title for the task."),
     description: z
       .string()
       .optional()
       .describe(
-        "Optional longer description of the problem or issue. Describe WHAT is wrong or needed, not HOW to fix it — this includes hints, suggestions, or partial approaches. The assigned agent will design the solution. If a relevant design doc exists, cross-link it here (e.g. 'See design doc: docs/path/to/design.md')."
+        "Optional longer description of the problem or issue. Describe WHAT is wrong or needed, not HOW to fix it."
       ),
-    parent: z
+    relation: z
+      .enum(["followup", "prerequisite", "independent"])
+      .default("followup")
+      .describe(
+        "`followup` (default): new task depends on target, target's dependents rewired. " +
+        "`prerequisite`: target depends on new task, target's deps transfer. " +
+        "`independent`: no dependency wiring."
+      ),
+    target: z
       .string()
       .optional()
       .describe(
-        "ID of the parent task (containment). Defaults to the current conversation's task."
+        "Task ID to relate to. Defaults to the current conversation's task. " +
+        "Use a previous call's task_id to chain follow-ups linearly."
       ),
-    dependencies: z
-      .array(z.string())
-      .optional()
+    autostart: z
+      .enum(["sonnet", "opus"])
+      .nullable()
       .describe(
-        "Task IDs this task depends on (blocking). The new task is 'blocked' until each one is 'done' or 'dropped'. Use the literal string \"current\" to depend on the task the calling agent is running in — useful when scheduling follow-up work that should wait until your current conversation finishes."
-      ),
-    autoStart: z
-      .object({
-        model: z
-          .enum(["sonnet", "opus"])
-          .describe(
-            "Model to use when the auto-launched conversation starts. Use \"opus\" for new features or tasks that require design/planning; \"sonnet\" for mechanical refactoring, well-scoped fixes, and routine execution."
-          ),
-      })
-      .optional()
-      .describe(
-        "Queue the task for auto-launch once all dependencies are non-blocking. Set this for every follow-up task — omit only when you explicitly want the task to sit in the user's queue without auto-launching."
+        "Auto-launch model. Pass \"sonnet\" or \"opus\" to queue for auto-launch " +
+        "once unblocked. Pass null to leave in the user's queue without auto-launching. " +
+        "Use \"opus\" for new features or tasks requiring design/planning; " +
+        "\"sonnet\" for mechanical refactoring, well-scoped fixes, and routine execution."
       ),
   },
   async handler(
-    { title, description, parent, dependencies, autoStart },
+    { title, description, relation, target, autostart },
     { conversationId },
   ) {
     const conv = await getConversation(conversationId);
     if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);
     const currentTaskId = conv.taskId;
 
-    const parentId = parent ?? currentTaskId;
+    const targetId = target ?? currentTaskId;
+    const targetTask = await getTask(targetId);
+    if (!targetTask) throw new Error(`Target task "${targetId}" not found`);
+
+    const groupId = relation !== "independent" ? currentTaskId : null;
 
     const task = await createTask({
-      parentId,
+      parentId: currentTaskId,
+      groupId,
       title,
       description: description ?? null,
       author: conversationId,
     });
 
-    const depIds = Array.from(new Set(dependencies ?? []))
-      .map((d) => (d === "current" ? currentTaskId : d))
-      .filter((d) => d !== "" && d !== task.id);
-    for (const depId of depIds) {
-      try {
-        await addTaskDependency(task.id, depId);
-      } catch (err) {
-        throw new Error(
-          `Failed to add dependency "${depId}": ${err instanceof Error ? err.message : err}`,
-        );
+    await withNotifyBatch(async () => {
+      if (relation === "followup") {
+        await addTaskDependency(task.id, targetId);
+        const dependents = await listDependentIds(targetId);
+        for (const depId of dependents) {
+          if (depId === task.id) continue;
+          await removeTaskDependency(depId, targetId);
+          await addTaskDependency(depId, task.id);
+        }
+      } else if (relation === "prerequisite") {
+        const targetDeps = await getTaskDependencyIds(targetId);
+        for (const depId of targetDeps) {
+          await removeTaskDependency(targetId, depId);
+          await addTaskDependency(task.id, depId);
+        }
+        await addTaskDependency(targetId, task.id);
       }
-    }
+    });
 
-    if (autoStart) {
-      await armTaskAutoStart({
-        taskId: task.id,
-        model: autoStart.model,
-        dependencies: depIds,
-      });
+    if (autostart) {
+      const deps = relation === "followup" ? [targetId]
+        : relation === "prerequisite" ? await getTaskDependencyIds(task.id)
+        : [];
+      await armTaskAutoStart({ taskId: task.id, model: autostart, dependencies: deps });
     }
 
     return {
@@ -130,9 +156,9 @@ as the \`parent\` or a \`dependencies\` entry of subsequent tasks.`,
           type: "text",
           text: JSON.stringify({
             task_id: task.id,
-            parent_id: parentId,
-            dependencies: depIds,
-            auto_start: autoStart ? { model: autoStart.model } : null,
+            relation,
+            group_id: groupId,
+            autostart,
           }),
         },
       ],

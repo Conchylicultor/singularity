@@ -13,6 +13,7 @@ export const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 export interface CreateTaskInput {
   id?: string;
   parentId?: string | null;
+  groupId?: string | null;
   title: string;
   author?: string;
   rank?: Rank;
@@ -37,6 +38,7 @@ export async function createTask(input: CreateTaskInput) {
   await db.insert(_tasks).values({
     id,
     parentId,
+    groupId: input.groupId ?? null,
     title: input.title,
     author: input.author,
     rank: rank.toJSON(),

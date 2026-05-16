@@ -104,6 +104,14 @@ export async function listDependentIds(taskId: string): Promise<string[]> {
   return rows.map((r) => r.taskId);
 }
 
+export async function getTaskDependencyIds(taskId: string): Promise<string[]> {
+  const rows = await db
+    .select({ dependsOnTaskId: _taskDependencies.dependsOnTaskId })
+    .from(_taskDependencies)
+    .where(eq(_taskDependencies.taskId, taskId));
+  return rows.map((r) => r.dependsOnTaskId);
+}
+
 // Armed tasks that depend on `changedTaskId`. Used by the static
 // taskStatusChanged trigger to fan out maybeLaunchTaskJob enqueues.
 export async function listArmedDependentsOf(

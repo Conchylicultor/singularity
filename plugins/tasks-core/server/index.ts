@@ -58,6 +58,7 @@ export {
   hasBlockingDep,
   listBlockingDepIds,
   listDependentIds,
+  getTaskDependencyIds,
   listArmedDependentsOf,
   findNextRankUnder,
   isDescendant,

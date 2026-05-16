@@ -34,6 +34,10 @@ type TaskNodeData = {
 
 type TaskFlowNode = Node<TaskNodeData, typeof NODE_TYPE>;
 
+const GROUP_BG_TYPE = "groupBackground";
+type GroupBgData = { groupId: string };
+type GroupBgNode = Node<GroupBgData, typeof GROUP_BG_TYPE>;
+
 function computeDagClosure(rootId: string, allTasks: readonly Task[]): Task[] {
   const byId = new Map(allTasks.map((t) => [t.id, t]));
   const reverseDeps = new Map<string, string[]>();
@@ -56,6 +60,7 @@ function computeDagClosure(rootId: string, allTasks: readonly Task[]): Task[] {
       if (byId.has(d)) stack.push(d);
     }
     for (const r of reverseDeps.get(id) ?? []) stack.push(r);
+    if (t.groupId && byId.has(t.groupId)) stack.push(t.groupId);
   }
   return [...visited].map((id) => byId.get(id)).filter((t): t is Task => !!t);
 }
@@ -128,7 +133,41 @@ function layoutDag(
     }
   }
 
-  return { nodes, edges };
+  // Group background nodes
+  const groupMembers = new Map<string, string[]>();
+  for (const t of sorted) {
+    if (t.groupId && ids.has(t.groupId)) {
+      const list = groupMembers.get(t.groupId) ?? [];
+      list.push(t.id);
+      groupMembers.set(t.groupId, list);
+    }
+  }
+  // Include the anchor task itself in its group visual
+  for (const [groupId, members] of groupMembers) {
+    if (!members.includes(groupId)) members.push(groupId);
+  }
+
+  const GROUP_PAD = 16;
+  const bgNodes: GroupBgNode[] = [];
+  for (const [groupId, memberIds] of groupMembers) {
+    const positions = memberIds.map((id) => g.node(id)).filter(Boolean);
+    if (positions.length === 0) continue;
+    const minX = Math.min(...positions.map((p) => p.x - NODE_WIDTH / 2)) - GROUP_PAD;
+    const minY = Math.min(...positions.map((p) => p.y - NODE_HEIGHT / 2)) - GROUP_PAD;
+    const maxX = Math.max(...positions.map((p) => p.x + NODE_WIDTH / 2)) + GROUP_PAD;
+    const maxY = Math.max(...positions.map((p) => p.y + NODE_HEIGHT / 2)) + GROUP_PAD;
+    bgNodes.push({
+      id: `group-${groupId}`,
+      type: GROUP_BG_TYPE,
+      data: { groupId },
+      position: { x: minX, y: minY },
+      style: { width: maxX - minX, height: maxY - minY },
+      selectable: false,
+      draggable: false,
+    });
+  }
+
+  return { nodes: [...bgNodes, ...nodes], edges };
 }
 
 function TaskNode({ data }: NodeProps<TaskFlowNode>) {
@@ -210,7 +249,15 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
   );
 }
 
-const NODE_TYPES = { [NODE_TYPE]: TaskNode };
+function GroupBackground() {
+  return (
+    <div
+      className="size-full rounded-lg border border-dashed border-border/50 bg-muted/15 pointer-events-none"
+    />
+  );
+}
+
+const NODE_TYPES = { [NODE_TYPE]: TaskNode, [GROUP_BG_TYPE]: GroupBackground };
 const EDGE_TYPES = { insertable: InsertableEdge };
 
 function TaskGraphInner({
@@ -220,7 +267,7 @@ function TaskGraphInner({
   onNavigate,
 }: {
   taskId: string;
-  nodes: TaskFlowNode[];
+  nodes: Node[];
   edges: Edge[];
   onNavigate: (taskId: string) => void;
 }) {
