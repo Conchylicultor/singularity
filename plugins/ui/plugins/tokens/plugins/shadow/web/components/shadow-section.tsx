@@ -27,6 +27,15 @@ const DEFAULT_PARAMS: ShadowParams = {
   offsetY: "1px",
 };
 
+function parseJson(value: unknown): Record<string, unknown> {
+  if (typeof value === "object" && value !== null) return value as Record<string, unknown>;
+  try {
+    return JSON.parse(String(value) || "{}") as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
 function colorToHex(oklchChannels: string): string {
   const parts = oklchChannels.trim().split(/\s+/);
   const l = parseFloat(parts[0] ?? "0");
@@ -45,10 +54,10 @@ function hexToColorParam(hex: string): string {
 
 function getActiveParams(
   active: { params?: ShadowParams } | undefined,
-  storedParams: string,
+  storedParams: unknown,
 ): ShadowParams {
   const base: ShadowParams = active?.params ?? DEFAULT_PARAMS;
-  const partial = JSON.parse(storedParams || "{}") as Partial<ShadowParams>;
+  const partial = parseJson(storedParams) as Partial<ShadowParams>;
   return { ...base, ...partial };
 }
 
@@ -147,12 +156,10 @@ export function ShadowSection({ search }: { search: string }) {
   const presets = Shadow.Preset.useContributions();
 
   const active = presets.find((p) => p.id === config.preset) ?? presets[0];
-  const storedPartial = JSON.parse(
-    (config.params as string) || "{}",
-  ) as Partial<ShadowParams>;
+  const storedPartial = parseJson(config.params) as Partial<ShadowParams>;
   const baseParams: ShadowParams = active?.params ?? DEFAULT_PARAMS;
-  const mergedParams = getActiveParams(active, config.params as string);
-  const hasOverrides = (config.params as string) !== "{}";
+  const mergedParams = getActiveParams(active, config.params);
+  const hasOverrides = Object.keys(storedPartial).length > 0;
 
   const tokens = hasOverrides ? buildShadowTiers(mergedParams) : (active?.light ?? buildShadowTiers(DEFAULT_PARAMS));
 
