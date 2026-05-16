@@ -1,1 +1,1 @@
--- Snapshot-only migration (--custom). Actual DDL in dag_schema_apply.
+-- Snapshot-only migration (--custom). DDL was applied out-of-band.

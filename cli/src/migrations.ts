@@ -56,14 +56,12 @@ export async function generateMigration(opts: {
 
   const proc = Bun.spawn(cmd, {
     cwd: resolve(root, "plugins/database/plugins/migrations"),
-    // "inherit" would break non-TTY environments: @clack/prompts checks
-    // isTTY and aborts when stdin is a pipe, so any interactive "rename
-    // table?" prompt drizzle-kit shows would silently exit without generating.
-    // "pipe" + a leading \r answers every select-prompt with its default
-    // (Enter = accept highlighted choice), which is "create table" — the
-    // correct answer when we're replacing a table, not renaming it.
+    // "pipe" stdin so we can feed \r to auto-accept @clack/prompts select
+    // dialogs. drizzle-kit asks "Is X created or renamed from Y?" for each
+    // ambiguous schema change; the default (first option) is always "created"
+    // which is correct — we never rename columns/tables in-place.
     stdin: "pipe",
-    stdout: "inherit",
+    stdout: "pipe",
     stderr: "pipe",
     env: {
       ...process.env,
@@ -71,13 +69,27 @@ export async function generateMigration(opts: {
       SINGULARITY_WORKTREE: worktreeName,
     },
   });
-  // Send Enter to auto-accept the default answer on any select prompt.
-  void proc.stdin.write(new Uint8Array([0x0d]));
+  // Send enough \r to auto-accept multiple select prompts. drizzle-kit shows
+  // one per ambiguous rename (column or table); a single \r only covers one
+  // prompt — if there are more, the second gets EOF and drizzle silently exits
+  // without generating. 10 covers any realistic schema change.
+  void proc.stdin.write(new Uint8Array(10).fill(0x0d));
   void proc.stdin.end();
 
-  // Tee stderr: forward live to the user AND capture so we can detect cases
-  // where drizzle-kit printed a diagnostic but still exited 0 (seen with
-  // snapshot-chain collisions).
+  // Capture stdout + stderr so we can detect silent aborts and diagnostics.
+  let stdoutBuf = "";
+  const stdoutDone = (async () => {
+    const decoder = new TextDecoder();
+    const reader = proc.stdout.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      process.stdout.write(value);
+      stdoutBuf += decoder.decode(value, { stream: true });
+    }
+    stdoutBuf += decoder.decode();
+  })();
+
   let stderrBuf = "";
   const stderrDone = (async () => {
     const decoder = new TextDecoder();
@@ -92,7 +104,7 @@ export async function generateMigration(opts: {
   })();
 
   const exitCode = await proc.exited;
-  await stderrDone;
+  await Promise.all([stdoutDone, stderrDone]);
   if (exitCode !== 0) process.exit(1);
   if (/\b(error|collision|conflict)\b/i.test(stderrBuf)) {
     console.error(
@@ -100,6 +112,21 @@ export async function generateMigration(opts: {
         "If this is a snapshot-chain collision, rebase onto origin/main, then re-run\n" +
         "  ./singularity build --reset-migration --migration-name <slug>\n" +
         "to drop this branch's migration and regenerate it against the new tip.",
+    );
+    process.exit(1);
+  }
+
+  // Detect silent abort: drizzle-kit showed a rename prompt but exited without
+  // generating. This happens when stdin EOF'd before all prompts were answered.
+  const showedPrompt = /renamed|created/.test(stdoutBuf);
+  const generatedNothing = !readdirSync(migrationsDir).some(
+    (f: string) => f.endsWith(".sql") && !before.has(f),
+  );
+  if (showedPrompt && generatedNothing && !customMigration) {
+    console.error(
+      "\nError: drizzle-kit showed interactive rename prompts but generated no migration.\n" +
+        "This usually means the stdin auto-accept failed to cover all prompts.\n" +
+        "Please report this — the build pipeline needs to handle more prompts.\n",
     );
     process.exit(1);
   }

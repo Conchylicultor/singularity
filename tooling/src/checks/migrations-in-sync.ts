@@ -1,4 +1,4 @@
-import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { homedir } from "node:os";
 import { basename, join, relative, resolve } from "path";
 import type { Check } from "./types";
@@ -42,6 +42,24 @@ export const migrationsInSync: Check = {
     const root = await getRoot();
     const migrationsPluginDir = resolve(root, "plugins/database/plugins/migrations");
     const committed = resolve(migrationsPluginDir, "data");
+
+    // --- Orphan-file check: every .sql on disk must have a journal entry ---
+    const journalPath = join(committed, "meta/_journal.json");
+    if (existsSync(journalPath)) {
+      const journal = JSON.parse(readFileSync(journalPath, "utf8"));
+      const journalTags = new Set(
+        (journal.entries as Array<{ tag: string }>).map((e) => e.tag),
+      );
+      const onDiskTags = listSql(committed).map((f) => f.slice(0, -4));
+      const orphans = onDiskTags.filter((tag) => !journalTags.has(tag));
+      if (orphans.length > 0) {
+        return {
+          ok: false,
+          message: `Orphan .sql files with no journal entry: ${orphans.join(", ")}`,
+          hint: "Either delete the orphan file or regenerate migrations with ./singularity build --migration-name <slug>.",
+        };
+      }
+    }
 
     // Temp dir must live inside the repo so drizzle-kit can resolve
     // node_modules. We write a tmp drizzle config here that points `out` at

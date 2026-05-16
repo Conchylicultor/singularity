@@ -20,6 +20,15 @@ export const migrationsGuard = defineGuard<BashInput>({
         };
       }
     }
+
+    if (/--custom-migration/.test(cmd)) {
+      return {
+        blocked: "Refusing to use --custom-migration without explicit approval.",
+        why: "--custom-migration creates a migration file outside drizzle-kit's normal generation flow. Files created this way are fragile: the runner tracks them by filename hash, so editing after creation silently breaks application. Agents that hit generation failures should stop and report rather than working around with --custom.",
+        hint: "If drizzle-kit failed to generate a migration, report the failure to the user.\n\nLegitimate uses of --custom-migration (data backfills, DDL drizzle can't express) require user approval. If the user approves, create .allow-migrations to bypass this guard.",
+      };
+    }
+
     return null;
   },
 });
