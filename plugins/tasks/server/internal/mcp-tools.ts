@@ -36,8 +36,9 @@ Controls how the new task connects to the target:
   the target's upstream position. Use when you discover something must
   happen before the current work.
 
-- \`independent\`: no dependency wiring at all. A standalone task that
-  doesn't gate or wait on anything. Use for unrelated side work.
+- \`independent\`: no dependency wiring. **Avoid almost always** — sub-tasks
+  depend on uncommitted files from the current conversation; an independent
+  task starts against main and won't see them.
 
 ## Examples
 
@@ -68,7 +69,10 @@ A now depends on the new task. A's old deps are rewired to the new task.
 Prefer **linear chains** over fan-out. Each downstream task picks up cold
 from the prior task's outcome, and intermediate work frequently surfaces
 issues that should reshape what comes after — a linear chain lets the next
-agent see the actual outcome instead of executing a stale plan.`,
+agent see the actual outcome instead of executing a stale plan.
+
+**Avoid \`independent\` for sub-tasks** — they depend on uncommitted files
+from the current conversation that an independent agent won't see.`,
   inputSchema: {
     title: z.string().min(1).describe("Short title for the task."),
     description: z
@@ -83,7 +87,7 @@ agent see the actual outcome instead of executing a stale plan.`,
       .describe(
         "`followup` (default): new task depends on target, target's dependents rewired. " +
         "`prerequisite`: target depends on new task, target's deps transfer. " +
-        "`independent`: no dependency wiring."
+        "`independent`: no dependency wiring — avoid almost always; sub-tasks depend on uncommitted files from the current conversation and won't see them if launched independently."
       ),
     target: z
       .string()
