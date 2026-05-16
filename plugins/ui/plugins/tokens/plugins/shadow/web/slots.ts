@@ -1,9 +1,10 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-import type { ShadowTokenValues } from "../shared";
+import type { ShadowParams, ShadowTokenValues } from "../shared";
 
 export interface ShadowPresetContribution {
   id: string;
   label: string;
+  params?: ShadowParams;
   light: ShadowTokenValues;
   dark: ShadowTokenValues;
 }
