@@ -84,7 +84,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`config_v2`** — File-based JSONC config system (v2). Umbrella for store, merge, and codegen sub-plugins.
   - Plugins:
-    - **`store`** — ConfigStore abstraction and JSONC-on-disk backend. Reads/writes formatted JSONC files under ~/.singularity/config/ with atomic writes and file-watching.
+    - **`store`** — ConfigStore abstraction and JSONC-on-disk backend. Reads/writes formatted JSONC files with atomic writes and file-watching.
 
 - **`conversations`** [load-bearing] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Plugins:

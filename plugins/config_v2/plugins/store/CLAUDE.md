@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: ConfigStore abstraction and JSONC-on-disk backend. Reads/writes formatted JSONC files under ~/.singularity/config/ with atomic writes and file-watching.
+- Description: ConfigStore abstraction and JSONC-on-disk backend. Reads/writes formatted JSONC files with atomic writes and file-watching.
 - Exports (core):
   - Types: `ConfigStore`, `Disposable`, `JsonValue`
 - Exports (server):

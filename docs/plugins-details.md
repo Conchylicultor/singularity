@@ -455,7 +455,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — File-based JSONC config system (v2). Umbrella for store, merge, and codegen sub-plugins.
   - Plugins:
-    - **`store`** — ConfigStore abstraction and JSONC-on-disk backend. Reads/writes formatted JSONC files under ~/.singularity/config/ with atomic writes and file-watching.
+    - **`store`** — ConfigStore abstraction and JSONC-on-disk backend. Reads/writes formatted JSONC files with atomic writes and file-watching.
       - Exports (core):
         - Types: `ConfigStore`, `Disposable`, `JsonValue`
       - Exports (server):
