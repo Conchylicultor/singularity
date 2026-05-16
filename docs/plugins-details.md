@@ -454,7 +454,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `review`, `theme-customizer`
 
 - **`config_v2`** — File-based JSONC config system (v2). Umbrella for store, merge, and codegen sub-plugins.
+  - Exports (core):
+    - Types: `ConfigDescriptor`, `ConfigValues`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`
+    - Values: `buildFieldsSchema`, `defineConfig`, `defineFieldType`
+  - Imported by: `primitives`
   - Plugins:
+    - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
+      - Exports (web):
+        - Types: `FieldRendererComponent`, `FieldRendererProps`
+        - Values: `FieldRenderer`, `Fields`
+      - Plugins:
+        - **`primitives`** — Basic field types: bool, text, int, float.
+          - Exports (core):
+            - Types: `BoolFieldDef`, `FloatFieldDef`, `IntFieldDef`, `TextFieldDef`
+            - Values: `boolField`, `boolFieldType`, `floatField`, `floatFieldType`, `intField`, `intFieldType`, `textField`, `textFieldType`
+          - Contributes:
+            - `Fields.Renderer` "bool" → `BoolRenderer`
+            - `Fields.Renderer` "text" → `TextRenderer`
+            - `Fields.Renderer` "int" → `IntRenderer`
+            - `Fields.Renderer` "float" → `FloatRenderer`
     - **`store`** — ConfigStore abstraction and JSONC-on-disk backend. Reads/writes formatted JSONC files with atomic writes and file-watching.
       - Exports (core):
         - Types: `ConfigStore`, `Disposable`, `JsonValue`

@@ -1,0 +1,5 @@
+{
+  "name": "@singularity/plugin-config_v2-fields-primitives",
+  "private": true,
+  "description": "Basic field types: bool, text, int, float."
+}
