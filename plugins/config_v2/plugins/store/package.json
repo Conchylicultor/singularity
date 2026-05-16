@@ -1,5 +1,5 @@
 {
   "name": "@singularity/plugin-config_v2-store",
   "private": true,
-  "description": "ConfigStore abstraction and JSONC-on-disk backend. Reads/writes formatted JSONC files under ~/.singularity/config/ with atomic writes and file-watching."
+  "description": "ConfigStore abstraction and JSONC-on-disk backend. Reads/writes formatted JSONC files with atomic writes and file-watching."
 }
