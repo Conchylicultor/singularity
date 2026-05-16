@@ -7,6 +7,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { formatTime } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 
 type UserTextEvent = Extract<JsonlEvent, { kind: "user-text" }>;
 
@@ -85,42 +86,44 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
     }, { mode: "push" });
 
   return (
-    <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2">
-      <SectionLabel className="mb-1 flex items-center gap-2 text-[10px]">
-        <span>User</span>
-        <span className="tabular-nums">{formatTime(e.at)}</span>
-      </SectionLabel>
-      <div
-        className={showCollapsed ? "max-h-48 overflow-hidden" : ""}
-        style={showCollapsed ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}
-      >
-        {e.segments ? (
-          <SegmentedContent segments={e.segments} onFileOpen={onFileOpen} />
-        ) : (
-          <div className="whitespace-pre-wrap break-words text-sm">
-            <FileLinkText text={e.text} onFileOpen={onFileOpen} />
-          </div>
-        )}
-      </div>
-      {collapsible ? (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="mt-1 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+    <ContentScope>
+      <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2">
+        <SectionLabel className="mb-1 flex items-center gap-2 text-[10px]">
+          <span>User</span>
+          <span className="tabular-nums">{formatTime(e.at)}</span>
+        </SectionLabel>
+        <div
+          className={showCollapsed ? "max-h-48 overflow-hidden" : ""}
+          style={showCollapsed ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}
         >
-          {expanded ? (
-            <>
-              <MdExpandLess className="size-3.5" />
-              Show less
-            </>
+          {e.segments ? (
+            <SegmentedContent segments={e.segments} onFileOpen={onFileOpen} />
           ) : (
-            <>
-              <MdExpandMore className="size-3.5" />
-              Show more
-            </>
+            <div className="whitespace-pre-wrap break-words text-sm">
+              <FileLinkText text={e.text} onFileOpen={onFileOpen} />
+            </div>
           )}
-        </button>
-      ) : null}
-    </div>
+        </div>
+        {collapsible ? (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="mt-1 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            {expanded ? (
+              <>
+                <MdExpandLess className="size-3.5" />
+                Show less
+              </>
+            ) : (
+              <>
+                <MdExpandMore className="size-3.5" />
+                Show more
+              </>
+            )}
+          </button>
+        ) : null}
+      </div>
+    </ContentScope>
   );
 }
