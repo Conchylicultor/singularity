@@ -8,6 +8,7 @@ import {
   MdOpenInFull,
 } from "react-icons/md";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
+import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PaneMatchContext, type PaneMatch, type PaneObject } from "../pane";
@@ -93,7 +94,9 @@ export function PaneChrome({ pane, title, actions, hideRightActions, children }:
           </Button>
         )}
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <ContentScope>{children}</ContentScope>
+      </div>
     </div>
   );
 }
