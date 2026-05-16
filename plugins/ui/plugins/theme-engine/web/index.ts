@@ -1,7 +1,5 @@
 import { type PluginDefinition, Core } from "@plugins/framework/plugins/web-sdk/core";
-import { Config } from "@plugins/config/web";
 import { ThemeInjector } from "./components/theme-injector";
-import { VariantSettings } from "./components/variant-settings";
 
 export { ThemeEngine } from "./slots";
 export type {
@@ -21,14 +19,5 @@ export default {
   name: "UI: Theme Engine",
   description:
     "Central settings pane for switching visual variants of pluggable UI components.",
-  contributions: [
-    Core.Root({ component: ThemeInjector }),
-    Config.Section({
-      id: "ui-variants",
-      title: "UI Themes",
-      description:
-        "Choose the global theme and visual variant for each pluggable component.",
-      component: VariantSettings,
-    }),
-  ],
+  contributions: [Core.Root({ component: ThemeInjector })],
 } satisfies PluginDefinition;

@@ -121,7 +121,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `DebugApp`
           - Contributes:
             - `Apps.App` "Debug" → `DebugLayout`
-          - Imported by: `agents`, `auth`, `branch`, `build`, `build-logs`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `dependencies`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `review`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `toaster`, `worktree-switcher`
+          - Imported by: `agents`, `auth`, `branch`, `build`, `build-logs`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `dependencies`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `review`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `theme-customizer`, `toaster`, `worktree-switcher`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -451,7 +451,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
   - Imported by: `auth`, `backup`, `build`, `chart`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
-  - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `review`, `theme-engine`
+  - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `review`, `theme-customizer`
 
 - **`config_v2`** — File-based JSONC config system (v2). Umbrella for store, merge, and codegen sub-plugins.
   - Plugins:
@@ -1815,7 +1815,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `transformValues`
       - Contributes:
         - `Core.Root` → `ThemeInjector`
-        - `Config.Section` "UI Themes" → `VariantSettings`
       - Server:
         - Uses: `config.Config`
       - Slot contributors: `chart`, `color-adjust`, `color-palette`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `typography`
@@ -1826,6 +1825,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `ThemeCustomizer`, `themeCustomizerPane`, `TokenRow`
           - Contributes:
             - `Pane.Register` "theme-customizer"
+            - `Config.Section` "UI Themes" → `VariantSettings`
+            - `Shell.Sidebar` "Theme" → `component`
     - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
       - Contributes:
         - `ThemeEngine.GlobalPreset` "Default"

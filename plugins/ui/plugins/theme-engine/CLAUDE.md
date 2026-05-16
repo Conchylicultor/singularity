@@ -15,7 +15,6 @@
   - Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `transformValues`
 - Contributes:
   - `Core.Root` → `ThemeInjector`
-  - `Config.Section` "UI Themes" → `VariantSettings`
 - Server:
   - Uses: `config.Config`
 - Slot contributors: `chart`, `color-adjust`, `color-palette`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `typography`

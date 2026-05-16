@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { MdTune } from "react-icons/md";
+import { PaneChrome, openPane } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useConfigValues, setConfigValue } from "@plugins/config/web";
 import { themeEngineConfig } from "@plugins/ui/plugins/theme-engine/core";
@@ -55,6 +56,44 @@ function GlobalPresetPicker() {
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+export function VariantSettings() {
+  const groups = ThemeEngine.VariantGroup.useContributions();
+  const globalPresets = ThemeEngine.GlobalPreset.useContributions();
+
+  if (groups.length === 0 && globalPresets.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No pluggable components registered.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-start justify-between gap-4">
+        <GlobalPresetPicker />
+        <button
+          className="flex items-center gap-1.5 px-3 py-1 text-sm rounded-md border border-border text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors shrink-0"
+          onClick={() => openPane(themeCustomizerPane, {}, { mode: "root" })}
+        >
+          <MdTune className="size-4" />
+          Customize
+        </button>
+      </div>
+      {groups.length > 0 && (
+        <div className="flex flex-col gap-4">
+          {groups.map((g) => (
+            <div key={g.componentId}>
+              <h4 className="text-sm font-medium mb-1">{g.componentLabel}</h4>
+              <g.component />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
