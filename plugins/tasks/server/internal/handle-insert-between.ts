@@ -1,5 +1,6 @@
 import {
   createTask,
+  getTask,
   removeTaskDependency,
   addTaskDependency,
 } from "@plugins/tasks-core/server";
@@ -21,9 +22,17 @@ export async function handleInsertBetween(req: Request): Promise<Response> {
     return new Response("Missing sourceTaskId or targetTaskId", { status: 400 });
   }
 
+  const [sourceTask, targetTask] = await Promise.all([
+    getTask(sourceTaskId),
+    getTask(targetTaskId),
+  ]);
+
+  const groupId = sourceTask?.groupId ?? targetTask?.groupId ?? null;
+
   const newTask = await withNotifyBatch(async () => {
     const row = await createTask({
       parentId: targetParentId ?? null,
+      groupId,
       title: "Untitled",
       author: "user",
     });
