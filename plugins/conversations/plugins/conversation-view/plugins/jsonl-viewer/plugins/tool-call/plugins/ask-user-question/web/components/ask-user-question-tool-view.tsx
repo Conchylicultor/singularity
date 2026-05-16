@@ -18,16 +18,42 @@ interface AskUserQuestionInput {
   questions: Question[];
 }
 
-function parseAnswerMap(content: string): Record<string, string> {
+const RESULT_PREFIX = 'User has answered your questions: ';
+const RESULT_SUFFIX = '. You can now continue with the user\'s answers in mind.';
+
+function parseAnswerMap(
+  content: string,
+  questions: Question[],
+): Record<string, string> {
+  const prefixIdx = content.indexOf(RESULT_PREFIX);
+  const suffixIdx = content.lastIndexOf(RESULT_SUFFIX);
+  if (prefixIdx === -1 || suffixIdx === -1) return {};
+
+  const payload = content.slice(prefixIdx + RESULT_PREFIX.length, suffixIdx);
+
   const answers: Record<string, string> = {};
-  const regex = /"((?:[^"\\]|\\.)*)"="((?:[^"\\]|\\.)*)"/g;
-  let match;
-  while ((match = regex.exec(content)) !== null) {
-    const key = match[1];
-    const value = match[2];
-    if (key != null && value != null)
-      answers[key.replace(/\\"/g, '"')] = value.replace(/\\"/g, '"');
+  const anchors: { question: string; valueStart: number }[] = [];
+
+  for (const q of questions) {
+    const anchor = `"${q.question}"="`;
+    const idx = payload.indexOf(anchor);
+    if (idx !== -1) {
+      anchors.push({ question: q.question, valueStart: idx + anchor.length });
+    }
   }
+
+  anchors.sort((a, b) => a.valueStart - b.valueStart);
+
+  for (let i = 0; i < anchors.length; i++) {
+    const cur = anchors[i]!;
+    const next = anchors[i + 1];
+    const end = next != null
+      ? payload.lastIndexOf('"', next.valueStart - 1)
+      : payload.length;
+    const raw = payload.slice(cur.valueStart, end);
+    answers[cur.question] = raw.endsWith('"') ? raw.slice(0, -1) : raw;
+  }
+
   return answers;
 }
 
@@ -97,7 +123,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   const resultContent = event.result?.content;
   const answerMap =
     resultContent && !event.result?.isError
-      ? parseAnswerMap(resultContent)
+      ? parseAnswerMap(resultContent, questions)
       : null;
 
   const questionSelections = questions.map((q) =>
