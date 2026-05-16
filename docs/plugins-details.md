@@ -453,6 +453,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Imported by: `auth`, `backup`, `build`, `chart`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
   - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `review`, `theme-engine`
 
+- **`config_v2`** — File-based JSONC config system (v2). Umbrella for store, merge, and codegen sub-plugins.
+  - Plugins:
+    - **`store`** — ConfigStore abstraction and JSONC-on-disk backend. Reads/writes formatted JSONC files under ~/.singularity/config/ with atomic writes and file-watching.
+      - Exports (core):
+        - Types: `ConfigStore`, `Disposable`, `JsonValue`
+      - Exports (server):
+        - Values: `getConfigStore`
+
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:
     - DB schema: `plugins/conversations/server/internal/tables-created-event.ts`
@@ -1222,7 +1230,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `POST /api/mcp/:conversationId`
     - **`paths`**
       - Exports (server):
-        - Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `CRASHES_DIR`, `GIT`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PGREP`, `PLUGINS_DIR`, `REPO_ROOT`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`
+        - Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `CONFIG_DIR`, `CRASHES_DIR`, `GIT`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PGREP`, `PLUGINS_DIR`, `REPO_ROOT`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`
     - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
       - Exports (core):
         - Types: `SecretMetadata`, `SecretRef`

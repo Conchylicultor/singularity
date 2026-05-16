@@ -16,6 +16,7 @@
         "drizzle-orm": "^0.36.0",
         "drizzle-zod": "^0.5.1",
         "fractional-indexing": "^3.2.0",
+        "jsonc-parser": "^3.3.1",
         "lucide-react": "^1.7.0",
         "pg": "^8.13.0",
         "react": "^19.1.0",
@@ -266,6 +267,12 @@
     "plugins/config": {
       "name": "@singularity/plugin-config",
       "version": "0.0.1",
+    },
+    "plugins/config_v2": {
+      "name": "@singularity/plugin-config_v2",
+    },
+    "plugins/config_v2/plugins/store": {
+      "name": "@singularity/plugin-config_v2-store",
     },
     "plugins/conversations": {
       "name": "@singularity/plugin-conversations",
@@ -1823,6 +1830,10 @@
 
     "@singularity/plugin-config": ["@singularity/plugin-config@workspace:plugins/config"],
 
+    "@singularity/plugin-config_v2": ["@singularity/plugin-config_v2@workspace:plugins/config_v2"],
+
+    "@singularity/plugin-config_v2-store": ["@singularity/plugin-config_v2-store@workspace:plugins/config_v2/plugins/store"],
+
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
 
     "@singularity/plugin-conversations-conversation-category": ["@singularity/plugin-conversations-conversation-category@workspace:plugins/conversations/plugins/conversation-category"],
@@ -3030,6 +3041,8 @@
     "json-stable-stringify-without-jsonify": ["json-stable-stringify-without-jsonify@1.0.1", "", {}, "sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw=="],
 
     "json5": ["json5@2.2.3", "", { "bin": { "json5": "lib/cli.js" } }, "sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg=="],
+
+    "jsonc-parser": ["jsonc-parser@3.3.1", "", {}, "sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ=="],
 
     "jsonfile": ["jsonfile@6.2.0", "", { "dependencies": { "universalify": "^2.0.0" }, "optionalDependencies": { "graceful-fs": "^4.1.6" } }, "sha512-FGuPw30AdOIUTRMC2OMRtQV+jkVj2cfPqSeWXv1NEAJ1qZ5zb1X6z1mFhbfOB/iy3ssJCD+3KuZ8r8C3uVFlAg=="],
 

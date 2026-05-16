@@ -27,6 +27,7 @@ import buildBuildProfilingPlugin from "@plugins/build/plugins/build-profiling/se
 import buildPlugin from "@plugins/build/server";
 import codeExplorerFileResolvePlugin from "@plugins/code-explorer/plugins/file-resolve/server";
 import codeExplorerPlugin from "@plugins/code-explorer/server";
+import config_v2StorePlugin from "@plugins/config_v2/plugins/store/server";
 import configPlugin from "@plugins/config/server";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
 import conversationsConversationCategoryPlugin from "@plugins/conversations/plugins/conversation-category/server";
@@ -126,6 +127,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (buildPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, debugLogsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin, infraPathsPlugin];
 (codeExplorerFileResolvePlugin as ServerPluginDefinition).dependsOn = [codeExplorerPlugin, infraPathsPlugin];
 (codeExplorerPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
+(config_v2StorePlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
 (configPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraPathsPlugin, infraSecretsPlugin];
 (conversationsRecoverPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, tasksCorePlugin];
 (conversationsConversationCategoryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, databasePlugin, infraClaudeCliPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, primitivesAvatarPlugin, tasksCorePlugin];
@@ -216,6 +218,7 @@ export const plugins: ServerPluginDefinition[] = [
   buildPlugin,
   codeExplorerFileResolvePlugin,
   codeExplorerPlugin,
+  config_v2StorePlugin,
   configPlugin,
   conversationsRecoverPlugin,
   conversationsConversationCategoryPlugin,
