@@ -4,7 +4,7 @@ import { isNull } from "drizzle-orm";
 import { deleteTriggersFor, trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
-import { Config, readConfig } from "@plugins/config/server";
+import { ConfigV2, getConfig } from "@plugins/config_v2/server";
 import { db } from "@plugins/database/server";
 import { handleBuild } from "./internal/handle-build";
 import { handleBuildStatus } from "./internal/handle-build-status";
@@ -18,7 +18,7 @@ import { buildConfig } from "../shared";
 export default {
   id: "build",
   name: "Build",
-  contributions: [Config.Field(buildConfig), Resource.Declare(mainAheadCountResource), Resource.Declare(buildHistoryResource)],
+  contributions: [ConfigV2.Register({ descriptor: buildConfig }), Resource.Declare(mainAheadCountResource), Resource.Declare(buildHistoryResource)],
   httpRoutes: {
     "POST /api/build": handleBuild,
     "GET /api/build/status": handleBuildStatus,
@@ -44,7 +44,7 @@ export default {
       oneShot: false,
     });
 
-    const { autoBuild } = await readConfig(buildConfig);
+    const { autoBuild } = getConfig(buildConfig);
     if (autoBuild) {
       const aheadCount = await getMainAheadCount();
       if (aheadCount > 0) {

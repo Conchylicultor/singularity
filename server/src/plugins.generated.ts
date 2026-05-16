@@ -125,7 +125,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (backupLocalPlugin as ServerPluginDefinition).dependsOn = [backupPlugin, configPlugin, infraPathsPlugin];
 (backupPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databaseAdminPlugin, databasePlugin, infraJobsPlugin, infraPathsPlugin];
 (buildBuildProfilingPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
-(buildPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, debugLogsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin, infraPathsPlugin];
+(buildPlugin as ServerPluginDefinition).dependsOn = [config_v2Plugin, databasePlugin, debugLogsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin, infraPathsPlugin];
 (codeExplorerFileResolvePlugin as ServerPluginDefinition).dependsOn = [codeExplorerPlugin, infraPathsPlugin];
 (codeExplorerPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
 (config_v2StorePlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];

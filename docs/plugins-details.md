@@ -374,12 +374,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
   - Contributes:
     - `Shell.Toolbar` → `BuildButton`
-    - `Config.Spec`
     - `Pane.Register` "build"
     - `Pane.Register` "build-detail"
   - Server:
     - Register: `defineJob('build.run')`
-    - Uses: `config.Config`, `config.readConfig`, `database.db`
+    - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
     - Resources: `build.history` (push), `build.mainAheadCount` (push)
     - `POST /api/build`
     - `GET /api/build/status`
@@ -450,7 +449,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/config/specs`
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
-  - Imported by: `auth`, `backup`, `build`, `chart`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
+  - Imported by: `auth`, `backup`, `chart`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
   - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `review`, `theme-customizer`
 
 - **`config_v2`** — Typed JSONC config handles for server plugins.
@@ -459,7 +458,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `buildFieldsSchema`, `defineConfig`, `defineFieldType`
   - Exports (server):
     - Values: `ConfigV2`, `getConfig`, `setConfig`, `watchConfig`
-  - Imported by: `primitives`
+  - Imported by: `build`, `primitives`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):

@@ -17,12 +17,11 @@
   - Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
 - Contributes:
   - `Shell.Toolbar` → `BuildButton`
-  - `Config.Spec`
   - `Pane.Register` "build"
   - `Pane.Register` "build-detail"
 - Server:
   - Register: `defineJob('build.run')`
-  - Uses: `config.Config`, `config.readConfig`, `database.db`
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
   - Resources: `build.history` (push), `build.mainAheadCount` (push)
   - `POST /api/build`
   - `GET /api/build/status`

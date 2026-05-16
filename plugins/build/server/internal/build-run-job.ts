@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { readConfig } from "@plugins/config/server";
+import { getConfig } from "@plugins/config_v2/server";
 import { buildConfig } from "../../shared";
 import { isBuildInflight, triggerBuild } from "./run-build";
 import { setLastAutoBuildAt } from "./auto-build-tracker";
@@ -11,7 +11,7 @@ export const buildRunJob = defineJob({
   event: z.never(),
   run: async () => {
     if (isBuildInflight()) return;
-    const { autoBuild } = await readConfig(buildConfig);
+    const { autoBuild } = getConfig(buildConfig);
     if (!autoBuild) return;
     setLastAutoBuildAt(new Date().toISOString());
     triggerBuild("auto");

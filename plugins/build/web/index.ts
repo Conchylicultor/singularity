@@ -1,8 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Shell } from "@plugins/shell/web";
-import { Config } from "@plugins/config/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { buildConfig } from "../shared";
 import { BuildButton } from "./components/build-button";
 import { buildPane, buildDetailPane } from "./panes";
 
@@ -19,7 +17,6 @@ export default {
       component: BuildButton,
       group: "actions",
     }),
-    Config.Spec(buildConfig),
     Pane.Register({ pane: buildPane }),
     Pane.Register({ pane: buildDetailPane }),
   ],
