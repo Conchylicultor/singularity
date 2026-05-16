@@ -14,7 +14,7 @@ function handleSelectAllScope(e: KeyboardEvent<HTMLElement>) {
 
 export function ContentScope({ children }: { children: ReactNode }) {
   return (
-    <div tabIndex={-1} onKeyDown={handleSelectAllScope} className="outline-none h-full overflow-hidden">
+    <div tabIndex={-1} onKeyDown={handleSelectAllScope} className="contents outline-none">
       {children}
     </div>
   );
