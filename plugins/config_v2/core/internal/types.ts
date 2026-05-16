@@ -33,6 +33,7 @@ export type InferFieldsObject<F extends FieldsRecord> = {
 export type ConfigValues<F extends FieldsRecord> = InferFieldsObject<F>;
 
 export interface ConfigDescriptor<F extends FieldsRecord = FieldsRecord> {
+  readonly name: string;
   readonly schema: z.ZodObject<Record<string, z.ZodTypeAny>>;
   readonly fields: F;
   readonly defaults: ConfigValues<F>;

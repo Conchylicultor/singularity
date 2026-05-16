@@ -15,6 +15,11 @@ import infraSecretsPlugin from "@plugins/infra/plugins/secrets/central";
 (authGooglePlugin as CentralPluginDefinition).dependsOn = [authPlugin];
 (authNotionPlugin as CentralPluginDefinition).dependsOn = [authPlugin];
 
+(authPlugin as CentralPluginDefinition)._hierarchyPath = "auth";
+(authGooglePlugin as CentralPluginDefinition)._hierarchyPath = "auth/google";
+(authNotionPlugin as CentralPluginDefinition)._hierarchyPath = "auth/notion";
+(infraSecretsPlugin as CentralPluginDefinition)._hierarchyPath = "infra/secrets";
+
 export const plugins: CentralPluginDefinition[] = [
   authPlugin,
   authGooglePlugin,

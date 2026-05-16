@@ -69,6 +69,7 @@ function importNameFor(relPath: string): string {
 interface Entry {
   importName: string;
   importPath: string; // `@plugins/<rel>/<runtime>`
+  hierarchyPath?: string; // derived from hierarchyId (dots → slashes)
 }
 
 /**
@@ -97,6 +98,7 @@ function collectEntries(root: string, runtime: Runtime): Entry[] {
     entries.push({
       importName: importNameFor(node.path),
       importPath: `@plugins/${node.path}/${runtime}`,
+      hierarchyPath: node.hierarchyId.replaceAll(".", "/"),
     });
   }
   entries.sort((a, b) => a.importPath.localeCompare(b.importPath));
@@ -216,6 +218,13 @@ export function renderPluginRegistry(opts: { root: string; runtime: Runtime }): 
         const d = deps.get(e.importName);
         if (!d) continue;
         lines.push(`(${e.importName} ${cast}).dependsOn = [${d.join(", ")}];`);
+      }
+    }
+    lines.push("");
+    const cast = `as ${cfg.typeName}`;
+    for (const e of entries) {
+      if (e.hierarchyPath) {
+        lines.push(`(${e.importName} ${cast})._hierarchyPath = ${JSON.stringify(e.hierarchyPath)};`);
       }
     }
   }

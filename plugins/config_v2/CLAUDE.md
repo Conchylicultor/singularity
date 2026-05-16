@@ -4,10 +4,12 @@
 
 ## Plugin reference
 
-- Description: File-based JSONC config system (v2). Umbrella for store, merge, and codegen sub-plugins.
+- Description: Typed JSONC config handles for server plugins.
 - Exports (core):
   - Types: `ConfigDescriptor`, `ConfigValues`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`
   - Values: `buildFieldsSchema`, `defineConfig`, `defineFieldType`
+- Exports (server):
+  - Values: `ConfigV2`, `getConfig`, `setConfig`, `watchConfig`
 - Imported by: `primitives`
 - Sub-plugins:
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.

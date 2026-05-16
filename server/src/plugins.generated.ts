@@ -28,6 +28,7 @@ import buildPlugin from "@plugins/build/server";
 import codeExplorerFileResolvePlugin from "@plugins/code-explorer/plugins/file-resolve/server";
 import codeExplorerPlugin from "@plugins/code-explorer/server";
 import config_v2StorePlugin from "@plugins/config_v2/plugins/store/server";
+import config_v2Plugin from "@plugins/config_v2/server";
 import configPlugin from "@plugins/config/server";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
 import conversationsConversationCategoryPlugin from "@plugins/conversations/plugins/conversation-category/server";
@@ -128,6 +129,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (codeExplorerFileResolvePlugin as ServerPluginDefinition).dependsOn = [codeExplorerPlugin, infraPathsPlugin];
 (codeExplorerPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
 (config_v2StorePlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
+(config_v2Plugin as ServerPluginDefinition).dependsOn = [config_v2StorePlugin];
 (configPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraPathsPlugin, infraSecretsPlugin];
 (conversationsRecoverPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, tasksCorePlugin];
 (conversationsConversationCategoryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, databasePlugin, infraClaudeCliPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, primitivesAvatarPlugin, tasksCorePlugin];
@@ -196,6 +198,109 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (uiTokensSidebarPalettePlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 (uiTokensTypographyPlugin as ServerPluginDefinition).dependsOn = [configPlugin];
 
+(activeDataPlugin as ServerPluginDefinition)._hierarchyPath = "active-data";
+(agentsAutoLaunchTogglePlugin as ServerPluginDefinition)._hierarchyPath = "agents/auto-launch/toggle";
+(agentsPlugin as ServerPluginDefinition)._hierarchyPath = "agents";
+(appsDeployServersPlugin as ServerPluginDefinition)._hierarchyPath = "apps/deploy/servers";
+(appsForgeCatalogTablesColumnsPlugin as ServerPluginDefinition)._hierarchyPath = "apps/forge/catalog/tables/columns";
+(appsForgeCatalogTablesForeignKeysPlugin as ServerPluginDefinition)._hierarchyPath = "apps/forge/catalog/tables/foreign-keys";
+(appsForgeCatalogTablesIndexesPlugin as ServerPluginDefinition)._hierarchyPath = "apps/forge/catalog/tables/indexes";
+(appsForgeCatalogTablesRowCountPlugin as ServerPluginDefinition)._hierarchyPath = "apps/forge/catalog/tables/row-count";
+(appsForgeCatalogTablesSampleRowsPlugin as ServerPluginDefinition)._hierarchyPath = "apps/forge/catalog/tables/sample-rows";
+(appsWorkflowsEnginePlugin as ServerPluginDefinition)._hierarchyPath = "apps/workflows/engine";
+(appsWorkflowsStepsBranchPlugin as ServerPluginDefinition)._hierarchyPath = "apps/workflows/steps/branch";
+(authGooglePlugin as ServerPluginDefinition)._hierarchyPath = "auth/google";
+(authNotionPlugin as ServerPluginDefinition)._hierarchyPath = "auth/notion";
+(authPlugin as ServerPluginDefinition)._hierarchyPath = "auth";
+(backupGoogleDrivePlugin as ServerPluginDefinition)._hierarchyPath = "backup/google-drive";
+(backupLocalPlugin as ServerPluginDefinition)._hierarchyPath = "backup/local";
+(backupPlugin as ServerPluginDefinition)._hierarchyPath = "backup";
+(buildBuildProfilingPlugin as ServerPluginDefinition)._hierarchyPath = "build/build-profiling";
+(buildPlugin as ServerPluginDefinition)._hierarchyPath = "build";
+(codeExplorerFileResolvePlugin as ServerPluginDefinition)._hierarchyPath = "code-explorer/file-resolve";
+(codeExplorerPlugin as ServerPluginDefinition)._hierarchyPath = "code-explorer";
+(config_v2StorePlugin as ServerPluginDefinition)._hierarchyPath = "config_v2/store";
+(config_v2Plugin as ServerPluginDefinition)._hierarchyPath = "config_v2";
+(configPlugin as ServerPluginDefinition)._hierarchyPath = "config";
+(conversationsRecoverPlugin as ServerPluginDefinition)._hierarchyPath = "conversations-recover";
+(conversationsConversationCategoryPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-category";
+(conversationsConversationProgressPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-progress";
+(conversationsConversationViewAllowMonitorPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/allow-monitor";
+(conversationsConversationViewCodeReviewPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/code/review";
+(conversationsConversationViewCodePlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/code";
+(conversationsConversationViewCommitsGraphPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/commits-graph";
+(conversationsConversationViewDropAndExitPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/drop-and-exit";
+(conversationsConversationViewExitPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/exit";
+(conversationsConversationViewHoldAndExitPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/hold-and-exit";
+(conversationsConversationViewJsonlViewerPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/jsonl-viewer";
+(conversationsConversationViewLaunchPromptsPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/launch-prompts";
+(conversationsConversationViewNotesPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/notes";
+(conversationsConversationViewPromptTemplatesPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/prompt-templates";
+(conversationsConversationViewPushAndExitPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/push-and-exit";
+(conversationsConversationViewQuickPromptsPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/quick-prompts";
+(conversationsConversationViewResumePlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/resume";
+(conversationsConversationViewTurnSummaryPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/turn-summary";
+(conversationsConversationsViewGroupedPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversations-view/grouped";
+(conversationsConversationsViewQueuePlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversations-view/queue";
+(conversationsModelProviderPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/model-provider";
+(conversationsRuntimeApiPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/runtime-api";
+(conversationsRuntimeTmuxPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/runtime-tmux";
+(conversationsSummaryPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/summary";
+(conversationsTranscriptApiPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/transcript-api";
+(conversationsTranscriptWatcherPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/transcript-watcher";
+(conversationsPlugin as ServerPluginDefinition)._hierarchyPath = "conversations";
+(crashesPlugin as ServerPluginDefinition)._hierarchyPath = "crashes";
+(databaseAdminPlugin as ServerPluginDefinition)._hierarchyPath = "database/admin";
+(databaseEmbeddedPlugin as ServerPluginDefinition)._hierarchyPath = "database/embedded";
+(databaseMigrationsPlugin as ServerPluginDefinition)._hierarchyPath = "database/migrations";
+(databaseQueryPlugin as ServerPluginDefinition)._hierarchyPath = "database/query";
+(databasePlugin as ServerPluginDefinition)._hierarchyPath = "database";
+(debugBroadcastsPlugin as ServerPluginDefinition)._hierarchyPath = "debug/broadcasts";
+(debugLogsPlugin as ServerPluginDefinition)._hierarchyPath = "debug/logs";
+(debugMemoryPlugin as ServerPluginDefinition)._hierarchyPath = "debug/memory";
+(debugProfilingBootPlugin as ServerPluginDefinition)._hierarchyPath = "debug/profiling/boot";
+(debugProfilingBuildPlugin as ServerPluginDefinition)._hierarchyPath = "debug/profiling/build";
+(debugProfilingStatsPlugin as ServerPluginDefinition)._hierarchyPath = "debug/profiling/stats";
+(debugWorktreeCleanupPlugin as ServerPluginDefinition)._hierarchyPath = "debug/worktree-cleanup";
+(eventsTestPlugin as ServerPluginDefinition)._hierarchyPath = "events-test";
+(healthPlugin as ServerPluginDefinition)._hierarchyPath = "health";
+(improvePlugin as ServerPluginDefinition)._hierarchyPath = "improve";
+(infraAttachmentsPlugin as ServerPluginDefinition)._hierarchyPath = "infra/attachments";
+(infraClaudeCliPlugin as ServerPluginDefinition)._hierarchyPath = "infra/claude-cli";
+(infraEntityExtensionsPlugin as ServerPluginDefinition)._hierarchyPath = "infra/entity-extensions";
+(infraEventsPlugin as ServerPluginDefinition)._hierarchyPath = "infra/events";
+(infraGitWatcherPlugin as ServerPluginDefinition)._hierarchyPath = "infra/git-watcher";
+(infraJobsPlugin as ServerPluginDefinition)._hierarchyPath = "infra/jobs";
+(infraMcpPlugin as ServerPluginDefinition)._hierarchyPath = "infra/mcp";
+(infraPathsPlugin as ServerPluginDefinition)._hierarchyPath = "infra/paths";
+(infraSecretsPlugin as ServerPluginDefinition)._hierarchyPath = "infra/secrets";
+(infraWorktreePlugin as ServerPluginDefinition)._hierarchyPath = "infra/worktree";
+(notificationsPlugin as ServerPluginDefinition)._hierarchyPath = "notifications";
+(pluginMetaPluginHealthPlugin as ServerPluginDefinition)._hierarchyPath = "plugin-meta/plugin-health";
+(pluginMetaPluginViewPlugin as ServerPluginDefinition)._hierarchyPath = "plugin-meta/plugin-view";
+(primitivesAvatarPlugin as ServerPluginDefinition)._hierarchyPath = "primitives/avatar";
+(primitivesRankPlugin as ServerPluginDefinition)._hierarchyPath = "primitives/rank";
+(reorderGroupsPlugin as ServerPluginDefinition)._hierarchyPath = "reorder/groups";
+(reorderPlugin as ServerPluginDefinition)._hierarchyPath = "reorder";
+(screenshotPlugin as ServerPluginDefinition)._hierarchyPath = "screenshot";
+(statsCommitsPlugin as ServerPluginDefinition)._hierarchyPath = "stats/commits";
+(statsCostPlugin as ServerPluginDefinition)._hierarchyPath = "stats/cost";
+(statsTasksPlugin as ServerPluginDefinition)._hierarchyPath = "stats/tasks";
+(tasksCorePlugin as ServerPluginDefinition)._hierarchyPath = "tasks-core";
+(tasksAutoStartPlugin as ServerPluginDefinition)._hierarchyPath = "tasks/auto-start";
+(tasksTaskTitlePlugin as ServerPluginDefinition)._hierarchyPath = "tasks/task-title";
+(tasksPlugin as ServerPluginDefinition)._hierarchyPath = "tasks";
+(terminalPlugin as ServerPluginDefinition)._hierarchyPath = "terminal";
+(uiSegmentedProgressBarPlugin as ServerPluginDefinition)._hierarchyPath = "ui/segmented-progress-bar";
+(uiThemeEnginePlugin as ServerPluginDefinition)._hierarchyPath = "ui/theme-engine";
+(uiTokensChartPlugin as ServerPluginDefinition)._hierarchyPath = "ui/tokens/chart";
+(uiTokensColorAdjustPlugin as ServerPluginDefinition)._hierarchyPath = "ui/tokens/color-adjust";
+(uiTokensColorPalettePlugin as ServerPluginDefinition)._hierarchyPath = "ui/tokens/color-palette";
+(uiTokensShadowPlugin as ServerPluginDefinition)._hierarchyPath = "ui/tokens/shadow";
+(uiTokensShapePlugin as ServerPluginDefinition)._hierarchyPath = "ui/tokens/shape";
+(uiTokensSidebarPalettePlugin as ServerPluginDefinition)._hierarchyPath = "ui/tokens/sidebar-palette";
+(uiTokensTypographyPlugin as ServerPluginDefinition)._hierarchyPath = "ui/tokens/typography";
+
 export const plugins: ServerPluginDefinition[] = [
   activeDataPlugin,
   agentsAutoLaunchTogglePlugin,
@@ -219,6 +324,7 @@ export const plugins: ServerPluginDefinition[] = [
   codeExplorerFileResolvePlugin,
   codeExplorerPlugin,
   config_v2StorePlugin,
+  config_v2Plugin,
   configPlugin,
   conversationsRecoverPlugin,
   conversationsConversationCategoryPlugin,

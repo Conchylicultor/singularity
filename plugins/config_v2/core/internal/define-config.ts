@@ -2,6 +2,7 @@ import type { FieldsRecord, ConfigDescriptor, ConfigValues } from "./types";
 import { buildFieldsSchema } from "./schema-builder";
 
 export function defineConfig<const F extends FieldsRecord>(opts: {
+  name?: string;
   fields: F;
 }): ConfigDescriptor<F> {
   for (const key of Object.keys(opts.fields)) {
@@ -18,5 +19,5 @@ export function defineConfig<const F extends FieldsRecord>(opts: {
     Object.entries(opts.fields).map(([k, f]) => [k, f.defaultValue]),
   ) as ConfigValues<F>;
 
-  return Object.freeze({ schema, fields: opts.fields, defaults });
+  return Object.freeze({ name: opts.name ?? "config", schema, fields: opts.fields, defaults });
 }
