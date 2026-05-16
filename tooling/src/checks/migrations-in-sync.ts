@@ -3,6 +3,8 @@ import { homedir } from "node:os";
 import { basename, join, relative, resolve } from "path";
 import type { Check } from "./types";
 
+const PROMPT_RE = /Is .+? (column in .+? table|table|schema|enum|view|sequence|role|policy) created or renamed/;
+
 const DATABASE_CONFIG_PATH = join(homedir(), ".singularity", "database.json");
 
 function libpqEnv(): Record<string, string> {
@@ -92,17 +94,40 @@ export const migrationsInSync: Check = {
         ],
         {
           cwd: migrationsPluginDir,
+          stdin: "pipe",
           stdout: "pipe",
           stderr: "pipe",
-          env: { ...process.env, ...libpqEnv(), SINGULARITY_WORKTREE: basename(root) },
+          env: { ...process.env, ...libpqEnv(), NO_COLOR: "1", SINGULARITY_WORKTREE: basename(root) },
         },
       );
+      // Send \r bytes to advance past any interactive rename/create prompts.
+      // Without this, drizzle-kit gets EOF, silently exits 0, generates nothing,
+      // and the check falsely passes.
+      void proc.stdin.write(new Uint8Array(20).fill(0x0d));
+      void proc.stdin.end();
+
+      const stdout = await new Response(proc.stdout).text();
       const stderr = await new Response(proc.stderr).text();
       const exitCode = await proc.exited;
       if (exitCode !== 0) {
         return {
           ok: false,
           message: `drizzle-kit generate failed:\n${stderr}`,
+        };
+      }
+
+      // Detect interactive prompts — their presence means the schema has
+      // ambiguous changes that require explicit agent input.
+      if (PROMPT_RE.test(stdout)) {
+        return {
+          ok: false,
+          message:
+            "Schema has ambiguous changes (rename vs create) requiring interactive resolution.",
+          hint:
+            "Run `./singularity build --migration-name <slug>` to see the detected prompts " +
+            "and provide explicit --migration-answers.\n\n" +
+            "AGENT: Stop here and report this to the user. Do not retry or work around this. " +
+            "If this check fails unexpectedly, report the limitation clearly.",
         };
       }
 

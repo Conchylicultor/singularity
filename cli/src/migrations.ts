@@ -10,6 +10,295 @@ import {
 import { join, resolve } from "path";
 import { libpqEnv } from "./paths";
 
+// ─── Types for interactive prompt handling ───────────────────────────────────
+
+export interface PromptOption {
+  index: number;
+  action: "create" | "rename";
+  label: string;
+  fromName?: string;
+}
+
+export interface DetectedPrompt {
+  index: number;
+  entityType: string;
+  entityName: string;
+  context: string | null;
+  question: string;
+  options: PromptOption[];
+}
+
+export type MigrationAnswer =
+  | { action: "create" }
+  | { action: "rename"; from: string };
+
+export interface DrizzlePromptResult {
+  exitCode: number;
+  stdoutBuf: string;
+  stderrBuf: string;
+  detectedPrompts: DetectedPrompt[];
+}
+
+// ─── ANSI / prompt parsing utilities ─────────────────────────────────────────
+
+// eslint-disable-next-line no-control-regex
+const ANSI_RE = /\x1b(?:\[[0-9;]*[a-zA-Z]|\[\?[0-9;]*[a-zA-Z]|\][^\x07]*\x07|[()][AB012])/g;
+
+function stripAnsi(str: string): string {
+  return str.replace(ANSI_RE, "");
+}
+
+const QUESTION_COL_RE =
+  /Is (.+?) column in (.+?) table created or renamed from another column/;
+const QUESTION_ENTITY_RE =
+  /Is (.+?) (table|schema|enum|view|sequence|role|policy) created or renamed/;
+const OPTION_CREATE_RE = /[❯ ]\s*\+\s*(.+?)\s+create\s/;
+const OPTION_RENAME_RE = /[❯ ]\s*~\s*(.+?)\s*›\s*(.+?)\s+rename\s/;
+const CONFIRMATION_RE = /will be (created|renamed|renamed\/moved)/;
+
+interface ParsedQuestion {
+  entityType: string;
+  entityName: string;
+  context: string | null;
+  question: string;
+}
+
+function tryParseQuestion(line: string): ParsedQuestion | null {
+  const colMatch = QUESTION_COL_RE.exec(line);
+  if (colMatch) {
+    return {
+      entityType: "column",
+      entityName: colMatch[1],
+      context: colMatch[2],
+      question: line.trim(),
+    };
+  }
+  const entityMatch = QUESTION_ENTITY_RE.exec(line);
+  if (entityMatch) {
+    return {
+      entityType: entityMatch[2],
+      entityName: entityMatch[1],
+      context: null,
+      question: line.trim(),
+    };
+  }
+  return null;
+}
+
+function tryParseOption(
+  line: string,
+  index: number,
+): PromptOption | null {
+  const createMatch = OPTION_CREATE_RE.exec(line);
+  if (createMatch) {
+    return { index, action: "create", label: `+ ${createMatch[1].trim()}` };
+  }
+  const renameMatch = OPTION_RENAME_RE.exec(line);
+  if (renameMatch) {
+    return {
+      index,
+      action: "rename",
+      label: `~ ${renameMatch[1].trim()} › ${renameMatch[2].trim()}`,
+      fromName: renameMatch[1].trim(),
+    };
+  }
+  return null;
+}
+
+function keystrokesForOptionIndex(optionIndex: number): Uint8Array {
+  const parts: number[] = [];
+  for (let i = 0; i < optionIndex; i++) parts.push(0x1b, 0x5b, 0x42); // arrow-down
+  parts.push(0x0d); // enter
+  return new Uint8Array(parts);
+}
+
+function resolveAnswer(
+  prompt: DetectedPrompt,
+  answer: MigrationAnswer,
+): number {
+  if (answer.action === "create") return 0;
+  const idx = prompt.options.findIndex(
+    (o) => o.action === "rename" && o.fromName === answer.from,
+  );
+  if (idx === -1) {
+    const available = prompt.options.map((o) => o.label).join(", ");
+    throw new Error(
+      `Answer specifies rename from "${answer.from}" but prompt for ` +
+        `"${prompt.entityName}" only has options: [${available}].\n` +
+        `The source may have been consumed by a prior rename answer.\n\n` +
+        `AGENT: Stop here and report this error to the user. Do not retry ` +
+        `without understanding why the expected rename source is missing.`,
+    );
+  }
+  return idx;
+}
+
+// ─── Core runner ─────────────────────────────────────────────────────────────
+
+/**
+ * Run drizzle-kit with interactive prompt handling.
+ *
+ * - answers=null (detect mode): advances each prompt with "create" (option 0)
+ *   to discover all prompts. The caller must discard any generated files.
+ * - answers=[...] (answer mode): uses the provided semantic answers to select
+ *   the correct option for each prompt.
+ */
+export async function runDrizzleKitWithPrompts(opts: {
+  cmd: string[];
+  cwd: string;
+  env: Record<string, string>;
+  answers: MigrationAnswer[] | null;
+  /** If true, echo stdout/stderr to the parent process streams. */
+  echo?: boolean;
+}): Promise<DrizzlePromptResult> {
+  const { cmd, cwd, env, answers, echo = false } = opts;
+
+  const proc = Bun.spawn(cmd, {
+    cwd,
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "pipe",
+    env: { ...env, NO_COLOR: "1" },
+  });
+
+  const detectedPrompts: DetectedPrompt[] = [];
+  let promptIndex = 0;
+  let awaitingConfirmation = false;
+  let currentQuestion: ParsedQuestion | null = null;
+  let currentOptions: PromptOption[] = [];
+
+  function flushPrompt(stdin: typeof proc.stdin) {
+    if (!currentQuestion || currentOptions.length === 0) return;
+    const prompt: DetectedPrompt = {
+      index: promptIndex,
+      entityType: currentQuestion.entityType,
+      entityName: currentQuestion.entityName,
+      context: currentQuestion.context,
+      question: currentQuestion.question,
+      options: currentOptions,
+    };
+    detectedPrompts.push(prompt);
+
+    let optIdx = 0;
+    if (answers) {
+      if (promptIndex >= answers.length) {
+        console.error(
+          `\nError: drizzle-kit showed prompt ${promptIndex + 1} but only ` +
+            `${answers.length} answer(s) were provided.\n` +
+            `Re-run without --migration-answers to discover all prompts.\n\n` +
+            `AGENT: Stop here and report this limitation to the user. The ` +
+            `number of prompts exceeded the provided answers. Do not retry ` +
+            `without first re-running in detect mode.`,
+        );
+        proc.kill();
+        return;
+      }
+      try {
+        optIdx = resolveAnswer(prompt, answers[promptIndex]);
+      } catch (e: unknown) {
+        console.error(`\n${e instanceof Error ? e.message : String(e)}`);
+        proc.kill();
+        return;
+      }
+    }
+
+    void stdin.write(keystrokesForOptionIndex(optIdx));
+    awaitingConfirmation = true;
+    promptIndex++;
+    currentQuestion = null;
+    currentOptions = [];
+  }
+
+  let stdoutBuf = "";
+  let strippedBuf = "";
+  let processedUpTo = 0;
+  let flushTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function tryFlushAfterDelay() {
+    if (flushTimer) clearTimeout(flushTimer);
+    flushTimer = setTimeout(() => {
+      if (currentQuestion && currentOptions.length > 0 && !awaitingConfirmation) {
+        flushPrompt(proc.stdin);
+      }
+    }, 100);
+  }
+
+  function processBuffer() {
+    const unprocessed = strippedBuf.slice(processedUpTo);
+    const lines = unprocessed.split("\n");
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+
+      if (awaitingConfirmation) {
+        if (CONFIRMATION_RE.test(line)) {
+          awaitingConfirmation = false;
+        }
+        continue;
+      }
+
+      const q = tryParseQuestion(line);
+      if (q) {
+        if (currentQuestion && currentOptions.length > 0) {
+          flushPrompt(proc.stdin);
+        }
+        currentQuestion = q;
+        currentOptions = [];
+        continue;
+      }
+
+      if (currentQuestion) {
+        const opt = tryParseOption(line, currentOptions.length);
+        if (opt) {
+          currentOptions.push(opt);
+          tryFlushAfterDelay();
+        } else if (currentOptions.length > 0) {
+          flushPrompt(proc.stdin);
+        }
+      }
+    }
+    processedUpTo = strippedBuf.length;
+  }
+
+  const stdoutDone = (async () => {
+    const decoder = new TextDecoder();
+    const reader = proc.stdout.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      if (echo) process.stdout.write(value);
+      stdoutBuf += chunk;
+      strippedBuf += stripAnsi(chunk);
+      processBuffer();
+    }
+    stdoutBuf += decoder.decode();
+
+    if (flushTimer) clearTimeout(flushTimer);
+    if (currentQuestion && currentOptions.length > 0 && !awaitingConfirmation) {
+      flushPrompt(proc.stdin);
+    }
+  })();
+
+  let stderrBuf = "";
+  const stderrDone = (async () => {
+    const decoder = new TextDecoder();
+    const reader = proc.stderr.getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (echo) process.stderr.write(value);
+      stderrBuf += decoder.decode(value, { stream: true });
+    }
+    stderrBuf += decoder.decode();
+  })();
+
+  const exitCode = await proc.exited;
+  await Promise.all([stdoutDone, stderrDone]);
+
+  return { exitCode, stdoutBuf, stderrBuf, detectedPrompts };
+}
+
 const NEW_FORMAT = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 // Drizzle-kit normally numbers files (0000, 0001, …) but emits "0NaN" when
 // it can't derive the next index from existing (non-matching) filenames.
@@ -20,6 +309,11 @@ const MIGRATION_NAME_REGEX = /^[a-z0-9_]+$/;
  * Run `drizzle-kit generate`; detect whether it produced a new migration;
  * require --migration-name when it did; rename new files to the hash-based
  * format and regenerate the journal. Exits the process on error.
+ *
+ * When drizzle-kit shows interactive rename/create prompts:
+ * - Without migrationAnswers: discovers all prompts (auto-advancing with
+ *   "create"), discards generated files, prints structured JSON, exits 2.
+ * - With migrationAnswers: uses the provided semantic answers and proceeds.
  */
 export async function generateMigration(opts: {
   root: string;
@@ -27,8 +321,9 @@ export async function generateMigration(opts: {
   migrationName?: string;
   resetMigration?: boolean;
   customMigration?: boolean;
+  migrationAnswers?: MigrationAnswer[];
 }): Promise<void> {
-  const { root, worktreeName, migrationName, resetMigration, customMigration } = opts;
+  const { root, worktreeName, migrationName, resetMigration, customMigration, migrationAnswers } = opts;
 
   if (migrationName && !MIGRATION_NAME_REGEX.test(migrationName)) {
     console.error(
@@ -54,64 +349,21 @@ export async function generateMigration(opts: {
   if (customMigration) cmd.push("--custom");
   if (migrationName) cmd.push("--name", migrationName);
 
-  const proc = Bun.spawn(cmd, {
-    cwd: resolve(root, "plugins/database/plugins/migrations"),
-    // "pipe" stdin so we can feed \r to auto-accept @clack/prompts select
-    // dialogs. drizzle-kit asks "Is X created or renamed from Y?" for each
-    // ambiguous schema change; the default (first option) is always "created"
-    // which is correct — we never rename columns/tables in-place.
-    stdin: "pipe",
-    stdout: "pipe",
-    stderr: "pipe",
+  const cwd = resolve(root, "plugins/database/plugins/migrations");
+  const result = await runDrizzleKitWithPrompts({
+    cmd,
+    cwd,
     env: {
       ...process.env,
       ...libpqEnv(),
       SINGULARITY_WORKTREE: worktreeName,
     },
+    answers: migrationAnswers ?? null,
+    echo: true,
   });
 
-  // Capture stdout + stderr so we can detect silent aborts and diagnostics.
-  // We reactively write \r to stdin whenever a rename/create prompt appears in
-  // stdout. Sending all bytes upfront doesn't work: hanji's keypress handler
-  // processes the entire buffered chunk synchronously, so the first prompt's
-  // tearDown removes the listener before subsequent \r bytes fire — only one
-  // prompt ever gets answered.
-  let stdoutBuf = "";
-  const PROMPT_RE = /created or renamed/;
-  const stdoutDone = (async () => {
-    const decoder = new TextDecoder();
-    const reader = proc.stdout.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      process.stdout.write(value);
-      stdoutBuf += chunk;
-      if (PROMPT_RE.test(chunk)) {
-        void proc.stdin.write(new Uint8Array([0x0d]));
-      }
-    }
-    stdoutBuf += decoder.decode();
-    void proc.stdin.end();
-  })();
-
-  let stderrBuf = "";
-  const stderrDone = (async () => {
-    const decoder = new TextDecoder();
-    const reader = proc.stderr.getReader();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      process.stderr.write(value);
-      stderrBuf += decoder.decode(value, { stream: true });
-    }
-    stderrBuf += decoder.decode();
-  })();
-
-  const exitCode = await proc.exited;
-  await Promise.all([stdoutDone, stderrDone]);
-  if (exitCode !== 0) process.exit(1);
-  if (/\b(error|collision|conflict)\b/i.test(stderrBuf)) {
+  if (result.exitCode !== 0) process.exit(1);
+  if (/\b(error|collision|conflict)\b/i.test(result.stderrBuf)) {
     console.error(
       "\nError: drizzle-kit printed a diagnostic but exited 0. Treating as failure.\n" +
         "If this is a snapshot-chain collision, rebase onto origin/main, then re-run\n" +
@@ -121,19 +373,25 @@ export async function generateMigration(opts: {
     process.exit(1);
   }
 
-  // Detect silent abort: drizzle-kit showed a rename prompt but exited without
-  // generating. This happens when stdin EOF'd before all prompts were answered.
-  const showedPrompt = PROMPT_RE.test(stdoutBuf);
-  const generatedNothing = !readdirSync(migrationsDir).some(
-    (f: string) => f.endsWith(".sql") && !before.has(f),
-  );
-  if (showedPrompt && generatedNothing && !customMigration) {
-    console.error(
-      "\nError: drizzle-kit showed interactive rename prompts but generated no migration.\n" +
-        "This usually means the stdin auto-accept failed to cover all prompts.\n" +
-        "Please report this — the build pipeline needs to handle more prompts.\n",
+  // INVARIANT: never keep a migration generated with prompts unless agent
+  // explicitly provided answers.
+  if (result.detectedPrompts.length > 0 && !migrationAnswers) {
+    const added = readdirSync(migrationsDir).filter(
+      (f: string) => f.endsWith(".sql") && !before.has(f),
     );
-    process.exit(1);
+    removeGeneratedFiles(migrationsDir, added);
+    console.log("\nMIGRATION_PROMPTS_DETECTED");
+    console.log(JSON.stringify(result.detectedPrompts, null, 2));
+    console.error(
+      "\ndrizzle-kit encountered ambiguous schema changes that require explicit answers.\n" +
+        "Re-run with --migration-answers to provide choices. Example:\n" +
+        `  ./singularity build --migration-name <slug> --migration-answers '${JSON.stringify(result.detectedPrompts.map(() => ({ action: "create" })))}'\n\n` +
+        "AGENT: Stop here and report this to the user. Show them the detected prompts\n" +
+        "above and ask which action to take for each. Do not auto-select or retry\n" +
+        "without explicit user input. If this feature does not work as expected or\n" +
+        "has limitations, report that clearly rather than working around it.\n",
+    );
+    process.exit(2);
   }
 
   const added = readdirSync(migrationsDir).filter(
@@ -168,8 +426,8 @@ export async function generateMigration(opts: {
     process.exit(1);
   }
 
-  const result = renameMigrations(migrationsDir);
-  for (const r of result.renamed) {
+  const renameResult = renameMigrations(migrationsDir);
+  for (const r of renameResult.renamed) {
     console.log(`  ${r.from} → ${r.to}`);
   }
 }

@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
 import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { basename, join, resolve } from "path";
-import { generateMigration } from "../migrations";
+import { generateMigration, type MigrationAnswer } from "../migrations";
 import { generatePluginDocs, collectAllPlugins } from "@tooling/docgen";
 import { generatePluginRegistry } from "@tooling/plugin-registry-gen";
 import { checkBroadcasts } from "../broadcasts";
@@ -21,6 +21,37 @@ import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profile
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const CENTRAL_ROUTES_FILE = join(SINGULARITY_DIR, "central-routes.json");
+
+function parseMigrationAnswers(raw: string): MigrationAnswer[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    console.error(
+      `Error: --migration-answers is not valid JSON.\n` +
+        `Expected: '[{"action":"create"},{"action":"rename","from":"old_name"}]'\n`,
+    );
+    process.exit(1);
+  }
+  if (!Array.isArray(parsed)) {
+    console.error(
+      `Error: --migration-answers must be a JSON array.\n` +
+        `Expected: '[{"action":"create"},{"action":"rename","from":"old_name"}]'\n`,
+    );
+    process.exit(1);
+  }
+  for (let i = 0; i < parsed.length; i++) {
+    const entry = parsed[i];
+    if (entry.action === "create") continue;
+    if (entry.action === "rename" && typeof entry.from === "string") continue;
+    console.error(
+      `Error: --migration-answers[${i}] is invalid: ${JSON.stringify(entry)}\n` +
+        `Each entry must be {"action":"create"} or {"action":"rename","from":"<source_name>"}.\n`,
+    );
+    process.exit(1);
+  }
+  return parsed as MigrationAnswer[];
+}
 
 interface CentralRoutesManifest {
   backend: string;
@@ -393,6 +424,10 @@ export function registerBuild(program: Command) {
       "--custom-migration",
       "Pass --custom to drizzle-kit generate: creates an empty migration file and updates the snapshot without interactive prompts. Edit the generated SQL file before the next build applies it.",
     )
+    .option(
+      "--migration-answers <json>",
+      'JSON array of answers for drizzle-kit rename/create prompts. Each entry is {"action":"create"} or {"action":"rename","from":"<source_name>"}. Run without this flag first to see detected prompts.',
+    )
     .option("--no-restart", "Skip asking the gateway to restart the backend")
     .option(
       "--skip-checks",
@@ -402,7 +437,7 @@ export function registerBuild(program: Command) {
       "--allow-main",
       "DANGER: allow running build from the main branch. Agents MUST NOT pass this flag without explicit user approval in the current conversation.",
     )
-    .action(async (opts: { migrationName?: string; resetMigration?: boolean; customMigration?: boolean; restart: boolean; skipChecks?: boolean; allowMain?: boolean }) => {
+    .action(async (opts: { migrationName?: string; resetMigration?: boolean; customMigration?: boolean; migrationAnswers?: string; restart: boolean; skipChecks?: boolean; allowMain?: boolean }) => {
       let endSpan = buildProfilerStart("ensureHooksPath", "build:preflight", "ensureHooksPath");
       await ensureHooksPath();
       endSpan();
@@ -515,6 +550,9 @@ export function registerBuild(program: Command) {
         migrationName: opts.migrationName,
         resetMigration: opts.resetMigration,
         customMigration: opts.customMigration,
+        migrationAnswers: opts.migrationAnswers
+          ? parseMigrationAnswers(opts.migrationAnswers)
+          : undefined,
       });
       endSpan();
 
