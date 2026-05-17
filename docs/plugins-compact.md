@@ -290,6 +290,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
     - **`groups`** — User-created groups within reorderable areas. Drag items onto each other to form groups.
 
+- **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
+
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Plugins:
     - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.

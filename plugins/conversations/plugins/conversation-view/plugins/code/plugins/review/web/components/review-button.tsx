@@ -6,7 +6,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pushesResource } from "@plugins/tasks/core";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
-import { convReviewPane } from "../panes";
+import { convCodeReviewPane } from "../panes";
 import { getFileWarningLevel, type FileWarningLevel } from "../core-files";
 import { reviewConfig } from "../../shared/config";
 
@@ -24,7 +24,7 @@ const WARNING_ICON_CLASS: Record<"careful" | "critical", string> = {
 export function ReviewButton() {
   const { conversation } = conversationPane.useData();
   const { files } = useEditedFiles(conversation.id);
-  const { isOpen, toggle } = convReviewPane.useToggle({ convId: conversation.id });
+  const { isOpen, toggle } = convCodeReviewPane.useToggle({ convId: conversation.id });
   const { safePaths, carefulPaths } = useConfigValues(reviewConfig, "conversation-code-review");
 
   const pushesQ = useResource(pushesResource);

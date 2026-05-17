@@ -11,7 +11,7 @@
   - Types: `ReviewSection`
   - Values: `reviewConfig`, `reviewSectionsResource`
 - Contributes:
-  - `Pane.Register` "conv-review"
+  - `Pane.Register` "conv-code-review"
   - `Conversation.ActionBar` → `ReviewButton`
   - `Config.Spec`
   - `Config.Section` "Review Sections" → `ReviewSectionsSettings`

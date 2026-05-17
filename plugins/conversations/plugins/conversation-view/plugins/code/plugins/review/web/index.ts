@@ -5,7 +5,7 @@ import { Config } from "@plugins/config/web";
 import { ReviewButton } from "./components/review-button";
 import { ReviewSectionsSettings } from "./components/review-sections-settings";
 import { reviewConfig } from "../shared/config";
-import { convReviewPane } from "./panes";
+import { convCodeReviewPane } from "./panes";
 
 export default {
   id: "conversation-code-review",
@@ -13,8 +13,8 @@ export default {
   description:
     "Toolbar button and full-screen view to review all worktree changes file-by-file.",
   contributions: [
-    Pane.Register({ pane: convReviewPane }),
-    Conversation.ActionBar({ id: "review", component: ReviewButton }),
+    Pane.Register({ pane: convCodeReviewPane }),
+    Conversation.ActionBar({ id: "code-review", component: ReviewButton }),
     Config.Spec(reviewConfig),
     Config.Section({
       id: "review-sections",

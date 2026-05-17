@@ -627,7 +627,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Types: `ReviewSection`
                 - Values: `reviewConfig`, `reviewSectionsResource`
               - Contributes:
-                - `Pane.Register` "conv-review"
+                - `Pane.Register` "conv-code-review"
                 - `Conversation.ActionBar` → `ReviewButton`
                 - `Config.Spec`
                 - `Config.Section` "Review Sections" → `ReviewSectionsSettings`
@@ -1595,6 +1595,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `DELETE /api/reorder/groups/:id`
         - `POST /api/reorder/groups/:id/members`
         - `DELETE /api/reorder/:slotId/groups/members/:contributionId`
+
+- **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
+  - Exports (web):
+    - Values: `convReviewPane`, `ReviewSlots`
+  - Contributes:
+    - `Pane.Register` "conv-review"
+    - `Conversation.ActionBar` → `ReviewButton`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Exports (web):

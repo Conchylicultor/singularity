@@ -192,6 +192,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "primitives/plugins/tree", hierarchyPath: "primitives/tree", loader: () => import("@plugins/primitives/plugins/tree/web") },
   { name: "reorder/plugins/edit-mode", hierarchyPath: "reorder/edit-mode", loader: () => import("@plugins/reorder/plugins/edit-mode/web") },
   { name: "reorder", hierarchyPath: "reorder", loader: () => import("@plugins/reorder/web") },
+  { name: "review", hierarchyPath: "review", loader: () => import("@plugins/review/web") },
   { name: "screenshot/plugins/draw-canvas", hierarchyPath: "screenshot/draw-canvas", loader: () => import("@plugins/screenshot/plugins/draw-canvas/web") },
   { name: "screenshot/plugins/draw-on-app", hierarchyPath: "screenshot/draw-on-app", loader: () => import("@plugins/screenshot/plugins/draw-on-app/web") },
   { name: "screenshot", hierarchyPath: "screenshot", loader: () => import("@plugins/screenshot/web") },

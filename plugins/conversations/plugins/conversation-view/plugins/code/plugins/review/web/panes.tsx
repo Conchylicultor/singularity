@@ -2,17 +2,17 @@ import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { ReviewView } from "./components/review-view";
 
-export const convReviewPane = Pane.define({
-  id: "conv-review",
+export const convCodeReviewPane = Pane.define({
+  id: "conv-code-review",
   after: [conversationPane],
-  segment: "review",
-  component: ConvReviewBody,
+  segment: "code-review",
+  component: ConvCodeReviewBody,
   width: 720,
 });
 
-function ConvReviewBody() {
+function ConvCodeReviewBody() {
   return (
-    <PaneChrome pane={convReviewPane} title="Review">
+    <PaneChrome pane={convCodeReviewPane} title="Code Review">
       <ReviewView />
     </PaneChrome>
   );

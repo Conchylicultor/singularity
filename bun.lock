@@ -960,6 +960,10 @@
       "name": "@singularity/plugin-reorder-groups",
       "version": "0.0.1",
     },
+    "plugins/review": {
+      "name": "@singularity/plugin-review",
+      "version": "0.0.1",
+    },
     "plugins/screenshot": {
       "name": "@singularity/plugin-screenshot",
       "version": "0.0.1",
@@ -2173,6 +2177,8 @@
     "@singularity/plugin-reorder-edit-mode": ["@singularity/plugin-reorder-edit-mode@workspace:plugins/reorder/plugins/edit-mode"],
 
     "@singularity/plugin-reorder-groups": ["@singularity/plugin-reorder-groups@workspace:plugins/reorder/plugins/groups"],
+
+    "@singularity/plugin-review": ["@singularity/plugin-review@workspace:plugins/review"],
 
     "@singularity/plugin-screenshot": ["@singularity/plugin-screenshot@workspace:plugins/screenshot"],
 
