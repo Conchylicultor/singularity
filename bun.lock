@@ -964,6 +964,10 @@
       "name": "@singularity/plugin-review",
       "version": "0.0.1",
     },
+    "plugins/review/plugins/plugin-changes": {
+      "name": "@singularity/plugin-review-plugin-changes",
+      "version": "0.0.1",
+    },
     "plugins/screenshot": {
       "name": "@singularity/plugin-screenshot",
       "version": "0.0.1",
@@ -2179,6 +2183,8 @@
     "@singularity/plugin-reorder-groups": ["@singularity/plugin-reorder-groups@workspace:plugins/reorder/plugins/groups"],
 
     "@singularity/plugin-review": ["@singularity/plugin-review@workspace:plugins/review"],
+
+    "@singularity/plugin-review-plugin-changes": ["@singularity/plugin-review-plugin-changes@workspace:plugins/review/plugins/plugin-changes"],
 
     "@singularity/plugin-screenshot": ["@singularity/plugin-screenshot@workspace:plugins/screenshot"],
 

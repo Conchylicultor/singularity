@@ -239,6 +239,11 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
       - `/api/reorder/groups/:id/members (POST)`
       - `/api/reorder/:slotId/groups/members/:contributionId (DELETE)`
 
+- **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
+  - Plugins:
+    - **`plugin-changes`** — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
+      - `/api/review/plugin-changes (GET)`
+
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - `/api/screenshots/:id (POST, GET)`
   - `/api/screenshots/:id/file (POST)`

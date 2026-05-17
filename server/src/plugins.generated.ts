@@ -90,6 +90,7 @@ import primitivesAvatarPlugin from "@plugins/primitives/plugins/avatar/server";
 import primitivesRankPlugin from "@plugins/primitives/plugins/rank/server";
 import reorderGroupsPlugin from "@plugins/reorder/plugins/groups/server";
 import reorderPlugin from "@plugins/reorder/server";
+import reviewPluginChangesPlugin from "@plugins/review/plugins/plugin-changes/server";
 import screenshotPlugin from "@plugins/screenshot/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
 import statsCostPlugin from "@plugins/stats/plugins/cost/server";
@@ -180,6 +181,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (primitivesRankPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (reorderGroupsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, primitivesRankPlugin];
 (reorderPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
+(reviewPluginChangesPlugin as ServerPluginDefinition).dependsOn = [conversationsConversationViewCodePlugin, infraPathsPlugin, tasksCorePlugin];
 (statsCommitsPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsConversationCategoryPlugin, databasePlugin, infraPathsPlugin, infraWorktreePlugin];
 (statsCostPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
 (statsTasksPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
@@ -282,6 +284,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (primitivesRankPlugin as ServerPluginDefinition)._hierarchyPath = "primitives/rank";
 (reorderGroupsPlugin as ServerPluginDefinition)._hierarchyPath = "reorder/groups";
 (reorderPlugin as ServerPluginDefinition)._hierarchyPath = "reorder";
+(reviewPluginChangesPlugin as ServerPluginDefinition)._hierarchyPath = "review/plugin-changes";
 (screenshotPlugin as ServerPluginDefinition)._hierarchyPath = "screenshot";
 (statsCommitsPlugin as ServerPluginDefinition)._hierarchyPath = "stats/commits";
 (statsCostPlugin as ServerPluginDefinition)._hierarchyPath = "stats/cost";
@@ -386,6 +389,7 @@ export const plugins: ServerPluginDefinition[] = [
   primitivesRankPlugin,
   reorderGroupsPlugin,
   reorderPlugin,
+  reviewPluginChangesPlugin,
   screenshotPlugin,
   statsCommitsPlugin,
   statsCostPlugin,

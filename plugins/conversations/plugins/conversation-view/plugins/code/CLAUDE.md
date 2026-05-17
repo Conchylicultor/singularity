@@ -10,6 +10,8 @@
   - Values: `editedFilesResource`
 - Exports (web):
   - Values: `useEditedFiles`
+- Exports (server):
+  - Values: `getEditedFiles`
 - Server:
   - Uses: `tasks-core.getConversation`
   - Resources: `edited-files` (invalidate)

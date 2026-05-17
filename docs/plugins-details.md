@@ -587,6 +587,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `editedFilesResource`
           - Exports (web):
             - Values: `useEditedFiles`
+          - Exports (server):
+            - Values: `getEditedFiles`
           - Server:
             - Uses: `tasks-core.getConversation`
             - Resources: `edited-files` (invalidate)
@@ -1602,6 +1604,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Pane.Register` "conv-review"
     - `Conversation.ActionBar` → `ReviewButton`
+  - Imported by: `plugin-changes`
+  - Plugins:
+    - **`plugin-changes`** — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
+      - Exports (core):
+        - Types: `DiffList`, `PluginChangeDiff`, `PluginChangesResponse`
+      - Contributes:
+        - `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
+      - Server:
+        - Uses: `tasks-core.getConversation`
+        - `GET /api/review/plugin-changes`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Exports (web):
@@ -1796,7 +1808,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineTriggerEvent('pushes.landed')`, `defineTriggerEvent('tasks.statusChanged')`
     - Uses: `database.db`
     - Resources: `attempts` (push), `pushes` (push)
-  - Imported by: `active-data`, `agents`, `allow-monitor`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
+  - Imported by: `active-data`, `agents`, `allow-monitor`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `plugin-changes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
   - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`), `auto-start` (table `tasks_ext_auto_start`), `plugin-health` (table `tasks_ext_health_review`)
 
 - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.

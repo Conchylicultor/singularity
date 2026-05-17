@@ -291,6 +291,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`groups`** — User-created groups within reorderable areas. Drag items onto each other to form groups.
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
+  - Plugins:
+    - **`plugin-changes`** — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Plugins:
