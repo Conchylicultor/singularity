@@ -1,6 +1,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { MdAdd } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
 import {
   RenameInput,
@@ -145,7 +146,7 @@ export function TasksList({
   rootTaskId?: string;
   onSelect: (id: string) => void;
 }) {
-  const { data: rows } = useResource(tasksResource);
+  const result = useResource(tasksResource);
   const listActions = TasksSlots.ListActions.useContributions();
   const [hideTerminal, setHideTerminal] = useState(true);
   const isTerminal = useCallback(
@@ -153,15 +154,17 @@ export function TasksList({
     [],
   );
   const orderedIds = useMemo(
-    () => deriveVisibleOrder(rows, rootTaskId, hideTerminal ? isTerminal : undefined),
-    [rows, rootTaskId, hideTerminal, isTerminal],
+    () => deriveVisibleOrder(result.pending ? [] : result.data, rootTaskId, hideTerminal ? isTerminal : undefined),
+    [result, rootTaskId, hideTerminal, isTerminal],
   );
+
+  if (result.pending) return <Placeholder>Loading…</Placeholder>;
 
   return (
     <MultiSelectProvider orderedIds={orderedIds}>
       <SelectionBar />
       <TreeList<Task>
-        rows={rows}
+        rows={result.data}
         rootId={rootTaskId}
         selectedId={selectedId}
         onSelect={onSelect}

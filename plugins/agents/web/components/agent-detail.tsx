@@ -45,8 +45,8 @@ function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
 }
 
 export function AgentDetail({ agentId }: { agentId: string }) {
-  const { data } = useResource(agentsResource);
-  const agent = data.find((a) => a.id === agentId) ?? null;
+  const agentsResult = useResource(agentsResource);
+  const agent = agentsResult.pending ? null : (agentsResult.data.find((a) => a.id === agentId) ?? null);
   const launchesQ = useResource(agentLaunchesResource);
   const [model, setModel] = useState<string | null>(agent?.model ?? null);
   const [launching, setLaunching] = useState(false);
@@ -63,12 +63,12 @@ export function AgentDetail({ agentId }: { agentId: string }) {
   );
 
   const latestStatus = useMemo(() => {
-    const launches = launchesQ.data;
+    const launches = launchesQ.pending ? [] : launchesQ.data;
     const latest = launches
       .filter((l) => l.agentId === agentId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
     return latest?.latestConversationStatus ?? null;
-  }, [launchesQ.data, agentId]);
+  }, [launchesQ, agentId]);
 
   const nameField = useEditableField({
     value: agent?.name ?? "",

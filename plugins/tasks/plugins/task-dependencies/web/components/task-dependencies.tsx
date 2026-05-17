@@ -23,16 +23,16 @@ function targetForSibling(task: Task): TaskChainTarget {
 
 export function TaskDependencies({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
-  const { data: tasks } = useResource(tasksResource);
+  const tasksResult = useResource(tasksResource);
 
   const deps = useMemo(() => task?.dependencies ?? [], [task?.dependencies]);
 
   const parentCandidate = useMemo(() => {
-    if (!task?.parentId) return null;
+    if (!task?.parentId || tasksResult.pending) return null;
     if (task.parentId === CONVERSATIONS_META_TASK_ID) return null;
     if (deps.includes(task.parentId)) return null;
-    return tasks.find((t) => t.id === task.parentId) ?? null;
-  }, [task?.parentId, deps, tasks]);
+    return tasksResult.data.find((t) => t.id === task.parentId) ?? null;
+  }, [task?.parentId, deps, tasksResult]);
 
   const addParentAsDep = useCallback(async () => {
     if (!parentCandidate) return;
@@ -82,7 +82,7 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
       ) : (
         <ul className="flex flex-wrap gap-2">
           {deps.map((depId) => (
-            <DepChip key={depId} taskId={taskId} depId={depId} tasks={tasks} />
+            <DepChip key={depId} taskId={taskId} depId={depId} tasks={tasksResult.pending ? [] : tasksResult.data} />
           ))}
         </ul>
       )}

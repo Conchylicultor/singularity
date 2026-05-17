@@ -12,12 +12,12 @@ export function DropAndExitButton({
   conversation: ConversationRecord;
 }) {
   const live = useConversation(conversation.id) ?? conversation;
-  const { data: pushes } = useResource(pushesResource);
+  const pushesResult = useResource(pushesResource);
   const { active } = useConversations();
 
   const hasPush = useMemo(
-    () => pushes.some((p) => p.attemptId === conversation.attemptId),
-    [pushes, conversation.attemptId],
+    () => pushesResult.pending ? false : pushesResult.data.some((p) => p.attemptId === conversation.attemptId),
+    [pushesResult, conversation.attemptId],
   );
 
   const hasOtherActive = useMemo(

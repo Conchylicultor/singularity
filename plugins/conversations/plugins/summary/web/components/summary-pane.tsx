@@ -17,9 +17,9 @@ const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
 
 export function SummaryPane() {
   const { conversation } = conversationPane.useData();
-  const { data: byConversation } = useResource(conversationSummariesResource);
+  const summariesResult = useResource(conversationSummariesResource);
   const summaries: ConversationSummary[] | undefined =
-    byConversation[conversation.id];
+    summariesResult.pending ? undefined : summariesResult.data[conversation.id];
   const latest = summaries?.[0];
 
   const [pendingSince, setPendingSince] = useState<number | null>(null);

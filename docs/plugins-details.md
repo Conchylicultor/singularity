@@ -1448,7 +1448,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `ResourceDescriptor`, `ResourceOrigin`
         - Values: `centralResourceDescriptor`, `resourceDescriptor`
       - Exports (web):
-        - Types: `ChannelStatuses`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`
+        - Types: `ChannelStatuses`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`
         - Values: `centralResourceDescriptor`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useNotificationsChannelStatuses`, `useNotificationsStatus`, `useResource`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Defines:

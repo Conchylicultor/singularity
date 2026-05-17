@@ -160,8 +160,8 @@ function BuildHistoryList({
   selectedRunId?: string;
   onRunClick?: (runId: string) => void;
 }) {
-  const { data } = useResource(buildHistoryResource);
-  const runs = data ?? [];
+  const result = useResource(buildHistoryResource);
+  const runs = result.pending ? [] : result.data;
   const limit = variant === "popover" ? 10 : 50;
   const visible = runs.slice(0, limit);
 
@@ -216,8 +216,8 @@ export function BuildPopoverContent({
   selectedRunId?: string;
   onRunClick?: (runId: string) => void;
 }) {
-  const { data: historyData } = useResource(buildHistoryResource);
-  const runs = historyData ?? [];
+  const historyResult = useResource(buildHistoryResource);
+  const runs = historyResult.pending ? [] : historyResult.data;
   const latestRun = runs[0];
   const building = latestRun?.finishedAt === null;
 

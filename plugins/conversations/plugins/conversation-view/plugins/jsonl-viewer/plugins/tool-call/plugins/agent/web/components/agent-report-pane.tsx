@@ -12,9 +12,10 @@ interface AgentInput {
 export function AgentReportPaneBody() {
   const { toolUseId } = agentReportPane.useParams();
   const { conversation } = conversationPane.useData();
-  const { data: events } = useResource(jsonlEventsResource, {
+  const eventsResult = useResource(jsonlEventsResource, {
     id: conversation.id,
   });
+  const events = eventsResult.pending ? [] : eventsResult.data;
 
   const event = events?.find(
     (e) => e.kind === "tool-call" && e.toolUseId === toolUseId,

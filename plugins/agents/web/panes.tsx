@@ -73,8 +73,8 @@ function AgentsRoot(): ReactElement {
 
 function AgentDetailBody(): ReactElement {
   const { id } = agentDetailPane.useParams();
-  const { data } = useResource(agentsResource);
-  const agent = data.find((a: Agent) => a.id === id) ?? null;
+  const agentsResult = useResource(agentsResource);
+  const agent = agentsResult.pending ? null : (agentsResult.data.find((a: Agent) => a.id === id) ?? null);
   const views = AgentsSlots.View.useContributions();
 
   const body = (

@@ -8,10 +8,14 @@ import { CallRow } from "./call-row";
 type ModelFilter = "all" | "haiku" | "sonnet" | "opus";
 
 export function CallsView() {
-  const { data } = useResource(claudeCliCallsResource);
-  const calls = data;
+  const result = useResource(claudeCliCallsResource);
   const modelChip = useChipFilter<ModelFilter>("all");
   const sourceChip = useChipFilter<string>("all");
+
+  const calls = useMemo(
+    () => result.pending ? [] : result.data,
+    [result],
+  );
 
   const sources = useMemo(() => {
     const set = new Set<string>();

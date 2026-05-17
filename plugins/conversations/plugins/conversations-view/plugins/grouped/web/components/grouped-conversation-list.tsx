@@ -80,8 +80,8 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     onCloseConversation,
   } = props;
 
-  const { data } = useResource(conversationGroupsResource);
-  const { groups, members } = data;
+  const groupsResult = useResource(conversationGroupsResource);
+  const { groups, members } = groupsResult.pending ? { groups: [], members: [] } : groupsResult.data;
 
   const groupIdByConvId = useMemo(() => {
     const m = new Map<string, string>();
@@ -150,7 +150,8 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     [attemptGroupsInOrder, groupIdByConvId],
   );
 
-  const { data: tasksData } = useResource(tasksResource);
+  const tasksResult = useResource(tasksResource);
+  const tasksData = tasksResult.pending ? [] : tasksResult.data;
   const { autoGroups, trulyUngrouped } = useTaskAutoGroups(
     ungroupedAttemptGroups,
     tasksData,

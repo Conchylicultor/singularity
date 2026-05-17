@@ -21,12 +21,12 @@ const TASK_STATUS_DOT: Record<TaskStatus, string> = {
 
 export function TaskLinkChip({ content }: { content: string; attrs: Record<string, string> }) {
   const taskId = content.trim();
-  const { data } = useResource(tasksResource);
+  const result = useResource(tasksResource);
   const conversation = conversationPane.useDataMaybe()?.conversation;
   const openPane = useOpenPane();
   const task = useMemo(
-    () => data.find((t) => t.id === taskId) ?? null,
-    [data, taskId],
+    () => (result.pending ? null : result.data.find((t) => t.id === taskId) ?? null),
+    [result, taskId],
   );
 
   if (!taskId) return null;

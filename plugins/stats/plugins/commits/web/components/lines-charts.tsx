@@ -467,7 +467,8 @@ export function LinesRateBreakdownChart({ bucket, filterKey, dedup }: { bucket: 
 export function LinesChartsSection() {
   const [byType, setByType] = useState(false);
   const [bucket, setBucket] = useState<Bucket>("day");
-  const { data: overrides } = useResource(excludedPathStateResource);
+  const overridesResult = useResource(excludedPathStateResource);
+  const overrides = overridesResult.pending ? {} : overridesResult.data;
   const { filterRebases } = useConfigValues(commitsConfig, "stats-commits");
   const filterKey = JSON.stringify(overrides);
 

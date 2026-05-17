@@ -53,8 +53,8 @@ function AddServerBody() {
 
 function ServerDetailBody() {
   const { serverId } = serverDetailPane.useParams();
-  const { data } = useResource(serversResource);
-  const server = data.find((s) => s.id === serverId) ?? null;
+  const serversResult = useResource(serversResource);
+  const server = serversResult.pending ? null : (serversResult.data.find((s) => s.id === serverId) ?? null);
 
   if (!server) {
     return (

@@ -1,9 +1,8 @@
-import { createContext, createElement, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, createElement, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   QueryClient,
   QueryClientProvider,
   useQuery,
-  type DefinedUseQueryResult,
   type NonUndefinedGuard,
 } from "@tanstack/react-query";
 import { NotificationsClient, queryKeyFor } from "./notifications-client";
@@ -72,15 +71,18 @@ export function useNotificationsChannelStatuses(): ChannelStatuses {
   return statuses;
 }
 
+export type ResourceResult<T> =
+  | { pending: true; error: Error | null; refetch: () => Promise<void> }
+  | { pending: false; data: T; error: Error | null; refetch: () => Promise<void> };
+
 // AGENT RULE: Never cast the `data` returned by useResource (e.g. `data as Foo[]`).
+// `data` is only accessible after narrowing `result.pending === false`.
 // The generic T is inferred from the ResourceDescriptor — casting silently hides type
 // mismatches between the resource payload and your assumption.
-// If you believe a cast is necessary, STOP and report the exact resource + expected type
-// to the user before writing any code, so the resource definition can be fixed instead.
 export function useResource<T, P extends ResourceParams = ResourceParams>(
   resource: ResourceDescriptor<T, P>,
   params?: P,
-): DefinedUseQueryResult<T> {
+): ResourceResult<T> {
   const notifications = useContext(NotificationsContext);
   if (!notifications) {
     throw new Error("useResource must be used within a NotificationsProvider");
@@ -98,7 +100,7 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; callers pass small flat objects
   }, [notifications, key, origin, schema, JSON.stringify(p)]);
 
-  return useQuery({
+  const q = useQuery({
     queryKey: queryKeyFor(key, p),
     queryFn: async (): Promise<T> => {
       const qs = new URLSearchParams(p).toString();
@@ -111,12 +113,22 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
     },
     // sub-ack writes setQueryData, so normally queryFn never runs.
     // It's the fallback when the WS is down.
-    // Cast needed because generic T is not constrained to exclude undefined at
-    // the definition site.  ResourceDescriptor.initialData is required (T, not
-    // T | undefined), so the cast is structurally safe.
     initialData: resource.initialData as NonUndefinedGuard<T>,
-    // Seeded at epoch 0 so consumers that need a loading distinction can
-    // check `dataUpdatedAt === 0` (pre-WS-sub-ack) vs `> 0` (server data).
+    // Seeded at epoch 0 so `dataUpdatedAt === 0` means only initialData has been seen.
     initialDataUpdatedAt: 0,
   });
+
+  const pending = q.dataUpdatedAt === 0;
+  const data = q.data;
+  const error = q.error as Error | null;
+  const refetchRef = useRef(q.refetch);
+  refetchRef.current = q.refetch;
+
+  return useMemo(
+    (): ResourceResult<T> =>
+      pending
+        ? { pending: true, error, refetch: () => refetchRef.current().then(() => {}) }
+        : { pending: false, data, error, refetch: () => refetchRef.current().then(() => {}) },
+    [pending, data, error],
+  );
 }

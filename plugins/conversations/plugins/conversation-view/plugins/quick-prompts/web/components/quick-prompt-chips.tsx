@@ -12,9 +12,11 @@ export function QuickPromptChips({
   conversation: ConversationRecord;
 }) {
   const live = useConversation(conversation.id) ?? conversation;
-  const { data: prompts } = useResource(quickPromptsResource);
+  const promptsResult = useResource(quickPromptsResource);
   const [sendingId, setSendingId] = useState<string | null>(null);
 
+  if (promptsResult.pending) return null;
+  const prompts = promptsResult.data;
   if (prompts.length === 0) return null;
   if (live.status !== "waiting") return null;
 

@@ -16,6 +16,7 @@ const categoryColorsResource = resourceDescriptor<Record<string, CategoryAvatarO
 );
 
 export function useCategoryColors(): Record<string, CategoryAvatarOverride> {
-  const { data } = useResource(categoryColorsResource);
-  return data;
+  const result = useResource(categoryColorsResource);
+  if (result.pending) return {};
+  return result.data;
 }

@@ -108,12 +108,21 @@ function ReorderListMiddlewareInner({
     );
   }, []);
 
-  const { data: rankMap } = useResource(reorderPrefsResource, {
+  const rankResult = useResource(reorderPrefsResource, {
     slotId: storageId,
   });
-  const { data: groupsData } = useResource(reorderGroupsResource, {
+  const groupsResult = useResource(reorderGroupsResource, {
     slotId: storageId,
   });
+
+  const rankMap = useMemo(
+    () => rankResult.pending ? {} : rankResult.data,
+    [rankResult],
+  );
+  const groupsData = useMemo(
+    () => groupsResult.pending ? { groups: [], members: [] } : groupsResult.data,
+    [groupsResult],
+  );
 
   const state = useMemo(
     () => computeReorderState(contributions, rankMap, groupsData),

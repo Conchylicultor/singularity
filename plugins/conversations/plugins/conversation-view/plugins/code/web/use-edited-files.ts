@@ -5,6 +5,7 @@ import type { EditedFile } from "../core/protocol";
 export function useEditedFiles(conversationId: string): {
   files: EditedFile[];
 } {
-  const { data } = useResource(editedFilesResource, { id: conversationId });
-  return { files: data };
+  const result = useResource(editedFilesResource, { id: conversationId });
+  if (result.pending) return { files: [] };
+  return { files: result.data };
 }

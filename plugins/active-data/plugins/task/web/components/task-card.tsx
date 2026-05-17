@@ -172,11 +172,11 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
   const activeConvId = activeConvEntry?.params.convId;
 
   const attempts = useMemo(() => {
-    const rows = attemptsQ.data;
-    return rows
+    if (attemptsQ.pending) return [];
+    return attemptsQ.data
       .filter((a) => a.taskId === taskId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-  }, [attemptsQ.data, taskId]);
+  }, [attemptsQ, taskId]);
 
   if (attempts.length === 0) {
     return (
@@ -238,9 +238,9 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
 
 function TaskChip({ taskId }: { taskId: string }) {
   const { conversation } = conversationPane.useData();
-  const { data: tasks } = useResource(tasksResource);
+  const tasksResult = useResource(tasksResource);
   const openPane = useOpenPane();
-  const task = tasks.find((t) => t.id === taskId);
+  const task = tasksResult.pending ? undefined : tasksResult.data.find((t) => t.id === taskId);
   const title = task?.title.trim() || "Untitled task";
   return (
     <button

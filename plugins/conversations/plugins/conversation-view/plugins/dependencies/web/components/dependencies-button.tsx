@@ -23,7 +23,8 @@ export function DependenciesButton({
 
   const task = useTask(conversation.taskId);
   const { active } = useConversations();
-  const { data: allTasks } = useResource(tasksResource);
+  const tasksResult = useResource(tasksResource);
+  const allTasks = useMemo(() => (tasksResult.pending ? [] : tasksResult.data), [tasksResult]);
 
   const depTaskIds = useMemo(
     () => new Set(task?.dependencies ?? []),

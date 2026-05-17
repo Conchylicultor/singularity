@@ -37,7 +37,8 @@ export function useConfigValues<S extends Schema>(
   descriptor: ConfigDescriptor<S>,
   pluginId: string,
 ): Values<S> {
-  const { data } = useResource(configResource);
+  const result = useResource(configResource);
+  const data = result.pending ? {} : result.data;
   const out: Record<string, unknown> = {};
   for (const [key, raw] of Object.entries(descriptor.schema)) {
     const meta = typeof raw === "object" && raw !== null && !Array.isArray(raw) && "default" in raw
@@ -55,8 +56,9 @@ export function useConfigValues<S extends Schema>(
 
 /** "Is this secret field currently set?" + timestamp. */
 export function useSecretFieldSet(fullKey: string): SecretFieldState {
-  const { data } = useResource(configSecretsResource);
-  return data[fullKey] ?? { set: false };
+  const result = useResource(configSecretsResource);
+  if (result.pending) return { set: false };
+  return result.data[fullKey] ?? { set: false };
 }
 
 /** Imperative write — used by the Settings pane. */

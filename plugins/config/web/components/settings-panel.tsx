@@ -64,7 +64,8 @@ export function SettingsPanel() {
   const specs = useSpecsWithPlugin();
   const sections = useSectionsWithPlugin();
   const groups = buildGroups(specs, sections);
-  const { data: values } = useResource(configResource);
+  const configResult = useResource(configResource);
+  const values = configResult.pending ? {} : configResult.data;
   const [error, setError] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);

@@ -149,9 +149,13 @@ export function JsonlPane({
 }) {
   const isWorking = conversation.status === "working" || conversation.status === "starting";
   const isGone = conversation.status === "gone" || conversation.status === "done";
-  const { data: events, error, dataUpdatedAt } = useResource(jsonlEventsResource, {
+  const eventsResult = useResource(jsonlEventsResource, {
     id: conversation.id,
   });
+  const events = useMemo(
+    () => eventsResult.pending ? [] : eventsResult.data,
+    [eventsResult],
+  );
   const totals = useMemo(() => aggregateUsage(events), [events]);
   const lastAssistantEvent = useMemo(() => {
     for (let i = events.length - 1; i >= 0; i--) {
@@ -199,11 +203,11 @@ export function JsonlPane({
           className={`h-full overflow-auto transition-opacity ${isGone ? "opacity-50" : ""}`}
         >
           <div ref={sticky.contentRef}>
-            {dataUpdatedAt === 0 ? (
+            {eventsResult.pending ? (
               <div className="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
-            ) : error ? (
+            ) : eventsResult.error ? (
               <div className="px-3 py-2 text-xs text-destructive">
-                {error instanceof Error ? error.message : String(error)}
+                {eventsResult.error instanceof Error ? eventsResult.error.message : String(eventsResult.error)}
               </div>
             ) : events.length === 0 ? (
               <div className="flex flex-col px-3 py-2 text-xs text-muted-foreground">

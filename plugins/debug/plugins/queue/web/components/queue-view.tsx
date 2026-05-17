@@ -104,13 +104,17 @@ const STATE_STYLES: Record<JobState, string> = {
 function JobsTab() {
   const chipFilter = useChipFilter<JobState | "all">("all");
   const [selected, setSelected] = useState<JobRow | null>(null);
-  const { data, refetch } = useResource(jobsListResource);
+  const jobsResult = useResource(jobsListResource);
+  const { refetch } = jobsResult;
 
-  const counts = data.counts;
+  const counts = useMemo(
+    () => jobsResult.pending ? { pending: 0, running: 0, retrying: 0, dead: 0 } : jobsResult.data.counts,
+    [jobsResult],
+  );
   const total = counts.pending + counts.running + counts.retrying + counts.dead;
   const visible = useMemo(
-    () => data.rows.filter((r) => chipFilter.matches(r.state)),
-    [data.rows, chipFilter],
+    () => jobsResult.pending ? [] : jobsResult.data.rows.filter((r) => chipFilter.matches(r.state)),
+    [jobsResult, chipFilter],
   );
 
   async function retry(id: string) {
@@ -267,9 +271,10 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
 // ─── Events tab ──────────────────────────────────────────────────────────
 
 function EventsTab() {
-  const { data, refetch } = useResource(eventEmissionsResource);
+  const emissionsResult = useResource(eventEmissionsResource);
+  const { refetch } = emissionsResult;
   const [selected, setSelected] = useState<EmissionRow | null>(null);
-  const rows = data.rows;
+  const rows = emissionsResult.pending ? [] : emissionsResult.data.rows;
 
   return (
     <div className="flex h-full flex-col">
@@ -383,10 +388,11 @@ function EmissionDrawer({
 // ─── Triggers tab ────────────────────────────────────────────────────────
 
 function TriggersTab() {
-  const { data, refetch } = useResource(eventTriggersResource);
-  const rows = data.rows;
+  const triggersResult = useResource(eventTriggersResource);
+  const { refetch } = triggersResult;
 
   const grouped = useMemo(() => {
+    const rows = triggersResult.pending ? [] : triggersResult.data.rows;
     const map = new Map<string, TriggerRow[]>();
     for (const r of rows) {
       const list = map.get(r.eventName) ?? [];
@@ -394,7 +400,7 @@ function TriggersTab() {
       map.set(r.eventName, list);
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [rows]);
+  }, [triggersResult]);
 
   async function toggle(id: string, enabled: boolean) {
     try {

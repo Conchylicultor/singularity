@@ -36,11 +36,11 @@ export function BuildButton() {
   const initialHashRef = useRef<string | null>(null);
   const lastAutoBuildAtRef = useRef<string | null | undefined>(undefined);
 
-  const { data: aheadData } = useResource(mainAheadCountResource);
-  const mainAheadCount = aheadData?.count ?? 0;
+  const aheadResult = useResource(mainAheadCountResource);
+  const mainAheadCount = aheadResult.pending ? 0 : (aheadResult.data?.count ?? 0);
 
-  const { data: historyData } = useResource(buildHistoryResource);
-  const latestRun = (historyData ?? [])[0];
+  const historyResult = useResource(buildHistoryResource);
+  const latestRun = historyResult.pending ? undefined : historyResult.data[0];
   const building = latestRun?.finishedAt === null;
   const trackedBuildRef = useRef<string | null>(null);
 

@@ -17,8 +17,8 @@ export interface ConversationNoteState extends EditableField<string> {
 export function useConversationNote(
   conversationId: string,
 ): ConversationNoteState {
-  const { data } = useResource(conversationNotesResource);
-  const serverNote = data[conversationId]?.notes ?? "";
+  const notesResult = useResource(conversationNotesResource);
+  const serverNote = notesResult.pending ? "" : (notesResult.data[conversationId]?.notes ?? "");
   const noteExists = serverNote.trim().length > 0;
   const isManuallyOpen = useIsOpen(conversationId);
 

@@ -7,7 +7,8 @@ import { tasksResource, type Task } from "@plugins/tasks/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 
 export function TaskDependents({ taskId }: { taskId: string }) {
-  const { data: tasks } = useResource(tasksResource);
+  const tasksResult = useResource(tasksResource);
+  const tasks = useMemo(() => (tasksResult.pending ? [] : tasksResult.data), [tasksResult]);
 
   const dependentIds = useMemo(
     () => tasks.filter((t) => t.dependencies.includes(taskId)).map((t) => t.id),

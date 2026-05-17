@@ -3,7 +3,7 @@ import { useAuthState } from "../hooks";
 import { DefaultProviderRow } from "./default-provider-row";
 
 export function AccountsPane() {
-  const { data, error } = useAuthState();
+  const authState = useAuthState();
   const providers = Auth.Provider.useContributions();
 
   return (
@@ -19,7 +19,7 @@ export function AccountsPane() {
         </div>
       </div>
 
-      {data.mainOffline ? (
+      {!authState.pending && authState.data.mainOffline ? (
         <div className="rounded border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-700">
           The main app is offline. Worktrees can't read tokens until it comes
           back. Visit{" "}
@@ -35,9 +35,9 @@ export function AccountsPane() {
         </div>
       ) : null}
 
-      {error ? (
+      {authState.error ? (
         <div className="rounded border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-          Failed to load auth state: {String(error)}
+          Failed to load auth state: {String(authState.error)}
         </div>
       ) : null}
 

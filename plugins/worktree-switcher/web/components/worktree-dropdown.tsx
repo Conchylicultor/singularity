@@ -11,17 +11,18 @@ const currentWorktree = (() => {
 const isAgentWorktree = currentWorktree !== "head" && currentWorktree !== "singularity";
 
 export function WorktreeDropdown() {
-  const { data: attempts } = useResource(attemptsResource);
-  const { data: tasks } = useResource(tasksResource);
+  const attemptsResult = useResource(attemptsResource);
+  const tasksResult = useResource(tasksResource);
 
   const taskTitle = useMemo(() => {
     if (!isAgentWorktree) return null;
-    const attempt = attempts.find((a) =>
+    if (attemptsResult.pending || tasksResult.pending) return null;
+    const attempt = attemptsResult.data.find((a) =>
       a.worktreePath.endsWith("/" + currentWorktree),
     );
     if (!attempt) return null;
-    return tasks.find((t) => t.id === attempt.taskId)?.title ?? null;
-  }, [attempts, tasks]);
+    return tasksResult.data.find((t) => t.id === attempt.taskId)?.title ?? null;
+  }, [attemptsResult, tasksResult]);
 
   return (
     <WithTooltip content={`Current worktree: ${currentWorktree}`}>

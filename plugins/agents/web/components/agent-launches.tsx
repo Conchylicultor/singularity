@@ -25,11 +25,11 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
   const activeConvId = convEntry?.params.convId;
 
   const launches = useMemo(() => {
-    const rows = launchesQ.data;
+    const rows = launchesQ.pending ? [] : launchesQ.data;
     return rows
       .filter((l) => l.agentId === agentId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-  }, [launchesQ.data, agentId]);
+  }, [launchesQ, agentId]);
 
   return (
     <section className="flex flex-col gap-2">

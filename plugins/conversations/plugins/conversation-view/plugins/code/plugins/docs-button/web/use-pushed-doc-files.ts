@@ -10,14 +10,16 @@ export function usePushedDocFiles(attemptId: string): EditedFile[] | null {
   const [result, setResult] = useState<{ key: string; files: EditedFile[] } | null>(null);
 
   const pushIdsKey = useMemo(() => {
+    if (pushesQ.pending) return null;
     const ids = new Set<string>();
     for (const r of pushesQ.data) {
       if (r.attemptId === attemptId) ids.add(r.pushId);
     }
     return [...ids].sort().join(",");
-  }, [pushesQ.data, attemptId]);
+  }, [pushesQ, attemptId]);
 
   useEffect(() => {
+    if (pushIdsKey === null) return;
     const ids = pushIdsKey ? pushIdsKey.split(",") : [];
     if (ids.length === 0) {
       setResult({ key: "", files: [] });
@@ -46,6 +48,7 @@ export function usePushedDocFiles(attemptId: string): EditedFile[] | null {
     };
   }, [pushIdsKey]);
 
+  if (pushIdsKey === null) return null;
   if (pushIdsKey === "") return [];
   if (result?.key !== pushIdsKey) return null;
   return result.files;

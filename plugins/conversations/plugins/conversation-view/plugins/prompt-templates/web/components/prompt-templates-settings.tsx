@@ -43,8 +43,10 @@ async function deleteTemplate(id: string): Promise<void> {
 }
 
 export function PromptTemplatesSettings() {
-  const { data: templates } = useResource(promptTemplatesResource);
+  const templatesResult = useResource(promptTemplatesResource);
   const deletingRef = useRef(new Set<string>());
+  if (templatesResult.pending) return null;
+  const templates = templatesResult.data;
 
   const visible = templates.filter((t) => !deletingRef.current.has(t.id));
 

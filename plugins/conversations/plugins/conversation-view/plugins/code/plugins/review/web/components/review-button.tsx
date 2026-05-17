@@ -29,8 +29,8 @@ export function ReviewButton() {
 
   const pushesQ = useResource(pushesResource);
   const hasPastPushes = useMemo(
-    () => pushesQ.data.some((p) => p.attemptId === conversation.attemptId),
-    [pushesQ.data, conversation.attemptId],
+    () => pushesQ.pending ? false : pushesQ.data.some((p) => p.attemptId === conversation.attemptId),
+    [pushesQ, conversation.attemptId],
   );
 
   const count = files.length;

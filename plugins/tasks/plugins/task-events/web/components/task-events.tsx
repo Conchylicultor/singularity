@@ -77,18 +77,20 @@ export function TaskEvents({ taskId }: { taskId: string }) {
   const activeConvId = activeConvEntry?.params.convId;
 
   const attempts = useMemo(() => {
+    if (attemptsQ.pending) return [];
     return attemptsQ.data
       .filter((a) => a.taskId === taskId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-  }, [attemptsQ.data, taskId]);
+  }, [attemptsQ, taskId]);
 
   const attemptIds = useMemo(() => new Set(attempts.map((a) => a.id)), [attempts]);
 
   const pushes = useMemo(() => {
+    if (pushesQ.pending) return [];
     return pushesQ.data
       .filter((p) => attemptIds.has(p.attemptId))
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-  }, [pushesQ.data, attemptIds]);
+  }, [pushesQ, attemptIds]);
 
   return (
     <div className="flex flex-col gap-6">

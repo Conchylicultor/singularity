@@ -42,7 +42,7 @@ export async function deleteTask(id: string): Promise<void> {
 }
 
 export function useTask(id: string | null | undefined): Task | null {
-  const { data } = useResource(tasksResource);
-  if (!id) return null;
-  return data.find((t) => t.id === id) ?? null;
+  const result = useResource(tasksResource);
+  if (!id || result.pending) return null;
+  return result.data.find((t) => t.id === id) ?? null;
 }

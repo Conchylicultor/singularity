@@ -5,7 +5,8 @@ import { addServerPane, serverDetailPane } from "../panes";
 import { ServerStatusBadge } from "./server-status-badge";
 
 export function ServersList() {
-  const { data: servers } = useResource(serversResource);
+  const serversResult = useResource(serversResource);
+  const servers = serversResult.pending ? [] : serversResult.data;
   const openPane = useOpenPane();
   const selectedId = serverDetailPane.useChainEntry()?.params.serverId;
   const addingServer = addServerPane.useChainEntry() !== null;

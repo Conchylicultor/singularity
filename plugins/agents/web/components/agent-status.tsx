@@ -8,12 +8,12 @@ export function AgentStatus({ agentId, size = "sm" }: { agentId: string; size?: 
   const launchesQ = useResource(agentLaunchesResource);
 
   const status = useMemo(() => {
-    const launches = launchesQ.data;
+    const launches = launchesQ.pending ? [] : launchesQ.data;
     const latest = launches
       .filter((l) => l.agentId === agentId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
     return latest?.latestConversationStatus ?? null;
-  }, [launchesQ.data, agentId]);
+  }, [launchesQ, agentId]);
 
   return (
     <span className="flex shrink-0 items-center justify-center" style={{ width: size === "md" ? 20 : 20, height: size === "md" ? 20 : 20 }}>

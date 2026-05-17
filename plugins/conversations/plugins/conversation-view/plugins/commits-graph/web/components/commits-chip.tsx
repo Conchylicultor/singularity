@@ -9,21 +9,22 @@ import { convCommitsGraphPane } from "../panes";
 
 export function CommitsChip() {
   const { conversation } = conversationPane.useData();
-  const { data } = useResource(commitDeltaResource, {
+  const deltaResult = useResource(commitDeltaResource, {
     attemptId: conversation.attemptId,
   });
-  const { data: pushes } = useResource(pushesResource);
+  const pushesResult = useResource(pushesResource);
   const pushCount = useMemo(
-    () => pushes.filter((p) => p.attemptId === conversation.attemptId).length,
-    [pushes, conversation.attemptId],
+    () => pushesResult.pending ? 0 : pushesResult.data.filter((p) => p.attemptId === conversation.attemptId).length,
+    [pushesResult, conversation.attemptId],
   );
   const { isOpen, toggle } = convCommitsGraphPane.useToggle({ convId: conversation.id });
 
-  if (data.mergeBase === null) return null;
+  if (deltaResult.pending) return null;
+  if (deltaResult.data.mergeBase === null) return null;
 
-  const ahead = data.ahead;
-  const behind = data.behind;
-  const branch = data.branch;
+  const ahead = deltaResult.data.ahead;
+  const behind = deltaResult.data.behind;
+  const branch = deltaResult.data.branch;
 
   const parts = [
     `${ahead} ahead`,

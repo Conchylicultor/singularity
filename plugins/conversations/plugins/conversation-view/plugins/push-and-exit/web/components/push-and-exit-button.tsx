@@ -32,8 +32,8 @@ export function PushAndExitButton({
   conversation: ConversationRecord;
 }) {
   const live = useConversation(conversation.id) ?? conversation;
-  const { data: jobs } = useResource(pushAndExitResource);
-  const job = jobs[conversation.id] as JobState | undefined;
+  const jobsResult = useResource(pushAndExitResource);
+  const job = jobsResult.pending ? undefined : (jobsResult.data[conversation.id] as JobState | undefined);
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
@@ -54,15 +54,11 @@ export function PushAndExitButton({
   draftRef.current = draft;
 
   const { files } = useEditedFiles(conversation.id);
-  const { data: pushes } = useResource(pushesResource);
+  const pushesResult = useResource(pushesResource);
   const { active, isLoading: conversationsLoading } = useConversations();
 
   const mode: Mode = useMemo(() => {
     if (!isDraftEmpty(draft)) return "send";
-    // Until every input has loaded, default to "push-and-exit" — the safe
-    // assumption (treat the conversation as if it has unpushed work) and
-    // prevents the label from flickering through "Drop & Exit" / "Exit"
-    // while resources stream in.
     if (conversationsLoading) {
       return "push-and-exit";
     }
@@ -70,6 +66,7 @@ export function PushAndExitButton({
       if (files.every((f) => f.path.startsWith("research/"))) return "go";
       return "push-and-exit";
     }
+    const pushes = pushesResult.pending ? [] : pushesResult.data;
     const hasPush = pushes.some((p) => p.attemptId === conversation.attemptId);
     if (hasPush) return "exit";
     const hasOtherActiveInWorktree = active.some(
@@ -79,7 +76,7 @@ export function PushAndExitButton({
         isActiveStatus(c.status),
     );
     return hasOtherActiveInWorktree ? "exit" : "drop-and-exit";
-  }, [draft, files, pushes, active, conversationsLoading, conversation.attemptId, conversation.id, conversation.worktreePath]);
+  }, [draft, files, pushesResult, active, conversationsLoading, conversation.attemptId, conversation.id, conversation.worktreePath]);
 
   useEffect(() => {
     if (!busy) return;

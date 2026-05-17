@@ -6,8 +6,8 @@ import { AgentDetail } from "./agent-detail";
 
 export function AgentSideBody() {
   const { agentId } = agentSidePane.useParams();
-  const { data } = useResource(agentsResource);
-  const agent = data.find((a: Agent) => a.id === agentId);
+  const result = useResource(agentsResource);
+  const agent = result.pending ? undefined : result.data.find((a: Agent) => a.id === agentId);
 
   return (
     <PaneChrome pane={agentSidePane} title={agent?.name ?? "Agent"}>

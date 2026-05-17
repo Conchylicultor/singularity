@@ -37,12 +37,12 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const result = parseResult(event);
   const taskId = result?.task_id;
 
-  const { data } = useResource(tasksResource);
+  const tasksResult = useResource(tasksResource);
   const { conversation } = conversationPane.useData();
   const openPane = useOpenPane();
   const task = useMemo(
-    () => (taskId ? (data.find((t) => t.id === taskId) ?? null) : null),
-    [data, taskId],
+    () => (tasksResult.pending || !taskId) ? null : (tasksResult.data.find((t) => t.id === taskId) ?? null),
+    [tasksResult, taskId],
   );
 
   const openTask = (e: React.MouseEvent) => {

@@ -29,15 +29,15 @@ function navigateTo(url: string) {
 
 export function BellButton() {
   const [open, setOpen] = useState(false);
-  const { data: notifications, dataUpdatedAt } = useResource(notificationsResource);
-  const list = notifications;
+  const notificationsResult = useResource(notificationsResource);
+  const list = notificationsResult.pending ? [] : notificationsResult.data;
   const unreadCount = list.filter((n) => !n.read).length;
 
   const prevIdsRef = useRef<Set<string> | null>(null);
 
-  // dataUpdatedAt === 0 means we only have initialData (empty); skip until
-  // the first real server response so we don't toast every existing row.
-  if (dataUpdatedAt > 0) {
+  // While pending we only have an empty placeholder; skip until the first
+  // real server response so we don't toast every existing row.
+  if (!notificationsResult.pending) {
     const currentIds = new Set(list.map((n) => n.id));
     if (prevIdsRef.current === null) {
       prevIdsRef.current = currentIds;

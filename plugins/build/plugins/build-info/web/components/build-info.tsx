@@ -46,8 +46,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 export function BuildInfo({ runId }: { runId: string }) {
-  const { data } = useResource(buildHistoryResource);
-  const run = (data ?? []).find((r) => r.id === runId);
+  const result = useResource(buildHistoryResource);
+  const run = result.pending ? undefined : result.data.find((r) => r.id === runId);
 
   if (!run) {
     return <p className="text-xs text-muted-foreground">Run not found</p>;

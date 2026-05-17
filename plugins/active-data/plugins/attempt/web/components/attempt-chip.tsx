@@ -16,11 +16,11 @@ const ATTEMPT_STATUS_DOT: Record<AttemptStatus, string> = {
 
 export function AttemptChip({ content }: { content: string; attrs: Record<string, string> }) {
   const attemptId = content.trim();
-  const { data } = useResource(attemptsResource);
+  const result = useResource(attemptsResource);
   const openPane = useOpenPane();
   const attempt = useMemo(
-    () => data.find((a) => a.id === attemptId) ?? null,
-    [data, attemptId],
+    () => (result.pending ? null : result.data.find((a) => a.id === attemptId) ?? null),
+    [result, attemptId],
   );
 
   if (!attemptId) return null;

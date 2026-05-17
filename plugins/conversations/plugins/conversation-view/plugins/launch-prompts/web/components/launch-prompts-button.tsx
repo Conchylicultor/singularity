@@ -27,9 +27,11 @@ export function LaunchPromptsButton({
 }: {
   conversation: ConversationRecord;
 }) {
-  const { data: prompts } = useResource(launchPromptsResource);
+  const promptsResult = useResource(launchPromptsResource);
   const [launching, setLaunching] = useState(false);
 
+  if (promptsResult.pending) return null;
+  const prompts = promptsResult.data;
   if (prompts.length === 0) return null;
 
   async function launch(item: LaunchPrompt) {

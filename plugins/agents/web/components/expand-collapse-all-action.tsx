@@ -39,8 +39,9 @@ export function ExpandCollapseAllAction({
   agentId: string;
   hasChildren: boolean;
 }) {
-  const { data } = useResource(agentsResource);
-  const rows = data;
+  const result = useResource(agentsResource);
+  if (result.pending) return null;
+  const rows = result.data;
   if (!hasChildren) return null;
 
   const nodes = subtreeWithChildren(rows, agentId);

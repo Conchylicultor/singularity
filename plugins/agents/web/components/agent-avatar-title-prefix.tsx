@@ -11,11 +11,13 @@ function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
 }
 
 export function AgentAvatarTitlePrefix({ conversation }: { conversation: ConversationRecord }) {
-  const { data: launches } = useResource(agentLaunchesResource);
-  const { data: agents } = useResource(agentsResource);
+  const launchesResult = useResource(agentLaunchesResource);
+  const agentsResult = useResource(agentsResource);
 
+  const launches = launchesResult.pending ? [] : launchesResult.data;
+  const agentsList = agentsResult.pending ? [] : agentsResult.data;
   const launch = launches.find((l) => l.taskId === conversation.taskId);
-  const agent = launch ? agents.find((a) => a.id === launch.agentId) : null;
+  const agent = launch ? agentsList.find((a) => a.id === launch.agentId) : null;
   const agentId = launch?.agentId;
 
   const { isOpen, toggle } = agentSidePane.useToggle({

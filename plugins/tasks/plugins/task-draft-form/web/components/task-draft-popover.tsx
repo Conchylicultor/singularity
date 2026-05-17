@@ -95,9 +95,12 @@ export function TaskDraftPopover({
   // Resolve the parent task for "child" target so we can render the preview
   // ("Will include: <title>") next to the parent-task toggle.
   const parentTaskId = target.kind === "child" ? target.parentTaskId : null;
-  const { data: tasks } = useResource(tasksResource);
+  const tasksResult = useResource(tasksResource);
+  const tasks = useMemo(() => (tasksResult.pending ? [] : tasksResult.data), [tasksResult]);
   const parentTask: Task | null =
-    parentTaskId ? tasks.find((t) => t.id === parentTaskId) ?? null : null;
+    parentTaskId
+      ? tasks.find((t) => t.id === parentTaskId) ?? null
+      : null;
 
   const effectiveRelateTaskId =
     relate?.taskId ?? (hasAmbientRelate ? activeRelate?.taskId : null) ?? null;

@@ -63,11 +63,12 @@ export function ReviewView() {
 
   const pushesQ = useResource(pushesResource);
   const pushGroups = useMemo(() => {
+    if (pushesQ.pending) return [];
     const rows = pushesQ.data.filter(
       (p) => p.attemptId === conversation.attemptId,
     );
     return groupPushes(rows);
-  }, [pushesQ.data, conversation.attemptId]);
+  }, [pushesQ, conversation.attemptId]);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-muted/20">
@@ -212,7 +213,7 @@ function FileList({
   emptyLabel: string;
 }) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const { data: reviewSections } = useResource(reviewSectionsResource);
+  const reviewSectionsResult = useResource(reviewSectionsResource);
 
   const sorted = useMemo(() => {
     if (!files) return null;
@@ -221,8 +222,8 @@ function FileList({
 
   const sections = useMemo((): FileSection[] | null => {
     if (!sorted) return null;
-    return groupBySection(sorted, reviewSections);
-  }, [sorted, reviewSections]);
+    return groupBySection(sorted, reviewSectionsResult.pending ? [] : reviewSectionsResult.data);
+  }, [sorted, reviewSectionsResult]);
 
   const totals = useMemo(
     () => (sorted ? sumStats(sorted) : { count: 0, additions: 0, deletions: 0 }),

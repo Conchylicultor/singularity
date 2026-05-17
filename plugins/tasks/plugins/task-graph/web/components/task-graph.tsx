@@ -362,7 +362,8 @@ function TaskGraphInner({
 }
 
 export function TaskGraph({ taskId }: { taskId: string }) {
-  const { data: allTasks } = useResource(tasksResource);
+  const tasksResult = useResource(tasksResource);
+  const allTasks = useMemo(() => (tasksResult.pending ? [] : tasksResult.data), [tasksResult]);
   const closure = useMemo(() => computeDagClosure(taskId, allTasks), [taskId, allTasks]);
   const ctxNavigate = useTaskNavigate();
   const openPane = useOpenPane();

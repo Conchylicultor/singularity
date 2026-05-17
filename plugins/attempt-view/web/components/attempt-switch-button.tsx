@@ -7,9 +7,9 @@ import { attemptPane } from "../panes";
 
 export function AttemptSwitchButton() {
   const { conversation } = conversationPane.useData();
-  const { data } = useResource(attemptsResource);
+  const result = useResource(attemptsResource);
 
-  const attempt = data.find((a) => a.id === conversation.attemptId) ?? null;
+  const attempt = result.pending ? null : result.data.find((a) => a.id === conversation.attemptId) ?? null;
   const count = attempt?.conversations.length ?? 0;
 
   const { isOpen, toggle } = attemptPane.useToggle(

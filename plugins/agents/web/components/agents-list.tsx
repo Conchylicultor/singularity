@@ -159,10 +159,10 @@ export function AgentsList({
   selectedSystemId?: string;
   onSelect?: (id: string) => void;
 }) {
-  const { data } = useResource(agentsResource);
-  const rows = data;
+  const result = useResource(agentsResource);
   const listActions = AgentsSlots.ListActions.useContributions();
   const openPane = useOpenPane();
+  const rows = useMemo(() => result.pending ? [] : result.data, [result]);
   const orderedIds = useMemo(() => deriveVisibleOrder(rows), [rows]);
 
   return (

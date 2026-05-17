@@ -16,9 +16,12 @@ function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
 }
 
 export function AgentAvatarRow({ conv }: { conv: ConversationItemConv }) {
-  const { data: launches } = useResource(agentLaunchesResource);
-  const { data: agents } = useResource(agentsResource);
+  const launchesResult = useResource(agentLaunchesResource);
+  const agentsResult = useResource(agentsResource);
   if (conv.kind !== "agent" || !conv.taskId) return null;
+  if (launchesResult.pending || agentsResult.pending) return null;
+  const launches = launchesResult.data;
+  const agents = agentsResult.data;
   const launch = launches.find((l) => l.taskId === conv.taskId);
   const agent = launch ? agents.find((a) => a.id === launch.agentId) : null;
   return (

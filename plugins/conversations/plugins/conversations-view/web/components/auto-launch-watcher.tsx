@@ -4,14 +4,13 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 
 export function AutoLaunchWatcher() {
-  const { data, dataUpdatedAt } = useResource(conversationsResource);
+  const result = useResource(conversationsResource);
   const initializedRef = useRef(false);
   const seenIdsRef = useRef(new Set<string>());
 
   useEffect(() => {
-    if (dataUpdatedAt === 0) return;
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- data may be undefined before resource hydrates
-    const active = data?.active ?? [];
+    if (result.pending) return;
+    const active = result.data.active;
     if (!initializedRef.current) {
       initializedRef.current = true;
       for (const conv of active) seenIdsRef.current.add(conv.id as string);
@@ -24,7 +23,7 @@ export function AutoLaunchWatcher() {
       }
       seenIdsRef.current.add(conv.id as string);
     }
-  }, [data, dataUpdatedAt]);
+  }, [result]);
 
   return null;
 }

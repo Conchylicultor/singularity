@@ -44,8 +44,10 @@ async function deletePrompt(id: string): Promise<void> {
 }
 
 export function LaunchPromptsSettings() {
-  const { data: prompts } = useResource(launchPromptsResource);
+  const promptsResult = useResource(launchPromptsResource);
   const deletingRef = useRef(new Set<string>());
+  if (promptsResult.pending) return null;
+  const prompts = promptsResult.data;
 
   const visible = prompts.filter((p) => !deletingRef.current.has(p.id));
 

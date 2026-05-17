@@ -30,16 +30,17 @@ function formatRelative(iso: string): string {
 export function CommitsGraphBody() {
   const { conversation } = conversationPane.useData();
   const convId = conversation.id;
-  const { data, error } = useResource(commitsGraphResource, {
+  const result = useResource(commitsGraphResource, {
     attemptId: conversation.attemptId,
   });
 
-  if (error) {
+  if (result.error) {
     return (
-      <Placeholder tone="error">Failed to load commits: {String(error)}</Placeholder>
+      <Placeholder tone="error">Failed to load commits: {String(result.error)}</Placeholder>
     );
   }
-  if (data.mergeBase === null) {
+  if (result.pending) return null;
+  if (result.data.mergeBase === null) {
     return (
       <Placeholder>
         No shared history with <span className="font-mono">main</span>.
@@ -55,7 +56,7 @@ export function CommitsGraphBody() {
     behind,
     branch,
     mergeBase,
-  } = data;
+  } = result.data;
   const landedCommits = landed;
   const behindCommits = behind_;
   const branchLabel = branch ?? "HEAD";

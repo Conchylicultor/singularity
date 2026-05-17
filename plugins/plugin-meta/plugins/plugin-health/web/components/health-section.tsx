@@ -38,10 +38,10 @@ function healthColor(
 }
 
 export function HealthSection({ node }: { node: PluginNode }) {
-  const { data: allReviews } = useResource(pluginHealthReviewsDescriptor);
+  const reviewsResult = useResource(pluginHealthReviewsDescriptor);
   const reviews = useMemo(
-    () => allReviews.filter((r) => r.pluginId === node.hierarchyId),
-    [allReviews, node.hierarchyId],
+    () => reviewsResult.pending ? [] : reviewsResult.data.filter((r) => r.pluginId === node.hierarchyId),
+    [reviewsResult, node.hierarchyId],
   );
 
   const [enriched, setEnriched] = useState<ReviewWithMeta[]>([]);

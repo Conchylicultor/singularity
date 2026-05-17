@@ -107,18 +107,18 @@ function AttemptSection({
 
 export function AttemptPane() {
   const { attemptId } = attemptPane.useParams();
-  const { data } = useResource(attemptsResource);
+  const result = useResource(attemptsResource);
   const openPane = useOpenPane();
 
   const attempt = useMemo(
-    () => data.find((a) => a.id === attemptId) ?? null,
-    [data, attemptId],
+    () => (result.pending ? null : result.data.find((a) => a.id === attemptId) ?? null),
+    [result, attemptId],
   );
 
   const taskAttempts = useMemo(() => {
-    if (!attempt) return [];
-    return data.filter((a) => a.taskId === attempt.taskId);
-  }, [data, attempt]);
+    if (!attempt || result.pending) return [];
+    return result.data.filter((a) => a.taskId === attempt.taskId);
+  }, [result, attempt]);
 
   const selectedConvId = conversationPane.useChainEntry()?.params.convId;
   const convEntries = conversationPane.useChainEntries();

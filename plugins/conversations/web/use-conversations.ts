@@ -15,13 +15,16 @@ export function useConversations(): {
   isLoading: boolean;
 } {
   const q = useResource(conversationsResource);
+  if (q.pending) {
+    return { active: [], recentGone: [], hasMoreGone: false, totalGoneCount: 0, system: [], isLoading: true };
+  }
   return {
     active: q.data.active,
     recentGone: q.data.recentGone,
     hasMoreGone: q.data.hasMoreGone,
     totalGoneCount: q.data.totalGoneCount,
     system: q.data.system,
-    isLoading: q.isLoading,
+    isLoading: false,
   };
 }
 

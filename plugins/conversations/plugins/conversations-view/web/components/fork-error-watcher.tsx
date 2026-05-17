@@ -4,10 +4,11 @@ import { ShellCommands as Shell } from "@plugins/shell/web";
 import { forkErrorsResource } from "@plugins/conversations/core";
 
 export function ForkErrorWatcher() {
-  const { data } = useResource(forkErrorsResource);
+  const result = useResource(forkErrorsResource);
   const lastSeen = useRef<string | null>(null);
 
   useEffect(() => {
+    const data = result.pending ? undefined : result.data;
     if (!data) {
       // Remember the baseline so we don't re-toast a pre-existing error
       // after a fresh subscription.
@@ -26,7 +27,7 @@ export function ForkErrorWatcher() {
       description: `${data.attemptId}: ${data.message}`,
       variant: "error",
     });
-  }, [data]);
+  }, [result]);
 
   return null;
 }

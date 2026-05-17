@@ -48,17 +48,20 @@ function TemplateChip({
 }
 
 export function FloatingTemplateChips({ insertText }: PromptEditorActionProps) {
-  const { data: templates } = useResource(promptTemplatesResource);
+  const templatesResult = useResource(promptTemplatesResource);
 
   const pinnedTemplates = useMemo(
     () =>
-      [...templates]
+      templatesResult.pending ? [] :
+      [...templatesResult.data]
         .filter((t) => t.useCount > 0)
         .sort((a, b) => b.useCount - a.useCount)
         .slice(0, MAX_PINNED),
-    [templates],
+    [templatesResult],
   );
 
+  if (templatesResult.pending) return null;
+  const templates = templatesResult.data;
   if (templates.length === 0) return null;
 
   return (

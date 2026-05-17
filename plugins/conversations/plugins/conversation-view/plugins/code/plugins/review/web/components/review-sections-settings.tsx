@@ -42,8 +42,10 @@ async function deleteSection(id: string): Promise<void> {
 }
 
 export function ReviewSectionsSettings() {
-  const { data: sections } = useResource(reviewSectionsResource);
+  const sectionsResult = useResource(reviewSectionsResource);
   const deletingRef = useRef(new Set<string>());
+  if (sectionsResult.pending) return null;
+  const sections = sectionsResult.data;
 
   const visible = sections.filter((s) => !deletingRef.current.has(s.id));
 

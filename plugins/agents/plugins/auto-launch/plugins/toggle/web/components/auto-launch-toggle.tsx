@@ -12,8 +12,9 @@ async function patchAutoLaunch(agentId: string, enabled: boolean) {
 }
 
 export function AutoLaunchToggle({ agentId }: { agentId: string }) {
-  const { data: rows } = useResource(agentAutoLaunchResource);
-  const enabled = rows.find((r) => r.parentId === agentId)?.enabled ?? false;
+  const result = useResource(agentAutoLaunchResource);
+  if (result.pending) return null;
+  const enabled = result.data.find((r) => r.parentId === agentId)?.enabled ?? false;
 
   return (
     <button

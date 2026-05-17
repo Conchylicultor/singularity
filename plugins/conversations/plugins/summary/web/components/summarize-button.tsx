@@ -11,9 +11,9 @@ import { convSummaryPane } from "../panes";
 
 export function SummarizeButton() {
   const { conversation } = conversationPane.useData();
-  const { data: byConversation } = useResource(conversationSummariesResource);
+  const summariesResult = useResource(conversationSummariesResource);
   const summaries: ConversationSummary[] | undefined =
-    byConversation[conversation.id];
+    summariesResult.pending ? undefined : summariesResult.data[conversation.id];
   const latest = summaries?.[0];
 
   const { isOpen, toggle } = convSummaryPane.useToggle({ convId: conversation.id });

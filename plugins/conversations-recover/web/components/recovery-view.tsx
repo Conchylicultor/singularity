@@ -51,6 +51,7 @@ type RestoreResult = { id: string; ok: true } | { id: string; ok: false; error: 
 export function RecoveryView() {
   const resource = useResource(conversationsResource);
   const queryClient = useQueryClient();
+  const readyData = resource.pending ? null : resource.data;
 
   const q = useQuery({
     queryKey: QUERY_KEY,
@@ -66,8 +67,10 @@ export function RecoveryView() {
   });
 
   useEffect(() => {
-    void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-  }, [resource.dataUpdatedAt, queryClient]);
+    if (readyData) {
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    }
+  }, [readyData, queryClient]);
 
   const items = useMemo(() => q.data ?? [], [q.data]);
   const isLoading = q.isLoading;

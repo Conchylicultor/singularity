@@ -105,14 +105,16 @@ export function QueueView({
   onCloseConversation,
 }: ViewProps) {
   const { active, recentGone, isLoading } = useConversations();
-  const { data: queueData } = useResource(queueRanksResource);
+  const queueResult = useResource(queueRanksResource);
+  const queueData = queueResult.pending ? { ranks: [], pinnedConversationId: null } : queueResult.data;
   const rankRows = queueData.ranks;
   const pinnedConversationId = queueData.pinnedConversationId;
-  const { data: taskRows } = useResource(tasksResource);
+  const tasksResult = useResource(tasksResource);
 
   // Unified task-group logic across all statuses.
   const { waitingGroups, workingGroups, allWaitingCount, blockedIds, unranked } = useMemo(() => {
     const ranks = new Map(rankRows.map((r) => [r.conversationId, r.rank]));
+    const taskRows = tasksResult.pending ? [] : tasksResult.data;
     const taskStatusMap = new Map(taskRows.map((t) => [t.id, t.status]));
     const ranked: RankedConversation[] = [];
     const blocked = new Set<string>();
@@ -166,7 +168,7 @@ export function QueueView({
       blockedIds: blocked,
       unranked: noRank,
     };
-  }, [active, rankRows, taskRows]);
+  }, [active, rankRows, tasksResult]);
 
   const disconnected = useMemo(
     () => active.filter((c) => c.status === "gone"),

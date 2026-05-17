@@ -41,9 +41,10 @@ export function TurnSummaryCard({
 }: {
   conversation: ConversationRecord;
 }) {
-  const { data } = useResource(turnSummariesResource);
+  const result = useResource(turnSummariesResource);
   const { open, toggle } = useCollapsible({ defaultOpen: true });
-  const summary = data[conversation.id];
+  if (result.pending) return null;
+  const summary = result.data[conversation.id];
   if (!summary) return null;
 
   const caveats = parseBullets(summary.caveats);

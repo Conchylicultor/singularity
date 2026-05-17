@@ -31,7 +31,8 @@ export interface ExcludedPathTogglesProps {
 
 export function ExcludedPathToggles({ dense = false }: ExcludedPathTogglesProps) {
   const { excludedPaths } = useConfigValues(commitsConfig, "stats-commits");
-  const { data: overrides } = useResource(excludedPathStateResource);
+  const overridesResult = useResource(excludedPathStateResource);
+  const overrides = overridesResult.pending ? {} : overridesResult.data;
 
   if (excludedPaths.length === 0) {
     return (

@@ -30,14 +30,14 @@ export function useActiveDataBinding<T>(
   schema: ZodType<T>,
 ): ActiveDataBindingHandle<T> {
   const identity = useActiveDataIdentity();
-  const { data, dataUpdatedAt } = useResource(
+  const resource = useResource(
     activeDataBindingsResource,
     identity ? { conversationId: identity.conversationId } : { conversationId: "" },
   );
 
   const value = useMemo<T | null>(() => {
-    if (!identity) return null;
-    const row = data.find(
+    if (!identity || resource.pending) return null;
+    const row = resource.data.find(
       (b) =>
         b.messageId === identity.messageId &&
         b.tag === identity.tag &&
@@ -46,7 +46,7 @@ export function useActiveDataBinding<T>(
     if (!row) return null;
     const parsed = schema.safeParse(row.payload);
     return parsed.success ? parsed.data : null;
-  }, [identity, data, schema]);
+  }, [identity, resource, schema]);
 
   const set = useCallback(
     async (next: T) => {
@@ -77,5 +77,5 @@ export function useActiveDataBinding<T>(
     }
   }, [identity]);
 
-  return { value, isLoading: dataUpdatedAt === 0, enabled: identity !== null, set, clear };
+  return { value, isLoading: resource.pending, enabled: identity !== null, set, clear };
 }
