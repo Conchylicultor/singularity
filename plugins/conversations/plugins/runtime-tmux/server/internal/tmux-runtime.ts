@@ -238,14 +238,24 @@ export const tmuxRuntime: ConversationRuntime = {
       cmdParts.push(`--resume ${opts.resumeSessionId}`);
       if (opts.forkSession) cmdParts.push("--fork-session");
     }
-    // `--` end-of-options: prompts often start with `- ` (markdown bullets,
-    // especially from improve-plugin-authored tasks). Without this, claude
-    // parses the prompt as an unknown flag, prints "error: unknown option …",
-    // and exits 1 — the tmux pane dies in <1s, runtime.create has already
-    // returned success, so the row sits in "starting" until the 30s sweep.
-    // "$1" is the prompt positional arg passed as a separate argv element below,
-    // which avoids embedding prompt content in the shell script string.
-    if (hasPrompt) cmdParts.push(`-- "$1"`);
+
+    // tmux has a ~16KB per-arg cap. For long prompts, write to a temp file and
+    // have the shell script cat+delete it. Short prompts use positional $1.
+    const PROMPT_ARG_LIMIT = 12_000;
+    const useTempFile = hasPrompt && opts!.prompt!.length > PROMPT_ARG_LIMIT;
+    let promptFile: string | undefined;
+    if (useTempFile) {
+      promptFile = `/tmp/singularity-prompt-${conversationId}.txt`;
+      await Bun.write(promptFile, opts!.prompt!);
+    }
+
+    if (hasPrompt) {
+      if (useTempFile) {
+        cmdParts.push(`-- "$(cat '${promptFile}' && rm -f '${promptFile}')"`);
+      } else {
+        cmdParts.push(`-- "$1"`);
+      }
+    }
     const claudeCmd = cmdParts.join(" ");
     const proc = Bun.spawn(
       [
@@ -257,23 +267,11 @@ export const tmuxRuntime: ConversationRuntime = {
         conversationId,
         "-c",
         worktreePath,
-        // Set env vars via tmux -e so the shell inherits them without explicit
-        // export. SINGULARITY_CONVERSATION_ID: git commit hook. SINGULARITY_PARENT_HOST: MCP routing.
         "-e", `SINGULARITY_CONVERSATION_ID=${conversationId}`,
         "-e", `SINGULARITY_PARENT_HOST=${parentHost}`,
-        // Split "zsh -l -c <script>" into separate argv elements rather than a
-        // single-quoted blob. tmux 3.6a passes trailing non-option args directly
-        // to exec, so zsh receives them as its own argv: -l -c <script> <$0> [<$1>].
-        // A "zsh -l -c '...'" single string can trigger tmux's command parser
-        // ("unknown command: zsh …") in edge cases — separate args avoid it.
         "zsh", "-l", "-c", claudeCmd,
-        // $0 (script name) then, when present, $1 (prompt for claude --).
-        // Passing the prompt as a positional OS arg avoids embedding it in the
-        // shell script and eliminates the SINGULARITY_PROMPT env var indirection.
-        // tmux's per-arg cap (~16KB on 3.6a) still applies; oversized prompts
-        // surface here rather than silently dying inside the pane.
         "zsh",
-        ...(hasPrompt ? [opts!.prompt!] : []),
+        ...(hasPrompt && !useTempFile ? [opts!.prompt!] : []),
       ],
       { stdout: "pipe", stderr: "pipe" },
     );
