@@ -82,7 +82,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`config`** [load-bearing] — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
 
-- **`config_v2`** — Typed JSONC config handles for server plugins.
+- **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Plugins:

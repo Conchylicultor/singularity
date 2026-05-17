@@ -8,6 +8,7 @@ import type {
 import type { Disposable, JsonValue } from "@plugins/config_v2/plugins/store/core";
 import { getConfigStore } from "@plugins/config_v2/plugins/store/server";
 import { ConfigV2 } from "./contribution";
+import { configV2ServerResource, registerDescriptorPath, setConfigGetter } from "./resource";
 
 interface CacheEntry {
   values: ConfigValues<FieldsRecord>;
@@ -50,6 +51,7 @@ function injectCollectionIds(
 }
 
 export async function initRegistry(): Promise<void> {
+  setConfigGetter(getConfig);
   const contributions = ConfigV2.Register.getContributions();
   const readyPromises: Promise<void>[] = [];
 
@@ -64,6 +66,7 @@ export async function initRegistry(): Promise<void> {
     }
 
     const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
+    registerDescriptorPath(storePath, descriptor);
 
     let resolveReady: () => void;
     const readyPromise = new Promise<void>((resolve) => {
@@ -85,6 +88,10 @@ export async function initRegistry(): Promise<void> {
       const subs = subscribersByDescriptor.get(descriptor);
       if (subs) {
         for (const cb of subs) cb(values);
+      }
+
+      if (!firstFire) {
+        configV2ServerResource.notify({ path: storePath });
       }
 
       if (firstFire) {

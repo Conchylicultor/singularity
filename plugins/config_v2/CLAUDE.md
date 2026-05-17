@@ -4,10 +4,12 @@
 
 ## Plugin reference
 
-- Description: Typed JSONC config handles for server plugins.
+- Description: Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 - Exports (core):
-  - Types: `ConfigDescriptor`, `ConfigValues`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`
-  - Values: `buildFieldsSchema`, `defineConfig`, `defineFieldType`
+  - Types: `ConfigDescriptor`, `ConfigV2Values`, `ConfigValues`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`
+  - Values: `buildFieldsSchema`, `configV2Resource`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`
+- Exports (web):
+  - Values: `ConfigV2`, `useConfig`
 - Exports (server):
   - Values: `ConfigV2`, `getConfig`, `setConfig`, `watchConfig`
 - Imported by: `build`, `primitives`

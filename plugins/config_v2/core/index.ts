@@ -11,3 +11,5 @@ export type {
   InferFieldValue,
   InferFieldsObject,
 } from "./internal/types";
+export { configV2Resource, configV2ValuesSchema } from "./internal/resource";
+export type { ConfigV2Values } from "./internal/resource";

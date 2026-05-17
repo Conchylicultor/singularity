@@ -18,6 +18,7 @@ export type Contribution = {
   _pluginId?: PluginId;
   _pluginName?: string;
   _pluginDescription?: string;
+  _hierarchyPath?: string;
   _doc?: DocMeta;
   [key: string]: unknown;
 };
@@ -50,6 +51,8 @@ export interface PluginDefinition {
    * agents); other plugins appear only as a name + one-liner.
    */
   loadBearing?: boolean;
+  /** Stamped by the loader from the generated registry entry. */
+  _hierarchyPath?: string;
   contributions?: Contribution[];
   /**
    * Plugins this plugin's `register` array must run after. Mirror of the

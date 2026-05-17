@@ -190,13 +190,14 @@ export function renderPluginRegistry(opts: { root: string; runtime: Runtime }): 
     lines.push("");
     lines.push("export interface PluginEntry {");
     lines.push("  name: string;");
+    lines.push("  hierarchyPath?: string;");
     lines.push("  loader: () => Promise<{ default: PluginDefinition }>;");
     lines.push("}");
     lines.push("");
     lines.push("export const pluginEntries: PluginEntry[] = [");
     for (const e of entries) {
       const name = e.importPath.replace(/^@plugins\//, "").replace(/\/web$/, "");
-      lines.push(`  { name: ${JSON.stringify(name)}, loader: () => import(${JSON.stringify(e.importPath)}) },`);
+      lines.push(`  { name: ${JSON.stringify(name)}, hierarchyPath: ${JSON.stringify(e.hierarchyPath)}, loader: () => import(${JSON.stringify(e.importPath)}) },`);
     }
     lines.push("];");
     lines.push("");
