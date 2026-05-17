@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MdNotifications, MdNotificationsNone } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { ShellCommands } from "@plugins/shell/web";
@@ -34,15 +34,14 @@ export function BellButton() {
   const unreadCount = list.filter((n) => !n.read).length;
 
   const prevIdsRef = useRef<Set<string> | null>(null);
+  const data = notificationsResult.pending ? null : notificationsResult.data;
 
-  // While pending we only have an empty placeholder; skip until the first
-  // real server response so we don't toast every existing row.
-  if (!notificationsResult.pending) {
-    const currentIds = new Set(list.map((n) => n.id));
-    if (prevIdsRef.current === null) {
-      prevIdsRef.current = currentIds;
-    } else {
-      for (const n of list) {
+  useEffect(() => {
+    if (!data) return;
+
+    const currentIds = new Set(data.map((n) => n.id));
+    if (prevIdsRef.current !== null) {
+      for (const n of data) {
         if (!prevIdsRef.current.has(n.id)) {
           ShellCommands.Toast({
             title: n.title,
@@ -53,7 +52,7 @@ export function BellButton() {
       }
     }
     prevIdsRef.current = currentIds;
-  }
+  }, [data]);
 
   function dismiss(id: string) {
     void fetch(`/api/notifications/${encodeURIComponent(id)}/dismiss`, {
