@@ -91,6 +91,7 @@ export function TaskDraftPopover({
   const [insertBeforeIds, setInsertBeforeIds] = useState<Set<string>>(
     new Set(),
   );
+  const [standalone, setStandalone] = useState(false);
 
   // Resolve the parent task for "child" target so we can render the preview
   // ("Will include: <title>") next to the parent-task toggle.
@@ -115,6 +116,12 @@ export function TaskDraftPopover({
         : [],
     [tasks, effectiveRelateTaskId, effectiveRelateMode],
   );
+
+  const relateTaskHasDeps = useMemo(() => {
+    if (!effectiveRelateTaskId || effectiveRelateMode !== "prerequisite") return false;
+    const t = tasks.find((t) => t.id === effectiveRelateTaskId);
+    return t ? t.dependencies.length > 0 : false;
+  }, [tasks, effectiveRelateTaskId, effectiveRelateMode]);
 
   useEffect(() => {
     setInsertBeforeIds(new Set(relateTaskChildren.map((c) => c.id)));
@@ -159,6 +166,7 @@ export function TaskDraftPopover({
     setRelateMode(relate?.defaultMode);
     setAmbientRelateMode(undefined);
     setInsertBeforeIds(new Set());
+    setStandalone(false);
   };
 
   const submit = async () => {
@@ -166,7 +174,7 @@ export function TaskDraftPopover({
     setSubmitting(true);
     try {
       const insertBefore =
-        insertBeforeIds.size > 0 ? Array.from(insertBeforeIds) : undefined;
+        relateTaskChildren.length > 0 ? Array.from(insertBeforeIds) : undefined;
 
       const effectiveRelate =
         relate && relateMode
@@ -174,12 +182,14 @@ export function TaskDraftPopover({
               taskId: relate.taskId,
               mode: relateMode,
               insertBefore: relateMode === "followup" ? insertBefore : undefined,
+              standalone: relateMode === "prerequisite" && standalone ? true : undefined,
             }
           : hasAmbientRelate && ambientRelateMode
             ? {
                 taskId: activeRelate!.taskId,
                 mode: ambientRelateMode,
                 insertBefore: ambientRelateMode === "followup" ? insertBefore : undefined,
+                standalone: ambientRelateMode === "prerequisite" && standalone ? true : undefined,
               }
             : undefined;
 
@@ -253,6 +263,9 @@ export function TaskDraftPopover({
         relateTaskChildren={relateTaskChildren}
         insertBeforeIds={insertBeforeIds}
         onInsertBeforeChange={setInsertBeforeIds}
+        standalone={standalone}
+        onStandaloneChange={setStandalone}
+        showStandalone={relateTaskHasDeps}
         heading={heading}
         footerStart={footerStart}
       />

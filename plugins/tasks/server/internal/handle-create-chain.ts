@@ -131,7 +131,7 @@ export async function handleCreateChain(req: Request): Promise<Response> {
 
       if (isHead && body.relate) {
         const selective =
-          body.relate.mode === "followup" && body.relate.insertBefore?.length
+          body.relate.mode === "followup" && body.relate.insertBefore
             ? body.relate.insertBefore
             : undefined;
         await rewireDependencies({
@@ -139,6 +139,7 @@ export async function handleCreateChain(req: Request): Promise<Response> {
           targetId: body.relate.taskId,
           relation: body.relate.mode,
           selectiveInsertBefore: selective,
+          standalone: body.relate.standalone,
         });
       }
       if (!isHead && card.linkedToPrev !== false) {

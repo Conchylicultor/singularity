@@ -49,6 +49,10 @@ export interface TaskDraftFormProps {
   relateTaskChildren?: ChildEntry[];
   insertBeforeIds?: Set<string>;
   onInsertBeforeChange?: (next: Set<string>) => void;
+  // Standalone prerequisite (don't transfer target's existing deps).
+  standalone?: boolean;
+  onStandaloneChange?: (next: boolean) => void;
+  showStandalone?: boolean;
   heading?: string;
   footerStart?: ReactNode;
 }
@@ -83,6 +87,9 @@ export function TaskDraftForm({
   relateTaskChildren,
   insertBeforeIds,
   onInsertBeforeChange,
+  standalone,
+  onStandaloneChange,
+  showStandalone,
   heading,
   footerStart,
 }: TaskDraftFormProps) {
@@ -226,6 +233,9 @@ export function TaskDraftForm({
                     }
                     insertBeforeIds={isHead ? insertBeforeIds : undefined}
                     onInsertBeforeChange={isHead ? onInsertBeforeChange : undefined}
+                    standalone={isHead && relateMode === "prerequisite" ? standalone : undefined}
+                    onStandaloneChange={isHead && relateMode === "prerequisite" ? onStandaloneChange : undefined}
+                    showStandalone={isHead && relateMode === "prerequisite" ? showStandalone : undefined}
                   />
                 </Fragment>
               );

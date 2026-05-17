@@ -49,6 +49,10 @@ export interface TaskDraftCardProps {
   relateTaskChildren?: ChildEntry[];
   insertBeforeIds?: Set<string>;
   onInsertBeforeChange?: (next: Set<string>) => void;
+  // Standalone prerequisite.
+  standalone?: boolean;
+  onStandaloneChange?: (next: boolean) => void;
+  showStandalone?: boolean;
 }
 
 function ContextRow({
@@ -145,6 +149,9 @@ export function TaskDraftCard({
   relateTaskChildren,
   insertBeforeIds,
   onInsertBeforeChange,
+  standalone,
+  onStandaloneChange,
+  showStandalone,
 }: TaskDraftCardProps) {
   const {
     attributes,
@@ -235,6 +242,20 @@ export function TaskDraftCard({
             disabled={disabled}
           />
         )}
+      {showStandalone && onStandaloneChange && (
+        <div className="px-2 py-1.5">
+          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              className="h-3 w-3 cursor-pointer"
+              checked={!!standalone}
+              disabled={disabled}
+              onChange={(e) => onStandaloneChange(e.target.checked)}
+            />
+            Standalone (don't inherit existing dependencies)
+          </label>
+        </div>
+      )}
     </div>
   );
 }
