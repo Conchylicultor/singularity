@@ -1,15 +1,19 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { serversResource, type Server } from "../../shared";
 import { addServerPane, serverDetailPane } from "../panes";
 import { ServerStatusBadge } from "./server-status-badge";
 
 export function ServersList() {
   const serversResult = useResource(serversResource);
-  const servers = serversResult.pending ? [] : serversResult.data;
   const openPane = useOpenPane();
   const selectedId = serverDetailPane.useChainEntry()?.params.serverId;
   const addingServer = addServerPane.useChainEntry() !== null;
+
+  if (serversResult.pending) return <Placeholder>Loading…</Placeholder>;
+
+  const servers = serversResult.data;
 
   return (
     <div className="flex h-full flex-col">

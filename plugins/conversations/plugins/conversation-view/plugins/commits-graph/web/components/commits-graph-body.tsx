@@ -39,7 +39,7 @@ export function CommitsGraphBody() {
       <Placeholder tone="error">Failed to load commits: {String(result.error)}</Placeholder>
     );
   }
-  if (result.pending) return null;
+  if (result.pending) return <Placeholder>Loading…</Placeholder>;
   if (result.data.mergeBase === null) {
     return (
       <Placeholder>

@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { MdAdd, MdDelete } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -22,6 +21,7 @@ import {
   SelectionCheckbox,
   useMultiSelect,
 } from "@plugins/primitives/plugins/multi-select/web";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { agentsResource } from "../../shared/resources";
 import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";
@@ -162,8 +162,11 @@ export function AgentsList({
   const result = useResource(agentsResource);
   const listActions = AgentsSlots.ListActions.useContributions();
   const openPane = useOpenPane();
-  const rows = useMemo(() => result.pending ? [] : result.data, [result]);
-  const orderedIds = useMemo(() => deriveVisibleOrder(rows), [rows]);
+
+  if (result.pending) return <Placeholder>Loading…</Placeholder>;
+
+  const rows = result.data;
+  const orderedIds = deriveVisibleOrder(rows);
 
   return (
     <MultiSelectProvider orderedIds={orderedIds}>

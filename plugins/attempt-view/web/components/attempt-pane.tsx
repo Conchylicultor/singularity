@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { MdVerticalSplit } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { PaneInstanceContext, useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -8,6 +7,7 @@ import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import type { AttemptWithConversations } from "@plugins/tasks/core";
 import { attemptsResource } from "@plugins/tasks/core";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { cn } from "@/lib/utils";
 import { attemptPane } from "../panes";
 
@@ -109,20 +109,17 @@ export function AttemptPane() {
   const { attemptId } = attemptPane.useParams();
   const result = useResource(attemptsResource);
   const openPane = useOpenPane();
-
-  const attempt = useMemo(
-    () => (result.pending ? null : result.data.find((a) => a.id === attemptId) ?? null),
-    [result, attemptId],
-  );
-
-  const taskAttempts = useMemo(() => {
-    if (!attempt || result.pending) return [];
-    return result.data.filter((a) => a.taskId === attempt.taskId);
-  }, [result, attempt]);
-
   const selectedConvId = conversationPane.useChainEntry()?.params.convId;
   const convEntries = conversationPane.useChainEntries();
   const convInstanceId = convEntries[convEntries.length - 1]?.instanceId;
+
+  if (result.pending) return <Placeholder>Loading…</Placeholder>;
+
+  const attempt = result.data.find((a) => a.id === attemptId) ?? null;
+
+  const taskAttempts = attempt
+    ? result.data.filter((a) => a.taskId === attempt.taskId)
+    : [];
 
   const handleSelect = (convId: string) =>
     openPane(conversationPane, { convId }, { mode: "push" });
