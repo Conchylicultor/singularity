@@ -224,6 +224,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `Forge`
           - Contributes:
             - `Apps.App` "Forge" → `ForgeLayout`
+    - **`sonata`** — Sonata — extensible piano and music app.
+      - Plugins:
+        - **`shell`** — App shell for Sonata. Registers the /sonata app entry and defines the Sonata.Section slot.
+          - Exports (web):
+            - Values: `Sonata`
+          - Contributes:
+            - `Apps.App` "Sonata" → `SonataLayout`
     - **`workflows`** — Workflows app.
       - Plugins:
         - **`engine`** — Core engine infrastructure. Defines the Workflows.StepType slot. Core backend infrastructure for the workflows app. Owns DB tables, step executor registry, durable run job, trigger event, HTTP API, and live-state resources.

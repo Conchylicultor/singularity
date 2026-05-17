@@ -46,6 +46,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
                 - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
         - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
         - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
+    - **`sonata`** — Sonata — extensible piano and music app.
+      - Plugins:
+        - **`shell`** — App shell for Sonata. Registers the /sonata app entry and defines the Sonata.Section slot.
     - **`workflows`** — Workflows app.
       - Plugins:
         - **`engine`** — Core engine infrastructure. Defines the Workflows.StepType slot. Core backend infrastructure for the workflows app. Owns DB tables, step executor registry, durable run job, trigger event, HTTP API, and live-state resources.

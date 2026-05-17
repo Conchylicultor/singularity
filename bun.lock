@@ -184,6 +184,14 @@
       "name": "@singularity/plugin-apps-forge-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata": {
+      "name": "@singularity/plugin-apps-sonata",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/shell": {
+      "name": "@singularity/plugin-apps-sonata-shell",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/workflows": {
       "name": "@singularity/plugin-apps-workflows",
       "version": "0.0.1",
@@ -1801,6 +1809,10 @@
     "@singularity/plugin-apps-forge-publish": ["@singularity/plugin-apps-forge-publish@workspace:plugins/apps/plugins/forge/plugins/publish"],
 
     "@singularity/plugin-apps-forge-shell": ["@singularity/plugin-apps-forge-shell@workspace:plugins/apps/plugins/forge/plugins/shell"],
+
+    "@singularity/plugin-apps-sonata": ["@singularity/plugin-apps-sonata@workspace:plugins/apps/plugins/sonata"],
+
+    "@singularity/plugin-apps-sonata-shell": ["@singularity/plugin-apps-sonata-shell@workspace:plugins/apps/plugins/sonata/plugins/shell"],
 
     "@singularity/plugin-apps-workflows": ["@singularity/plugin-apps-workflows@workspace:plugins/apps/plugins/workflows"],
 

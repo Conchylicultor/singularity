@@ -36,6 +36,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "apps/plugins/forge/plugins/catalog", hierarchyPath: "apps/forge/catalog", loader: () => import("@plugins/apps/plugins/forge/plugins/catalog/web") },
   { name: "apps/plugins/forge/plugins/publish", hierarchyPath: "apps/forge/publish", loader: () => import("@plugins/apps/plugins/forge/plugins/publish/web") },
   { name: "apps/plugins/forge/plugins/shell", hierarchyPath: "apps/forge/shell", loader: () => import("@plugins/apps/plugins/forge/plugins/shell/web") },
+  { name: "apps/plugins/sonata/plugins/shell", hierarchyPath: "apps/sonata/shell", loader: () => import("@plugins/apps/plugins/sonata/plugins/shell/web") },
   { name: "apps/plugins/workflows/plugins/engine", hierarchyPath: "apps/workflows/engine", loader: () => import("@plugins/apps/plugins/workflows/plugins/engine/web") },
   { name: "apps/plugins/workflows/plugins/shell", hierarchyPath: "apps/workflows/shell", loader: () => import("@plugins/apps/plugins/workflows/plugins/shell/web") },
   { name: "apps/plugins/workflows/plugins/steps/plugins/branch", hierarchyPath: "apps/workflows/steps/branch", loader: () => import("@plugins/apps/plugins/workflows/plugins/steps/plugins/branch/web") },
