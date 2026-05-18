@@ -117,7 +117,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `DebugApp`
           - Contributes:
             - `Apps.App` "Debug" → `DebugLayout`
-          - Imported by: `agents`, `auth`, `branch`, `build`, `build-logs`, `code-explorer`, `config`, `conversation-category`, `conversations`, `conversations-view`, `dependencies`, `draw-on-app`, `edit-mode`, `events-test`, `health`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `review`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `theme-customizer`, `toaster`, `worktree-switcher`
+          - Imported by: `agents`, `auth`, `branch`, `build`, `build-logs`, `code-explorer`, `config`, `conversation-category`, `conversations-view`, `dependencies`, `draw-on-app`, `drop-and-exit`, `edit-mode`, `events-test`, `exit`, `health`, `hold-and-exit`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `review`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `theme-customizer`, `toaster`, `worktree-switcher`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -464,8 +464,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `CreateConversationBody`, `DeleteConversationQuery`, `ForkError`, `ListGoneQuery`, `ListTurnsQuery`, `PostTurnBody`
     - Values: `closeConversation`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `CreateConversationBodySchema`, `deleteConversation`, `DeleteConversationQuerySchema`, `forkErrorsResource`, `getConversation`, `hasLiveProcess`, `isActiveStatus`, `listConversations`, `listConversationTurns`, `listGoneConversations`, `ListGoneQuerySchema`, `ListTurnsQuerySchema`, `postConversationTurn`, `PostTurnBodySchema`, `stopConversation`
   - Exports (web):
-    - Types: `ConversationActionOpts`
-    - Values: `GonePageSchema`, `useConversation`, `useConversationAction`, `useConversationById`, `useConversations`
+    - Values: `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
   - Exports (server):
     - Types: `ConversationCreatedPayload`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`, `UserTurnSentPayload`
     - Values: `afterTurn`, `conversationCreated`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `getConversationRow`, `hasLiveProcess`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`, `userTurnSent`

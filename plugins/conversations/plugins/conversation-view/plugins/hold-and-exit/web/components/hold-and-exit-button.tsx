@@ -1,7 +1,10 @@
 import { PauseCircle } from "lucide-react";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { useConversation, useConversationAction } from "@plugins/conversations/web";
+import { useConversation } from "@plugins/conversations/web";
+import { ShellCommands as Shell } from "@plugins/shell/web";
 import { Button } from "@/components/ui/button";
+import { holdAndExit } from "../../shared";
 
 export function HoldAndExitButton({
   conversation,
@@ -9,21 +12,21 @@ export function HoldAndExitButton({
   conversation: ConversationRecord;
 }) {
   const live = useConversation(conversation.id) ?? conversation;
-  const { trigger, busy } = useConversationAction(conversation.id, "hold-and-exit", {
-    successMessage: "Task held — conversation closed",
-    errorMessage: "Hold & Exit failed",
+  const { mutate, isPending } = useEndpointMutation(holdAndExit, {
+    onSuccess: () => Shell.Toast({ description: "Task held — conversation closed", variant: "success" }),
+    onError: (err) => Shell.Toast({ description: `Hold & Exit failed: ${err.message}`, variant: "error" }),
   });
 
-  const disabled = busy || live.status === "gone" || live.status === "done" || live.status === "starting";
+  const disabled = isPending || live.status === "gone" || live.status === "done" || live.status === "starting";
 
   return (
     <Button
       variant="outline"
       size="icon-sm"
-      title={busy ? "Holding…" : "Hold & Exit"}
+      title={isPending ? "Holding…" : "Hold & Exit"}
       aria-label="Hold & Exit"
       disabled={disabled}
-      onClick={trigger}
+      onClick={() => mutate({ params: { id: conversation.id } })}
     >
       <PauseCircle className="size-3.5" />
     </Button>
