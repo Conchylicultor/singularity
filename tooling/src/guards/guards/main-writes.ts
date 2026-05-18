@@ -3,6 +3,23 @@ import { defineGuard } from "../define-guard";
 import { parseShell } from "../parse-shell";
 import type { BashInput } from "../types";
 
+const DEST_LAST_CMDS = new Set(["cp", "mv", "rsync", "install"]);
+const ALL_ARGS_CMDS = new Set([
+  "rm",
+  "rmdir",
+  "tee",
+  "touch",
+  "mkdir",
+  "chmod",
+  "chown",
+  "chgrp",
+  "truncate",
+  "shred",
+  "ln",
+  "unlink",
+]);
+const INPLACE_FLAG_CMDS = new Set(["sed", "perl"]);
+
 export const mainWritesGuard = defineGuard<BashInput>({
   name: "main-writes",
   matcher: "Bash",
@@ -28,7 +45,8 @@ export const mainWritesGuard = defineGuard<BashInput>({
 
     for (const call of calls) {
       const paths = call.args.filter((a) => !a.startsWith("-"));
-      if (call.name === "cp" || call.name === "mv" || call.name === "rsync") {
+
+      if (DEST_LAST_CMDS.has(call.name)) {
         if (paths.length >= 2 && isMainBranch(paths[paths.length - 1])) {
           return violation(
             `${call.name} destination '${paths[paths.length - 1]}'`,
@@ -36,10 +54,25 @@ export const mainWritesGuard = defineGuard<BashInput>({
             ctx.cwd,
           );
         }
-      } else if (call.name === "tee") {
+      } else if (ALL_ARGS_CMDS.has(call.name)) {
         for (const p of paths) {
           if (isMainBranch(p)) {
-            return violation(`tee destination '${p}'`, repo, ctx.cwd);
+            return violation(`${call.name} target '${p}'`, repo, ctx.cwd);
+          }
+        }
+      } else if (INPLACE_FLAG_CMDS.has(call.name)) {
+        const hasInplace = call.args.some(
+          (a) => a === "-i" || a.startsWith("-i"),
+        );
+        if (hasInplace) {
+          for (const p of paths) {
+            if (isMainBranch(p)) {
+              return violation(
+                `${call.name} -i target '${p}'`,
+                repo,
+                ctx.cwd,
+              );
+            }
           }
         }
       }
