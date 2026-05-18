@@ -721,7 +721,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Contributes:
                 - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
                 - `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
-              - Slot contributors: `add-task`, `agent`, `ask-user-question`, `bash`, `edit`, `read`, `skill`, `write`
+              - Slot contributors: `add-task`, `agent`, `ask-user-question`, `bash`, `edit`, `flag-raise`, `read`, `skill`, `write`
               - Plugins:
                 - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
                   - Contributes:
@@ -740,6 +740,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - Contributes:
                     - `JsonlViewerTool.Renderer` "Edit" → `EditView`
                     - `JsonlViewerTool.Renderer` "MultiEdit" → `MultiEditView`
+                - **`flag-raise`** — Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.
+                  - Contributes:
+                    - `JsonlViewerTool.Renderer` "flag_raise$" → `FlagRaiseToolView`
                 - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
                   - Contributes:
                     - `JsonlViewerTool.Renderer` "Read" → `ReadToolView`
