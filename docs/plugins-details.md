@@ -1615,12 +1615,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`plugin-changes`** — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
       - Exports (core):
-        - Types: `DiffList`, `PluginChangeDiff`, `PluginChangesResponse`
+        - Types: `DiffList`, `PluginChangeDiff`, `PluginChangesResponse`, `PluginReviewProps`
+      - Exports (web):
+        - Values: `PluginChangesSlots`
       - Contributes:
         - `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
       - Server:
         - Uses: `tasks-core.getConversation`
         - `GET /api/review/plugin-changes`
+      - Plugins:
+        - **`api-changes`** — API surface diff section for per-plugin review cards.
+          - Contributes:
+            - `PluginChangesSlots.Section` → `ApiChangesSection`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Exports (web):

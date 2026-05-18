@@ -62,7 +62,11 @@ export function PluginChangesSection({
   return (
     <div className="flex flex-col gap-2">
       {state.data.plugins.map((plugin) => (
-        <PluginChangeCard key={plugin.path} plugin={plugin} />
+        <PluginChangeCard
+          key={plugin.path}
+          conversationId={conversationId}
+          plugin={plugin}
+        />
       ))}
     </div>
   );

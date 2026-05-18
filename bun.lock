@@ -976,6 +976,10 @@
       "name": "@singularity/plugin-review-plugin-changes",
       "version": "0.0.1",
     },
+    "plugins/review/plugins/plugin-changes/plugins/api-changes": {
+      "name": "@singularity/plugin-review-plugin-changes-api-changes",
+      "version": "0.0.1",
+    },
     "plugins/screenshot": {
       "name": "@singularity/plugin-screenshot",
       "version": "0.0.1",
@@ -2197,6 +2201,8 @@
     "@singularity/plugin-review": ["@singularity/plugin-review@workspace:plugins/review"],
 
     "@singularity/plugin-review-plugin-changes": ["@singularity/plugin-review-plugin-changes@workspace:plugins/review/plugins/plugin-changes"],
+
+    "@singularity/plugin-review-plugin-changes-api-changes": ["@singularity/plugin-review-plugin-changes-api-changes@workspace:plugins/review/plugins/plugin-changes/plugins/api-changes"],
 
     "@singularity/plugin-screenshot": ["@singularity/plugin-screenshot@workspace:plugins/screenshot"],
 

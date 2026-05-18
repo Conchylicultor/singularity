@@ -23,3 +23,8 @@ export interface PluginChangeDiff {
 export interface PluginChangesResponse {
   plugins: PluginChangeDiff[];
 }
+
+export interface PluginReviewProps {
+  conversationId: string;
+  plugin: PluginChangeDiff;
+}
