@@ -56,6 +56,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/agents/server/internal/schema.ts`
     - DB schema: `plugins/agents/server/internal/tables-attachments.ts`
     - DB schema: `plugins/agents/server/internal/tables.ts`
+  - Exports (core):
+    - Types: `CreateAgentBody`, `LaunchAgentBody`, `LaunchAgentResponse`, `UpdateAgentBody`
+    - Values: `createAgent`, `CreateAgentBodySchema`, `deleteAgent`, `getAgent`, `launchAgent`, `LaunchAgentBodySchema`, `LaunchAgentResponseSchema`, `listAgentLaunches`, `listAgents`, `updateAgent`, `UpdateAgentBodySchema`
   - Exports (web):
     - Types: `SystemAgentDescriptor`
     - Values: `agentDetailPane`, `Agents`, `agentSidePane`, `agentsResource`, `agentsRootPane`, `defineSystemAgent`, `patchAgent`, `systemAgentDetailPane`
@@ -76,13 +79,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Uses: `conversations.createConversation`, `database.db`, `tasks-core.conversationsLiveResource`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`
     - Resources: `agent-launches` (push)
-    - `GET /api/agents`
-    - `POST /api/agents`
-    - `GET /api/agents/:id`
-    - `PATCH /api/agents/:id`
-    - `DELETE /api/agents/:id`
-    - `POST /api/agents/:id/launch`
-    - `GET /api/agents/:id/launches`
   - Imported by: `toggle`
   - Slot contributors: `toggle`
   - Extended by: `toggle` (table `agents_ext_auto_launch`)
@@ -1200,6 +1196,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`
         - Resources: `claude-cli-calls` (push)
+    - **`endpoints`** — Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
+      - Exports (core):
+        - Types: `EndpointDef`, `ExtractParams`
+        - Values: `defineEndpoint`, `extractMethod`, `extractPath`, `interpolatePath`
+      - Exports (web):
+        - Values: `EndpointError`, `fetchEndpoint`, `useEndpoint`, `useEndpointMutation`
+      - Exports (server):
+        - Values: `HttpError`, `implement`
     - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
       - Defines:
         - DB schema: `plugins/infra/plugins/entity-extensions/server/internal/define-extension.ts`
