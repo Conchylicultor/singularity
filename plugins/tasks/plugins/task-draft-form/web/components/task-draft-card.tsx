@@ -44,7 +44,6 @@ export interface TaskDraftCardProps {
   // Head-card-only relate toggle.
   relateMode?: TaskChainRelateMode | undefined;
   onRelateModeChange?: (next: TaskChainRelateMode | undefined) => void;
-  showIndependentRelate?: boolean;
   // Insert-before-children (follow-up with children).
   relateTaskChildren?: ChildEntry[];
   insertBeforeIds?: Set<string>;
@@ -145,7 +144,6 @@ export function TaskDraftCard({
   parentTaskPreview,
   relateMode,
   onRelateModeChange,
-  showIndependentRelate,
   relateTaskChildren,
   insertBeforeIds,
   onInsertBeforeChange,
@@ -203,7 +201,6 @@ export function TaskDraftCard({
             <RelateModeChip
               value={relateMode}
               onChange={onRelateModeChange!}
-              showIndependent={showIndependentRelate}
               disabled={disabled}
             />
           )}

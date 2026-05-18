@@ -259,7 +259,6 @@ export function TaskDraftPopover({
               ? setAmbientRelateMode
               : undefined
         }
-        showIndependentRelate={hasAmbientRelate}
         relateTaskChildren={relateTaskChildren}
         insertBeforeIds={insertBeforeIds}
         onInsertBeforeChange={setInsertBeforeIds}

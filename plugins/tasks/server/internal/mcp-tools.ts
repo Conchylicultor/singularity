@@ -34,10 +34,6 @@ Controls how the new task connects to the target:
   the target's upstream position. Use when you discover something must
   happen before the current work.
 
-- \`independent\`: no dependency wiring. **Avoid almost always** — sub-tasks
-  depend on uncommitted files from the current conversation; an independent
-  task starts against main and won't see them.
-
 ## Examples
 
 **Follow-up (the common case):**
@@ -58,19 +54,12 @@ If B was waiting on A, the chain auto-rewires: B → X3 → X2 → X1 → A.
 
 A now depends on the new task. A's old deps are rewired to the new task.
 
-**Independent** — side work, doesn't gate anything:
-
-  { "title": "Refactor later", "relation": "independent", "autostart": null }
-
 ## Guidelines
 
 Prefer **linear chains** over fan-out. Each downstream task picks up cold
 from the prior task's outcome, and intermediate work frequently surfaces
 issues that should reshape what comes after — a linear chain lets the next
-agent see the actual outcome instead of executing a stale plan.
-
-**Avoid \`independent\` for sub-tasks** — they depend on uncommitted files
-from the current conversation that an independent agent won't see.`,
+agent see the actual outcome instead of executing a stale plan.`,
   inputSchema: {
     title: z.string().min(1).describe("Short title for the task."),
     description: z
@@ -80,12 +69,11 @@ from the current conversation that an independent agent won't see.`,
         "Optional longer description of the problem or issue. Describe WHAT is wrong or needed, not HOW to fix it."
       ),
     relation: z
-      .enum(["followup", "prerequisite", "independent"])
+      .enum(["followup", "prerequisite"])
       .default("followup")
       .describe(
         "`followup` (default): new task depends on target, target's dependents rewired. " +
-        "`prerequisite`: target depends on new task, target's deps transfer. " +
-        "`independent`: no dependency wiring — avoid almost always; sub-tasks depend on uncommitted files from the current conversation and won't see them if launched independently."
+        "`prerequisite`: target depends on new task, target's deps transfer."
       ),
     target: z
       .string()
@@ -116,26 +104,21 @@ from the current conversation that an independent agent won't see.`,
     const targetTask = await getTask(targetId);
     if (!targetTask) throw new Error(`Target task "${targetId}" not found`);
 
-    const groupId = relation !== "independent" ? currentTaskId : null;
-
     const task = await createTask({
       parentId: currentTaskId,
-      groupId,
+      groupId: currentTaskId,
       title,
       description: description ?? null,
       author: conversationId,
     });
 
-    if (relation !== "independent") {
-      await withNotifyBatch(() =>
-        rewireDependencies({ newTaskId: task.id, targetId, relation }),
-      );
-    }
+    await withNotifyBatch(() =>
+      rewireDependencies({ newTaskId: task.id, targetId, relation }),
+    );
 
     if (autostart) {
       const deps = relation === "followup" ? [targetId]
-        : relation === "prerequisite" ? await getTaskDependencyIds(task.id)
-        : [];
+        : await getTaskDependencyIds(task.id);
       await armTaskAutoStart({ taskId: task.id, model: autostart, dependencies: deps });
     }
 
@@ -146,7 +129,7 @@ from the current conversation that an independent agent won't see.`,
           text: JSON.stringify({
             task_id: task.id,
             relation,
-            group_id: groupId,
+            group_id: currentTaskId,
             autostart,
           }),
         },

@@ -1,14 +1,7 @@
 import { cn } from "@/lib/utils";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
-type ModeValue = TaskChainRelateMode | "independent";
-
-const RELATE_MODES: { value: ModeValue; label: string; title: string }[] = [
-  {
-    value: "independent",
-    label: "Independent",
-    title: "Create a standalone task with no relation",
-  },
+const RELATE_MODES: { value: TaskChainRelateMode; label: string; title: string }[] = [
   {
     value: "followup",
     label: "Follow-up",
@@ -24,19 +17,15 @@ const RELATE_MODES: { value: ModeValue; label: string; title: string }[] = [
 export interface RelateModeChipProps {
   value: TaskChainRelateMode | undefined;
   onChange: (next: TaskChainRelateMode | undefined) => void;
-  showIndependent?: boolean;
   disabled?: boolean;
 }
 
 export function RelateModeChip({
   value,
   onChange,
-  showIndependent,
   disabled,
 }: RelateModeChipProps) {
-  const modes = showIndependent
-    ? RELATE_MODES
-    : RELATE_MODES.filter((m) => m.value !== "independent");
+  const modes = RELATE_MODES;
 
   return (
     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -47,8 +36,7 @@ export function RelateModeChip({
         className="border-border bg-muted/40 inline-flex items-center rounded-md border p-0.5"
       >
         {modes.map((m) => {
-          const effective = m.value === "independent" ? undefined : m.value;
-          const selected = effective === value;
+          const selected = m.value === value;
           return (
             <button
               key={m.value}
@@ -59,7 +47,7 @@ export function RelateModeChip({
               title={m.title}
               onClick={(e) => {
                 e.stopPropagation();
-                onChange(effective);
+                onChange(m.value);
               }}
               className={cn(
                 "rounded px-1.5 py-0.5 transition-colors",

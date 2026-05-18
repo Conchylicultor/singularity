@@ -44,7 +44,6 @@ export interface TaskDraftFormProps {
   // Head-card relate toggle (only rendered when both are supplied).
   relateMode?: TaskChainRelateMode | undefined;
   onRelateModeChange?: (next: TaskChainRelateMode | undefined) => void;
-  showIndependentRelate?: boolean;
   // Insert-before-children (follow-up mode with children).
   relateTaskChildren?: ChildEntry[];
   insertBeforeIds?: Set<string>;
@@ -83,7 +82,6 @@ export function TaskDraftForm({
   parentTaskPreview,
   relateMode,
   onRelateModeChange,
-  showIndependentRelate,
   relateTaskChildren,
   insertBeforeIds,
   onInsertBeforeChange,
@@ -225,7 +223,6 @@ export function TaskDraftForm({
                     parentTaskPreview={isHead ? parentTaskPreview : null}
                     relateMode={isHead ? relateMode : undefined}
                     onRelateModeChange={isHead ? onRelateModeChange : undefined}
-                    showIndependentRelate={isHead ? showIndependentRelate : undefined}
                     relateTaskChildren={
                       isHead && relateMode === "followup"
                         ? relateTaskChildren
