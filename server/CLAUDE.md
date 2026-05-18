@@ -88,6 +88,8 @@ interface WsHandler {
 
 Plain functions: `(req: Request) => Response | Promise<Response>`. No wrapper types needed — these are standard Web API types.
 
+**Prefer `implement()` for new handlers.** The endpoints primitive (`@plugins/infra/plugins/endpoints/server`) wraps a plain handler with typed body/query validation, auto-serialization, and `HttpError` short-circuiting. Declare the contract once in `core/endpoints.ts` with `defineEndpoint`; use `[endpoint.route]` as the `httpRoutes` key. See [`plugins/infra/plugins/endpoints/CLAUDE.md`](../plugins/infra/plugins/endpoints/CLAUDE.md).
+
 ## Adding a Plugin's Server Component
 
 1. Create the plugin directory with this structure:
