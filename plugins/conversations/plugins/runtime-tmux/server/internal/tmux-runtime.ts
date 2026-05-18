@@ -327,19 +327,17 @@ export const tmuxRuntime: ConversationRuntime = {
       stdout: "pipe",
       stderr: "pipe",
     }).exited;
-    // Send the text via load-buffer + paste-buffer -p so tmux wraps it in
-    // bracketed paste markers (\x1b[200~ … \x1b[201~). Without that, Claude
-    // CLI falls back to a timing/burst heuristic to detect pastes — large
-    // multi-line prompts get split into several "[Pasted text #N]" chips and
-    // the trailing Enter we send below gets absorbed into the last paste,
-    // leaving the prompt unsubmitted. -b uses a named buffer (not the
-    // anonymous default the user cycles through with prefix+]) and -d
-    // deletes it after paste. tmux buffers are isolated from the system
-    // clipboard.
+    // Bracketed paste + Enter in one atomic tmux invocation.
+    //
+    // `paste-buffer -p` wraps the content in \e[200~/\e[201~ markers.
+    // Previously, `send-keys Enter` was a separate process spawn after a
+    // heuristic sleep — if Enter arrived before the CLI exited paste mode,
+    // it was swallowed as a literal newline.
+    //
+    // Fix: chain both commands with ";" so tmux processes them in one event
+    // loop iteration. paste-buffer writes markers + content, then send-keys
+    // writes Enter — back-to-back with no inter-process gap.
     const bufferName = `singularity-send-${conversationId}`;
-    // Pass text as a Buffer — not a pipe. FileSink.write() returns a number
-    // (not a Promise), so `await sink.write()` is a no-op and data can be
-    // lost before end() closes the pipe. Buffer stdin is atomic.
     const load = Bun.spawn([TMUX, "load-buffer", "-b", bufferName, "-"], {
       stdin: Buffer.from(text),
       stdout: "pipe",
@@ -352,25 +350,21 @@ export const tmuxRuntime: ConversationRuntime = {
         `tmux load-buffer for ${conversationId} failed (exit ${loadExit}): ${stderr.trim() || "<no stderr>"}`,
       );
     }
-    const pasteProc = Bun.spawn(
-      [TMUX, "paste-buffer", "-d", "-p", "-b", bufferName, "-t", conversationId],
+    const pasteAndEnter = Bun.spawn(
+      [
+        TMUX,
+        "paste-buffer", "-d", "-p", "-b", bufferName, "-t", conversationId,
+        ";",
+        "send-keys", "-t", conversationId, "Enter",
+      ],
       { stdout: "pipe", stderr: "pipe" },
     );
-    const pasteExit = await pasteProc.exited;
-    if (pasteExit !== 0) {
-      const stderr = await new Response(pasteProc.stderr).text();
+    const exitCode = await pasteAndEnter.exited;
+    if (exitCode !== 0) {
+      const stderr = await new Response(pasteAndEnter.stderr).text();
       throw new Error(
-        `tmux paste-buffer for ${conversationId} failed (exit ${pasteExit}): ${stderr.trim() || "<no stderr>"}`,
+        `tmux paste+enter for ${conversationId} failed (exit ${exitCode}): ${stderr.trim() || "<no stderr>"}`,
       );
     }
-    // Give Claude's input parser time to process the paste-end marker
-    // (\e[201~) and exit bracketed-paste mode before Enter arrives.
-    // Without this, Enter sometimes lands while the parser is still in
-    // paste mode and gets swallowed as a literal newline.
-    await Bun.sleep(50);
-    await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Enter"], {
-      stdout: "pipe",
-      stderr: "pipe",
-    }).exited;
   },
 };
