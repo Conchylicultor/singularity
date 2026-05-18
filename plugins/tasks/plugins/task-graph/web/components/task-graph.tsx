@@ -179,7 +179,7 @@ function layoutDag(
       type: GROUP_BG_TYPE,
       data: { groupId, label: anchor?.title || "Group", depth },
       position: { x: minX, y: minY },
-      style: { width: maxX - minX, height: maxY - minY },
+      style: { width: maxX - minX, height: maxY - minY, pointerEvents: "none" },
       selectable: false,
       draggable: false,
     });
@@ -354,7 +354,9 @@ function TaskGraphInner({
         zoomOnScroll
         zoomOnPinch
         zoomOnDoubleClick={false}
-        onNodeClick={(_, node) => onNavigate(node.id)}
+        onNodeClick={(_, node) => {
+          if (node.type === NODE_TYPE) onNavigate(node.id);
+        }}
         onConnect={onConnect}
         connectionRadius={20}
         proOptions={{ hideAttribution: true }}
