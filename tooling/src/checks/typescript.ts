@@ -30,7 +30,7 @@ export const typescript: Check = {
 
     const [web, server, tooling] = await Promise.all([
       runTsc(`${root}/web`, ["-p", "tsconfig.app.json"]),
-      runTsc(`${root}/server`, []),
+      runTsc(`${root}/plugins/framework/plugins/server`, []),
       runTsc(`${root}/tooling`, []),
     ]);
 

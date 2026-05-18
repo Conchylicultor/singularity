@@ -145,7 +145,7 @@ if (!worktree) {
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/paths/server";
+import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 
 const dbConfigPath = join(SINGULARITY_DIR, "database.json");
 let host = "localhost", port = "5432", user = process.env.USER ?? "postgres";
