@@ -1,9 +1,6 @@
 import { type ReactElement } from "react";
 import { Pane, PaneChrome, type, useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import {
-  Tasks as TasksSlots,
-  TasksList,
-} from "@plugins/tasks/plugins/task-list/web";
+import { Tasks } from "@plugins/tasks/plugins/task-list/web";
 import { type Task } from "@plugins/tasks/core";
 import { useTask } from "@plugins/tasks/web";
 import { TaskDetailFlushProvider } from "./context";
@@ -33,23 +30,15 @@ export const taskDetailPane = Pane.define({
 });
 
 function TasksRoot(): ReactElement {
-  const lists = TasksSlots.List.useContributions();
   const openPane = useOpenPane();
   const selectedId = taskDetailPane.useChainEntry()?.params.taskId;
 
   return (
-    <div className="h-full overflow-auto p-4">
-      <TasksList
+    <div className="h-full p-4">
+      <Tasks.Host
         selectedId={selectedId}
         onSelect={(id) => openPane(taskDetailPane, { taskId: id }, { mode: "push" })}
       />
-      {lists.length > 0 && (
-        <div className="mt-6 flex flex-col gap-4">
-          {lists.map((l) => (
-            <l.component key={l.id} />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

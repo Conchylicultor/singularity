@@ -809,16 +809,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Conversation.ActionBar` → `VscodeButton`
     - **`conversations-view`** — Sidebar list of all conversations.
-      - Defines:
-        - Slots: `ConversationsView.View`
       - Exports (web):
-        - Types: `ViewContribution`, `ViewProps`
+        - Types: `ViewProps`
         - Values: `ConversationsView`, `useGoneConversationsPagination`
       - Contributes:
         - `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
         - `Core.Root` → `ForkErrorWatcher`
         - `Core.Root` → `AutoLaunchWatcher`
-      - Slot contributors: `grouped`, `history`, `queue`
       - Plugins:
         - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
           - Defines:
@@ -1447,6 +1444,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
       - Exports (web):
         - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
+    - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
+      - Exports (web):
+        - Types: `TabbedView`, `TabContribution`
+        - Values: `defineTabbedView`
     - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
       - Exports (web):
         - Types: `NodeExtension`, `TextEditorPluginProps`
@@ -1611,7 +1612,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Stats.Chart` "Tasks" → `TasksSection`
       - Server:
         - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.listTasks`
-      - Imported by: `dependencies`, `side-task`, `task-dependencies`, `task-description`, `task-detail`, `task-header`, `task-list`, `tasks-panel`
+      - Imported by: `dependencies`, `side-task`, `task-dependencies`, `task-description`, `task-detail`, `task-header`, `task-list`, `tasks-panel`, `tree`
 
 - **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
   - Exports (core):
@@ -1670,13 +1671,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `TaskDetailSlots.Section` "header" → `TaskHeader`
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
       - Defines:
-        - Slots: `Tasks.List`, `Tasks.TaskActions`, `Tasks.ListActions`
+        - Slots: `Tasks.TaskActions`, `Tasks.ListActions`
       - Exports (web):
-        - Values: `Tasks`, `TasksList`
+        - Types: `TaskViewProps`
+        - Values: `Tasks`
       - Contributes:
         - `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`
         - `Tasks.TaskActions` "delete" → `DeleteTaskAction`
         - `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
+      - Slot contributors: `recent`, `tree`
+      - Plugins:
+        - **`recent`** — Recency-sorted flat task list tab.
+          - Contributes:
+            - `Tasks.View` "Recent" → `TasksRecentView`
+        - **`tree`** — Tree-view tab for the task list.
+          - Exports (web):
+            - Values: `TasksList`
+          - Contributes:
+            - `Tasks.View` "Tree" → `TasksList`
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
       - Exports (web):
         - Values: `STATUS_META`, `StatusBadge`, `StatusIcon`

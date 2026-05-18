@@ -952,6 +952,10 @@
       "name": "@singularity/plugin-primitives-syntax-highlight",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/tabbed-view": {
+      "name": "@singularity/plugin-primitives-tabbed-view",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/text-editor": {
       "name": "@singularity/plugin-primitives-text-editor",
       "version": "0.0.1",
@@ -1104,6 +1108,14 @@
     },
     "plugins/tasks/plugins/task-list": {
       "name": "@singularity/plugin-tasks-task-list",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/task-list/plugins/recent": {
+      "name": "@singularity/plugin-tasks-task-list-recent",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/task-list/plugins/tree": {
+      "name": "@singularity/plugin-tasks-task-list-tree",
       "version": "0.0.1",
     },
     "plugins/tasks/plugins/task-status": {
@@ -2204,6 +2216,8 @@
 
     "@singularity/plugin-primitives-syntax-highlight": ["@singularity/plugin-primitives-syntax-highlight@workspace:plugins/primitives/plugins/syntax-highlight"],
 
+    "@singularity/plugin-primitives-tabbed-view": ["@singularity/plugin-primitives-tabbed-view@workspace:plugins/primitives/plugins/tabbed-view"],
+
     "@singularity/plugin-primitives-text-editor": ["@singularity/plugin-primitives-text-editor@workspace:plugins/primitives/plugins/text-editor"],
 
     "@singularity/plugin-primitives-text-editor-paste-images": ["@singularity/plugin-primitives-text-editor-paste-images@workspace:plugins/primitives/plugins/text-editor/plugins/paste-images"],
@@ -2269,6 +2283,10 @@
     "@singularity/plugin-tasks-task-header": ["@singularity/plugin-tasks-task-header@workspace:plugins/tasks/plugins/task-header"],
 
     "@singularity/plugin-tasks-task-list": ["@singularity/plugin-tasks-task-list@workspace:plugins/tasks/plugins/task-list"],
+
+    "@singularity/plugin-tasks-task-list-recent": ["@singularity/plugin-tasks-task-list-recent@workspace:plugins/tasks/plugins/task-list/plugins/recent"],
+
+    "@singularity/plugin-tasks-task-list-tree": ["@singularity/plugin-tasks-task-list-tree@workspace:plugins/tasks/plugins/task-list/plugins/tree"],
 
     "@singularity/plugin-tasks-task-status": ["@singularity/plugin-tasks-task-status@workspace:plugins/tasks/plugins/task-status"],
 

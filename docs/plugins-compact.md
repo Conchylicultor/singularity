@@ -284,6 +284,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`spinner`** — Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
     - **`status-dot`** — Colored status-indicator dot primitive. Composes a fixed-size rounded span with a caller-supplied Tailwind color class. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
+    - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
     - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
       - Plugins:
         - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
@@ -330,6 +331,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`task-graph`** — Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
+      - Plugins:
+        - **`recent`** — Recency-sorted flat task list tab.
+        - **`tree`** — Tree-view tab for the task list.
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
     - **`task-title`** — Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip.
 

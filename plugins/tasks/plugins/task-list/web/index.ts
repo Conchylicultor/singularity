@@ -5,7 +5,7 @@ import { ExpandCollapseAllAction } from "./components/expand-collapse-all-action
 import { LaunchAgentAction } from "./components/launch-agent-action";
 
 export { Tasks } from "./slots";
-export { TasksList } from "./components/tasks-list";
+export type { TaskViewProps } from "./slots";
 
 export default {
   id: "task-list",

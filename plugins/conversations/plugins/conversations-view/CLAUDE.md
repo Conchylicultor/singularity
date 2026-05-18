@@ -5,16 +5,13 @@
 ## Plugin reference
 
 - Description: Sidebar list of all conversations.
-- Defines:
-  - Slots: `ConversationsView.View`
 - Exports (web):
-  - Types: `ViewContribution`, `ViewProps`
+  - Types: `ViewProps`
   - Values: `ConversationsView`, `useGoneConversationsPagination`
 - Contributes:
   - `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
   - `Core.Root` → `ForkErrorWatcher`
   - `Core.Root` → `AutoLaunchWatcher`
-- Slot contributors: `grouped`, `history`, `queue`
 - Sub-plugins:
   - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
   - **`history`** — All conversations in historical order of creation.

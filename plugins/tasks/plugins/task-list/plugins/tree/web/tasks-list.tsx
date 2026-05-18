@@ -14,7 +14,7 @@ import { buildTree, type TreeNode } from "@plugins/primitives/plugins/tree/core"
 import type { TaskStatus } from "@plugins/tasks-core/core";
 import { tasksResource } from "@plugins/tasks/core";
 import { patchTask, setAutoStart } from "@plugins/tasks/web";
-import { Tasks as TasksSlots } from "../slots";
+import { Tasks as TasksSlots } from "@plugins/tasks/plugins/task-list/web";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import {
   MultiSelectProvider,

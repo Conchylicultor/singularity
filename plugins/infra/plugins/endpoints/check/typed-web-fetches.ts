@@ -75,7 +75,7 @@ const ALLOWED = new Map<string, number>([
   ["plugins/tasks/plugins/task-graph/web/components/task-graph.tsx", 2],
   ["plugins/tasks/plugins/task-header/web/components/task-header.tsx", 1],
   ["plugins/tasks/plugins/task-list/web/components/launch-agent-action.tsx", 1],
-  ["plugins/tasks/plugins/task-list/web/components/tasks-list.tsx", 1],
+  ["plugins/tasks/plugins/task-list/plugins/tree/web/tasks-list.tsx", 1],
   ["plugins/tasks/web/client.ts", 4],
 ]);
 

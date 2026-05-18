@@ -7,7 +7,7 @@ import { ForkErrorWatcher } from "./components/fork-error-watcher";
 import { AutoLaunchWatcher } from "./components/auto-launch-watcher";
 
 export { ConversationsView } from "./slots";
-export type { ViewContribution, ViewProps } from "./slots";
+export type { ViewProps } from "./slots";
 export { useGoneConversationsPagination } from "./internal/use-gone-conversations-pagination";
 
 export default {

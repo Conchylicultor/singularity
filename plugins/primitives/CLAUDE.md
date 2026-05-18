@@ -45,6 +45,7 @@
   - **`spinner`** — Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
   - **`status-dot`** — Colored status-indicator dot primitive. Composes a fixed-size rounded span with a caller-supplied Tailwind color class. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
   - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
+  - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
   - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
   - **`tooltip`** — WithTooltip wrapper, TooltipProvider, and <Kbd> keyboard shortcut badge.
   - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
