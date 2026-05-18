@@ -9,6 +9,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  type Connection,
   type Edge,
   type Node,
   type NodeProps,
@@ -226,7 +227,8 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
       <Handle
         type="target"
         position={Position.Left}
-        className="!bg-transparent !border-0 !w-1 !h-1"
+        className="!bg-muted-foreground/60 !border-border !w-2.5 !h-2.5 !rounded-full"
+        style={{ opacity: hovered ? 1 : 0, transition: "opacity 150ms", cursor: "crosshair" }}
       />
       <Icon className={cn("size-4 shrink-0", meta.iconClassName)} />
       <span
@@ -240,7 +242,8 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
       <Handle
         type="source"
         position={Position.Right}
-        className="!bg-transparent !border-0 !w-1 !h-1"
+        className="!bg-muted-foreground/60 !border-border !w-2.5 !h-2.5 !rounded-full"
+        style={{ opacity: hovered ? 1 : 0, transition: "opacity 150ms", cursor: "crosshair" }}
       />
       {!hasChildren && (
         <div
@@ -304,11 +307,13 @@ function TaskGraphInner({
   nodes,
   edges,
   onNavigate,
+  onConnect,
 }: {
   taskId: string;
   nodes: Node[];
   edges: Edge[];
   onNavigate: (taskId: string) => void;
+  onConnect: (connection: Connection) => void;
 }) {
   const { fitView } = useReactFlow();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -342,7 +347,7 @@ function TaskGraphInner({
         nodeTypes={NODE_TYPES}
         edgeTypes={EDGE_TYPES}
         nodesDraggable={false}
-        nodesConnectable={false}
+        nodesConnectable
         edgesFocusable={false}
         elementsSelectable={false}
         panOnDrag
@@ -350,6 +355,8 @@ function TaskGraphInner({
         zoomOnPinch
         zoomOnDoubleClick={false}
         onNodeClick={(_, node) => onNavigate(node.id)}
+        onConnect={onConnect}
+        connectionRadius={20}
         proOptions={{ hideAttribution: true }}
         connectionLineType={ConnectionLineType.SmoothStep}
         minZoom={0.5}
@@ -374,6 +381,17 @@ export function TaskGraph({ taskId }: { taskId: string }) {
     },
     [ctxNavigate, openPane],
   );
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      if (!connection.source || !connection.target) return;
+      void fetch(`/api/tasks/${connection.target}/dependencies`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dependsOnTaskId: connection.source }),
+      });
+    },
+    [],
+  );
   const { nodes, edges } = useMemo(
     () => layoutDag(closure, allTasks, taskId, onNavigate),
     [closure, allTasks, taskId, onNavigate],
@@ -383,7 +401,7 @@ export function TaskGraph({ taskId }: { taskId: string }) {
 
   return (
     <ReactFlowProvider>
-      <TaskGraphInner taskId={taskId} nodes={nodes} edges={edges} onNavigate={onNavigate} />
+      <TaskGraphInner taskId={taskId} nodes={nodes} edges={edges} onNavigate={onNavigate} onConnect={onConnect} />
     </ReactFlowProvider>
   );
 }
