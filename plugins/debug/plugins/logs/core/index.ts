@@ -7,3 +7,4 @@ export type {
   ErrorMsg,
   ServerMessage,
 } from "./protocol";
+export { getLogChannels } from "./endpoints";

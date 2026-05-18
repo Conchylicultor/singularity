@@ -1,6 +1,8 @@
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { triggerBuildEndpoint } from "../../core/endpoints";
 import { triggerBuild } from "./run-build";
 
-export function handleBuild(_req: Request): Response {
+export const handleBuild = implement(triggerBuildEndpoint, () => {
   triggerBuild("manual");
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});

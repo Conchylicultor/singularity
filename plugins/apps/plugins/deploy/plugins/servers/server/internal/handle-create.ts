@@ -1,18 +1,13 @@
 import { db } from "@plugins/database/server";
 import { setSecret } from "@plugins/infra/plugins/secrets/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { createServer } from "../../shared/endpoints";
 import { _deployServers } from "./tables";
 import { serversResource } from "./resources";
 
-export async function handleCreate(req: Request): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as {
-    name?: string;
-    host?: string;
-    port?: number;
-    sshUser?: string;
-    sshPrivateKey?: string;
-  };
+export const handleCreate = implement(createServer, async ({ body }) => {
   if (!body.host) {
-    return Response.json({ error: "host is required" }, { status: 400 });
+    throw new HttpError(400, "host is required");
   }
   const id = `srv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const [row] = await db
@@ -29,10 +24,10 @@ export async function handleCreate(req: Request): Promise<Response> {
     await setSecret({ namespace: "deploy-ssh", key: id }, body.sshPrivateKey);
   }
   serversResource.notify();
-  return Response.json({
+  return {
     ...row,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     sshKeyConfigured: !!body.sshPrivateKey,
-  });
-}
+  };
+});

@@ -7,6 +7,14 @@ import { handleGetState } from "./internal/handlers/state";
 import { handleGetToken } from "./internal/handlers/token";
 import { authStateResource } from "./internal/auth-resource";
 import { onReady } from "./internal/boot";
+import {
+  oauthStart,
+  oauthCallback,
+  disconnect,
+  setApiKey,
+  getAuthState,
+  getToken,
+} from "@plugins/auth/core";
 
 export {
   getAccessToken,
@@ -48,12 +56,12 @@ export default {
   description:
     "Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.",
   httpRoutes: {
-    "GET /api/auth/start/:provider": handleOAuthStart,
-    "GET /api/auth/callback/:provider": handleOAuthCallback,
-    "POST /api/auth/disconnect/:provider": handleDisconnect,
-    "POST /api/auth/api-key/:provider": handleSetApiKey,
-    "GET /api/auth/state": handleGetState,
-    "POST /api/auth/token": handleGetToken,
+    [oauthStart.route]: handleOAuthStart,
+    [oauthCallback.route]: handleOAuthCallback,
+    [disconnect.route]: handleDisconnect,
+    [setApiKey.route]: handleSetApiKey,
+    [getAuthState.route]: handleGetState,
+    [getToken.route]: handleGetToken,
   },
   resources: [authStateResource],
   onReady,

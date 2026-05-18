@@ -13,22 +13,34 @@ import {
 } from "./internal/handle";
 import { logPing } from "./internal/log-job";
 import { pinged } from "./internal/tables";
+import {
+  subscribeEventsTest,
+  emitEventsTest,
+  directEnqueueEventsTest,
+  getEventsTestLog,
+  resetEventsTest,
+  deleteEventsTestTrigger,
+  deleteEventsTestTargeting,
+  listEventsTestTriggers,
+  waitEventsTestIdle,
+  crashRecoveryEventsTest,
+} from "../shared/endpoints";
 
 export default {
   id: "events-test",
   name: "Events Test",
   description: "Dummy plugin exercising the events and jobs APIs end-to-end.",
   httpRoutes: {
-    "POST /api/events-test/subscribe": handleSubscribe,
-    "POST /api/events-test/emit": handleEmit,
-    "POST /api/events-test/direct-enqueue": handleDirectEnqueue,
-    "GET /api/events-test/log": handleLog,
-    "POST /api/events-test/reset": handleReset,
-    "DELETE /api/events-test/trigger/:id": handleDeleteTrigger,
-    "POST /api/events-test/delete-targeting": handleDeleteTargeting,
-    "GET /api/events-test/triggers": handleListTriggers,
-    "GET /api/events-test/wait-idle": handleWaitIdle,
-    "POST /api/events-test/crash-recovery": handleCrashRecovery,
+    [subscribeEventsTest.route]: handleSubscribe,
+    [emitEventsTest.route]: handleEmit,
+    [directEnqueueEventsTest.route]: handleDirectEnqueue,
+    [getEventsTestLog.route]: handleLog,
+    [resetEventsTest.route]: handleReset,
+    [deleteEventsTestTrigger.route]: handleDeleteTrigger,
+    [deleteEventsTestTargeting.route]: handleDeleteTargeting,
+    [listEventsTestTriggers.route]: handleListTriggers,
+    [waitEventsTestIdle.route]: handleWaitIdle,
+    [crashRecoveryEventsTest.route]: handleCrashRecovery,
   },
   register: [logPing, pinged],
 } satisfies ServerPluginDefinition;

@@ -2,6 +2,8 @@ import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { listMemoryFiles } from "../../shared/endpoints";
 
 async function memoryDir(): Promise<string> {
   const root = await ensureMainWorktreeRoot();
@@ -23,13 +25,13 @@ function typeFor(name: string): MemoryFile["type"] {
   return "other";
 }
 
-export async function listFiles(): Promise<Response> {
+export const listFiles = implement(listMemoryFiles, async () => {
   const dir = await memoryDir();
   let names: string[];
   try {
     names = await readdir(dir);
   } catch {
-    return Response.json({ ok: true, files: [], dir });
+    return { ok: true, files: [], dir };
   }
   const files: MemoryFile[] = names
     .filter((n) => n.endsWith(".md"))
@@ -40,5 +42,5 @@ export async function listFiles(): Promise<Response> {
       return a.localeCompare(b);
     })
     .map((name) => ({ name, type: typeFor(name) }));
-  return Response.json({ ok: true, files, dir });
-}
+  return { ok: true, files, dir };
+});

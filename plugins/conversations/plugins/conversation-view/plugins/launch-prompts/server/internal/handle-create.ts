@@ -1,5 +1,7 @@
 import { db } from "@plugins/database/server";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/prompt-editor/plugins/paste-images/core";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { createLaunchPrompt } from "../../shared/endpoints";
 import { launchPromptsTable } from "./tables";
 import { launchPromptAttachments } from "./tables-attachments";
 import { launchPromptsServerResource } from "./resources";
@@ -7,21 +9,13 @@ import { nextRank } from "./rank";
 
 const VALID_MODELS = new Set(["sonnet", "opus"]);
 
-export async function handleCreate(req: Request): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as {
-    title?: string;
-    prompt?: string;
-    model?: string;
-  };
-  if (typeof body.title !== "string" || body.title.trim() === "") {
-    return Response.json({ error: "title required" }, { status: 400 });
-  }
-  if (typeof body.prompt !== "string") {
-    return Response.json({ error: "prompt required" }, { status: 400 });
+export const handleCreate = implement(createLaunchPrompt, async ({ body }) => {
+  if (body.title.trim() === "") {
+    throw new HttpError(400, "title required");
   }
   const model = body.model ?? "sonnet";
   if (!VALID_MODELS.has(model)) {
-    return Response.json({ error: "model must be 'sonnet' or 'opus'" }, { status: 400 });
+    throw new HttpError(400, "model must be 'sonnet' or 'opus'");
   }
 
   const id = crypto.randomUUID();
@@ -35,5 +29,5 @@ export async function handleCreate(req: Request): Promise<Response> {
   await launchPromptAttachments.set(id, extractAttachmentIds(body.prompt));
 
   launchPromptsServerResource.notify();
-  return Response.json(row, { status: 201 });
-}
+  return row;
+});

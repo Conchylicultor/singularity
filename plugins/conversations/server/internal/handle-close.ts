@@ -1,15 +1,11 @@
-import { deleteConversation } from "./lifecycle";
 import { markConversationClosed, notifyConversationsChanged } from "@plugins/tasks-core/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { closeConversation } from "../../core/endpoints";
+import { deleteConversation } from "./lifecycle";
 
-export async function handleClose(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const id = params.id;
-  if (!id) return new Response("Missing id", { status: 400 });
-
-  await markConversationClosed(id);
-  await deleteConversation(id);
+export const handleClose = implement(closeConversation, async ({ params }) => {
+  await markConversationClosed(params.id);
+  await deleteConversation(params.id);
   notifyConversationsChanged();
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});

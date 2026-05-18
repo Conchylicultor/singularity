@@ -5,3 +5,4 @@ export type {
   PluginChangesResponse,
   PluginReviewProps,
 } from "./protocol";
+export { getPluginChanges } from "./endpoints";

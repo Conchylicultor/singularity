@@ -14,14 +14,15 @@ import { mainAheadCountResource } from "./internal/main-ahead-resource";
 import { buildHistoryResource } from "./internal/build-history-resource";
 import { _buildRuns } from "./internal/tables";
 import { buildConfig } from "../shared";
+import { triggerBuildEndpoint, getBuildStatus } from "../core/endpoints";
 
 export default {
   id: "build",
   name: "Build",
   contributions: [ConfigV2.Register({ descriptor: buildConfig }), Resource.Declare(mainAheadCountResource), Resource.Declare(buildHistoryResource)],
   httpRoutes: {
-    "POST /api/build": handleBuild,
-    "GET /api/build/status": handleBuildStatus,
+    [triggerBuildEndpoint.route]: handleBuild,
+    [getBuildStatus.route]: handleBuildStatus,
   },
   register: [buildRunJob],
   onReady: async () => {

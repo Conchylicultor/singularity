@@ -1,3 +1,6 @@
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { getStatsProfiling } from "../../shared/endpoints";
+
 interface Span {
   id: string;
   phase: string;
@@ -55,10 +58,10 @@ function parseServerTimingChildren(
   return children;
 }
 
-export async function handleStatsProfiling(_req: Request): Promise<Response> {
+export const handleStatsProfiling = implement(getStatsProfiling, async () => {
   const socketPath = process.env.SOCKET_PATH;
   if (!socketPath) {
-    return Response.json({ spans: [], totalMs: 0 });
+    return { spans: [], totalMs: 0 };
   }
 
   const t0 = performance.now();
@@ -94,5 +97,5 @@ export async function handleStatsProfiling(_req: Request): Promise<Response> {
     );
   }
 
-  return Response.json({ spans, totalMs });
-}
+  return { spans, totalMs };
+});

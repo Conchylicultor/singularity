@@ -1,4 +1,6 @@
 import { conversationAttachments, getConversation } from "@plugins/tasks-core/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { postConversationTurn } from "../../core/endpoints";
 import { sendTurn } from "./runtime";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
 import { userTurnSent } from "./tables-user-turn-sent-event";
@@ -7,27 +9,16 @@ import { userTurnSent } from "./tables-user-turn-sent-event";
 // `![](/api/attachments/<id>)` refs; we resolve those into `@<disk-path>`
 // before handing the prompt to the agent and additively link the referenced
 // attachments to this conversation so the orphan sweep leaves them alone.
-export async function handlePostTurn(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
+export const handlePostTurn = implement(postConversationTurn, async ({ params, body }) => {
   const id = params.id;
-  if (!id) return new Response("Missing id", { status: 400 });
   if (!/^[A-Za-z0-9_-]+$/.test(id)) {
-    return new Response("invalid id", { status: 400 });
+    throw new HttpError(400, "invalid id");
   }
 
-  const body = (await req.json().catch(() => ({}))) as { text?: unknown };
-  if (typeof body.text !== "string" || body.text.length === 0) {
-    return Response.json({ error: "body.text required" }, { status: 400 });
-  }
-
-  const { text: resolved, attachmentIds } = await resolveAttachmentRefs(
-    body.text,
-  );
+  const { text: resolved, attachmentIds } = await resolveAttachmentRefs(body.text);
   const finalText = resolved.trim();
   if (finalText.length === 0) {
-    return Response.json({ error: "text required" }, { status: 400 });
+    throw new HttpError(400, "text required");
   }
 
   if (attachmentIds.length > 0) {
@@ -38,7 +29,7 @@ export async function handlePostTurn(
     await sendTurn(id, finalText);
   } catch (err) {
     if (err instanceof Error && err.message.includes("not found")) {
-      return new Response("Not found", { status: 404 });
+      throw new HttpError(404, "Not found");
     }
     throw err;
   }
@@ -48,9 +39,9 @@ export async function handlePostTurn(
     await userTurnSent.emit({
       conversationId: id,
       taskId: conv.taskId,
-      text: body.text as string,
+      text: body.text,
     });
   }
 
-  return Response.json({ ok: true, attachmentIds });
-}
+  return { ok: true, attachmentIds };
+});

@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 
-export { implement, HttpError } from "./internal/implement";
+export { implement, HttpError } from "../core/implement";
 
 export default {
   id: "endpoints",

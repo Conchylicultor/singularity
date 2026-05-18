@@ -9,7 +9,7 @@
   - DB schema: `plugins/build/server/internal/tables.ts`
 - Exports (core):
   - Types: `BuildRun`, `MainAheadCount`
-  - Values: `buildHistoryResource`, `BuildRunSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
+  - Values: `buildHistoryResource`, `BuildRunSchema`, `getBuildStatus`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
 - Exports (web):
   - Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`
 - Exports (shared):
@@ -23,9 +23,6 @@
   - Register: `defineJob('build.run')`
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
   - Resources: `build.history` (push), `build.mainAheadCount` (push)
-  - `POST /api/build`
-  - `GET /api/build/status`
-- Endpoint callers: `build-profiling`
 - Sub-plugins:
   - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
   - **`build-logs`** — Live log stream section in the build detail pane.

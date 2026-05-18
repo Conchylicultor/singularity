@@ -1,0 +1,1 @@
+export { getTableForeignKeys } from "./endpoints";

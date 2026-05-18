@@ -1,5 +1,4 @@
-import type { HttpHandler } from "@server/types";
-import type { EndpointDef } from "../../core/define-endpoint";
+import type { EndpointDef } from "./define-endpoint";
 
 export class HttpError extends Error {
   constructor(
@@ -10,14 +9,13 @@ export class HttpError extends Error {
   }
 }
 
-/**
- * Wraps a typed handler into a standard HttpHandler.
- *
- * - Validates body via bodySchema (400 on failure)
- * - Validates query via querySchema (400 on failure)
- * - Serializes return value to Response.json() (or 204 for void)
- * - Catches HttpError and returns the appropriate status
- */
+type HttpHandler = (
+  req: Request,
+  params: Record<string, string>,
+) => Response | Promise<Response>;
+
+type ImplementReturn<T> = [T] extends [void] ? unknown : T;
+
 export function implement<
   Route extends string,
   TParams,
@@ -31,7 +29,7 @@ export function implement<
     body: TBody;
     query: TQuery;
     req: Request;
-  }) => Promise<TResponse> | TResponse,
+  }) => Promise<ImplementReturn<TResponse>> | ImplementReturn<TResponse>,
 ): HttpHandler {
   return async (req: Request, params: Record<string, string>) => {
     try {

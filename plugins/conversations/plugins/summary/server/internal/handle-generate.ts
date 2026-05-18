@@ -4,42 +4,29 @@ import {
   deleteConversation,
 } from "@plugins/conversations/server";
 import { getConversation } from "@plugins/tasks-core/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { generateConversationSummary } from "../../shared/endpoints";
 import { buildSummarizePayload } from "./prompt";
 
 // Cap how long the summarising conversation may live before we reap it.
 const CLEANUP_AFTER_MS = 5 * 60 * 1000;
 
-export async function handleGenerate(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const conversationId = params.conversationId;
-  if (!conversationId) {
-    return Response.json(
-      { error: "Missing conversationId in path" },
-      { status: 400 },
-    );
-  }
+export const handleGenerate = implement(generateConversationSummary, async ({ params }) => {
+  const { conversationId } = params;
   const contextPath = `/tmp/singularity-summary-${conversationId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.xml`;
 
   let payload;
   try {
     payload = await buildSummarizePayload(conversationId, contextPath);
   } catch (err) {
-    return Response.json(
-      { error: err instanceof Error ? err.message : String(err) },
-      { status: 400 },
-    );
+    throw new HttpError(400, err instanceof Error ? err.message : String(err));
   }
 
   await fs.writeFile(contextPath, payload.context, "utf8");
 
   const parent = await getConversation(conversationId);
   if (!parent) {
-    return Response.json(
-      { error: `Parent conversation ${conversationId} not found` },
-      { status: 404 },
-    );
+    throw new HttpError(404, `Parent conversation ${conversationId} not found`);
   }
 
   const conv = await createConversation({
@@ -58,11 +45,8 @@ export async function handleGenerate(
     void fs.unlink(contextPath);
   }, CLEANUP_AFTER_MS).unref();
 
-  return Response.json(
-    {
-      spawnedConversationId: conv.id,
-      turnCount: payload.turnCount,
-    },
-    { status: 202 },
-  );
-}
+  return {
+    spawnedConversationId: conv.id,
+    turnCount: payload.turnCount,
+  };
+});

@@ -2,20 +2,21 @@ import { asc, sql } from "drizzle-orm";
 import { deleteTrigger, deleteTriggersFor, trigger } from "@plugins/infra/plugins/events/server";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { db } from "@plugins/database/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import {
+  subscribeEventsTest,
+  emitEventsTest,
+  directEnqueueEventsTest,
+  getEventsTestLog,
+  resetEventsTest,
+  deleteEventsTestTrigger,
+  deleteEventsTestTargeting,
+  listEventsTestTriggers,
+} from "../../shared/endpoints";
 import { logEntries, logPing, resetLog } from "./log-job";
 import { _pingedTriggers, pinged } from "./tables";
 
-interface SubscribeBody {
-  userId?: string;
-  label: string;
-  oneShot?: boolean;
-}
-
-export async function handleSubscribe(req: Request): Promise<Response> {
-  const body = (await req.json()) as SubscribeBody;
-  if (typeof body.label !== "string") {
-    return Response.json({ error: "label (string) required" }, { status: 400 });
-  }
+export const handleSubscribe = implement(subscribeEventsTest, async ({ body }) => {
   const source = body.userId ? pinged.where({ userId: body.userId }) : pinged;
   const id = await trigger({
     on: source,
@@ -23,55 +24,39 @@ export async function handleSubscribe(req: Request): Promise<Response> {
     with: { label: body.label },
     oneShot: body.oneShot ?? true,
   });
-  return Response.json({ id });
-}
+  return { id };
+});
 
-interface EmitBody {
-  userId: string;
-  message?: string;
-}
-
-export async function handleEmit(req: Request): Promise<Response> {
-  const body = (await req.json()) as EmitBody;
-  if (typeof body.userId !== "string") {
-    return Response.json({ error: "userId (string) required" }, { status: 400 });
-  }
+export const handleEmit = implement(emitEventsTest, async ({ body }) => {
   await pinged.emit({
     userId: body.userId,
     message: body.message ?? "hello",
   });
-  return Response.json({ ok: true });
-}
-
-interface DirectEnqueueBody {
-  label: string;
-}
+  return { ok: true };
+});
 
 // Exercises the Layer-1 `.enqueue()` path: no trigger row is involved, the
 // job runs straight from graphile_worker.jobs. The handler logs `label` from
 // input and defaults the event-only fields (userId/message) to
 // "direct"/"direct-enqueued", since direct enqueue has no event source.
-export async function handleDirectEnqueue(req: Request): Promise<Response> {
-  const body = (await req.json()) as DirectEnqueueBody;
-  if (typeof body.label !== "string") {
-    return Response.json({ error: "label (string) required" }, { status: 400 });
-  }
+export const handleDirectEnqueue = implement(directEnqueueEventsTest, async ({ body }) => {
   const { jobId } = await logPing.enqueue({ label: body.label });
-  return Response.json({ jobId });
-}
+  return { jobId };
+});
 
-export function handleLog(): Response {
-  return Response.json({ entries: logEntries });
-}
+export const handleLog = implement(getEventsTestLog, () => {
+  return { entries: logEntries };
+});
 
-export function handleReset(): Response {
+export const handleReset = implement(resetEventsTest, () => {
   resetLog();
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});
 
 // Poll graphile_worker.jobs until no jobs for the shared jobs.run task are
 // pending. Lets e2e tests synchronize between emit()/enqueue() (which now
 // return once jobs are durable, not once handlers finish) and /log.
+// NOTE: Not using implement() because retryUntil returns a raw Response.
 export async function handleWaitIdle(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const timeoutMs = Number(url.searchParams.get("timeoutMs") ?? 2000);
@@ -91,34 +76,23 @@ export async function handleWaitIdle(req: Request): Promise<Response> {
   );
 }
 
-export async function handleDeleteTrigger(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const id = params.id;
-  if (!id) return Response.json({ error: "id required" }, { status: 400 });
+export const handleDeleteTrigger = implement(deleteEventsTestTrigger, async ({ params }) => {
+  const { id } = params;
+  if (!id) throw new HttpError(400, "id required");
   await deleteTrigger(id);
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});
 
-interface DeleteTargetingBody {
-  label: string;
-}
-
-export async function handleDeleteTargeting(req: Request): Promise<Response> {
-  const body = (await req.json()) as DeleteTargetingBody;
-  if (typeof body.label !== "string") {
-    return Response.json({ error: "label (string) required" }, { status: 400 });
-  }
+export const handleDeleteTargeting = implement(deleteEventsTestTargeting, async ({ body }) => {
   await deleteTriggersFor(logPing, { label: body.label });
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});
 
-export async function handleListTriggers(): Promise<Response> {
+export const handleListTriggers = implement(listEventsTestTriggers, async () => {
   const rows = await db
     .select()
     .from(_pingedTriggers)
     // biome-ignore lint/suspicious/noExplicitAny: dynamic column access on base-columns.
     .orderBy(asc((_pingedTriggers as any).createdAt));
-  return Response.json({ rows });
-}
+  return { rows };
+});

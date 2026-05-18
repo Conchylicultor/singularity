@@ -1,17 +1,14 @@
 import { join } from "path";
 import { getConversation } from "@plugins/tasks-core/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { getAllowFiles } from "../../shared/endpoints";
 
 const ALLOW_FILES = [".allow-main", ".allow-migrations", ".allow-postgres"] as const;
 
-export async function handleGetAllowFiles(
-  _req: Request,
-  { id }: Record<string, string>,
-): Promise<Response> {
-  if (!id) return new Response("Missing id", { status: 400 });
-
-  const conversation = await getConversation(id);
+export const handleGetAllowFiles = implement(getAllowFiles, async ({ params }) => {
+  const conversation = await getConversation(params.id);
   if (!conversation?.worktreePath) {
-    return Response.json({ allowFiles: [] });
+    return { allowFiles: [] };
   }
 
   const results = await Promise.all(
@@ -21,7 +18,7 @@ export async function handleGetAllowFiles(
     })),
   );
 
-  return Response.json({
+  return {
     allowFiles: results.filter((r) => r.exists).map((r) => r.name),
-  });
-}
+  };
+});

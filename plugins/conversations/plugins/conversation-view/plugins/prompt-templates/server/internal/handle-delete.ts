@@ -1,17 +1,13 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { deletePromptTemplate } from "../../shared/endpoints";
 import { promptTemplatesTable } from "./tables";
 import { promptTemplatesServerResource } from "./resources";
 
-export async function handleDelete(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const { id } = params;
-  if (!id) return new Response("Missing id", { status: 400 });
-
-  await db.delete(promptTemplatesTable).where(eq(promptTemplatesTable.id, id));
+export const handleDelete = implement(deletePromptTemplate, async ({ params }) => {
+  await db.delete(promptTemplatesTable).where(eq(promptTemplatesTable.id, params.id));
 
   promptTemplatesServerResource.notify();
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});

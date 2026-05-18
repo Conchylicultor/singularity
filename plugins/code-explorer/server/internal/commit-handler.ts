@@ -1,27 +1,26 @@
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { getCommitFiles } from "../../shared/endpoints";
 import { getRangeFiles, resolveParentSha } from "./get-push-files";
 import { resolveWorktreePath } from "./resolve-worktree-path";
 
-export async function handleCommitFiles(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const worktree = params.worktree;
-  if (!worktree) return new Response("Missing worktree", { status: 400 });
+export const handleCommitFiles = implement(getCommitFiles, async ({ params, req }) => {
+  const { worktree } = params;
+  if (!worktree) throw new HttpError(400, "Missing worktree");
 
   const url = new URL(req.url);
   const sha = url.searchParams.get("sha");
-  if (!sha) return new Response("Missing sha", { status: 400 });
+  if (!sha) throw new HttpError(400, "Missing sha");
 
   const wtPath = await resolveWorktreePath(worktree);
-  if (!wtPath) return new Response("Not found", { status: 404 });
+  if (!wtPath) throw new HttpError(404, "Not found");
 
   const baseSha = await resolveParentSha(wtPath, sha);
   if (!baseSha) {
-    return Response.json({ files: [], baseSha: sha, headSha: sha });
+    return { files: [], baseSha: sha, headSha: sha };
   }
 
   const files = await getRangeFiles(wtPath, baseSha, sha);
-  if (!files) return new Response("git diff failed", { status: 500 });
+  if (!files) throw new HttpError(500, "git diff failed");
 
-  return Response.json({ files, baseSha, headSha: sha });
-}
+  return { files, baseSha, headSha: sha };
+});

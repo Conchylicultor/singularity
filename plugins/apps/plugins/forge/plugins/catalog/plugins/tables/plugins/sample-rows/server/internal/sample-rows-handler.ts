@@ -1,18 +1,16 @@
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { getTableSampleRows } from "../../shared/endpoints";
 
-export async function handleGetSampleRows(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const tableName = params.tableName;
-  if (!tableName) return new Response("Missing tableName", { status: 400 });
+export const handleGetSampleRows = implement(getTableSampleRows, async ({ params }) => {
+  const { tableName } = params;
 
   const exists = await db.execute<{ table_name: string }>(
     sql`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ${tableName}`,
   );
   if (exists.rows.length === 0) {
-    return new Response("Table not found", { status: 404 });
+    throw new HttpError(404, "Table not found");
   }
 
   const quotedTable = `"${tableName.replace(/"/g, '""')}"`;
@@ -23,5 +21,5 @@ export async function handleGetSampleRows(
   const columns =
     result.rows.length > 0 ? Object.keys(result.rows[0]!) : [];
 
-  return Response.json({ columns, rows: result.rows });
-}
+  return { columns, rows: result.rows };
+});

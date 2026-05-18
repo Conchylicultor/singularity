@@ -1,16 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { getSlot, patchSlot, deleteContribution } from "../../shared/endpoints";
 import { _reorderPrefs } from "./tables";
 import { reorderPrefsResource } from "./resource";
 
-export async function handleGetSlot(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const slotId = params.slotId;
-  if (!slotId) {
-    return Response.json({ error: "slotId required" }, { status: 400 });
-  }
+export const handleGetSlot = implement(getSlot, async ({ params }) => {
   const rows = await db
     .select({
       contributionId: _reorderPrefs.contributionId,
@@ -18,51 +13,29 @@ export async function handleGetSlot(
       hidden: _reorderPrefs.hidden,
     })
     .from(_reorderPrefs)
-    .where(eq(_reorderPrefs.slotId, slotId));
+    .where(eq(_reorderPrefs.slotId, params.slotId));
   const out: Record<string, { rank?: string; hidden: boolean }> = {};
   for (const r of rows)
     out[r.contributionId] = {
       rank: r.rank as string,
       hidden: r.hidden,
     };
-  return Response.json(out);
-}
+  return out;
+});
 
-export async function handlePatchSlot(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const slotId = params.slotId;
-  if (!slotId) {
-    return Response.json({ error: "slotId required" }, { status: 400 });
-  }
-  const body = (await req.json().catch(() => null)) as
-    | { contributionId?: string; rank?: string; hidden?: boolean }
-    | null;
-  if (
-    !body ||
-    typeof body.contributionId !== "string" ||
-    body.contributionId.length === 0
-  ) {
-    return Response.json(
-      { error: "body.contributionId must be a non-empty string" },
-      { status: 400 },
-    );
-  }
+const SPACER_PREFIX = "__spacer__";
 
+export const handlePatchSlot = implement(patchSlot, async ({ params, body }) => {
   const hasRank = typeof body.rank === "string" && body.rank.length > 0;
   const hasHidden = typeof body.hidden === "boolean";
   if (!hasRank && !hasHidden) {
-    return Response.json(
-      { error: "body must include rank (string) and/or hidden (boolean)" },
-      { status: 400 },
-    );
+    throw new HttpError(400, "body must include rank (string) and/or hidden (boolean)");
   }
 
   if (hasRank && !hasHidden) {
     await db
       .insert(_reorderPrefs)
-      .values({ slotId, contributionId: body.contributionId, rank: body.rank })
+      .values({ slotId: params.slotId, contributionId: body.contributionId, rank: body.rank })
       .onConflictDoUpdate({
         target: [_reorderPrefs.slotId, _reorderPrefs.contributionId],
         set: { rank: body.rank },
@@ -71,7 +44,7 @@ export async function handlePatchSlot(
     await db
       .insert(_reorderPrefs)
       .values({
-        slotId,
+        slotId: params.slotId,
         contributionId: body.contributionId,
         hidden: body.hidden,
       })
@@ -83,7 +56,7 @@ export async function handlePatchSlot(
     await db
       .insert(_reorderPrefs)
       .values({
-        slotId,
+        slotId: params.slotId,
         contributionId: body.contributionId,
         rank: body.rank,
         hidden: body.hidden,
@@ -94,38 +67,25 @@ export async function handlePatchSlot(
       });
   }
 
-  reorderPrefsResource.notify({ slotId });
-  return Response.json({ ok: true });
-}
+  reorderPrefsResource.notify({ slotId: params.slotId });
+  return { ok: true };
+});
 
-const SPACER_PREFIX = "__spacer__";
-
-export async function handleDeleteContribution(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const slotId = params.slotId;
-  const contributionId = params.contributionId;
-  if (!slotId || !contributionId) {
-    return Response.json(
-      { error: "slotId and contributionId required" },
-      { status: 400 },
-    );
-  }
-  if (!contributionId.startsWith(SPACER_PREFIX)) {
-    return Response.json(
-      { error: "Only spacer rows may be deleted" },
-      { status: 400 },
-    );
-  }
-  await db
-    .delete(_reorderPrefs)
-    .where(
-      and(
-        eq(_reorderPrefs.slotId, slotId),
-        eq(_reorderPrefs.contributionId, contributionId),
-      ),
-    );
-  reorderPrefsResource.notify({ slotId });
-  return Response.json({ ok: true });
-}
+export const handleDeleteContribution = implement(
+  deleteContribution,
+  async ({ params }) => {
+    if (!params.contributionId.startsWith(SPACER_PREFIX)) {
+      throw new HttpError(400, "Only spacer rows may be deleted");
+    }
+    await db
+      .delete(_reorderPrefs)
+      .where(
+        and(
+          eq(_reorderPrefs.slotId, params.slotId),
+          eq(_reorderPrefs.contributionId, params.contributionId),
+        ),
+      );
+    reorderPrefsResource.notify({ slotId: params.slotId });
+    return { ok: true };
+  },
+);

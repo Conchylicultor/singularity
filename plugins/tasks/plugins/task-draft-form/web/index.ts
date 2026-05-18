@@ -11,15 +11,6 @@ export type {
 } from "./components/task-draft-form";
 export type { ChainModel } from "./components/model-chip";
 
-export type {
-  TaskChainCard,
-  TaskChainLaunch,
-  TaskChainRelate as TaskChainRelateSpec,
-  TaskChainRelateMode,
-  TaskChainSubmitBody,
-  TaskChainSubmitResponse,
-  TaskChainTarget,
-} from "../core/types";
 
 export {
   setActiveRelateContext,

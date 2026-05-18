@@ -7,6 +7,11 @@ import {
   handleGetStaleness,
   handleGetTasksForReview,
 } from "./internal/routes";
+import {
+  getPluginHealthReviews,
+  getPluginStaleness,
+  getPluginHealthTasks,
+} from "../core/endpoints";
 
 export { healthReviewExt } from "./internal/tables";
 export { pluginHealthReviewsResource } from "./internal/resource";
@@ -17,9 +22,9 @@ export default {
   description: "Per-plugin health review tracking.",
   contributions: [Resource.Declare(pluginHealthReviewsResource)],
   httpRoutes: {
-    "GET /api/plugin-health/reviews": handleGetReviews,
-    "GET /api/plugin-health/staleness/:pluginId": handleGetStaleness,
-    "GET /api/plugin-health/tasks/:reviewId": handleGetTasksForReview,
+    [getPluginHealthReviews.route]: handleGetReviews,
+    [getPluginStaleness.route]: handleGetStaleness,
+    [getPluginHealthTasks.route]: handleGetTasksForReview,
   },
   register: [proposeTaskTool],
 } satisfies ServerPluginDefinition;

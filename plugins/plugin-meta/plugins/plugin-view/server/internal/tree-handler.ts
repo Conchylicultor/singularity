@@ -5,6 +5,8 @@ import {
   type BarrelExport as TreeBarrelExport,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { getPluginTree } from "../../core/endpoints";
 import type { BarrelExport, PluginNode, PluginTreePayload } from "../../core/types";
 
 function categorize(name: string, kind: "type" | "value"): "type" | "hook" | "component" | "value" {
@@ -113,7 +115,7 @@ function tally(
   for (const child of node.children) tally(child, totals);
 }
 
-export function handleTree(): Response {
+export const handleTree = implement(getPluginTree, () => {
   const tree = buildPluginTree(PLUGINS_DIR);
   const symbolConsumers = buildSymbolConsumers(tree);
   const plugins = tree.roots.map((r) => toApiNode(r, symbolConsumers));
@@ -122,5 +124,5 @@ export function handleTree(): Response {
   for (const p of plugins) tally(p, totals);
 
   const payload: PluginTreePayload = { plugins, totals };
-  return Response.json(payload);
-}
+  return payload;
+});

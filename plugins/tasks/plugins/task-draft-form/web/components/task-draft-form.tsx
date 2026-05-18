@@ -17,7 +17,7 @@ import { TaskDraftCard, type ParentTaskPreview } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";
 import type { ChildEntry } from "./insert-before-children";
 import type { ChainModel } from "./model-chip";
-import type { TaskChainRelateMode } from "../../core/types";
+import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
 export interface CardDraft {
   localId: string;

@@ -12,6 +12,7 @@ import {
   stopStuckLockSweeper,
 } from "./internal/stuck-lock-sweeper";
 import { startWorker, stopWorker } from "./internal/worker";
+import { listJobs, retryJob, cancelJob } from "../core/endpoints";
 
 export { defineJob, UNSAFE_getRegisteredJob, getAllRegisteredJobNames, DEFAULT_MAX_ATTEMPTS } from "./internal/registry";
 export { sweepOnce as UNSAFE_sweepStuckLocks } from "./internal/stuck-lock-sweeper";
@@ -37,9 +38,9 @@ export default {
     "Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.",
   loadBearing: true,
   httpRoutes: {
-    "GET /api/jobs": handleListJobs,
-    "POST /api/jobs/:id/retry": handleRetryJob,
-    "DELETE /api/jobs/:id": handleCancelJob,
+    [listJobs.route]: handleListJobs,
+    [retryJob.route]: handleRetryJob,
+    [cancelJob.route]: handleCancelJob,
   },
   register: [jobsResumeJob],
   contributions: [Resource.Declare(jobsListResource)],

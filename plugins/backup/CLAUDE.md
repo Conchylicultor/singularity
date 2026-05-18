@@ -13,14 +13,14 @@
   - Values: `backupPane`
 - Exports (server):
   - Values: `_backupRuns`, `BackupTarget`
+- Exports (shared):
+  - Values: `listBackupRuns`, `runBackup`
 - Contributes:
   - `Pane.Register` "backup"
   - `DebugApp.Sidebar` "Backup" → `component`
 - Server:
   - Register: `defineJob('backup.run')`
   - Uses: `config.Config`, `config.readConfig`, `database.db`
-  - `POST /api/backup/run`
-  - `GET /api/backup/runs`
 - Imported by: `google-drive`, `local`
 - Sub-plugins:
   - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.

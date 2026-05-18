@@ -18,6 +18,14 @@ import {
   handleDeleteColor,
 } from "./internal/colors-routes";
 import { backfillCategoryColorsSvgNodes } from "./internal/backfill-svg";
+import {
+  classifyConversation,
+  setConversationCategory,
+  clearConversationCategory,
+  getCategoryColors,
+  setCategoryColor,
+  deleteCategoryColor,
+} from "../shared/endpoints";
 
 export { conversationCategoryConfig } from "../shared/config";
 export { conversationCategory } from "./internal/tables";
@@ -38,12 +46,12 @@ export default {
     Trigger({ on: conversationTurnCompleted, do: classifyConversationJob, with: {}, oneShot: false }),
   ],
   httpRoutes: {
-    "POST /api/conversation-category/:conversationId/classify": handleClassify,
-    "POST /api/conversation-category/:conversationId": handleSetCategory,
-    "DELETE /api/conversation-category/:conversationId": handleClearCategory,
-    "GET /api/conversation-category/colors": handleGetColors,
-    "POST /api/conversation-category/colors": handleSetColor,
-    "DELETE /api/conversation-category/colors/:category": handleDeleteColor,
+    [classifyConversation.route]: handleClassify,
+    [setConversationCategory.route]: handleSetCategory,
+    [clearConversationCategory.route]: handleClearCategory,
+    [getCategoryColors.route]: handleGetColors,
+    [setCategoryColor.route]: handleSetColor,
+    [deleteCategoryColor.route]: handleDeleteColor,
   },
   onReady: async () => {
     await backfillCategoryColorsSvgNodes();

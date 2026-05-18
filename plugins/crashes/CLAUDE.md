@@ -18,7 +18,6 @@
 - Server:
   - Uses: `database.db`, `notifications.recordNotification`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
   - Resources: `crashes` (push)
-  - `POST /api/crashes`
 - Imported by: `conversations`, `runtime-tmux`
 - Sub-plugins:
   - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.

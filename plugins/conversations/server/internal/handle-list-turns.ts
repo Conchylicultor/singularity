@@ -1,23 +1,18 @@
 import { getConversationClaudeSessionId } from "@plugins/tasks-core/server";
 import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { listConversationTurns } from "../../core/endpoints";
 import { readTurns } from "./claude-transcript";
 
-export async function handleListTurns(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const id = params.id;
-  if (!id) return new Response("Missing id", { status: 400 });
-
+export const handleListTurns = implement(listConversationTurns, async ({ params, query }) => {
   // undefined = row not found; null = row exists but no session yet
-  const claudeSessionId = await getConversationClaudeSessionId(id);
-  if (claudeSessionId === undefined) return new Response("Not found", { status: 404 });
-  if (!claudeSessionId) return Response.json({ turns: [] });
+  const claudeSessionId = await getConversationClaudeSessionId(params.id);
+  if (claudeSessionId === undefined) throw new HttpError(404, "Not found");
+  if (!claudeSessionId) return { turns: [] };
 
   const path = await findTranscriptPath(claudeSessionId);
-  if (!path) return Response.json({ turns: [] });
+  if (!path) return { turns: [] };
 
-  const since = new URL(req.url).searchParams.get("since") ?? undefined;
-  const turns = await readTurns(path, since);
-  return Response.json({ turns });
-}
+  const turns = await readTurns(path, query.since);
+  return { turns };
+});

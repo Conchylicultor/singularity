@@ -1,39 +1,29 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import {
+  getCategoryColors,
+  setCategoryColor,
+  deleteCategoryColor,
+} from "../../shared/endpoints";
 import { _conversationCategoryColors } from "./tables-colors";
 import { categoryColorsResource } from "./colors-resource";
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
-}
-
-export async function handleGetColors(): Promise<Response> {
+export const handleGetColors = implement(getCategoryColors, async () => {
   const rows = await db.select().from(_conversationCategoryColors);
-  return json(
-    Object.fromEntries(
-      rows.map((r) => [r.category, {
-        colorKey: r.colorKey ?? null,
-        iconKey: r.iconKey ?? null,
-        iconSvgNodes: r.iconSvgNodes ?? null,
-      }]),
-    ),
+  return Object.fromEntries(
+    rows.map((r) => [r.category, {
+      colorKey: r.colorKey ?? null,
+      iconKey: r.iconKey ?? null,
+      iconSvgNodes: r.iconSvgNodes ?? null,
+    }]),
   );
-}
+});
 
-export async function handleSetColor(req: Request): Promise<Response> {
-  let body: { category?: string; colorKey?: string | null; iconKey?: string | null; iconSvgNodes?: string | null };
-  try {
-    body = (await req.json()) as typeof body;
-  } catch {
-    return json({ error: "invalid-json" }, 400);
-  }
+export const handleSetColor = implement(setCategoryColor, async ({ body }) => {
   const { category, colorKey, iconKey, iconSvgNodes } = body;
-  if (!category) return json({ error: "missing-category" }, 400);
   if (colorKey === undefined && iconKey === undefined) {
-    return json({ error: "missing-fields" }, 400);
+    throw new HttpError(400, "missing-fields");
   }
 
   if (colorKey === null && iconKey === null) {
@@ -41,7 +31,7 @@ export async function handleSetColor(req: Request): Promise<Response> {
       .delete(_conversationCategoryColors)
       .where(eq(_conversationCategoryColors.category, category));
     categoryColorsResource.notify();
-    return json({ ok: true });
+    return { ok: true };
   }
 
   await db
@@ -62,19 +52,16 @@ export async function handleSetColor(req: Request): Promise<Response> {
       },
     });
   categoryColorsResource.notify();
-  return json({ ok: true });
-}
+  return { ok: true };
+});
 
-export async function handleDeleteColor(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
+export const handleDeleteColor = implement(deleteCategoryColor, async ({ params }) => {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   const category = decodeURIComponent(params.category ?? "");
-  if (!category) return json({ error: "missing-category" }, 400);
+  if (!category) throw new HttpError(400, "missing-category");
   await db
     .delete(_conversationCategoryColors)
     .where(eq(_conversationCategoryColors.category, category));
   categoryColorsResource.notify();
-  return json({ ok: true });
-}
+  return { ok: true };
+});

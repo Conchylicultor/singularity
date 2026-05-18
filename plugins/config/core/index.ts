@@ -17,3 +17,11 @@ export {
   normalizeStringList,
   validateKind,
 } from "./internal/lib";
+export {
+  getConfig,
+  getConfigSpecs,
+  patchConfig,
+  deleteConfig,
+  patchConfigBodySchema,
+} from "./endpoints";
+export type { PatchConfigBody } from "./endpoints";

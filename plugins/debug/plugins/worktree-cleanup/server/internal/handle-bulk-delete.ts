@@ -2,6 +2,8 @@ import { stat } from "node:fs/promises";
 import { getAttempt } from "@plugins/tasks-core/server";
 import { dropDatabase } from "@plugins/database/plugins/admin/server";
 import { removeWorktree } from "@plugins/infra/plugins/worktree/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { bulkDeleteWorktrees } from "../../shared/endpoints";
 
 const CONCURRENCY = 4;
 
@@ -30,19 +32,8 @@ async function deleteOne(id: string): Promise<{ id: string; ok: true } | { id: s
   return { id, ok: true };
 }
 
-export async function handleBulkDelete(_req: Request): Promise<Response> {
-  let body: unknown;
-  try {
-    body = await _req.json();
-  } catch {
-    return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
-  }
-
-  if (!Array.isArray((body as { ids?: unknown }).ids)) {
-    return Response.json({ ok: false, error: "ids must be an array" }, { status: 400 });
-  }
-
-  const ids = (body as { ids: unknown[] }).ids.filter((x): x is string => typeof x === "string");
+export const handleBulkDelete = implement(bulkDeleteWorktrees, async ({ body }) => {
+  const { ids } = body;
   const results: ({ id: string; ok: true } | { id: string; ok: false; error: string })[] = [];
 
   // Process with bounded concurrency to avoid overwhelming git locks and Postgres
@@ -57,5 +48,5 @@ export async function handleBulkDelete(_req: Request): Promise<Response> {
   const succeeded = results.filter((r) => r.ok).length;
   const failed = results.filter((r) => !r.ok);
 
-  return Response.json({ ok: true, succeeded, failed });
-}
+  return { ok: true, succeeded, failed };
+});

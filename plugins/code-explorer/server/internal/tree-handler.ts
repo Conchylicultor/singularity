@@ -1,16 +1,14 @@
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { GIT } from "@plugins/infra/plugins/paths/server";
+import { getCodeTree } from "../../shared/endpoints";
 import { resolveWorktreePath } from "./resolve-worktree-path";
 
-import { GIT } from "@plugins/infra/plugins/paths/server";
-
-export async function handleTree(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const worktree = params.worktree;
-  if (!worktree) return new Response("Missing worktree", { status: 400 });
+export const handleTree = implement(getCodeTree, async ({ params }) => {
+  const { worktree } = params;
+  if (!worktree) throw new HttpError(400, "Missing worktree");
 
   const wtPath = await resolveWorktreePath(worktree);
-  if (!wtPath) return new Response("Not found", { status: 404 });
+  if (!wtPath) throw new HttpError(404, "Not found");
 
   const proc = Bun.spawn(
     [GIT, "--no-optional-locks", "-C", wtPath, "ls-files", "--cached", "--others", "--exclude-standard"],
@@ -21,7 +19,7 @@ export async function handleTree(
     proc.exited,
   ]);
   if (code !== 0) {
-    return new Response("git ls-files failed", { status: 500 });
+    throw new HttpError(500, "git ls-files failed");
   }
 
   const files = out
@@ -29,5 +27,5 @@ export async function handleTree(
     .filter((line) => line.length > 0)
     .sort();
 
-  return Response.json({ files });
-}
+  return { files };
+});

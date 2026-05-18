@@ -1,5 +1,12 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import {
+  getConfig,
+  getConfigSpecs,
+  patchConfig,
+  deleteConfig,
+} from "../../core/endpoints";
 import { config } from "./tables";
 import { getRegistry, getField } from "./registry";
 import { deleteValue, getAll, setValue } from "./read-cache";
@@ -11,17 +18,10 @@ import {
 import { deleteSecret, setSecret } from "@plugins/infra/plugins/secrets/server";
 import { fullKey, validateKind, normalizeStringList } from "@plugins/config/core";
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
-}
-
 /** GET /api/config/specs — returns the static spec list for the Settings UI. */
-export async function handleSpecs(): Promise<Response> {
+export const handleSpecs = implement(getConfigSpecs, async () => {
   const registry = getRegistry();
-  return json({
+  return {
     plugins: registry.map((p) => ({
       pluginId: p.pluginId,
       pluginName: p.pluginName,
@@ -35,42 +35,35 @@ export async function handleSpecs(): Promise<Response> {
         default: f.default,
       })),
     })),
-  });
-}
+  };
+});
 
 /** PATCH /api/config — body: { key: string, value: unknown }. */
-export async function handlePatch(req: Request): Promise<Response> {
-  let body: { key?: string; value?: unknown };
-  try {
-    body = (await req.json()) as { key?: string; value?: unknown };
-  } catch {
-    return json({ error: "invalid-json" }, 400);
-  }
-  const key = body.key;
-  if (!key) return json({ error: "missing-key" }, 400);
+export const handlePatch = implement(patchConfig, async ({ body }) => {
+  const { key, value: rawValue } = body;
   const field = getField(key);
-  if (!field) return json({ error: "unknown-key", key }, 404);
+  if (!field) throw new HttpError(404, JSON.stringify({ error: "unknown-key", key }));
 
   if (field.kind === "secret") {
-    if (typeof body.value !== "string") {
-      return json({ error: "invalid-value", key, expected: "string" }, 400);
+    if (typeof rawValue !== "string") {
+      throw new HttpError(400, JSON.stringify({ error: "invalid-value", key, expected: "string" }));
     }
     const ref = { namespace: CONFIG_SECRETS_NAMESPACE, key };
-    if (body.value === "") {
+    if (rawValue === "") {
       await deleteSecret(ref);
     } else {
-      await setSecret(ref, body.value);
+      await setSecret(ref, rawValue);
     }
     configSecretsResource.notify();
-    return json({ ok: true, key, set: body.value !== "" });
+    return { ok: true, key, set: rawValue !== "" };
   }
 
-  let value = body.value;
+  let value = rawValue;
   if (field.kind === "string-list" && Array.isArray(value)) {
     value = normalizeStringList(value as string[]);
   }
   if (!validateKind(field.kind, value)) {
-    return json({ error: "invalid-value", key, expected: field.kind }, 400);
+    throw new HttpError(400, JSON.stringify({ error: "invalid-value", key, expected: field.kind }));
   }
 
   await db
@@ -83,30 +76,26 @@ export async function handlePatch(req: Request): Promise<Response> {
 
   setValue(key, value);
   configResource.notify();
-  return json({ ok: true, key, value });
-}
+  return { ok: true, key, value };
+});
 
 /** DELETE /api/config/:key — resets the field to its default (or clears the secret). */
-export async function handleDelete(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
+export const handleDelete = implement(deleteConfig, async ({ params }) => {
   const key = params.key;
-  if (!key) return json({ error: "missing-key" }, 400);
   const field = getField(key);
   if (field?.kind === "secret") {
     await deleteSecret({ namespace: CONFIG_SECRETS_NAMESPACE, key });
     configSecretsResource.notify();
-    return json({ ok: true, key });
+    return { ok: true, key };
   }
   await db.delete(config).where(eq(config.key, key));
   deleteValue(key);
   configResource.notify();
-  return json({ ok: true, key });
-}
+  return { ok: true, key };
+});
 
 /** GET /api/config — values + specs in one payload (convenience for non-WS clients). */
-export async function handleGet(): Promise<Response> {
+export const handleGet = implement(getConfig, async () => {
   const map = await getAll();
-  return json({ values: Object.fromEntries(map) });
-}
+  return { values: Object.fromEntries(map) };
+});

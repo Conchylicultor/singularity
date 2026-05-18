@@ -2,6 +2,8 @@ import { stat } from "node:fs/promises";
 import { listAttempts, listTasks } from "@plugins/tasks-core/server";
 import { databaseExists } from "@plugins/database/plugins/admin/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { listWorktrees } from "../../shared/endpoints";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";
 const CONCURRENCY = 50;
@@ -81,7 +83,7 @@ async function pMap<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>
   return results;
 }
 
-export async function handleList(): Promise<Response> {
+export const handleList = implement(listWorktrees, async () => {
   try {
     await ensureMainWorktreeRoot();
 
@@ -129,8 +131,8 @@ export async function handleList(): Promise<Response> {
 
     entries.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-    return Response.json({ ok: true, entries });
+    return { ok: true, entries };
   } catch (e) {
-    return Response.json({ ok: false, error: String(e) }, { status: 500 });
+    throw new HttpError(500, String(e));
   }
-}
+});

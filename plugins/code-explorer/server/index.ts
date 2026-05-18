@@ -5,6 +5,7 @@ import { handleFileDiff } from "./internal/file-diff-handler";
 import { handleImageContent } from "./internal/image-handler";
 import { handlePushFiles } from "./internal/push-handler";
 import { handleTree } from "./internal/tree-handler";
+import { getCodeTree, getFileContent, getFileDiff, getImageContent, getPushFiles, getCommitFiles } from "../shared/endpoints";
 
 export { resolveWorktreePath } from "./internal/resolve-worktree-path";
 
@@ -14,11 +15,11 @@ export default {
   description:
     "Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.",
   httpRoutes: {
-    "GET /api/code/:worktree/tree": handleTree,
-    "GET /api/code/:worktree/file": handleFileContent,
-    "GET /api/code/:worktree/diff": handleFileDiff,
-    "GET /api/code/:worktree/image": handleImageContent,
-    "GET /api/code/:worktree/push": handlePushFiles,
-    "GET /api/code/:worktree/commit": handleCommitFiles,
+    [getCodeTree.route]: handleTree,
+    [getFileContent.route]: handleFileContent,
+    [getFileDiff.route]: handleFileDiff,
+    [getImageContent.route]: handleImageContent,
+    [getPushFiles.route]: handlePushFiles,
+    [getCommitFiles.route]: handleCommitFiles,
   },
 } satisfies ServerPluginDefinition;

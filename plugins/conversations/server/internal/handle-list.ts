@@ -1,6 +1,7 @@
 import { listConversationsForDisplay } from "@plugins/tasks-core/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { listConversations } from "../../core/endpoints";
 
-export async function handleList(_req: Request): Promise<Response> {
-  const rows = await listConversationsForDisplay();
-  return Response.json(rows);
-}
+export const handleList = implement(listConversations, async () => {
+  return listConversationsForDisplay();
+});

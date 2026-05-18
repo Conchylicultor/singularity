@@ -8,26 +8,12 @@ import {
   scheduleTaskTitleUpdate,
   synthesiseTitleFallback,
 } from "@plugins/tasks/plugins/task-title/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { createTask as createTaskEndpoint } from "../../core/endpoints";
 import { armTaskAutoStart } from "./arm-auto-start";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 
-interface AutoStartInput {
-  model?: "opus" | "sonnet";
-}
-
-interface CreateBody {
-  parentId?: string | null;
-  title?: string;
-  description?: string | null;
-  author?: string;
-  rank?: string;
-  dependencies?: string[];
-  autoStart?: AutoStartInput;
-  attachmentIds?: string[];
-}
-
-export async function handleCreate(req: Request): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as CreateBody;
+export const handleCreate = implement(createTaskEndpoint, async ({ body }) => {
   const description = body.description?.trim() || null;
   const explicitTitle = body.title?.trim();
   // Use the synthesised fallback as the initial title so creation is instant;
@@ -66,7 +52,7 @@ export async function handleCreate(req: Request): Promise<Response> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Bad request";
       const status = msg.includes("not found") ? 404 : 400;
-      return new Response(msg, { status });
+      throw new HttpError(status, msg);
     }
   }
 
@@ -79,13 +65,13 @@ export async function handleCreate(req: Request): Promise<Response> {
     // Re-fetch so the response reflects the autoStart columns and any
     // dependencies we just wrote.
     const fresh = await getTask(row.id);
-    return Response.json(fresh ?? row);
+    return fresh ?? row;
   }
 
   if (dependencies.length > 0) {
     const fresh = await getTask(row.id);
-    return Response.json(fresh ?? row);
+    return fresh ?? row;
   }
 
-  return Response.json(row);
-}
+  return row;
+});

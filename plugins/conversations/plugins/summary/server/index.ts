@@ -3,6 +3,7 @@ import { Resource } from "@server/resources";
 import { conversationSummariesResource } from "./internal/resources";
 import { handleGenerate } from "./internal/handle-generate";
 import { submitConversationSummaryTool } from "./internal/mcp-tools";
+import { generateConversationSummary } from "../shared/endpoints";
 
 export { _conversationSummaries } from "./internal/tables";
 export { conversationSummariesResource } from "./internal/resources";
@@ -14,7 +15,7 @@ export default {
     "On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.",
   contributions: [Resource.Declare(conversationSummariesResource)],
   httpRoutes: {
-    "POST /api/conversation-summary/:conversationId/generate": handleGenerate,
+    [generateConversationSummary.route]: handleGenerate,
   },
   register: [submitConversationSummaryTool],
 } satisfies ServerPluginDefinition;

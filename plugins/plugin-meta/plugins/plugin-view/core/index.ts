@@ -1,1 +1,2 @@
 export type { BarrelExport, SlotInfo, RouteInfo, ResourceInfo, ContributionInfo, CommandInfo, TableInfo, EntityExtensionInfo, EntityExtensionRef, PublicApi, PluginNode, PluginTreePayload } from "./types";
+export { getPluginTree } from "./endpoints";

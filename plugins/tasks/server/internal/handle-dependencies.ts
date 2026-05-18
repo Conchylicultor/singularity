@@ -1,35 +1,26 @@
-import { addTaskDependency, removeTaskDependency } from "@plugins/tasks-core/server";
+import {
+  addTaskDependency as addTaskDependencyDb,
+  removeTaskDependency,
+} from "@plugins/tasks-core/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { addTaskDependency, removeTaskDependency as removeTaskDependencyEndpoint } from "../../core/endpoints";
 
-export async function handleAddDependency(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const id = params.id;
-  if (!id) return new Response("Missing id", { status: 400 });
-  const body = (await req.json().catch(() => ({}))) as {
-    dependsOnTaskId?: unknown;
-  };
-  if (typeof body.dependsOnTaskId !== "string" || body.dependsOnTaskId.length === 0) {
-    return new Response("Missing dependsOnTaskId", { status: 400 });
-  }
+export const handleAddDependency = implement(addTaskDependency, async ({ params, body }) => {
   try {
-    await addTaskDependency(id, body.dependsOnTaskId);
+    await addTaskDependencyDb(params.id, body.dependsOnTaskId);
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Bad request";
     const status = msg.includes("not found") ? 404 : 400;
-    return new Response(msg, { status });
+    throw new HttpError(status, msg);
   }
-  return new Response(null, { status: 204 });
-}
+  // return undefined → implement() sends 204
+});
 
-export async function handleRemoveDependency(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const id = params.id;
-  const depId = params.depId;
-  if (!id || !depId) return new Response("Missing id", { status: 400 });
-  const found = await removeTaskDependency(id, depId);
-  if (!found) return new Response("Not found", { status: 404 });
-  return new Response(null, { status: 204 });
-}
+export const handleRemoveDependency = implement(
+  removeTaskDependencyEndpoint,
+  async ({ params }) => {
+    const found = await removeTaskDependency(params.id, params.depId);
+    if (!found) throw new HttpError(404, "Not found");
+    // return undefined → implement() sends 204
+  },
+);

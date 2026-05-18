@@ -17,6 +17,7 @@ import { logEntries, logPing, resetLog } from "./log-job";
 // claim it; mutate the row to look exactly like "worker died holding the
 // lock 6 minutes ago" (locked_at + locked_by, attempts=1, run_at past);
 // force one sweep; wait for the handler to actually run.
+// NOTE: Not using implement() because retryUntil and error paths return raw Response objects.
 export async function handleCrashRecovery(): Promise<Response> {
   resetLog();
   const label = `crash-recovery-${randomUUID()}`;

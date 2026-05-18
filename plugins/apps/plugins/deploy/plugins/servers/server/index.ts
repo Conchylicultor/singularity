@@ -6,6 +6,13 @@ import { handleCreate } from "./internal/handle-create";
 import { handleUpdate } from "./internal/handle-update";
 import { handleDelete } from "./internal/handle-delete";
 import { serversResource } from "./internal/resources";
+import {
+  listServers,
+  createServer,
+  getServer,
+  updateServer,
+  deleteServer,
+} from "../shared/endpoints";
 
 export { _deployServers } from "./internal/tables";
 export { serversResource } from "./internal/resources";
@@ -15,11 +22,11 @@ export default {
   name: "Deploy: Servers",
   description: "Server registry for the deployment platform.",
   httpRoutes: {
-    "GET /api/deploy/servers": handleList,
-    "POST /api/deploy/servers": handleCreate,
-    "GET /api/deploy/servers/:id": handleGet,
-    "PATCH /api/deploy/servers/:id": handleUpdate,
-    "DELETE /api/deploy/servers/:id": handleDelete,
+    [listServers.route]: handleList,
+    [createServer.route]: handleCreate,
+    [getServer.route]: handleGet,
+    [updateServer.route]: handleUpdate,
+    [deleteServer.route]: handleDelete,
   },
   contributions: [Resource.Declare(serversResource)],
 } satisfies ServerPluginDefinition;

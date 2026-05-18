@@ -1,6 +1,8 @@
 import { resolve } from "node:path";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { resolveWorktreePath } from "@plugins/code-explorer/server";
 import { GIT, HOME_DIR } from "@plugins/infra/plugins/paths/server";
+import { resolveFile } from "../../shared/endpoints";
 
 function expandTilde(path: string): string {
   if (path === "~") return HOME_DIR;
@@ -25,31 +27,28 @@ function isSuffixMatch(query: string[], file: string[]): boolean {
   return true;
 }
 
-export async function handleResolve(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const worktree = params.worktree;
-  if (!worktree) return new Response("Missing worktree", { status: 400 });
+export const handleResolve = implement(resolveFile, async ({ params, req }) => {
+  const { worktree } = params;
+  if (!worktree) throw new HttpError(400, "Missing worktree");
 
   const url = new URL(req.url);
   const rawPath = url.searchParams.get("path");
   if (!rawPath || rawPath.includes("\0"))
-    return Response.json({ kind: "not-found" });
+    return { kind: "not-found" as const };
 
   const wtPath = await resolveWorktreePath(worktree);
-  if (!wtPath) return new Response("Not found", { status: 404 });
+  if (!wtPath) throw new HttpError(404, "Not found");
 
   const cleaned = expandTilde(rawPath.replace(/^\.\//, ""));
-  if (!cleaned) return Response.json({ kind: "not-found" });
+  if (!cleaned) return { kind: "not-found" as const };
 
   const absTarget = cleaned.startsWith("/") ? resolve(cleaned) : resolve(wtPath, cleaned);
   if (await Bun.file(absTarget).exists()) {
-    return Response.json({ kind: "exact" });
+    return { kind: "exact" as const };
   }
 
   // ~-rooted and absolute paths are not in the git tree; skip ls-files
-  if (cleaned.startsWith("/")) return Response.json({ kind: "not-found" });
+  if (cleaned.startsWith("/")) return { kind: "not-found" as const };
 
   const proc = Bun.spawn(
     [GIT, "--no-optional-locks", "-C", wtPath, "ls-files", "--cached", "--others", "--exclude-standard"],
@@ -59,7 +58,7 @@ export async function handleResolve(
     new Response(proc.stdout).text(),
     proc.exited,
   ]);
-  if (code !== 0) return Response.json({ kind: "not-found" });
+  if (code !== 0) return { kind: "not-found" as const };
 
   const querySeg = cleaned.split("/").filter((s) => s !== "...");
   const matches: string[] = [];
@@ -72,7 +71,7 @@ export async function handleResolve(
     }
   }
 
-  if (matches.length === 0) return Response.json({ kind: "not-found" });
+  if (matches.length === 0) return { kind: "not-found" as const };
 
   const suffix: string[] = [];
   const rest: string[] = [];
@@ -82,12 +81,12 @@ export async function handleResolve(
   }
 
   if (suffix.length === 1) {
-    return Response.json({ kind: "resolved", matches: suffix });
+    return { kind: "resolved" as const, matches: suffix };
   }
 
   const sorted = [
     ...suffix.sort((a, b) => a.length - b.length),
     ...rest.sort((a, b) => a.length - b.length),
   ];
-  return Response.json({ kind: "resolved", matches: sorted });
-}
+  return { kind: "resolved" as const, matches: sorted };
+});

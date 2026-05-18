@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { TaskChainRelateMode } from "../../core/types";
+import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
 type ModeValue = TaskChainRelateMode | "independent";
 

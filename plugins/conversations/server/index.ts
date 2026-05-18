@@ -9,6 +9,17 @@ import { handleGet } from "./internal/handle-get";
 import { handleListTurns } from "./internal/handle-list-turns";
 import { handlePostTurn } from "./internal/handle-post-turn";
 import { handleStop } from "./internal/handle-stop";
+import {
+  listConversations,
+  listGoneConversations,
+  getConversation,
+  createConversation,
+  deleteConversation,
+  postConversationTurn,
+  stopConversation,
+  listConversationTurns,
+  closeConversation,
+} from "../core/endpoints";
 import { startPoller } from "./internal/poller";
 import { startTurnEmitter } from "./internal/turn-emitter";
 import { forkErrorsResource } from "./internal/fork-errors";
@@ -53,15 +64,15 @@ export default {
     "Conversation domain: shared server code and types; view plugins live under `plugins/`.",
   loadBearing: true,
   httpRoutes: {
-    "GET /api/conversations": handleList,
-    "GET /api/conversations/gone": handleListGone,
-    "GET /api/conversations/:id": handleGet,
-    "POST /api/conversations": handleCreate,
-    "DELETE /api/conversations": handleDelete,
-    "POST /api/conversations/:id/turn": handlePostTurn,
-    "POST /api/conversations/:id/stop": handleStop,
-    "GET /api/conversations/:id/turns": handleListTurns,
-    "POST /api/conversations/:id/close": handleClose,
+    [listConversations.route]: handleList,
+    [listGoneConversations.route]: handleListGone,
+    [getConversation.route]: handleGet,
+    [createConversation.route]: handleCreate,
+    [deleteConversation.route]: handleDelete,
+    [postConversationTurn.route]: handlePostTurn,
+    [stopConversation.route]: handleStop,
+    [listConversationTurns.route]: handleListTurns,
+    [closeConversation.route]: handleClose,
   },
   // conversationsLiveResource is mounted on tasks-core; only fork-errors stays here.
   contributions: [

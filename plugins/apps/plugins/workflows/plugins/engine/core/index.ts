@@ -18,3 +18,25 @@ export {
   workflowDefinitionsDescriptor,
   workflowExecutionsDescriptor,
 } from "./resources";
+export {
+  listDefinitions,
+  createDefinition,
+  getDefinition,
+  updateDefinition,
+  deleteDefinition,
+  listExecutions,
+  createExecution,
+  getExecution,
+  deleteExecution,
+  submitStep,
+  CreateDefinitionBodySchema,
+  UpdateDefinitionBodySchema,
+  CreateExecutionBodySchema,
+  SubmitStepBodySchema,
+} from "./endpoints";
+export type {
+  CreateDefinitionBody,
+  UpdateDefinitionBody,
+  CreateExecutionBody,
+  SubmitStepBody,
+} from "./endpoints";

@@ -6,6 +6,7 @@ import { crashesResource } from "./internal/resources";
 import { recordCrash } from "./internal/record-crash";
 import { ensureCrashesMetaTask } from "./internal/meta-crashes";
 import { flushBufferedCrashes, installProcessHooks } from "./internal/process-hooks";
+import { reportCrash } from "../shared/endpoints";
 
 export { _crashes } from "./internal/tables";
 export { crashesResource } from "./internal/resources";
@@ -17,7 +18,7 @@ export default {
   name: "Crashes",
   description: "Records server/frontend crashes and files deduped tasks.",
   httpRoutes: {
-    "POST /api/crashes": handleReport,
+    [reportCrash.route]: handleReport,
   },
   contributions: [Resource.Declare(crashesResource)],
   onReady: async () => {

@@ -1,4 +1,16 @@
 export { defineAuthProvider } from "./internal/lib";
+export {
+  oauthStart,
+  oauthCallback,
+  disconnect,
+  setApiKey,
+  getAuthState,
+  getToken,
+  DisconnectBodySchema,
+  SetApiKeyBodySchema,
+  GetTokenBodySchema,
+} from "./endpoints";
+export type { DisconnectBody, SetApiKeyBody, GetTokenBody } from "./endpoints";
 export type {
   AuthProviderDescriptor,
   AuthProviderKind,

@@ -1,18 +1,16 @@
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import type { HttpHandler } from "@server/types";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { getTableForeignKeys } from "../../shared/endpoints";
 
-export const handleGetForeignKeys: HttpHandler = async (_req, params) => {
-  const tableName = params["tableName"];
-  if (!tableName) {
-    return Response.json({ error: "Missing tableName" }, { status: 400 });
-  }
+export const handleGetForeignKeys = implement(getTableForeignKeys, async ({ params }) => {
+  const { tableName } = params;
 
   const tableCheck = await db.execute(
     sql`SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ${tableName}`,
   );
   if (tableCheck.rows.length === 0) {
-    return Response.json({ error: "Table not found" }, { status: 404 });
+    throw new HttpError(404, "Table not found");
   }
 
   const [outgoingResult, incomingResult] = await Promise.all([
@@ -42,8 +40,8 @@ export const handleGetForeignKeys: HttpHandler = async (_req, params) => {
     ),
   ]);
 
-  return Response.json({
+  return {
     outgoing: outgoingResult.rows,
     incoming: incomingResult.rows,
-  });
-};
+  };
+});

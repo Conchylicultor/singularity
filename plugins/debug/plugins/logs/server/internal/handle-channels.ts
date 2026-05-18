@@ -1,5 +1,7 @@
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { getLogChannels } from "../../core/endpoints";
 import { getChannelIds } from "./registry";
 
-export function handleChannels(_req: Request): Response {
-  return Response.json({ channels: getChannelIds() });
-}
+export const handleChannels = implement(getLogChannels, () => {
+  return { channels: getChannelIds() };
+});

@@ -15,7 +15,7 @@ import { describeOutcome, submitChain } from "../internal/submit";
 import type {
   TaskChainRelateMode,
   TaskChainTarget,
-} from "../../core/types";
+} from "@plugins/tasks/core";
 import { useActiveRelateContext } from "../active-relate-context";
 
 const HEAD_DEFAULT_MODEL: ChainModel = "sonnet";

@@ -1,8 +1,7 @@
-import type { HttpHandler } from "@central/types";
+import { implement } from "@plugins/infra/plugins/endpoints/core";
+import { getToken } from "@plugins/auth/core";
 import { getAccessTokenInternal } from "../token-access";
 
-export const handleGetToken: HttpHandler = async (req) => {
-  const body = await req.json();
-  const result = await getAccessTokenInternal(body);
-  return Response.json(result);
-};
+export const handleGetToken = implement(getToken, async ({ body }) => {
+  return getAccessTokenInternal(body);
+});

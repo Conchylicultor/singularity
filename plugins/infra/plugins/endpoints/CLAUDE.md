@@ -59,7 +59,7 @@ Use `fetchEndpoint` for imperative fetches outside React. Non-2xx responses thro
 - Load-bearing: yes
 - Exports (core):
   - Types: `EndpointDef`, `ExtractParams`
-  - Values: `defineEndpoint`, `extractMethod`, `extractPath`, `interpolatePath`
+  - Values: `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`
 - Exports (web):
   - Values: `EndpointError`, `fetchEndpoint`, `useEndpoint`, `useEndpointMutation`
 - Exports (server):

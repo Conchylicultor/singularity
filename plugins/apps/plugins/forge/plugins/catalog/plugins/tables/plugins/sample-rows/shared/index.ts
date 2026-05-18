@@ -1,0 +1,1 @@
+export { getTableSampleRows } from "./endpoints";

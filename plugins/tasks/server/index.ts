@@ -22,6 +22,21 @@ import {
   ensureConversationsMetaTask,
 } from "./internal/meta-conversations";
 import { addTaskTool } from "./internal/mcp-tools";
+import {
+  listTasks,
+  createTask,
+  createTaskChain,
+  insertTaskBetween,
+  getTask,
+  updateTask,
+  deleteTask,
+  getTaskAttachments,
+  setTaskAutoStart,
+  clearTaskAutoStart,
+  addTaskDependency,
+  removeTaskDependency,
+  getRepoInfo,
+} from "../core/endpoints";
 
 export { armTaskAutoStart } from "./internal/arm-auto-start";
 
@@ -30,19 +45,19 @@ export default {
   name: "Tasks",
   description: "Nested tasks with attempts linking to conversations.",
   httpRoutes: {
-    "GET /api/tasks": handleList,
-    "POST /api/tasks": handleCreate,
-    "POST /api/tasks/chain": handleCreateChain,
-    "POST /api/tasks/insert-between": handleInsertBetween,
-    "GET /api/tasks/:id": handleGet,
-    "PATCH /api/tasks/:id": handleUpdate,
-    "DELETE /api/tasks/:id": handleDelete,
-    "GET /api/tasks/:id/attachments": handleTaskAttachments,
-    "POST /api/tasks/:id/auto-start": handleSetAutoStart,
-    "DELETE /api/tasks/:id/auto-start": handleClearAutoStart,
-    "POST /api/tasks/:id/dependencies": handleAddDependency,
-    "DELETE /api/tasks/:id/dependencies/:depId": handleRemoveDependency,
-    "GET /api/repo-info": handleRepoInfo,
+    [listTasks.route]: handleList,
+    [createTask.route]: handleCreate,
+    [createTaskChain.route]: handleCreateChain,
+    [insertTaskBetween.route]: handleInsertBetween,
+    [getTask.route]: handleGet,
+    [updateTask.route]: handleUpdate,
+    [deleteTask.route]: handleDelete,
+    [getTaskAttachments.route]: handleTaskAttachments,
+    [setTaskAutoStart.route]: handleSetAutoStart,
+    [clearTaskAutoStart.route]: handleClearAutoStart,
+    [addTaskDependency.route]: handleAddDependency,
+    [removeTaskDependency.route]: handleRemoveDependency,
+    [getRepoInfo.route]: handleRepoInfo,
   },
   register: [addTaskTool, pushIngestJob],
   contributions: [

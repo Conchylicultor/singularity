@@ -7,10 +7,8 @@ import { Button } from "@/components/ui/button";
 import { tasksResource, type Task } from "@plugins/tasks/core";
 import { useTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
-import {
-  TaskDraftPopover,
-  type TaskChainTarget,
-} from "@plugins/tasks/plugins/task-draft-form/web";
+import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
+import type { TaskChainTarget } from "@plugins/tasks/core";
 
 const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 

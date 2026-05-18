@@ -15,29 +15,14 @@ import {
   attachmentMarkdown,
   extractAttachmentIds,
 } from "@plugins/primitives/plugins/prompt-editor/plugins/paste-images/core";
-import {
-  TaskChainSubmitBodySchema,
-  type TaskChainCard,
-  type TaskChainSubmitBody,
-  type TaskChainSubmitResponse,
-} from "@plugins/tasks/plugins/task-draft-form/core";
+import { type TaskChainCard } from "../../core/task-chain-types";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { createTaskChain } from "../../core/endpoints";
 import { withNotifyBatch } from "@server/resources";
 import { armTaskAutoStart } from "./arm-auto-start";
 import { rewireDependencies } from "./rewire-dependencies";
 
-export async function handleCreateChain(req: Request): Promise<Response> {
-  let raw: unknown;
-  try {
-    raw = await req.json();
-  } catch {
-    return new Response("invalid JSON body", { status: 400 });
-  }
-  const parsed = TaskChainSubmitBodySchema.safeParse(raw);
-  if (!parsed.success) {
-    return new Response(`invalid body: ${parsed.error.message}`, { status: 400 });
-  }
-  const body: TaskChainSubmitBody = parsed.data;
-
+export const handleCreateChain = implement(createTaskChain, async ({ body }) => {
   // Single parentId source — server does not care which target kind it came from.
   const parentId =
     body.target.kind === "metaTask"
@@ -48,7 +33,7 @@ export async function handleCreateChain(req: Request): Promise<Response> {
   // inline its title/description if any head card has includeParentTask.
   const parentTask = await getTask(parentId);
   if (!parentTask) {
-    return new Response(`parent task ${parentId} not found`, { status: 400 });
+    throw new HttpError(400, `parent task ${parentId} not found`);
   }
 
   // Verify relate.taskId exists upfront so we don't half-create the chain
@@ -56,7 +41,7 @@ export async function handleCreateChain(req: Request): Promise<Response> {
   if (body.relate) {
     const rel = await getTask(body.relate.taskId);
     if (!rel) {
-      return new Response(`relate task ${body.relate.taskId} not found`, { status: 400 });
+      throw new HttpError(400, `relate task ${body.relate.taskId} not found`);
     }
   }
 
@@ -64,12 +49,12 @@ export async function handleCreateChain(req: Request): Promise<Response> {
     for (const depId of body.relate.insertBefore) {
       const dep = await getTask(depId);
       if (!dep) {
-        return new Response(`insertBefore: task ${depId} not found`, { status: 400 });
+        throw new HttpError(400, `insertBefore: task ${depId} not found`);
       }
       if (!dep.dependencies.includes(body.relate.taskId)) {
-        return new Response(
+        throw new HttpError(
+          400,
           `insertBefore: task ${depId} does not depend on ${body.relate.taskId}`,
-          { status: 400 },
         );
       }
     }
@@ -85,7 +70,7 @@ export async function handleCreateChain(req: Request): Promise<Response> {
     for (const id of ids) {
       const row = await getAttachment(id);
       if (!row) {
-        return new Response(`card ${i}: attachment ${id} not found`, { status: 400 });
+        throw new HttpError(400, `card ${i}: attachment ${id} not found`);
       }
       resolved.push(row);
     }
@@ -166,9 +151,8 @@ export async function handleCreateChain(req: Request): Promise<Response> {
     }
   });
 
-  const res: TaskChainSubmitResponse = { taskIds };
-  return Response.json(res);
-}
+  return { taskIds };
+});
 
 function renderTaskDescription(opts: {
   text: string;

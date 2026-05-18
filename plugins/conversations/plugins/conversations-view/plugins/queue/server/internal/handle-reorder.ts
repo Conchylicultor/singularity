@@ -1,19 +1,14 @@
-import { z } from "zod";
 import { db } from "@plugins/database/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { reorderQueue } from "../../shared/endpoints";
 import { lockDeck, rankAdjacentTo, reseatGroupMembers, upsertRank } from "./queue-ranks";
 import { queueRanksResource } from "./resource";
 import { validatePin } from "./pinned";
 import { cascadeBlockedDependents } from "./cascade-blocked";
 
-const Body = z.object({
-  conversationId: z.string().min(1),
-  targetId: z.string().min(1),
-  zone: z.enum(["before", "after"]),
-});
-
-export async function handleReorder(req: Request): Promise<Response> {
-  const { conversationId, targetId, zone } = Body.parse(await req.json());
-  if (conversationId === targetId) return Response.json({ ok: true });
+export const handleReorder = implement(reorderQueue, async ({ body }) => {
+  const { conversationId, targetId, zone } = body;
+  if (conversationId === targetId) return { ok: true };
 
   await db.transaction(async (tx) => {
     await lockDeck(tx);
@@ -25,5 +20,5 @@ export async function handleReorder(req: Request): Promise<Response> {
   });
 
   queueRanksResource.notify();
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});

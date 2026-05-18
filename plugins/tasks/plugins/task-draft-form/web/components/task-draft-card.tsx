@@ -10,7 +10,7 @@ import {
   InsertBeforeChildren,
   type ChildEntry,
 } from "./insert-before-children";
-import type { TaskChainRelateMode } from "../../core/types";
+import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
 export interface ParentTaskPreview {
   id: string;

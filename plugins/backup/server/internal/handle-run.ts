@@ -1,6 +1,8 @@
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { runBackup } from "../../shared/endpoints";
 import { backupRunJob } from "./backup-job";
 
-export async function handleRun(): Promise<Response> {
+export const handleRun = implement(runBackup, async () => {
   const { jobId } = await backupRunJob.enqueue({ trigger: "manual" });
-  return Response.json({ ok: true, jobId });
-}
+  return { ok: true, jobId };
+});

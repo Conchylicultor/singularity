@@ -1,0 +1,1 @@
+export { resolveFile } from "./endpoints";

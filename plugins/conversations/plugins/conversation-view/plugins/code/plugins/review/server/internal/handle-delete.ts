@@ -1,19 +1,15 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { deleteReviewSection } from "../../shared/endpoints";
 import { reviewSectionsTable } from "./tables";
 import { reviewSectionsServerResource } from "./resources";
 
-export async function handleDelete(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const { id } = params;
-  if (!id) return new Response("Missing id", { status: 400 });
-
+export const handleDelete = implement(deleteReviewSection, async ({ params }) => {
   await db
     .delete(reviewSectionsTable)
-    .where(eq(reviewSectionsTable.id, id));
+    .where(eq(reviewSectionsTable.id, params.id));
 
   reviewSectionsServerResource.notify();
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});

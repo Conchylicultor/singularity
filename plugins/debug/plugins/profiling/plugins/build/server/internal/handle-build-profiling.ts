@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { getBuildProfiling } from "../../shared/endpoints";
 
 interface BuildProfile {
   spans: Array<{
@@ -24,10 +26,10 @@ function readBuildProfile(): BuildProfile | null {
   }
 }
 
-export function handleBuildProfiling(_req: Request): Response {
+export const handleBuildProfiling = implement(getBuildProfiling, () => {
   const build = readBuildProfile();
-  return Response.json({
+  return {
     spans: build?.spans ?? [],
     totalMs: build?.totalDurationMs ?? 0,
-  });
-}
+  };
+});

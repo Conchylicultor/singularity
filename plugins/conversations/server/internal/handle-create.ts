@@ -1,18 +1,11 @@
 import { notifyConversationsChanged } from "@plugins/tasks-core/server";
 import { recordCrash } from "@plugins/crashes/server";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { createConversation as createConversationEndpoint } from "../../core/endpoints";
 import { createConversation } from "./lifecycle";
 
-export async function handleCreate(req: Request): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as {
-    taskId?: string;
-    attemptId?: string;
-    prompt?: string;
-    runtime?: string;
-    model?: string;
-    forkFromConversationId?: string;
-  };
-
+export const handleCreate = implement(createConversationEndpoint, async ({ body }) => {
   const model =
     body.model !== undefined ? ConversationModelSchema.parse(body.model) : undefined;
 
@@ -44,8 +37,8 @@ export async function handleCreate(req: Request): Promise<Response> {
     }).catch((e) => {
       console.error("[conversations] recordCrash failed", e);
     });
-    return Response.json({ error: message }, { status: 500 });
+    throw new HttpError(500, message);
   }
   notifyConversationsChanged();
-  return Response.json(session);
-}
+  return session;
+});

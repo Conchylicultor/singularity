@@ -1,23 +1,14 @@
 import { resumeConversation } from "@plugins/conversations/server";
 import { notifyConversationsChanged } from "@plugins/tasks-core/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { restoreBatch } from "../../shared/endpoints";
 
 type RestoreResult = { id: string; ok: true } | { id: string; ok: false; error: string };
 
-export async function handleRestoreBatch(req: Request): Promise<Response> {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    return Response.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; body may be null after JSON.parse
-  const ids = (body as { ids?: unknown })?.ids;
-  if (!Array.isArray(ids) || !ids.every((x): x is string => typeof x === "string")) {
-    return Response.json({ error: "Expected { ids: string[] }" }, { status: 400 });
-  }
+export const handleRestoreBatch = implement(restoreBatch, async ({ body }) => {
+  const { ids } = body;
   if (ids.length === 0) {
-    return Response.json({ results: [] satisfies RestoreResult[] });
+    return { results: [] satisfies RestoreResult[] };
   }
 
   const results: RestoreResult[] = await Promise.all(
@@ -31,5 +22,5 @@ export async function handleRestoreBatch(req: Request): Promise<Response> {
     }),
   );
   notifyConversationsChanged();
-  return Response.json({ results });
-}
+  return { results };
+});

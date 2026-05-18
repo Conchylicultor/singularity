@@ -1,12 +1,9 @@
-import { getConversation } from "@plugins/tasks-core/server";
+import { getConversation as getConversationDb } from "@plugins/tasks-core/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { getConversation } from "../../core/endpoints";
 
-export async function handleGet(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const id = params.id;
-  if (!id) return new Response("Missing id", { status: 400 });
-  const row = await getConversation(id);
-  if (!row) return new Response("Not found", { status: 404 });
-  return Response.json(row);
-}
+export const handleGet = implement(getConversation, async ({ params }) => {
+  const row = await getConversationDb(params.id);
+  if (!row) throw new HttpError(404, "Not found");
+  return row;
+});

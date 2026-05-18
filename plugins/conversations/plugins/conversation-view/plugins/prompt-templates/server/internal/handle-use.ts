@@ -1,24 +1,20 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { usePromptTemplate } from "../../shared/endpoints";
 import { promptTemplatesTable } from "./tables";
 import { promptTemplatesServerResource } from "./resources";
 
-export async function handleUse(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const { id } = params;
-  if (!id) return new Response("Missing id", { status: 400 });
-
+export const handleUse = implement(usePromptTemplate, async ({ params }) => {
   const [updated] = await db
     .update(promptTemplatesTable)
     .set({ useCount: sql`${promptTemplatesTable.useCount} + 1` })
-    .where(eq(promptTemplatesTable.id, id))
+    .where(eq(promptTemplatesTable.id, params.id))
     .returning({ id: promptTemplatesTable.id });
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard
-  if (!updated) return new Response("Not found", { status: 404 });
+  if (!updated) throw new HttpError(404, "Not found");
 
   promptTemplatesServerResource.notify();
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});

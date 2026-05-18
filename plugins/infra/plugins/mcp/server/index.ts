@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { handleMcpRequest } from "./internal/handle-mcp";
+import { mcpRequest } from "../shared/endpoints";
 
 export { Mcp } from "./internal/mcp";
 export type { McpTool, McpToolContext, McpToolResult } from "./internal/mcp";
@@ -11,6 +12,6 @@ export default {
     "HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.",
   loadBearing: true,
   httpRoutes: {
-    "POST /api/mcp/:conversationId": handleMcpRequest,
+    [mcpRequest.route]: handleMcpRequest,
   },
 } satisfies ServerPluginDefinition;

@@ -1,20 +1,16 @@
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { stopConversation } from "../../core/endpoints";
 import { interruptConversation, rewindConversationTurn } from "./runtime";
 
-export async function handleStop(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const id = params.id;
-  if (!id) return new Response("Missing id", { status: 400 });
-
+export const handleStop = implement(stopConversation, async ({ params }) => {
   try {
-    await interruptConversation(id);
+    await interruptConversation(params.id);
   } catch (err) {
     if (err instanceof Error && err.message.includes("not found")) {
-      return new Response("Not found", { status: 404 });
+      throw new HttpError(404, "Not found");
     }
     throw err;
   }
-  const rewindText = await rewindConversationTurn(id);
-  return Response.json({ ok: true, rewindText: rewindText ?? null });
-}
+  const rewindText = await rewindConversationTurn(params.id);
+  return { ok: true, rewindText: rewindText ?? null };
+});

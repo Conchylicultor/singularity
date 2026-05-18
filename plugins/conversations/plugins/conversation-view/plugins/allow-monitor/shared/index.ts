@@ -1,0 +1,1 @@
+export { getAllowFiles } from "./endpoints";

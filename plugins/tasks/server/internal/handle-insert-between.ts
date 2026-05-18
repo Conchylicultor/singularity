@@ -4,23 +4,12 @@ import {
   removeTaskDependency,
   addTaskDependency,
 } from "@plugins/tasks-core/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { insertTaskBetween } from "../../core/endpoints";
 import { withNotifyBatch } from "@server/resources";
 
-interface InsertBetweenBody {
-  sourceTaskId?: string;
-  targetTaskId?: string;
-  targetParentId?: string | null;
-}
-
-export async function handleInsertBetween(req: Request): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as InsertBetweenBody;
+export const handleInsertBetween = implement(insertTaskBetween, async ({ body }) => {
   const { sourceTaskId, targetTaskId, targetParentId } = body;
-  if (
-    typeof sourceTaskId !== "string" ||
-    typeof targetTaskId !== "string"
-  ) {
-    return new Response("Missing sourceTaskId or targetTaskId", { status: 400 });
-  }
 
   const [sourceTask, targetTask] = await Promise.all([
     getTask(sourceTaskId),
@@ -29,7 +18,7 @@ export async function handleInsertBetween(req: Request): Promise<Response> {
 
   const groupId = sourceTask?.groupId ?? targetTask?.groupId ?? null;
 
-  const newTask = await withNotifyBatch(async () => {
+  return withNotifyBatch(async () => {
     const row = await createTask({
       parentId: targetParentId ?? null,
       groupId,
@@ -40,6 +29,4 @@ export async function handleInsertBetween(req: Request): Promise<Response> {
     await addTaskDependency(targetTaskId, row.id);
     return row;
   });
-
-  return Response.json(newTask);
-}
+});

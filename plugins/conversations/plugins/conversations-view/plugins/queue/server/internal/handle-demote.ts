@@ -1,17 +1,16 @@
-import { z } from "zod";
 import { getConversation } from "@plugins/tasks-core/server";
 import { db } from "@plugins/database/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { demoteQueue } from "../../shared/endpoints";
 import { lockDeck, rankForBottom, reseatGroupMembers, upsertRank } from "./queue-ranks";
 import { queueRanksResource } from "./resource";
 import { validatePin } from "./pinned";
 import { cascadeBlockedDependents } from "./cascade-blocked";
 
-const Body = z.object({ conversationId: z.string().min(1) });
-
-export async function handleDemote(req: Request): Promise<Response> {
-  const { conversationId } = Body.parse(await req.json());
+export const handleDemote = implement(demoteQueue, async ({ body }) => {
+  const { conversationId } = body;
   const conv = await getConversation(conversationId);
-  if (!conv) return new Response("Not found", { status: 404 });
+  if (!conv) throw new HttpError(404, "Not found");
 
   await db.transaction(async (tx) => {
     await lockDeck(tx);
@@ -23,5 +22,5 @@ export async function handleDemote(req: Request): Promise<Response> {
   });
 
   queueRanksResource.notify();
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});

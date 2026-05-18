@@ -1,5 +1,18 @@
 import { eq, desc, asc, and } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import {
+  listDefinitions as listDefinitionsEndpoint,
+  createDefinition as createDefinitionEndpoint,
+  getDefinition as getDefinitionEndpoint,
+  updateDefinition as updateDefinitionEndpoint,
+  deleteDefinition as deleteDefinitionEndpoint,
+  listExecutions as listExecutionsEndpoint,
+  createExecution as createExecutionEndpoint,
+  getExecution as getExecutionEndpoint,
+  deleteExecution as deleteExecutionEndpoint,
+  submitStep as submitStepEndpoint,
+} from "../../core/endpoints";
 import { _workflowDefinitions, _workflowExecutions, _workflowExecutionSteps } from "./tables";
 import {
   createDefinition,
@@ -17,76 +30,51 @@ import { userInputSubmitted } from "./tables-events";
 
 // ─── Definitions ──────────────────────────────────────────
 
-export async function handleListDefinitions(_req: Request): Promise<Response> {
+export const handleListDefinitions = implement(listDefinitionsEndpoint, async () => {
   const rows = await db
     .select()
     .from(_workflowDefinitions)
     .orderBy(desc(_workflowDefinitions.createdAt));
-  return Response.json(rows.map(serializeDefinition));
-}
+  return rows.map(serializeDefinition);
+});
 
-export async function handleCreateDefinition(req: Request): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as {
-    name?: string;
-    description?: string;
-    steps?: Record<string, unknown>;
-    entryStepId?: string;
-  };
-  if (!body.name) {
-    return Response.json({ error: "name is required" }, { status: 400 });
-  }
+export const handleCreateDefinition = implement(createDefinitionEndpoint, async ({ body }) => {
   const row = await createDefinition({
     name: body.name,
     description: body.description,
     steps: body.steps as Parameters<typeof createDefinition>[0]["steps"],
     entryStepId: body.entryStepId,
   });
-  return Response.json(serializeDefinition(row), { status: 201 });
-}
+  return serializeDefinition(row);
+});
 
-export async function handleGetDefinition(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
+export const handleGetDefinition = implement(getDefinitionEndpoint, async ({ params }) => {
   const [row] = await db
     .select()
     .from(_workflowDefinitions)
     .where(eq(_workflowDefinitions.id, params.id));
-  if (!row) return new Response("Not found", { status: 404 });
-  return Response.json(serializeDefinition(row));
-}
+  if (!row) throw new HttpError(404, "Not found");
+  return serializeDefinition(row);
+});
 
-export async function handleUpdateDefinition(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as {
-    name?: string;
-    description?: string | null;
-    steps?: Record<string, unknown>;
-    entryStepId?: string | null;
-  };
+export const handleUpdateDefinition = implement(updateDefinitionEndpoint, async ({ params, body }) => {
   const row = await updateDefinition(params.id, {
     name: body.name,
     description: body.description,
     steps: body.steps as Parameters<typeof updateDefinition>[1]["steps"],
     entryStepId: body.entryStepId,
   });
-  if (!row) return new Response("Not found", { status: 404 });
-  return Response.json(serializeDefinition(row));
-}
+  if (!row) throw new HttpError(404, "Not found");
+  return serializeDefinition(row);
+});
 
-export async function handleDeleteDefinition(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
+export const handleDeleteDefinition = implement(deleteDefinitionEndpoint, async ({ params }) => {
   await deleteDefinition(params.id);
-  return new Response(null, { status: 204 });
-}
+});
 
 // ─── Executions ───────────────────────────────────────────
 
-export async function handleListExecutions(req: Request): Promise<Response> {
+export const handleListExecutions = implement(listExecutionsEndpoint, async ({ req }) => {
   const url = new URL(req.url);
   const definitionId = url.searchParams.get("definitionId");
 
@@ -100,7 +88,7 @@ export async function handleListExecutions(req: Request): Promise<Response> {
     )
     .orderBy(desc(_workflowExecutions.createdAt));
 
-  if (executions.length === 0) return Response.json([]);
+  if (executions.length === 0) return [];
 
   const execIds = executions.map((e) => e.id);
   const allSteps = await db
@@ -116,24 +104,16 @@ export async function handleListExecutions(req: Request): Promise<Response> {
     stepsByExec.set(step.executionId, list);
   }
 
-  return Response.json(
-    executions.map((exec) => serializeExecution(exec, stepsByExec.get(exec.id) ?? [])),
-  );
-}
+  return executions.map((exec) => serializeExecution(exec, stepsByExec.get(exec.id) ?? []));
+});
 
-export async function handleCreateExecution(req: Request): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as {
-    definitionId?: string;
-  };
-  if (!body.definitionId) {
-    return Response.json({ error: "definitionId is required" }, { status: 400 });
-  }
+export const handleCreateExecution = implement(createExecutionEndpoint, async ({ body }) => {
   let execution;
   try {
     execution = await createExecution(body.definitionId);
   } catch (err) {
     if (err instanceof Error && err.message.includes("not found")) {
-      return Response.json({ error: err.message }, { status: 404 });
+      throw new HttpError(404, err.message);
     }
     throw err;
   }
@@ -143,18 +123,15 @@ export async function handleCreateExecution(req: Request): Promise<Response> {
     { jobKey: execution.id },
   );
 
-  return Response.json(serializeExecution(execution, []), { status: 201 });
-}
+  return serializeExecution(execution, []);
+});
 
-export async function handleGetExecution(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
+export const handleGetExecution = implement(getExecutionEndpoint, async ({ params }) => {
   const [execution] = await db
     .select()
     .from(_workflowExecutions)
     .where(eq(_workflowExecutions.id, params.id));
-  if (!execution) return new Response("Not found", { status: 404 });
+  if (!execution) throw new HttpError(404, "Not found");
 
   const steps = await db
     .select()
@@ -162,33 +139,22 @@ export async function handleGetExecution(
     .where(eq(_workflowExecutionSteps.executionId, params.id))
     .orderBy(asc(_workflowExecutionSteps.executionOrder));
 
-  return Response.json(serializeExecution(execution, steps));
-}
+  return serializeExecution(execution, steps);
+});
 
-export async function handleDeleteExecution(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
+export const handleDeleteExecution = implement(deleteExecutionEndpoint, async ({ params }) => {
   const row = await cancelExecution(params.id);
-  if (!row) return new Response("Not found", { status: 404 });
-  return new Response(null, { status: 204 });
-}
+  if (!row) throw new HttpError(404, "Not found");
+});
 
 // ─── Submit ───────────────────────────────────────────────
 
-export async function handleSubmitStep(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as {
-    data?: Record<string, unknown>;
-  };
-
+export const handleSubmitStep = implement(submitStepEndpoint, async ({ params, body }) => {
   const [execution] = await db
     .select()
     .from(_workflowExecutions)
     .where(eq(_workflowExecutions.id, params.execId));
-  if (!execution) return new Response("Execution not found", { status: 404 });
+  if (!execution) throw new HttpError(404, "Execution not found");
 
   const [step] = await db
     .select()
@@ -199,12 +165,9 @@ export async function handleSubmitStep(
         eq(_workflowExecutionSteps.executionId, params.execId),
       ),
     );
-  if (!step) return new Response("Step not found", { status: 404 });
+  if (!step) throw new HttpError(404, "Step not found");
   if (step.status !== "suspended") {
-    return Response.json(
-      { error: `Step status is "${step.status}", expected "suspended"` },
-      { status: 409 },
-    );
+    throw new HttpError(409, `Step status is "${step.status}", expected "suspended"`);
   }
 
   await userInputSubmitted.emit({
@@ -212,6 +175,4 @@ export async function handleSubmitStep(
     stepId: params.stepId,
     data: body.data ?? {},
   });
-
-  return new Response(null, { status: 202 });
-}
+});

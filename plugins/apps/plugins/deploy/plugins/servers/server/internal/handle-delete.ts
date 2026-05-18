@@ -1,20 +1,18 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { deleteSecret } from "@plugins/infra/plugins/secrets/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { deleteServer } from "../../shared/endpoints";
 import { _deployServers } from "./tables";
 import { serversResource } from "./resources";
 
-export async function handleDelete(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
+export const handleDelete = implement(deleteServer, async ({ params }) => {
   const [row] = await db
     .delete(_deployServers)
     .where(eq(_deployServers.id, params.id))
     .returning();
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (!row) return new Response("Not found", { status: 404 });
+  if (!row) throw new HttpError(404, "Not found");
   await deleteSecret({ namespace: "deploy-ssh", key: params.id });
   serversResource.notify();
-  return new Response(null, { status: 204 });
-}
+});

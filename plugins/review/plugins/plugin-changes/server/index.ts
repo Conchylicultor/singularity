@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { handlePluginChanges } from "./internal/handle-plugin-changes";
+import { getPluginChanges } from "../core/endpoints";
 
 export default {
   id: "review-plugin-changes",
@@ -7,6 +8,6 @@ export default {
   description:
     "Computes structured diffs of plugin public APIs between the worktree and main.",
   httpRoutes: {
-    "GET /api/review/plugin-changes": handlePluginChanges,
+    [getPluginChanges.route]: handlePluginChanges,
   },
 } satisfies ServerPluginDefinition;

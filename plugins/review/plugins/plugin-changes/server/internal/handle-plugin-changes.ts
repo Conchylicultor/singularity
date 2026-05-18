@@ -2,6 +2,8 @@ import { dirname, join, resolve } from "node:path";
 import { getConversation } from "@plugins/tasks-core/server";
 import { getEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import { REPO_ROOT, GIT } from "@plugins/infra/plugins/paths/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { getPluginChanges } from "../../core/endpoints";
 import { computePluginChanges } from "./compute-plugin-diff";
 import type { PluginChangesResponse } from "../../core/protocol";
 
@@ -26,16 +28,16 @@ async function getMainPluginsDir(): Promise<string> {
   return cachedMainPluginsDir;
 }
 
-export async function handlePluginChanges(req: Request): Promise<Response> {
+export const handlePluginChanges = implement(getPluginChanges, async ({ req }) => {
   const url = new URL(req.url, "http://localhost");
   const conversationId = url.searchParams.get("conversationId");
   if (!conversationId) {
-    return Response.json({ error: "conversationId required" }, { status: 400 });
+    throw new HttpError(400, "conversationId required");
   }
 
   const conversation = await getConversation(conversationId);
   if (!conversation?.worktreePath) {
-    return Response.json({ error: "conversation not found" }, { status: 404 });
+    throw new HttpError(404, "conversation not found");
   }
 
   const [editedFiles, mainPluginsDir] = await Promise.all([
@@ -51,5 +53,5 @@ export async function handlePluginChanges(req: Request): Promise<Response> {
   );
 
   const response: PluginChangesResponse = { plugins };
-  return Response.json(response);
-}
+  return response;
+});

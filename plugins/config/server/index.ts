@@ -12,6 +12,7 @@ import {
   handlePatch,
   handleSpecs,
 } from "./internal/handlers";
+import { getConfig, getConfigSpecs, patchConfig, deleteConfig } from "../core/endpoints";
 
 export { Config } from "./internal/contribution";
 export { configResource } from "./internal/resource";
@@ -24,10 +25,10 @@ export default {
   description:
     "Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.",
   httpRoutes: {
-    "GET /api/config": handleGet,
-    "GET /api/config/specs": handleSpecs,
-    "PATCH /api/config": handlePatch,
-    "DELETE /api/config/:key": handleDelete,
+    [getConfig.route]: handleGet,
+    [getConfigSpecs.route]: handleSpecs,
+    [patchConfig.route]: handlePatch,
+    [deleteConfig.route]: handleDelete,
   },
   contributions: [Resource.Declare(configResource), Resource.Declare(configSecretsResource)],
   async onReady() {

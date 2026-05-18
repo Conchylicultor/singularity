@@ -1,17 +1,16 @@
-import { z } from "zod";
 import { getConversation } from "@plugins/tasks-core/server";
 import { db } from "@plugins/database/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { stepDownQueue } from "../../shared/endpoints";
 import { lockDeck, rankAfterN, reseatGroupMembers, upsertRank, findTaskIdForConversation } from "./queue-ranks";
 import { queueRanksResource } from "./resource";
 import { getPinnedId, setPinnedId, topWaitingByRank, validatePin } from "./pinned";
 import { cascadeBlockedDependents } from "./cascade-blocked";
 
-const Body = z.object({ conversationId: z.string().min(1), steps: z.number().int().positive() });
-
-export async function handleStepDown(req: Request): Promise<Response> {
-  const { conversationId, steps } = Body.parse(await req.json());
+export const handleStepDown = implement(stepDownQueue, async ({ body }) => {
+  const { conversationId, steps } = body;
   const conv = await getConversation(conversationId);
-  if (!conv) return new Response("Not found", { status: 404 });
+  if (!conv) throw new HttpError(404, "Not found");
 
   await db.transaction(async (tx) => {
     await lockDeck(tx);
@@ -31,5 +30,5 @@ export async function handleStepDown(req: Request): Promise<Response> {
   });
 
   queueRanksResource.notify();
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});

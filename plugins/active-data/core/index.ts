@@ -8,3 +8,5 @@ export type {
   ActiveDataBindingsPayload,
 } from "./resource";
 export { inlineBoundary } from "./inline-id-pattern";
+export { putBinding, deleteBinding, putBindingBodySchema } from "./endpoints";
+export type { PutBindingBody } from "./endpoints";

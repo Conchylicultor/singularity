@@ -12,3 +12,11 @@ export type {
   TriggerRow,
   TriggersPayload,
 } from "./resources";
+export {
+  listEmissions,
+  listTriggers,
+  deleteTriggerEndpoint,
+  patchTriggerBodySchema,
+  patchTriggerEndpoint,
+} from "./endpoints";
+export type { PatchTriggerBody } from "./endpoints";

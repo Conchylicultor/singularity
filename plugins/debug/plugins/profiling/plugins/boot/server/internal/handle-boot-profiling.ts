@@ -1,9 +1,11 @@
 import { getProfilingData } from "@server/profiler";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { getBootProfiling } from "../../shared/endpoints";
 
-export function handleBootProfiling(_req: Request): Response {
+export const handleBootProfiling = implement(getBootProfiling, () => {
   const server = getProfilingData();
-  return Response.json({
+  return {
     spans: server.spans,
     totalMs: server.totalDurationMs,
-  });
-}
+  };
+});

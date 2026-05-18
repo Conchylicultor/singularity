@@ -65,8 +65,8 @@ If you're tempted to store `{ [item]: { enabled: boolean, … } }` as a JSON blo
   - Slots: `Config.Spec`, `Config.Section`
   - DB schema: `plugins/config/server/internal/tables.ts`
 - Exports (core):
-  - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `Schema`, `ValueOf`, `Values`
-  - Values: `defineConfig`, `fullKey`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `validateKind`
+  - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `PatchConfigBody`, `Schema`, `ValueOf`, `Values`
+  - Values: `defineConfig`, `deleteConfig`, `fullKey`, `getConfig`, `getConfigSpecs`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `patchConfig`, `patchConfigBodySchema`, `validateKind`
 - Exports (web):
   - Types: `SecretFieldState`, `SectionWithPlugin`, `SpecWithPlugin`
   - Values: `Config`, `configResource`, `configSecretsResource`, `resetConfigValue`, `setConfigValue`, `settingsPane`, `useConfigValues`, `useSecretFieldSet`, `useSectionsWithPlugin`, `useSpecsWithPlugin`
@@ -77,10 +77,6 @@ If you're tempted to store `{ [item]: { enabled: boolean, … } }` as a JSON blo
   - `Shell.Sidebar` "Settings" → `component`
 - Server:
   - Uses: `database.db`
-  - `GET /api/config`
-  - `GET /api/config/specs`
-  - `PATCH /api/config`
-  - `DELETE /api/config/:key`
 - Imported by: `auth`, `backup`, `chart`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
 - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `review`, `theme-customizer`
 

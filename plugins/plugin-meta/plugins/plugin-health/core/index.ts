@@ -8,3 +8,8 @@ export type {
   PluginStaleness,
   ReviewTaskSummary,
 } from "./schemas";
+export {
+  getPluginHealthReviews,
+  getPluginStaleness,
+  getPluginHealthTasks,
+} from "./endpoints";

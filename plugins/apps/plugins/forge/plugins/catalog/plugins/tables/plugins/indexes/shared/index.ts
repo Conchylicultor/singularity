@@ -1,0 +1,1 @@
+export { getTableIndexes } from "./endpoints";

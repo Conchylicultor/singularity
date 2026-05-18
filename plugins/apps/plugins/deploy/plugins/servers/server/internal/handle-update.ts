@@ -1,20 +1,12 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { setSecret } from "@plugins/infra/plugins/secrets/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { updateServer } from "../../shared/endpoints";
 import { _deployServers } from "./tables";
 import { serversResource } from "./resources";
 
-export async function handleUpdate(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as {
-    name?: string;
-    host?: string;
-    port?: number;
-    sshUser?: string;
-    sshPrivateKey?: string;
-  };
+export const handleUpdate = implement(updateServer, async ({ params, body }) => {
   const updates: Record<string, unknown> = { updatedAt: new Date() };
   if (body.name !== undefined) updates.name = body.name;
   if (body.host !== undefined) updates.host = body.host;
@@ -27,7 +19,7 @@ export async function handleUpdate(
     .where(eq(_deployServers.id, params.id))
     .returning();
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (!row) return new Response("Not found", { status: 404 });
+  if (!row) throw new HttpError(404, "Not found");
   if (body.sshPrivateKey) {
     await setSecret(
       { namespace: "deploy-ssh", key: params.id },
@@ -35,9 +27,9 @@ export async function handleUpdate(
     );
   }
   serversResource.notify();
-  return Response.json({
+  return {
     ...row,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
-  });
-}
+  };
+});

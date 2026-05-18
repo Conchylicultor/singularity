@@ -6,6 +6,7 @@ import {
   handleGetSlot,
   handlePatchSlot,
 } from "./internal/handlers";
+import { getSlot, patchSlot, deleteContribution } from "../shared/endpoints";
 
 export { _reorderPrefs } from "./internal/tables";
 export { reorderPrefsResource } from "./internal/resource";
@@ -18,8 +19,8 @@ export default {
   loadBearing: true,
   contributions: [Resource.Declare(reorderPrefsResource)],
   httpRoutes: {
-    "GET /api/reorder/:slotId": handleGetSlot,
-    "PATCH /api/reorder/:slotId": handlePatchSlot,
-    "DELETE /api/reorder/:slotId/:contributionId": handleDeleteContribution,
+    [getSlot.route]: handleGetSlot,
+    [patchSlot.route]: handlePatchSlot,
+    [deleteContribution.route]: handleDeleteContribution,
   },
 } satisfies ServerPluginDefinition;

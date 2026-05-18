@@ -1,21 +1,11 @@
 import type { ServerPluginDefinition } from "@server/types";
-import { resumeConversation } from "@plugins/conversations/server";
-import { notifyConversationsChanged } from "@plugins/tasks-core/server";
+import { handleResume } from "./internal/handle-resume";
+import { resumeConversationEndpoint } from "../shared/endpoints";
 
 export default {
   id: "resume",
   name: "Resume",
   httpRoutes: {
-    "POST /api/conversations/:id/resume": async (_req, { id }) => {
-      if (!id) return new Response("Missing id", { status: 400 });
-      try {
-        await resumeConversation(id);
-        notifyConversationsChanged();
-        return Response.json({ ok: true });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return new Response(msg, { status: 409 });
-      }
-    },
+    [resumeConversationEndpoint.route]: handleResume,
   },
 } satisfies ServerPluginDefinition;

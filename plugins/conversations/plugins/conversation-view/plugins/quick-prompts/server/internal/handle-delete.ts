@@ -1,17 +1,13 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { deleteQuickPrompt } from "../../shared/endpoints";
 import { quickPromptsTable } from "./tables";
 import { quickPromptsServerResource } from "./resources";
 
-export async function handleDelete(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const { id } = params;
-  if (!id) return new Response("Missing id", { status: 400 });
-
-  await db.delete(quickPromptsTable).where(eq(quickPromptsTable.id, id));
+export const handleDelete = implement(deleteQuickPrompt, async ({ params }) => {
+  await db.delete(quickPromptsTable).where(eq(quickPromptsTable.id, params.id));
 
   quickPromptsServerResource.notify();
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});

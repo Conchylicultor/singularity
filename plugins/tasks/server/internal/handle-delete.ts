@@ -1,19 +1,14 @@
-import { deleteTask } from "@plugins/tasks-core/server";
+import { deleteTask as deleteTaskDb } from "@plugins/tasks-core/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { deleteTask } from "../../core/endpoints";
 
-export async function handleDelete(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const id = params.id;
-  if (!id) return new Response("Missing id", { status: 400 });
+export const handleDelete = implement(deleteTask, async ({ params }) => {
   let found;
   try {
-    found = await deleteTask(id);
+    found = await deleteTaskDb(params.id);
   } catch (err) {
-    return new Response(err instanceof Error ? err.message : "Conflict", {
-      status: 409,
-    });
+    throw new HttpError(409, err instanceof Error ? err.message : "Conflict");
   }
-  if (!found) return new Response("Not found", { status: 404 });
-  return new Response(null, { status: 204 });
-}
+  if (!found) throw new HttpError(404, "Not found");
+  // return undefined → implement() sends 204
+});

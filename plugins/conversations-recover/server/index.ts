@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { handleRestoreBatch } from "./internal/handle-restore-batch";
+import { restoreBatch } from "../shared/endpoints";
 
 export default {
   id: "conversations-recover",
@@ -7,6 +8,6 @@ export default {
   description:
     "Batch-restore recently-closed conversations that were killed by a crash.",
   httpRoutes: {
-    "POST /api/conversations-recover/restore-batch": handleRestoreBatch,
+    [restoreBatch.route]: handleRestoreBatch,
   },
 } satisfies ServerPluginDefinition;

@@ -1,14 +1,12 @@
 import { getConversationClaudeSessionId } from "@plugins/tasks-core/server";
 import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { getConversationTranscript } from "../../shared/endpoints";
 
-export async function handleTranscript(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const { id } = params;
-  const claudeSessionId = await getConversationClaudeSessionId(id);
-  if (claudeSessionId === undefined) return new Response("Not found", { status: 404 });
-  if (!claudeSessionId) return Response.json({ path: null });
+export const handleTranscript = implement(getConversationTranscript, async ({ params }) => {
+  const claudeSessionId = await getConversationClaudeSessionId(params.id);
+  if (claudeSessionId === undefined) throw new HttpError(404, "Not found");
+  if (!claudeSessionId) return { path: null };
   const path = await findTranscriptPath(claudeSessionId);
-  return Response.json({ path });
-}
+  return { path };
+});

@@ -18,6 +18,13 @@ import { advancePinJob } from "./internal/advance-pin-job";
 import { taskStatusPinJob } from "./internal/task-status-pin-job";
 import { queueRanksResource } from "./internal/resource";
 import { repairBlockedOrder } from "./internal/repair-blocked-order";
+import {
+  reorderQueue,
+  promoteQueue,
+  demoteQueue,
+  stepDownQueue,
+  rerankQueue,
+} from "../shared/endpoints";
 
 export { conversationsQueue } from "./internal/tables";
 export { queueRanksResource } from "./internal/resource";
@@ -38,11 +45,11 @@ export default {
   ],
   register: [seedRankJob, validatePinJob, advancePinJob, taskStatusPinJob],
   httpRoutes: {
-    "POST /api/conversations-queue/reorder": handleReorder,
-    "POST /api/conversations-queue/promote": handlePromote,
-    "POST /api/conversations-queue/demote": handleDemote,
-    "POST /api/conversations-queue/step-down": handleStepDown,
-    "POST /api/conversations-queue/rerank": handleRerank,
+    [reorderQueue.route]:  handleReorder,
+    [promoteQueue.route]:  handlePromote,
+    [demoteQueue.route]:   handleDemote,
+    [stepDownQueue.route]: handleStepDown,
+    [rerankQueue.route]:   handleRerank,
   },
   onReady: repairBlockedOrder,
 } satisfies ServerPluginDefinition;

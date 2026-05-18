@@ -1,25 +1,24 @@
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { getFileContent as getFileContentEndpoint } from "../../shared/endpoints";
 import { getFileContent, getFileContentAtRef } from "./get-file-content";
 import { ALLOWED_REFS, resolveRef } from "./resolve-ref";
 import { resolveWorktreePath } from "./resolve-worktree-path";
 
-export async function handleFileContent(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const worktree = params.worktree;
-  if (!worktree) return new Response("Missing worktree", { status: 400 });
+export const handleFileContent = implement(getFileContentEndpoint, async ({ params, req }) => {
+  const { worktree } = params;
+  if (!worktree) throw new HttpError(400, "Missing worktree");
 
   const url = new URL(req.url);
   const path = url.searchParams.get("path");
-  if (!path) return new Response("Missing path", { status: 400 });
+  if (!path) throw new HttpError(400, "Missing path");
   const ref = url.searchParams.get("ref");
 
   const wtPath = await resolveWorktreePath(worktree);
-  if (!wtPath) return new Response("Not found", { status: 404 });
+  if (!wtPath) throw new HttpError(404, "Not found");
 
   let result;
   if (ref) {
-    if (!ALLOWED_REFS.has(ref)) return new Response("Invalid ref", { status: 400 });
+    if (!ALLOWED_REFS.has(ref)) throw new HttpError(400, "Invalid ref");
     const resolvedRef = await resolveRef(wtPath, ref);
     result = await getFileContentAtRef(wtPath, path, resolvedRef);
   } else {
@@ -28,17 +27,14 @@ export async function handleFileContent(
 
   switch (result.kind) {
     case "invalid-path":
-      return new Response("Invalid path", { status: 400 });
+      throw new HttpError(400, "Invalid path");
     case "not-found":
-      return new Response("File not found", { status: 404 });
+      throw new HttpError(404, "File not found");
     case "too-large":
-      return Response.json(
-        { error: "too-large", size: result.size },
-        { status: 413 },
-      );
+      throw new HttpError(413, "File too large");
     case "binary":
-      return Response.json({ error: "binary" }, { status: 415 });
+      throw new HttpError(415, "Binary file");
     case "ok":
-      return Response.json({ content: result.content });
+      return { content: result.content };
   }
-}
+});

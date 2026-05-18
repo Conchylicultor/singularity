@@ -4,3 +4,11 @@ export {
   SecretsMainOfflineError,
   SecretsKeychainLockedError,
 } from "./internal/errors";
+export {
+  secretsGet,
+  secretsSet,
+  secretsDelete,
+  secretsHas,
+  secretsMeta,
+  secretsList,
+} from "./endpoints";

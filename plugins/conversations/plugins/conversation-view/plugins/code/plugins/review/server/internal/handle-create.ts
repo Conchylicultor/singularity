@@ -1,20 +1,11 @@
 import { db } from "@plugins/database/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { createReviewSection } from "../../shared/endpoints";
 import { reviewSectionsTable } from "./tables";
 import { reviewSectionsServerResource } from "./resources";
 import { nextRank } from "./rank";
 
-export async function handleCreate(req: Request): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as {
-    name?: string;
-    patterns?: string[];
-  };
-  if (typeof body.name !== "string" || body.name.trim() === "") {
-    return Response.json({ error: "name required" }, { status: 400 });
-  }
-  if (!Array.isArray(body.patterns)) {
-    return Response.json({ error: "patterns required" }, { status: 400 });
-  }
-
+export const handleCreate = implement(createReviewSection, async ({ body }) => {
   const id = crypto.randomUUID();
   const rank = await nextRank();
 
@@ -29,5 +20,5 @@ export async function handleCreate(req: Request): Promise<Response> {
     .returning();
 
   reviewSectionsServerResource.notify();
-  return Response.json(row, { status: 201 });
-}
+  return row;
+});

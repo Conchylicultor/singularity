@@ -69,8 +69,8 @@ Behavior:
   - Slots: `ActiveData.Tag`
   - DB schema: `plugins/active-data/server/internal/tables.ts`
 - Exports (core):
-  - Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`
-  - Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `inlineBoundary`
+  - Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`, `PutBindingBody`
+  - Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `deleteBinding`, `inlineBoundary`, `putBinding`, `putBindingBodySchema`
 - Exports (web):
   - Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataCodeContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`, `CodeReplaceContrib`
   - Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
@@ -80,8 +80,6 @@ Behavior:
   - `MarkdownEnhancerSlot`
 - Server:
   - Uses: `database.db`, `tasks-core._conversations`
-  - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
-  - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
 - Imported by: `assistant-text`, `attempt`, `conv`, `plugin-link`, `task`, `task-link`
 - Slot contributors: `attempt`, `conv`, `plugin-link`, `task`, `task-link`
 - Sub-plugins:

@@ -16,6 +16,12 @@ import {
   syncTriggerContributions,
   sweepStaleTriggers,
 } from "./internal/trigger-contributions";
+import {
+  listEmissions,
+  listTriggers,
+  deleteTriggerEndpoint,
+  patchTriggerEndpoint,
+} from "../core/endpoints";
 
 export { defineTriggerEvent } from "./internal/event";
 export type {
@@ -47,10 +53,10 @@ export default {
     "Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().",
   loadBearing: true,
   httpRoutes: {
-    "GET /api/events/emissions": handleListEmissions,
-    "GET /api/events/triggers": handleListTriggers,
-    "DELETE /api/events/triggers/:id": handleDeleteTrigger,
-    "PATCH /api/events/triggers/:id": handlePatchTrigger,
+    [listEmissions.route]: handleListEmissions,
+    [listTriggers.route]: handleListTriggers,
+    [deleteTriggerEndpoint.route]: handleDeleteTrigger,
+    [patchTriggerEndpoint.route]: handlePatchTrigger,
   },
   register: [eventsDispatchJob, jobsHooksRegistration],
   contributions: [Resource.Declare(eventEmissionsResource), Resource.Declare(eventTriggersResource)],

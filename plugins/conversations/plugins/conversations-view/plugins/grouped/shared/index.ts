@@ -9,3 +9,10 @@ export {
   ConversationGroupsPayloadSchema,
   conversationGroupsResource,
 } from "./internal/schemas";
+export {
+  createConversationGroup,
+  patchConversationGroup,
+  deleteConversationGroup,
+  addConversationGroupMembers,
+  removeConversationGroupMember,
+} from "./endpoints";

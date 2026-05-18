@@ -54,13 +54,12 @@ Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The
   - Values: `getEditMode`, `setEditMode`, `useEditMode`
 - Exports (server):
   - Values: `_reorderPrefs`, `reorderPrefsResource`
+- Exports (shared):
+  - Types: `PatchSlotBody`, `ReorderSlotPrefs`
+  - Values: `deleteContribution`, `getSlot`, `patchSlot`, `patchSlotBodySchema`, `reorderPrefsResource`, `ReorderSlotPrefsSchema`
 - Server:
   - Uses: `database.db`
-  - `GET /api/reorder/:slotId`
-  - `PATCH /api/reorder/:slotId`
-  - `DELETE /api/reorder/:slotId/:contributionId`
 - Imported by: `edit-mode`
-- Endpoint callers: `groups`
 - Sub-plugins:
   - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
   - **`groups`** — User-created groups within reorderable areas. Drag items onto each other to form groups.

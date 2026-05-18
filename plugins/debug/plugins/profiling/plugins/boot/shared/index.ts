@@ -1,0 +1,1 @@
+export { getBootProfiling } from "./endpoints";

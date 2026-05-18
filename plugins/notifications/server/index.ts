@@ -4,6 +4,7 @@ import { notificationsResource } from "./internal/resources";
 import { handleDismiss } from "./internal/handle-dismiss";
 import { handleDismissAll } from "./internal/handle-dismiss-all";
 import { handleMarkAllRead } from "./internal/handle-mark-read";
+import { dismissAllNotifications, markAllNotificationsRead, dismissNotification } from "../shared/endpoints";
 
 export { _notifications } from "./internal/tables";
 export { notificationsResource } from "./internal/resources";
@@ -16,8 +17,8 @@ export default {
   description: "Persistent bell-button notifications backed by the DB.",
   contributions: [Resource.Declare(notificationsResource)],
   httpRoutes: {
-    "POST /api/notifications/dismiss-all": handleDismissAll,
-    "POST /api/notifications/mark-all-read": handleMarkAllRead,
-    "POST /api/notifications/:id/dismiss": handleDismiss,
+    [dismissAllNotifications.route]: handleDismissAll,
+    [markAllNotificationsRead.route]: handleMarkAllRead,
+    [dismissNotification.route]: handleDismiss,
   },
 } satisfies ServerPluginDefinition;

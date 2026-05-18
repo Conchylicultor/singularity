@@ -15,6 +15,18 @@ import {
   handleDeleteExecution,
   handleSubmitStep,
 } from "./internal/routes";
+import {
+  listDefinitions,
+  createDefinition,
+  getDefinition,
+  updateDefinition,
+  deleteDefinition,
+  listExecutions,
+  createExecution,
+  getExecution,
+  deleteExecution,
+  submitStep,
+} from "../core/endpoints";
 
 export { _workflowDefinitions, _workflowExecutions, _workflowExecutionSteps } from "./internal/tables";
 export { userInputSubmitted, _userInputSubmittedTriggers } from "./internal/tables-events";
@@ -28,16 +40,16 @@ export default {
   description:
     "Core backend infrastructure for the workflows app. Owns DB tables, step executor registry, durable run job, trigger event, HTTP API, and live-state resources.",
   httpRoutes: {
-    "GET /api/workflows/definitions": handleListDefinitions,
-    "POST /api/workflows/definitions": handleCreateDefinition,
-    "GET /api/workflows/definitions/:id": handleGetDefinition,
-    "PATCH /api/workflows/definitions/:id": handleUpdateDefinition,
-    "DELETE /api/workflows/definitions/:id": handleDeleteDefinition,
-    "GET /api/workflows/executions": handleListExecutions,
-    "POST /api/workflows/executions": handleCreateExecution,
-    "GET /api/workflows/executions/:id": handleGetExecution,
-    "DELETE /api/workflows/executions/:id": handleDeleteExecution,
-    "POST /api/workflows/executions/:execId/steps/:stepId/submit": handleSubmitStep,
+    [listDefinitions.route]: handleListDefinitions,
+    [createDefinition.route]: handleCreateDefinition,
+    [getDefinition.route]: handleGetDefinition,
+    [updateDefinition.route]: handleUpdateDefinition,
+    [deleteDefinition.route]: handleDeleteDefinition,
+    [listExecutions.route]: handleListExecutions,
+    [createExecution.route]: handleCreateExecution,
+    [getExecution.route]: handleGetExecution,
+    [deleteExecution.route]: handleDeleteExecution,
+    [submitStep.route]: handleSubmitStep,
   },
   register: [workflowRunJob, userInputSubmitted],
   contributions: [

@@ -8,6 +8,13 @@ import {
   handlePatchGroup,
   handleRemoveMember,
 } from "./internal/routes";
+import {
+  createConversationGroup,
+  patchConversationGroup,
+  deleteConversationGroup,
+  addConversationGroupMembers,
+  removeConversationGroupMember,
+} from "../shared/endpoints";
 
 export { _conversationGroups, _conversationGroupMembers } from "./internal/tables";
 export { conversationGroupsResource } from "./internal/resource";
@@ -19,11 +26,11 @@ export default {
   description:
     "User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.",
   httpRoutes: {
-    "POST /api/conversation-groups": handleCreateGroup,
-    "PATCH /api/conversation-groups/:id": handlePatchGroup,
-    "DELETE /api/conversation-groups/:id": handleDeleteGroup,
-    "POST /api/conversation-groups/:id/members": handleAddMember,
-    "DELETE /api/conversation-groups/members/:conversationId": handleRemoveMember,
+    [createConversationGroup.route]:      handleCreateGroup,
+    [patchConversationGroup.route]:       handlePatchGroup,
+    [deleteConversationGroup.route]:      handleDeleteGroup,
+    [addConversationGroupMembers.route]:  handleAddMember,
+    [removeConversationGroupMember.route]: handleRemoveMember,
   },
   contributions: [Resource.Declare(conversationGroupsResource)],
 } satisfies ServerPluginDefinition;

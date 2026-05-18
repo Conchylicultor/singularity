@@ -7,6 +7,8 @@
 - Description: Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
 - Exports (server):
   - Values: `resolveWorktreePath`
+- Exports (shared):
+  - Values: `getCodeTree`, `getCommitFiles`, `getFileContent`, `getFileDiff`, `getImageContent`, `getPushFiles`
 - Contributes:
   - `Pane.Register` "global-file-tree"
   - `Pane.Register` "conv-file-tree"
@@ -14,14 +16,7 @@
   - `Conversation.ActionBar` → `ConvTreeButton`
 - Server:
   - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`
-  - `GET /api/code/:worktree/tree`
-  - `GET /api/code/:worktree/file`
-  - `GET /api/code/:worktree/diff`
-  - `GET /api/code/:worktree/image`
-  - `GET /api/code/:worktree/push`
-  - `GET /api/code/:worktree/commit`
 - Imported by: `file-resolve`
-- Endpoint callers: `commits-graph`, `diff`, `docs-button`, `file-pane`, `file-resolve`, `image`, `markdown-extensions`, `read`, `review`
 - Sub-plugins:
   - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
 

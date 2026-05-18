@@ -1,0 +1,1 @@
+export { mcpRequest } from "./endpoints";

@@ -1,41 +1,35 @@
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { listJobs, retryJob, cancelJob } from "../../core/endpoints";
 import { getWorkerUtils } from "./worker";
 import { loadJobsList, jobsListResource } from "./resources";
 
-export async function handleListJobs(req: Request): Promise<Response> {
+export const handleListJobs = implement(listJobs, async ({ req }) => {
   const url = new URL(req.url);
   const state = url.searchParams.get("state");
   const limit = Math.min(Number(url.searchParams.get("limit") ?? 200), 1000);
 
   const payload = await loadJobsList(limit);
   if (state && state !== "all") {
-    return Response.json({
+    return {
       rows: payload.rows.filter((j) => j.state === state),
       counts: payload.counts,
-    });
+    };
   }
-  return Response.json(payload);
-}
+  return payload;
+});
 
-export async function handleRetryJob(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const id = params.id;
-  if (!id) return Response.json({ error: "id required" }, { status: 400 });
+export const handleRetryJob = implement(retryJob, async ({ params }) => {
+  if (!params.id) throw new HttpError(400, "id required");
   const utils = await getWorkerUtils();
-  await utils.rescheduleJobs([id], { attempts: 0, runAt: new Date() });
+  await utils.rescheduleJobs([params.id], { attempts: 0, runAt: new Date() });
   jobsListResource.notify();
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});
 
-export async function handleCancelJob(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const id = params.id;
-  if (!id) return Response.json({ error: "id required" }, { status: 400 });
+export const handleCancelJob = implement(cancelJob, async ({ params }) => {
+  if (!params.id) throw new HttpError(400, "id required");
   const utils = await getWorkerUtils();
-  await utils.completeJobs([id]);
+  await utils.completeJobs([params.id]);
   jobsListResource.notify();
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});

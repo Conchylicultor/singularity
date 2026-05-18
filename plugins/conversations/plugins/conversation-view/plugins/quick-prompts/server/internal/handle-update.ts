@@ -1,21 +1,14 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/prompt-editor/plugins/paste-images/core";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { updateQuickPrompt } from "../../shared/endpoints";
 import { quickPromptsTable } from "./tables";
 import { quickPromptAttachments } from "./tables-attachments";
 import { quickPromptsServerResource } from "./resources";
 
-export async function handleUpdate(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
+export const handleUpdate = implement(updateQuickPrompt, async ({ params, body }) => {
   const { id } = params;
-  if (!id) return new Response("Missing id", { status: 400 });
-
-  const body = (await req.json().catch(() => ({}))) as {
-    title?: string;
-    prompt?: string;
-  };
 
   const patch: Partial<typeof quickPromptsTable.$inferInsert> = {
     updatedAt: new Date(),
@@ -30,12 +23,12 @@ export async function handleUpdate(
     .returning({ id: quickPromptsTable.id });
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (!updated) return new Response("Not found", { status: 404 });
+  if (!updated) throw new HttpError(404, "Not found");
 
   if (typeof body.prompt === "string") {
     await quickPromptAttachments.set(id, extractAttachmentIds(body.prompt));
   }
 
   quickPromptsServerResource.notify();
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});

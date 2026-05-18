@@ -1,6 +1,7 @@
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
-
 import { GIT } from "@plugins/infra/plugins/paths/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { getRepoInfo } from "../../core/endpoints";
 
 let cached: { githubBase: string | null } | null = null;
 
@@ -31,6 +32,6 @@ async function loadRepoInfo(): Promise<{ githubBase: string | null }> {
   return cached;
 }
 
-export async function handleRepoInfo(): Promise<Response> {
-  return Response.json(await loadRepoInfo());
-}
+export const handleRepoInfo = implement(getRepoInfo, async () => {
+  return loadRepoInfo();
+});

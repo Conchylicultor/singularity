@@ -8,6 +8,14 @@ import {
   handleMeta,
   handleSet,
 } from "./internal/handlers";
+import {
+  secretsGet,
+  secretsSet,
+  secretsDelete,
+  secretsHas,
+  secretsMeta,
+  secretsList,
+} from "@plugins/infra/plugins/secrets/core";
 
 export {
   getSecret,
@@ -31,12 +39,12 @@ export default {
     "Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.",
   loadBearing: true,
   httpRoutes: {
-    "POST /api/secrets/get": handleGet,
-    "POST /api/secrets/set": handleSet,
-    "POST /api/secrets/delete": handleDelete,
-    "POST /api/secrets/has": handleHas,
-    "POST /api/secrets/meta": handleMeta,
-    "POST /api/secrets/list": handleList,
+    [secretsGet.route]: handleGet,
+    [secretsSet.route]: handleSet,
+    [secretsDelete.route]: handleDelete,
+    [secretsHas.route]: handleHas,
+    [secretsMeta.route]: handleMeta,
+    [secretsList.route]: handleList,
   },
   onReady,
 } satisfies CentralPluginDefinition;

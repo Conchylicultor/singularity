@@ -1,28 +1,22 @@
-import { listGoneConversations } from "@plugins/tasks-core/server";
+import { listGoneConversations as listGoneConversationsDb } from "@plugins/tasks-core/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { listGoneConversations } from "../../core/endpoints";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 
-export async function handleListGone(req: Request): Promise<Response> {
-  const url = new URL(req.url);
-  const beforeStr = url.searchParams.get("before");
-  const limitStr = url.searchParams.get("limit");
-
-  if (!beforeStr) {
-    return Response.json({ error: "Missing required param: before" }, { status: 400 });
-  }
-
-  const before = new Date(beforeStr);
+export const handleListGone = implement(listGoneConversations, async ({ query }) => {
+  const before = new Date(query.before);
   if (isNaN(before.getTime())) {
-    return Response.json({ error: "Invalid date: before" }, { status: 400 });
+    throw new HttpError(400, "Invalid date: before");
   }
 
-  const parsed = parseInt(limitStr ?? "", 10);
+  const parsed = parseInt(query.limit ?? "", 10);
   const limit = Math.min(MAX_LIMIT, Math.max(1, isNaN(parsed) ? DEFAULT_LIMIT : parsed));
 
-  const rows = await listGoneConversations({ before, limit: limit + 1 });
-  return Response.json({
+  const rows = await listGoneConversationsDb({ before, limit: limit + 1 });
+  return {
     items: rows.slice(0, limit),
     hasMore: rows.length > limit,
-  });
-}
+  };
+});

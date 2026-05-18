@@ -8,6 +8,12 @@ import { handleCreate } from "./internal/handle-create";
 import { handleUpdate } from "./internal/handle-update";
 import { handleDelete } from "./internal/handle-delete";
 import { seedDefaults } from "./internal/seed";
+import {
+  listReviewSections,
+  createReviewSection,
+  updateReviewSection,
+  deleteReviewSection,
+} from "../shared/endpoints";
 
 export default {
   id: "conversation-code-review",
@@ -15,10 +21,10 @@ export default {
   description:
     "Toolbar button and full-screen view to review all worktree changes file-by-file.",
   httpRoutes: {
-    "GET /api/review-sections": handleList,
-    "POST /api/review-sections": handleCreate,
-    "PATCH /api/review-sections/:id": handleUpdate,
-    "DELETE /api/review-sections/:id": handleDelete,
+    [listReviewSections.route]: handleList,
+    [createReviewSection.route]: handleCreate,
+    [updateReviewSection.route]: handleUpdate,
+    [deleteReviewSection.route]: handleDelete,
   },
   contributions: [
     Config.Field(reviewConfig),

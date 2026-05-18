@@ -7,13 +7,11 @@
 - Description: Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
 - Exports (web):
   - Values: `captureApp`, `screenshotPane`
+- Exports (shared):
+  - Values: `createScreenshot`, `getScreenshot`, `saveScreenshotFile`
 - Contributes:
   - `Pane.Register` "screenshot"
   - `Shell.Toolbar` → `ScreenshotButton`
-- Server:
-  - `POST /api/screenshots/:id`
-  - `GET /api/screenshots/:id`
-  - `POST /api/screenshots/:id/file`
 - Imported by: `draw-on-app`
 - Sub-plugins:
   - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.

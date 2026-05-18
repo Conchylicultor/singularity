@@ -10,6 +10,15 @@ import {
   handlePatchState,
 } from "./internal/excluded-paths";
 import { commitsConfig } from "../shared/config";
+import {
+  getCommitsCumulative,
+  getCommitsRate,
+  getCommitsLinesCumulative,
+  getCommitsLinesRate,
+  getExcludedPathState,
+  patchExcludedPathState,
+  deleteExcludedPathState,
+} from "../shared/endpoints";
 
 export default {
   id: "stats-commits",
@@ -17,12 +26,12 @@ export default {
   description: "Commit-based stats: commits and lines of change over time.",
   contributions: [Config.Field(commitsConfig), Resource.Declare(excludedPathStateResource)],
   httpRoutes: {
-    "GET /api/stats/commits/cumulative": handleCumulative,
-    "GET /api/stats/commits/rate": handleRate,
-    "GET /api/stats/commits/lines/cumulative": handleLinesCumulative,
-    "GET /api/stats/commits/lines/rate": handleLinesRate,
-    "GET /api/stats/commits/excluded-path-state": handleGetState,
-    "PATCH /api/stats/commits/excluded-path-state": handlePatchState,
-    "DELETE /api/stats/commits/excluded-path-state/:path": handleDeleteState,
+    [getCommitsCumulative.route]: handleCumulative,
+    [getCommitsRate.route]: handleRate,
+    [getCommitsLinesCumulative.route]: handleLinesCumulative,
+    [getCommitsLinesRate.route]: handleLinesRate,
+    [getExcludedPathState.route]: handleGetState,
+    [patchExcludedPathState.route]: handlePatchState,
+    [deleteExcludedPathState.route]: handleDeleteState,
   },
 } satisfies ServerPluginDefinition;

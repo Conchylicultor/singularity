@@ -6,6 +6,13 @@ import { handleCreate } from "./internal/handle-create";
 import { handleUpdate } from "./internal/handle-update";
 import { handleDelete } from "./internal/handle-delete";
 import { handleUse }    from "./internal/handle-use";
+import {
+  listPromptTemplates,
+  createPromptTemplate,
+  updatePromptTemplate,
+  deletePromptTemplate,
+  usePromptTemplate,
+} from "../shared/endpoints";
 
 export default {
   id: "prompt-templates",
@@ -13,11 +20,11 @@ export default {
   description:
     "Named template chips that prepend text to the conversation prompt editor for editing before sending.",
   httpRoutes: {
-    "GET /api/prompt-templates":            handleList,
-    "POST /api/prompt-templates":           handleCreate,
-    "PATCH /api/prompt-templates/:id":      handleUpdate,
-    "DELETE /api/prompt-templates/:id":     handleDelete,
-    "POST /api/prompt-templates/:id/use":   handleUse,
+    [listPromptTemplates.route]:   handleList,
+    [createPromptTemplate.route]:  handleCreate,
+    [updatePromptTemplate.route]:  handleUpdate,
+    [deletePromptTemplate.route]:  handleDelete,
+    [usePromptTemplate.route]:     handleUse,
   },
   contributions: [Resource.Declare(promptTemplatesServerResource)],
 } satisfies ServerPluginDefinition;

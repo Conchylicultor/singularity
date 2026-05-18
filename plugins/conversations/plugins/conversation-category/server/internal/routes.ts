@@ -1,13 +1,17 @@
 import { readConfig } from "@plugins/config/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import type { HttpHandler } from "@server/types";
 import { conversationCategoryConfig } from "../../shared/config";
+import {
+  setConversationCategory,
+  clearConversationCategory,
+} from "../../shared/endpoints";
 import { conversationCategory } from "./tables";
 import { conversationCategoriesResource } from "./resource";
 import { classifyConversationJob } from "./classify-job";
 
-export async function handleClassify(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
+// Returns 202 Accepted — implement() always returns 200, so use a raw handler here.
+export const handleClassify: HttpHandler = async (_req, params) => {
   const conversationId = params.conversationId;
   if (!conversationId) {
     return Response.json(
@@ -20,64 +24,28 @@ export async function handleClassify(
     force: true,
   });
   return Response.json({ ok: true }, { status: 202 });
-}
+};
 
-interface SetCategoryBody {
-  category: string;
-}
-
-export async function handleSetCategory(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const conversationId = params.conversationId;
-  if (!conversationId) {
-    return Response.json(
-      { error: "Missing conversationId in path" },
-      { status: 400 },
-    );
-  }
-  const body = (await req.json().catch(() => null)) as SetCategoryBody | null;
-  const category = body?.category;
-  if (typeof category !== "string" || category.trim() === "") {
-    return Response.json(
-      { error: "category (non-empty string) required" },
-      { status: 400 },
-    );
-  }
-
+export const handleSetCategory = implement(setConversationCategory, async ({ params, body }) => {
   // Validate against the configured list — the UI offers these as choices,
   // but a stale tab or direct API caller could pass anything; reject early
   // so the chip never displays a label that's not in the picker.
   const { categories } = await readConfig(conversationCategoryConfig);
-  if (!categories.includes(category)) {
-    return Response.json(
-      { error: `category "${category}" is not in the configured list` },
-      { status: 400 },
-    );
+  if (!categories.includes(body.category)) {
+    throw new HttpError(400, `category "${body.category}" is not in the configured list`);
   }
 
-  await conversationCategory.upsert(conversationId, {
-    category,
+  await conversationCategory.upsert(params.conversationId, {
+    category: body.category,
     source: "manual",
   });
   conversationCategoriesResource.notify();
 
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});
 
-export async function handleClearCategory(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const conversationId = params.conversationId;
-  if (!conversationId) {
-    return Response.json(
-      { error: "Missing conversationId in path" },
-      { status: 400 },
-    );
-  }
-  await conversationCategory.delete(conversationId);
+export const handleClearCategory = implement(clearConversationCategory, async ({ params }) => {
+  await conversationCategory.delete(params.conversationId);
   conversationCategoriesResource.notify();
-  return Response.json({ ok: true });
-}
+  return { ok: true };
+});
