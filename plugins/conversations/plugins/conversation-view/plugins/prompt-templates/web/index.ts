@@ -3,6 +3,7 @@ import { PromptEditorSlots } from "@plugins/primitives/plugins/prompt-editor/web
 import { Config } from "@plugins/config/web";
 import { FloatingTemplateChips } from "./components/prompt-template-chips";
 import { PromptTemplatesSettings } from "./components/prompt-templates-settings";
+import { promptTemplatesConfig } from "../shared/config";
 
 export default {
   id: "conversation-prompt-templates",
@@ -14,6 +15,7 @@ export default {
       id: "prompt-templates",
       component: FloatingTemplateChips,
     }),
+    Config.Spec(promptTemplatesConfig),
     Config.Section({
       id: "prompt-templates",
       title: "Prompt Templates",

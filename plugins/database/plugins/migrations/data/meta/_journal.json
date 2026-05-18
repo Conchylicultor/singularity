@@ -694,6 +694,13 @@
       "tag": "20260516_215044_5ae5d7e3__dag_workflow_columns",
       "hash": "5ae5d7e3",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1779107391000,
+      "tag": "20260518_122951_4bc753a5__remove_quick_prompts",
+      "hash": "4bc753a5",
+      "breakpoints": true
     }
   ]
 }

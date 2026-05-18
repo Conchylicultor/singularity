@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@server/types";
 import { Resource } from "@server/resources";
+import { Config } from "@plugins/config/server";
 import { promptTemplatesServerResource } from "./internal/resources";
 import { handleList }   from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";
@@ -13,6 +14,7 @@ import {
   deletePromptTemplate,
   usePromptTemplate,
 } from "../shared/endpoints";
+import { promptTemplatesConfig } from "../shared/config";
 
 export default {
   id: "prompt-templates",
@@ -26,5 +28,8 @@ export default {
     [deletePromptTemplate.route]:  handleDelete,
     [usePromptTemplate.route]:     handleUse,
   },
-  contributions: [Resource.Declare(promptTemplatesServerResource)],
+  contributions: [
+    Resource.Declare(promptTemplatesServerResource),
+    Config.Field(promptTemplatesConfig),
+  ],
 } satisfies ServerPluginDefinition;

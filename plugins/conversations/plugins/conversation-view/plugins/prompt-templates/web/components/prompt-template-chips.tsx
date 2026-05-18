@@ -11,11 +11,11 @@ import { useConversation } from "@plugins/conversations/web";
 import { postConversationTurn } from "@plugins/conversations/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
+import { useConfigValues } from "@plugins/config/web";
 import { usePromptTemplate } from "../../shared/endpoints";
 import { promptTemplatesResource } from "../../shared/resources";
 import type { PromptTemplate } from "../../shared/resources";
-
-const MAX_PINNED = 3;
+import { promptTemplatesConfig } from "../../shared/config";
 
 function applyTemplate(
   t: PromptTemplate,
@@ -76,17 +76,13 @@ export function FloatingTemplateChips({ insertText }: PromptEditorActionProps) {
   const live = useConversation(conversation.id) ?? conversation;
   const templatesResult = useResource(promptTemplatesResource);
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const { pinnedCount } = useConfigValues(promptTemplatesConfig, "conversation-prompt-templates");
 
   const canSend = live.status === "waiting" && sendingId === null;
 
   const pinnedTemplates = useMemo(
-    () =>
-      templatesResult.pending ? [] :
-      [...templatesResult.data]
-        .filter((t) => t.useCount > 0)
-        .sort((a, b) => b.useCount - a.useCount)
-        .slice(0, MAX_PINNED),
-    [templatesResult],
+    () => templatesResult.pending ? [] : templatesResult.data.slice(0, pinnedCount),
+    [templatesResult, pinnedCount],
   );
 
   async function sendTemplate(t: PromptTemplate) {

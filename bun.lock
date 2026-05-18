@@ -495,10 +495,6 @@
     "plugins/conversations/plugins/conversation-view/plugins/push-counter": {
       "name": "@singularity/plugin-conversations-conversation-view-push-counter",
     },
-    "plugins/conversations/plugins/conversation-view/plugins/quick-prompts": {
-      "name": "@singularity/plugin-conversations-conversation-view-quick-prompts",
-      "version": "0.0.1",
-    },
     "plugins/conversations/plugins/conversation-view/plugins/resume": {
       "name": "@singularity/plugin-conversations-conversation-view-resume",
       "version": "0.0.1",
@@ -1981,8 +1977,6 @@
     "@singularity/plugin-conversations-conversation-view-push-and-exit": ["@singularity/plugin-conversations-conversation-view-push-and-exit@workspace:plugins/conversations/plugins/conversation-view/plugins/push-and-exit"],
 
     "@singularity/plugin-conversations-conversation-view-push-counter": ["@singularity/plugin-conversations-conversation-view-push-counter@workspace:plugins/conversations/plugins/conversation-view/plugins/push-counter"],
-
-    "@singularity/plugin-conversations-conversation-view-quick-prompts": ["@singularity/plugin-conversations-conversation-view-quick-prompts@workspace:plugins/conversations/plugins/conversation-view/plugins/quick-prompts"],
 
     "@singularity/plugin-conversations-conversation-view-resume": ["@singularity/plugin-conversations-conversation-view-resume@workspace:plugins/conversations/plugins/conversation-view/plugins/resume"],
 

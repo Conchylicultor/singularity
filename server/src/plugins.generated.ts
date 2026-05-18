@@ -44,7 +44,6 @@ import conversationsConversationViewLaunchPromptsPlugin from "@plugins/conversat
 import conversationsConversationViewNotesPlugin from "@plugins/conversations/plugins/conversation-view/plugins/notes/server";
 import conversationsConversationViewPromptTemplatesPlugin from "@plugins/conversations/plugins/conversation-view/plugins/prompt-templates/server";
 import conversationsConversationViewPushAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server";
-import conversationsConversationViewQuickPromptsPlugin from "@plugins/conversations/plugins/conversation-view/plugins/quick-prompts/server";
 import conversationsConversationViewResumePlugin from "@plugins/conversations/plugins/conversation-view/plugins/resume/server";
 import conversationsConversationViewTurnSummaryPlugin from "@plugins/conversations/plugins/conversation-view/plugins/turn-summary/server";
 import conversationsConversationsViewGroupedPlugin from "@plugins/conversations/plugins/conversations-view/plugins/grouped/server";
@@ -145,9 +144,8 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (conversationsConversationViewJsonlViewerPlugin as ServerPluginDefinition).dependsOn = [conversationsTranscriptWatcherPlugin, tasksCorePlugin];
 (conversationsConversationViewLaunchPromptsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraAttachmentsPlugin, infraEndpointsPlugin, primitivesRankPlugin];
 (conversationsConversationViewNotesPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEndpointsPlugin, infraEntityExtensionsPlugin, tasksCorePlugin];
-(conversationsConversationViewPromptTemplatesPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraAttachmentsPlugin, infraEndpointsPlugin, primitivesRankPlugin];
+(conversationsConversationViewPromptTemplatesPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraAttachmentsPlugin, infraEndpointsPlugin, primitivesRankPlugin];
 (conversationsConversationViewPushAndExitPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraEndpointsPlugin, infraJobsPlugin, infraMcpPlugin, tasksCorePlugin];
-(conversationsConversationViewQuickPromptsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraAttachmentsPlugin, infraEndpointsPlugin, primitivesRankPlugin];
 (conversationsConversationViewResumePlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraEndpointsPlugin, tasksCorePlugin];
 (conversationsConversationViewTurnSummaryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, databasePlugin, infraClaudeCliPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
 (conversationsConversationsViewGroupedPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEndpointsPlugin, primitivesRankPlugin, tasksCorePlugin];
@@ -243,7 +241,6 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (conversationsConversationViewNotesPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/notes";
 (conversationsConversationViewPromptTemplatesPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/prompt-templates";
 (conversationsConversationViewPushAndExitPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/push-and-exit";
-(conversationsConversationViewQuickPromptsPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/quick-prompts";
 (conversationsConversationViewResumePlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/resume";
 (conversationsConversationViewTurnSummaryPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/turn-summary";
 (conversationsConversationsViewGroupedPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversations-view/grouped";
@@ -349,7 +346,6 @@ export const plugins: ServerPluginDefinition[] = [
   conversationsConversationViewNotesPlugin,
   conversationsConversationViewPromptTemplatesPlugin,
   conversationsConversationViewPushAndExitPlugin,
-  conversationsConversationViewQuickPromptsPlugin,
   conversationsConversationViewResumePlugin,
   conversationsConversationViewTurnSummaryPlugin,
   conversationsConversationsViewGroupedPlugin,
