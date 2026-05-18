@@ -51,8 +51,23 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
     openPane(taskSidePane, { convId: conversation.id, taskId }, { mode: "push" });
   };
 
+  const summary = (
+    <span className="flex min-w-0 items-center gap-2">
+      <span className="min-w-0 truncate">{input.title}</span>
+      {input.autostart ? (
+        <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+          auto-launch {input.autostart}
+        </span>
+      ) : (
+        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+          no auto-launch
+        </span>
+      )}
+    </span>
+  );
+
   return (
-    <ToolCallCard event={event} summary={input.title} defaultOpen>
+    <ToolCallCard event={event} summary={summary} defaultOpen>
       <div className="mt-2 space-y-2">
         {input.description && (
           <p className="text-xs text-muted-foreground whitespace-pre-wrap">
