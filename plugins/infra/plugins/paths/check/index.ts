@@ -20,8 +20,6 @@ const ALLOWED_PATHS = [
   // Tooling inlines the subset of paths it needs (HOME_DIR, libpqEnv) to avoid depending on cli/.
   "tooling/src/guards/guards/main-edits.ts",
   "tooling/src/checks/migrations-in-sync.ts",
-  // Standalone script that intentionally avoids importing server internals.
-  "server/backfill-pushes.ts",
   // Database plugin owns its own embedded-PG path constants and config
   // reader. Lives in shared/ so server, central, and CLI can all import
   // from a sanctioned location.
