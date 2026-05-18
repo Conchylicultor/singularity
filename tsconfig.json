@@ -3,15 +3,15 @@
     "paths": {
       "@/*": ["./web/src/*"],
       "@plugins/*": ["./plugins/*"],
-      "@server/*": ["./server/src/*"],
-      "@central/*": ["./central/src/*"],
+      "@server/*": ["./plugins/framework/plugins/server/core/*"],
+      "@central/*": ["./central/bin/*"],
       "@tooling/*": ["./tooling/src/*"]
     }
   },
   "files": [],
   "references": [
     { "path": "./web" },
-    { "path": "./server" },
+    { "path": "./plugins/framework/plugins/server" },
     { "path": "./central" }
   ]
 }

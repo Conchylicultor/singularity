@@ -519,7 +519,7 @@ export function registerBuild(program: Command) {
       endSpan = buildProfilerStart("centralJson", "build:codegen", "central.json");
       const mainRoot = await getMainRepoRoot();
       const centralDir = resolve(mainRoot, "central");
-      if (existsSync(join(centralDir, "src", "index.ts"))) {
+      if (existsSync(join(centralDir, "bin", "index.ts"))) {
         mkdirSync(WORKTREES_DIR, { recursive: true });
         writeFileSync(
           join(WORKTREES_DIR, "central.json"),
@@ -582,7 +582,7 @@ export function registerBuild(program: Command) {
       // surface as 502s on first request. Run server tsc explicitly here.
       endSpan = buildProfilerStart("tscServer", "build:validation", "tsc server");
       console.log("Type-checking server...");
-      await exec(["bunx", "tsc"], resolve(root, "server"));
+      await exec(["bunx", "tsc"], resolve(root, "plugins/framework/plugins/server"));
       endSpan();
 
       // 4b. Type-check central if present. Same rationale as server.
@@ -590,7 +590,7 @@ export function registerBuild(program: Command) {
       // validated even though the running central runs main's code. (Errors
       // here would otherwise only surface after merge.)
       const worktreeCentralDir = resolve(root, "central");
-      if (existsSync(join(worktreeCentralDir, "src", "index.ts"))) {
+      if (existsSync(join(worktreeCentralDir, "bin", "index.ts"))) {
         endSpan = buildProfilerStart("tscCentral", "build:validation", "tsc central");
         console.log("Type-checking central...");
         await exec(["bunx", "tsc"], worktreeCentralDir);
@@ -628,7 +628,7 @@ export function registerBuild(program: Command) {
       endSpan = buildProfilerStart("registerWorktree", "build:deploy", "register worktree");
       console.log("Registering worktree...");
       const spec = {
-        server: resolve(root, "server"),
+        server: resolve(root, "plugins/framework/plugins/server"),
         web: livePath,
       };
 
@@ -647,7 +647,7 @@ export function registerBuild(program: Command) {
 
       // 6c. Re-register the `central` worktree spec for idempotency. Path is
       // always main's central/ — see comment at the early write above.
-      if (existsSync(join(centralDir, "src", "index.ts"))) {
+      if (existsSync(join(centralDir, "bin", "index.ts"))) {
         const centralSpec = { server: centralDir };
         writeFileSync(
           join(WORKTREES_DIR, "central.json"),

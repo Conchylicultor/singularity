@@ -5,7 +5,7 @@
 // and rebuild — this file regenerates from the filesystem. The
 // `plugins-registry-in-sync` check fails on drift.
 
-import type { ServerPluginDefinition } from "./types";
+import type { ServerPluginDefinition } from "@server/types";
 import activeDataPlugin from "@plugins/active-data/server";
 import agentsAutoLaunchTogglePlugin from "@plugins/agents/plugins/auto-launch/plugins/toggle/server";
 import agentsPlugin from "@plugins/agents/server";

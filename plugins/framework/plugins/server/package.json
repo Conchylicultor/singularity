@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/server",
+  "name": "@singularity/plugin-framework-server",
   "private": true,
   "type": "module",
   "dependencies": {},

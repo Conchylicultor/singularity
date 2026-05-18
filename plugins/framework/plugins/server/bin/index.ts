@@ -1,10 +1,10 @@
-import { profilerStart } from "./profiler";
-import type { WsData, HttpHandler, WsHandler } from "./types";
+import { profilerStart } from "@server/profiler";
+import type { WsData, HttpHandler, WsHandler } from "@server/types";
 import { plugins } from "./plugins";
-import { notificationsWsHandler, handleResourceHttp } from "./resources";
+import { notificationsWsHandler, handleResourceHttp } from "@server/resources";
 import { topoSortPlugins } from "./topo";
-import { collectContributions } from "./contributions";
-import { reportServerError } from "./error-reporter";
+import { collectContributions } from "@server/contributions";
+import { reportServerError } from "@server/error-reporter";
 
 // Phase 1 — register: sequential, topo-sorted. Each plugin's `register`
 // array holds Registration tokens returned by helpers like `Mcp.tool`,

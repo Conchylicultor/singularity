@@ -18,7 +18,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 
 - **Subdomain routing, not path-prefix** — each instance thinks it's at `/`, so no base-path rewriting. `*.localhost` resolves natively in Chrome and Firefox
 - **Gateway serves statics, backend serves API/WS** — separating the cheap thing (files) from the expensive thing (process) means page loads are instant and backends only exist when needed
-- **Gateway owns backend lifecycles** — backends are spawned, supervised, and killed by the gateway. They never know the gateway exists. The convention is `bun src/index.ts` in the `server` directory with `SOCKET_PATH=<path>` in env
+- **Gateway owns backend lifecycles** — backends are spawned, supervised, and killed by the gateway. They never know the gateway exists. The convention is `bun bin/index.ts` in the `server` directory with `SOCKET_PATH=<path>` in env
 - **Unix domain sockets, not TCP loopback** — eliminates the IPv4/IPv6 bind-shape asymmetry that allowed unrelated processes to silently steal traffic on macOS (an IPv4-loopback squatter could coexist with a dual-stack listener on the same port). UDS scopes the gateway↔backend channel by filesystem path, removes the port allocator entirely, and removes any LAN-exposure surface.
 - **`/gateway/*` is a reserved path** on every host — the gateway intercepts it before proxying. Apps call `GET /gateway/worktrees` to list instances. This is an official API, not internal plumbing
 
@@ -44,7 +44,7 @@ Location: `~/.singularity/worktrees/<name>.json`. Filename = worktree identifier
 }
 ```
 
-Two fields, both required, both absolute paths. The gateway hardcodes the launch convention (`bun src/index.ts`, `SOCKET_PATH` env var, 15s readiness timeout). No per-worktree overrides in v1.
+Two fields, both required, both absolute paths. The gateway hardcodes the launch convention (`bun bin/index.ts`, `SOCKET_PATH` env var, 15s readiness timeout). No per-worktree overrides in v1.
 
 ## File Structure
 

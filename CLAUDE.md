@@ -40,7 +40,7 @@ Every feature is a **plugin**. The core app is thin plumbing that connects plugi
 Always READ the plugin architecture doc to understand design, caveats, and rules:
 
 - Frontend: [`plugins/framework/plugins/web-sdk/CLAUDE.md`](plugins/framework/plugins/web-sdk/CLAUDE.md)
-- Backend: [`server/CLAUDE.md`](../server/CLAUDE.md)
+- Backend: [`plugins/framework/plugins/server/CLAUDE.md`](plugins/framework/plugins/server/CLAUDE.md)
 
 Think carefully about the plugin's boundaries, APIs, etc. when designing plugins, as it is the load-bearing infra of the entire project.
 
@@ -50,7 +50,7 @@ Think carefully about the plugin's boundaries, APIs, etc. when designing plugins
 - **Cross-plugin import grammar.** Only runtime barrels are legal: `@plugins/<name>/{web,server,core}` for top-level plugins, or `@plugins/<name>/plugins/.../.../{web,server,core}` for any nesting depth. `shared/` is plugin-private — cross-plugin imports from `shared/` are forbidden (enforced by R10). Forbidden: paths that go *inside* a barrel (`/web/components/`, `/server/internal/`, etc.), workspace-name imports (`@singularity/plugin-shell`), and relative `../` escapes into another plugin's tree.
 - **No cross-plugin re-exports.** Import the source barrel directly — never proxy another plugin's symbols through your own barrel. Re-exports hide the real dependency. Right: `import { X } from "@plugins/tasks/plugins/task-draft-form/web"`. Wrong: re-exporting `X` from `@plugins/tasks/web` so others don't have to.
 - **Barrel purity.** Each `index.ts` may only contain `import` statements, re-exports of the plugin's own internal files, type aliases, and a single `export default <definePlugin(...)>`. No `const`/`let`, no logic, no side effects.
-- **Registry exclusivity.** Default-export imports (`import fooPlugin from "@plugins/foo/web"`) are only allowed in `web/src/plugins.ts` and `server/src/plugins.ts`.
+- **Registry exclusivity.** Default-export imports (`import fooPlugin from "@plugins/foo/web"`) are only allowed in `web/src/plugins.ts` and `plugins/framework/plugins/server/bin/plugins.ts`.
 - **No cycles.** The cross-plugin import graph must be a DAG. Type-only imports count as edges.
 - **Before writing a helper, search `docs/plugins-details.md` for it** — public exports, contributions, server endpoints, and reverse indexes (who imports me, who contributes to my slots, who calls my endpoints) for every plugin. The slim `docs/plugins-compact.md` is auto-loaded by agents; read the full `plugins-details.md` on demand. Each plugin also has its own `plugins/<…>/CLAUDE.md` with hand-written prose plus an autogen reference block — open that one when working inside a specific plugin. All three are kept in sync by the `plugins-doc-in-sync` check.
 
@@ -68,7 +68,6 @@ Think carefully about the plugin's boundaries, APIs, etc. when designing plugins
 │       └── check/    # Custom Check[] enforced by ./singularity check (optional)
 ├── web/              # Frontend bootstrap (SPA shell, plugin registry)
 ├── gateway/          # Namespace proxy (Go). See [`gateway/CLAUDE.md`](gateway/CLAUDE.md)
-├── server/           # Backend (TypeScript/Bun)
 ├── cli/              # Agent CLI (TypeScript, Commander.js)
 ├── tooling/          # Repo tooling: checks, guards, lint rules, boundary engine
 ├── sidequests/       # Independent side projects (see Sidequests section below)

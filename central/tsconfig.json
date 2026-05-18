@@ -13,14 +13,14 @@
     "types": ["@types/bun"],
     "paths": {
       "@plugins/*": ["../plugins/*"],
-      "@central/*": ["./src/*"]
+      "@central/*": ["./bin/*"]
     }
   },
   "exclude": [
     "../plugins/framework/plugins/web-sdk/**"
   ],
   "include": [
-    "src",
+    "bin",
     "../plugins/*/central",
     "../plugins/*/core",
     "../plugins/*/shared",

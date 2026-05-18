@@ -2,7 +2,6 @@ import { defineBoundaries, zone, allow } from "./tooling/src/boundaries/config";
 
 export default defineBoundaries({
   zones: [
-    zone("server", { match: "server" }),
     zone("web", { match: "web" }),
     zone("central", { match: "central" }),
     zone("cli", { match: "cli" }),
@@ -33,12 +32,8 @@ export default defineBoundaries({
     allow("web     -> plugin.framework.web-sdk"),
     allow("tooling -> plugin.framework.web-sdk"),
 
-    // Plugins can import server/central frameworks
-    allow("plugin.** -> server"),
+    // Plugins can import central framework
     allow("plugin.** -> central"),
-
-    // Server framework can import plugin public API (core runtime only — enforced by runtime isolation + R10)
-    allow("server -> plugin.**"),
 
     // Plugins can import other plugins
     allow("plugin.** -> plugin.**"),
@@ -49,12 +44,12 @@ export default defineBoundaries({
     "web/src/plugins.ts",
     "web/src/plugins.generated.ts",
     "web/src/App.tsx",
-    "server/src/plugins.ts",
-    "server/src/plugins.generated.ts",
-    "server/src/index.ts",
-    "central/src/plugins.ts",
-    "central/src/plugins.generated.ts",
-    "central/src/index.ts",
+    "plugins/framework/plugins/server/bin/plugins.ts",
+    "plugins/framework/plugins/server/bin/plugins.generated.ts",
+    "plugins/framework/plugins/server/bin/index.ts",
+    "central/bin/plugins.ts",
+    "central/bin/plugins.generated.ts",
+    "central/bin/index.ts",
     "boundary.config.ts",
     "eslint.config.ts",
   ],

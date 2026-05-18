@@ -18,12 +18,12 @@ const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
   "web/src/plugins.ts",
   "web/src/plugins.generated.ts",
-  "server/src/plugins.ts",
-  "server/src/plugins.generated.ts",
-  "server/src/index.ts",
-  "central/src/plugins.ts",
-  "central/src/plugins.generated.ts",
-  "central/src/index.ts",
+  "plugins/framework/plugins/server/bin/plugins.ts",
+  "plugins/framework/plugins/server/bin/plugins.generated.ts",
+  "plugins/framework/plugins/server/bin/index.ts",
+  "central/bin/plugins.ts",
+  "central/bin/plugins.generated.ts",
+  "central/bin/index.ts",
 ]);
 
 const VALID_RUNTIMES = new Set(["web", "server", "central", "core", "shared"]);
@@ -36,6 +36,7 @@ const KNOWN_PLUGIN_DIRS = new Set([
   "lint",
   "check",
   "scripts",
+  "bin",
 ]);
 
 const PUSH_BACK_HINT =
@@ -368,7 +369,7 @@ function pluginForPath(relFile: string, pluginSet: Set<string>): string | null {
 // Source-file discovery
 // ============================================================================
 
-const SOURCE_ROOTS = ["plugins", "web/src", "server/src", "central/src"];
+const SOURCE_ROOTS = ["plugins", "web/src", "central/bin"];
 const IGNORED_DIRS = new Set(["node_modules", "dist", ".git"]);
 
 function findSourceFiles(root: string): string[] {

@@ -13,7 +13,7 @@ The fix: make every top-level directory a regular plugin under `plugins/`. The d
 | 1–2 | `shared/` → `core/` + `internal/` zone | **Done** (2026-05-12, `cae45a43`) |
 | 3 | `plugin-core/` → `plugins/` | **Done** (2026-05-14, `715930f7`) — landed in `plugins/framework/plugins/web-sdk/` rather than standalone `plugins/plugin-core/` |
 | 3+ | Remove `@core`/`@web-sdk` aliases | **Done** (2026-05-14, `12c07e5f`) — all consumer imports migrated to canonical `@plugins/framework/plugins/web-sdk/core` paths |
-| 4 | `server/` → `plugins/framework/plugins/server/` | Not started |
+| 4 | `server/` → `plugins/framework/plugins/server/` | **Done** (2026-05-18) — split into `core/` (framework API) + `bin/` (boot harness); `central/src/` → `central/bin/` for gateway parity |
 | 5 | `web/` → `plugins/framework/plugins/web/` | Not started |
 | 7 | `tooling/` → `plugins/framework/plugins/tooling/` | Not started |
 | 6 | `cli/` → `plugins/framework/plugins/cli/` | Not started |
@@ -46,58 +46,18 @@ The `plugin-core/` directory at root is now empty (stale `node_modules/` only, n
 
 **Why second:** This is the most valuable phase — it unlocks the original pain point (plugins depending on server infra). Also the most complex structurally because `server/` plays two roles: a framework library and a Bun process entry point.
 
-### What moves
+Detailed implementation plan: [`research/2026-05-18-phase4-server-to-plugin.md`](./2026-05-18-phase4-server-to-plugin.md)
 
-```
-plugins/framework/plugins/server/
-  core/              ← public barrel (zone: core) — the framework API
-    index.ts         ← re-exports: types, resources, contributions, error-reporter, profiler
-    types.ts           (89 imports across plugins)
-    resources.ts       (32 imports)
-    contributions.ts   (1 import)
-    error-reporter.ts  (3 imports)
-    profiler.ts        (1 import)
-  server/            ← server barrel (zone: server) — the process entry point
-    index.ts         ← Bun.serve, route tables, lifecycle (current server/src/index.ts)
-    plugins.ts       ← composition root (excluded from boundary checks)
-    plugins.generated.ts
-    internal/
-      topo.ts
-      paths.ts
-```
+### Summary
 
-### Import paths
-
-`@server/*` → retarget from `server/src/*` to `plugins/framework/plugins/server/core/*`. 126 consumer files unchanged.
-
-### Boundary checker
-
-- `boundary.config.ts`: remove `zone("server", { match: "server" })` and `allow("plugin.** -> server")`. Plugin becomes `plugin.framework.server`.
-- `resolve.ts`: update `@server/` specifier branch to resolve to `plugin.framework.server`.
-- `exclude` list: update `server/src/plugins.ts` → `plugins/framework/plugins/server/server/plugins.ts`, same for `plugins.generated.ts` and `index.ts`.
-- `plugin-registry-gen.ts`: update `RUNTIMES.server.registryFile` and `generatedFile` paths. Fix `typeImport` (currently `import ... from "./types"` — needs to become `import ... from "@server/types"` since the generated file is no longer colocated with types.ts).
-
-### Build system
-
-- `singularity` entry script and `cli/src/commands/build.ts`: update server path from `resolve(root, "server")` to `resolve(root, "plugins/framework/plugins/server")`.
-- Gateway: verify how it resolves the server entry point from the worktree spec JSON. The gateway receives a path and runs `bun <path>/server/index.ts` — confirm and update.
-- `tsc` invocation in build.ts: `resolve(root, "server")` → `resolve(root, "plugins/framework/plugins/server")`.
-
-### Key risks
-
-- **Bun entry point resolution.** The gateway spawns the server process. The spec JSON written by `build.ts` must point to the correct entry. If the gateway hardcodes `src/index.ts` relative to the spec path, it needs updating to `server/index.ts`.
-- **Module identity.** `resources.ts` uses module-level singletons. All imports must resolve through the same canonical path (the retargeted alias ensures this).
-
-### `central/` note
-
-`central/` is structurally identical to `server/` (same types.ts/resources.ts/topo.ts pattern, own CentralPluginDefinition). A Phase 4b can move it using the exact same strategy — destination would be `plugins/framework/plugins/central/`. Not included here due to CLAUDE.md restrictions ("NEVER modify central/ unless explicitly instructed"). The boundary config retains `zone("central", ...)` until then.
+Split `server/src/` into `core/` (framework API: types, resources, contributions — 196 imports across 163 files) and `bin/` (boot harness: Bun.serve, topo-sort, lifecycle — zero external consumers). Rename entry point to `bin/index.ts` (one-line gateway change, applies to central too). Retarget `@server/*` alias from `server/src/*` to `plugins/framework/plugins/server/core/*` — zero consumer file changes. Update gateway (1 line), `cli/build.ts` (2 lines), `plugin-registry-gen.ts` (3 fields), `boundary.config.ts` (remove server zone + 2 edges), `resolve.ts` (zone → `plugin.framework.server`), and 7 tooling check files.
 
 ### Done when
 
-- `./singularity build` succeeds, server boots, `/api/health` returns 200.
-- `./singularity check` passes.
-- `server/` deleted from repo root.
-- All `@server/*` imports resolve identically.
+- `./singularity build` succeeds, server boots, `/api/health` returns 200
+- `./singularity check` passes
+- `server/` deleted from repo root
+- All `@server/*` imports resolve to `plugins/framework/plugins/server/core/*`
 
 ---
 

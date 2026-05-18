@@ -1051,6 +1051,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
+    - **`server`**
+      - Exports (core):
+        - Types: `ConfigDescriptorLike`, `DependsOnEntry`, `HttpHandler`, `PhaseId`, `Registration`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `Span`, `WsData`, `WsHandler`
+        - Values: `collectContributions`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `notificationsWsHandler`, `profilerStart`, `reportServerError`, `Resource`, `setErrorReporter`, `withNotifyBatch`
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
       - Exports (core):
         - Types: `Contribution`, `DocMeta`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `Slot`

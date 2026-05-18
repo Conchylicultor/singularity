@@ -523,7 +523,7 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error)
 		return nil, fmt.Errorf("unlink stale socket: %w", err)
 	}
 
-	cmd := exec.Command("bun", "src/index.ts")
+	cmd := exec.Command("bun", "bin/index.ts")
 	cmd.Dir = spec.Server
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("SOCKET_PATH=%s", socketPath),

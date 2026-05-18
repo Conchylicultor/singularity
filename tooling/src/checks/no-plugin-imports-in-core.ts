@@ -21,10 +21,10 @@ const ALLOWED_DIRS = ["plugins/"];
 const COMPOSITION_ROOTS = [
   "web/src/plugins.ts",
   "web/src/plugins.generated.ts",
-  "server/src/plugins.ts",
-  "server/src/plugins.generated.ts",
-  "central/src/plugins.ts",
-  "central/src/plugins.generated.ts",
+  "plugins/framework/plugins/server/bin/plugins.ts",
+  "plugins/framework/plugins/server/bin/plugins.generated.ts",
+  "central/bin/plugins.ts",
+  "central/bin/plugins.generated.ts",
   "web/src/App.tsx",
 ];
 
