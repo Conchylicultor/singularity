@@ -1,28 +1,16 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/prompt-editor/plugins/paste-images/core";
+import { updateAgent } from "../../core/endpoints";
+import { AgentSchema } from "../../core/schemas";
 import { _agents } from "./tables";
 import { agentAttachments } from "./tables-attachments";
 import { agents } from "./schema";
 import { agentsResource } from "./resources";
 
-export async function handleUpdate(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
+export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
   const id = params.id;
-  if (!id) return new Response("Missing id", { status: 400 });
-  const body = (await req.json().catch(() => ({}))) as {
-    name?: string;
-    prompt?: string | null;
-    model?: string | null;
-    icon?: string | null;
-    iconColor?: string | null;
-    iconSvgNodes?: string | null;
-    expanded?: boolean;
-    parentId?: string | null;
-    rank?: string;
-  };
   const patch: Record<string, unknown> = { updatedAt: new Date() };
   if (typeof body.name === "string") patch.name = body.name;
   if (body.prompt === null || typeof body.prompt === "string") {
@@ -43,17 +31,15 @@ export async function handleUpdate(
   if (typeof body.expanded === "boolean") patch.expanded = body.expanded;
   if (body.parentId === null || typeof body.parentId === "string") {
     if (body.parentId === id) {
-      return new Response("Cannot parent an agent to itself", { status: 400 });
+      throw new HttpError(400, "Cannot parent an agent to itself");
     }
     if (body.parentId !== null && (await isDescendant(id, body.parentId))) {
-      return new Response("Cannot parent an agent under its own descendant", {
-        status: 400,
-      });
+      throw new HttpError(400, "Cannot parent an agent under its own descendant");
     }
     patch.parentId = body.parentId;
   }
-  if (typeof body.rank === "string" && body.rank.length > 0) {
-    patch.rank = body.rank;
+  if (body.rank != null) {
+    patch.rank = body.rank.toJSON();
   }
   const [updated] = await db
     .update(_agents)
@@ -61,7 +47,7 @@ export async function handleUpdate(
     .where(eq(_agents.id, id))
     .returning({ id: _agents.id });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (!updated) return new Response("Not found", { status: 404 });
+  if (!updated) throw new HttpError(404, "Not found");
   if (typeof body.parentId === "string" && body.parentId.length > 0) {
     await db
       .update(_agents)
@@ -80,8 +66,10 @@ export async function handleUpdate(
 
   const [row] = await db.select().from(agents).where(eq(agents.id, id)).limit(1);
   agentsResource.notify();
-  return Response.json(row);
-}
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+  if (!row) throw new HttpError(404, "Not found after update");
+  return AgentSchema.parse(row);
+});
 
 async function isDescendant(ancestorId: string, candidateId: string): Promise<boolean> {
   const all = await db

@@ -13,6 +13,8 @@ import {
 } from "@plugins/primitives/plugins/avatar/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { Button } from "@/components/ui/button";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { launchAgent, updateAgent } from "@plugins/agents/core";
 import { agentLaunchesResource, agentsResource } from "../../shared/resources";
 import { AgentLaunches } from "./agent-launches";
 
@@ -32,11 +34,7 @@ const MODELS = [
 ] as const;
 
 async function patchAgent(id: string, patch: Patch) {
-  await fetch(`/api/agents/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
-  });
+  await fetchEndpoint(updateAgent, { id }, { body: patch });
 }
 
 function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
@@ -91,12 +89,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
     setLaunching(true);
     try {
       await promptField.flush();
-      const res = await fetch(`/api/agents/${agentId}/launch`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) return;
+      await fetchEndpoint(launchAgent, { id: agentId }, { body: {} });
     } finally {
       setLaunching(false);
     }

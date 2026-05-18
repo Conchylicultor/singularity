@@ -1,15 +1,13 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { getAgent } from "../../core/endpoints";
+import { AgentSchema } from "../../core/schemas";
 import { agents } from "./schema";
 
-export async function handleGet(
-  _req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const id = params.id;
-  if (!id) return new Response("Missing id", { status: 400 });
-  const [row] = await db.select().from(agents).where(eq(agents.id, id)).limit(1);
+export const handleGet = implement(getAgent, async ({ params }) => {
+  const [row] = await db.select().from(agents).where(eq(agents.id, params.id)).limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (!row) return new Response("Not found", { status: 404 });
-  return Response.json(row);
-}
+  if (!row) throw new HttpError(404, "Not found");
+  return AgentSchema.parse(row);
+});

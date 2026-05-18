@@ -8,10 +8,6 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
   - `/api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex (PUT, DELETE)`
 
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
-  - `/api/agents (GET, POST)`
-  - `/api/agents/:id (GET, PATCH, DELETE)`
-  - `/api/agents/:id/launch (POST)`
-  - `/api/agents/:id/launches (GET)`
   - Plugins:
     - **`auto-launch`** — Umbrella plugin for agent auto-launch. Sub-plugins contribute row actions and settings.
       - Plugins:

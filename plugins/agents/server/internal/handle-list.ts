@@ -1,11 +1,11 @@
 import { asc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { listAgents } from "../../core/endpoints";
+import { AgentSchema } from "../../core/schemas";
 import { agents } from "./schema";
 
-export async function handleList(_req: Request): Promise<Response> {
-  const rows = await db
-    .select()
-    .from(agents)
-    .orderBy(asc(agents.rank), asc(agents.createdAt));
-  return Response.json(rows);
-}
+export const handleList = implement(listAgents, async () => {
+  const rows = await db.select().from(agents).orderBy(asc(agents.rank), asc(agents.createdAt));
+  return rows.map((r) => AgentSchema.parse(r));
+});

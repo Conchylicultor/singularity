@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createTask } from "@plugins/tasks-core/server";
 import { createConversation } from "@plugins/conversations/server";
 import {
   ConversationModelSchema,
   type ConversationModel,
 } from "@plugins/conversations/plugins/model-provider/core";
+import { launchAgent } from "../../core/endpoints";
 import { _agent_launches } from "./tables";
 import { agents } from "./schema";
 import { AGENTS_META_TASK_ID } from "./meta-agents";
@@ -18,12 +20,8 @@ function formatLaunchTime(d: Date): string {
   )}:${pad(d.getMinutes())}`;
 }
 
-export async function handleLaunch(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
+export const handleLaunch = implement(launchAgent, async ({ params, body }) => {
   const agentId = params.id;
-  if (!agentId) return new Response("Missing id", { status: 400 });
 
   const [agent] = await db
     .select()
@@ -31,12 +29,11 @@ export async function handleLaunch(
     .where(eq(agents.id, agentId))
     .limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (!agent) return new Response("Not found", { status: 404 });
+  if (!agent) throw new HttpError(404, "Not found");
   if (!agent.prompt) {
-    return new Response("Agent has no prompt (folder node)", { status: 400 });
+    throw new HttpError(400, "Agent has no prompt (folder node)");
   }
 
-  const body = (await req.json().catch(() => ({}))) as { model?: string };
   const requestedModel = body.model ?? agent.model ?? "sonnet";
   const model: ConversationModel = ConversationModelSchema.parse(requestedModel);
 
@@ -61,9 +58,9 @@ export async function handleLaunch(
   await db.insert(_agent_launches).values({ id: launchId, agentId, taskId: task.id });
   agentLaunchesResource.notify();
 
-  return Response.json({
+  return {
     launchId,
     taskId: task.id,
     conversationId: conversation.id,
-  });
-}
+  };
+});

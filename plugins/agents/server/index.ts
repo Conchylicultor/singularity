@@ -10,6 +10,15 @@ import { handleListLaunches } from "./internal/handle-list-launches";
 import { agentLaunchesResource, agentsResource } from "./internal/resources";
 import { ensureAgentsMetaTask } from "./internal/meta-agents";
 import { backfillAgentSvgNodes } from "./internal/backfill-svg";
+import {
+  listAgents,
+  createAgent,
+  getAgent,
+  updateAgent,
+  deleteAgent,
+  launchAgent,
+  listAgentLaunches,
+} from "../core/endpoints";
 
 export { _agent_launches, _agents } from "./internal/tables";
 export { agents, AgentSchema, AgentLaunchSchema, AgentLaunchWithStatusSchema } from "./internal/schema";
@@ -23,13 +32,13 @@ export default {
   name: "Agents",
   description: "Named agent definitions that launch conversations.",
   httpRoutes: {
-    "GET /api/agents": handleList,
-    "POST /api/agents": handleCreate,
-    "GET /api/agents/:id": handleGet,
-    "PATCH /api/agents/:id": handleUpdate,
-    "DELETE /api/agents/:id": handleDelete,
-    "POST /api/agents/:id/launch": handleLaunch,
-    "GET /api/agents/:id/launches": handleListLaunches,
+    [listAgents.route]: handleList,
+    [createAgent.route]: handleCreate,
+    [getAgent.route]: handleGet,
+    [updateAgent.route]: handleUpdate,
+    [deleteAgent.route]: handleDelete,
+    [launchAgent.route]: handleLaunch,
+    [listAgentLaunches.route]: handleListLaunches,
   },
   contributions: [Resource.Declare(agentsResource), Resource.Declare(agentLaunchesResource)],
   onReady: async () => {

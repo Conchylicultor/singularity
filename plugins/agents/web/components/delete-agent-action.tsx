@@ -1,5 +1,7 @@
 import { MdDelete } from "react-icons/md";
 import { cn } from "@/lib/utils";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { deleteAgent } from "@plugins/agents/core";
 
 export function DeleteAgentAction({
   agentId,
@@ -16,7 +18,7 @@ export function DeleteAgentAction({
   const onClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (disabled) return;
-    await fetch(`/api/agents/${agentId}`, { method: "DELETE" });
+    await fetchEndpoint(deleteAgent, { id: agentId });
   };
 
   return (

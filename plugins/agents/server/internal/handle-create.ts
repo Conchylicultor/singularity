@@ -1,23 +1,18 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { createAgent } from "../../core/endpoints";
+import { AgentSchema } from "../../core/schemas";
 import { _agents } from "./tables";
+import { agents } from "./schema";
 import { nextAgentRankUnder } from "./rank";
 import { agentsResource } from "./resources";
 
-export async function handleCreate(req: Request): Promise<Response> {
-  const body = (await req.json().catch(() => ({}))) as {
-    parentId?: string | null;
-    name?: string;
-    prompt?: string | null;
-    model?: string | null;
-    icon?: string | null;
-    iconColor?: string | null;
-    iconSvgNodes?: string | null;
-  };
+export const handleCreate = implement(createAgent, async ({ body }) => {
   const id = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const parentId = body.parentId ?? null;
   const rank = await nextAgentRankUnder(parentId);
-  const [row] = await db
+  await db
     .insert(_agents)
     .values({
       id,
@@ -29,8 +24,7 @@ export async function handleCreate(req: Request): Promise<Response> {
       iconColor: body.iconColor ?? null,
       iconSvgNodes: body.iconSvgNodes ?? null,
       rank: rank.toJSON(),
-    })
-    .returning();
+    });
   if (parentId) {
     await db
       .update(_agents)
@@ -38,5 +32,8 @@ export async function handleCreate(req: Request): Promise<Response> {
       .where(eq(_agents.id, parentId));
   }
   agentsResource.notify();
-  return Response.json(row);
-}
+  const [row] = await db.select().from(agents).where(eq(agents.id, id)).limit(1);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+  if (!row) throw new HttpError(500, "Failed to retrieve created agent");
+  return AgentSchema.parse(row);
+});

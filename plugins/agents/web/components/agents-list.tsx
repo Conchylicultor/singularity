@@ -22,6 +22,12 @@ import {
   useMultiSelect,
 } from "@plugins/primitives/plugins/multi-select/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  createAgent,
+  deleteAgent,
+  updateAgent,
+} from "@plugins/agents/core";
 import { agentsResource } from "../../shared/resources";
 import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";
@@ -44,11 +50,7 @@ type AgentPatch = {
 };
 
 export async function patchAgent(id: string, patch: AgentPatch) {
-  await fetch(`/api/agents/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
-  });
+  await fetchEndpoint(updateAgent, { id }, { body: patch });
 }
 
 function randomFrom<T>(arr: readonly T[]): T {
@@ -64,19 +66,19 @@ async function createAgentRow(args: {
   parentId: string | null;
   rank?: Rank;
 }): Promise<string | null> {
-  const res = await fetch("/api/agents", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ...args,
-      name: "New agent",
-      prompt: "",
-      iconColor: randomFrom(AVATAR_COLOR_KEYS),
-    }),
-  });
-  if (!res.ok) return null;
-  const agent = (await res.json()) as Agent;
-  return agent.id;
+  try {
+    const agent = await fetchEndpoint(createAgent, {}, {
+      body: {
+        ...args,
+        name: "New agent",
+        prompt: "",
+        iconColor: randomFrom(AVATAR_COLOR_KEYS),
+      },
+    });
+    return agent.id;
+  } catch {
+    return null;
+  }
 }
 
 function deriveVisibleOrder(rows: readonly Agent[]): string[] {
@@ -96,9 +98,7 @@ function DeleteSelectedAction() {
   const { selectedIds, clearAll } = useMultiSelect();
   const onClick = async () => {
     await Promise.all(
-      [...selectedIds].map((id) =>
-        fetch(`/api/agents/${id}`, { method: "DELETE" }),
-      ),
+      [...selectedIds].map((id) => fetchEndpoint(deleteAgent, { id })),
     );
     clearAll();
   };

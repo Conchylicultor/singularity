@@ -75,6 +75,7 @@ import healthPlugin from "@plugins/health/server";
 import improvePlugin from "@plugins/improve/server";
 import infraAttachmentsPlugin from "@plugins/infra/plugins/attachments/server";
 import infraClaudeCliPlugin from "@plugins/infra/plugins/claude-cli/server";
+import infraEndpointsPlugin from "@plugins/infra/plugins/endpoints/server";
 import infraEntityExtensionsPlugin from "@plugins/infra/plugins/entity-extensions/server";
 import infraEventsPlugin from "@plugins/infra/plugins/events/server";
 import infraGitWatcherPlugin from "@plugins/infra/plugins/git-watcher/server";
@@ -112,7 +113,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 
 (activeDataPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, tasksCorePlugin];
 (agentsAutoLaunchTogglePlugin as ServerPluginDefinition).dependsOn = [agentsPlugin, databasePlugin, infraEntityExtensionsPlugin];
-(agentsPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraAttachmentsPlugin, primitivesAvatarPlugin, primitivesRankPlugin, tasksCorePlugin];
+(agentsPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraAttachmentsPlugin, infraEndpointsPlugin, primitivesAvatarPlugin, primitivesRankPlugin, tasksCorePlugin];
 (appsForgeCatalogTablesColumnsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (appsForgeCatalogTablesForeignKeysPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (appsForgeCatalogTablesIndexesPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
@@ -269,6 +270,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (improvePlugin as ServerPluginDefinition)._hierarchyPath = "improve";
 (infraAttachmentsPlugin as ServerPluginDefinition)._hierarchyPath = "infra/attachments";
 (infraClaudeCliPlugin as ServerPluginDefinition)._hierarchyPath = "infra/claude-cli";
+(infraEndpointsPlugin as ServerPluginDefinition)._hierarchyPath = "infra/endpoints";
 (infraEntityExtensionsPlugin as ServerPluginDefinition)._hierarchyPath = "infra/entity-extensions";
 (infraEventsPlugin as ServerPluginDefinition)._hierarchyPath = "infra/events";
 (infraGitWatcherPlugin as ServerPluginDefinition)._hierarchyPath = "infra/git-watcher";
@@ -374,6 +376,7 @@ export const plugins: ServerPluginDefinition[] = [
   improvePlugin,
   infraAttachmentsPlugin,
   infraClaudeCliPlugin,
+  infraEndpointsPlugin,
   infraEntityExtensionsPlugin,
   infraEventsPlugin,
   infraGitWatcherPlugin,

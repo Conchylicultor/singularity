@@ -141,6 +141,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "health", hierarchyPath: "health", loader: () => import("@plugins/health/web") },
   { name: "improve", hierarchyPath: "improve", loader: () => import("@plugins/improve/web") },
   { name: "infra/plugins/attachments", hierarchyPath: "infra/attachments", loader: () => import("@plugins/infra/plugins/attachments/web") },
+  { name: "infra/plugins/endpoints", hierarchyPath: "infra/endpoints", loader: () => import("@plugins/infra/plugins/endpoints/web") },
   { name: "layouts/plugins/miller", hierarchyPath: "layouts/miller", loader: () => import("@plugins/layouts/plugins/miller/web") },
   { name: "notifications", hierarchyPath: "notifications", loader: () => import("@plugins/notifications/web") },
   { name: "plugin-meta/plugins/plugin-health", hierarchyPath: "plugin-meta/plugin-health", loader: () => import("@plugins/plugin-meta/plugins/plugin-health/web") },

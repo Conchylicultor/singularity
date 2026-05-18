@@ -10,6 +10,9 @@
   - DB schema: `plugins/agents/server/internal/schema.ts`
   - DB schema: `plugins/agents/server/internal/tables-attachments.ts`
   - DB schema: `plugins/agents/server/internal/tables.ts`
+- Exports (core):
+  - Types: `CreateAgentBody`, `LaunchAgentBody`, `LaunchAgentResponse`, `UpdateAgentBody`
+  - Values: `createAgent`, `CreateAgentBodySchema`, `deleteAgent`, `getAgent`, `launchAgent`, `LaunchAgentBodySchema`, `LaunchAgentResponseSchema`, `listAgentLaunches`, `listAgents`, `updateAgent`, `UpdateAgentBodySchema`
 - Exports (web):
   - Types: `SystemAgentDescriptor`
   - Values: `agentDetailPane`, `Agents`, `agentSidePane`, `agentsResource`, `agentsRootPane`, `defineSystemAgent`, `patchAgent`, `systemAgentDetailPane`
@@ -30,13 +33,6 @@
 - Server:
   - Uses: `conversations.createConversation`, `database.db`, `tasks-core.conversationsLiveResource`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`
   - Resources: `agent-launches` (push)
-  - `GET /api/agents`
-  - `POST /api/agents`
-  - `GET /api/agents/:id`
-  - `PATCH /api/agents/:id`
-  - `DELETE /api/agents/:id`
-  - `POST /api/agents/:id/launch`
-  - `GET /api/agents/:id/launches`
 - Imported by: `toggle`
 - Slot contributors: `toggle`
 - Extended by: `toggle` (table `agents_ext_auto_launch`)
