@@ -511,7 +511,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `POST /api/conversations/:id/stop`
     - `GET /api/conversations/:id/turns`
     - `POST /api/conversations/:id/close`
-  - Imported by: `agents`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `drop-and-exit`, `exit`, `grouped`, `history`, `hold-and-exit`, `improve`, `prompt-input`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `task-header`, `task-title`, `tasks`, `turn-summary`, `welcome`
+  - Imported by: `agents`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `drop-and-exit`, `exit`, `file-changes`, `grouped`, `history`, `hold-and-exit`, `improve`, `prompt-input`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `task-header`, `task-title`, `tasks`, `turn-summary`, `welcome`
   - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `transcript-api`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
@@ -1619,7 +1619,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`plugin-changes`** — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
       - Exports (core):
-        - Types: `DiffList`, `PluginChangeDiff`, `PluginChangesResponse`, `PluginReviewProps`
+        - Types: `DiffList`, `PluginChangedFile`, `PluginChangeDiff`, `PluginChangesResponse`, `PluginReviewProps`
       - Exports (web):
         - Values: `PluginChangesSlots`
       - Contributes:
@@ -1631,6 +1631,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`api-changes`** — API surface diff section for per-plugin review cards.
           - Contributes:
             - `PluginChangesSlots.Section` → `ApiChangesSection`
+        - **`file-changes`** — File-level diff section for per-plugin review cards.
+          - Contributes:
+            - `PluginChangesSlots.Section` → `FileChangesSection`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Exports (web):

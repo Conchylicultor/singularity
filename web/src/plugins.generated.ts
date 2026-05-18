@@ -195,6 +195,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "reorder/plugins/edit-mode", hierarchyPath: "reorder/edit-mode", loader: () => import("@plugins/reorder/plugins/edit-mode/web") },
   { name: "reorder", hierarchyPath: "reorder", loader: () => import("@plugins/reorder/web") },
   { name: "review/plugins/plugin-changes/plugins/api-changes", hierarchyPath: "review/plugin-changes/api-changes", loader: () => import("@plugins/review/plugins/plugin-changes/plugins/api-changes/web") },
+  { name: "review/plugins/plugin-changes/plugins/file-changes", hierarchyPath: "review/plugin-changes/file-changes", loader: () => import("@plugins/review/plugins/plugin-changes/plugins/file-changes/web") },
   { name: "review/plugins/plugin-changes", hierarchyPath: "review/plugin-changes", loader: () => import("@plugins/review/plugins/plugin-changes/web") },
   { name: "review", hierarchyPath: "review", loader: () => import("@plugins/review/web") },
   { name: "screenshot/plugins/draw-canvas", hierarchyPath: "screenshot/draw-canvas", loader: () => import("@plugins/screenshot/plugins/draw-canvas/web") },

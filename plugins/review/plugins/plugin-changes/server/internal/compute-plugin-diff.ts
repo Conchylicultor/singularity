@@ -126,6 +126,13 @@ export function computePluginChanges(
       fileCount: files.length,
       additions: files.reduce((sum, f) => sum + f.additions, 0),
       deletions: files.reduce((sum, f) => sum + f.deletions, 0),
+      files: files.map((f) => ({
+        path: f.path,
+        status: f.status,
+        additions: f.additions,
+        deletions: f.deletions,
+        ...(f.from ? { from: f.from } : {}),
+      })),
       slots: diffSets(slotStrings(current), main ? slotStrings(main) : empty),
       contributions: diffSets(
         contributionStrings(current),

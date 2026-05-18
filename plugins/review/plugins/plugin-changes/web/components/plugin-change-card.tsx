@@ -39,17 +39,6 @@ export function PluginChangeCard({ conversationId, plugin }: PluginReviewProps) 
             <S key={s.id} conversationId={conversationId} plugin={plugin} />
           ) : null;
         })}
-        <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-          {plugin.fileCount}f
-          {plugin.additions > 0 && (
-            <span className="text-green-600 dark:text-green-400">
-              {" "}+{plugin.additions}
-            </span>
-          )}
-          {plugin.deletions > 0 && (
-            <span className="text-red-400"> -{plugin.deletions}</span>
-          )}
-        </span>
       </button>
       {expanded && hasExpandable && (
         <div className="flex flex-col gap-3 px-3 pb-3 pt-1 border-t border-border/40">

@@ -31,7 +31,7 @@
   - `POST /api/conversations/:id/stop`
   - `GET /api/conversations/:id/turns`
   - `POST /api/conversations/:id/close`
-- Imported by: `agents`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `drop-and-exit`, `exit`, `grouped`, `history`, `hold-and-exit`, `improve`, `prompt-input`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `task-header`, `task-title`, `tasks`, `turn-summary`, `welcome`
+- Imported by: `agents`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `drop-and-exit`, `exit`, `file-changes`, `grouped`, `history`, `hold-and-exit`, `improve`, `prompt-input`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `task-header`, `task-title`, `tasks`, `turn-summary`, `welcome`
 - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `drop-and-exit`, `exit`, `hold-and-exit`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `quick-prompts`, `resume`, `transcript-api`
 - Sub-plugins:
   - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.

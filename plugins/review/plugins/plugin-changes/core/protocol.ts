@@ -3,6 +3,14 @@ export interface DiffList {
   removed: string[];
 }
 
+export interface PluginChangedFile {
+  path: string;
+  status: string;
+  additions: number;
+  deletions: number;
+  from?: string;
+}
+
 export interface PluginChangeDiff {
   hierarchyId: string;
   name: string;
@@ -11,6 +19,7 @@ export interface PluginChangeDiff {
   fileCount: number;
   additions: number;
   deletions: number;
+  files: PluginChangedFile[];
   slots: DiffList;
   contributions: DiffList;
   exports: DiffList;
