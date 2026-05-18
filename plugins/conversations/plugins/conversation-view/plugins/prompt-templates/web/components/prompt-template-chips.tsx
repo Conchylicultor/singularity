@@ -1,12 +1,17 @@
-import { useMemo } from "react";
-import { PenLine } from "lucide-react";
+import { useState, useMemo } from "react";
+import { PenLine, SendHorizontal } from "lucide-react";
 import {
   FloatingAction,
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/floating-action/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
-import { Button } from "@/components/ui/button";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversation } from "@plugins/conversations/web";
+import { postConversationTurn } from "@plugins/conversations/core";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { ShellCommands as Shell } from "@plugins/shell/web";
+import { usePromptTemplate } from "../../shared/endpoints";
 import { promptTemplatesResource } from "../../shared/resources";
 import type { PromptTemplate } from "../../shared/resources";
 
@@ -24,31 +29,55 @@ function TemplateChip({
   template,
   insertText,
   pinned,
+  onSend,
+  canSend,
+  sending,
 }: {
   template: PromptTemplate;
   insertText: (text: string) => void;
   pinned?: boolean;
+  onSend: (t: PromptTemplate) => void;
+  canSend: boolean;
+  sending: boolean;
 }) {
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      className={
-        pinned
-          ? "h-6 rounded-full px-2.5 text-xs"
-          : "h-6 rounded-full border-dashed px-2.5 text-xs"
-      }
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={() => applyTemplate(template, insertText)}
+    <div
+      className={`inline-flex items-center h-6 rounded-full border border-input bg-background text-xs${pinned ? "" : " border-dashed"}`}
     >
-      <PenLine className="mr-1 size-3" />
-      {template.title}
-    </Button>
+      <button
+        type="button"
+        className="flex items-center gap-1 pl-2 pr-1.5 h-full rounded-l-full hover:bg-accent hover:text-accent-foreground transition-colors"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => applyTemplate(template, insertText)}
+      >
+        <PenLine className="size-3 shrink-0" />
+        <span>{template.title}</span>
+      </button>
+      <div className="w-px h-3 bg-border" />
+      <button
+        type="button"
+        className={`flex items-center px-1.5 h-full rounded-r-full transition-colors${
+          canSend && !sending
+            ? " hover:bg-accent text-muted-foreground hover:text-accent-foreground"
+            : " text-muted-foreground/30 cursor-default"
+        }`}
+        onMouseDown={(e) => e.preventDefault()}
+        disabled={!canSend || sending}
+        onClick={() => onSend(template)}
+      >
+        <SendHorizontal className="size-3 shrink-0" />
+      </button>
+    </div>
   );
 }
 
 export function FloatingTemplateChips({ insertText }: PromptEditorActionProps) {
+  const { conversation } = conversationPane.useData();
+  const live = useConversation(conversation.id) ?? conversation;
   const templatesResult = useResource(promptTemplatesResource);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+
+  const canSend = live.status === "waiting" && sendingId === null;
 
   const pinnedTemplates = useMemo(
     () =>
@@ -59,6 +88,22 @@ export function FloatingTemplateChips({ insertText }: PromptEditorActionProps) {
         .slice(0, MAX_PINNED),
     [templatesResult],
   );
+
+  async function sendTemplate(t: PromptTemplate) {
+    if (!canSend) return;
+    setSendingId(t.id);
+    try {
+      void fetchEndpoint(usePromptTemplate, { id: t.id });
+      await fetchEndpoint(postConversationTurn, { id: conversation.id }, { body: { text: t.prompt } });
+    } catch (err) {
+      Shell.Toast({
+        description: `Failed to send: ${err instanceof Error ? err.message : String(err)}`,
+        variant: "error",
+      });
+    } finally {
+      setSendingId(null);
+    }
+  }
 
   if (templatesResult.pending) return null;
   const templates = templatesResult.data;
@@ -74,6 +119,9 @@ export function FloatingTemplateChips({ insertText }: PromptEditorActionProps) {
               template={t}
               insertText={insertText}
               pinned
+              onSend={(tpl) => void sendTemplate(tpl)}
+              canSend={canSend}
+              sending={sendingId === t.id}
             />
           ))}
         </div>
@@ -89,6 +137,9 @@ export function FloatingTemplateChips({ insertText }: PromptEditorActionProps) {
               key={t.id}
               template={t}
               insertText={insertText}
+              onSend={(tpl) => void sendTemplate(tpl)}
+              canSend={canSend}
+              sending={sendingId === t.id}
             />
           ))}
         </FloatingActionFadeIn>
