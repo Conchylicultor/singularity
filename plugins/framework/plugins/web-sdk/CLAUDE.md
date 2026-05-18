@@ -21,7 +21,7 @@ A slot is created with `defineSlot<P>(id)`. It returns an object that is both:
 2. **A hook** — call `.useContributions()` inside React to get all contributions targeting this slot
 
 ```typescript
-import { defineSlot } from "@core";
+import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 
 export const MyPlugin = {
   Panel: defineSlot<{ title: string; component: ComponentType }>("myplugin.panel"),
@@ -33,7 +33,7 @@ export const MyPlugin = {
 A plugin is a `PluginDefinition` — just `{ id, name, contributions? }`:
 
 ```typescript
-import { type PluginDefinition } from "@core";
+import { type PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Shell } from "@plugins/shell/web";
 
 const myPlugin: PluginDefinition = {
@@ -83,7 +83,7 @@ A command is created with `defineCommand<Args, Return>(id)`. The returned object
 ### Defining a command
 
 ```typescript
-import { defineCommand } from "@core";
+import { defineCommand } from "@plugins/framework/plugins/web-sdk/core";
 
 export const Shell = {
   Toast: defineCommand<ToastArgs, void>("shell.toast"),
@@ -140,7 +140,7 @@ export default {
 
 ## Live state, networking, editable fields
 
-`@core` is the **framework** only — slots, commands, contributions, plugin context, and the `PluginDefinition` type. Cross-cutting client-side primitives live as plugins under [`plugins/primitives/`](../plugins/primitives/):
+`@plugins/framework/plugins/web-sdk/core` is the **framework** only — slots, commands, contributions, plugin context, and the `PluginDefinition` type. Cross-cutting client-side primitives live as plugins under [`plugins/primitives/`](../plugins/primitives/):
 
 - `<PluginErrorBoundary>`, `ErrorBoundary.Action`, `registerBoundaryReporter` → `@plugins/primitives/plugins/error-boundary/web`
 - `useResource`, `NotificationsProvider`, `resourceDescriptor` → `@plugins/primitives/plugins/live-state/web` (and `…/core` or `…/shared` for resource declarations)
@@ -156,7 +156,7 @@ For typed HTTP fetching, use the endpoints primitive (`@plugins/infra/plugins/en
 ```
 plugins/
 ├── framework/plugins/web-sdk/   # This package — framework primitives
-│   ├── core/                    # Public API (importable via @core)
+│   ├── core/                    # Public API (importable via @plugins/framework/plugins/web-sdk/core)
 │   │   ├── index.ts             # Barrel export
 │   │   ├── types.ts             # PluginDefinition, Contribution
 │   │   ├── slots.ts             # defineSlot(), Slot<P>, Core.Root
@@ -192,7 +192,6 @@ web/src/
 
 Configured in `web/vite.config.ts` and `web/tsconfig.app.json`:
 
-- `@core` → `plugins/framework/plugins/web-sdk/core/`
 - `@plugins/*` → `plugins/*/`
 - `@/*` → `web/src/*`
 
