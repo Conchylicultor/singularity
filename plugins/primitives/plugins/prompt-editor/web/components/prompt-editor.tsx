@@ -200,9 +200,19 @@ function ToolbarRow() {
     [editor],
   );
 
+  const focusEditor = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.target === e.currentTarget) {
+        e.preventDefault();
+        editor.focus();
+      }
+    },
+    [editor],
+  );
+
   if (!editable || items.length === 0) return null;
   return (
-    <div className="flex items-center px-2 pb-1.5">
+    <div className="flex items-center px-2 pb-1.5" onMouseDown={focusEditor}>
       <PromptEditorSlots.FloatingAction.Render>
         {(item) => <item.component insertText={insertText} />}
       </PromptEditorSlots.FloatingAction.Render>
