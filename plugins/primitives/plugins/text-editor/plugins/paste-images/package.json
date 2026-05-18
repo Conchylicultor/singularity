@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-text-editor-paste-images",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Image paste/drop support for the text editor."
+}

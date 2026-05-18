@@ -4,7 +4,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
+import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import {
   Avatar,
   AvatarPicker,
@@ -162,7 +162,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
             promptField.onBlur();
           }}
         >
-          <PromptEditor
+          <TextEditor
             value={promptField.value}
             onChange={promptField.onChange}
             placeholder="Instructions the agent runs with…"

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { LaunchButtons, type LaunchRequest } from "@plugins/primitives/plugins/launch/web";
-import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
+import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 
 export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | null | Promise<Blob | null> }) {
   const [text, setText] = useState("");
@@ -29,7 +29,7 @@ export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | 
 
   return (
     <div className="bg-background flex shrink-0 flex-col gap-2 border-t p-3">
-      <PromptEditor
+      <TextEditor
         value={text}
         onChange={setText}
         placeholder="Describe what to do with this screenshot…"

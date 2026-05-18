@@ -3,10 +3,6 @@ import { createPortal } from "react-dom";
 import { MdClose } from "react-icons/md";
 import { attachmentUrl } from "../internal/markdown";
 
-// Full-screen image preview shown when a thumbnail is clicked. Backdrop is a
-// fixed overlay covering the whole viewport; clicking the backdrop or pressing
-// Escape closes it. Escape and click-through are handled here so callers don't
-// have to wire them up.
 export function Lightbox({
   attachmentId,
   alt,

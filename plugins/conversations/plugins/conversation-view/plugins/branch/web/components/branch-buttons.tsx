@@ -3,7 +3,7 @@ import { GitBranch } from "lucide-react";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
+import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
 import {
   MODEL_REGISTRY,
@@ -57,7 +57,7 @@ export function BranchButtons({
     >
       <div className="flex flex-col gap-3 p-3">
         <div className="text-sm font-medium">Branch from this conversation</div>
-        <PromptEditor
+        <TextEditor
           value={prompt}
           onChange={setPrompt}
           onSubmit={() => {

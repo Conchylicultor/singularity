@@ -1,7 +1,7 @@
 import { useId, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
+import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { taskSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
 import { useActiveDataBinding } from "@plugins/active-data/web";
@@ -114,7 +114,7 @@ export function TaskCard({
 
   return (
     <div className="border-border bg-background my-2 flex flex-col gap-2 rounded-md border p-2">
-      <PromptEditor
+      <TextEditor
         value={prompt}
         onChange={setPrompt}
         placeholder="What should be done?"

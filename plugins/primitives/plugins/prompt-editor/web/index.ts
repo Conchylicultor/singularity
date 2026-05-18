@@ -4,14 +4,12 @@ export { PromptEditor } from "./components/prompt-editor";
 export {
   PromptEditorSlots,
   type PromptEditorActionProps,
-  type PromptEditorPluginProps,
 } from "./slots";
-export { registerNodeExtension, type NodeExtension } from "./internal/node-extensions";
 
 export default {
   id: "prompt-editor",
   name: "Prompt Editor",
   description:
-    "Lexical-based prompt editor primitive. An extensible shell where plugins inject features (image paste, templates, etc.) via the Plugin slot and registerNodeExtension.",
+    "Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).",
   contributions: [],
 } satisfies PluginDefinition;

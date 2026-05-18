@@ -11,11 +11,6 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { $createImageNode } from "./image-node";
 
-// Intercepts paste & drop events with `image/*` clipboard items. For each
-// image, uploads to /api/attachments and inserts an inline `ImageNode`
-// referencing the returned attachment id. The thumbnail then renders via
-// `<img src=/api/attachments/:id>`. Non-image clipboard data falls through
-// to Lexical's default paste handling.
 export function ImageUploadPlugin({
   onError,
 }: {
@@ -33,9 +28,6 @@ export function ImageUploadPlugin({
       );
       if (imageItems.length === 0) return false;
 
-      // macOS clipboard provides multiple representations of the same image
-      // (e.g. PNG + TIFF). For paste, deduplicate to one item (prefer PNG).
-      // Drop keeps all items since each is an intentionally distinct file.
       const items =
         event instanceof DragEvent
           ? imageItems

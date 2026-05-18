@@ -2,9 +2,6 @@ import { useEffect } from "react";
 import { COMMAND_PRIORITY_HIGH, KEY_ENTER_COMMAND } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 
-// Enter-to-submit. `submitMode === "enter"` fires onSubmit on plain Enter
-// (Shift+Enter inserts a newline). `submitMode === "cmd-enter"` fires on
-// Cmd/Ctrl+Enter; plain Enter inserts a newline as usual.
 export function EnterKeyPlugin({
   onSubmit,
   submitMode,

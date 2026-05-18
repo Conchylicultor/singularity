@@ -7,7 +7,7 @@ import {
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useConversationById } from "@plugins/conversations/web";
+import { useConversation } from "@plugins/conversations/web";
 import { postConversationTurn } from "@plugins/conversations/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { ShellCommands as Shell } from "@plugins/shell/web";
@@ -72,14 +72,13 @@ function TemplateChip({
 }
 
 export function FloatingTemplateChips({ insertText }: PromptEditorActionProps) {
-  const conversationData = conversationPane.useDataMaybe();
-  const live = useConversationById(conversationData?.conversation.id ?? null) ?? conversationData?.conversation;
+  const { conversation } = conversationPane.useData();
+  const live = useConversation(conversation.id) ?? conversation;
   const templatesResult = useResource(promptTemplatesResource);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const { pinnedCount } = useConfigValues(promptTemplatesConfig, "conversation-prompt-templates");
 
-  const conversation = conversationData?.conversation;
-  const canSend = live?.status === "waiting" && sendingId === null;
+  const canSend = live.status === "waiting" && sendingId === null;
 
   const pinnedTemplates = useMemo(
     () => templatesResult.pending ? [] : templatesResult.data.slice(0, pinnedCount),
@@ -87,7 +86,7 @@ export function FloatingTemplateChips({ insertText }: PromptEditorActionProps) {
   );
 
   async function sendTemplate(t: PromptTemplate) {
-    if (!canSend || !conversation) return;
+    if (!canSend) return;
     setSendingId(t.id);
     try {
       void fetchEndpoint(usePromptTemplate, { id: t.id });

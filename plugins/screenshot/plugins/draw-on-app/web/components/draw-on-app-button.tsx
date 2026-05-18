@@ -6,7 +6,7 @@ import { captureApp } from "@plugins/screenshot/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
-import { attachmentMarkdown } from "@plugins/primitives/plugins/prompt-editor/plugins/paste-images/web";
+import { attachmentMarkdown } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { ImproveCommands } from "@plugins/improve/web";
 import type { Stroke } from "@plugins/screenshot/plugins/draw-canvas/web";
 import { LiveDrawOverlay } from "./live-draw-overlay";

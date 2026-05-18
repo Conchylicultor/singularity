@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { extractAttachmentIds } from "@plugins/primitives/plugins/prompt-editor/plugins/paste-images/core";
+import { extractAttachmentIds } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
 import { updateAgent } from "../../core/endpoints";
 import { AgentSchema } from "../../core/schemas";
 import { _agents } from "./tables";

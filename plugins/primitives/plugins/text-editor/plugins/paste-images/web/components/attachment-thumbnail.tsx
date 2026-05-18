@@ -3,12 +3,6 @@ import { MdClose } from "react-icons/md";
 import { attachmentUrl } from "../internal/markdown";
 import { Lightbox } from "./lightbox";
 
-// Inline image thumbnail with optional remove × and click-to-expand lightbox.
-// Used both inside the Lexical editor (when an `ImageNode` decorates) and
-// anywhere else that wants to render an attachment image consistently.
-//
-// Sizing defaults to the inline-prompt size (`max-h-16 max-w-32`); pass
-// `size="md"` for larger previews (used in the Improve form's pre-fill row).
 export function AttachmentThumbnail({
   attachmentId,
   alt,

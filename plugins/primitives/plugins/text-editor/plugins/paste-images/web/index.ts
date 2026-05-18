@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { PromptEditorSlots } from "@plugins/primitives/plugins/prompt-editor/web";
+import { TextEditorSlots } from "@plugins/primitives/plugins/text-editor/web";
 import { ImageUploadPlugin } from "./internal/image-upload-plugin";
 import "./internal/register";
 
@@ -18,9 +18,9 @@ export default {
   id: "paste-images",
   name: "Paste Images",
   description:
-    "Image paste/drop support for the prompt editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.",
+    "Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.",
   contributions: [
-    PromptEditorSlots.Plugin({
+    TextEditorSlots.Plugin({
       id: "paste-images",
       component: ImageUploadPlugin,
     }),

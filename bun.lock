@@ -900,10 +900,6 @@
         "lexical": "^0.44.0",
       },
     },
-    "plugins/primitives/plugins/prompt-editor/plugins/paste-images": {
-      "name": "@singularity/plugin-primitives-prompt-editor-paste-images",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/rank": {
       "name": "@singularity/plugin-primitives-rank",
       "version": "0.0.1",
@@ -946,6 +942,18 @@
     },
     "plugins/primitives/plugins/syntax-highlight": {
       "name": "@singularity/plugin-primitives-syntax-highlight",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/text-editor": {
+      "name": "@singularity/plugin-primitives-text-editor",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
+    },
+    "plugins/primitives/plugins/text-editor/plugins/paste-images": {
+      "name": "@singularity/plugin-primitives-text-editor-paste-images",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/tooltip": {
@@ -2172,8 +2180,6 @@
 
     "@singularity/plugin-primitives-prompt-editor": ["@singularity/plugin-primitives-prompt-editor@workspace:plugins/primitives/plugins/prompt-editor"],
 
-    "@singularity/plugin-primitives-prompt-editor-paste-images": ["@singularity/plugin-primitives-prompt-editor-paste-images@workspace:plugins/primitives/plugins/prompt-editor/plugins/paste-images"],
-
     "@singularity/plugin-primitives-rank": ["@singularity/plugin-primitives-rank@workspace:plugins/primitives/plugins/rank"],
 
     "@singularity/plugin-primitives-relative-time": ["@singularity/plugin-primitives-relative-time@workspace:plugins/primitives/plugins/relative-time"],
@@ -2195,6 +2201,10 @@
     "@singularity/plugin-primitives-status-dot": ["@singularity/plugin-primitives-status-dot@workspace:plugins/primitives/plugins/status-dot"],
 
     "@singularity/plugin-primitives-syntax-highlight": ["@singularity/plugin-primitives-syntax-highlight@workspace:plugins/primitives/plugins/syntax-highlight"],
+
+    "@singularity/plugin-primitives-text-editor": ["@singularity/plugin-primitives-text-editor@workspace:plugins/primitives/plugins/text-editor"],
+
+    "@singularity/plugin-primitives-text-editor-paste-images": ["@singularity/plugin-primitives-text-editor-paste-images@workspace:plugins/primitives/plugins/text-editor/plugins/paste-images"],
 
     "@singularity/plugin-primitives-tooltip": ["@singularity/plugin-primitives-tooltip@workspace:plugins/primitives/plugins/tooltip"],
 

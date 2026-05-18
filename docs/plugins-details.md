@@ -1388,18 +1388,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InlinePopoverProps`
         - Values: `InlinePopover`
-    - **`prompt-editor`** — Lexical-based prompt editor primitive. An extensible shell where plugins inject features (image paste, templates, etc.) via the Plugin slot and registerNodeExtension.
+    - **`prompt-editor`** — Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).
       - Exports (web):
-        - Types: `NodeExtension`, `PromptEditorActionProps`, `PromptEditorPluginProps`
-        - Values: `PromptEditor`, `PromptEditorSlots`, `registerNodeExtension`
-      - Plugins:
-        - **`paste-images`** — Image paste/drop support for the prompt editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
-          - Exports (core):
-            - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `rewriteAttachmentMarkdown`
-          - Exports (web):
-            - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `rewriteAttachmentMarkdown`
-          - Contributes:
-            - `PromptEditorSlots.Plugin` → `ImageUploadPlugin`
+        - Types: `PromptEditorActionProps`
+        - Values: `PromptEditor`, `PromptEditorSlots`
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
       - Exports (core):
         - Values: `Rank`, `RankSchema`, `rankText`
@@ -1451,6 +1443,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
       - Exports (web):
         - Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
+    - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
+      - Exports (web):
+        - Types: `NodeExtension`, `TextEditorPluginProps`
+        - Values: `registerNodeExtension`, `TextEditor`, `TextEditorSlots`
+      - Plugins:
+        - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
+          - Exports (core):
+            - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `rewriteAttachmentMarkdown`
+          - Exports (web):
+            - Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `rewriteAttachmentMarkdown`
+          - Contributes:
+            - `TextEditorSlots.Plugin` → `ImageUploadPlugin`
     - **`tooltip`** — WithTooltip wrapper, TooltipProvider, and <Kbd> keyboard shortcut badge.
       - Exports (web):
         - Types: `KbdProps`, `WithTooltipProps`

@@ -2,7 +2,7 @@ import { type CSSProperties } from "react";
 import { MdClose, MdDragIndicator } from "react-icons/md";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
+import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { cn } from "@/lib/utils";
 import { ModelChip, type ChainModel } from "./model-chip";
 import { RelateModeChip } from "./relate-mode-chip";
@@ -183,7 +183,7 @@ export function TaskDraftCard({
     >
       <MdDragIndicator className="pointer-events-none absolute right-1.5 top-1.5 size-3 text-muted-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
       <div onPointerDown={(e) => e.stopPropagation()} className="cursor-auto">
-        <PromptEditor
+        <TextEditor
           value={text}
           onChange={onTextChange}
           onSubmit={onSubmitChord}

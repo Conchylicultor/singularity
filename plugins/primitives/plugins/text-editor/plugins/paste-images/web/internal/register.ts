@@ -1,4 +1,4 @@
-import { registerNodeExtension } from "@plugins/primitives/plugins/prompt-editor/web";
+import { registerNodeExtension } from "@plugins/primitives/plugins/text-editor/web";
 import { ImageNode, $createImageNode, $isImageNode } from "./image-node";
 import {
   ATTACHMENT_MARKDOWN_RE,

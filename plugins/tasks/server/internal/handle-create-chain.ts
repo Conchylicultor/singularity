@@ -14,7 +14,7 @@ import { getAttachment } from "@plugins/infra/plugins/attachments/server";
 import {
   attachmentMarkdown,
   extractAttachmentIds,
-} from "@plugins/primitives/plugins/prompt-editor/plugins/paste-images/core";
+} from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
 import { type TaskChainCard } from "../../core/task-chain-types";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createTaskChain } from "../../core/endpoints";
