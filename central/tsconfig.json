@@ -17,21 +17,13 @@
     }
   },
   "exclude": [
-    "../plugins/framework/plugins/web-sdk/**"
+    "../plugins/framework/plugins/web-sdk/**",
+    "**/node_modules"
   ],
   "include": [
     "bin",
-    "../plugins/*/central",
-    "../plugins/*/core",
-    "../plugins/*/shared",
-    "../plugins/*/plugins/*/central",
-    "../plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/shared",
-    "../plugins/*/plugins/*/plugins/*/central",
-    "../plugins/*/plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/plugins/*/shared",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/central",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/shared"
+    "../**/plugins/*/central",
+    "../**/plugins/*/core",
+    "../**/plugins/*/shared"
   ]
 }

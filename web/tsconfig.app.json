@@ -24,27 +24,15 @@
   },
   "exclude": [
     "../plugins/plugin-meta/plugins/plugin-tree/**",
-    "../plugins/plugin-meta/plugins/barrel-import/**"
+    "../plugins/plugin-meta/plugins/barrel-import/**",
+    "**/node_modules"
   ],
   "include": [
     "src",
     "../plugins/framework/plugins/web-sdk",
-    "../plugins/*/web",
-    "../plugins/*/core",
-    "../plugins/*/shared",
-    "../plugins/*/lint",
-    "../plugins/*/plugins/*/web",
-    "../plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/shared",
-    "../plugins/*/plugins/*/lint",
-    "../plugins/*/plugins/*/plugins/*/web",
-    "../plugins/*/plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/plugins/*/shared",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/web",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/shared",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/web",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/core",
-    "../plugins/*/plugins/*/plugins/*/plugins/*/plugins/*/shared"
+    "../**/plugins/*/web",
+    "../**/plugins/*/core",
+    "../**/plugins/*/shared",
+    "../**/plugins/*/lint"
   ]
 }

@@ -17,27 +17,15 @@
     }
   },
   "exclude": [
-    "../../../framework/plugins/web-sdk/**"
+    "../../../framework/plugins/web-sdk/**",
+    "**/node_modules"
   ],
   "include": [
     "bin",
     "core",
-    "../../../*/server",
-    "../../../*/core",
-    "../../../*/shared",
-    "../../../*/check",
-    "../../../*/plugins/*/server",
-    "../../../*/plugins/*/core",
-    "../../../*/plugins/*/shared",
-    "../../../*/plugins/*/check",
-    "../../../*/plugins/*/plugins/*/server",
-    "../../../*/plugins/*/plugins/*/core",
-    "../../../*/plugins/*/plugins/*/shared",
-    "../../../*/plugins/*/plugins/*/plugins/*/server",
-    "../../../*/plugins/*/plugins/*/plugins/*/core",
-    "../../../*/plugins/*/plugins/*/plugins/*/shared",
-    "../../../*/plugins/*/plugins/*/plugins/*/plugins/*/server",
-    "../../../*/plugins/*/plugins/*/plugins/*/plugins/*/core",
-    "../../../*/plugins/*/plugins/*/plugins/*/plugins/*/shared"
+    "../../../../**/plugins/*/server",
+    "../../../../**/plugins/*/core",
+    "../../../../**/plugins/*/shared",
+    "../../../../**/plugins/*/check"
   ]
 }
