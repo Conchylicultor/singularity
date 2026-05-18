@@ -1,3 +1,5 @@
+import typedWebFetches from "./typed-web-fetches";
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
@@ -13,7 +15,7 @@ async function getRoot(): Promise<string> {
 // No legacy allowlist entries remain.
 const ALLOWED = new Set<string>([]);
 
-const check: Check = {
+const typedHandlers: Check = {
   id: "endpoints:typed-handlers",
   description:
     "HTTP route handlers must use defineEndpoint + implement(); literal route strings in httpRoutes are forbidden for new plugins",
@@ -63,4 +65,4 @@ const check: Check = {
   },
 };
 
-export default check;
+export default [typedHandlers, typedWebFetches];
