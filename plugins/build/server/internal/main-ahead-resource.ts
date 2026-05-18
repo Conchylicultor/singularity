@@ -2,10 +2,8 @@ import { defineResource } from "@server/resources";
 import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
 import { MainAheadCountSchema } from "../../shared";
 import { getMainAheadCount } from "./git-status";
+import { buildHistoryResource } from "./build-history-resource";
 
-// Cascaded off the git-watcher's `refHeadResource`: every advance of
-// `refs/heads/main` notifies us, the loader recomputes the count against
-// `web/dist/.build-commit`, and the toolbar dot updates immediately.
 export const mainAheadCountResource = defineResource({
   key: "build.mainAheadCount",
   mode: "push",
@@ -16,6 +14,7 @@ export const mainAheadCountResource = defineResource({
       map: (params: { refName: string }) =>
         params.refName === "refs/heads/main" ? [{}] : [],
     },
+    { resource: buildHistoryResource },
   ],
   loader: async () => ({ count: await getMainAheadCount() }),
 });
