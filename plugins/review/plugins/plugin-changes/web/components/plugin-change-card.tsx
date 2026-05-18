@@ -1,19 +1,22 @@
-import { useState } from "react";
 import { MdExpandMore, MdExpandLess } from "react-icons/md";
 import type { PluginReviewProps } from "../../core";
 import { PluginChanges } from "../slots";
 
-export function PluginChangeCard({ conversationId, plugin }: PluginReviewProps) {
+export function PluginChangeCard({
+  conversationId,
+  plugin,
+  expanded,
+  onToggle,
+}: PluginReviewProps & { expanded: boolean; onToggle: () => void }) {
   const sections = PluginChanges.Section.useContributions();
   const hasExpandable = sections.some(
     (s) => s.hasContent?.(plugin) ?? false,
   );
-  const [expanded, setExpanded] = useState(hasExpandable);
 
   return (
     <div className="rounded-lg border border-border/60 overflow-hidden">
       <button
-        onClick={() => setExpanded(!expanded)}
+        onClick={onToggle}
         className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/30"
       >
         {expanded ? (
