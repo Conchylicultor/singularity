@@ -6,17 +6,6 @@ import {
 import type { EndpointDef } from "../../core/define-endpoint";
 import { EndpointError, fetchEndpoint } from "./fetch-endpoint";
 
-// Extend TanStack Query's global mutation meta with the opt-out flag.
-// Set meta.suppressError = true on any useMutation/useEndpointMutation call
-// to silence the global auto-toast and handle the error locally instead.
-declare module "@tanstack/react-query" {
-  interface Register {
-    mutationMeta: {
-      suppressError?: boolean;
-    };
-  }
-}
-
 type MutationVariables<TParams, TBody> = TParams extends Record<string, never>
   ? TBody extends void
     ? { params?: TParams; body?: never }
