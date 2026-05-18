@@ -1,3 +1,6 @@
 import { defineDetailSections } from "@plugins/primitives/plugins/detail-sections/web";
 
-export const Review = defineDetailSections<{ conversationId: string }>("review");
+export const Review = defineDetailSections<{ conversationId: string }>("review", {
+  collapsible: true,
+  defaultOpen: true,
+});

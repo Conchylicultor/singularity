@@ -2,11 +2,11 @@ import { useMemo, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent, CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { pushesResource, type Push } from "@plugins/tasks/core";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { reviewSectionsResource } from "../../shared";
 import { groupBySection, type FileSection } from "../core-files";
 import { usePushFiles } from "../use-push-files";
@@ -30,8 +30,6 @@ function groupPushes(rows: Push[]): PushGroup[] {
     const createdAt = new Date(row.createdAt);
     if (existing) {
       existing.count += 1;
-      // Show the most-recent commit's subject; rows arrive sorted desc by
-      // pushesResource so the first-seen row already wins.
       if (createdAt > existing.createdAt) {
         existing.createdAt = createdAt;
         existing.message = row.message;
@@ -57,21 +55,29 @@ function formatDate(value: Date): string {
   });
 }
 
-export function ReviewView() {
-  const { conversation } = conversationPane.useData();
+export function CodeReviewSection({
+  conversationId,
+}: {
+  conversationId: string;
+}) {
+  const conversation = useConversationById(conversationId);
   const [source, setSource] = useState<Source>({ kind: "working" });
 
   const pushesQ = useResource(pushesResource);
   const pushGroups = useMemo(() => {
-    if (pushesQ.pending) return [];
+    if (pushesQ.pending || !conversation) return [];
     const rows = pushesQ.data.filter(
       (p) => p.attemptId === conversation.attemptId,
     );
     return groupPushes(rows);
-  }, [pushesQ, conversation.attemptId]);
+  }, [pushesQ, conversation]);
+
+  if (!conversation) {
+    return <Placeholder>Loading...</Placeholder>;
+  }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-muted/20">
+    <div className="flex min-h-0 flex-col">
       <SourceTabs
         source={source}
         onChange={setSource}
@@ -168,7 +174,7 @@ function WorkingTreeBody({
 function PushBody({ pushId }: { pushId: string }) {
   const state = usePushFiles(pushId);
   if (state.kind === "loading") {
-    return <Body><Placeholder>Loading…</Placeholder></Body>;
+    return <Body><Placeholder>Loading...</Placeholder></Body>;
   }
   if (state.kind === "error") {
     return (
@@ -263,7 +269,7 @@ function FileList({
       />
       <Body>
         {sections == null ? (
-          <Placeholder>Loading…</Placeholder>
+          <Placeholder>Loading...</Placeholder>
         ) : sorted!.length === 0 ? (
           <Placeholder>{emptyLabel}</Placeholder>
         ) : (
@@ -349,8 +355,6 @@ function ToolbarRow({
   return (
     <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-4 py-2 backdrop-blur">
       <div className="flex items-center gap-2 text-sm font-medium">
-        <span>Review</span>
-        <span className="text-muted-foreground">·</span>
         <span className="tabular-nums">{count} files</span>
         <span className="text-emerald-600 tabular-nums dark:text-emerald-400">
           +{additions}

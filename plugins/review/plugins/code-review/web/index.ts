@@ -1,20 +1,23 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { Config } from "@plugins/config/web";
-import { ReviewButton } from "./components/review-button";
+import { ReviewSlots } from "@plugins/review/web";
+import { CodeReviewSection } from "./components/code-review-section";
+import { CodeReviewSummary } from "./components/code-review-summary";
 import { ReviewSectionsSettings } from "./components/review-sections-settings";
 import { reviewConfig } from "../shared/config";
-import { convCodeReviewPane } from "./panes";
 
 export default {
-  id: "conversation-code-review",
-  name: "Conversation: Code — Review",
+  id: "review-code-review",
+  name: "Review: Code Review",
   description:
-    "Toolbar button and full-screen view to review all worktree changes file-by-file.",
+    "File-by-file code review section for the review pane.",
   contributions: [
-    Pane.Register({ pane: convCodeReviewPane }),
-    Conversation.ActionBar({ id: "code-review", component: ReviewButton }),
+    ReviewSlots.Section({
+      id: "code-review",
+      label: "Code Review",
+      component: CodeReviewSection,
+      summary: CodeReviewSummary,
+    }),
     Config.Spec(reviewConfig),
     Config.Section({
       id: "review-sections",

@@ -16,10 +16,10 @@ import {
 } from "../shared/endpoints";
 
 export default {
-  id: "conversation-code-review",
-  name: "Conversation: Code — Review",
+  id: "review-code-review",
+  name: "Review: Code Review",
   description:
-    "Toolbar button and full-screen view to review all worktree changes file-by-file.",
+    "File-by-file code review section for the review pane.",
   httpRoutes: {
     [listReviewSections.route]: handleList,
     [createReviewSection.route]: handleCreate,

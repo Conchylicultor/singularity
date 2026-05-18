@@ -7,6 +7,7 @@ export const convReviewPane = Pane.define({
   after: [conversationPane],
   segment: "review",
   component: ConvReviewBody,
+  width: 720,
 });
 
 function ConvReviewBody() {

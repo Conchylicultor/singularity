@@ -62,7 +62,7 @@ export function ReviewFileRow({
   const dir = slash >= 0 ? file.path.slice(0, slash + 1) : "";
   const basename = slash >= 0 ? file.path.slice(slash + 1) : file.path;
   const from = file.from && file.from !== file.path ? file.from : null;
-  const { safePaths, carefulPaths } = useConfigValues(reviewConfig, "conversation-code-review");
+  const { safePaths, carefulPaths } = useConfigValues(reviewConfig, "review-code-review");
   const level = getFileWarningLevel(file.path, safePaths, carefulPaths);
   return (
     <div className="border-b border-border last:border-b-0">

@@ -117,7 +117,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `DebugApp`
           - Contributes:
             - `Apps.App` "Debug" → `DebugLayout`
-          - Imported by: `agents`, `auth`, `branch`, `build`, `build-logs`, `code-explorer`, `config`, `conversation-category`, `conversations-view`, `dependencies`, `draw-on-app`, `drop-and-exit`, `edit-mode`, `events-test`, `exit`, `health`, `hold-and-exit`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `review`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `theme-customizer`, `toaster`, `worktree-switcher`
+          - Imported by: `agents`, `auth`, `branch`, `build`, `build-logs`, `code-explorer`, `code-review`, `config`, `conversation-category`, `conversations-view`, `dependencies`, `draw-on-app`, `drop-and-exit`, `edit-mode`, `events-test`, `exit`, `health`, `hold-and-exit`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `theme-customizer`, `toaster`, `worktree-switcher`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -422,8 +422,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Sidebar` "Settings" → `component`
   - Server:
     - Uses: `database.db`
-  - Imported by: `auth`, `backup`, `chart`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `quick-prompts`, `review`, `segmented-progress-bar`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
-  - Slot contributors: `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `review`, `theme-customizer`
+  - Imported by: `auth`, `backup`, `chart`, `code-review`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `quick-prompts`, `segmented-progress-bar`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
+  - Slot contributors: `code-review`, `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `quick-prompts`, `theme-customizer`
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Exports (core):
@@ -471,7 +471,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Register: `defineJob('tasks.maybe-launch')`, `defineJob('tasks.maybe-launch-dependents')`, `defineTriggerEvent('conversation.created')`, `defineTriggerEvent('conversation.turn-completed')`, `defineTriggerEvent('conversation.userTurnSent')`
     - Uses: `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.notifyConversationsChanged`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTaskTitle`
-  - Imported by: `agents`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `drop-and-exit`, `exit`, `file-changes`, `grouped`, `history`, `hold-and-exit`, `improve`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `task-header`, `task-title`, `tasks`, `turn-summary`, `welcome`
+  - Imported by: `agents`, `code-review`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `drop-and-exit`, `exit`, `file-changes`, `grouped`, `history`, `hold-and-exit`, `improve`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `resume`, `runtime-api`, `runtime-tmux`, `summary`, `task-header`, `task-title`, `tasks`, `turn-summary`, `welcome`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
       - Defines:
@@ -579,19 +579,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
                   - Contributes:
                     - `FilePane.Renderer` "Raw" → `RawView`
-            - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file. Toolbar button and full-screen view to review all worktree changes file-by-file.
-              - Defines:
-                - DB schema: `plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/server/internal/tables.ts`
-              - Exports (shared):
-                - Types: `CreateReviewSectionBody`, `ReviewSection`, `UpdateReviewSectionBody`
-                - Values: `createReviewSection`, `CreateReviewSectionBodySchema`, `deleteReviewSection`, `listReviewSections`, `reviewConfig`, `reviewSectionsResource`, `updateReviewSection`, `UpdateReviewSectionBodySchema`
-              - Contributes:
-                - `Pane.Register` "conv-code-review"
-                - `Conversation.ActionBar` → `ReviewButton`
-                - `Config.Spec`
-                - `Config.Section` "Review Sections" → `ReviewSectionsSettings`
-              - Server:
-                - Uses: `config.Config`, `database.db`
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
           - Contributes:
             - `Pane.Register` "conv-commits-graph"
@@ -953,7 +940,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Exports (server):
     - Values: `awaitDbReady`, `db`, `isTransientDbError`
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `claude-cli`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `review`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `claude-cli`, `code-review`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `push-and-exit`, `queue`, `quick-prompts`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Exports (server):
@@ -1524,8 +1511,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Pane.Register` "conv-review"
     - `Conversation.ActionBar` → `ReviewButton`
-  - Imported by: `plugin-changes`
+  - Imported by: `code-review`, `plugin-changes`
   - Plugins:
+    - **`code-review`** — File-by-file code review section for the review pane. File-by-file code review section for the review pane.
+      - Defines:
+        - DB schema: `plugins/review/plugins/code-review/server/internal/tables.ts`
+      - Exports (shared):
+        - Types: `CreateReviewSectionBody`, `ReviewSection`, `UpdateReviewSectionBody`
+        - Values: `createReviewSection`, `CreateReviewSectionBodySchema`, `deleteReviewSection`, `listReviewSections`, `reviewConfig`, `reviewSectionsResource`, `updateReviewSection`, `UpdateReviewSectionBodySchema`
+      - Contributes:
+        - `ReviewSlots.Section` "code-review" → `CodeReviewSection`
+        - `Config.Spec`
+        - `Config.Section` "Review Sections" → `ReviewSectionsSettings`
+      - Server:
+        - Uses: `config.Config`, `database.db`
     - **`plugin-changes`** — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
       - Exports (core):
         - Types: `DiffList`, `PluginChangedFile`, `PluginChangeDiff`, `PluginChangesResponse`, `PluginReviewProps`

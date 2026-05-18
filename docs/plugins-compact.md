@@ -113,7 +113,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
                 - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
                 - **`markdown`** — Rendered markdown preview for .md and .mdx files.
                 - **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
-            - **`review`** — Toolbar button and full-screen view to review all worktree changes file-by-file. Toolbar button and full-screen view to review all worktree changes file-by-file.
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
         - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
         - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
@@ -297,6 +296,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Plugins:
+    - **`code-review`** — File-by-file code review section for the review pane. File-by-file code review section for the review pane.
     - **`plugin-changes`** — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
       - Plugins:
         - **`api-changes`** — API surface diff section for per-plugin review cards.

@@ -356,10 +356,6 @@
       "name": "@singularity/plugin-conversations-conversation-view-code-file-pane-raw",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/conversation-view/plugins/code/plugins/review": {
-      "name": "@singularity/plugin-conversations-conversation-view-code-review",
-      "version": "0.0.1",
-    },
     "plugins/conversations/plugins/conversation-view/plugins/commits-graph": {
       "name": "@singularity/plugin-conversations-conversation-view-commits-graph",
       "version": "0.0.1",
@@ -978,6 +974,10 @@
     },
     "plugins/review": {
       "name": "@singularity/plugin-review",
+      "version": "0.0.1",
+    },
+    "plugins/review/plugins/code-review": {
+      "name": "@singularity/plugin-review-code-review",
       "version": "0.0.1",
     },
     "plugins/review/plugins/plugin-changes": {
@@ -1912,8 +1912,6 @@
 
     "@singularity/plugin-conversations-conversation-view-code-file-pane-raw": ["@singularity/plugin-conversations-conversation-view-code-file-pane-raw@workspace:plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/raw"],
 
-    "@singularity/plugin-conversations-conversation-view-code-review": ["@singularity/plugin-conversations-conversation-view-code-review@workspace:plugins/conversations/plugins/conversation-view/plugins/code/plugins/review"],
-
     "@singularity/plugin-conversations-conversation-view-commits-graph": ["@singularity/plugin-conversations-conversation-view-commits-graph@workspace:plugins/conversations/plugins/conversation-view/plugins/commits-graph"],
 
     "@singularity/plugin-conversations-conversation-view-dependencies": ["@singularity/plugin-conversations-conversation-view-dependencies@workspace:plugins/conversations/plugins/conversation-view/plugins/dependencies"],
@@ -2215,6 +2213,8 @@
     "@singularity/plugin-reorder-groups": ["@singularity/plugin-reorder-groups@workspace:plugins/reorder/plugins/groups"],
 
     "@singularity/plugin-review": ["@singularity/plugin-review@workspace:plugins/review"],
+
+    "@singularity/plugin-review-code-review": ["@singularity/plugin-review-code-review@workspace:plugins/review/plugins/code-review"],
 
     "@singularity/plugin-review-plugin-changes": ["@singularity/plugin-review-plugin-changes@workspace:plugins/review/plugins/plugin-changes"],
 

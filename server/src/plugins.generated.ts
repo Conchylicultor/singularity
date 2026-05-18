@@ -34,7 +34,6 @@ import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
 import conversationsConversationCategoryPlugin from "@plugins/conversations/plugins/conversation-category/server";
 import conversationsConversationProgressPlugin from "@plugins/conversations/plugins/conversation-progress/server";
 import conversationsConversationViewAllowMonitorPlugin from "@plugins/conversations/plugins/conversation-view/plugins/allow-monitor/server";
-import conversationsConversationViewCodeReviewPlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/review/server";
 import conversationsConversationViewCodePlugin from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import conversationsConversationViewCommitsGraphPlugin from "@plugins/conversations/plugins/conversation-view/plugins/commits-graph/server";
 import conversationsConversationViewDropAndExitPlugin from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/server";
@@ -91,6 +90,7 @@ import primitivesAvatarPlugin from "@plugins/primitives/plugins/avatar/server";
 import primitivesRankPlugin from "@plugins/primitives/plugins/rank/server";
 import reorderGroupsPlugin from "@plugins/reorder/plugins/groups/server";
 import reorderPlugin from "@plugins/reorder/server";
+import reviewCodeReviewPlugin from "@plugins/review/plugins/code-review/server";
 import reviewPluginChangesPlugin from "@plugins/review/plugins/plugin-changes/server";
 import screenshotPlugin from "@plugins/screenshot/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
@@ -137,7 +137,6 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (conversationsConversationCategoryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, databasePlugin, infraClaudeCliPlugin, infraEndpointsPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, primitivesAvatarPlugin, tasksCorePlugin];
 (conversationsConversationProgressPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, infraPathsPlugin, tasksCorePlugin];
 (conversationsConversationViewAllowMonitorPlugin as ServerPluginDefinition).dependsOn = [infraEndpointsPlugin, tasksCorePlugin];
-(conversationsConversationViewCodeReviewPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraEndpointsPlugin, primitivesRankPlugin];
 (conversationsConversationViewCodePlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, tasksCorePlugin];
 (conversationsConversationViewCommitsGraphPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin, tasksCorePlugin];
 (conversationsConversationViewDropAndExitPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraEndpointsPlugin, tasksCorePlugin];
@@ -186,6 +185,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (primitivesRankPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];
 (reorderGroupsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEndpointsPlugin, primitivesRankPlugin];
 (reorderPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEndpointsPlugin];
+(reviewCodeReviewPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraEndpointsPlugin, primitivesRankPlugin];
 (reviewPluginChangesPlugin as ServerPluginDefinition).dependsOn = [conversationsConversationViewCodePlugin, infraEndpointsPlugin, infraPathsPlugin, tasksCorePlugin];
 (statsCommitsPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsConversationCategoryPlugin, databasePlugin, infraEndpointsPlugin, infraPathsPlugin, infraWorktreePlugin];
 (statsCostPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
@@ -233,7 +233,6 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (conversationsConversationCategoryPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-category";
 (conversationsConversationProgressPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-progress";
 (conversationsConversationViewAllowMonitorPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/allow-monitor";
-(conversationsConversationViewCodeReviewPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/code/review";
 (conversationsConversationViewCodePlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/code";
 (conversationsConversationViewCommitsGraphPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/commits-graph";
 (conversationsConversationViewDropAndExitPlugin as ServerPluginDefinition)._hierarchyPath = "conversations/conversation-view/drop-and-exit";
@@ -290,6 +289,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (primitivesRankPlugin as ServerPluginDefinition)._hierarchyPath = "primitives/rank";
 (reorderGroupsPlugin as ServerPluginDefinition)._hierarchyPath = "reorder/groups";
 (reorderPlugin as ServerPluginDefinition)._hierarchyPath = "reorder";
+(reviewCodeReviewPlugin as ServerPluginDefinition)._hierarchyPath = "review/code-review";
 (reviewPluginChangesPlugin as ServerPluginDefinition)._hierarchyPath = "review/plugin-changes";
 (screenshotPlugin as ServerPluginDefinition)._hierarchyPath = "screenshot";
 (statsCommitsPlugin as ServerPluginDefinition)._hierarchyPath = "stats/commits";
@@ -339,7 +339,6 @@ export const plugins: ServerPluginDefinition[] = [
   conversationsConversationCategoryPlugin,
   conversationsConversationProgressPlugin,
   conversationsConversationViewAllowMonitorPlugin,
-  conversationsConversationViewCodeReviewPlugin,
   conversationsConversationViewCodePlugin,
   conversationsConversationViewCommitsGraphPlugin,
   conversationsConversationViewDropAndExitPlugin,
@@ -396,6 +395,7 @@ export const plugins: ServerPluginDefinition[] = [
   primitivesRankPlugin,
   reorderGroupsPlugin,
   reorderPlugin,
+  reviewCodeReviewPlugin,
   reviewPluginChangesPlugin,
   screenshotPlugin,
   statsCommitsPlugin,
