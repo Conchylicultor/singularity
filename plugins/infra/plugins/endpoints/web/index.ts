@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { fetchEndpoint, EndpointError } from "./internal/fetch-endpoint";
+export { fetchEndpoint, EndpointError, getEndpointErrorMessage } from "./internal/fetch-endpoint";
 export { useEndpoint } from "./internal/use-endpoint";
 export { useEndpointMutation } from "./internal/use-endpoint-mutation";
 

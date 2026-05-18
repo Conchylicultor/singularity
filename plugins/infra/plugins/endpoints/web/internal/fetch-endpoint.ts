@@ -10,6 +10,22 @@ export class EndpointError extends Error {
   }
 }
 
+export function getEndpointErrorMessage(error: unknown): string {
+  if (error instanceof EndpointError) {
+    const { body } = error;
+    if (
+      body &&
+      typeof body === "object" &&
+      "message" in body &&
+      typeof (body as { message: unknown }).message === "string"
+    ) {
+      return (body as { message: string }).message;
+    }
+    return error.message;
+  }
+  return error instanceof Error ? error.message : String(error);
+}
+
 type FetchOpts<TBody, TQuery> = { signal?: AbortSignal } & (TBody extends void
   ? { body?: never }
   : { body: TBody }) &

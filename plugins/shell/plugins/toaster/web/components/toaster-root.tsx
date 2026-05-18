@@ -1,8 +1,12 @@
 import { useEffect } from "react";
 import { Toaster as Sonner, toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { ShellCommands, type ToastArgs } from "@plugins/shell/web";
 
 export function ToasterRoot() {
+  const queryClient = useQueryClient();
+
   ShellCommands.Toast.useHandler(({ title, description, variant }: ToastArgs) => {
     const opts = { description: title ? description : undefined };
     const message = title ?? description;
@@ -20,6 +24,15 @@ export function ToasterRoot() {
     window.addEventListener("unhandledrejection", onRejection);
     return () => window.removeEventListener("unhandledrejection", onRejection);
   }, []);
+
+  useEffect(() => {
+    return queryClient.getMutationCache().subscribe((event) => {
+      if (event.type !== "updated") return;
+      if (event.action.type !== "error") return;
+      if (event.mutation.options.meta?.suppressError) return;
+      toast.error(getEndpointErrorMessage(event.action.error));
+    });
+  }, [queryClient]);
 
   return (
     <Sonner
