@@ -184,7 +184,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (reorderGroupsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEndpointsPlugin, primitivesRankPlugin];
 (reorderPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEndpointsPlugin];
 (reviewCodeReviewPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraEndpointsPlugin, primitivesRankPlugin];
-(reviewPluginChangesPlugin as ServerPluginDefinition).dependsOn = [conversationsConversationViewCodePlugin, infraEndpointsPlugin, infraPathsPlugin, tasksCorePlugin];
+(reviewPluginChangesPlugin as ServerPluginDefinition).dependsOn = [codeExplorerPlugin, conversationsConversationViewCodePlugin, infraEndpointsPlugin, infraPathsPlugin, tasksCorePlugin];
 (statsCommitsPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsConversationCategoryPlugin, databasePlugin, infraEndpointsPlugin, infraPathsPlugin, infraWorktreePlugin];
 (statsCostPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
 (statsTasksPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];

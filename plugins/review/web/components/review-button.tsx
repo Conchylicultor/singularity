@@ -22,7 +22,7 @@ export function ReviewButton() {
       <MdRateReview className="size-4" />
       {sections.map((s) => {
         const S = s.summary;
-        return S ? <S key={s.id} conversationId={conversation.id} /> : null;
+        return S ? <S key={s.id} conversationId={conversation.id} source={{ kind: "working" }} /> : null;
       })}
     </Button>
   );

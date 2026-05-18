@@ -6,6 +6,7 @@ import { convReviewPane } from "./panes";
 
 export { Review as ReviewSlots } from "./slots";
 export { convReviewPane } from "./panes";
+export type { Source, ReviewProps } from "./source";
 
 export default {
   id: "review",

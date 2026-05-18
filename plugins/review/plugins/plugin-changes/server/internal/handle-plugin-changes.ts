@@ -1,6 +1,9 @@
 import { dirname, join, resolve } from "node:path";
-import { getConversation } from "@plugins/tasks-core/server";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { getConversation, listPushesByPushId } from "@plugins/tasks-core/server";
 import { getEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
+import { resolveParentSha, getRangeFiles } from "@plugins/code-explorer/server";
 import { REPO_ROOT, GIT } from "@plugins/infra/plugins/paths/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { getPluginChanges } from "../../core/endpoints";
@@ -8,9 +11,10 @@ import { computePluginChanges } from "./compute-plugin-diff";
 import type { PluginChangesResponse } from "../../core/protocol";
 
 let cachedMainPluginsDir: string | null = null;
+let cachedMainRoot: string | null = null;
 
-async function getMainPluginsDir(): Promise<string> {
-  if (cachedMainPluginsDir) return cachedMainPluginsDir;
+async function getMainRoot(): Promise<string> {
+  if (cachedMainRoot) return cachedMainRoot;
 
   const proc = Bun.spawn(
     [GIT, "--no-optional-locks", "rev-parse", "--git-common-dir"],
@@ -23,18 +27,37 @@ async function getMainPluginsDir(): Promise<string> {
   if (code !== 0) throw new Error("Failed to resolve git common dir");
 
   const absGitDir = resolve(REPO_ROOT, out.trim());
-  const mainRoot = dirname(absGitDir);
-  cachedMainPluginsDir = join(mainRoot, "plugins");
+  cachedMainRoot = dirname(absGitDir);
+  return cachedMainRoot;
+}
+
+async function getMainPluginsDir(): Promise<string> {
+  if (cachedMainPluginsDir) return cachedMainPluginsDir;
+  cachedMainPluginsDir = join(await getMainRoot(), "plugins");
   return cachedMainPluginsDir;
 }
 
-export const handlePluginChanges = implement(getPluginChanges, async ({ req }) => {
-  const url = new URL(req.url, "http://localhost");
-  const conversationId = url.searchParams.get("conversationId");
-  if (!conversationId) {
-    throw new HttpError(400, "conversationId required");
+async function extractPluginsAtSha(sha: string): Promise<string> {
+  const dir = await mkdtemp(join(tmpdir(), `review-${sha.slice(0, 8)}-`));
+  const mainRoot = await getMainRoot();
+  const archive = Bun.spawn(
+    [GIT, "--no-optional-locks", "-C", mainRoot, "archive", sha, "--", "plugins/"],
+    { stdout: "pipe", stderr: "pipe" },
+  );
+  const tar = Bun.spawn(["tar", "-x", "-C", dir], {
+    stdin: archive.stdout,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [archiveCode, tarCode] = await Promise.all([archive.exited, tar.exited]);
+  if (archiveCode !== 0 || tarCode !== 0) {
+    await rm(dir, { recursive: true, force: true });
+    throw new Error(`Failed to extract plugins at ${sha}`);
   }
+  return dir;
+}
 
+async function handleWorkingTree(conversationId: string): Promise<PluginChangesResponse> {
   const conversation = await getConversation(conversationId);
   if (!conversation?.worktreePath) {
     throw new HttpError(404, "conversation not found");
@@ -51,7 +74,52 @@ export const handlePluginChanges = implement(getPluginChanges, async ({ req }) =
     mainPluginsDir,
     editedFiles,
   );
+  return { plugins };
+}
 
-  const response: PluginChangesResponse = { plugins };
-  return response;
+async function handlePush(pushId: string): Promise<PluginChangesResponse> {
+  const mainRoot = await getMainRoot();
+  const commits = await listPushesByPushId(pushId);
+  if (commits.length === 0) {
+    throw new HttpError(404, "push not found");
+  }
+
+  const earliest = commits[0]!;
+  const latest = commits[commits.length - 1]!;
+  const baseSha = await resolveParentSha(mainRoot, earliest.sha);
+  if (!baseSha) {
+    throw new HttpError(400, "could not resolve base SHA");
+  }
+  const headSha = latest.sha;
+
+  const editedFiles = await getRangeFiles(mainRoot, baseSha, headSha);
+  if (!editedFiles) {
+    throw new HttpError(500, "failed to compute diff for push range");
+  }
+
+  const [baseDir, headDir] = await Promise.all([
+    extractPluginsAtSha(baseSha),
+    extractPluginsAtSha(headSha),
+  ]);
+
+  try {
+    const plugins = computePluginChanges(
+      join(headDir, "plugins"),
+      join(baseDir, "plugins"),
+      editedFiles,
+    );
+    return { plugins };
+  } finally {
+    await Promise.all([
+      rm(baseDir, { recursive: true, force: true }),
+      rm(headDir, { recursive: true, force: true }),
+    ]);
+  }
+}
+
+export const handlePluginChanges = implement(getPluginChanges, async ({ query }) => {
+  if (query.pushId) {
+    return handlePush(query.pushId);
+  }
+  return handleWorkingTree(query.conversationId);
 });

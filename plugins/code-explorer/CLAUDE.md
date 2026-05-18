@@ -6,7 +6,7 @@
 
 - Description: Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
 - Exports (server):
-  - Values: `resolveWorktreePath`
+  - Values: `getRangeFiles`, `resolveParentSha`, `resolveWorktreePath`
 - Exports (shared):
   - Values: `getCodeTree`, `getCommitFiles`, `getFileContent`, `getFileDiff`, `getImageContent`, `getPushFiles`
 - Contributes:
@@ -16,7 +16,7 @@
   - `Conversation.ActionBar` → `ConvTreeButton`
 - Server:
   - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`
-- Imported by: `file-resolve`
+- Imported by: `file-resolve`, `plugin-changes`
 - Sub-plugins:
   - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
 

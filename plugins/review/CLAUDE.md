@@ -25,6 +25,7 @@ contributions: [
 
 - Description: Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
 - Exports (web):
+  - Types: `ReviewProps`, `Source`
   - Values: `convReviewPane`, `ReviewSlots`
 - Contributes:
   - `Pane.Register` "conv-review"

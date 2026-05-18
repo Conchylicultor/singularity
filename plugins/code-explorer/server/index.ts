@@ -8,6 +8,7 @@ import { handleTree } from "./internal/tree-handler";
 import { getCodeTree, getFileContent, getFileDiff, getImageContent, getPushFiles, getCommitFiles } from "../shared/endpoints";
 
 export { resolveWorktreePath } from "./internal/resolve-worktree-path";
+export { resolveParentSha, getRangeFiles } from "./internal/get-push-files";
 
 export default {
   id: "code-explorer",

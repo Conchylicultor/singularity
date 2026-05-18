@@ -17,6 +17,7 @@ export function CodeReviewSummary({
   conversationId,
 }: {
   conversationId: string;
+  source: unknown;
 }) {
   const conversation = useConversationById(conversationId);
   const { files } = useEditedFiles(conversationId);

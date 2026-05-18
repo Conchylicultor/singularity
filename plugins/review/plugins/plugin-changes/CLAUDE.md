@@ -13,7 +13,7 @@
 - Contributes:
   - `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
 - Server:
-  - Uses: `tasks-core.getConversation`
+  - Uses: `code-explorer.getRangeFiles`, `code-explorer.resolveParentSha`, `tasks-core.getConversation`, `tasks-core.listPushesByPushId`
 - Sub-plugins:
   - **`api-changes`** — API surface diff section for per-plugin review cards.
   - **`file-changes`** — File-level diff section for per-plugin review cards.

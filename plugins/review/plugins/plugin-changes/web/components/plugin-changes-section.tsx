@@ -1,14 +1,17 @@
 import { useCallback, useMemo, useState } from "react";
 import { MdUnfoldMore, MdUnfoldLess } from "react-icons/md";
+import type { Source } from "@plugins/review/web";
 import { usePluginChanges } from "../use-plugin-changes";
 import { PluginChangeCard } from "./plugin-change-card";
 
 export function PluginChangesSection({
   conversationId,
+  source,
 }: {
   conversationId: string;
+  source: Source;
 }) {
-  const { data, isPending, error } = usePluginChanges(conversationId);
+  const { data, isPending, error } = usePluginChanges(conversationId, source);
   const [expandedSet, setExpandedSet] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
