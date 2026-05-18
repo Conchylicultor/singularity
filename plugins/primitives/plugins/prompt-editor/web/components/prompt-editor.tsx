@@ -130,31 +130,39 @@ function EditorShell({
   const minHeight = `${Math.max(minRows, 1) * 1.5}rem`;
 
   return (
-    <div className="relative w-full min-w-0">
-      <PlainTextPlugin
-        contentEditable={
-          <ContentEditable
-            style={{ minHeight, maxHeight }}
-            className={cn(
-              "border-input bg-transparent rounded-md border px-2.5 py-1.5 text-sm leading-5 outline-none transition-colors resize-none",
-              "overflow-y-auto",
-              "focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
-              "aria-disabled:pointer-events-none aria-disabled:cursor-not-allowed aria-disabled:bg-input/50 aria-disabled:opacity-50",
-              "dark:bg-input/30 dark:aria-disabled:bg-input/80",
-              className,
-            )}
-            aria-disabled={disabled}
-            aria-placeholder={placeholder ?? ""}
-            placeholder={
-              <div className="text-muted-foreground pointer-events-none absolute inset-0 px-2.5 py-1.5 text-sm leading-5">
-                {placeholder ?? ""}
-              </div>
-            }
-          />
-        }
-        ErrorBoundary={LexicalErrorBoundary}
-      />
-      <FloatingActionAnchor />
+    <div
+      className={cn(
+        "w-full min-w-0 rounded-md border transition-colors",
+        "border-input",
+        "has-[:focus-visible]:border-ring has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
+        disabled
+          ? "pointer-events-none cursor-not-allowed opacity-50 bg-input/50 dark:bg-input/80"
+          : "bg-transparent dark:bg-input/30",
+      )}
+    >
+      <div className="relative">
+        <PlainTextPlugin
+          contentEditable={
+            <ContentEditable
+              style={{ minHeight, maxHeight }}
+              className={cn(
+                "px-2.5 py-1.5 text-sm leading-5 outline-none resize-none",
+                "overflow-y-auto",
+                className,
+              )}
+              aria-disabled={disabled}
+              aria-placeholder={placeholder ?? ""}
+              placeholder={
+                <div className="text-muted-foreground pointer-events-none absolute inset-0 px-2.5 py-1.5 text-sm leading-5">
+                  {placeholder ?? ""}
+                </div>
+              }
+            />
+          }
+          ErrorBoundary={LexicalErrorBoundary}
+        />
+      </div>
+      <ToolbarRow />
     </div>
   );
 }
@@ -167,7 +175,7 @@ function PluginSlot({ onError }: { onError?: (msg: string) => void }) {
   );
 }
 
-function FloatingActionAnchor() {
+function ToolbarRow() {
   const [editor] = useLexicalComposerContext();
   const [editable, setEditable] = useState(() => editor.isEditable());
   const items = PromptEditorSlots.FloatingAction.useContributions();
@@ -183,9 +191,6 @@ function FloatingActionAnchor() {
         if ($isRangeSelection(selection)) {
           selection.insertText(text);
         } else {
-          // No selection means the editor was never focused. Insert at the end
-          // rather than selectStart() — selectStart() triggers scroll-into-view
-          // at position 0 and shifts the visible area unexpectedly.
           $getRoot().selectEnd();
           const sel = $getSelection();
           if ($isRangeSelection(sel)) sel.insertText(text);
@@ -197,13 +202,9 @@ function FloatingActionAnchor() {
 
   if (!editable || items.length === 0) return null;
   return (
-    <div className="absolute bottom-1.5 right-1.5 z-10 pointer-events-none">
+    <div className="flex items-center px-2 pb-1.5">
       <PromptEditorSlots.FloatingAction.Render>
-        {(item) => (
-          <div className="pointer-events-auto">
-            <item.component insertText={insertText} />
-          </div>
-        )}
+        {(item) => <item.component insertText={insertText} />}
       </PromptEditorSlots.FloatingAction.Render>
     </div>
   );

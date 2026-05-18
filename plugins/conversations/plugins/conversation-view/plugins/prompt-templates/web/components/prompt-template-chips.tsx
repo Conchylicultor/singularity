@@ -65,9 +65,9 @@ export function FloatingTemplateChips({ insertText }: PromptEditorActionProps) {
   if (templates.length === 0) return null;
 
   return (
-    <div className="flex items-end gap-1.5">
+    <div className="flex items-center gap-1.5">
       {pinnedTemplates.length > 0 && (
-        <div className="flex items-center gap-1 pb-0.5">
+        <div className="flex items-center gap-1">
           {pinnedTemplates.map((t) => (
             <TemplateChip
               key={t.id}
