@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ReviewSlots } from "@plugins/review/web";
 import { PluginChangesSection } from "./components/plugin-changes-section";
+import { PluginChangesSummary } from "./components/plugin-changes-summary";
 
 export { PluginChanges as PluginChangesSlots } from "./slots";
 
@@ -14,6 +15,7 @@ export default {
       id: "plugin-changes",
       label: "Plugin Changes",
       component: PluginChangesSection,
+      summary: PluginChangesSummary,
     }),
   ],
 } satisfies PluginDefinition;

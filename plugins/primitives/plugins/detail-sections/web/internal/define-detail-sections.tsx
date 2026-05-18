@@ -20,6 +20,7 @@ export interface DetailSections<EntityProps> {
     label: string;
     component: ComponentType<EntityProps>;
     headerExtra?: ComponentType;
+    summary?: ComponentType<EntityProps>;
   }>;
   Host: ComponentType<EntityProps>;
 }
@@ -32,6 +33,7 @@ export function defineDetailSections<EntityProps extends Record<string, unknown>
     label: string;
     component: ComponentType<EntityProps>;
     headerExtra?: ComponentType;
+    summary?: ComponentType<EntityProps>;
   }>(`${id}.section`, {
     docLabel: (p) => p.id,
   });
