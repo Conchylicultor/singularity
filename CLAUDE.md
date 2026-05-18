@@ -195,7 +195,6 @@ When working on this project, follow these instructions thoughtfully:
 
 - Most features first require a thoughtful design phase. Use the project `plan` SKILL for this phase. This is important to correctly write the plan doc at the right location. Do NOT use `EnterPlanMode` tool.
 - New features should be implemented as plugins in `plugins/`. See [`plugins/framework/plugins/web-sdk/CLAUDE.md`](plugins/framework/plugins/web-sdk/CLAUDE.md) for how to create one.
-- When implementing a new feature or plugin, read the `structure-decision` SKILL ([`.claude/skills/structure-decision/SKILL.md`](.claude/skills/structure-decision/SKILL.md)) for rules on where to place code and how to structure it.
 - When creating a new top-level app, use the `create-app` SKILL ([`.claude/skills/create-app/SKILL.md`](.claude/skills/create-app/SKILL.md)).
 - Always edit files in your worktree, not the main branch.
 - **Avoid `find` for file searches.** Claude Code's shell shim reroutes `find` to a bundled bfs that holds an unbounded directory FD frontier; broad finds against this repo (with `node_modules` + worktrees) accumulate ~65k DIR FDs and have crashed macOS. Use `rg --files -g '<glob>'` or `fd '<regex>'` — both respect `.gitignore` and have bounded FDs. Only use `find` when you need its predicates (`-mtime`, `-size`, `-perm`, etc.), and always scope it with `-prune` or `-maxdepth N`. The PreToolUse guard at `tooling/src/guards/guards/find.ts` denies unbounded `find` calls.
