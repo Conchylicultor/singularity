@@ -582,7 +582,7 @@ export function registerBuild(program: Command) {
       // surface as 502s on first request. Run server tsc explicitly here.
       endSpan = buildProfilerStart("tscServer", "build:validation", "tsc server");
       console.log("Type-checking server...");
-      await exec(["bunx", "tsc"], resolve(root, "plugins/framework/plugins/server"));
+      await exec(["bunx", "tsc"], resolve(root, "plugins/framework/plugins/server-core"));
       endSpan();
 
       // 4b. Type-check central if present. Same rationale as server.
@@ -628,7 +628,7 @@ export function registerBuild(program: Command) {
       endSpan = buildProfilerStart("registerWorktree", "build:deploy", "register worktree");
       console.log("Registering worktree...");
       const spec = {
-        server: resolve(root, "plugins/framework/plugins/server"),
+        server: resolve(root, "plugins/framework/plugins/server-core"),
         web: livePath,
       };
 

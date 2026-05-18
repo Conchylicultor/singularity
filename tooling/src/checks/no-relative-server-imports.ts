@@ -15,7 +15,7 @@ export const noRelativeServerImports: Check = {
   async run() {
     const root = await getRoot();
     const proc = Bun.spawn(
-      ["git", "grep", "-rn", "-E", `from ['"](\\.\\./)+plugins/framework/plugins/server/core/`, "--", "plugins/"],
+      ["git", "grep", "-rn", "-E", `from ['"](\\.\\./)+plugins/framework/plugins/server-core/core/`, "--", "plugins/"],
       { cwd: root, stdout: "pipe", stderr: "pipe" },
     );
     const out = (await new Response(proc.stdout).text()).trim();
@@ -28,7 +28,7 @@ export const noRelativeServerImports: Check = {
       ok: false,
       message: `relative server/src import found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
       hint:
-        "Use the `@server/*` alias instead of relative paths (e.g. `@server/types`, `@server/db/client`, `@server/resources`). The alias is defined in `plugins/framework/plugins/server/tsconfig.json`.",
+        "Use the `@server/*` alias instead of relative paths (e.g. `@server/types`, `@server/db/client`, `@server/resources`). The alias is defined in `plugins/framework/plugins/server-core/tsconfig.json`.",
     };
   },
 };

@@ -19,8 +19,8 @@ const RUNTIMES: Record<Runtime, RuntimeConfig> = {
     typeImport: `import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";`,
   },
   server: {
-    registryFile: "plugins/framework/plugins/server/bin/plugins.ts",
-    generatedFile: "plugins/framework/plugins/server/bin/plugins.generated.ts",
+    registryFile: "plugins/framework/plugins/server-core/bin/plugins.ts",
+    generatedFile: "plugins/framework/plugins/server-core/bin/plugins.generated.ts",
     typeName: "ServerPluginDefinition",
     typeImport: `import type { ServerPluginDefinition } from "@server/types";`,
   },

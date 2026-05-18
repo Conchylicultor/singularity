@@ -17,7 +17,7 @@ See the top-level [`CLAUDE.md`](../../../../CLAUDE.md) for overall architecture 
 ## File Structure
 
 ```
-plugins/framework/plugins/server/
+plugins/framework/plugins/server-core/
 ├── package.json          # @singularity/server
 ├── tsconfig.json
 ├── core/                 # Public API — the framework types and helpers

@@ -200,7 +200,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
-    - **`server`**
+    - **`server-core`**
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.

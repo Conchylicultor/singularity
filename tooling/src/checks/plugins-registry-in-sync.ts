@@ -20,7 +20,7 @@ const RUNTIMES: Runtime[] = ["web", "server", "central"];
 export const pluginsRegistryInSync: Check = {
   id: "plugins-registry-in-sync",
   description:
-    "web/src/plugins.generated.ts, plugins/framework/plugins/server/bin/plugins.generated.ts, and central/bin/plugins.generated.ts match the current plugin source",
+    "web/src/plugins.generated.ts, plugins/framework/plugins/server-core/bin/plugins.generated.ts, and central/bin/plugins.generated.ts match the current plugin source",
   async run() {
     const root = await getRoot();
     for (const runtime of RUNTIMES) {

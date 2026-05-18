@@ -3,7 +3,7 @@
     "paths": {
       "@/*": ["./web/src/*"],
       "@plugins/*": ["./plugins/*"],
-      "@server/*": ["./plugins/framework/plugins/server/core/*"],
+      "@server/*": ["./plugins/framework/plugins/server-core/core/*"],
       "@central/*": ["./central/bin/*"],
       "@tooling/*": ["./tooling/src/*"]
     }
@@ -11,7 +11,7 @@
   "files": [],
   "references": [
     { "path": "./web" },
-    { "path": "./plugins/framework/plugins/server" },
+    { "path": "./plugins/framework/plugins/server-core" },
     { "path": "./central" }
   ]
 }

@@ -18,9 +18,9 @@ const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
   "web/src/plugins.ts",
   "web/src/plugins.generated.ts",
-  "plugins/framework/plugins/server/bin/plugins.ts",
-  "plugins/framework/plugins/server/bin/plugins.generated.ts",
-  "plugins/framework/plugins/server/bin/index.ts",
+  "plugins/framework/plugins/server-core/bin/plugins.ts",
+  "plugins/framework/plugins/server-core/bin/plugins.generated.ts",
+  "plugins/framework/plugins/server-core/bin/index.ts",
   "central/bin/plugins.ts",
   "central/bin/plugins.generated.ts",
   "central/bin/index.ts",

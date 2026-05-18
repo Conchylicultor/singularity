@@ -109,7 +109,7 @@ export function buildZoneMap(
     }
 
     if (specifier.startsWith("@server/")) {
-      return { zone: "plugin.framework.server", runtime: "core" };
+      return { zone: "plugin.framework.server-core", runtime: "core" };
     }
 
     if (specifier.startsWith("@central/")) {
