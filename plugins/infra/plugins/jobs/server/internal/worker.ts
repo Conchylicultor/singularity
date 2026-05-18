@@ -7,7 +7,7 @@ import {
 } from "graphile-worker";
 import { db } from "@plugins/database/server";
 import { connectionString } from "@plugins/database/plugins/admin/server";
-import { reportServerError } from "@server/error-reporter";
+import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { JOB_TASK } from "./constants";
 import {
   UNSAFE_getRegisteredJob,

@@ -22,7 +22,7 @@ const RUNTIMES: Record<Runtime, RuntimeConfig> = {
     registryFile: "plugins/framework/plugins/server-core/bin/plugins.ts",
     generatedFile: "plugins/framework/plugins/server-core/bin/plugins.generated.ts",
     typeName: "ServerPluginDefinition",
-    typeImport: `import type { ServerPluginDefinition } from "@server/types";`,
+    typeImport: `import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";`,
   },
   central: {
     registryFile: "central/bin/plugins.ts",

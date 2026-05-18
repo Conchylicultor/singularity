@@ -1,4 +1,4 @@
-import { defineServerContribution } from "@server/contributions";
+import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 import type { BackupArchive, BackupTargetResult } from "@plugins/backup/core";
 
 export const BackupTarget = defineServerContribution<{

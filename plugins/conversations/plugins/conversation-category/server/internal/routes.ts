@@ -1,6 +1,6 @@
 import { readConfig } from "@plugins/config/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import type { HttpHandler } from "@server/types";
+import type { HttpHandler } from "@plugins/framework/plugins/server-core/core";
 import { conversationCategoryConfig } from "../../shared/config";
 import {
   setConversationCategory,

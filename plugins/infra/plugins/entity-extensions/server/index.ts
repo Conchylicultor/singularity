@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export { defineExtension } from "./internal/define-extension";
 export type { EntityExtension } from "./internal/define-extension";

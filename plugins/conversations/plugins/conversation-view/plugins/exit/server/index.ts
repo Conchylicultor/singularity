@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleExit } from "./internal/handle-exit";
 import { exitConversation } from "../shared/endpoints";
 

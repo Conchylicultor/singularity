@@ -1,5 +1,5 @@
-import type { ServerPluginDefinition } from "@server/types";
-import { Resource } from "@server/resources";
+import { Resource } from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { conversationSummariesResource } from "./internal/resources";
 import { handleGenerate } from "./internal/handle-generate";
 import { submitConversationSummaryTool } from "./internal/mcp-tools";

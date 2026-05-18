@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { Registration } from "@server/types";
+import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { registry } from "./registry";
 
 export interface McpToolContext {

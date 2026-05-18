@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export { nextRankIn, nextRankUnder } from "./internal/helpers";
 export type { RankExecutor } from "./internal/helpers";

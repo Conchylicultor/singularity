@@ -1,5 +1,5 @@
 import type { JobCtx } from "@plugins/infra/plugins/jobs/server";
-import type { Registration } from "@server/types";
+import type { Registration } from "@plugins/framework/plugins/server-core/core";
 
 export interface StepExecutorRunArgs {
   execution: { id: string; definitionId: string };

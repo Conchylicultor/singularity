@@ -1,4 +1,4 @@
-import { reportServerError } from "@server/error-reporter";
+import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { CLAUDE as CLAUDE_BIN } from "@plugins/infra/plugins/paths/server";
 import { recordClaudeCliCall } from "./record-call";
 

@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { awaitDbReady, db } from "./internal/client";
 import { runMigrations } from "@plugins/database/plugins/migrations/server";
 

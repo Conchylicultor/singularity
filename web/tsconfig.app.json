@@ -18,8 +18,7 @@
     "noUncheckedIndexedAccess": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@plugins/*": ["../plugins/*"],
-      "@server/*": ["../server/src/*"]
+      "@plugins/*": ["../plugins/*"]
     }
   },
   "exclude": [

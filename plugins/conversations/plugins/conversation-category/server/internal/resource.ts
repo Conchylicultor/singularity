@@ -1,6 +1,6 @@
 import { asc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { defineResource } from "@server/resources";
+import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import {
   ConversationCategoriesPayloadSchema,
   type ConversationCategoriesPayload,

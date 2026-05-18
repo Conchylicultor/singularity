@@ -1,4 +1,4 @@
-import { defineResource } from "@server/resources";
+import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import type { ForkError } from "../../core/fork-errors";
 import { ForkErrorSchema } from "../../core/fork-errors";
 

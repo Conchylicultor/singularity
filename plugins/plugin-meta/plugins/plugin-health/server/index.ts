@@ -1,5 +1,5 @@
-import type { ServerPluginDefinition } from "@server/types";
-import { Resource } from "@server/resources";
+import { Resource } from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { pluginHealthReviewsResource } from "./internal/resource";
 import { proposeTaskTool } from "./internal/mcp-tools";
 import {

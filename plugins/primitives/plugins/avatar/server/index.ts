@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export { resolveIconSvgNodesJson } from "./internal/resolve-svg";
 

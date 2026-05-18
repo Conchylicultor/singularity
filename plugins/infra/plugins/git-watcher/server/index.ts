@@ -1,5 +1,5 @@
-import type { ServerPluginDefinition } from "@server/types";
-import { Resource } from "@server/resources";
+import { Resource } from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { refAdvanced } from "./internal/tables-ref-advanced";
 import { refHeadResource } from "./internal/ref-head-resource";
 import { startGitWatcher, stopGitWatcher } from "./internal/watcher";

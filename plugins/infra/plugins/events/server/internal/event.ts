@@ -12,7 +12,7 @@ import {
   UNSAFE_getRegisteredJob,
 } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
-import type { Registration } from "@server/types";
+import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { eventTriggerColumns } from "./base-columns";
 import { eventsDispatchJob } from "./dispatch-job";
 import { triggerTableRegistry } from "./registry";

@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import type { ServerPluginDefinition } from "@server/types";
-import { Resource } from "@server/resources";
+import { Resource } from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { exitCleanFinalizeJob } from "./internal/exit-clean-finalize-job";
 import { exitCleanTool, flagRaiseTool } from "./internal/mcp-tools";
 import { pushAndExitJob } from "./internal/push-and-exit-job";

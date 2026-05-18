@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import type { Registration } from "@server/types";
+import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { _jobSteps, _jobWaits } from "./tables";
 
 // Globally-shared brand. `Symbol.for` returns the same Symbol across module

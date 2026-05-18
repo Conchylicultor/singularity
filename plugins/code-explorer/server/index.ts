@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleCommitFiles } from "./internal/commit-handler";
 import { handleFileContent } from "./internal/file-content-handler";
 import { handleFileDiff } from "./internal/file-diff-handler";

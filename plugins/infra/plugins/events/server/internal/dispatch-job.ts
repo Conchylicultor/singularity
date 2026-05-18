@@ -3,7 +3,7 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { defineJob, UNSAFE_getRegisteredJob } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
-import { reportServerError } from "@server/error-reporter";
+import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { triggerTableRegistry } from "./registry";
 
 // The events plugin's dispatcher is itself a registered job. `emit()` enqueues

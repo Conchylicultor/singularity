@@ -1,4 +1,4 @@
-import { defineResource } from "@server/resources";
+import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { z } from "zod";
 import type { SecretMetadata } from "@plugins/infra/plugins/secrets/core";
 import {

@@ -1,6 +1,6 @@
 import { asc, desc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { defineResource } from "@server/resources";
+import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { pushes } from "./tables";
 import { attempts, tasks } from "./schema";
 import { TaskSchema, PushSchema, type Task } from "./schema";

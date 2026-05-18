@@ -1,4 +1,4 @@
-import { defineServerContribution } from "@server/contributions";
+import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 import { notInArray } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { getAllRegisteredJobNames } from "@plugins/infra/plugins/jobs/server";

@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleRestoreBatch } from "./internal/handle-restore-batch";
 import { restoreBatch } from "../shared/endpoints";
 

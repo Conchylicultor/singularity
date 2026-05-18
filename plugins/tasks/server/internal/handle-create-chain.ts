@@ -18,7 +18,7 @@ import {
 import { type TaskChainCard } from "../../core/task-chain-types";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createTaskChain } from "../../core/endpoints";
-import { withNotifyBatch } from "@server/resources";
+import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import { armTaskAutoStart } from "./arm-auto-start";
 import { rewireDependencies } from "./rewire-dependencies";
 

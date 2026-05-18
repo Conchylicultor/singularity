@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { defineResource } from "@server/resources";
+import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { JobsPayloadSchema, type JobsPayload, type JobState } from "../../core/resources";
 import { JOB_TASK } from "./constants";
 

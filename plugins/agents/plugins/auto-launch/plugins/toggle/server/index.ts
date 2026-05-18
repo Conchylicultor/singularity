@@ -1,5 +1,5 @@
-import type { ServerPluginDefinition } from "@server/types";
-import { Resource } from "@server/resources";
+import { Resource } from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleSet } from "./internal/handle-set";
 import { agentAutoLaunchResource } from "./internal/resource";
 import { setAgentAutoLaunch } from "../shared/endpoints";

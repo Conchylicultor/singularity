@@ -1,4 +1,4 @@
-import { defineResource } from "@server/resources";
+import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { getAttempt, listPushesForAttempt, pushesResource } from "@plugins/tasks-core/server";
 import type { Push } from "@plugins/tasks-core/core";
 import {

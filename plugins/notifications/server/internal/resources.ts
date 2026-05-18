@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
-import { defineResource } from "@server/resources";
+import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { _notifications } from "./tables";
 import { NotificationSchema } from "../../shared/schema";
 

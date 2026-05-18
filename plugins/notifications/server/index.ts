@@ -1,5 +1,5 @@
-import type { ServerPluginDefinition } from "@server/types";
-import { Resource } from "@server/resources";
+import { Resource } from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { notificationsResource } from "./internal/resources";
 import { handleDismiss } from "./internal/handle-dismiss";
 import { handleDismissAll } from "./internal/handle-dismiss-all";

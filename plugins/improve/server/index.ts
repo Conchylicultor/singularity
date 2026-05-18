@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { conversationCreated } from "@plugins/conversations/server";
 import { ensureImprovementsMetaTask } from "./internal/meta-improvements";

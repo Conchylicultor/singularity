@@ -6,7 +6,7 @@ import {
   getTask,
   getTaskDependencyIds,
 } from "@plugins/tasks-core/server";
-import { withNotifyBatch } from "@server/resources";
+import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import { armTaskAutoStart } from "./arm-auto-start";
 import { rewireDependencies } from "./rewire-dependencies";
 

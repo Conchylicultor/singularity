@@ -1,4 +1,4 @@
-import { defineServerContribution } from "@server/contributions";
+import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 import type { ConfigDescriptor } from "../../core";
 
 interface ConfigRegistration {

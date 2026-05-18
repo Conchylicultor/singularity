@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handlePluginChanges } from "./internal/handle-plugin-changes";
 import { getPluginChanges } from "../core/endpoints";
 

@@ -108,10 +108,6 @@ export function buildZoneMap(
       return { zone: `${pluginZoneName}.${bestHierarchy}`, runtime: null };
     }
 
-    if (specifier.startsWith("@server/")) {
-      return { zone: "plugin.framework.server-core", runtime: "core" };
-    }
-
     if (specifier.startsWith("@central/")) {
       return { zone: "central", runtime: null };
     }

@@ -6,7 +6,7 @@ import {
 } from "@plugins/tasks-core/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { insertTaskBetween } from "../../core/endpoints";
-import { withNotifyBatch } from "@server/resources";
+import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 
 export const handleInsertBetween = implement(insertTaskBetween, async ({ body }) => {
   const { sourceTaskId, targetTaskId, targetParentId } = body;

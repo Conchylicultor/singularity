@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { listFiles } from "./internal/list-files";
 import { readMemoryFile } from "./internal/read-file";
 import { listMemoryFiles, readMemoryFile as readMemoryFileEndpoint } from "../shared/endpoints";

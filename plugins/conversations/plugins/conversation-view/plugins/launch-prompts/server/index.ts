@@ -1,5 +1,5 @@
-import type { ServerPluginDefinition } from "@server/types";
-import { Resource } from "@server/resources";
+import { Resource } from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { launchPromptsServerResource } from "./internal/resources";
 import { handleList }   from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";

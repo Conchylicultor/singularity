@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Config } from "@plugins/config/server";
 import { BackupTarget } from "@plugins/backup/server";
 import { googleDriveBackupConfig } from "../shared/config";

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PoolClient } from "pg";
 import type { z } from "zod";
-import type { Registration } from "@server/types";
+import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { DEFAULT_MAX_ATTEMPTS, JOB_TASK } from "./constants";
 import { getWorkerUtils } from "./worker";
 

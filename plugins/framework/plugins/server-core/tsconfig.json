@@ -12,8 +12,7 @@
     "jsx": "react-jsx",
     "types": ["@types/bun"],
     "paths": {
-      "@plugins/*": ["../../../*"],
-      "@server/*": ["./core/*"]
+      "@plugins/*": ["../../../*"]
     }
   },
   "exclude": [

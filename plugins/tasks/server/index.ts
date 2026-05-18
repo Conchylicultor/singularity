@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleList } from "./internal/handle-list";
 import { handleCreate } from "./internal/handle-create";
 import { handleCreateChain } from "./internal/handle-create-chain";

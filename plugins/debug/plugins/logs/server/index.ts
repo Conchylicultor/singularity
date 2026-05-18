@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleChannels } from "./internal/handle-channels";
 import { wsHandler } from "./internal/ws-handler";
 import { getLogChannels } from "../core/endpoints";

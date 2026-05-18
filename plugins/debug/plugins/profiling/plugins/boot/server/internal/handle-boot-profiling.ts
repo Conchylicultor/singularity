@@ -1,4 +1,4 @@
-import { getProfilingData } from "@server/profiler";
+import { getProfilingData } from "@plugins/framework/plugins/server-core/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getBootProfiling } from "../../shared/endpoints";
 

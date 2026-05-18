@@ -1,6 +1,5 @@
-import type { ServerPluginDefinition } from "@server/types";
-import { Resource } from "@server/resources";
-import { setErrorReporter } from "@server/error-reporter";
+import { Resource, setErrorReporter } from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleReport } from "./internal/handle-report";
 import { crashesResource } from "./internal/resources";
 import { recordCrash } from "./internal/record-crash";

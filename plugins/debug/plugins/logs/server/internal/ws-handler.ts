@@ -1,5 +1,5 @@
 import type { ServerWebSocket } from "bun";
-import type { WsHandler, WsData } from "@server/types";
+import type { WsHandler, WsData } from "@plugins/framework/plugins/server-core/core";
 import type { ClientMessage, ServerMessage } from "@plugins/debug/plugins/logs/core";
 import { subscribe } from "./registry";
 import type { LogEntry } from "./registry";

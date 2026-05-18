@@ -1,6 +1,6 @@
-import type { ServerPluginDefinition } from "@server/types";
+import { Resource } from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Config } from "@plugins/config/server";
-import { Resource } from "@server/resources";
 import { reviewConfig } from "../shared/config";
 import { reviewSectionsServerResource } from "./internal/resources";
 import { handleList } from "./internal/handle-list";

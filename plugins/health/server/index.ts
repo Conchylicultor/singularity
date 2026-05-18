@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleHealth } from "./internal/handle-health";
 import { getHealth } from "../shared/endpoints";
 

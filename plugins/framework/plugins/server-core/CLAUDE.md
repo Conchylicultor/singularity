@@ -40,7 +40,7 @@ plugins/framework/plugins/server-core/
 Each server plugin default-exports a `ServerPluginDefinition`:
 
 ```typescript
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { wsHandler } from "./internal/ws-handler";
 
 const plugin: ServerPluginDefinition = {
@@ -61,7 +61,7 @@ Live state (anything a client wants kept in sync with server truth) is declared 
 
 ```typescript
 // plugins/tasks/server/internal/tasks-resource.ts
-import { defineResource } from "@server/resources";
+import { defineResource } from "@plugins/framework/plugins/server-core/core";
 
 export const tasksResource = defineResource({
   key: "tasks",
@@ -112,7 +112,7 @@ plugins/{name}/server/
 2. Declare routes in `index.ts`:
 
 ```typescript
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleList } from "./internal/handle-list";
 
 const plugin: ServerPluginDefinition = {
@@ -131,7 +131,6 @@ export default plugin;
 
 Configured in `tsconfig.json`:
 
-- `@server/*` → `./core/*` (public API)
 - `@plugins/*` → `../../../*` (plugin tree)
 
 The `include` field covers `../../../*/server`, `../../../*/core`, and `../../../*/shared` so plugin server code and shared types are type-checked together with the server.

@@ -1,4 +1,4 @@
-import { defineResource } from "@server/resources";
+import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { configV2ValuesSchema } from "../../core";
 import type { ConfigV2Values } from "../../core";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord } from "../../core";

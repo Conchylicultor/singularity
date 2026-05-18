@@ -1,4 +1,4 @@
-import { defineResource } from "@server/resources";
+import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
 import { MainAheadCountSchema } from "../../shared";
 import { getMainAheadCount } from "./git-status";

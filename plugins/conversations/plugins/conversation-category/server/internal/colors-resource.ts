@@ -1,5 +1,5 @@
 import { db } from "@plugins/database/server";
-import { defineResource } from "@server/resources";
+import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { z } from "zod";
 import { _conversationCategoryColors } from "./tables-colors";
 

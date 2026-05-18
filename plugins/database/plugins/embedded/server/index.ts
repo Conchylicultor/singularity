@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export { PG_DATA_DIR, PG_DIR, PG_LOG_FILE, PG_PORT, PG_SOCKET_DIR, PG_USER } from "../shared";
 

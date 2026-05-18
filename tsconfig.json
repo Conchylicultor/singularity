@@ -3,7 +3,6 @@
     "paths": {
       "@/*": ["./web/src/*"],
       "@plugins/*": ["./plugins/*"],
-      "@server/*": ["./plugins/framework/plugins/server-core/core/*"],
       "@central/*": ["./central/bin/*"],
       "@tooling/*": ["./tooling/src/*"]
     }

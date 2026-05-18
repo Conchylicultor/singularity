@@ -1,4 +1,4 @@
-import type { ServerPluginDefinition } from "@server/types";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Config, readConfig } from "@plugins/config/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { backupConfig } from "../shared/config";

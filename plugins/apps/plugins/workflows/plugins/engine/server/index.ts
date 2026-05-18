@@ -1,5 +1,5 @@
-import type { ServerPluginDefinition } from "@server/types";
-import { Resource } from "@server/resources";
+import { Resource } from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { workflowRunJob } from "./internal/run-job";
 import { userInputSubmitted } from "./internal/tables-events";
 import { workflowDefinitionsResource, workflowExecutionsResource } from "./internal/resources";
