@@ -28,6 +28,46 @@ function navigateTo(url: string) {
   window.dispatchEvent(new CustomEvent("shell:navigate"));
 }
 
+function NotificationRow({ n, dismiss, navigateTo: nav, onClose }: { n: Notification; dismiss: (id: string) => void; navigateTo: (url: string) => void; onClose: () => void }) {
+  return (
+    <li
+      className={`flex gap-2 px-3 py-2.5 border-l-2 ${VARIANT_BORDER[n.variant]} ${n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
+      onClick={
+        n.linkTo?.startsWith("/")
+          ? () => { nav(n.linkTo!); onClose(); }
+          : undefined
+      }
+    >
+      <div className="flex-1 min-w-0">
+        <p className={`text-xs font-medium truncate ${VARIANT_TEXT[n.variant]}`}>
+          {n.title}
+        </p>
+        <p className="text-xs text-muted-foreground line-clamp-2">
+          {n.description}
+        </p>
+        <div className="flex items-center gap-2 mt-0.5">
+          <RelativeTime date={n.createdAt} className="text-[10px] text-muted-foreground" />
+          {n.type && (
+            <span className="text-[10px] text-muted-foreground">{n.type}</span>
+          )}
+          {n.linkTo?.startsWith("/") && (
+            <span className="text-[10px] text-muted-foreground hover:text-foreground">
+              View &rarr;
+            </span>
+          )}
+        </div>
+      </div>
+      <button
+        className="shrink-0 text-muted-foreground hover:text-foreground text-sm leading-none"
+        onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
+        aria-label="Dismiss"
+      >
+        &times;
+      </button>
+    </li>
+  );
+}
+
 export function BellButton() {
   const [open, setOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -47,6 +87,11 @@ export function BellButton() {
         ? n.variant === "error"
         : n.type === typeFilter,
   );
+
+  const isCountedUnread = (n: Notification) =>
+    !n.read && (n.variant === "error" || n.variant === "warning");
+  const unreadFiltered = filtered.filter(isCountedUnread);
+  const restFiltered = filtered.filter((n) => !isCountedUnread(n));
 
   const prevIdsRef = useRef<Set<string> | null>(null);
   const data = notificationsResult.pending ? null : notificationsResult.data;
@@ -79,11 +124,16 @@ export function BellButton() {
     void fetch("/api/notifications/dismiss-all", { method: "POST" });
   }
 
+  const hadUnreadRef = useRef(false);
+
   function onOpenChange(next: boolean) {
-    setOpen(next);
-    if (next && unreadCount > 0) {
+    if (next) {
+      hadUnreadRef.current = unreadCount > 0;
+    } else if (hadUnreadRef.current) {
       void fetch("/api/notifications/mark-all-read", { method: "POST" });
+      hadUnreadRef.current = false;
     }
+    setOpen(next);
   }
 
   return (
@@ -145,59 +195,32 @@ export function BellButton() {
           </p>
         ) : (
           <div className="max-h-96 overflow-y-auto">
-            <ul>
-              {filtered.map((n) => (
-                <li
-                  key={n.id}
-                  className={`flex gap-2 px-3 py-2.5 border-l-2 ${VARIANT_BORDER[n.variant]} ${n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
-                  onClick={
-                    n.linkTo?.startsWith("/")
-                      ? () => {
-                          navigateTo(n.linkTo!);
-                          setOpen(false);
-                        }
-                      : undefined
-                  }
-                >
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className={`text-xs font-medium truncate ${VARIANT_TEXT[n.variant]}`}
-                    >
-                      {n.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {n.description}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <RelativeTime
-                        date={n.createdAt}
-                        className="text-[10px] text-muted-foreground"
-                      />
-                      {n.type && (
-                        <span className="text-[10px] text-muted-foreground">
-                          {n.type}
-                        </span>
-                      )}
-                      {n.linkTo?.startsWith("/") && (
-                        <span className="text-[10px] text-muted-foreground hover:text-foreground">
-                          View &rarr;
-                        </span>
-                      )}
-                    </div>
+            {unreadFiltered.length > 0 && (
+              <>
+                <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-destructive bg-destructive/5 border-b">
+                  Unread ({unreadFiltered.length})
+                </div>
+                <ul>
+                  {unreadFiltered.map((n) => (
+                    <NotificationRow key={n.id} n={n} dismiss={dismiss} navigateTo={navigateTo} onClose={() => { setOpen(false); }} />
+                  ))}
+                </ul>
+              </>
+            )}
+            {restFiltered.length > 0 && (
+              <>
+                {unreadFiltered.length > 0 && (
+                  <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-t">
+                    Earlier
                   </div>
-                  <button
-                    className="shrink-0 text-muted-foreground hover:text-foreground text-sm leading-none"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      dismiss(n.id);
-                    }}
-                    aria-label="Dismiss"
-                  >
-                    &times;
-                  </button>
-                </li>
-              ))}
-            </ul>
+                )}
+                <ul>
+                  {restFiltered.map((n) => (
+                    <NotificationRow key={n.id} n={n} dismiss={dismiss} navigateTo={navigateTo} onClose={() => { setOpen(false); }} />
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
         )}
     </InlinePopover>
