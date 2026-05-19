@@ -28,7 +28,7 @@ export default {
   onReady: async () => {
     const orphans = await db
       .update(_buildRuns)
-      .set({ finishedAt: new Date(), exitCode: 0 })
+      .set({ finishedAt: new Date() })
       .where(isNull(_buildRuns.finishedAt))
       .returning({ id: _buildRuns.id });
     if (orphans.length > 0) {
