@@ -24,7 +24,7 @@ export function AutoLaunchWatcher() {
         const tasks = tasksResult.pending ? [] : tasksResult.data;
         const task = tasks.find((t) => t.id === conv.taskId);
         const taskLabel = task?.title ? ` · ${task.title}` : "";
-        toast({ type: "task", description: `Auto-started queued task${taskLabel} · ${model}`, variant: "info" });
+        toast({ type: "task", description: `Auto-started queued task${taskLabel} · ${model}`, variant: "info", linkTo: `/c/${conv.id}` });
       }
       seenIdsRef.current.add(conv.id as string);
     }

@@ -178,7 +178,7 @@ export function BellButton() {
                       )}
                       {n.linkTo?.startsWith("/") && (
                         <span className="text-[10px] text-muted-foreground hover:text-foreground">
-                          View task &rarr;
+                          View &rarr;
                         </span>
                       )}
                     </div>
