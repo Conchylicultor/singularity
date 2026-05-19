@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
 import { PluginRuntimeContext } from "./context";
 import type { Contribution } from "./types";
 import type { ComponentType } from "react";
@@ -8,6 +8,8 @@ export interface Slot<P> {
   id: string;
   useContributions(): P[];
 }
+
+const EMPTY: Contribution[] = [];
 
 export function defineSlot<P>(
   id: string,
@@ -26,8 +28,11 @@ export function defineSlot<P>(
     if (!ctx) {
       throw new Error("useContributions must be used within PluginProvider");
     }
-    return (ctx.bySlot.get(id) ?? []).map(
-      ({ _slotId: _, ...rest }: Contribution) => rest as P,
+    const raw = ctx.bySlot.get(id) ?? EMPTY;
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- same as above
+    return useMemo(
+      () => raw.map(({ _slotId: _, ...rest }: Contribution) => rest as P),
+      [raw],
     );
   };
 
