@@ -2,7 +2,6 @@ import { defineBoundaries, zone, allow } from "./tooling/src/boundaries/config";
 
 export default defineBoundaries({
   zones: [
-    zone("web", { match: "web" }),
     zone("cli", { match: "cli" }),
     zone("tooling", { match: "tooling" }),
     zone("plugin", { match: "plugins", discover: "plugin-tree" }),
@@ -28,7 +27,6 @@ export default defineBoundaries({
     allow("** -> plugin.packages.retry"),
 
     // Web entry point and tooling can import the web-sdk plugin (PluginProvider, PluginDefinition, etc.)
-    allow("web     -> plugin.framework.web-sdk"),
     allow("tooling -> plugin.framework.web-sdk"),
 
     // Plugins can import other plugins
@@ -37,9 +35,9 @@ export default defineBoundaries({
 
   // Composition roots that wire plugins together — exempt from boundary checks
   exclude: [
-    "web/src/plugins.ts",
-    "web/src/plugins.generated.ts",
-    "web/src/App.tsx",
+    "plugins/framework/plugins/web-core/web/plugins.ts",
+    "plugins/framework/plugins/web-core/web/plugins.generated.ts",
+    "plugins/framework/plugins/web-core/web/App.tsx",
     "plugins/framework/plugins/server-core/bin/plugins.ts",
     "plugins/framework/plugins/server-core/bin/plugins.generated.ts",
     "plugins/framework/plugins/server-core/bin/index.ts",

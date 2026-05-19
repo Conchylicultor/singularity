@@ -13,8 +13,8 @@ interface RuntimeConfig {
 
 const RUNTIMES: Record<Runtime, RuntimeConfig> = {
   web: {
-    registryFile: "web/src/plugins.ts",
-    generatedFile: "web/src/plugins.generated.ts",
+    registryFile: "plugins/framework/plugins/web-core/web/plugins.ts",
+    generatedFile: "plugins/framework/plugins/web-core/web/plugins.generated.ts",
     typeName: "PluginDefinition",
     typeImport: `import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";`,
   },

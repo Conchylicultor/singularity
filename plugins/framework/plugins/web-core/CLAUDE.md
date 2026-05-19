@@ -7,16 +7,16 @@ Single-page application (SPA). No SSR, no SEO concerns.
 - **Vite** — Build tool and dev server
 - **React 19** + **TypeScript**
 - **Tailwind CSS v4** — Styling (via `@tailwindcss/vite` plugin)
-- **shadcn/ui** — UI components (Radix-based, copy-pasted into `src/components/ui/`)
+- **shadcn/ui** — UI components (Radix-based, copy-pasted into `web/components/ui/`)
 - **Lucide** — Icons
 
 ## Structure
 
-- `src/` — Application source
+- `web/` — Application source
   - `components/ui/` — shadcn/ui components (generated, do not edit manually)
   - `components/` — App-level components
   - `lib/` — Utilities
-- `@` path alias resolves to `src/`
+- `@` path alias resolves to `web/`
 
 ## Commands
 

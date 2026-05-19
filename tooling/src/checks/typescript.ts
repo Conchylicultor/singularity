@@ -29,7 +29,7 @@ export const typescript: Check = {
     const root = await getRoot();
 
     const [web, server, central, tooling] = await Promise.all([
-      runTsc(`${root}/web`, ["-p", "tsconfig.app.json"]),
+      runTsc(`${root}/plugins/framework/plugins/web-core`, ["-p", "tsconfig.app.json"]),
       runTsc(`${root}/plugins/framework/plugins/server-core`, []),
       runTsc(`${root}/plugins/framework/plugins/central-core`, []),
       runTsc(`${root}/tooling`, []),

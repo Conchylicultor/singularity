@@ -1,14 +1,14 @@
 {
   "compilerOptions": {
     "paths": {
-      "@/*": ["./web/src/*"],
+      "@/*": ["./plugins/framework/plugins/web-core/web/*"],
       "@plugins/*": ["./plugins/*"],
       "@tooling/*": ["./tooling/src/*"]
     }
   },
   "files": [],
   "references": [
-    { "path": "./web" },
+    { "path": "./plugins/framework/plugins/web-core" },
     { "path": "./plugins/framework/plugins/server-core" },
     { "path": "./plugins/framework/plugins/central-core" }
   ]

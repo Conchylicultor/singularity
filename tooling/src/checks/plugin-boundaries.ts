@@ -9,15 +9,15 @@ const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 // import grammar (R4) and the "default-import is registry-only" rule (R5)).
 //
 // Principled exemptions:
-//   - web/src/plugins.ts / server-core/bin/plugins.ts / central-core/bin/plugins.ts: plugin
+//   - web-core/web/plugins.ts / server-core/bin/plugins.ts / central-core/bin/plugins.ts: plugin
 //     registries (today, 1-line re-exports of the .generated.ts twins).
-//   - web/src/plugins.generated.ts / server-core/bin/plugins.generated.ts /
+//   - web-core/web/plugins.generated.ts / server-core/bin/plugins.generated.ts /
 //     central-core/bin/plugins.generated.ts: codegen output of `./singularity build`,
 //     emits one default-import per plugin barrel by design.
 //
 const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
-  "web/src/plugins.ts",
-  "web/src/plugins.generated.ts",
+  "plugins/framework/plugins/web-core/web/plugins.ts",
+  "plugins/framework/plugins/web-core/web/plugins.generated.ts",
   "plugins/framework/plugins/server-core/bin/plugins.ts",
   "plugins/framework/plugins/server-core/bin/plugins.generated.ts",
   "plugins/framework/plugins/server-core/bin/index.ts",
@@ -286,7 +286,7 @@ export const pluginBoundaries: Check = {
             rule: "default-import",
             file: relFile,
             message: `default import from \`${imp.path}\` is not allowed outside the plugin registries`,
-            fix: `other plugins may only use named imports. The default export (PluginDefinition) is consumed exclusively by \`web/src/plugins.ts\` and \`server/src/plugins.ts\`.`,
+            fix: `other plugins may only use named imports. The default export (PluginDefinition) is consumed exclusively by \`plugins/framework/plugins/web-core/web/plugins.ts\` and \`plugins/framework/plugins/server-core/bin/plugins.ts\`.`,
           });
         }
 
@@ -369,7 +369,7 @@ function pluginForPath(relFile: string, pluginSet: Set<string>): string | null {
 // Source-file discovery
 // ============================================================================
 
-const SOURCE_ROOTS = ["plugins", "web/src"];
+const SOURCE_ROOTS = ["plugins", "plugins/framework/plugins/web-core/web"];
 const IGNORED_DIRS = new Set(["node_modules", "dist", ".git"]);
 
 function findSourceFiles(root: string): string[] {

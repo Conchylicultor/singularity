@@ -17,21 +17,19 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "@plugins/*": ["../plugins/*"]
+      "@/*": ["./web/*"],
+      "@plugins/*": ["../../../*"]
     }
   },
   "exclude": [
-    "../plugins/plugin-meta/plugins/plugin-tree/**",
-    "../plugins/plugin-meta/plugins/barrel-import/**",
+    "../../../plugin-meta/plugins/plugin-tree/**",
+    "../../../plugin-meta/plugins/barrel-import/**",
     "**/node_modules"
   ],
   "include": [
-    "src",
-    "../plugins/framework/plugins/web-sdk",
-    "../**/plugins/*/web",
-    "../**/plugins/*/core",
-    "../**/plugins/*/shared",
-    "../**/plugins/*/lint"
+    "web",
+    "../../../../**/plugins/*/web",
+    "../../../../**/plugins/*/core",
+    "../../../../**/plugins/*/shared"
   ]
 }

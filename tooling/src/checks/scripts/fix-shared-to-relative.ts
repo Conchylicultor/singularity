@@ -20,7 +20,7 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-const SOURCE_ROOTS = ["plugins", "web/src"];
+const SOURCE_ROOTS = ["plugins", "plugins/framework/plugins/web-core/web"];
 const IGNORED_DIRS = new Set(["node_modules", "dist", ".git"]);
 
 function walkTs(dir: string, out: string[]) {

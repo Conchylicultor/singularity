@@ -1,7 +1,7 @@
 {
   "name": "singularity",
   "private": true,
-  "workspaces": ["web", "plugins/**", "cli", "tooling"],
+  "workspaces": ["plugins/**", "cli", "tooling"],
   "scripts": {
     "playwright": "playwright"
   },

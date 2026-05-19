@@ -19,13 +19,13 @@ const ALLOWED_PLUGIN_IMPORT_RE = /@plugins\/packages\/|@plugins\/plugin-meta\/pl
 // Only plugins/ itself and the composition roots may import from plugins/
 const ALLOWED_DIRS = ["plugins/"];
 const COMPOSITION_ROOTS = [
-  "web/src/plugins.ts",
-  "web/src/plugins.generated.ts",
+  "plugins/framework/plugins/web-core/web/plugins.ts",
+  "plugins/framework/plugins/web-core/web/plugins.generated.ts",
   "plugins/framework/plugins/server-core/bin/plugins.ts",
   "plugins/framework/plugins/server-core/bin/plugins.generated.ts",
   "plugins/framework/plugins/central-core/bin/plugins.ts",
   "plugins/framework/plugins/central-core/bin/plugins.generated.ts",
-  "web/src/App.tsx",
+  "plugins/framework/plugins/web-core/web/App.tsx",
 ];
 
 export const noPluginImportsInCore: Check = {

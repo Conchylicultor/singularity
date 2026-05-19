@@ -101,14 +101,14 @@ const baseConfigs: Linter.Config[] = [
         projectService: {
           allowDefaultProject: [
             "*.config.ts",
-            "web/vitest.config.ts",
-            "server/*.ts",
+            "plugins/framework/plugins/web-core/vitest.config.ts",
+            "plugins/database/plugins/migrations/drizzle.config.ts",
             "plugins/*/scripts/*.ts",
             "plugins/*/*.config.ts",
-            "plugins/*/plugins/*/*.config.ts",
             "plugins/*/plugins/*/scripts/*.ts",
+            "plugins/*/plugins/*/lint/*.ts",
           ],
-          defaultProject: "web/tsconfig.app.json",
+          defaultProject: "plugins/framework/plugins/web-core/tsconfig.app.json",
         },
         tsconfigRootDir: here,
       },
@@ -145,7 +145,7 @@ const baseConfigs: Linter.Config[] = [
       "**/.git/**",
       "**/.check-*/**",
       ".claude/worktrees/**",
-      "web/dist/**",
+      "plugins/framework/plugins/web-core/dist/**",
     ],
   },
 ];

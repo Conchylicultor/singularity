@@ -481,7 +481,7 @@ export function registerBuild(program: Command) {
       endSpan();
 
       endSpan = buildProfilerStart("acquireBuildLock", "build:setup", "acquire build lock");
-      const webDir = resolve(root, "web");
+      const webDir = resolve(root, "plugins/framework/plugins/web-core");
       await acquireBuildLock(resolve(webDir, ".build.lock"));
       endSpan();
 

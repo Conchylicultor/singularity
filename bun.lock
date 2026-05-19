@@ -662,6 +662,31 @@
         "typescript": "~5.8.3",
       },
     },
+    "plugins/framework/plugins/web-core": {
+      "name": "@singularity/web",
+      "version": "0.0.1",
+      "dependencies": {
+        "@base-ui/react": "^1.3.0",
+        "@fontsource-variable/cascadia-code": "^5.2.2",
+        "@fontsource-variable/inter": "^5.2.8",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
+        "radix-ui": "^1.0.0",
+        "react-resizable-panels": "^4.10.0",
+        "tailwind-merge": "^3.5.0",
+      },
+      "devDependencies": {
+        "@tailwindcss/vite": "^4.1.4",
+        "@testing-library/react": "^16.3.2",
+        "@vitejs/plugin-react": "^4.4.1",
+        "jsdom": "^29.0.2",
+        "shadcn": "^4.2.0",
+        "tailwindcss": "^4.1.4",
+        "typescript": "~5.8.3",
+        "vite": "^6.3.2",
+        "vitest": "^4.1.4",
+      },
+    },
     "plugins/framework/plugins/web-sdk": {
       "name": "@singularity/plugin-framework-web-sdk",
       "version": "0.0.1",
@@ -1209,31 +1234,6 @@
       "devDependencies": {
         "@types/bun": "latest",
         "typescript": "~5.8.3",
-      },
-    },
-    "web": {
-      "name": "@singularity/web",
-      "version": "0.0.1",
-      "dependencies": {
-        "@base-ui/react": "^1.3.0",
-        "@fontsource-variable/cascadia-code": "^5.2.2",
-        "@fontsource-variable/inter": "^5.2.8",
-        "class-variance-authority": "^0.7.1",
-        "clsx": "^2.1.1",
-        "radix-ui": "^1.0.0",
-        "react-resizable-panels": "^4.10.0",
-        "tailwind-merge": "^3.5.0",
-      },
-      "devDependencies": {
-        "@tailwindcss/vite": "^4.1.4",
-        "@testing-library/react": "^16.3.2",
-        "@vitejs/plugin-react": "^4.4.1",
-        "jsdom": "^29.0.2",
-        "shadcn": "^4.2.0",
-        "tailwindcss": "^4.1.4",
-        "typescript": "~5.8.3",
-        "vite": "^6.3.2",
-        "vitest": "^4.1.4",
       },
     },
   },
@@ -2330,7 +2330,7 @@
 
     "@singularity/tooling": ["@singularity/tooling@workspace:tooling"],
 
-    "@singularity/web": ["@singularity/web@workspace:web"],
+    "@singularity/web": ["@singularity/web@workspace:plugins/framework/plugins/web-core"],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 
