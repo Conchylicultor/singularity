@@ -59,7 +59,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
           auto-launch {input.autostart}
         </span>
       ) : (
-        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+        <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-400">
           no auto-launch
         </span>
       )}
