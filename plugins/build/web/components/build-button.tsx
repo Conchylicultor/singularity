@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { getHealth, waitForRestart } from "@plugins/health/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { MdOpenInFull } from "react-icons/md";
@@ -55,9 +55,9 @@ export function BuildButton() {
     if (trackedBuildRef.current === latestRun.id) {
       trackedBuildRef.current = null;
       if (latestRun.exitCode === 0) {
-        Shell.Toast({ description: "Build succeeded", variant: "success" });
+        toast({ type: "build", description: "Build succeeded", variant: "success" });
       } else {
-        Shell.Toast({ description: `Build failed (exit ${latestRun.exitCode})`, variant: "error" });
+        toast({ type: "build", description: `Build failed (exit ${latestRun.exitCode})`, variant: "error" });
       }
     }
   }, [latestRun?.id, latestRun?.finishedAt]);
@@ -73,7 +73,7 @@ export function BuildButton() {
       lastAutoBuildAtRef.current = status.autoBuildAt;
     } else if (status.autoBuildAt && status.autoBuildAt !== lastAutoBuildAtRef.current) {
       lastAutoBuildAtRef.current = status.autoBuildAt;
-      Shell.Toast({ description: "Auto-build triggered by new push", variant: "info" });
+      toast({ type: "build", description: "Auto-build triggered by new push", variant: "info" });
       setAutoBuilding(true);
       getHealth().then((before) => {
         if (!before) { setAutoBuilding(false); return; }

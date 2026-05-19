@@ -4,7 +4,7 @@ import type { ConversationRecord } from "@plugins/conversations/plugins/conversa
 import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import {
   MODEL_REGISTRY,
   type ConversationModel,
@@ -30,7 +30,7 @@ export function BranchButtons({
     onLaunched: () => {
       setPrompt("");
       setOpen(false);
-      Shell.Toast({ description: "Branch created", variant: "success" });
+      toast({ type: "conversation", description: "Branch created", variant: "success" });
     },
   });
 

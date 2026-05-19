@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { MdContentCopy, MdPlayArrow } from "react-icons/md";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { useStickyScroll, JumpToBottomButton } from "@plugins/primitives/plugins/auto-scroll/web";
@@ -83,7 +83,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
   const copyLogs = useCallback(() => {
     const text = entries.map((e) => e.line).join("\n");
     navigator.clipboard.writeText(text).then(() => {
-      Shell.Toast({ description: "Logs copied to clipboard", variant: "info" });
+      toast({ type: "build", description: "Logs copied to clipboard", variant: "info" });
     });
   }, [entries]);
 
@@ -225,12 +225,12 @@ export function BuildPopoverContent({
     try {
       const res = await fetch("/api/build", { method: "POST" });
       if (!res.ok) {
-        Shell.Toast({ description: "Failed to start build", variant: "error" });
+        toast({ type: "build", description: "Failed to start build", variant: "error" });
       } else {
-        Shell.Toast({ description: "Build started", variant: "info" });
+        toast({ type: "build", description: "Build started", variant: "info" });
       }
     } catch {
-      Shell.Toast({ description: "Server unreachable", variant: "error" });
+      toast({ type: "build", description: "Server unreachable", variant: "error" });
     }
   }, []);
 

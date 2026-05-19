@@ -1,14 +1,15 @@
 import { useRef, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
-import { ShellCommands } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { launchPromptsResource } from "../../shared/resources";
 import type { LaunchPrompt } from "../../shared/resources";
 
 function toastError(title: string, err: unknown) {
-  ShellCommands.Toast({
+  toast({
+    type: "conversation",
     title,
     description: err instanceof Error ? err.message : String(err),
     variant: "error",

@@ -4,6 +4,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { recentClientIds } from "../internal/toast";
 import { notificationsResource } from "../../shared/resources";
 import type { Notification } from "../../shared/schema";
 
@@ -29,9 +30,21 @@ function navigateTo(url: string) {
 
 export function BellButton() {
   const [open, setOpen] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const notificationsResult = useResource(notificationsResource);
   const list = notificationsResult.pending ? [] : notificationsResult.data;
   const unreadCount = list.filter((n) => !n.read).length;
+
+  const uniqueTypes = Array.from(new Set(list.map((n) => n.type))).filter(Boolean);
+  const hasErrors = list.some((n) => n.variant === "error");
+
+  const filtered = list.filter((n) =>
+    typeFilter === "all"
+      ? true
+      : typeFilter === "errors"
+        ? n.variant === "error"
+        : n.type === typeFilter,
+  );
 
   const prevIdsRef = useRef<Set<string> | null>(null);
   const data = notificationsResult.pending ? null : notificationsResult.data;
@@ -42,7 +55,7 @@ export function BellButton() {
     const currentIds = new Set(data.map((n) => n.id));
     if (prevIdsRef.current !== null) {
       for (const n of data) {
-        if (!prevIdsRef.current.has(n.id)) {
+        if (!prevIdsRef.current.has(n.id) && !recentClientIds.has(n.id)) {
           ShellCommands.Toast({
             title: n.title,
             description: n.description,
@@ -103,14 +116,35 @@ export function BellButton() {
             </button>
           )}
         </div>
+        {list.length > 0 && (
+          <div className="flex gap-1 px-3 py-1.5 overflow-x-auto border-b">
+            {(["all", ...(hasErrors ? ["errors"] : []), ...uniqueTypes] as string[]).map((chip) => (
+              <button
+                key={chip}
+                className={`shrink-0 text-xs px-2 py-0.5 rounded-full ${
+                  typeFilter === chip
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                onClick={() => { setTypeFilter(chip); }}
+              >
+                {chip === "all" ? "All" : chip.charAt(0).toUpperCase() + chip.slice(1)}
+              </button>
+            ))}
+          </div>
+        )}
         {list.length === 0 ? (
           <p className="px-3 py-6 text-center text-sm text-muted-foreground">
             No notifications
           </p>
+        ) : filtered.length === 0 ? (
+          <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+            No notifications for this filter
+          </p>
         ) : (
           <div className="max-h-96 overflow-y-auto">
             <ul>
-              {list.map((n) => (
+              {filtered.map((n) => (
                 <li
                   key={n.id}
                   className={`flex gap-2 px-3 py-2.5 border-l-2 ${VARIANT_BORDER[n.variant]} ${n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
@@ -137,6 +171,11 @@ export function BellButton() {
                         date={n.createdAt}
                         className="text-[10px] text-muted-foreground"
                       />
+                      {n.type && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {n.type}
+                        </span>
+                      )}
                       {n.linkTo?.startsWith("/") && (
                         <span className="text-[10px] text-muted-foreground hover:text-foreground">
                           View task &rarr;

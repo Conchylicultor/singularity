@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ShellCommands } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { currentWorktreeName, startConnectFlow } from "../connect";
 
 export interface ConnectButtonProps {
@@ -31,19 +31,22 @@ export function ConnectButton({
           });
           if (result.ok && result.identity) {
             onConnected?.(result.identity);
-            ShellCommands.Toast({
+            toast({
+              type: "auth",
               description: `Connected (${result.identity.email ?? result.identity.accountId})`,
               variant: "success",
             });
           } else if (result.message && result.message !== "cancelled") {
-            ShellCommands.Toast({
+            toast({
+              type: "auth",
               title: "Connect failed",
               description: result.message,
               variant: "error",
             });
           }
         } catch (err) {
-          ShellCommands.Toast({
+          toast({
+            type: "auth",
             title: "Connect failed",
             description: err instanceof Error ? err.message : String(err),
             variant: "error",

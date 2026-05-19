@@ -117,7 +117,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `DebugApp`
           - Contributes:
             - `Apps.App` "Debug" → `DebugLayout`
-          - Imported by: `agents`, `auth`, `branch`, `build`, `build-logs`, `code-explorer`, `code-review`, `config`, `conversation-category`, `conversations-view`, `dependencies`, `draw-on-app`, `drop-and-exit`, `edit-mode`, `events-test`, `exit`, `health`, `hold-and-exit`, `improve`, `launch-prompts`, `notifications`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `stats`, `summary`, `task-attachments`, `task-detail`, `task-draft-form`, `theme`, `theme-customizer`, `toaster`, `worktree-switcher`
+          - Imported by: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `draw-on-app`, `edit-mode`, `health`, `improve`, `notifications`, `screenshot`, `stats`, `task-detail`, `theme`, `theme-customizer`, `toaster`, `worktree-switcher`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -1198,17 +1198,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
   - Defines:
     - DB schema: `plugins/notifications/server/internal/tables.ts`
+  - Exports (web):
+    - Types: `ToastArgs`
+    - Values: `toast`
   - Exports (server):
     - Types: `RecordNotificationInput`
     - Values: `_notifications`, `notificationsResource`, `recordNotification`
   - Exports (shared):
-    - Values: `dismissAllNotifications`, `dismissNotification`, `markAllNotificationsRead`
+    - Values: `createNotification`, `dismissAllNotifications`, `dismissNotification`, `markAllNotificationsRead`
   - Contributes:
     - `Shell.Toolbar` → `BellButton`
   - Server:
+    - Register: `defineJob('notifications.ttl-cleanup')`
     - Uses: `database.db`
     - Resources: `notifications` (push)
-  - Imported by: `crashes`
+  - Imported by: `auth`, `branch`, `build`, `build-logs`, `code-review`, `conversation-category`, `conversations-view`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `events-test`, `exit`, `health`, `hold-and-exit`, `launch-prompts`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`, `toaster`
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:

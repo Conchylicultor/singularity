@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Auth } from "../slots";
 import { useAccountStatus } from "../hooks";
 import { Button } from "@/components/ui/button";
-import { ShellCommands } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { settingsPane } from "@plugins/config/web";
 import { currentWorktreeName, disconnect, startConnectFlow } from "../connect";
@@ -29,21 +29,24 @@ export function DefaultProviderRow({ providerId }: Props) {
         worktree: currentWorktreeName(),
       });
       if (result.ok) {
-        ShellCommands.Toast({
+        toast({
+          type: "auth",
           description: `Connected ${provider?.name ?? providerId}${
             result.identity?.email ? ` (${result.identity.email})` : ""
           }`,
           variant: "success",
         });
       } else if (result.message && result.message !== "cancelled") {
-        ShellCommands.Toast({
+        toast({
+          type: "auth",
           title: `Failed to connect ${provider?.name ?? providerId}`,
           description: result.message,
           variant: "error",
         });
       }
     } catch (err) {
-      ShellCommands.Toast({
+      toast({
+        type: "auth",
         title: `Failed to connect ${provider?.name ?? providerId}`,
         description: err instanceof Error ? err.message : String(err),
         variant: "error",
@@ -57,12 +60,14 @@ export function DefaultProviderRow({ providerId }: Props) {
     setBusy(true);
     try {
       await disconnect(providerId);
-      ShellCommands.Toast({
+      toast({
+        type: "auth",
         description: `Disconnected ${provider?.name ?? providerId}`,
         variant: "success",
       });
     } catch (err) {
-      ShellCommands.Toast({
+      toast({
+        type: "auth",
         title: "Disconnect failed",
         description: err instanceof Error ? err.message : String(err),
         variant: "error",

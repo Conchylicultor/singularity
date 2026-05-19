@@ -10,7 +10,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useConversation } from "@plugins/conversations/web";
 import { postConversationTurn } from "@plugins/conversations/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { useConfigValues } from "@plugins/config/web";
 import { usePromptTemplate } from "../../shared/endpoints";
 import { promptTemplatesResource } from "../../shared/resources";
@@ -99,7 +99,8 @@ export function FloatingTemplateChips({
       await fetchEndpoint(postConversationTurn, { id: conversation.id }, { body: { text } });
       clearContent();
     } catch (err) {
-      Shell.Toast({
+      toast({
+        type: "conversation",
         description: `Failed to send: ${err instanceof Error ? err.message : String(err)}`,
         variant: "error",
       });

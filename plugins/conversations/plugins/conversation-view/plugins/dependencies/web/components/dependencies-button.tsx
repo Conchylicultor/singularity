@@ -5,7 +5,7 @@ import { useConversations } from "@plugins/conversations/web";
 import { useTask } from "@plugins/tasks/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { tasksResource } from "@plugins/tasks/core";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { buttonVariants } from "@/components/ui/button";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
@@ -93,7 +93,8 @@ export function DependenciesButton({
           },
         );
         if (!res.ok && res.status !== 204) {
-          Shell.Toast({
+          toast({
+            type: "conversation",
             description: (await res.text()) || "Failed to add dependency",
             variant: "error",
           });
@@ -134,7 +135,8 @@ export function DependenciesButton({
           },
         );
         if (!res.ok && res.status !== 204) {
-          Shell.Toast({
+          toast({
+            type: "conversation",
             description: (await res.text()) || "Failed to add dependency",
             variant: "error",
           });

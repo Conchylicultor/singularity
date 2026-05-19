@@ -1,1 +1,6 @@
-export { dismissAllNotifications, markAllNotificationsRead, dismissNotification } from "./endpoints";
+export {
+  createNotification,
+  dismissAllNotifications,
+  markAllNotificationsRead,
+  dismissNotification,
+} from "./endpoints";

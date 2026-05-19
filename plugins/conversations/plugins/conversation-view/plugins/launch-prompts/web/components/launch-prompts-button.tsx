@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ListVideo } from "lucide-react";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,9 +48,10 @@ export function LaunchPromptsButton({
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      Shell.Toast({ description: `Launched: ${item.title}` });
+      toast({ type: "conversation", description: `Launched: ${item.title}` });
     } catch (err) {
-      Shell.Toast({
+      toast({
+        type: "conversation",
         description: `Failed to launch: ${err instanceof Error ? err.message : String(err)}`,
         variant: "error",
       });

@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { tasksResource, type Task } from "@plugins/tasks/core";
@@ -206,18 +206,20 @@ export function TaskDraftPopover({
         beforeScreenshot: () => setOpen(false),
       });
       if (!outcome.ok) {
-        Shell.Toast({
+        toast({
+          type: "task",
           description: outcome.errorMessage ?? "Submit failed",
           variant: "error",
         });
         return;
       }
-      Shell.Toast({ description: describeOutcome(outcome, cards), variant: "success" });
+      toast({ type: "task", description: describeOutcome(outcome, cards), variant: "success" });
       onSuccess?.(outcome.taskIds ?? []);
       resetForm();
       setOpen(false);
     } catch (err) {
-      Shell.Toast({
+      toast({
+        type: "task",
         description: `Submit failed: ${(err as Error).message}`,
         variant: "error",
       });

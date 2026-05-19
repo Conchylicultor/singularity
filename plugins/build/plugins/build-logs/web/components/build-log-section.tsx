@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { MdContentCopy } from "react-icons/md";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { useStickyScroll, JumpToBottomButton } from "@plugins/primitives/plugins/auto-scroll/web";
 import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/debug/plugins/logs/core";
@@ -49,7 +49,7 @@ export function BuildLogSection({ runId: _runId }: { runId: string }) {
   const copyLogs = useCallback(() => {
     const text = entries.map((e) => e.line).join("\n");
     navigator.clipboard.writeText(text).then(() => {
-      Shell.Toast({ description: "Logs copied to clipboard", variant: "info" });
+      toast({ type: "build", description: "Logs copied to clipboard", variant: "info" });
     });
   }, [entries]);
 

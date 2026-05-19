@@ -4,7 +4,7 @@ import { LogOut, Play } from "lucide-react";
 import { isDraftEmpty, conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, useConversation } from "@plugins/conversations/web";
 import { isActiveStatus } from "@plugins/conversations/core";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pushesResource } from "@plugins/tasks/core";
@@ -89,7 +89,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
 
   useEffect(() => {
     if (job?.status !== "clean") return;
-    Shell.Toast({ description: "Pushed and closed", variant: "success" });
+    toast({ type: "conversation", description: "Pushed and closed", variant: "success" });
     void fetch(
       `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
       { method: "DELETE" },
@@ -99,7 +99,8 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   useEffect(() => {
     if (job?.status !== "error") return;
     const message = (job as Extract<JobState, { status: "error" }>).message;
-    Shell.Toast({
+    toast({
+      type: "conversation",
       description: `Push & Exit failed: ${message}`,
       variant: "error",
     });
@@ -126,9 +127,10 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
           const text = await res.text();
           throw new Error(text || `HTTP ${res.status}`);
         }
-        Shell.Toast({ description: "Resuming conversation…", variant: "success" });
+        toast({ type: "conversation", description: "Resuming conversation…", variant: "success" });
       } catch (err) {
-        Shell.Toast({
+        toast({
+          type: "conversation",
           description: `Resume failed: ${err instanceof Error ? err.message : String(err)}`,
           variant: "error",
         });
@@ -151,7 +153,8 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         clearDraft();
       } catch (err) {
-        Shell.Toast({
+        toast({
+          type: "conversation",
           description: `Failed to send: ${err instanceof Error ? err.message : String(err)}`,
           variant: "error",
         });
@@ -170,7 +173,8 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
       } catch (err) {
-        Shell.Toast({
+        toast({
+          type: "conversation",
           description: `Go failed: ${err instanceof Error ? err.message : String(err)}`,
           variant: "error",
         });
@@ -188,7 +192,8 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         }
       } catch (err) {
         setPending(false);
-        Shell.Toast({
+        toast({
+          type: "conversation",
           description: `Push & Exit failed: ${err instanceof Error ? err.message : String(err)}`,
           variant: "error",
         });
@@ -200,9 +205,10 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
           { method: "POST" },
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        Shell.Toast({ description: "Conversation closed", variant: "success" });
+        toast({ type: "conversation", description: "Conversation closed", variant: "success" });
       } catch (err) {
-        Shell.Toast({
+        toast({
+          type: "conversation",
           description: `Exit failed: ${err instanceof Error ? err.message : String(err)}`,
           variant: "error",
         });
@@ -214,12 +220,14 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
           { method: "POST" },
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        Shell.Toast({
+        toast({
+          type: "conversation",
           description: "Task dropped and conversation closed",
           variant: "success",
         });
       } catch (err) {
-        Shell.Toast({
+        toast({
+          type: "conversation",
           description: `Drop & Exit failed: ${err instanceof Error ? err.message : String(err)}`,
           variant: "error",
         });
@@ -237,9 +245,10 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
         { method: "DELETE" },
       );
-      Shell.Toast({ description: "Conversation closed", variant: "success" });
+      toast({ type: "conversation", description: "Conversation closed", variant: "success" });
     } catch (err) {
-      Shell.Toast({
+      toast({
+        type: "conversation",
         description: `Close failed: ${err instanceof Error ? err.message : String(err)}`,
         variant: "error",
       });

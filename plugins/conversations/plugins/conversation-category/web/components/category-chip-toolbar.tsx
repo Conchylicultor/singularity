@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MdAutoAwesome, MdCheck } from "react-icons/md";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { useConfigValues } from "@plugins/config/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { conversationCategoryConfig } from "../../shared";
@@ -28,7 +28,8 @@ export function CategoryChipToolbar() {
       await setCategory(conversation.id, next);
       setOpen(false);
     } catch (err) {
-      Shell.Toast({
+      toast({
+        type: "conversation",
         description: `Failed to set category: ${err instanceof Error ? err.message : String(err)}`,
         variant: "error",
       });
@@ -44,7 +45,8 @@ export function CategoryChipToolbar() {
       await reclassify(conversation.id);
       setOpen(false);
     } catch (err) {
-      Shell.Toast({
+      toast({
+        type: "conversation",
         description: `Re-classify failed: ${err instanceof Error ? err.message : String(err)}`,
         variant: "error",
       });

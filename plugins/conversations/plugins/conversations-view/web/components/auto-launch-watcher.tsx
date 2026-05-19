@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { conversationsResource } from "@plugins/conversations/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { tasksResource } from "@plugins/tasks/core";
 
 export function AutoLaunchWatcher() {
@@ -24,7 +24,7 @@ export function AutoLaunchWatcher() {
         const tasks = tasksResult.pending ? [] : tasksResult.data;
         const task = tasks.find((t) => t.id === conv.taskId);
         const taskLabel = task?.title ? ` · ${task.title}` : "";
-        Shell.Toast({ description: `Auto-started queued task${taskLabel} · ${model}`, variant: "info" });
+        toast({ type: "task", description: `Auto-started queued task${taskLabel} · ${model}`, variant: "info" });
       }
       seenIdsRef.current.add(conv.id as string);
     }

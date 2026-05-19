@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdReplay, MdWorkOutline } from "react-icons/md";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { FilterChip, useChipFilter } from "@plugins/primitives/plugins/filter-chips/web";
 import { jobsListResource, type JobRow, type JobState } from "@plugins/infra/plugins/jobs/core";
@@ -70,7 +70,7 @@ async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
 
 function toastErr(e: unknown, prefix: string) {
   const msg = e instanceof Error ? e.message : String(e);
-  Shell.Toast({ description: `${prefix}: ${msg}`, variant: "error" });
+  toast({ type: "debug", description: `${prefix}: ${msg}`, variant: "error" });
 }
 
 function relativeTime(iso: string): string {

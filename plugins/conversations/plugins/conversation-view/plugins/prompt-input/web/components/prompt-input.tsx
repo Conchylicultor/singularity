@@ -8,7 +8,7 @@ import {
 import { useConversation } from "@plugins/conversations/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { Button } from "@/components/ui/button";
 
 export function PromptInput({ conversation }: { conversation: ConversationRecord }) {
@@ -49,7 +49,8 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       clearDraft();
     } catch (err) {
-      Shell.Toast({
+      toast({
+        type: "conversation",
         description: `Failed to send: ${err instanceof Error ? err.message : String(err)}`,
         variant: "error",
       });
@@ -70,7 +71,8 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
       const data = (await res.json()) as { ok: boolean; rewindText: string | null };
       if (data.rewindText) setDraft(data.rewindText);
     } catch (err) {
-      Shell.Toast({
+      toast({
+        type: "conversation",
         description: `Failed to stop: ${err instanceof Error ? err.message : String(err)}`,
         variant: "error",
       });
@@ -102,7 +104,8 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
           maxHeight="10rem"
           namespace={`prompt-input-${conversation.id}`}
           onError={(msg) =>
-            Shell.Toast({
+            toast({
+              type: "conversation",
               description: `Editor error: ${msg}`,
               variant: "error",
             })

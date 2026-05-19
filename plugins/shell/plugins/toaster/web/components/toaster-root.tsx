@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { Toaster as Sonner, toast } from "sonner";
+import { Toaster as Sonner, toast as sonnerToast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { toast as notifyToast } from "@plugins/notifications/web";
 import { ShellCommands, type ToastArgs } from "@plugins/shell/web";
 
 export function ToasterRoot() {
@@ -10,7 +11,7 @@ export function ToasterRoot() {
   ShellCommands.Toast.useHandler(({ title, description, variant }: ToastArgs) => {
     const opts = { description: title ? description : undefined };
     const message = title ?? description;
-    const fn = variant && variant !== "default" ? toast[variant] : toast;
+    const fn = variant && variant !== "default" ? sonnerToast[variant] : sonnerToast;
     fn(message, opts);
   });
 
@@ -19,7 +20,7 @@ export function ToasterRoot() {
       const reason = e.reason;
       const message =
         reason instanceof Error ? reason.message : String(reason);
-      toast.error(message);
+      notifyToast({ type: "error", description: message, variant: "error" });
     };
     window.addEventListener("unhandledrejection", onRejection);
     return () => window.removeEventListener("unhandledrejection", onRejection);
@@ -30,7 +31,11 @@ export function ToasterRoot() {
       if (event.type !== "updated") return;
       if (event.action.type !== "error") return;
       if (event.mutation.options.meta?.suppressError) return;
-      toast.error(getEndpointErrorMessage(event.action.error));
+      notifyToast({
+        type: "error",
+        description: getEndpointErrorMessage(event.action.error),
+        variant: "error",
+      });
     });
   }, [queryClient]);
 

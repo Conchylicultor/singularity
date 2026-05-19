@@ -177,7 +177,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (infraGitWatcherPlugin as ServerPluginDefinition).dependsOn = [infraEventsPlugin, infraPathsPlugin, infraWorktreePlugin];
 (infraJobsPlugin as ServerPluginDefinition).dependsOn = [databaseAdminPlugin, databasePlugin, infraEndpointsPlugin];
 (infraWorktreePlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
-(notificationsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEndpointsPlugin];
+(notificationsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEndpointsPlugin, infraJobsPlugin];
 (pluginMetaPluginHealthPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEndpointsPlugin, infraEntityExtensionsPlugin, infraMcpPlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
 (pluginMetaPluginViewPlugin as ServerPluginDefinition).dependsOn = [infraEndpointsPlugin, infraPathsPlugin];
 (primitivesRankPlugin as ServerPluginDefinition).dependsOn = [databasePlugin];

@@ -4,7 +4,7 @@ import { flushSync } from "react-dom";
 import { MdGesture } from "react-icons/md";
 import { captureApp } from "@plugins/screenshot/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { ShellCommands } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { attachmentMarkdown } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { ImproveCommands } from "@plugins/improve/web";
@@ -43,7 +43,7 @@ export function DrawOnAppButton() {
           !(node instanceof HTMLElement && node.dataset.drawChrome === "true"),
       );
       if (!blob) {
-        ShellCommands.Toast({ description: "Capture failed", variant: "error" });
+        toast({ type: "screenshot", description: "Capture failed", variant: "error" });
         setChromeVisible(true);
         return;
       }
@@ -53,7 +53,8 @@ export function DrawOnAppButton() {
         text: attachmentMarkdown(uploaded.id, "drawing.png"),
       });
     } catch (err) {
-      ShellCommands.Toast({
+      toast({
+        type: "screenshot",
         description: `Capture failed: ${(err as Error).message}`,
         variant: "error",
       });

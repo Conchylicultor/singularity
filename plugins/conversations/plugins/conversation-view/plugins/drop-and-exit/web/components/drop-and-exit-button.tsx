@@ -4,7 +4,7 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation, useConversations } from "@plugins/conversations/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { pushesResource } from "@plugins/tasks/core";
 import { Button } from "@/components/ui/button";
 import { dropAndExit } from "../../shared";
@@ -31,9 +31,10 @@ export function DropAndExitButton({
   const { mutate, isPending } = useEndpointMutation(dropAndExit, {
     onSuccess: (data) => {
       const description = data.dropped ? "Task dropped and conversation closed" : "Conversation closed";
-      Shell.Toast({ description, variant: "success" });
+      toast({ type: "conversation", description, variant: "success" });
     },
-    onError: (err) => Shell.Toast({
+    onError: (err) => toast({
+      type: "conversation",
       description: `${hasPush ? "Complete" : "Drop"} & Exit failed: ${err.message}`,
       variant: "error",
     }),

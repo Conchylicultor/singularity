@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +32,7 @@ export function SummaryPane() {
     lastSeenIdRef.current = latest.id;
     if (pendingSince !== null) {
       setPendingSince(null);
-      Shell.Toast({ description: "Summary ready", variant: "success" });
+      toast({ type: "summary", description: "Summary ready", variant: "success" });
     }
   }, [latest, pendingSince]);
 
@@ -42,18 +42,12 @@ export function SummaryPane() {
     const remaining = pendingSince + PENDING_TIMEOUT_MS - Date.now();
     if (remaining <= 0) {
       setPendingSince(null);
-      Shell.Toast({
-        description: "Summarisation timed out",
-        variant: "error",
-      });
+      toast({ type: "summary", description: "Summarisation timed out", variant: "error" });
       return;
     }
     const t = setTimeout(() => {
       setPendingSince(null);
-      Shell.Toast({
-        description: "Summarisation timed out",
-        variant: "error",
-      });
+      toast({ type: "summary", description: "Summarisation timed out", variant: "error" });
     }, remaining);
     return () => clearTimeout(t);
   }, [pendingSince]);
@@ -72,7 +66,8 @@ export function SummaryPane() {
       }
     } catch (err) {
       setPendingSince(null);
-      Shell.Toast({
+      toast({
+        type: "summary",
         description: `Summarise failed: ${err instanceof Error ? err.message : String(err)}`,
         variant: "error",
       });

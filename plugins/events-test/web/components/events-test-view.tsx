@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdSend } from "react-icons/md";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -39,7 +39,7 @@ async function postJson<T>(url: string, body: unknown): Promise<T> {
 
 function toastErr(e: unknown, prefix: string) {
   const msg = e instanceof Error ? e.message : String(e);
-  Shell.Toast({ description: `${prefix}: ${msg}`, variant: "error" });
+  toast({ type: "debug", description: `${prefix}: ${msg}`, variant: "error" });
 }
 
 export function EventsTestView() {
@@ -105,7 +105,7 @@ export function EventsTestView() {
 
   const onSubscribe = async () => {
     if (!subLabel.trim()) {
-      Shell.Toast({ description: "label is required", variant: "warning" });
+      toast({ type: "debug", description: "label is required", variant: "warning" });
       return;
     }
     setSubBusy(true);
@@ -119,7 +119,8 @@ export function EventsTestView() {
         },
       );
       flashTrigger(id);
-      Shell.Toast({
+      toast({
+        type: "debug",
         description: `Subscribed (${subUserId.trim() || "match-any"}, ${subOneShot ? "one-shot" : "recurring"})`,
         variant: "success",
       });
@@ -133,7 +134,7 @@ export function EventsTestView() {
 
   const onEmit = async () => {
     if (!emitUserId.trim()) {
-      Shell.Toast({ description: "userId is required", variant: "warning" });
+      toast({ type: "debug", description: "userId is required", variant: "warning" });
       return;
     }
     setEmitBusy(true);
@@ -142,7 +143,8 @@ export function EventsTestView() {
         userId: emitUserId.trim(),
         message: emitMessage.trim() || undefined,
       });
-      Shell.Toast({
+      toast({
+        type: "debug",
         description: `Emitted pinged(userId="${emitUserId.trim()}")`,
         variant: "info",
       });
@@ -157,7 +159,7 @@ export function EventsTestView() {
   const onDeleteTrigger = async (id: string) => {
     try {
       await fetch(`/api/events-test/trigger/${id}`, { method: "DELETE" });
-      Shell.Toast({ description: "Trigger deleted", variant: "success" });
+      toast({ type: "debug", description: "Trigger deleted", variant: "success" });
       await refresh();
     } catch (e) {
       toastErr(e, "delete failed");
@@ -166,7 +168,7 @@ export function EventsTestView() {
 
   const onDeleteTargeting = async () => {
     if (!dtLabel.trim()) {
-      Shell.Toast({ description: "label is required", variant: "warning" });
+      toast({ type: "debug", description: "label is required", variant: "warning" });
       return;
     }
     setDtBusy(true);
@@ -174,7 +176,8 @@ export function EventsTestView() {
       await postJson("/api/events-test/delete-targeting", {
         label: dtLabel.trim(),
       });
-      Shell.Toast({
+      toast({
+        type: "debug",
         description: `Swept triggers with label="${dtLabel.trim()}"`,
         variant: "success",
       });
@@ -189,7 +192,7 @@ export function EventsTestView() {
 
   const onDirectEnqueue = async () => {
     if (!deLabel.trim()) {
-      Shell.Toast({ description: "label is required", variant: "warning" });
+      toast({ type: "debug", description: "label is required", variant: "warning" });
       return;
     }
     setDeBusy(true);
@@ -202,7 +205,8 @@ export function EventsTestView() {
           message: deMessage.trim() || undefined,
         },
       );
-      Shell.Toast({
+      toast({
+        type: "debug",
         description: `Enqueued job ${jobId}`,
         variant: "success",
       });
@@ -217,7 +221,7 @@ export function EventsTestView() {
   const onResetLog = async () => {
     try {
       await fetch("/api/events-test/reset", { method: "POST" });
-      Shell.Toast({ description: "Log cleared", variant: "default" });
+      toast({ type: "debug", description: "Log cleared" });
       await refresh();
     } catch (e) {
       toastErr(e, "reset failed");

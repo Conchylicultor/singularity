@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MdReplay } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { Button } from "@/components/ui/button";
 
 export function ResumeButton({
@@ -36,12 +36,10 @@ export function ResumeButton({
         const text = await res.text();
         throw new Error(text || `HTTP ${res.status}`);
       }
-      Shell.Toast({
-        description: "Resuming conversation…",
-        variant: "success",
-      });
+      toast({ type: "conversation", description: "Resuming conversation…", variant: "success" });
     } catch (err) {
-      Shell.Toast({
+      toast({
+        type: "conversation",
         description: `Resume failed: ${err instanceof Error ? err.message : String(err)}`,
         variant: "error",
       });

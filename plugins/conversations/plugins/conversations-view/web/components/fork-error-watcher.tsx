@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { ShellCommands as Shell } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { forkErrorsResource } from "@plugins/conversations/core";
 
 export function ForkErrorWatcher() {
@@ -22,7 +22,8 @@ export function ForkErrorWatcher() {
     }
     if (lastSeen.current === data.id) return;
     lastSeen.current = data.id;
-    Shell.Toast({
+    toast({
+      type: "db",
       title: "DB fork failed",
       description: `${data.attemptId}: ${data.message}`,
       variant: "error",

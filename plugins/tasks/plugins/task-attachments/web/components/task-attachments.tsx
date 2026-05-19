@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { listAttachments, type Attachment } from "@plugins/infra/plugins/attachments/web";
-import { ShellCommands } from "@plugins/shell/web";
+import { toast } from "@plugins/notifications/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 
 function formatSize(bytes: number): string {
@@ -13,7 +13,8 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
 
   useEffect(() => {
     listAttachments("task", taskId).then(setAttachments).catch((err: unknown) => {
-      ShellCommands.Toast({
+      toast({
+        type: "task",
         title: "Failed to load attachments",
         description: err instanceof Error ? err.message : String(err),
         variant: "error",
