@@ -34,12 +34,11 @@ function TasksRoot(): ReactElement {
   const selectedId = taskDetailPane.useChainEntry()?.params.taskId;
 
   return (
-    <div className="h-full p-4">
-      <Tasks.Host
-        selectedId={selectedId}
-        onSelect={(id) => openPane(taskDetailPane, { taskId: id }, { mode: "push" })}
-      />
-    </div>
+    <Tasks.Host
+      className="h-full p-4"
+      selectedId={selectedId}
+      onSelect={(id) => openPane(taskDetailPane, { taskId: id }, { mode: "push" })}
+    />
   );
 }
 

@@ -12,7 +12,7 @@ export interface TabContribution<ViewProps> {
 
 export interface TabbedView<ViewProps> {
   View: Slot<TabContribution<ViewProps>>;
-  Host: ComponentType<ViewProps & { header?: ReactNode }>;
+  Host: ComponentType<ViewProps & { header?: ReactNode; className?: string }>;
 }
 
 export function defineTabbedView<ViewProps extends object>(
@@ -24,8 +24,8 @@ export function defineTabbedView<ViewProps extends object>(
     docLabel: (p) => p.title,
   });
 
-  function Host(props: ViewProps & { header?: ReactNode }): ReactNode {
-    const { header, ...viewProps } = props;
+  function Host(props: ViewProps & { header?: ReactNode; className?: string }): ReactNode {
+    const { header, className, ...viewProps } = props;
     const views = View.useContributions();
 
     const ordered = useMemo(
@@ -57,7 +57,7 @@ export function defineTabbedView<ViewProps extends object>(
     const ActiveComponent = activeView?.component ?? null;
 
     return (
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
         {(header || ordered.length > 1) && (
           <div className="flex shrink-0 flex-col gap-1 px-2 pb-1">
             {header}
