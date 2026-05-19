@@ -9,7 +9,7 @@ async function getRoot(): Promise<string> {
 }
 
 async function runTsc(cwd: string, args: string[]): Promise<{ ok: true } | { ok: false; errors: string }> {
-  const proc = Bun.spawn(["bunx", "tsc", "--noEmit", ...args], {
+  const proc = Bun.spawn([process.execPath, "x", "tsc", "--noEmit", ...args], {
     cwd,
     stdout: "pipe",
     stderr: "pipe",

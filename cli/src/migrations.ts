@@ -345,7 +345,7 @@ export async function generateMigration(opts: {
   // imports through plugin barrels can pull in `paths/bins.ts`, which calls
   // `Bun.which()` and crashes with "Bun is not defined" — silently exit-0,
   // no migration generated. `--bun` forces Bun runtime regardless of shebang.
-  const cmd = ["bunx", "--bun", "drizzle-kit", "generate"];
+  const cmd = [process.execPath, "x", "--bun", "drizzle-kit", "generate"];
   if (customMigration) cmd.push("--custom");
   if (migrationName) cmd.push("--name", migrationName);
 

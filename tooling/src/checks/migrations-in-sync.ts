@@ -86,7 +86,8 @@ export const migrationsInSync: Check = {
       // schema closure pulls in `paths/bins.ts` (Bun.which is undefined).
       const proc = Bun.spawn(
         [
-          "bunx",
+          process.execPath,
+          "x",
           "--bun",
           "drizzle-kit",
           "generate",

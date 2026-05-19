@@ -90,7 +90,7 @@ export const eslintCheck: Check = {
     const cacheLocation = join(root, "node_modules", ".cache", "eslint");
     bustCacheIfStale(root, cacheLocation);
     const proc = Bun.spawn(
-      ["bunx", "eslint", ".", "--cache", "--cache-location", cacheLocation],
+      [process.execPath, "x", "eslint", ".", "--cache", "--cache-location", cacheLocation],
       {
         cwd: root,
         stdout: "pipe",
