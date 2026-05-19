@@ -1,5 +1,6 @@
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { conversationsLiveResource } from "@plugins/tasks-core/server";
 import { QueueDataSchema, type QueueData, type QueueRankRow } from "../../shared/resources";
 import { conversationsQueue } from "./tables";
 import { validatePin } from "./pinned";
@@ -8,6 +9,7 @@ export const queueRanksResource = defineResource({
   key: "queue-ranks",
   mode: "push",
   schema: QueueDataSchema,
+  dependsOn: [{ resource: conversationsLiveResource }],
   loader: async (): Promise<QueueData> => {
     const rows = await db
       .select({

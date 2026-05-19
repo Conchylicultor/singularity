@@ -845,7 +845,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `ConversationsView.View` "Queue" → `QueueView`
           - Server:
             - Register: `defineJob('queue.seed-rank')`, `defineJob('queue.validate-pin')`, `defineJob('queue.advance-pin')`, `defineJob('queue.task-status-pin')`
-            - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `conversations.userTurnSent`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`, `tasks-core.listBlockingDepIds`, `tasks-core.listDependentIds`, `tasks-core.taskStatusChanged`
+            - Uses: `conversations.conversationCreated`, `conversations.conversationTurnCompleted`, `conversations.userTurnSent`, `database.db`, `tasks-core._attempts`, `tasks-core._conversations`, `tasks-core.conversationsLiveResource`, `tasks-core.getConversation`, `tasks-core.hasBlockingDep`, `tasks-core.listBlockingDepIds`, `tasks-core.listDependentIds`, `tasks-core.taskStatusChanged`
             - Resources: `queue-ranks` (push)
     - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
       - Exports (core):
