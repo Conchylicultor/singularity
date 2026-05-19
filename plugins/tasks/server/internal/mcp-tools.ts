@@ -38,13 +38,13 @@ Controls how the new task connects to the target:
 
 **Follow-up (the common case):**
 
-  { "title": "Run integration tests", "autostart": "sonnet" }
+  { "title": "Add dark mode support", "description": "Plan first. ...", "autostart": "opus" }
 
 **Linear chain** — use \`target\` to chain off the previous task:
 
-  { "title": "Step 1", "autostart": "sonnet" }              → id: "X1"
-  { "title": "Step 2", "target": "X1", "autostart": "sonnet" }  → id: "X2"
-  { "title": "Step 3", "target": "X2", "autostart": "opus" }    → id: "X3"
+  { "title": "Step 1", "autostart": "opus" }              → id: "X1"
+  { "title": "Step 2", "target": "X1", "autostart": "opus" }  → id: "X2"
+  { "title": "Step 3", "target": "X2", "autostart": "opus" }  → id: "X3"
 
 If B was waiting on A, the chain auto-rewires: B → X3 → X2 → X1 → A.
 
@@ -66,7 +66,9 @@ agent see the actual outcome instead of executing a stale plan.`,
       .string()
       .optional()
       .describe(
-        "Optional longer description of the problem or issue. Describe WHAT is wrong or needed, not HOW to fix it."
+        "Optional longer description of the problem or issue. Describe WHAT is wrong or needed, not HOW to fix it. " +
+        "Start with \"Plan first.\" to instruct the executing agent to write its own plan before implementing — " +
+        "do this for any non-mechanical task, even if a broader plan already exists."
       ),
     relation: z
       .enum(["followup", "prerequisite"])
@@ -86,10 +88,9 @@ agent see the actual outcome instead of executing a stale plan.`,
       .enum(["sonnet", "opus"])
       .nullable()
       .describe(
-        "Auto-launch model. Pass \"sonnet\" or \"opus\" to queue for auto-launch " +
-        "once unblocked. Pass null to leave in the user's queue without auto-launching. " +
-        "Use \"opus\" for new features or tasks requiring design/planning; " +
-        "\"sonnet\" for mechanical refactoring, well-scoped fixes, and routine execution."
+        "Auto-launch model. Default to \"opus\" unless the task is purely mechanical " +
+        "refactoring (no design decisions, no unknowns) — use \"sonnet\" only then. " +
+        "Pass null to leave in the user's queue without auto-launching."
       ),
   },
   async handler(
