@@ -43,6 +43,11 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   }
   if (!res.ok) {
     const text = await res.text().catch(() => "");
+    // Gateway returns this exact text when the central-routes manifest hasn't
+    // loaded yet — treat as offline so callers can degrade gracefully.
+    if (res.status === 404 && text.includes("Singularity gateway")) {
+      throw new SecretsMainOfflineError();
+    }
     throw new Error(`secrets api ${path}: ${res.status} ${text}`);
   }
   return (await res.json()) as T;
