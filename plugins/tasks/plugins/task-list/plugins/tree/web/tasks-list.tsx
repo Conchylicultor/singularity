@@ -2,7 +2,6 @@ import { useMemo, useState, useCallback } from "react";
 import { MdAdd } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
-import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
 import {
   RenameInput,
   RowChrome,
@@ -13,7 +12,7 @@ import {
 import { buildTree, type TreeNode } from "@plugins/primitives/plugins/tree/core";
 import type { TaskStatus } from "@plugins/tasks-core/core";
 import { tasksResource } from "@plugins/tasks/core";
-import { patchTask, setAutoStart } from "@plugins/tasks/web";
+import { patchTask } from "@plugins/tasks/web";
 import { Tasks as TasksSlots } from "@plugins/tasks/plugins/task-list/web";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import {
@@ -48,8 +47,6 @@ function TaskRow({ node, depth }: { node: TreeNode<Task>; depth: number }) {
   const hasChildren = node.children.length > 0;
   const dropped = node.status === "dropped";
   const done = node.status === "done";
-  const autoStart = useTaskAutoStart(node.id);
-  const queuedModel = autoStart?.autoStartModel ?? null;
   return (
     <RowChrome
       node={node}
@@ -80,28 +77,10 @@ function TaskRow({ node, depth }: { node: TreeNode<Task>; depth: number }) {
           done && "text-muted-foreground",
         )}
       />
-      {queuedModel && <QueuedChip taskId={node.id} model={queuedModel} />}
     </RowChrome>
   );
 }
 
-function QueuedChip({ taskId, model }: { taskId: string; model: "opus" | "sonnet" }) {
-  const label = model === "opus" ? "Opus" : "Sonnet";
-  return (
-    <button
-      type="button"
-      title="Auto-start when parent is done — click to cancel"
-      aria-label={`Cancel auto-start (${label})`}
-      onClick={(e) => {
-        e.stopPropagation();
-        void setAutoStart(taskId, "none");
-      }}
-      className="ml-1 inline-flex shrink-0 items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
-    >
-      Queued · {label}
-    </button>
-  );
-}
 
 function deriveVisibleOrder(
   rows: readonly Task[],

@@ -13,6 +13,8 @@
   - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`, `useTaskAutoStart`
 - Exports (server):
   - Values: `claimAutoStart`, `getTaskAutoStart`, `setTaskAutoStart`, `tasksAutoStartResource`
+- Contributes:
+  - `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
 - Server:
   - Uses: `database.db`, `tasks-core._tasks`
   - Resources: `tasks-auto-start` (push)

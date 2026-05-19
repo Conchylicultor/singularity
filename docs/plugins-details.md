@@ -1616,7 +1616,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Stats.Chart` "Tasks" → `TasksSection`
       - Server:
         - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.listTasks`
-      - Imported by: `dependencies`, `side-task`, `task-dependencies`, `task-description`, `task-detail`, `task-header`, `task-list`, `tasks-panel`, `tree`
+      - Imported by: `auto-start`, `dependencies`, `side-task`, `task-dependencies`, `task-description`, `task-detail`, `task-header`, `task-list`, `tasks-panel`, `tree`
 
 - **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
   - Exports (core):
@@ -1640,6 +1640,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`, `useTaskAutoStart`
       - Exports (server):
         - Values: `claimAutoStart`, `getTaskAutoStart`, `setTaskAutoStart`, `tasksAutoStartResource`
+      - Contributes:
+        - `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
       - Server:
         - Uses: `database.db`, `tasks-core._tasks`
         - Resources: `tasks-auto-start` (push)
@@ -1680,10 +1682,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `TaskViewProps`
         - Values: `Tasks`
       - Contributes:
+        - `Tasks.TaskActions` "child-count" → `ChildCountAction`
         - `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`
         - `Tasks.TaskActions` "delete" → `DeleteTaskAction`
         - `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
-      - Slot contributors: `recent`, `tree`
+      - Slot contributors: `auto-start`, `recent`, `tree`
       - Plugins:
         - **`recent`** — Recency-sorted flat task list tab.
           - Contributes:

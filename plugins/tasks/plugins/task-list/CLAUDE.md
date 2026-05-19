@@ -11,10 +11,11 @@
   - Types: `TaskViewProps`
   - Values: `Tasks`
 - Contributes:
+  - `Tasks.TaskActions` "child-count" → `ChildCountAction`
   - `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`
   - `Tasks.TaskActions` "delete" → `DeleteTaskAction`
   - `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
-- Slot contributors: `recent`, `tree`
+- Slot contributors: `auto-start`, `recent`, `tree`
 - Sub-plugins:
   - **`recent`** — Recency-sorted flat task list tab.
   - **`tree`** — Tree-view tab for the task list.
