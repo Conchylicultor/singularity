@@ -15,6 +15,32 @@ const IMAGE_MIME: Record<string, string> = {
 
 type Segment = { kind: "text"; value: string } | { kind: "image"; mime: string; data: string };
 
+function extractTaskNotifications(text: string, at: string, out: JsonlEvent[]): string {
+  const re = /<task-notification>([\s\S]*?)<\/task-notification>/g;
+  const blocks: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    blocks.push(m[0]);
+    const inner = m[1] ?? "";
+    const get = (tag: string) => {
+      const tm = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(inner);
+      return tm?.[1]?.trim();
+    };
+    const taskId = get("task-id") ?? "";
+    const toolUseId = get("tool-use-id");
+    const status = get("status") ?? "";
+    const summary = get("summary") ?? "";
+    if (taskId || status || summary) {
+      out.push({ kind: "task-notification", at, taskId, toolUseId, status, summary });
+    }
+  }
+  let stripped = text;
+  for (const block of blocks) {
+    stripped = stripped.replace(block, "");
+  }
+  return stripped.trim();
+}
+
 async function pushTextWithImages(text: string, at: string, out: JsonlEvent[]): Promise<void> {
   // Local regex instance — the g flag stores match state in lastIndex, so a
   // shared module-level regex gets corrupted when concurrent async calls
@@ -174,8 +200,9 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
 
       const content = msg.content;
       if (typeof content === "string") {
-        if (content.length > 0) {
-          await pushTextWithImages(content, ts, events);
+        const remaining = extractTaskNotifications(content, ts, events);
+        if (remaining.length > 0) {
+          await pushTextWithImages(remaining, ts, events);
         }
       } else if (Array.isArray(content)) {
         for (const block of content as RawBlock[]) {
@@ -196,7 +223,10 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
             }
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
           } else if (block?.type === "text" && typeof block.text === "string") {
-            await pushTextWithImages(block.text, ts, events);
+            const remaining = extractTaskNotifications(block.text, ts, events);
+            if (remaining.length > 0) {
+              await pushTextWithImages(remaining, ts, events);
+            }
           } else if (
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
             block?.type === "image" &&

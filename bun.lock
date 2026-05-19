@@ -401,6 +401,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-system",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/task-notification": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-task-notification",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call",
       "version": "0.0.1",
@@ -1974,6 +1978,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-system": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-system@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/system"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-task-notification": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-task-notification@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/task-notification"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call"],
 

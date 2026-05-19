@@ -631,7 +631,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
-          - Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `tool-call`, `user-image`, `user-text`
+          - Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `tool-call`, `user-image`, `user-text`
           - Plugins:
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Contributes:
@@ -650,6 +650,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`system`** — Renders system events in the JSONL viewer.
               - Contributes:
                 - `JsonlViewer.EventRenderer` "system" → `SystemRow`
+            - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.
+              - Contributes:
+                - `JsonlViewer.EventRenderer` "task-notification" → `TaskNotificationRow`
             - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
               - Defines:
                 - Slots: `JsonlViewerTool.Renderer`

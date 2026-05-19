@@ -70,5 +70,13 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     at: z.string(),
     text: z.string(),
   }),
+  z.object({
+    kind: z.literal("task-notification"),
+    at: z.string(),
+    taskId: z.string(),
+    toolUseId: z.string().optional(),
+    status: z.string(),
+    summary: z.string(),
+  }),
 ]);
 export type JsonlEvent = z.infer<typeof JsonlEventSchema>;
