@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
@@ -33,19 +32,17 @@ function FilePeekPaneBody() {
 
   const resolved = useResolvedFile(worktree, filePath);
 
-  useEffect(() => {
-    if (resolved.status === "resolved") {
-      const fp = resolved.path;
-      openPane(filePeekPane, {
-        worktree,
-        filePath: line != null ? `${fp}:${line}` : fp,
-      }, { mode: "swap" });
-    }
-  }, [resolved, worktree, line, openPane]);
+  // Use the resolved path directly instead of swapping the pane — a swap
+  // re-mounts the component (new URL → new params → new fetches), which
+  // destroys in-progress text selection.
+  const effectivePath =
+    resolved.status === "resolved" || resolved.status === "exact"
+      ? resolved.path
+      : filePath;
 
   const { files } = useEditedFiles(convId ?? "");
-  const status = files.find((f) => f.path === filePath)?.status ?? "clean";
-  const renderers = useFileRenderers({ path: filePath, status });
+  const status = files.find((f) => f.path === effectivePath)?.status ?? "clean";
+  const renderers = useFileRenderers({ path: effectivePath, status });
 
   if (resolved.status === "loading") {
     return (
@@ -85,7 +82,7 @@ function FilePeekPaneBody() {
   const title = (
     <span className="flex min-w-0 flex-1 items-center gap-2">
       <span className="min-w-0 flex-1 overflow-hidden">
-        <FilepathBreadcrumb path={filePath} />
+        <FilepathBreadcrumb path={effectivePath} />
       </span>
       <FileTabs {...renderers} />
     </span>
@@ -96,7 +93,7 @@ function FilePeekPaneBody() {
       <div className="h-full min-h-0 overflow-auto">
         <FileContent
           worktree={worktree}
-          path={filePath}
+          path={effectivePath}
           line={line}
           active={renderers.active}
         />
