@@ -156,5 +156,12 @@ export async function runChecks(ids?: string[], options?: RunChecksOptions): Pro
       if (result.hint) console.error(`  hint: ${result.hint}`);
     }
   }
+  if (!allOk) {
+    console.error(
+      "\nIf you cannot fix the failing check(s): STOP, report the failure to the user, and wait for instructions. " +
+        "Do NOT work around check failures — not by disabling checks, editing check code, " +
+        "expanding skip lists, committing via raw git, or any other means.",
+    );
+  }
   return allOk;
 }
