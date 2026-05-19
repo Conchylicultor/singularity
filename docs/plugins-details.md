@@ -523,7 +523,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
       - Contributes:
         - `Pane.Register` "conversation"
-      - Slot contributors: `agents`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `dependencies`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+      - Slot contributors: `agents`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `dependencies`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Exports (web):
@@ -767,8 +767,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
           - Exports (shared):
             - Values: `resumeConversationEndpoint`
-          - Contributes:
-            - `Conversation.PromptBar` "Exit" → `ResumeButton`
           - Server:
             - Uses: `conversations.resumeConversation`, `tasks-core.notifyConversationsChanged`
         - **`side-task`** — Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).

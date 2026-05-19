@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MdDeleteForever, MdRocketLaunch, MdSend } from "react-icons/md";
+import { MdDeleteForever, MdReplay, MdRocketLaunch, MdSend } from "react-icons/md";
 import { LogOut, Play } from "lucide-react";
 import { isDraftEmpty, conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, useConversation } from "@plugins/conversations/web";
@@ -24,7 +24,7 @@ import {
   type JobState,
 } from "../../shared/resources";
 
-type Mode = "send" | "push-and-exit" | "exit" | "drop-and-exit" | "go";
+type Mode = "send" | "push-and-exit" | "exit" | "drop-and-exit" | "go" | "restore";
 
 export function PushAndExitButton(_: PromptEditorActionProps) {
   const { conversation } = conversationPane.useData();
@@ -54,7 +54,10 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const pushesResult = useResource(pushesResource);
   const { active, isLoading: conversationsLoading } = useConversations();
 
+  const isNotRunning = live.status === "gone" || live.status === "done";
+
   const mode: Mode = useMemo(() => {
+    if (isNotRunning) return "restore";
     if (!isDraftEmpty(draft)) return "send";
     if (conversationsLoading) {
       return "push-and-exit";
@@ -73,7 +76,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         isActiveStatus(c.status),
     );
     return hasOtherActiveInWorktree ? "exit" : "drop-and-exit";
-  }, [draft, files, pushesResult, active, conversationsLoading, conversation.attemptId, conversation.id, conversation.worktreePath]);
+  }, [isNotRunning, draft, files, pushesResult, active, conversationsLoading, conversation.attemptId, conversation.id, conversation.worktreePath]);
 
   useEffect(() => {
     if (!busy) return;
@@ -106,10 +109,32 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     );
   }, [job, conversation.id]);
 
-  const disabled = busy || sending || live.status === "gone" || live.status === "done" || live.status === "starting";
+  const hasSession = !!live.claudeSessionId;
+  const disabled = mode === "restore"
+    ? busy || !hasSession
+    : busy || sending || live.status === "starting";
 
   async function onClick() {
     if (disabled) return;
+    if (mode === "restore") {
+      try {
+        const res = await fetch(
+          `/api/conversations/${encodeURIComponent(conversation.id)}/resume`,
+          { method: "POST" },
+        );
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `HTTP ${res.status}`);
+        }
+        Shell.Toast({ description: "Resuming conversation…", variant: "success" });
+      } catch (err) {
+        Shell.Toast({
+          description: `Resume failed: ${err instanceof Error ? err.message : String(err)}`,
+          variant: "error",
+        });
+      }
+      return;
+    }
     if (mode === "send") {
       const current = draftRef.current;
       if (isDraftEmpty(current)) return;
@@ -235,30 +260,34 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       : undefined;
 
   const label =
-    mode === "send"
-      ? sending
-        ? "Sending…"
-        : "Send"
-      : mode === "go"
-        ? "Go"
-        : mode === "push-and-exit"
-          ? busy
-            ? "Pushing…"
-            : "Push & Exit"
-          : mode === "exit"
-            ? "Exit"
-            : "Drop & Exit";
+    mode === "restore"
+      ? "Restore"
+      : mode === "send"
+        ? sending
+          ? "Sending…"
+          : "Send"
+        : mode === "go"
+          ? "Go"
+          : mode === "push-and-exit"
+            ? busy
+              ? "Pushing…"
+              : "Push & Exit"
+            : mode === "exit"
+              ? "Exit"
+              : "Drop & Exit";
 
   const Icon =
-    mode === "send"
-      ? MdSend
-      : mode === "go"
-        ? Play
-        : mode === "push-and-exit"
-          ? MdRocketLaunch
-          : mode === "exit"
-            ? LogOut
-            : MdDeleteForever;
+    mode === "restore"
+      ? MdReplay
+      : mode === "send"
+        ? MdSend
+        : mode === "go"
+          ? Play
+          : mode === "push-and-exit"
+            ? MdRocketLaunch
+            : mode === "exit"
+              ? LogOut
+              : MdDeleteForever;
 
   const buttonClass =
     mode === "go"
