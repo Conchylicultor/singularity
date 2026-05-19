@@ -567,6 +567,10 @@
       "name": "@singularity/plugin-crashes-launch-fix",
       "version": "0.0.1",
     },
+    "plugins/crashes/plugins/mutation-errors": {
+      "name": "@singularity/plugin-crashes-mutation-errors",
+      "version": "0.0.1",
+    },
     "plugins/database": {
       "name": "@singularity/plugin-database",
       "version": "0.0.1",
@@ -2052,6 +2056,8 @@
     "@singularity/plugin-crashes": ["@singularity/plugin-crashes@workspace:plugins/crashes"],
 
     "@singularity/plugin-crashes-launch-fix": ["@singularity/plugin-crashes-launch-fix@workspace:plugins/crashes/plugins/launch-fix"],
+
+    "@singularity/plugin-crashes-mutation-errors": ["@singularity/plugin-crashes-mutation-errors@workspace:plugins/crashes/plugins/mutation-errors"],
 
     "@singularity/plugin-database": ["@singularity/plugin-database@workspace:plugins/database"],
 

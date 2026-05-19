@@ -917,6 +917,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
       - Contributes:
         - `ErrorBoundary.Action` → `LaunchFixButton`
+    - **`mutation-errors`** — Warning toast and persistent notification for unhandled TanStack Query mutation errors.
+      - Contributes:
+        - `Core.Root` → `MutationErrorWatcher`
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Exports (core):
@@ -1217,7 +1220,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineJob('notifications.ttl-cleanup')`
     - Uses: `database.db`
     - Resources: `notifications` (push)
-  - Imported by: `auth`, `branch`, `build`, `build-logs`, `code-review`, `conversation-category`, `conversations-view`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `events-test`, `exit`, `health`, `hold-and-exit`, `launch-prompts`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`, `toaster`
+  - Imported by: `auth`, `branch`, `build`, `build-logs`, `code-review`, `conversation-category`, `conversations-view`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `events-test`, `exit`, `health`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:

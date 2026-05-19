@@ -124,6 +124,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "conversations/plugins/summary", hierarchyPath: "conversations/summary", loader: () => import("@plugins/conversations/plugins/summary/web") },
   { name: "conversations", hierarchyPath: "conversations", loader: () => import("@plugins/conversations/web") },
   { name: "crashes/plugins/launch-fix", hierarchyPath: "crashes/launch-fix", loader: () => import("@plugins/crashes/plugins/launch-fix/web") },
+  { name: "crashes/plugins/mutation-errors", hierarchyPath: "crashes/mutation-errors", loader: () => import("@plugins/crashes/plugins/mutation-errors/web") },
   { name: "crashes", hierarchyPath: "crashes", loader: () => import("@plugins/crashes/web") },
   { name: "debug/plugins/broadcasts", hierarchyPath: "debug/broadcasts", loader: () => import("@plugins/debug/plugins/broadcasts/web") },
   { name: "debug/plugins/claude-cli-calls", hierarchyPath: "debug/claude-cli-calls", loader: () => import("@plugins/debug/plugins/claude-cli-calls/web") },

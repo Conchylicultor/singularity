@@ -33,7 +33,9 @@ export function BellButton() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const notificationsResult = useResource(notificationsResource);
   const list = notificationsResult.pending ? [] : notificationsResult.data;
-  const unreadCount = list.filter((n) => !n.read).length;
+  const unreadCount = list.filter(
+    (n) => !n.read && (n.variant === "error" || n.variant === "warning"),
+  ).length;
 
   const uniqueTypes = Array.from(new Set(list.map((n) => n.type))).filter(Boolean);
   const hasErrors = list.some((n) => n.variant === "error");
