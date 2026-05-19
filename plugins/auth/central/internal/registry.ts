@@ -1,4 +1,4 @@
-import type { Registration } from "@central/types";
+import type { Registration } from "@plugins/framework/plugins/central-core/core";
 import type { AuthProviderDescriptor } from "@plugins/auth/core";
 import { AuthProviderUnknownError } from "@plugins/auth/core";
 

@@ -1,4 +1,4 @@
-import type { CentralPluginDefinition } from "@central/types";
+import type { CentralPluginDefinition } from "@plugins/framework/plugins/central-core/core";
 import { handleOAuthStart } from "./internal/handlers/oauth-start";
 import { handleOAuthCallback } from "./internal/handlers/oauth-callback";
 import { handleDisconnect } from "./internal/handlers/disconnect";

@@ -23,8 +23,8 @@ const COMPOSITION_ROOTS = [
   "web/src/plugins.generated.ts",
   "plugins/framework/plugins/server-core/bin/plugins.ts",
   "plugins/framework/plugins/server-core/bin/plugins.generated.ts",
-  "central/bin/plugins.ts",
-  "central/bin/plugins.generated.ts",
+  "plugins/framework/plugins/central-core/bin/plugins.ts",
+  "plugins/framework/plugins/central-core/bin/plugins.generated.ts",
   "web/src/App.tsx",
 ];
 

@@ -11,7 +11,7 @@ const PUSH_BACK_HINT =
   "without understanding the architectural intent. If a rule blocks a legitimate case, " +
   "STOP and report it — we'll iterate on the design together.";
 
-const SOURCE_ROOTS = ["plugins", "web/src", "central/bin", "cli/src", "tooling/src"];
+const SOURCE_ROOTS = ["plugins", "web/src", "cli/src", "tooling/src"];
 const IGNORED_DIRS = new Set(["node_modules", "dist", "build", ".git"]);
 
 interface Violation {

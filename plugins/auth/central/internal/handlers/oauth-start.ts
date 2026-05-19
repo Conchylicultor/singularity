@@ -1,4 +1,4 @@
-import type { HttpHandler } from "@central/types";
+import type { HttpHandler } from "@plugins/framework/plugins/central-core/core";
 import { tryGetProvider } from "../registry";
 import { resolveCredentials } from "../credentials";
 import {

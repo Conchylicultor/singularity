@@ -14,6 +14,7 @@ The fix: make every top-level directory a regular plugin under `plugins/`. The d
 | 3 | `plugin-core/` → `plugins/` | **Done** (2026-05-14, `715930f7`) — landed in `plugins/framework/plugins/web-sdk/` rather than standalone `plugins/plugin-core/` |
 | 3+ | Remove `@core`/`@web-sdk` aliases | **Done** (2026-05-14, `12c07e5f`) — all consumer imports migrated to canonical `@plugins/framework/plugins/web-sdk/core` paths |
 | 4 | `server/` → `plugins/framework/plugins/server/` | **Done** (2026-05-18) — split into `core/` (framework API) + `bin/` (boot harness); `central/src/` → `central/bin/` for gateway parity |
+| 4b | `central/` → `plugins/framework/plugins/central-core/` | **Done** (2026-05-19) — split into `core/` + `bin/`; `@central/*` alias fully removed, all 8 imports migrated to canonical `@plugins/.../core` paths |
 | 5 | `web/` → `plugins/framework/plugins/web/` | Not started |
 | 7 | `tooling/` → `plugins/framework/plugins/tooling/` | Not started |
 | 6 | `cli/` → `plugins/framework/plugins/cli/` | Not started |
@@ -58,6 +59,25 @@ Split `server/src/` into `core/` (framework API: types, resources, contributions
 - `./singularity check` passes
 - `server/` deleted from repo root
 - All `@server/*` imports resolve to `plugins/framework/plugins/server/core/*`
+
+---
+
+## Phase 4b: `central/` → `plugins/framework/plugins/central-core/`
+
+**Structurally identical to Phase 4** but much smaller — 8 consumer imports across 4 files vs 196 across 163.
+
+Detailed implementation plan: [`research/2026-05-18-phase4b-central-to-plugin.md`](./2026-05-18-phase4b-central-to-plugin.md)
+
+### Summary
+
+Split `central/bin/` into `core/` (framework API: types, resources — 8 imports across 8 files) and `bin/` (boot harness: Bun.serve, topo-sort, lifecycle — zero external consumers). Landed directly as `central-core/` to avoid the server→server-core follow-on rename. Fully removed `@central/*` alias and migrated all 8 consumer imports to canonical `@plugins/framework/plugins/central-core/core` paths. Zero gateway code changes.
+
+### Done when
+
+- `./singularity build` succeeds, server + central boot, `/api/health` returns 200
+- `./singularity check` passes
+- `central/` deleted from repo root
+- All 8 `@central/*` imports migrated to canonical `@plugins/...` paths
 
 ---
 
@@ -202,12 +222,11 @@ Self-referential calls in `push.ts` (CLI spawns itself as subprocess): `bun cli/
 ```
 
 - **3 done**: landed in `plugins/framework/plugins/web-sdk/`
-- **4 next**: most valuable, unlocks the DAG pain point
-- **5 third**: simple, no dependents
+- **4 done**: landed in `plugins/framework/plugins/server-core/`
+- **4b done**: landed in `plugins/framework/plugins/central-core/`
+- **5 next**: simple, no dependents
 - **7 before 6**: CLI imports `@tooling/*`
 - **6 last**: pure leaf consumer
-
-Phases 4 and 5 are independent and could run in parallel if desired.
 
 ## End State
 
@@ -217,9 +236,10 @@ After all phases, the repo root simplifies to:
 ├── plugins/
 │   ├── framework/
 │   │   └── plugins/
-│   │       ├── web-sdk/   ← Phase 3, done
-│   │       ├── server/    ← Phase 4
-│   │       ├── web/       ← Phase 5
+│   │       ├── web-sdk/      ← Phase 3, done
+│   │       ├── server-core/  ← Phase 4, done
+│   │       ├── central-core/ ← Phase 4b, done
+│   │       ├── web/          ← Phase 5
 │   │       ├── tooling/   ← Phase 7
 │   │       └── cli/       ← Phase 6
 │   ├── shell/
@@ -237,7 +257,7 @@ After all phases, the repo root simplifies to:
 ```typescript
 zones: [
   zone("plugin", { match: "plugins", discover: "plugin-tree" }),
-  zone("central", { match: "central" }),  // until Phase 4b
+  // web, cli, tooling zones remain until Phases 5/6/7
 ],
 ```
 

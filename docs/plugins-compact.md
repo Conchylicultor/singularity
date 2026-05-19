@@ -200,6 +200,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
+    - **`central-core`**
     - **`server-core`**
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
 

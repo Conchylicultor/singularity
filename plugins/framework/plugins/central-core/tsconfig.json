@@ -12,18 +12,18 @@
     "jsx": "react-jsx",
     "types": ["@types/bun"],
     "paths": {
-      "@plugins/*": ["../plugins/*"],
-      "@central/*": ["./bin/*"]
+      "@plugins/*": ["../../../*"]
     }
   },
   "exclude": [
-    "../plugins/framework/plugins/web-sdk/**",
+    "../../../framework/plugins/web-sdk/**",
     "**/node_modules"
   ],
   "include": [
     "bin",
-    "../**/plugins/*/central",
-    "../**/plugins/*/core",
-    "../**/plugins/*/shared"
+    "core",
+    "../../../../**/plugins/*/central",
+    "../../../../**/plugins/*/core",
+    "../../../../**/plugins/*/shared"
   ]
 }

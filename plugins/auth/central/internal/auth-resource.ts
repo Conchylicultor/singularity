@@ -1,4 +1,4 @@
-import { defineResource } from "@central/resources";
+import { defineResource } from "@plugins/framework/plugins/central-core/core";
 import { z } from "zod";
 import type { AuthStateValue, AuthAccountState } from "@plugins/auth/core";
 import { computeAuthState, warmAuthState } from "./auth-state";

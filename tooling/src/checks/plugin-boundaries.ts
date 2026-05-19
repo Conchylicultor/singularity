@@ -9,10 +9,10 @@ const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 // import grammar (R4) and the "default-import is registry-only" rule (R5)).
 //
 // Principled exemptions:
-//   - web/src/plugins.ts / server/src/plugins.ts / central/src/plugins.ts: plugin
+//   - web/src/plugins.ts / server-core/bin/plugins.ts / central-core/bin/plugins.ts: plugin
 //     registries (today, 1-line re-exports of the .generated.ts twins).
-//   - web/src/plugins.generated.ts / server/src/plugins.generated.ts /
-//     central/src/plugins.generated.ts: codegen output of `./singularity build`,
+//   - web/src/plugins.generated.ts / server-core/bin/plugins.generated.ts /
+//     central-core/bin/plugins.generated.ts: codegen output of `./singularity build`,
 //     emits one default-import per plugin barrel by design.
 //
 const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
@@ -21,9 +21,9 @@ const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
   "plugins/framework/plugins/server-core/bin/plugins.ts",
   "plugins/framework/plugins/server-core/bin/plugins.generated.ts",
   "plugins/framework/plugins/server-core/bin/index.ts",
-  "central/bin/plugins.ts",
-  "central/bin/plugins.generated.ts",
-  "central/bin/index.ts",
+  "plugins/framework/plugins/central-core/bin/plugins.ts",
+  "plugins/framework/plugins/central-core/bin/plugins.generated.ts",
+  "plugins/framework/plugins/central-core/bin/index.ts",
 ]);
 
 const VALID_RUNTIMES = new Set(["web", "server", "central", "core", "shared"]);
@@ -369,7 +369,7 @@ function pluginForPath(relFile: string, pluginSet: Set<string>): string | null {
 // Source-file discovery
 // ============================================================================
 
-const SOURCE_ROOTS = ["plugins", "web/src", "central/bin"];
+const SOURCE_ROOTS = ["plugins", "web/src"];
 const IGNORED_DIRS = new Set(["node_modules", "dist", ".git"]);
 
 function findSourceFiles(root: string): string[] {

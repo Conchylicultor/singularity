@@ -59,7 +59,7 @@ interface CentralRoutesManifest {
 }
 
 /**
- * Runtime-level routes registered by `central/src/index.ts` itself rather
+ * Runtime-level routes registered by `central-core/bin/index.ts` itself rather
  * than by any plugin's barrel. The build pipeline can't see these via plugin
  * scanning, so they're hard-coded baseline entries on the manifest.
  */
@@ -512,13 +512,13 @@ export function registerBuild(program: Command) {
 
       // 2b'. Write the central spec early too — otherwise the gateway has no
       // way to spawn central. (Repeated at end of build for idempotency.)
-      // central.json always points at *main's* central/, not the current
+      // central.json always points at *main's* central-core/, not the current
       // worktree's: central is a singleton serving every worktree, so the
       // canonical source is main. The file is idempotent across worktree
       // builds — same content every time.
       endSpan = buildProfilerStart("centralJson", "build:codegen", "central.json");
       const mainRoot = await getMainRepoRoot();
-      const centralDir = resolve(mainRoot, "central");
+      const centralDir = resolve(mainRoot, "plugins/framework/plugins/central-core");
       if (existsSync(join(centralDir, "bin", "index.ts"))) {
         mkdirSync(WORKTREES_DIR, { recursive: true });
         writeFileSync(
@@ -589,7 +589,7 @@ export function registerBuild(program: Command) {
       // Type-check the *worktree's* central, not main's: local edits must be
       // validated even though the running central runs main's code. (Errors
       // here would otherwise only surface after merge.)
-      const worktreeCentralDir = resolve(root, "central");
+      const worktreeCentralDir = resolve(root, "plugins/framework/plugins/central-core");
       if (existsSync(join(worktreeCentralDir, "bin", "index.ts"))) {
         endSpan = buildProfilerStart("tscCentral", "build:validation", "tsc central");
         console.log("Type-checking central...");
@@ -646,7 +646,7 @@ export function registerBuild(program: Command) {
       await writeCentralRoutesManifest(root);
 
       // 6c. Re-register the `central` worktree spec for idempotency. Path is
-      // always main's central/ — see comment at the early write above.
+      // always main's central-core/ — see comment at the early write above.
       if (existsSync(join(centralDir, "bin", "index.ts"))) {
         const centralSpec = { server: centralDir };
         writeFileSync(
@@ -656,7 +656,7 @@ export function registerBuild(program: Command) {
 
         // 6d. Restart central so it picks up freshly-merged main code. Only
         // done when building from main — agent worktrees never change central's
-        // running code (central always runs main's central/), so restarting on
+        // running code (central always runs main's central-core/), so restarting on
         // every worktree build would needlessly drop every open WS connection.
         if (root === mainRoot) {
           endSpan = buildProfilerStart("restartCentral", "build:deploy", "restart central");

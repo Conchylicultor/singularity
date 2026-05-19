@@ -5,7 +5,7 @@
 // and rebuild — this file regenerates from the filesystem. The
 // `plugins-registry-in-sync` check fails on drift.
 
-import type { CentralPluginDefinition } from "./types";
+import type { CentralPluginDefinition } from "@plugins/framework/plugins/central-core/core";
 import authPlugin from "@plugins/auth/central";
 import authGooglePlugin from "@plugins/auth/plugins/google/central";
 import authNotionPlugin from "@plugins/auth/plugins/notion/central";

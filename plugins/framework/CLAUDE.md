@@ -6,6 +6,7 @@
 
 - Description: Umbrella for framework primitives: web plugin SDK, server, central
 - Sub-plugins:
+  - **`central-core`**
   - **`server-core`**
   - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
 

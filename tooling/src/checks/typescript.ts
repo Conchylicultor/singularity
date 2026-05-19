@@ -28,20 +28,22 @@ export const typescript: Check = {
   async run() {
     const root = await getRoot();
 
-    const [web, server, tooling] = await Promise.all([
+    const [web, server, central, tooling] = await Promise.all([
       runTsc(`${root}/web`, ["-p", "tsconfig.app.json"]),
       runTsc(`${root}/plugins/framework/plugins/server-core`, []),
+      runTsc(`${root}/plugins/framework/plugins/central-core`, []),
       runTsc(`${root}/tooling`, []),
     ]);
 
-    if (web.ok && server.ok && tooling.ok) return { ok: true };
+    if (web.ok && server.ok && central.ok && tooling.ok) return { ok: true };
 
     const sections: string[] = [];
     if (!web.ok) sections.push(`web:\n    ${web.errors.split("\n").join("\n    ")}`);
     if (!server.ok) sections.push(`server:\n    ${server.errors.split("\n").join("\n    ")}`);
+    if (!central.ok) sections.push(`central:\n    ${central.errors.split("\n").join("\n    ")}`);
     if (!tooling.ok) sections.push(`tooling:\n    ${tooling.errors.split("\n").join("\n    ")}`);
 
-    const combined = `${web.ok ? "" : web.errors}\n${server.ok ? "" : server.errors}\n${tooling.ok ? "" : tooling.errors}`;
+    const combined = `${web.ok ? "" : web.errors}\n${server.ok ? "" : server.errors}\n${central.ok ? "" : central.errors}\n${tooling.ok ? "" : tooling.errors}`;
     const hasMissingModule = /error TS2307: Cannot find module/.test(combined);
     const hint = hasMissingModule
       ? "A \"Cannot find module\" error for a dep you didn't touch is usually a missing workspace link — run ./singularity build first (it re-runs bun install) and re-push. Otherwise: fix type errors before pushing; if a cast is necessary, fix the type definition instead."

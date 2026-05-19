@@ -1,6 +1,6 @@
-import type { WsData, HttpHandler, WsHandler } from "./types";
+import type { WsData, HttpHandler, WsHandler } from "@plugins/framework/plugins/central-core/core";
 import { plugins } from "./plugins";
-import { notificationsWsHandler, handleResourceHttp } from "./resources";
+import { notificationsWsHandler, handleResourceHttp } from "@plugins/framework/plugins/central-core/core";
 import { topoSortPlugins } from "./topo";
 
 // Phase 1 — register: sequential, topo-sorted. Each plugin's `register`

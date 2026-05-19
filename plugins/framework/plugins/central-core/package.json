@@ -1,5 +1,5 @@
 {
-  "name": "@singularity/central",
+  "name": "@singularity/plugin-framework-central-core",
   "private": true,
   "type": "module",
   "devDependencies": {

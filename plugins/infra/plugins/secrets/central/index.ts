@@ -1,4 +1,4 @@
-import type { CentralPluginDefinition } from "@central/types";
+import type { CentralPluginDefinition } from "@plugins/framework/plugins/central-core/core";
 import { onReady } from "./internal/boot";
 import {
   handleDelete,
