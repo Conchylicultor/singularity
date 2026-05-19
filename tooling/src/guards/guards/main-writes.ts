@@ -19,6 +19,21 @@ const ALL_ARGS_CMDS = new Set([
   "unlink",
 ]);
 const INPLACE_FLAG_CMDS = new Set(["sed", "perl"]);
+const GIT_MUTATING_SUBCMDS = new Set([
+  "rm",
+  "add",
+  "commit",
+  "reset",
+  "checkout",
+  "restore",
+  "stash",
+  "clean",
+  "revert",
+  "cherry-pick",
+  "merge",
+  "rebase",
+  "push",
+]);
 
 export const mainWritesGuard = defineGuard<BashInput>({
   name: "main-writes",
@@ -30,7 +45,7 @@ export const mainWritesGuard = defineGuard<BashInput>({
     if (!cmd) return null;
 
     const repo = resolve(ctx.cwd, "../../..");
-    if (!cmd.includes(`${repo}/`)) return null;
+    if (!cmd.includes(repo)) return null;
 
     const isMainBranch = (p: string) =>
       p.startsWith(`${repo}/`) && !p.startsWith(`${ctx.cwd}/`);
@@ -40,6 +55,26 @@ export const mainWritesGuard = defineGuard<BashInput>({
     for (const r of redirections) {
       if (isMainBranch(r.target)) {
         return violation(`redirection target '${r.target}'`, repo, ctx.cwd);
+      }
+    }
+
+    const cdsToMain = calls.some(
+      (c) =>
+        c.name === "cd" &&
+        c.args.some((a) => {
+          const resolved = resolve(a);
+          return resolved === repo || resolved.startsWith(`${repo}/`);
+        }),
+    );
+    if (cdsToMain) {
+      for (const call of calls) {
+        if (call.name === "git" && GIT_MUTATING_SUBCMDS.has(call.args[0])) {
+          return violation(
+            `git ${call.args[0]} after cd into main repo`,
+            repo,
+            ctx.cwd,
+          );
+        }
       }
     }
 
