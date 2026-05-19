@@ -202,6 +202,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`central-core`**
     - **`server-core`**
+    - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
