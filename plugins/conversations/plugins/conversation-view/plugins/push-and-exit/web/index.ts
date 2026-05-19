@@ -7,5 +7,5 @@ export default {
   name: "Conversation: Push & Exit",
   description:
     "Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.",
-  contributions: [PromptEditorSlots.FloatingAction({ id: "push-and-exit", component: PushAndExitButton })],
+  contributions: [PromptEditorSlots.FloatingAction({ id: "push-and-exit", component: PushAndExitButton, alwaysActive: true })],
 } satisfies PluginDefinition;

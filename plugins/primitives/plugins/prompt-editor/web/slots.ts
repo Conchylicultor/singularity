@@ -10,5 +10,6 @@ export interface PromptEditorActionProps {
 export const PromptEditorSlots = {
   FloatingAction: defineRenderSlot<{
     component: ComponentType<PromptEditorActionProps>;
+    alwaysActive?: boolean;
   }>("prompt-editor.floating-action"),
 };

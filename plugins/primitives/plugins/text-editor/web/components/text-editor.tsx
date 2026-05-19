@@ -141,11 +141,11 @@ function EditorShell({
         "border-input",
         "has-[:focus-visible]:border-ring has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
         disabled
-          ? "pointer-events-none cursor-not-allowed opacity-50 bg-input/50 dark:bg-input/80"
+          ? "bg-input/50 dark:bg-input/80"
           : "bg-transparent dark:bg-input/30",
       )}
     >
-      <div className="relative">
+      <div className={cn("relative", disabled && "opacity-50 pointer-events-none cursor-not-allowed")}>
         <PlainTextPlugin
           contentEditable={
             <ContentEditable

@@ -6,6 +6,7 @@ import {
   $getSelection,
   $isRangeSelection,
 } from "lexical";
+import { cn } from "@/lib/utils";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { PromptEditorSlots } from "../slots";
 
@@ -26,6 +27,8 @@ export function PromptEditor(props: {
 }) {
   return <TextEditor {...props} bottomSlot={<ToolbarRow />} />;
 }
+
+const disabledPartCls = "opacity-50 pointer-events-none select-none";
 
 function ToolbarRow() {
   const [editor] = useLexicalComposerContext();
@@ -78,16 +81,20 @@ function ToolbarRow() {
     [editor],
   );
 
-  if (!editable || items.length === 0) return null;
+  const hasAlwaysActive = !editable && items.some((i) => i.alwaysActive);
+  if (items.length === 0) return null;
+  if (!editable && !hasAlwaysActive) return null;
   return (
     <div className="flex items-center px-2 pb-1.5" onMouseDown={focusEditor}>
       <PromptEditorSlots.FloatingAction.Render>
         {(item) => (
-          <item.component
-            insertText={insertText}
-            getContent={getContent}
-            clearContent={clearContent}
-          />
+          <div className={cn(!editable && !item.alwaysActive && disabledPartCls)}>
+            <item.component
+              insertText={insertText}
+              getContent={getContent}
+              clearContent={clearContent}
+            />
+          </div>
         )}
       </PromptEditorSlots.FloatingAction.Render>
     </div>
