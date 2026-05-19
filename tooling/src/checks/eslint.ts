@@ -34,7 +34,7 @@ function bustCacheIfStale(root: string, cacheLocation: string): void {
   const cacheMtime = statSync(cacheLocation).mtimeMs;
 
   const lintSourceDirs = [
-    join(root, "tooling", "src", "lint"),
+    join(root, "plugins", "framework", "plugins", "tooling", "plugins", "lint", "core"),
     ...findPluginLintDirs(root),
   ];
   const configFile = join(root, "eslint.config.ts");
@@ -107,7 +107,7 @@ export const eslintCheck: Check = {
     return {
       ok: false,
       message: `ESLint reported violations:\n  ${combined.split("\n").join("\n  ")}`,
-      hint: "Global rules live in tooling/src/lint/; plugin rules in plugins/<name>/lint/index.ts. Do NOT silence violations with eslint-disable comments or modify rule configs to make them pass. If you believe a violation is a false positive, STOP and report it to the user — do not work around it.",
+      hint: "Global rules live in plugins/framework/plugins/tooling/plugins/lint/core/; plugin rules in plugins/<name>/lint/index.ts. Do NOT silence violations with eslint-disable comments or modify rule configs to make them pass. If you believe a violation is a false positive, STOP and report it to the user — do not work around it.",
     };
   },
 };

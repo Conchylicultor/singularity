@@ -26,6 +26,7 @@ const COMPOSITION_ROOTS = [
   "plugins/framework/plugins/central-core/bin/plugins.ts",
   "plugins/framework/plugins/central-core/bin/plugins.generated.ts",
   "plugins/framework/plugins/web-core/web/App.tsx",
+  "eslint.config.ts",
 ];
 
 export const noPluginImportsInCore: Check = {

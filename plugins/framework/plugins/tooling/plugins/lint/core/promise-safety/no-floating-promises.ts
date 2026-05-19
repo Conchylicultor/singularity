@@ -1,6 +1,6 @@
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 
-const original = tsPlugin.rules!["no-floating-promises"];
+const original = tsPlugin.rules!["no-floating-promises"]!;
 
 const GUIDANCE =
   "\n\nDo NOT silently swallow errors with .catch(() => {}) or .catch(console.error) — this hides bugs." +

@@ -28,6 +28,8 @@ export default defineBoundaries({
 
     // Web entry point and tooling can import the web-sdk plugin (PluginProvider, PluginDefinition, etc.)
     allow("tooling -> plugin.framework.web-sdk"),
+    // Temporary: shim in tooling/src/eslint/ re-exports from the migrated lint plugin (removed in Phase 7.5)
+    allow("tooling -> plugin.framework.tooling.lint"),
 
     // Plugins can import other plugins
     allow("plugin.** -> plugin.**"),

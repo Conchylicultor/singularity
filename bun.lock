@@ -677,6 +677,10 @@
       "name": "@singularity/plugin-framework-tooling-guards",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint": {
+      "name": "@singularity/plugin-framework-tooling-lint",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/web-core": {
       "name": "@singularity/web",
       "version": "0.0.1",
@@ -2102,6 +2106,8 @@
     "@singularity/plugin-framework-tooling": ["@singularity/plugin-framework-tooling@workspace:plugins/framework/plugins/tooling"],
 
     "@singularity/plugin-framework-tooling-guards": ["@singularity/plugin-framework-tooling-guards@workspace:plugins/framework/plugins/tooling/plugins/guards"],
+
+    "@singularity/plugin-framework-tooling-lint": ["@singularity/plugin-framework-tooling-lint@workspace:plugins/framework/plugins/tooling/plugins/lint"],
 
     "@singularity/plugin-framework-web-sdk": ["@singularity/plugin-framework-web-sdk@workspace:plugins/framework/plugins/web-sdk"],
 

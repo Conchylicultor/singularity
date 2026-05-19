@@ -24,8 +24,8 @@ import reactHooks from "eslint-plugin-react-hooks";
 import {
   discoverAllowDefaultProject,
   findPluginDirs,
-} from "./tooling/src/eslint/allow-default-project";
-import { promiseSafetyRules } from "./tooling/src/lint/promise-safety/index";
+  promiseSafetyRules,
+} from "./plugins/framework/plugins/tooling/plugins/lint/core";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pluginsRoot = join(here, "plugins");

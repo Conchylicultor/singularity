@@ -206,6 +206,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Plugins:
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
+        - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
