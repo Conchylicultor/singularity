@@ -14,13 +14,17 @@
  * registered in baseConfigs below — they apply to all `**\/*.{ts,tsx}` files.
  */
 
-import { existsSync, readdirSync } from "fs";
+import { existsSync } from "fs";
 import { dirname, join, sep } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import type { Linter } from "eslint";
 import reactHooks from "eslint-plugin-react-hooks";
+import {
+  discoverAllowDefaultProject,
+  findPluginDirs,
+} from "./tooling/src/eslint/allow-default-project";
 import { promiseSafetyRules } from "./tooling/src/lint/promise-safety/index";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -32,34 +36,6 @@ interface PluginContribution {
   /** ESLint plugin namespace — must match the lint barrel's `name`. */
   name: string;
   rules: Record<string, unknown>;
-}
-
-function findPluginDirs(root: string): string[] {
-  const out: string[] = [];
-  function walk(dir: string, depth: number) {
-    if (depth > 10) return;
-    const hasWeb = existsSync(join(dir, "web", "index.ts"));
-    const hasServer = existsSync(join(dir, "server", "index.ts"));
-    const hasCentral = existsSync(join(dir, "central", "index.ts"));
-    if ((hasWeb || hasServer || hasCentral) && dir !== root) out.push(dir);
-    let entries;
-    try {
-      entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const e of entries) {
-      if (!e.isDirectory()) continue;
-      if (dir === root) walk(join(dir, e.name), depth + 1);
-      else if (e.name === "plugins") {
-        for (const c of readdirSync(join(dir, e.name), { withFileTypes: true })) {
-          if (c.isDirectory()) walk(join(dir, e.name, c.name), depth + 1);
-        }
-      }
-    }
-  }
-  walk(root, 0);
-  return out;
 }
 
 async function discoverPluginContributions(): Promise<PluginContribution[]> {
@@ -99,15 +75,7 @@ const baseConfigs: Linter.Config[] = [
         ecmaVersion: "latest",
         sourceType: "module",
         projectService: {
-          allowDefaultProject: [
-            "*.config.ts",
-            "plugins/framework/plugins/web-core/vitest.config.ts",
-            "plugins/database/plugins/migrations/drizzle.config.ts",
-            "plugins/*/scripts/*.ts",
-            "plugins/*/*.config.ts",
-            "plugins/*/plugins/*/scripts/*.ts",
-            "plugins/*/plugins/*/lint/*.ts",
-          ],
+          allowDefaultProject: discoverAllowDefaultProject(here),
           defaultProject: "plugins/framework/plugins/web-core/tsconfig.app.json",
         },
         tsconfigRootDir: here,

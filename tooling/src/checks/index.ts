@@ -3,6 +3,7 @@ import { join, sep } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { createBoundaryCheck } from "../boundaries/check";
 import boundaryConfig from "../../../boundary.config";
+import { allowDefaultProjectInSync } from "./allow-default-project";
 import { conversationTrailer } from "./conversation-trailer";
 import { eslintCheck } from "./eslint";
 import { migrationsInSync } from "./migrations-in-sync";
@@ -25,6 +26,7 @@ import type { Check } from "./types";
 const boundaryRules = createBoundaryCheck(boundaryConfig);
 
 export const CHECKS: Check[] = [
+  allowDefaultProjectInSync,
   conversationTrailer,
   migrationsInSync,
   snapshotChainIntact,
