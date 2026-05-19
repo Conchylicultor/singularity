@@ -9,7 +9,7 @@ import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 export async function getMainAheadCount(): Promise<number> {
   let base = "HEAD";
   try {
-    const stored = (await Bun.file(`${REPO_ROOT}/web/dist/.build-commit`).text()).trim();
+    const stored = (await Bun.file(`${REPO_ROOT}/plugins/framework/plugins/web-core/dist/.build-commit`).text()).trim();
     if (stored) base = stored;
   } catch {}
   const proc = Bun.spawnSync(["git", "log", `${base}..refs/heads/main`, "--oneline"], {
