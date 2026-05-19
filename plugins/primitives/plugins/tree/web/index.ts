@@ -20,6 +20,12 @@ export type {
 } from "./internal/use-tree-row";
 export type { TreeItem } from "./internal/types";
 
+export { useSubtreeExpandAll } from "./internal/use-subtree-expand-all";
+export type {
+  ExpandableRow,
+  UseSubtreeExpandAllReturn,
+} from "./internal/use-subtree-expand-all";
+
 export default {
   id: "tree",
   name: "Tree",

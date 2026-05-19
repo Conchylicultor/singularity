@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
-import { MdUnfoldMore, MdUnfoldLess } from "react-icons/md";
+import { useMemo } from "react";
+import { useExpandAll, ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import type { Source } from "@plugins/review/web";
 import { usePluginChanges } from "../use-plugin-changes";
 import { PluginChangeCard } from "./plugin-change-card";
@@ -12,29 +12,13 @@ export function PluginChangesSection({
   source: Source;
 }) {
   const { data, isPending, error } = usePluginChanges(conversationId, source);
-  const [expandedSet, setExpandedSet] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
 
   const allPaths = useMemo(
     () => data?.plugins.map((p) => p.path) ?? [],
     [data],
   );
 
-  const allExpanded = allPaths.length > 0 && allPaths.every((p) => expandedSet.has(p));
-
-  const toggleAll = useCallback(() => {
-    setExpandedSet(allExpanded ? new Set() : new Set(allPaths));
-  }, [allExpanded, allPaths]);
-
-  const toggle = useCallback((path: string) => {
-    setExpandedSet((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) next.delete(path);
-      else next.add(path);
-      return next;
-    });
-  }, []);
+  const { expanded: expandedSet, allExpanded, toggleAll, toggle } = useExpandAll(allPaths);
 
   if (isPending) {
     return (
@@ -57,22 +41,11 @@ export function PluginChangesSection({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex justify-end">
-        <button
-          onClick={toggleAll}
-          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          {allExpanded ? (
-            <>
-              <MdUnfoldLess className="size-3.5" />
-              Collapse all
-            </>
-          ) : (
-            <>
-              <MdUnfoldMore className="size-3.5" />
-              Expand all
-            </>
-          )}
-        </button>
+        <ExpandAllButton
+          variant="full"
+          allExpanded={allExpanded}
+          onToggle={toggleAll}
+        />
       </div>
       {data.plugins.map((plugin) => (
         <PluginChangeCard

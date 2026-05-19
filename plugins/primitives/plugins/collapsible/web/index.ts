@@ -19,6 +19,12 @@ export type {
   UseCollapsibleReturn,
 } from "./internal/use-collapsible";
 
+export { useExpandAll } from "./internal/use-expand-all";
+export type { UseExpandAllReturn } from "./internal/use-expand-all";
+
+export { ExpandAllButton } from "./internal/expand-all-button";
+export type { ExpandAllButtonProps } from "./internal/expand-all-button";
+
 export default {
   id: "collapsible",
   name: "Collapsible",

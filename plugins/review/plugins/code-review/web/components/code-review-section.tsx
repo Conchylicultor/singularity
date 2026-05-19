@@ -1,10 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent, CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent, CollapsibleChevron, useExpandAll, ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import type { Source } from "@plugins/review/web";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
-import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { reviewSectionsResource } from "../../shared";
@@ -96,13 +95,19 @@ function FileList({
   head?: string;
   emptyLabel: string;
 }) {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const reviewSectionsResult = useResource(reviewSectionsResource);
 
   const sorted = useMemo(() => {
     if (!files) return null;
     return [...files].sort((a, b) => a.path.localeCompare(b.path));
   }, [files]);
+
+  const sortedPaths = useMemo(
+    () => sorted?.map((f) => f.path) ?? [],
+    [sorted],
+  );
+
+  const { expanded, allExpanded, toggleAll, toggle: toggleOne } = useExpandAll(sortedPaths);
 
   const sections = useMemo((): FileSection[] | null => {
     if (!sorted) return null;
@@ -113,27 +118,6 @@ function FileList({
     () => (sorted ? sumStats(sorted) : { count: 0, additions: 0, deletions: 0 }),
     [sorted],
   );
-
-  const allExpanded =
-    sorted != null && sorted.length > 0 && expanded.size === sorted.length;
-
-  function toggleAll() {
-    if (!sorted) return;
-    if (allExpanded) {
-      setExpanded(new Set());
-    } else {
-      setExpanded(new Set(sorted.map((f) => f.path)));
-    }
-  }
-
-  function toggleOne(path: string) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) next.delete(path);
-      else next.add(path);
-      return next;
-    });
-  }
 
   return (
     <>
@@ -182,7 +166,7 @@ function FileSectionBlock({
   worktree: string;
   base: string;
   head?: string;
-  expanded: Set<string>;
+  expanded: ReadonlySet<string>;
   onToggle: (path: string) => void;
 }) {
   const label = section.name ?? "Changes";
@@ -242,14 +226,12 @@ function ToolbarRow({
         </span>
       </div>
       <div className="flex flex-1 items-center justify-end gap-1">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onToggleAll}
+        <ExpandAllButton
+          variant="full"
+          allExpanded={allExpanded}
+          onToggle={onToggleAll}
           disabled={!canToggle}
-        >
-          {allExpanded ? "Collapse all" : "Expand all"}
-        </Button>
+        />
       </div>
     </div>
   );

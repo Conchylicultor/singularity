@@ -3,9 +3,8 @@ import {
   MdAdd,
   MdFilterAlt,
   MdFilterAltOff,
-  MdUnfoldLess,
-  MdUnfoldMore,
 } from "react-icons/md";
+import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import {
   DndContext,
   DragOverlay,
@@ -303,19 +302,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
               </div>
               <div className="ml-auto flex items-center gap-1">
                 {showExpandAll && (
-                  <button
-                    type="button"
-                    onClick={expandAll}
-                    title={allExpanded ? "Collapse all" : "Expand all"}
-                    aria-label={allExpanded ? "Collapse all" : "Expand all"}
-                    className="hover:bg-accent text-muted-foreground hover:text-foreground flex size-7 items-center justify-center rounded"
-                  >
-                    {allExpanded ? (
-                      <MdUnfoldLess className="size-4" />
-                    ) : (
-                      <MdUnfoldMore className="size-4" />
-                    )}
-                  </button>
+                  <ExpandAllButton allExpanded={allExpanded} onToggle={expandAll} />
                 )}
                 {toolbar.hideTerminal && (
                   <button

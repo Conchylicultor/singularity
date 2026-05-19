@@ -1285,8 +1285,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `Breadcrumb`
     - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
       - Exports (web):
-        - Types: `CollapsibleChevronProps`, `CollapsibleContentProps`, `CollapsibleProps`, `CollapsibleTriggerProps`, `UseCollapsibleOptions`, `UseCollapsibleReturn`
-        - Values: `Collapsible`, `CollapsibleChevron`, `CollapsibleContent`, `CollapsibleTrigger`, `useCollapsible`
+        - Types: `CollapsibleChevronProps`, `CollapsibleContentProps`, `CollapsibleProps`, `CollapsibleTriggerProps`, `ExpandAllButtonProps`, `UseCollapsibleOptions`, `UseCollapsibleReturn`, `UseExpandAllReturn`
+        - Values: `Collapsible`, `CollapsibleChevron`, `CollapsibleContent`, `CollapsibleTrigger`, `ExpandAllButton`, `useCollapsible`, `useExpandAll`
     - **`color-picker`** — Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.
       - Exports (web):
         - Types: `AlphaSliderProps`, `ColorAreaProps`, `ColorInputProps`, `ColorPickerPopoverProps`, `ColorPickerProps`, `HueSliderProps`, `SwatchGridProps`
@@ -1473,8 +1473,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `DropZone`, `TreeNode`
         - Values: `buildTree`, `computeDrop`, `isDescendant`
       - Exports (web):
-        - Types: `RenameInputProps`, `RowChromeMenuHelpers`, `RowChromeProps`, `RowControls`, `RowMenuItem`, `TreeItem`, `TreeListContextValue`, `TreeListProps`
-        - Values: `hideTerminalSubtrees`, `RenameInput`, `RowChrome`, `TreeList`, `useTreeListContext`, `useTreeRow`
+        - Types: `ExpandableRow`, `RenameInputProps`, `RowChromeMenuHelpers`, `RowChromeProps`, `RowControls`, `RowMenuItem`, `TreeItem`, `TreeListContextValue`, `TreeListProps`, `UseSubtreeExpandAllReturn`
+        - Values: `hideTerminalSubtrees`, `RenameInput`, `RowChrome`, `TreeList`, `useSubtreeExpandAll`, `useTreeListContext`, `useTreeRow`
 
 - **`reorder`** — Generic reorder primitive. Slots opt in via defineRenderSlot reorder config; DnD is automatic via middleware. Generic reorder primitive: per-worktree storage of slot contribution ranks.
   - Defines:
