@@ -523,7 +523,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
       - Contributes:
         - `Pane.Register` "conversation"
-      - Slot contributors: `agents`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `dependencies`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `push-and-exit`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+      - Slot contributors: `agents`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `dependencies`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `resume`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Exports (web):
@@ -759,7 +759,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Types: `JobState`
             - Values: `cancelPushAndExit`, `pushAndExitResource`, `startPushAndExit`
           - Contributes:
-            - `Conversation.PromptBar` "Exit" → `PushAndExitButton`
+            - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
           - Server:
             - Register: `defineJob('push_and_exit.run')`, `defineJob('push_and_exit.exit_clean_finalize')`, `mcpTool('exit_clean')`, `mcpTool('flag_raise')`
             - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.sendTurn`, `database.db`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`

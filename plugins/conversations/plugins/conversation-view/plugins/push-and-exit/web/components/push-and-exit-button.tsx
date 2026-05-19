@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MdDeleteForever, MdRocketLaunch, MdSend } from "react-icons/md";
 import { LogOut, Play } from "lucide-react";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { isDraftEmpty } from "@plugins/conversations/plugins/conversation-view/web";
+import { isDraftEmpty, conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, useConversation } from "@plugins/conversations/web";
 import { isActiveStatus } from "@plugins/conversations/core";
 import { ShellCommands as Shell } from "@plugins/shell/web";
@@ -10,6 +9,7 @@ import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pushesResource } from "@plugins/tasks/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
+import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -26,11 +26,8 @@ import {
 
 type Mode = "send" | "push-and-exit" | "exit" | "drop-and-exit" | "go";
 
-export function PushAndExitButton({
-  conversation,
-}: {
-  conversation: ConversationRecord;
-}) {
+export function PushAndExitButton(_: PromptEditorActionProps) {
+  const { conversation } = conversationPane.useData();
   const live = useConversation(conversation.id) ?? conversation;
   const jobsResult = useResource(pushAndExitResource);
   const job = jobsResult.pending ? undefined : (jobsResult.data[conversation.id] as JobState | undefined);

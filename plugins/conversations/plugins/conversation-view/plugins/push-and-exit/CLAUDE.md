@@ -11,7 +11,7 @@
   - Types: `JobState`
   - Values: `cancelPushAndExit`, `pushAndExitResource`, `startPushAndExit`
 - Contributes:
-  - `Conversation.PromptBar` "Exit" → `PushAndExitButton`
+  - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
 - Server:
   - Register: `defineJob('push_and_exit.run')`, `defineJob('push_and_exit.exit_clean_finalize')`, `mcpTool('exit_clean')`, `mcpTool('flag_raise')`
   - Uses: `conversations.ConversationTurnCompletedPayload`, `conversations.afterTurn`, `conversations.conversationTurnCompleted`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.sendTurn`, `database.db`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
