@@ -18,7 +18,7 @@ const ALLOWED_PATHS = [
   // Non-plugin runtimes that cannot import from @plugins — each has its own canonical paths file.
   "cli/src/paths.ts",
   // Tooling inlines the subset of paths it needs (HOME_DIR, libpqEnv) to avoid depending on cli/.
-  "tooling/src/guards/guards/main-edits.ts",
+  "plugins/framework/plugins/tooling/plugins/guards/core/guards/main-edits.ts",
   "tooling/src/checks/migrations-in-sync.ts",
   // Database plugin owns its own embedded-PG path constants and config
   // reader. Lives in shared/ so server, central, and CLI can all import

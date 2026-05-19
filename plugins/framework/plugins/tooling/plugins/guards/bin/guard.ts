@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { runHook } from "./guards/runner";
+import { runHook } from "../core/runner";
 
 const chunks: Buffer[] = [];
 for await (const chunk of process.stdin) chunks.push(chunk as Buffer);

@@ -1057,6 +1057,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Exports (core):
         - Types: `Check`, `CheckResult`
+      - Plugins:
+        - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
+          - Exports (core):
+            - Types: `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`
+            - Values: `createContext`, `defineGuard`, `GUARDS`, `parseShell`
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
       - Exports (core):
         - Types: `Contribution`, `DocMeta`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `Slot`

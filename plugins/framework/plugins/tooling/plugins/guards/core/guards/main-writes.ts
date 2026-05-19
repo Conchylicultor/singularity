@@ -68,9 +68,10 @@ export const mainWritesGuard = defineGuard<BashInput>({
     );
     if (cdsToMain) {
       for (const call of calls) {
-        if (call.name === "git" && GIT_MUTATING_SUBCMDS.has(call.args[0])) {
+        const subcmd = call.args[0];
+        if (call.name === "git" && subcmd && GIT_MUTATING_SUBCMDS.has(subcmd)) {
           return violation(
-            `git ${call.args[0]} after cd into main repo`,
+            `git ${subcmd} after cd into main repo`,
             repo,
             ctx.cwd,
           );
@@ -82,9 +83,10 @@ export const mainWritesGuard = defineGuard<BashInput>({
       const paths = call.args.filter((a) => !a.startsWith("-"));
 
       if (DEST_LAST_CMDS.has(call.name)) {
-        if (paths.length >= 2 && isMainBranch(paths[paths.length - 1])) {
+        const dest = paths[paths.length - 1];
+        if (paths.length >= 2 && dest && isMainBranch(dest)) {
           return violation(
-            `${call.name} destination '${paths[paths.length - 1]}'`,
+            `${call.name} destination '${dest}'`,
             repo,
             ctx.cwd,
           );
