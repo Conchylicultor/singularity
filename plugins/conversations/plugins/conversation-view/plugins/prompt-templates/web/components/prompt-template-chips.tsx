@@ -71,7 +71,11 @@ function TemplateChip({
   );
 }
 
-export function FloatingTemplateChips({ insertText }: PromptEditorActionProps) {
+export function FloatingTemplateChips({
+  insertText,
+  getContent,
+  clearContent,
+}: PromptEditorActionProps) {
   const { conversation } = conversationPane.useData();
   const live = useConversation(conversation.id) ?? conversation;
   const templatesResult = useResource(promptTemplatesResource);
@@ -89,8 +93,11 @@ export function FloatingTemplateChips({ insertText }: PromptEditorActionProps) {
     if (!canSend) return;
     setSendingId(t.id);
     try {
+      const existing = getContent().trim();
+      const text = existing ? `${t.prompt}\n\n${existing}` : t.prompt;
       void fetchEndpoint(usePromptTemplate, { id: t.id });
-      await fetchEndpoint(postConversationTurn, { id: conversation.id }, { body: { text: t.prompt } });
+      await fetchEndpoint(postConversationTurn, { id: conversation.id }, { body: { text } });
+      clearContent();
     } catch (err) {
       Shell.Toast({
         description: `Failed to send: ${err instanceof Error ? err.message : String(err)}`,

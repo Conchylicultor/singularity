@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { $getRoot, $getSelection, $isRangeSelection } from "lexical";
+import {
+  $createParagraphNode,
+  $getRoot,
+  $getSelection,
+  $isRangeSelection,
+} from "lexical";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { PromptEditorSlots } from "../slots";
 
@@ -47,6 +52,22 @@ function ToolbarRow() {
     [editor],
   );
 
+  const getContent = useCallback(() => {
+    let text = "";
+    editor.getEditorState().read(() => {
+      text = $getRoot().getTextContent();
+    });
+    return text;
+  }, [editor]);
+
+  const clearContent = useCallback(() => {
+    editor.update(() => {
+      const root = $getRoot();
+      root.clear();
+      root.append($createParagraphNode());
+    });
+  }, [editor]);
+
   const focusEditor = useCallback(
     (e: React.MouseEvent) => {
       if (e.target === e.currentTarget) {
@@ -61,7 +82,13 @@ function ToolbarRow() {
   return (
     <div className="flex items-center px-2 pb-1.5" onMouseDown={focusEditor}>
       <PromptEditorSlots.FloatingAction.Render>
-        {(item) => <item.component insertText={insertText} />}
+        {(item) => (
+          <item.component
+            insertText={insertText}
+            getContent={getContent}
+            clearContent={clearContent}
+          />
+        )}
       </PromptEditorSlots.FloatingAction.Render>
     </div>
   );
