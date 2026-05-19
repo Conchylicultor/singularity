@@ -1395,6 +1395,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `PromptEditorActionProps`
         - Values: `PromptEditor`, `PromptEditorSlots`
+      - Plugins:
+        - **`voice-input`** — Voice dictation for the prompt editor via the Web Speech API.
+          - Contributes:
+            - `PromptEditorSlots.FloatingAction` → `VoiceInputButton`
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
       - Exports (core):
         - Values: `Rank`, `RankSchema`, `rankText`

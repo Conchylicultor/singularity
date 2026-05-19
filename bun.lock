@@ -933,6 +933,10 @@
         "lexical": "^0.44.0",
       },
     },
+    "plugins/primitives/plugins/prompt-editor/plugins/voice-input": {
+      "name": "@singularity/plugin-primitives-prompt-editor-voice-input",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/rank": {
       "name": "@singularity/plugin-primitives-rank",
       "version": "0.0.1",
@@ -2193,6 +2197,8 @@
     "@singularity/plugin-primitives-popover": ["@singularity/plugin-primitives-popover@workspace:plugins/primitives/plugins/popover"],
 
     "@singularity/plugin-primitives-prompt-editor": ["@singularity/plugin-primitives-prompt-editor@workspace:plugins/primitives/plugins/prompt-editor"],
+
+    "@singularity/plugin-primitives-prompt-editor-voice-input": ["@singularity/plugin-primitives-prompt-editor-voice-input@workspace:plugins/primitives/plugins/prompt-editor/plugins/voice-input"],
 
     "@singularity/plugin-primitives-rank": ["@singularity/plugin-primitives-rank@workspace:plugins/primitives/plugins/rank"],
 

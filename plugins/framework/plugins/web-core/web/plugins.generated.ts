@@ -176,6 +176,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "primitives/plugins/persistent-draft", hierarchyPath: "primitives/persistent-draft", loader: () => import("@plugins/primitives/plugins/persistent-draft/web") },
   { name: "primitives/plugins/placeholder", hierarchyPath: "primitives/placeholder", loader: () => import("@plugins/primitives/plugins/placeholder/web") },
   { name: "primitives/plugins/popover", hierarchyPath: "primitives/popover", loader: () => import("@plugins/primitives/plugins/popover/web") },
+  { name: "primitives/plugins/prompt-editor/plugins/voice-input", hierarchyPath: "primitives/prompt-editor/voice-input", loader: () => import("@plugins/primitives/plugins/prompt-editor/plugins/voice-input/web") },
   { name: "primitives/plugins/prompt-editor", hierarchyPath: "primitives/prompt-editor", loader: () => import("@plugins/primitives/plugins/prompt-editor/web") },
   { name: "primitives/plugins/rank", hierarchyPath: "primitives/rank", loader: () => import("@plugins/primitives/plugins/rank/web") },
   { name: "primitives/plugins/relative-time", hierarchyPath: "primitives/relative-time", loader: () => import("@plugins/primitives/plugins/relative-time/web") },
