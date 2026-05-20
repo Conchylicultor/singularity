@@ -5,9 +5,7 @@ import type { ZoneDefinition } from "./types";
 const RUNTIMES = new Set(["web", "server", "central", "core", "shared"]);
 
 export interface ResolvedZone {
-  /** Zone name without runtime suffix (e.g., "plugin.shell", "core", "server"). */
   zone: string;
-  /** Runtime suffix if present (e.g., "web", "server", "shared"), or null for non-runtime zones. */
   runtime: string | null;
 }
 

@@ -1,9 +1,8 @@
-import { defineBoundaries, zone, allow } from "./tooling/src/boundaries/config";
+import { defineBoundaries, zone, allow } from "./core/config";
 
 export default defineBoundaries({
   zones: [
     zone("cli", { match: "cli" }),
-    zone("tooling", { match: "tooling" }),
     zone("plugin", { match: "plugins", discover: "plugin-tree" }),
   ],
 
@@ -26,11 +25,6 @@ export default defineBoundaries({
     allow("** -> plugin.plugin-meta.plugin-tree"),
     allow("** -> plugin.packages.retry"),
 
-    // Web entry point and tooling can import the web-sdk plugin (PluginProvider, PluginDefinition, etc.)
-    allow("tooling -> plugin.framework.web-sdk"),
-    // Temporary: shim in tooling/src/eslint/ re-exports from the migrated lint plugin (removed in Phase 7.5)
-    allow("tooling -> plugin.framework.tooling.lint"),
-
     // Plugins can import other plugins
     allow("plugin.** -> plugin.**"),
   ],
@@ -46,7 +40,6 @@ export default defineBoundaries({
     "plugins/framework/plugins/central-core/bin/plugins.ts",
     "plugins/framework/plugins/central-core/bin/plugins.generated.ts",
     "plugins/framework/plugins/central-core/bin/index.ts",
-    "boundary.config.ts",
     "eslint.config.ts",
   ],
 });

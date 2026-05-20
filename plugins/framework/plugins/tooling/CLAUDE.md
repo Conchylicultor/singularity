@@ -8,6 +8,7 @@
 - Exports (core):
   - Types: `Check`, `CheckResult`
 - Sub-plugins:
+  - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
   - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
   - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
 

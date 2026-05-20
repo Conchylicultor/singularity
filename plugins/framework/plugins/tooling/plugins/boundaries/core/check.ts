@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { join, relative, sep } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import type { Check, CheckResult } from "../checks/types";
+import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
 import type { BoundaryConfig } from "./types";
 import { buildZoneMap } from "./resolve";
 import { checkRuntime, detectCycle, evaluateEdges, isRuntimeException } from "./evaluate";
@@ -11,7 +11,7 @@ const PUSH_BACK_HINT =
   "without understanding the architectural intent. If a rule blocks a legitimate case, " +
   "STOP and report it — we'll iterate on the design together.";
 
-const SOURCE_ROOTS = ["plugins", "web/src", "cli/src", "tooling/src"];
+const SOURCE_ROOTS = ["plugins", "web/src", "cli/src"];
 const IGNORED_DIRS = new Set(["node_modules", "dist", "build", ".git"]);
 
 interface Violation {
@@ -167,12 +167,9 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
       const pluginTree = existsSync(pluginsRoot) ? buildPluginTree(pluginsRoot) : null;
       const zoneMap = buildZoneMap(root, config.zones, pluginTree);
 
-      // Parse runtime exceptions into a Set for fast lookup
       const rtExceptions = new Set<string>();
       for (const expr of config.runtimeExceptions ?? []) {
         const { source, target } = parseRuntimeException(expr);
-        // Split "zone.runtime" into zone and runtime parts
-        // Store as "zone\0runtime\0zone\0runtime" key
         rtExceptions.add(`${source}\0${target}`);
       }
 
@@ -199,10 +196,8 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
           const target = zoneMap.resolveImport(specifier);
           if (!target) continue;
 
-          // Self-import is always allowed (same zone, any runtime within it)
           if (source.zone === target.zone) continue;
 
-          // Layer 1: Runtime check
           const rtExempt = isRuntimeException(
             rtExceptions,
             source.zone,
@@ -222,11 +217,9 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
             continue;
           }
 
-          // Layer 2: Zone edge check (on zone names without runtime suffixes)
           const result = evaluateEdges(config.edges, source.zone, target.zone);
 
           if (result === "allow") {
-            // Track edges with full zone.runtime for cycle detection
             const srcKey = source.runtime ? `${source.zone}.${source.runtime}` : source.zone;
             const tgtKey = target.runtime ? `${target.zone}.${target.runtime}` : target.zone;
             realizedEdges.add(`${srcKey}\0${tgtKey}`);
@@ -247,7 +240,6 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
         }
       }
 
-      // Cycle detection on the realized edge graph
       const edgeList = Array.from(realizedEdges).map((e) => {
         const [from, to] = e.split("\0");
         return { from: from!, to: to! };

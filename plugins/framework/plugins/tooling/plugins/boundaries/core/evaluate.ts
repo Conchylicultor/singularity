@@ -3,11 +3,6 @@ import { matchZone } from "./match";
 
 export type EdgeResult = "allow" | "deny" | "default-deny";
 
-/**
- * Evaluate an import against zone edges.
- * Rules are evaluated top-to-bottom, first match wins.
- * If no rule matches, default-deny.
- */
 export function evaluateEdges(
   edges: Edge[],
   sourceZone: string,
@@ -21,13 +16,6 @@ export function evaluateEdges(
   return "default-deny";
 }
 
-/**
- * Check if source runtime can import from target runtime.
- * Returns true if allowed, false if denied.
- *
- * When either side has no runtime (non-plugin zone like server/core),
- * the runtime check is skipped (returns true).
- */
 export function checkRuntime(
   runtimes: Record<string, string[]>,
   sourceRuntime: string | null,
@@ -40,9 +28,6 @@ export function checkRuntime(
   return allowed.includes(targetRuntime);
 }
 
-/**
- * Check if a specific full-zone pair is exempted from the runtime check.
- */
 export function isRuntimeException(
   exceptions: Set<string>,
   sourceZone: string,
@@ -56,10 +41,6 @@ export function isRuntimeException(
   return exceptions.has(`${fullSource}\0${fullTarget}`);
 }
 
-/**
- * Detect cycles in the realized import graph using DFS.
- * Returns the first cycle found as a list of zone names, or null.
- */
 export function detectCycle(
   edges: { from: string; to: string }[],
 ): string[] | null {

@@ -1064,6 +1064,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (core):
         - Types: `Check`, `CheckResult`
       - Plugins:
+        - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
+          - Exports (core):
+            - Types: `AllowEdge`, `BoundaryConfig`, `DenyEdge`, `Edge`, `RuntimeName`, `ZoneDefinition`
+            - Values: `allow`, `boundaryRulesCheck`, `createBoundaryCheck`, `defineBoundaries`, `deny`, `zone`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Exports (core):
             - Types: `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`
