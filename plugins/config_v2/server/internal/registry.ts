@@ -13,9 +13,9 @@ import {
   readTypedConfig,
 } from "../../core";
 import { jsoncConfigProxy } from "./jsonc-proxy";
-import type { Disposable, JsonValue } from "@plugins/config_v2/plugins/store/core";
-import { getConfigStore } from "@plugins/config_v2/plugins/store/server";
+import type { Disposable, JsonValue } from "../../core";
 import { REPO_ROOT, CONFIG_DIR } from "@plugins/infra/plugins/paths/server";
+import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
 import { configV2ServerResource, registerDescriptorPath, setConfigGetter } from "./resource";
 
@@ -97,13 +97,9 @@ export function initRegistry(): void {
       configV2ServerResource.notify({ path: storePath });
     };
 
-    const store = getConfigStore();
-    const userOverwritesStorePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
-    const userOriginStorePath = `${hierarchyPath}/${descriptor.name}.origin.jsonc`;
-
     const disposables: Disposable[] = [];
-    disposables.push(store.watch(userOverwritesStorePath, onFileChange));
-    disposables.push(store.watch(userOriginStorePath, onFileChange));
+    disposables.push(watchFileChange(userOverwritesPath, onFileChange));
+    disposables.push(watchFileChange(userOriginPath, onFileChange));
 
     cacheByDescriptor.set(descriptor, {
       values,

@@ -2,10 +2,12 @@ export { defineConfig } from "./internal/define-config";
 export { buildFieldsSchema } from "./internal/schema-builder";
 export { defineFieldType } from "./internal/types";
 export type {
+  Disposable,
   FieldDef,
   FieldMeta,
   FieldType,
   FieldsRecord,
+  JsonValue,
   ConfigDescriptor,
   ConfigValues,
   InferFieldValue,

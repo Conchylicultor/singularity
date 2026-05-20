@@ -1,5 +1,6 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { initConfigWatcher, shutdownConfigWatcher } from "./internal/config-watcher";
 import { initRegistry, shutdownRegistry } from "./internal/registry";
 import { configV2ServerResource } from "./internal/resource";
 
@@ -11,10 +12,12 @@ export default {
   name: "Config v2",
   description: "Typed JSONC config handles for server plugins.",
   contributions: [Resource.Declare(configV2ServerResource)],
-  onReady() {
+  async onReady() {
+    await initConfigWatcher();
     initRegistry();
   },
-  onShutdown() {
+  async onShutdown() {
     shutdownRegistry();
+    await shutdownConfigWatcher();
   },
 } satisfies ServerPluginDefinition;

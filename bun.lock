@@ -264,9 +264,6 @@
     "plugins/config_v2/plugins/fields/plugins/primitives": {
       "name": "@singularity/plugin-config_v2-fields-primitives",
     },
-    "plugins/config_v2/plugins/store": {
-      "name": "@singularity/plugin-config_v2-store",
-    },
     "plugins/conversations": {
       "name": "@singularity/plugin-conversations",
       "version": "0.0.1",
@@ -2016,8 +2013,6 @@
     "@singularity/plugin-config_v2-fields": ["@singularity/plugin-config_v2-fields@workspace:plugins/config_v2/plugins/fields"],
 
     "@singularity/plugin-config_v2-fields-primitives": ["@singularity/plugin-config_v2-fields-primitives@workspace:plugins/config_v2/plugins/fields/plugins/primitives"],
-
-    "@singularity/plugin-config_v2-store": ["@singularity/plugin-config_v2-store@workspace:plugins/config_v2/plugins/store"],
 
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
 

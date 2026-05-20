@@ -3,7 +3,7 @@ import { join, relative } from "path";
 import { renderConfigOriginContent } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { computeHash } from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
-import type { JsonValue } from "@plugins/config_v2/plugins/store/core";
+import type { JsonValue } from "@plugins/config_v2/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };

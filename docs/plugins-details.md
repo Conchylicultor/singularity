@@ -430,7 +430,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Exports (core):
-    - Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Values`, `ConfigValues`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`
+    - Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`
     - Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2Resource`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`
   - Exports (web):
     - Values: `ConfigV2`, `useConfig`
@@ -452,11 +452,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Fields.Renderer` "text" → `TextRenderer`
             - `Fields.Renderer` "int" → `IntRenderer`
             - `Fields.Renderer` "float" → `FloatRenderer`
-    - **`store`** — ConfigStore abstraction and JSONC-on-disk backend. Reads/writes formatted JSONC files with atomic writes and file-watching.
-      - Exports (core):
-        - Types: `ConfigStore`, `Disposable`, `JsonValue`
-      - Exports (server):
-        - Values: `getConfigStore`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:

@@ -3,7 +3,7 @@ import { dirname, join } from "path";
 import { buildEnrichedTree } from "./docgen";
 import { computeHash } from "@plugins/config_v2/core";
 import type { ConfigDescriptor, FieldDef } from "@plugins/config_v2/core";
-import type { JsonValue } from "@plugins/config_v2/plugins/store/core";
+import type { JsonValue } from "@plugins/config_v2/core";
 import {
   registerBarrelStubs,
   importBarrel,

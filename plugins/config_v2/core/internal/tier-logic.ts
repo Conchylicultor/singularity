@@ -1,7 +1,7 @@
 import type { ConfigProxy } from "./config-proxy";
 import { computeHash } from "./config-proxy";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord } from "./types";
-import type { JsonValue } from "@plugins/config_v2/plugins/store/core";
+import type { JsonValue } from "./types";
 
 export function effective(
   origin: ConfigProxy,

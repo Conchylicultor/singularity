@@ -10,7 +10,7 @@ import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
 import { parse as parseJsonc } from "jsonc-parser";
 import type { ConfigProxy } from "../../core";
-import type { JsonValue } from "@plugins/config_v2/plugins/store/core";
+import type { JsonValue } from "../../core";
 
 const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
 
