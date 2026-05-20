@@ -97,6 +97,8 @@ export async function runChecks(ids?: string[], options?: RunChecksOptions): Pro
   const log = options?.log ?? ((line: string, stream: "stdout" | "stderr") =>
     stream === "stderr" ? console.error(line) : console.log(line));
 
+  const MAX_MESSAGE_LINES = 100;
+
   let allOk = true;
   for (const { check, result, durationMs, wallStart } of results) {
     options?.onCheckDone?.(check.id, durationMs, wallStart);
@@ -105,7 +107,15 @@ export async function runChecks(ids?: string[], options?: RunChecksOptions): Pro
     } else {
       allOk = false;
       log(`• ${check.id} ... FAIL`, "stdout");
-      log(`  ${result.message}`, "stderr");
+      const lines = result.message.split("\n");
+      if (lines.length > MAX_MESSAGE_LINES) {
+        const head = lines.slice(0, 50).join("\n");
+        const tail = lines.slice(-50).join("\n");
+        const omitted = lines.length - 100;
+        log(`  ${head}\n  ... (${omitted} lines omitted — re-run \`./singularity check ${check.id}\` for full output)\n  ${tail}`, "stderr");
+      } else {
+        log(`  ${result.message}`, "stderr");
+      }
       if (result.hint) log(`  hint: ${result.hint}`, "stderr");
     }
   }
