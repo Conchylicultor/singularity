@@ -5,7 +5,7 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { JsonlViewer, useStickyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { useStickyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 
 type UserTextEvent = Extract<JsonlEvent, { kind: "user-text" }>;
@@ -119,11 +119,6 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
             )}
           </button>
         ) : null}
-      </div>
-      <div className="flex items-center gap-1.5 px-1 pt-1 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
-        <JsonlViewer.RowAction.Render>
-          {(item) => <item.component event={e} />}
-        </JsonlViewer.RowAction.Render>
       </div>
     </ContentScope>
   );

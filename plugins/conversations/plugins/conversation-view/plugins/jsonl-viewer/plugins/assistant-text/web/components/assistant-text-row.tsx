@@ -4,10 +4,7 @@ import {
 } from "@plugins/active-data/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import {
-  JsonlViewer,
-  useRowMarkdown,
-} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { useRowMarkdown } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 
@@ -53,11 +50,6 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
         ) : (
           <div className="whitespace-pre-wrap break-words text-sm">{e.text}</div>
         )}
-      </div>
-      <div className="flex items-center gap-1.5 px-1 pt-1 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
-        <JsonlViewer.RowAction.Render>
-          {(item) => <item.component event={e} />}
-        </JsonlViewer.RowAction.Render>
       </div>
     </ContentScope>
   );
