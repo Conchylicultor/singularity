@@ -129,7 +129,7 @@ function EventSections({ events, children }: { events: JsonlEvent[]; children?: 
   };
 
   return (
-    <div className="flex flex-col gap-2 p-2 pb-10">
+    <div className="mx-auto flex max-w-reading flex-col gap-2 p-2 pb-10">
       {sections.map((section) => {
         const firstEvent = events[section.start]!;
         if (firstEvent.kind !== "user-text") {

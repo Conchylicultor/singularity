@@ -11,6 +11,7 @@
     --font-sans: 'Inter Variable', sans-serif;
     --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
     --font-mono: 'Cascadia Code Variable', monospace;
+    --max-width-reading: 75ch;
 }
 
 @theme inline {
