@@ -178,6 +178,31 @@ async function exec(
   }
 }
 
+class BuildStepError extends Error {
+  constructor(public readonly step: string) {
+    super(`Build step "${step}" failed`);
+    this.name = "BuildStepError";
+  }
+}
+
+async function execOrThrow(
+  cmd: string[],
+  cwd: string,
+  step: string,
+  env?: Record<string, string>,
+): Promise<void> {
+  const proc = Bun.spawn(cmd, {
+    cwd,
+    stdout: "inherit",
+    stderr: "inherit",
+    env: env ? { ...process.env, ...env } : undefined,
+  });
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    throw new BuildStepError(step);
+  }
+}
+
 async function getWorktreeRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
     stdout: "pipe",
@@ -567,49 +592,68 @@ export function registerBuild(program: Command) {
       await generateConfigOrigins({ root });
       endSpan();
 
-      // 3c. Run repo validation checks (typescript, plugin-boundaries, eslint,
-      // plugin-contributed checks, ...). Fail before the expensive frontend
-      // build kicks off. `--skip-checks` opts out for fast iteration; checks
-      // still gate `push`.
-      if (!opts.skipChecks) {
-        console.log("Running checks...");
-        const ok = await runChecks(undefined, {
-          onCheckDone: (id, durationMs, wallStartMs) => {
-            pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
-          },
-        });
-        if (!ok) process.exit(1);
-      }
-
-      // 4. Type-check server. Bun runs the server without static checks, and
-      // the web `tsc -b` only covers files reachable from web — so server-only
-      // modules (handlers, pollers) can ship with broken imports and only
-      // surface as 502s on first request. Run server tsc explicitly here.
-      endSpan = buildProfilerStart("tscServer", "build:validation", "tsc server");
-      console.log("Type-checking server...");
-      await exec([process.execPath, "x", "tsc"], resolve(root, "plugins/framework/plugins/server-core"));
-      endSpan();
-
-      // 4b. Type-check central if present. Same rationale as server.
-      // Type-check the *worktree's* central, not main's: local edits must be
-      // validated even though the running central runs main's code. (Errors
-      // here would otherwise only surface after merge.)
-      const worktreeCentralDir = resolve(root, "plugins/framework/plugins/central-core");
-      if (existsSync(join(worktreeCentralDir, "bin", "index.ts"))) {
-        endSpan = buildProfilerStart("tscCentral", "build:validation", "tsc central");
-        console.log("Type-checking central...");
-        await exec([process.execPath, "x", "tsc"], worktreeCentralDir);
-        endSpan();
-      }
-
-      // 5. Build frontend into a per-pid staging dir, then atomically
-      // publish. Vite reads `VITE_OUT_DIR` (see web/vite.config.ts).
-      endSpan = buildProfilerStart("viteBuild", "build:frontend", "vite build");
+      // 3c–5. Run validation (checks, tsc) and the Vite build in parallel.
+      // All four are independent: checks and tsc read source files, Vite
+      // compiles into a staging dir. On failure, the staging dir is cleaned
+      // up and nothing is published. `--skip-checks` still skips checks.
       const stagingName = `${STAGING_PREFIX}${process.pid}`;
       const stagingPath = resolve(webDir, stagingName);
-      console.log("Building frontend...");
-      await exec(["bun", "run", "build"], webDir, { VITE_OUT_DIR: stagingName });
-      endSpan();
+      const worktreeCentralDir = resolve(root, "plugins/framework/plugins/central-core");
+      const hasCentral = existsSync(join(worktreeCentralDir, "bin", "index.ts"));
+
+      console.log("Running checks, type-checking, and building frontend in parallel...");
+
+      const parallel: Array<Promise<void>> = [];
+
+      if (!opts.skipChecks) {
+        parallel.push(
+          (async () => {
+            const ok = await runChecks(undefined, {
+              onCheckDone: (id, durationMs, wallStartMs) => {
+                pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
+              },
+            });
+            if (!ok) throw new BuildStepError("checks");
+          })(),
+        );
+      }
+
+      parallel.push(
+        (async () => {
+          const end = buildProfilerStart("tscServer", "build:validation", "tsc server");
+          await execOrThrow([process.execPath, "x", "tsc"], resolve(root, "plugins/framework/plugins/server-core"), "tsc server");
+          end();
+        })(),
+      );
+
+      if (hasCentral) {
+        parallel.push(
+          (async () => {
+            const end = buildProfilerStart("tscCentral", "build:validation", "tsc central");
+            await execOrThrow([process.execPath, "x", "tsc"], worktreeCentralDir, "tsc central");
+            end();
+          })(),
+        );
+      }
+
+      parallel.push(
+        (async () => {
+          const end = buildProfilerStart("viteBuild", "build:frontend", "vite build");
+          await execOrThrow(["bun", "run", "build"], webDir, "vite build", { VITE_OUT_DIR: stagingName });
+          end();
+        })(),
+      );
+
+      const results = await Promise.allSettled(parallel);
+      const failures = results
+        .filter((r): r is PromiseRejectedResult => r.status === "rejected")
+        .map((r) => (r.reason instanceof BuildStepError ? r.reason.step : String(r.reason)));
+
+      if (failures.length > 0) {
+        await rm(stagingPath, { recursive: true, force: true });
+        console.error(`\nBuild failed: ${failures.join(", ")}`);
+        process.exit(1);
+      }
 
       // Write the commit hash at build time so the server can report drift.
       const commitProc = Bun.spawnSync(["git", "rev-parse", "HEAD"], {
