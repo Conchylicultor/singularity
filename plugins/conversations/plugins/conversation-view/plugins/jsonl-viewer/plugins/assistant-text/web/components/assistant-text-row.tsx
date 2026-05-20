@@ -21,7 +21,7 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
 
   return (
     <ContentScope>
-      <div className="rounded-md border border-border/60 bg-background px-3 py-2">
+      <div className="px-3 py-2">
         {markdownMode ? (
           <div className="text-sm leading-6">
             {(() => {
