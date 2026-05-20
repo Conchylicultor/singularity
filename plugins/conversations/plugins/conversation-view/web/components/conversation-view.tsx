@@ -34,7 +34,7 @@ export function ConversationView() {
           <JsonlPane conversation={conversation}>
             {showBottomBar && (
               <PromptInsertProvider>
-                <div className="shrink-0 border-t border-border">
+                <div className="shrink-0">
                 <div className="mx-auto flex max-w-reading flex-col gap-2 px-3 pt-1.5 pb-2">
                   <Conversation.AbovePromptInput.Render>
                     {(item) => <item.component conversation={conversation} />}
