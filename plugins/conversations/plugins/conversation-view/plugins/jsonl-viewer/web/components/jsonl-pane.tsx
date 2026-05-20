@@ -159,11 +159,9 @@ function EventSections({ events, children }: { events: JsonlEvent[]; children?: 
 
 export function JsonlPane({
   conversation,
-  actions,
   children,
 }: {
   conversation: Conversation;
-  actions?: ReactNode;
   children?: ReactNode;
 }) {
   const isWorking = conversation.status === "working" || conversation.status === "starting";
@@ -208,14 +206,6 @@ export function JsonlPane({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-2 border-b px-2 py-1.5">
-        {events.length > 0 && (
-          <span className="tabular-nums text-xs text-muted-foreground">
-            {events.length}
-          </span>
-        )}
-        {actions && <div className="ml-auto flex items-center gap-1">{actions}</div>}
-      </div>
       <div className="relative min-h-0 flex-1">
         <div
           ref={sticky.scrollRef}

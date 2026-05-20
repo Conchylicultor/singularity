@@ -37,8 +37,11 @@ export function ConversationView() {
       hideRightActions
     >
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
+        <div className="flex items-center border-b px-2 py-1.5">
+          <ActionBarView />
+        </div>
         <div className="min-h-0 flex-1 overflow-hidden">
-          <JsonlPane conversation={conversation} actions={<ActionBarView />}>
+          <JsonlPane conversation={conversation}>
             {showBottomBar && (
               <PromptInsertProvider>
                 <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-1.5 pb-2">
