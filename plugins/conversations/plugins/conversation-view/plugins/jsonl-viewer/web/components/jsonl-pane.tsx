@@ -92,7 +92,7 @@ function StickyUserHeader({ children }: { children: ReactNode }) {
         className={
           expanded
             ? "z-10 bg-background pb-0.5"
-            : "sticky top-0 z-10 bg-background pb-0.5 shadow-[0_2px_6px_-2px_rgba(0,0,0,0.1)]"
+            : "sticky top-0 z-20 bg-background pb-0.5 shadow-[0_2px_6px_-2px_rgba(0,0,0,0.1)]"
         }
       >
         {children}
