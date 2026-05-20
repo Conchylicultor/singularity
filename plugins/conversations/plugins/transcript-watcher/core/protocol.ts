@@ -77,6 +77,7 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     toolUseId: z.string().optional(),
     status: z.string(),
     summary: z.string(),
+    extra: z.record(z.string()).optional(),
   }),
 ]);
 export type JsonlEvent = z.infer<typeof JsonlEventSchema>;

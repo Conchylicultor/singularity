@@ -1,6 +1,9 @@
+import { XMLParser } from "fast-xml-parser";
 import type { JsonlEvent, TokenUsage, ToolCallResult } from "../../core";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
+
+const xmlParser = new XMLParser({ parseTagValue: false, trimValues: true });
 
 const IMAGE_MIME: Record<string, string> = {
   png: "image/png",
@@ -15,23 +18,52 @@ const IMAGE_MIME: Record<string, string> = {
 
 type Segment = { kind: "text"; value: string } | { kind: "image"; mime: string; data: string };
 
+const KNOWN_NOTIFICATION_KEYS = new Set(["task-id", "tool-use-id", "status", "summary"]);
+
 function extractTaskNotifications(text: string, at: string, out: JsonlEvent[]): string {
   const re = /<task-notification>([\s\S]*?)<\/task-notification>/g;
   const blocks: string[] = [];
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     blocks.push(m[0]);
-    const inner = m[1] ?? "";
-    const get = (tag: string) => {
-      const tm = new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(inner);
-      return tm?.[1]?.trim();
-    };
-    const taskId = get("task-id") ?? "";
-    const toolUseId = get("tool-use-id");
-    const status = get("status") ?? "";
-    const summary = get("summary") ?? "";
+
+    let parsed: Record<string, unknown> = {};
+    try {
+      const result = xmlParser.parse(m[0]) as Record<string, unknown>;
+      const inner = result["task-notification"];
+      if (inner && typeof inner === "object") {
+        parsed = inner as Record<string, unknown>;
+      }
+    } catch {
+      continue;
+    }
+
+    const str = (v: unknown): string =>
+      typeof v === "string" ? v : typeof v === "number" ? String(v) : "";
+
+    const taskId = str(parsed["task-id"]);
+    const toolUseId = str(parsed["tool-use-id"]) || undefined;
+    const status = str(parsed["status"]);
+    const summary = str(parsed["summary"]);
+
+    const extra: Record<string, string> = {};
+    for (const [k, v] of Object.entries(parsed)) {
+      if (!KNOWN_NOTIFICATION_KEYS.has(k)) {
+        const s = str(v);
+        if (s) extra[k] = s;
+      }
+    }
+
     if (taskId || status || summary) {
-      out.push({ kind: "task-notification", at, taskId, toolUseId, status, summary });
+      out.push({
+        kind: "task-notification",
+        at,
+        taskId,
+        toolUseId,
+        status,
+        summary,
+        extra: Object.keys(extra).length > 0 ? extra : undefined,
+      });
     }
   }
   let stripped = text;

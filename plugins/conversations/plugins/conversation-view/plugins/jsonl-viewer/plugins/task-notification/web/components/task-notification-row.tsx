@@ -19,6 +19,15 @@ export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
       </span>
       <span className={statusClass}>{e.status}</span>
       <span className="truncate">{e.summary}</span>
+      {e.extra &&
+        Object.entries(e.extra).map(([k, v]) => (
+          <span
+            key={k}
+            className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]"
+          >
+            {k}: {v}
+          </span>
+        ))}
     </div>
   );
 }
