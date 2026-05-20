@@ -64,9 +64,15 @@ export function PaneChrome({ pane, title, actions, hideRightActions, children }:
         onDoubleClick={layoutCtx?.onDoubleClickHeader}
       >
         {chrome.history && <PaneHistoryButtons pane={pane} />}
-        {resolvedTitle != null && resolvedTitle !== "" && (
-          <span className="truncate text-sm font-medium">{resolvedTitle}</span>
-        )}
+        {resolvedTitle != null &&
+          resolvedTitle !== "" &&
+          (typeof resolvedTitle === "string" ? (
+            <span className="truncate text-sm font-medium">
+              {resolvedTitle}
+            </span>
+          ) : (
+            resolvedTitle
+          ))}
         <PaneActionsSlot pane={pane} position="left" />
         {hideRightActions ? (
           <div className="flex-1" />

@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { ModelBadge } from "./components/model-badge";
 
 export default {
@@ -8,6 +8,6 @@ export default {
   description:
     "Displays the conversation model as a colored chip in the toolbar.",
   contributions: [
-    conversationPane.Actions({ component: ModelBadge, position: "left" }),
+    Conversation.Header({ id: "model", component: ModelBadge }),
   ],
 } satisfies PluginDefinition;

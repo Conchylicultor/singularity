@@ -19,7 +19,4 @@ export const Conversation = {
   AbovePromptInput: defineRenderSlot<{
     component: ComponentType<{ conversation: ConversationRecord }>;
   }>("conversation.above-prompt-input"),
-  TitlePrefix: defineSlot<{
-    component: ComponentType<{ conversation: ConversationRecord }>;
-  }>("conversation.title-prefix"),
 };

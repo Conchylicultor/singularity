@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Config } from "@plugins/config/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationCategoryConfig } from "../shared";
 import { CategoryChipToolbar } from "./components/category-chip-toolbar";
@@ -17,10 +17,7 @@ export default {
   description:
     "Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover.",
   contributions: [
-    conversationPane.Actions({
-      component: CategoryChipToolbar,
-      position: "left",
-    }),
+    Conversation.Header({ id: "category", component: CategoryChipToolbar }),
     Config.Spec(conversationCategoryConfig),
     Config.Section({
       id: "category-colors",

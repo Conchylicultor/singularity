@@ -3,7 +3,7 @@ import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Shell } from "@plugins/shell/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { MdPrecisionManufacturing } from "react-icons/md";
 import {
   agentsRootPane,
@@ -48,7 +48,7 @@ export default {
       match: (conv) => conv.kind === "agent",
       component: AgentAvatarRow,
     }),
-    Conversation.TitlePrefix({ component: AgentAvatarTitlePrefix }),
+    Conversation.Header({ id: "agent-avatar", component: AgentAvatarTitlePrefix }),
     AgentsSlots.AgentActions({
       id: "expand-collapse-all",
       component: ExpandCollapseAllAction,

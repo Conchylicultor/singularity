@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { StatusBadge } from "./components/status-badge";
 
 export default {
@@ -7,6 +7,6 @@ export default {
   name: "Conversation: Status",
   description: "Displays the conversation status as a colored badge in the toolbar.",
   contributions: [
-    conversationPane.Actions({ component: StatusBadge, position: "left" }),
+    Conversation.Header({ id: "status", component: StatusBadge }),
   ],
 } satisfies PluginDefinition;

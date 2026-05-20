@@ -11,7 +11,7 @@
 - Exports (server):
   - Values: `classifyProgressJob`, `conversationProgress`, `conversationProgressResource`, `markProgressPushedJob`
 - Contributes:
-  - `conversationPane.Actions` → `ProgressBarToolbar`
+  - `Conversation.Header` → `ProgressBarToolbar`
   - `Item.Chips` → `ProgressBarRow`
 - Server:
   - Register: `defineJob('conversation-progress.classify')`, `defineJob('conversation-progress.mark-pushed')`

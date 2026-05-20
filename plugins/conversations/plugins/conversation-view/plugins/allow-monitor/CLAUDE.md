@@ -21,7 +21,7 @@ Polls every 3 seconds via a plain `useQuery` with `refetchInterval` — no WebSo
 - Exports (shared):
   - Values: `getAllowFiles`
 - Contributes:
-  - `conversationPane.Actions` → `AllowMonitorChip`
+  - `Conversation.Header` → `AllowMonitorChip`
 - Server:
   - Uses: `tasks-core.getConversation`
 

@@ -1,5 +1,6 @@
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { ActionBarView } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
+import { HeaderView } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { Conversation } from "../slots";
 import { conversationPane } from "../panes";
 import { PromptInsertProvider } from "../prompt-insert-context";
@@ -10,7 +11,6 @@ export function ConversationView() {
   const promptBarItems = Conversation.PromptBar.useContributions();
   const promptInputItems = Conversation.PromptInput.useContributions();
   const abovePromptInputItems = Conversation.AbovePromptInput.useContributions();
-  const titlePrefixItems = Conversation.TitlePrefix.useContributions();
   const PromptInputComponent = promptInputItems[0]?.component ?? null;
 
   const showBottomBar =
@@ -21,19 +21,7 @@ export function ConversationView() {
   return (
     <PaneChrome
       pane={conversationPane}
-      title={
-        titlePrefixItems.length > 0 ? (
-          <span className="flex items-center gap-2">
-            {titlePrefixItems.map((item, i) => {
-              const Cmp = item.component;
-              return <Cmp key={i} conversation={conversation} />;
-            })}
-            <span className="truncate">{conversation.title ?? conversation.id}</span>
-          </span>
-        ) : (
-          conversation.title ?? conversation.id
-        )
-      }
+      title={<HeaderView />}
       hideRightActions
     >
       <div className="flex h-full min-h-0 flex-col overflow-hidden">

@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { AllowMonitorChip } from "./components/allow-monitor-chip";
 
 export default {
@@ -8,6 +8,6 @@ export default {
   description:
     "Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.",
   contributions: [
-    conversationPane.Actions({ component: AllowMonitorChip, position: "left" }),
+    Conversation.Header({ id: "allow-monitor", component: AllowMonitorChip }),
   ],
 } satisfies PluginDefinition;

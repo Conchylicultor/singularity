@@ -83,7 +83,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
       - Plugins:
         - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
-    - **`conversation-view`** — Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
+    - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
         - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
@@ -103,6 +103,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`exit`** — Toolbar button that closes the conversation without changing any task state.
         - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
         - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
+        - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area.
         - **`hold-and-exit`** — Toolbar button that marks the task as held and closes the conversation.
         - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
           - Plugins:

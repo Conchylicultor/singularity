@@ -71,7 +71,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `agentSidePane.Actions` → `ExpandAgentButton`
     - `Shell.Sidebar` "Agents" → `component`
     - `Item.Avatar` → `AgentAvatarRow`
-    - `Conversation.TitlePrefix` → `AgentAvatarTitlePrefix`
+    - `Conversation.Header` → `AgentAvatarTitlePrefix`
     - `Agents.AgentActions` "expand-collapse-all" → `ExpandCollapseAllAction`
     - `Agents.AgentActions` "delete" → `DeleteAgentAction`
   - Server:
@@ -485,7 +485,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `ConversationCategoriesPayload`, `ConversationCategory`, `SetCategoryBody`, `SetColorBody`
         - Values: `classifyConversation`, `clearConversationCategory`, `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`, `deleteCategoryColor`, `getCategoryColors`, `SetCategoryBodySchema`, `setCategoryColor`, `SetColorBodySchema`, `setConversationCategory`
       - Contributes:
-        - `conversationPane.Actions` → `CategoryChipToolbar`
+        - `Conversation.Header` → `CategoryChipToolbar`
         - `Config.Spec`
         - `Config.Section` "Category avatars" → `CategoryColorSettings`
         - `Item.Avatar` → `CategoryAvatarRow`
@@ -499,7 +499,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (server):
         - Values: `classifyProgressJob`, `conversationProgress`, `conversationProgressResource`, `markProgressPushedJob`
       - Contributes:
-        - `conversationPane.Actions` → `ProgressBarToolbar`
+        - `Conversation.Header` → `ProgressBarToolbar`
         - `Item.Chips` → `ProgressBarRow`
       - Server:
         - Register: `defineJob('conversation-progress.classify')`, `defineJob('conversation-progress.mark-pushed')`
@@ -513,15 +513,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Types: `ConversationItemConv`, `ConversationItemProps`
             - Values: `CONV_STATUS_DOT`, `ConversationItem`, `ConvRelativeTime`, `ConvStatusDot`, `ConvSysBadge`, `ConvTitle`, `formatRelativeTime`, `Item`
           - Slot contributors: `agents`, `conversation-category`, `conversation-progress`
-    - **`conversation-view`** — Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
+    - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
       - Defines:
-        - Slots: `Conversation.PromptInput`, `Conversation.TitlePrefix`
+        - Slots: `Conversation.PromptInput`
       - Exports (web):
         - Types: `ConversationRecord`
         - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
       - Contributes:
         - `Pane.Register` "conversation"
-      - Slot contributors: `agents`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `dependencies`, `docs-button`, `drop-and-exit`, `event-counter`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+        - `Conversation.Header` → `ConversationTitle`
+      - Slot contributors: `agents`, `allow-monitor`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `dependencies`, `docs-button`, `drop-and-exit`, `event-counter`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `model`, `notes`, `open-app`, `prompt-input`, `review`, `status`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Exports (web):
@@ -530,7 +531,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (shared):
             - Values: `getAllowFiles`
           - Contributes:
-            - `conversationPane.Actions` → `AllowMonitorChip`
+            - `Conversation.Header` → `AllowMonitorChip`
           - Server:
             - Uses: `tasks-core.getConversation`
         - **`branch`** — Forks the current Claude session into a background conversation with the typed draft as the opening prompt.
@@ -608,6 +609,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
           - Contributes:
             - `JsonlViewer.RowAction` "fork-session" → `ForkSessionAction`
+        - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area.
+          - Exports (web):
+            - Values: `Conversation`, `HeaderView`
         - **`hold-and-exit`** — Toolbar button that marks the task as held and closes the conversation.
           - Exports (shared):
             - Values: `holdAndExit`
@@ -723,7 +727,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `MarkdownEnhancerSlot`
         - **`model`** — Displays the conversation model as a colored chip in the toolbar.
           - Contributes:
-            - `conversationPane.Actions` → `ModelBadge`
+            - `Conversation.Header` → `ModelBadge`
         - **`new-child-task`** — Deprecated — functionality merged into the Improve button via ambient relate context.
         - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
           - Defines:
@@ -781,7 +785,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `taskSidePane.Actions` → `ExpandTaskButton`
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
           - Contributes:
-            - `conversationPane.Actions` → `StatusBadge`
+            - `Conversation.Header` → `StatusBadge`
         - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
           - Contributes:
             - `Pane.Register` "conv-tasks"

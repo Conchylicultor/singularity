@@ -4,15 +4,16 @@
 
 ## Plugin reference
 
-- Description: Conversation pane host. Toolbar/title go through PaneChrome via `conversationPane.Actions`; only `Conversation.PromptBar` lives here.
+- Description: Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
 - Defines:
-  - Slots: `Conversation.PromptInput`, `Conversation.TitlePrefix`
+  - Slots: `Conversation.PromptInput`
 - Exports (web):
   - Types: `ConversationRecord`
   - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
 - Contributes:
   - `Pane.Register` "conversation"
-- Slot contributors: `agents`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `dependencies`, `docs-button`, `drop-and-exit`, `event-counter`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+  - `Conversation.Header` → `ConversationTitle`
+- Slot contributors: `agents`, `allow-monitor`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `dependencies`, `docs-button`, `drop-and-exit`, `event-counter`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `model`, `notes`, `open-app`, `prompt-input`, `review`, `status`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
 - Sub-plugins:
   - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
   - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
@@ -24,6 +25,7 @@
   - **`exit`** — Toolbar button that closes the conversation without changing any task state.
   - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
   - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
+  - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area.
   - **`hold-and-exit`** — Toolbar button that marks the task as held and closes the conversation.
   - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
   - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.

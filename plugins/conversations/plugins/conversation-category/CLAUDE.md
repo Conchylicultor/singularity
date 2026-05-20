@@ -50,7 +50,7 @@ unless the user clicks "Re-classify with Haiku".
   - Types: `ConversationCategoriesPayload`, `ConversationCategory`, `SetCategoryBody`, `SetColorBody`
   - Values: `classifyConversation`, `clearConversationCategory`, `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`, `deleteCategoryColor`, `getCategoryColors`, `SetCategoryBodySchema`, `setCategoryColor`, `SetColorBodySchema`, `setConversationCategory`
 - Contributes:
-  - `conversationPane.Actions` → `CategoryChipToolbar`
+  - `Conversation.Header` → `CategoryChipToolbar`
   - `Config.Spec`
   - `Config.Section` "Category avatars" → `CategoryColorSettings`
   - `Item.Avatar` → `CategoryAvatarRow`

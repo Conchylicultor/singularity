@@ -1,6 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Avatar, DEFAULT_AGENT_AVATAR, type SvgNode } from "@plugins/primitives/plugins/avatar/web";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { agentLaunchesResource, agentsResource } from "../../shared/resources";
 import { agentSidePane } from "../panes";
 import { cn } from "@/lib/utils";
@@ -10,7 +10,8 @@ function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
   try { return JSON.parse(raw) as SvgNode[]; } catch { return null; }
 }
 
-export function AgentAvatarTitlePrefix({ conversation }: { conversation: ConversationRecord }) {
+export function AgentAvatarTitlePrefix() {
+  const { conversation } = conversationPane.useData();
   const launchesResult = useResource(agentLaunchesResource);
   const agentsResult = useResource(agentsResource);
 

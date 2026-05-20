@@ -27,7 +27,7 @@
   - `agentSidePane.Actions` → `ExpandAgentButton`
   - `Shell.Sidebar` "Agents" → `component`
   - `Item.Avatar` → `AgentAvatarRow`
-  - `Conversation.TitlePrefix` → `AgentAvatarTitlePrefix`
+  - `Conversation.Header` → `AgentAvatarTitlePrefix`
   - `Agents.AgentActions` "expand-collapse-all" → `ExpandCollapseAllAction`
   - `Agents.AgentActions` "delete" → `DeleteAgentAction`
 - Server:
