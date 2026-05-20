@@ -51,6 +51,7 @@ export interface PluginDefinition {
    * agents); other plugins appear only as a name + one-liner.
    */
   loadBearing?: boolean;
+  collapsed?: boolean;
   /** Stamped by the loader from the generated registry entry. */
   _hierarchyPath?: string;
   contributions?: Contribution[];

@@ -74,6 +74,7 @@ export interface PluginNode {
   hierarchyId: string;
   description?: string;
   loadBearing: boolean;
+  collapsed: boolean;
   runtimes: { web: boolean; server: boolean; central: boolean };
   children: PluginNode[];
   publicApi?: PublicApi;

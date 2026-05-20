@@ -80,6 +80,7 @@ export interface PluginNode {
   description?: string;
   descriptions: Partial<Record<Runtime, string>>;
   loadBearing: boolean;
+  collapsed: boolean;
   runtimes: Record<Runtime, boolean>;
   children: PluginNode[];
 
@@ -625,6 +626,21 @@ function collectPlugin(dir: string, pluginsRoot: string): CollectedPlugin {
     (serverSrc ? parseBoolField(serverSrc, "loadBearing") : false) ||
     (centralSrc ? parseBoolField(centralSrc, "loadBearing") : false);
 
+  let collapsed =
+    (webSrc ? parseBoolField(webSrc, "collapsed") : false) ||
+    (serverSrc ? parseBoolField(serverSrc, "collapsed") : false) ||
+    (centralSrc ? parseBoolField(centralSrc, "collapsed") : false);
+  if (!collapsed) {
+    const pkgSrc = readIfExists(join(dir, "package.json"));
+    if (pkgSrc) {
+      try {
+        const pkg = JSON.parse(pkgSrc);
+        if (pkg.singularity?.collapsed === true) collapsed = true;
+      // eslint-disable-next-line promise-safety/no-bare-catch
+      } catch {}
+    }
+  }
+
   const slots = slotsSrc
     ? parseDefineGroup(stripTypes(slotsSrc), "defineSlot", (memberName, slotId, groupName) => ({
         memberName,
@@ -714,6 +730,7 @@ function collectPlugin(dir: string, pluginsRoot: string): CollectedPlugin {
       description,
       descriptions,
       loadBearing,
+      collapsed,
       runtimes: {
         web: !!webIndex,
         server: !!serverIndex,

@@ -4,6 +4,7 @@ import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 export default {
   id: "ui-tokens",
   name: "UI: Token Groups",
+  collapsed: true,
   description:
     "Umbrella for CSS token group plugins. Contributes global theme presets.",
   contributions: [

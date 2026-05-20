@@ -51,6 +51,7 @@ function toApiNode(node: TreePluginNode, symbolConsumers: Map<string, Map<string
     hierarchyId: node.hierarchyId,
     description: node.description,
     loadBearing: node.loadBearing,
+    collapsed: node.collapsed,
     runtimes: node.runtimes,
     children: node.children.map((c) => toApiNode(c, symbolConsumers)),
     publicApi: {

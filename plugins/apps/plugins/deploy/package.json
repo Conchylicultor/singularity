@@ -2,5 +2,6 @@
   "name": "@singularity/plugin-apps-deploy",
   "description": "Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.",
   "private": true,
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "singularity": { "collapsed": true }
 }

@@ -2,5 +2,6 @@
   "name": "@singularity/plugin-apps-sonata",
   "description": "Sonata — extensible piano and music app.",
   "private": true,
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "singularity": { "collapsed": true }
 }

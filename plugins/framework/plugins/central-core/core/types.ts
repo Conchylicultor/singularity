@@ -36,6 +36,7 @@ export interface CentralPluginDefinition {
    * `PluginDefinition.loadBearing` in `plugin-core/types.ts` for semantics.
    */
   loadBearing?: boolean;
+  collapsed?: boolean;
   httpRoutes?: Record<string, HttpHandler>;
   wsRoutes?: Record<string, WsHandler>;
   resources?: ResourceLike[];

@@ -156,6 +156,12 @@ function renderPluginBody(
 
 type RenderMode = "detail" | "compact";
 
+function countDescendants(p: PluginNode): number {
+  let n = 0;
+  for (const c of p.children) n += 1 + countDescendants(c);
+  return n;
+}
+
 function renderPluginTreeMd(
   p: PluginNode,
   depth: number,
@@ -167,8 +173,16 @@ function renderPluginTreeMd(
   const lines: string[] = [];
   const desc = pluginDescription(p);
   const descStr = desc ? ` — ${desc}` : "";
-  const marker = mode === "compact" && p.loadBearing ? " [load-bearing]" : "";
-  lines.push(`${headerIndent}- **\`${p.name}\`**${marker}${descStr}`);
+  const lbMarker = mode === "compact" && p.loadBearing ? " [load-bearing]" : "";
+
+  if (mode === "compact" && p.collapsed && p.children.length > 0) {
+    const total = countDescendants(p);
+    const subLabel = total === 1 ? "1 sub-plugin" : `${total} sub-plugins`;
+    lines.push(`${headerIndent}- **\`${p.name}\`**${lbMarker} [${subLabel}]${descStr}`);
+    return lines;
+  }
+
+  lines.push(`${headerIndent}- **\`${p.name}\`**${lbMarker}${descStr}`);
 
   const includeBody = mode === "detail";
   if (includeBody) renderPluginBody(p, bodyIndent, root, lines);
@@ -203,7 +217,7 @@ function renderTreeBody(roots: PluginNode[], root: string, mode: RenderMode): st
 
 const COMPACT_HEADER =
   "# Plugins (compact)\n\n" +
-  "Slim, always-loaded index of every plugin. Shows only `name — description`; load-bearing infrastructure plugins are marked `[load-bearing]`. Read [`plugins-details.md`](./plugins-details.md) for the full reference, or open the per-plugin `CLAUDE.md` when working inside a specific plugin.\n\n";
+  "Slim, always-loaded index of every plugin. Shows only `name — description`; load-bearing infrastructure plugins are marked `[load-bearing]`; collapsed plugins show `[N sub-plugins]` — open the plugin's own `CLAUDE.md` for its full sub-tree. Read [`plugins-details.md`](./plugins-details.md) for the full reference, or open the per-plugin `CLAUDE.md` when working inside a specific plugin.\n\n";
 
 const DETAILS_HEADER =
   "# Plugins (details)\n\n" +
@@ -241,11 +255,18 @@ function renderPluginClaudeAutogen(p: PluginNode, root: string): string {
   if (p.loadBearing) lines.push("- Load-bearing: yes");
   renderPluginBody(p, "", root, lines);
   if (p.children.length > 0) {
-    lines.push("- Sub-plugins:");
-    for (const c of p.children) {
-      const cdesc = pluginDescription(c);
-      const cdescStr = cdesc ? ` — ${cdesc}` : "";
-      lines.push(`  - **\`${c.name}\`**${cdescStr}`);
+    if (p.collapsed) {
+      lines.push("- Sub-plugins:");
+      for (const c of p.children) {
+        lines.push(...renderPluginTreeMd(c, 1, root, "compact"));
+      }
+    } else {
+      lines.push("- Sub-plugins:");
+      for (const c of p.children) {
+        const cdesc = pluginDescription(c);
+        const cdescStr = cdesc ? ` — ${cdesc}` : "";
+        lines.push(`  - **\`${c.name}\`**${cdescStr}`);
+      }
     }
   }
   return lines.join("\n") + "\n";
