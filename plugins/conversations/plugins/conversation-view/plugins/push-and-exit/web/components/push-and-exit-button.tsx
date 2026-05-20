@@ -87,7 +87,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
       { method: "DELETE" },
     );
-  }, [busy, live.status, conversation.id]);
+  }, [busy, job, live.status, conversation.id]);
 
   useEffect(() => {
     if (job?.status !== "clean") return;
