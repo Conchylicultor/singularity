@@ -1,6 +1,7 @@
 import { agentModelGuard } from "./guards/agent-model";
 import { findGuard } from "./guards/find";
 import { gitDiffMainGuard } from "./guards/git-diff-main";
+import { gitPushGuard } from "./guards/git-push";
 import { mainEditsGuard } from "./guards/main-edits";
 import { mainWritesGuard } from "./guards/main-writes";
 import { migrationsGuard } from "./guards/migrations";
@@ -13,6 +14,7 @@ export const GUARDS: Guard<any>[] = [
   findGuard,
   rgReplaceGuard,
   gitDiffMainGuard,
+  gitPushGuard,
   migrationsGuard,
   mainWritesGuard,
   postgresGuard,
