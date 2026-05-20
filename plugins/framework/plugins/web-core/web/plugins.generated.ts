@@ -182,6 +182,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "primitives/plugins/prompt-editor", hierarchyPath: "primitives/prompt-editor", loader: () => import("@plugins/primitives/plugins/prompt-editor/web") },
   { name: "primitives/plugins/rank", hierarchyPath: "primitives/rank", loader: () => import("@plugins/primitives/plugins/rank/web") },
   { name: "primitives/plugins/relative-time", hierarchyPath: "primitives/relative-time", loader: () => import("@plugins/primitives/plugins/relative-time/web") },
+  { name: "primitives/plugins/responsive-overflow", hierarchyPath: "primitives/responsive-overflow", loader: () => import("@plugins/primitives/plugins/responsive-overflow/web") },
   { name: "primitives/plugins/search", hierarchyPath: "primitives/search", loader: () => import("@plugins/primitives/plugins/search/web") },
   { name: "primitives/plugins/section-label", hierarchyPath: "primitives/section-label", loader: () => import("@plugins/primitives/plugins/section-label/web") },
   { name: "primitives/plugins/select-scope", hierarchyPath: "primitives/select-scope", loader: () => import("@plugins/primitives/plugins/select-scope/web") },

@@ -1437,6 +1437,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
       - Exports (web):
         - Values: `formatRelativeTime`, `RelativeTime`
+    - **`responsive-overflow`** — Progressively hides children that don't fit the container width. Exposes ResponsiveOverflow component and useResponsiveOverflow hook.
+      - Exports (web):
+        - Types: `ResponsiveOverflowProps`, `UseResponsiveOverflowHandle`, `UseResponsiveOverflowOptions`
+        - Values: `ResponsiveOverflow`, `useResponsiveOverflow`
     - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
       - Exports (web):
         - Types: `SearchInputProps`, `TextFilterHandle`, `UseTextFilterOptions`

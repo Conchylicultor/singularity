@@ -285,6 +285,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`voice-input`** — Voice dictation for the prompt editor via the Web Speech API.
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
+    - **`responsive-overflow`** — Progressively hides children that don't fit the container width. Exposes ResponsiveOverflow component and useResponsiveOverflow hook.
     - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
     - **`section-label`** — Eyebrow/section-label typography primitive: small caps muted label for form sections and content headers.
     - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope> to prevent page-wide selection when focus is inside it.

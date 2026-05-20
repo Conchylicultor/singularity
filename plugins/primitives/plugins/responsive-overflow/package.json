@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-responsive-overflow",
+  "description": "Progressively hides children that don't fit the container width.",
+  "private": true,
+  "version": "0.0.1"
+}

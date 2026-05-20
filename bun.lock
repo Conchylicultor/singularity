@@ -972,6 +972,10 @@
       "name": "@singularity/plugin-primitives-relative-time",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/responsive-overflow": {
+      "name": "@singularity/plugin-primitives-responsive-overflow",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/search": {
       "name": "@singularity/plugin-primitives-search",
       "version": "0.0.1",
@@ -2242,6 +2246,8 @@
     "@singularity/plugin-primitives-rank": ["@singularity/plugin-primitives-rank@workspace:plugins/primitives/plugins/rank"],
 
     "@singularity/plugin-primitives-relative-time": ["@singularity/plugin-primitives-relative-time@workspace:plugins/primitives/plugins/relative-time"],
+
+    "@singularity/plugin-primitives-responsive-overflow": ["@singularity/plugin-primitives-responsive-overflow@workspace:plugins/primitives/plugins/responsive-overflow"],
 
     "@singularity/plugin-primitives-search": ["@singularity/plugin-primitives-search@workspace:plugins/primitives/plugins/search"],
 

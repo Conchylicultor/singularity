@@ -4,6 +4,7 @@ import {
   FloatingAction,
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/floating-action/web";
+import { ResponsiveOverflow } from "@plugins/primitives/plugins/responsive-overflow/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -116,7 +117,7 @@ export function FloatingTemplateChips({
   return (
     <div className="flex items-center gap-1.5">
       {pinnedTemplates.length > 0 && (
-        <div className="flex items-center gap-1">
+        <ResponsiveOverflow gap={4} className="items-center">
           {pinnedTemplates.map((t) => (
             <TemplateChip
               key={t.id}
@@ -128,7 +129,7 @@ export function FloatingTemplateChips({
               sending={sendingId === t.id}
             />
           ))}
-        </div>
+        </ResponsiveOverflow>
       )}
       <FloatingAction
         variant="ghost"
