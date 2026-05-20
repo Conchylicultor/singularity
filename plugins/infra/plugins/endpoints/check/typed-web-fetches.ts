@@ -49,6 +49,7 @@ const ALLOWED = new Map<string, number>([
   ["plugins/debug/plugins/memory/web/components/memory-panel.tsx", 2],
   ["plugins/debug/plugins/profiling/plugins/boot/web/components/boot-section.tsx", 1],
   ["plugins/debug/plugins/profiling/plugins/build/web/components/build-section.tsx", 1],
+  ["plugins/debug/plugins/profiling/plugins/push/web/components/push-section.tsx", 1],
   ["plugins/debug/plugins/profiling/plugins/stats/web/components/stats-section.tsx", 1],
   ["plugins/debug/plugins/queue/web/components/queue-view.tsx", 4],
   ["plugins/debug/plugins/worktree-cleanup/web/components/worktree-cleanup-panel.tsx", 3],

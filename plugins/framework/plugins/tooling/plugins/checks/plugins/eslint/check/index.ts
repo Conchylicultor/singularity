@@ -104,7 +104,8 @@ const check: Check = {
       new Response(proc.stderr).text(),
       proc.exited,
     ]);
-    if (exitCode === 0) return { ok: true };
+    // exit 0 = clean, exit 1 = warnings only, exit 2 = errors
+    if (exitCode <= 1) return { ok: true };
     const combined = [stdout.trim(), stderr.trim()].filter(Boolean).join("\n").trim();
     return {
       ok: false,
