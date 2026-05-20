@@ -685,6 +685,82 @@
       "name": "@singularity/plugin-framework-tooling-checks",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/allow-default-project": {
+      "name": "@singularity/plugin-framework-tooling-checks-allow-default-project",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync": {
+      "name": "@singularity/plugin-framework-tooling-checks-config-origins-in-sync",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/conversation-trailer": {
+      "name": "@singularity/plugin-framework-tooling-checks-conversation-trailer",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/eslint": {
+      "name": "@singularity/plugin-framework-tooling-checks-eslint",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/migrations-in-sync": {
+      "name": "@singularity/plugin-framework-tooling-checks-migrations-in-sync",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/no-plugin-imports-in-core": {
+      "name": "@singularity/plugin-framework-tooling-checks-no-plugin-imports-in-core",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/no-plugin-workspace-deps": {
+      "name": "@singularity/plugin-framework-tooling-checks-no-plugin-workspace-deps",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/no-raw-event-source": {
+      "name": "@singularity/plugin-framework-tooling-checks-no-raw-event-source",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/no-raw-sse": {
+      "name": "@singularity/plugin-framework-tooling-checks-no-raw-sse",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/no-raw-websocket": {
+      "name": "@singularity/plugin-framework-tooling-checks-no-raw-websocket",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/no-reexport-default": {
+      "name": "@singularity/plugin-framework-tooling-checks-no-reexport-default",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/no-relative-server-imports": {
+      "name": "@singularity/plugin-framework-tooling-checks-no-relative-server-imports",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/no-use-resource-cast": {
+      "name": "@singularity/plugin-framework-tooling-checks-no-use-resource-cast",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries": {
+      "name": "@singularity/plugin-framework-tooling-checks-plugin-boundaries",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/plugins-doc-in-sync": {
+      "name": "@singularity/plugin-framework-tooling-checks-plugins-doc-in-sync",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/plugins-have-claudemd": {
+      "name": "@singularity/plugin-framework-tooling-checks-plugins-have-claudemd",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/plugins-registry-in-sync": {
+      "name": "@singularity/plugin-framework-tooling-checks-plugins-registry-in-sync",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/snapshot-chain-intact": {
+      "name": "@singularity/plugin-framework-tooling-checks-snapshot-chain-intact",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/typescript": {
+      "name": "@singularity/plugin-framework-tooling-checks-typescript",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/codegen": {
       "name": "@singularity/plugin-framework-tooling-codegen",
       "version": "0.0.1",
@@ -2123,6 +2199,44 @@
     "@singularity/plugin-framework-tooling-boundaries": ["@singularity/plugin-framework-tooling-boundaries@workspace:plugins/framework/plugins/tooling/plugins/boundaries"],
 
     "@singularity/plugin-framework-tooling-checks": ["@singularity/plugin-framework-tooling-checks@workspace:plugins/framework/plugins/tooling/plugins/checks"],
+
+    "@singularity/plugin-framework-tooling-checks-allow-default-project": ["@singularity/plugin-framework-tooling-checks-allow-default-project@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/allow-default-project"],
+
+    "@singularity/plugin-framework-tooling-checks-config-origins-in-sync": ["@singularity/plugin-framework-tooling-checks-config-origins-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync"],
+
+    "@singularity/plugin-framework-tooling-checks-conversation-trailer": ["@singularity/plugin-framework-tooling-checks-conversation-trailer@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/conversation-trailer"],
+
+    "@singularity/plugin-framework-tooling-checks-eslint": ["@singularity/plugin-framework-tooling-checks-eslint@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/eslint"],
+
+    "@singularity/plugin-framework-tooling-checks-migrations-in-sync": ["@singularity/plugin-framework-tooling-checks-migrations-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/migrations-in-sync"],
+
+    "@singularity/plugin-framework-tooling-checks-no-plugin-imports-in-core": ["@singularity/plugin-framework-tooling-checks-no-plugin-imports-in-core@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-plugin-imports-in-core"],
+
+    "@singularity/plugin-framework-tooling-checks-no-plugin-workspace-deps": ["@singularity/plugin-framework-tooling-checks-no-plugin-workspace-deps@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-plugin-workspace-deps"],
+
+    "@singularity/plugin-framework-tooling-checks-no-raw-event-source": ["@singularity/plugin-framework-tooling-checks-no-raw-event-source@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-raw-event-source"],
+
+    "@singularity/plugin-framework-tooling-checks-no-raw-sse": ["@singularity/plugin-framework-tooling-checks-no-raw-sse@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-raw-sse"],
+
+    "@singularity/plugin-framework-tooling-checks-no-raw-websocket": ["@singularity/plugin-framework-tooling-checks-no-raw-websocket@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-raw-websocket"],
+
+    "@singularity/plugin-framework-tooling-checks-no-reexport-default": ["@singularity/plugin-framework-tooling-checks-no-reexport-default@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-reexport-default"],
+
+    "@singularity/plugin-framework-tooling-checks-no-relative-server-imports": ["@singularity/plugin-framework-tooling-checks-no-relative-server-imports@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-relative-server-imports"],
+
+    "@singularity/plugin-framework-tooling-checks-no-use-resource-cast": ["@singularity/plugin-framework-tooling-checks-no-use-resource-cast@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-use-resource-cast"],
+
+    "@singularity/plugin-framework-tooling-checks-plugin-boundaries": ["@singularity/plugin-framework-tooling-checks-plugin-boundaries@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries"],
+
+    "@singularity/plugin-framework-tooling-checks-plugins-doc-in-sync": ["@singularity/plugin-framework-tooling-checks-plugins-doc-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/plugins-doc-in-sync"],
+
+    "@singularity/plugin-framework-tooling-checks-plugins-have-claudemd": ["@singularity/plugin-framework-tooling-checks-plugins-have-claudemd@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/plugins-have-claudemd"],
+
+    "@singularity/plugin-framework-tooling-checks-plugins-registry-in-sync": ["@singularity/plugin-framework-tooling-checks-plugins-registry-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/plugins-registry-in-sync"],
+
+    "@singularity/plugin-framework-tooling-checks-snapshot-chain-intact": ["@singularity/plugin-framework-tooling-checks-snapshot-chain-intact@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/snapshot-chain-intact"],
+
+    "@singularity/plugin-framework-tooling-checks-typescript": ["@singularity/plugin-framework-tooling-checks-typescript@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/typescript"],
 
     "@singularity/plugin-framework-tooling-codegen": ["@singularity/plugin-framework-tooling-codegen@workspace:plugins/framework/plugins/tooling/plugins/codegen"],
 

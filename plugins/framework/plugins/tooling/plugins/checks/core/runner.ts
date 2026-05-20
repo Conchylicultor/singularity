@@ -1,50 +1,6 @@
-import { existsSync } from "fs";
-import { join, sep } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { boundaryRulesCheck } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
-import { allowDefaultProjectInSync } from "./allow-default-project";
-import { configOriginsInSync } from "./config-origins-in-sync";
-import { conversationTrailer } from "./conversation-trailer";
-import { eslintCheck } from "./eslint";
-import { migrationsInSync } from "./migrations-in-sync";
-import { noRawEventSource } from "./no-raw-event-source";
-import { noRawSse } from "./no-raw-sse";
-import { noPluginImportsInCore } from "./no-plugin-imports-in-core";
-import { noPluginWorkspaceDeps } from "./no-plugin-workspace-deps";
-import { noRawWebsocket } from "./no-raw-websocket";
-import { noReexportDefault } from "./no-reexport-default";
-import { noRelativeServerImports } from "./no-relative-server-imports";
-import { noUseResourceCast } from "./no-use-resource-cast";
-import { pluginBoundaries } from "./plugin-boundaries";
-import { typescript } from "./typescript";
-import { pluginsDocInSync } from "./plugins-doc-in-sync";
-import { pluginsHaveClaudeMd } from "./plugins-have-claudemd";
-import { pluginsRegistryInSync } from "./plugins-registry-in-sync";
-import { snapshotChainIntact } from "./snapshot-chain-intact";
+import { existsSync, readdirSync } from "fs";
+import { join, relative } from "path";
 import type { Check } from "./types";
-
-export const CHECKS: Check[] = [
-  allowDefaultProjectInSync,
-  conversationTrailer,
-  configOriginsInSync,
-  migrationsInSync,
-  snapshotChainIntact,
-  pluginsDocInSync,
-  pluginsRegistryInSync,
-  pluginsHaveClaudeMd,
-  pluginBoundaries,
-  boundaryRulesCheck,
-  noPluginImportsInCore,
-  noPluginWorkspaceDeps,
-  noRawEventSource,
-  noRawSse,
-  noRawWebsocket,
-  noReexportDefault,
-  noRelativeServerImports,
-  noUseResourceCast,
-  typescript,
-  eslintCheck,
-];
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
@@ -54,42 +10,29 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-async function loadPluginChecks(root: string): Promise<Check[]> {
-  const pluginsRoot = join(root, "plugins");
-  if (!existsSync(pluginsRoot)) return [];
-  const builtInIds = new Set(CHECKS.map((c) => c.id));
-  const out: Check[] = [];
-  const tree = buildPluginTree(pluginsRoot);
-  for (const node of tree.byDir.values()) {
-    const checkBarrel = join(node.dir, "check", "index.ts");
-    if (!existsSync(checkBarrel)) continue;
-    const pluginRel = node.dir
-      .slice(pluginsRoot.length + 1)
-      .split(sep)
-      .join("/");
-    let mod: { default?: unknown };
+function findCheckBarrels(dir: string): string[] {
+  const out: string[] = [];
+  function walk(d: string, depth: number) {
+    if (depth > 12) return;
+    let entries;
     try {
-      mod = await import(checkBarrel);
-    } catch (err) {
-      console.warn(`  [check loader] failed to import ${pluginRel}/check/index.ts: ${err}`);
-      continue;
+      entries = readdirSync(d, { withFileTypes: true });
+    } catch {
+      return;
     }
-    const exported = mod.default;
-    const checks = Array.isArray(exported) ? exported : exported ? [exported] : [];
-    for (const c of checks) {
-      if (!isCheck(c)) {
-        console.warn(`  [check loader] ${pluginRel}/check/index.ts: skipping non-Check export`);
-        continue;
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      if (e.name === "node_modules" || e.name === "dist" || e.name === ".git") continue;
+      const child = join(d, e.name);
+      if (e.name === "check") {
+        const barrel = join(child, "index.ts");
+        if (existsSync(barrel)) out.push(barrel);
+      } else {
+        walk(child, depth + 1);
       }
-      if (builtInIds.has(c.id)) {
-        console.warn(
-          `  [check loader] ${pluginRel}/check: id "${c.id}" collides with a built-in; skipping`,
-        );
-        continue;
-      }
-      out.push(c);
     }
   }
+  walk(dir, 0);
   return out;
 }
 
@@ -103,10 +46,46 @@ function isCheck(value: unknown): value is Check {
   );
 }
 
+async function loadAllChecks(root: string): Promise<Check[]> {
+  const pluginsRoot = join(root, "plugins");
+  if (!existsSync(pluginsRoot)) return [];
+
+  const checkBarrels = findCheckBarrels(pluginsRoot);
+  checkBarrels.sort();
+
+  const out: Check[] = [];
+  const seenIds = new Set<string>();
+
+  for (const barrel of checkBarrels) {
+    const rel = relative(pluginsRoot, barrel);
+    let mod: { default?: unknown };
+    try {
+      mod = await import(barrel);
+    } catch (err) {
+      console.warn(`  [check loader] failed to import ${rel}: ${err}`);
+      continue;
+    }
+    const exported = mod.default;
+    const checks = Array.isArray(exported) ? exported : exported ? [exported] : [];
+    for (const c of checks) {
+      if (!isCheck(c)) {
+        console.warn(`  [check loader] ${rel}: skipping non-Check export`);
+        continue;
+      }
+      if (seenIds.has(c.id)) {
+        console.warn(`  [check loader] ${rel}: duplicate id "${c.id}"; skipping`);
+        continue;
+      }
+      seenIds.add(c.id);
+      out.push(c);
+    }
+  }
+  return out;
+}
+
 export async function listAllChecks(): Promise<Check[]> {
   const root = await getRoot();
-  const pluginChecks = await loadPluginChecks(root);
-  return [...CHECKS, ...pluginChecks];
+  return loadAllChecks(root);
 }
 
 export interface RunChecksOptions {

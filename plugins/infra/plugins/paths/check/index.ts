@@ -16,6 +16,8 @@ const ALLOWED_PATHS = [
   "plugins/infra/plugins/paths/core/internal/paths.ts",
   "plugins/infra/plugins/paths/server/internal/bins.ts",
   // CLI bin/ imports from @plugins/infra/paths/server — no homedir() calls, no allowlist entry needed.
+  // Tooling inlines the subset of paths it needs (HOME_DIR, libpqEnv) to avoid depending on cli/.
+  "plugins/framework/plugins/tooling/plugins/guards/core/guards/main-edits.ts",
   // Database plugin owns its own embedded-PG path constants and config
   // reader. Lives in shared/ so server, central, and CLI can all import
   // from a sanctioned location.

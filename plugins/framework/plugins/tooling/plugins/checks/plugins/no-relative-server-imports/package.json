@@ -1,0 +1,5 @@
+{
+  "name": "@singularity/plugin-framework-tooling-checks-no-relative-server-imports",
+  "version": "0.0.1",
+  "private": true
+}
