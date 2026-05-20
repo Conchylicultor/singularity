@@ -2,94 +2,80 @@ import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getPushProfiling } from "../../shared/endpoints";
 import { readContentionRecords } from "./read-contention";
 
-interface Span {
-  id: string;
-  phase: string;
-  label: string;
-  startMs: number;
-  durationMs: number;
-}
-
-interface Phase {
-  id: string;
-  label: string;
-  outcome: string;
+interface PushEntry {
+  pushId: string;
   branch: string;
+  outcome: string;
+  startedAt: string;
+  startMs: number;
+  waitMs: number;
+  holdMs: number;
 }
 
-const DEFAULT_LIMIT = 20;
+interface WorktreeGroup {
+  worktree: string;
+  pushes: PushEntry[];
+}
+
+const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
 export const handlePushProfiling = implement(
   getPushProfiling,
-  ({ req }) => {
-    const url = new URL(req.url, "http://localhost");
-    const limitParam = url.searchParams.get("limit");
-    const limit = limitParam ? Math.max(1, parseInt(limitParam, 10) || DEFAULT_LIMIT) : DEFAULT_LIMIT;
-
+  () => {
     const allRecords = readContentionRecords();
 
-    // Sort by startedAt ascending, then take last N
-    allRecords.sort(
+    const cutoff = Date.now() - TWENTY_FOUR_HOURS;
+    const recent = allRecords.filter(
+      (r) => new Date(r.startedAt).getTime() >= cutoff,
+    );
+
+    recent.sort(
       (a, b) =>
         new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
     );
-    const records = allRecords.slice(-limit);
 
-    if (records.length === 0) {
-      return { spans: [], totalMs: 0, phases: [] };
+    if (recent.length === 0) {
+      return { groups: [], totalMs: 0 };
     }
 
-    // Origin = earliest lockRequestedAt in the window
     const originMs = Math.min(
-      ...records.map((r) => new Date(r.lockRequestedAt).getTime()),
+      ...recent.map((r) => new Date(r.lockRequestedAt).getTime()),
     );
 
-    const spans: Span[] = [];
-    const phases: Phase[] = [];
-
-    for (const record of records) {
+    const byWorktree = new Map<string, PushEntry[]>();
+    for (const record of recent) {
+      const wt = record.branch;
       const pushOffset =
         new Date(record.lockRequestedAt).getTime() - originMs;
 
-      phases.push({
-        id: record.pushId,
-        label: record.branch,
-        outcome: record.outcome,
+      const entry: PushEntry = {
+        pushId: record.pushId,
         branch: record.branch,
-      });
+        outcome: record.outcome,
+        startedAt: record.startedAt,
+        startMs: pushOffset,
+        waitMs: record.waitMs,
+        holdMs: record.holdMs,
+      };
 
-      // "wait" span if there was lock contention
-      if (record.waitMs > 0) {
-        spans.push({
-          id: `${record.pushId}:wait`,
-          phase: record.pushId,
-          label: "lock wait",
-          startMs: pushOffset,
-          durationMs: record.waitMs,
-        });
-      }
-
-      // Step spans offset after the wait
-      for (const step of record.steps) {
-        spans.push({
-          id: `${record.pushId}:${step.name}`,
-          phase: record.pushId,
-          label: step.name,
-          startMs: pushOffset + record.waitMs + step.startMs,
-          durationMs: step.durationMs,
-        });
-      }
+      const list = byWorktree.get(wt) ?? [];
+      list.push(entry);
+      byWorktree.set(wt, list);
     }
 
-    // totalMs = max extent across all records
+    const groups: WorktreeGroup[] = [];
+    for (const [worktree, pushes] of byWorktree) {
+      groups.push({ worktree, pushes });
+    }
+
     const totalMs = Math.max(
-      ...records.map((r) => {
+      ...recent.map((r) => {
         const pushOffset =
           new Date(r.lockRequestedAt).getTime() - originMs;
         return pushOffset + r.waitMs + r.holdMs;
       }),
     );
 
-    return { spans, totalMs, phases };
+    return { groups, totalMs };
   },
 );
