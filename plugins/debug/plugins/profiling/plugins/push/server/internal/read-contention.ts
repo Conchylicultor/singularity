@@ -41,8 +41,9 @@ export function readContentionRecords(): PushContentionRecord[] {
     if (!trimmed) continue;
     try {
       records.push(JSON.parse(trimmed) as PushContentionRecord);
-    } catch {
-      // skip malformed lines — crash tolerance
+    } catch (err) {
+      if (err instanceof SyntaxError) continue;
+      throw err;
     }
   }
   return records;

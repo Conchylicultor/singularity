@@ -82,8 +82,9 @@ export function PushSection(): ReactElement | null {
       const res = await fetch("/api/debug/profiling/push");
       if (!res.ok) return;
       setData((await res.json()) as PushData);
-    } catch {
-      // debug tool — silent on fetch errors
+    } catch (err) {
+      if (err instanceof TypeError) return;
+      throw err;
     }
   }, []);
 
