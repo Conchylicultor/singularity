@@ -526,7 +526,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
       - Contributes:
         - `Pane.Register` "conversation"
-      - Slot contributors: `agents`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `dependencies`, `docs-button`, `drop-and-exit`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+      - Slot contributors: `agents`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `dependencies`, `docs-button`, `drop-and-exit`, `event-counter`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `notes`, `open-app`, `prompt-input`, `review`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Exports (web):
@@ -646,6 +646,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
               - Contributes:
                 - `JsonlViewer.EventRenderer` "assistant-thinking" → `AssistantThinkingRow`
+            - **`event-counter`** — Displays the total event count in the conversation toolbar.
+              - Contributes:
+                - `Conversation.ActionBar` → `EventCounter`
             - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
               - Contributes:
                 - `JsonlViewer.Overlay` "message-toc" → `MessageToc`
