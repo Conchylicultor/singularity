@@ -1072,6 +1072,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (core):
             - Types: `Check`, `CheckResult`, `RunChecksOptions`, `TscTarget`
             - Values: `discoverTscTargets`, `listAllChecks`, `runChecks`
+          - Plugins:
+            - **`allow-default-project`**
+            - **`config-origins-in-sync`**
+            - **`conversation-trailer`**
+            - **`eslint`**
+            - **`migrations-in-sync`**
+            - **`no-plugin-imports-in-core`**
+            - **`no-plugin-workspace-deps`**
+            - **`no-raw-event-source`**
+            - **`no-raw-sse`**
+            - **`no-raw-websocket`**
+            - **`no-reexport-default`**
+            - **`no-relative-server-imports`**
+            - **`no-use-resource-cast`**
+            - **`plugin-boundaries`**
+            - **`plugins-doc-in-sync`**
+            - **`plugins-have-claudemd`**
+            - **`plugins-registry-in-sync`**
+            - **`snapshot-chain-intact`**
+            - **`typescript`**
         - **`codegen`** — Plugin doc generation and registry codegen
           - Exports (core):
             - Types: `GenerateDocsOptions`, `PluginNode`, `PluginTree`, `Runtime`

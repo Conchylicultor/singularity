@@ -193,6 +193,26 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
         - **`checks`** — Check runner and built-in checks for ./singularity check
+          - Plugins:
+            - **`allow-default-project`**
+            - **`config-origins-in-sync`**
+            - **`conversation-trailer`**
+            - **`eslint`**
+            - **`migrations-in-sync`**
+            - **`no-plugin-imports-in-core`**
+            - **`no-plugin-workspace-deps`**
+            - **`no-raw-event-source`**
+            - **`no-raw-sse`**
+            - **`no-raw-websocket`**
+            - **`no-reexport-default`**
+            - **`no-relative-server-imports`**
+            - **`no-use-resource-cast`**
+            - **`plugin-boundaries`**
+            - **`plugins-doc-in-sync`**
+            - **`plugins-have-claudemd`**
+            - **`plugins-registry-in-sync`**
+            - **`snapshot-chain-intact`**
+            - **`typescript`**
         - **`codegen`** — Plugin doc generation and registry codegen
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config

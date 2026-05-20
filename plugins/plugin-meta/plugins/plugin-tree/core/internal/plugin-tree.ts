@@ -554,7 +554,9 @@ function findAllPluginDirs(pluginsRoot: string): string[] {
     const hasCentral = existsSync(join(dir, "central", "index.ts"));
     const hasShared = existsSync(join(dir, "shared", "index.ts"));
     const hasCore = existsSync(join(dir, "core", "index.ts"));
-    const hasBarrel = hasWeb || hasServer || hasCentral || hasShared || hasCore;
+    const hasCheck = existsSync(join(dir, "check", "index.ts"));
+    const hasLint = existsSync(join(dir, "lint", "index.ts"));
+    const hasBarrel = hasWeb || hasServer || hasCentral || hasShared || hasCore || hasCheck || hasLint;
     const isUmbrella =
       !hasBarrel &&
       existsSync(join(dir, "plugins")) &&

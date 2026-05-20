@@ -1,5 +1,6 @@
-import { existsSync, readdirSync } from "fs";
-import { join, relative } from "path";
+import { existsSync } from "fs";
+import { join, sep } from "path";
+import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { Check } from "./types";
 
 async function getRoot(): Promise<string> {
@@ -8,32 +9,6 @@ async function getRoot(): Promise<string> {
     stderr: "pipe",
   });
   return (await new Response(proc.stdout).text()).trim();
-}
-
-function findCheckBarrels(dir: string): string[] {
-  const out: string[] = [];
-  function walk(d: string, depth: number) {
-    if (depth > 12) return;
-    let entries;
-    try {
-      entries = readdirSync(d, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const e of entries) {
-      if (!e.isDirectory()) continue;
-      if (e.name === "node_modules" || e.name === "dist" || e.name === ".git") continue;
-      const child = join(d, e.name);
-      if (e.name === "check") {
-        const barrel = join(child, "index.ts");
-        if (existsSync(barrel)) out.push(barrel);
-      } else {
-        walk(child, depth + 1);
-      }
-    }
-  }
-  walk(dir, 0);
-  return out;
 }
 
 function isCheck(value: unknown): value is Check {
@@ -50,30 +25,33 @@ async function loadAllChecks(root: string): Promise<Check[]> {
   const pluginsRoot = join(root, "plugins");
   if (!existsSync(pluginsRoot)) return [];
 
-  const checkBarrels = findCheckBarrels(pluginsRoot);
-  checkBarrels.sort();
-
+  const tree = buildPluginTree(pluginsRoot);
   const out: Check[] = [];
   const seenIds = new Set<string>();
 
-  for (const barrel of checkBarrels) {
-    const rel = relative(pluginsRoot, barrel);
+  for (const node of tree.byDir.values()) {
+    const checkBarrel = join(node.dir, "check", "index.ts");
+    if (!existsSync(checkBarrel)) continue;
+    const pluginRel = node.dir
+      .slice(pluginsRoot.length + 1)
+      .split(sep)
+      .join("/");
     let mod: { default?: unknown };
     try {
-      mod = await import(barrel);
+      mod = await import(checkBarrel);
     } catch (err) {
-      console.warn(`  [check loader] failed to import ${rel}: ${err}`);
+      console.warn(`  [check loader] failed to import ${pluginRel}/check/index.ts: ${err}`);
       continue;
     }
     const exported = mod.default;
     const checks = Array.isArray(exported) ? exported : exported ? [exported] : [];
     for (const c of checks) {
       if (!isCheck(c)) {
-        console.warn(`  [check loader] ${rel}: skipping non-Check export`);
+        console.warn(`  [check loader] ${pluginRel}/check/index.ts: skipping non-Check export`);
         continue;
       }
       if (seenIds.has(c.id)) {
-        console.warn(`  [check loader] ${rel}: duplicate id "${c.id}"; skipping`);
+        console.warn(`  [check loader] ${pluginRel}/check: duplicate id "${c.id}"; skipping`);
         continue;
       }
       seenIds.add(c.id);
