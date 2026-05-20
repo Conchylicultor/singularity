@@ -1,6 +1,5 @@
 import { type ReactNode } from "react";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
-import { TokenBadge } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import type { ToolCallEvent } from "../../core";
 
 interface ToolCallCardProps {
@@ -51,11 +50,6 @@ export function ToolCallCard({
             ))}
           </span>
         )}
-        {event.usage ? (
-          <span className={summary ? "" : "ml-auto"}>
-            <TokenBadge usage={event.usage} />
-          </span>
-        ) : null}
       </button>
       {open && <div id={contentId}>{children}</div>}
     </div>

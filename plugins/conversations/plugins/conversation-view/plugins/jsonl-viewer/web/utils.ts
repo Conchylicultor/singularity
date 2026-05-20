@@ -1,5 +1,4 @@
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import type { TokenUsage } from "@plugins/conversations/plugins/transcript-watcher/core";
 
 function isToday(d: Date): boolean {
   const now = new Date();
@@ -24,14 +23,4 @@ export function formatTokenCount(n: number): string {
   if (n < 10_000) return `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k`;
   if (n < 1_000_000) return `${Math.round(n / 1000)}k`;
   return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
-}
-
-export function tokenUsageTooltip(u: TokenUsage): string {
-  return [
-    `Input: ${u.input.toLocaleString()}`,
-    `Output: ${u.output.toLocaleString()}`,
-    `Cache read: ${u.cacheRead.toLocaleString()}`,
-    `Cache creation: ${u.cacheCreation.toLocaleString()}`,
-    `Context: ${(u.input + u.cacheRead + u.cacheCreation).toLocaleString()}`,
-  ].join("\n");
 }
