@@ -197,6 +197,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Plugins:
             - **`allow-default-project`**
+            - **`barrel-stubs-in-sync`**
             - **`config-origins-in-sync`**
             - **`conversation-trailer`**
             - **`eslint`**

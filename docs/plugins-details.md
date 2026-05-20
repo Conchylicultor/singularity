@@ -1084,6 +1084,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `discoverTscTargets`, `listAllChecks`, `runChecks`
           - Plugins:
             - **`allow-default-project`**
+            - **`barrel-stubs-in-sync`**
             - **`config-origins-in-sync`**
             - **`conversation-trailer`**
             - **`eslint`**
@@ -1105,7 +1106,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`codegen`** — Plugin doc generation and registry codegen
           - Exports (core):
             - Types: `GenerateDocsOptions`, `PluginNode`, `PluginTree`, `Runtime`
-            - Values: `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `pluginRegistryPath`, `pluginRoutesDocPath`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderPluginRegistry`, `renderRoutesDoc`
+            - Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `pluginRegistryPath`, `pluginRoutesDocPath`, `renderBarrelStubs`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderPluginRegistry`, `renderRoutesDoc`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Exports (core):
             - Types: `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`
@@ -1282,7 +1283,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
       - Exports (core):
-        - Values: `importBarrel`, `registerBarrelStubs`
+        - Types: `AutoStubEntry`
+        - Values: `AUTO_STUB_CSS`, `AUTO_STUB_PACKAGES`, `importBarrel`, `registerBarrelStubs`
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Defines:
         - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`
@@ -1300,8 +1302,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Resources: `plugin-health-reviews` (push)
     - **`plugin-tree`**
       - Exports (core):
-        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`
-        - Values: `buildPluginTree`, `enrichPluginTreeDocs`
+        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `FacetDef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`
+        - Values: `buildPluginTree`, `defineFacet`, `enrichPluginTreeDocs`, `getFacet`, `setFacet`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Exports (core):
         - Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `EntityExtensionInfo`, `EntityExtensionRef`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`, `TableInfo`

@@ -10,6 +10,7 @@
   - Values: `discoverTscTargets`, `listAllChecks`, `runChecks`
 - Sub-plugins:
   - **`allow-default-project`**
+  - **`barrel-stubs-in-sync`**
   - **`config-origins-in-sync`**
   - **`conversation-trailer`**
   - **`eslint`**
