@@ -92,7 +92,7 @@ const check: Check = {
     const cacheLocation = join(root, ".cache", "eslint");
     bustCacheIfStale(root, cacheLocation);
     const proc = Bun.spawn(
-      [process.execPath, "x", "eslint", ".", "--quiet", "--cache", "--cache-location", cacheLocation],
+      [process.execPath, "x", "eslint", ".", "--quiet", "--cache", "--cache-location", cacheLocation, "--cache-strategy", "content"],
       {
         cwd: root,
         stdout: "pipe",
