@@ -562,6 +562,13 @@ export function registerBuild(program: Command) {
       await generatePluginDocs({ root });
       endSpan();
 
+      // 4b. Generate config origin files from defineConfig contributions
+      endSpan = buildProfilerStart("configOrigins", "build:codegen", "generate config origins");
+      console.log("Generating config origins...");
+      const { generateConfigOrigins } = await import("@tooling/config-origin-gen");
+      await generateConfigOrigins({ root });
+      endSpan();
+
       // 3c. Run repo validation checks (typescript, plugin-boundaries, eslint,
       // plugin-contributed checks, ...). Fail before the expensive frontend
       // build kicks off. `--skip-checks` opts out for fast iteration; checks

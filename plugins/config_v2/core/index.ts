@@ -13,3 +13,15 @@ export type {
 } from "./internal/types";
 export { configV2Resource, configV2ValuesSchema } from "./internal/resource";
 export type { ConfigV2Values } from "./internal/resource";
+export type { ConfigProxy } from "./internal/config-proxy";
+export {
+  computeHash,
+  codeConfigProxy,
+  readonlyProxy,
+} from "./internal/config-proxy";
+export {
+  effective,
+  hasConflict,
+  propagate,
+  readTypedConfig,
+} from "./internal/tier-logic";

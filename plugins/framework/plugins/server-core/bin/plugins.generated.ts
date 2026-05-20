@@ -130,7 +130,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (codeExplorerFileResolvePlugin as ServerPluginDefinition).dependsOn = [codeExplorerPlugin, infraEndpointsPlugin, infraPathsPlugin];
 (codeExplorerPlugin as ServerPluginDefinition).dependsOn = [infraEndpointsPlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
 (config_v2StorePlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
-(config_v2Plugin as ServerPluginDefinition).dependsOn = [config_v2StorePlugin];
+(config_v2Plugin as ServerPluginDefinition).dependsOn = [config_v2StorePlugin, infraPathsPlugin];
 (configPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEndpointsPlugin, infraPathsPlugin, infraSecretsPlugin];
 (conversationsRecoverPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraEndpointsPlugin, tasksCorePlugin];
 (conversationsConversationCategoryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, databasePlugin, infraClaudeCliPlugin, infraEndpointsPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, primitivesAvatarPlugin, tasksCorePlugin];

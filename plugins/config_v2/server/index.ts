@@ -11,10 +11,10 @@ export default {
   name: "Config v2",
   description: "Typed JSONC config handles for server plugins.",
   contributions: [Resource.Declare(configV2ServerResource)],
-  async onReady() {
-    await initRegistry();
+  onReady() {
+    initRegistry();
   },
-  async onShutdown() {
+  onShutdown() {
     shutdownRegistry();
   },
 } satisfies ServerPluginDefinition;

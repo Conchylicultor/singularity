@@ -1,46 +1,34 @@
+import { join } from "node:path";
 import type {
   ConfigDescriptor,
   ConfigValues,
   FieldsRecord,
-  FieldDef,
   InferFieldValue,
 } from "../../core";
+import {
+  readonlyProxy,
+  computeHash,
+  effective,
+  propagate,
+  readTypedConfig,
+} from "../../core";
+import { jsoncConfigProxy } from "./jsonc-proxy";
 import type { Disposable, JsonValue } from "@plugins/config_v2/plugins/store/core";
 import { getConfigStore } from "@plugins/config_v2/plugins/store/server";
+import { REPO_ROOT, CONFIG_DIR } from "@plugins/infra/plugins/paths/server";
 import { ConfigV2 } from "./contribution";
 import { configV2ServerResource, registerDescriptorPath, setConfigGetter } from "./resource";
 
 interface CacheEntry {
   values: ConfigValues<FieldsRecord>;
   storePath: string;
-  storeDisposable: Disposable;
+  userOriginPath: string;
+  userOverwritesPath: string;
+  disposables: Disposable[];
 }
 
 const cacheByDescriptor = new WeakMap<ConfigDescriptor, CacheEntry>();
 const subscribersByDescriptor = new WeakMap<ConfigDescriptor, Set<(values: ConfigValues<FieldsRecord>) => void>>();
-
-function parseDocument(
-  raw: JsonValue | undefined,
-  descriptor: ConfigDescriptor,
-): ConfigValues<FieldsRecord> {
-  if (raw === undefined || raw === null || typeof raw !== "object" || Array.isArray(raw)) {
-    return { ...descriptor.defaults };
-  }
-
-  const doc = raw as Record<string, JsonValue>;
-  const result: Record<string, unknown> = {};
-
-  for (const [key, field] of Object.entries(descriptor.fields) as [string, FieldDef][]) {
-    if (!(key in doc)) {
-      result[key] = field.defaultValue;
-      continue;
-    }
-    const parsed = field.schema.safeParse(doc[key]);
-    result[key] = parsed.success ? parsed.data : field.defaultValue;
-  }
-
-  return result as ConfigValues<FieldsRecord>;
-}
 
 function injectCollectionIds(
   doc: Record<string, unknown>,
@@ -50,10 +38,9 @@ function injectCollectionIds(
   return doc;
 }
 
-export async function initRegistry(): Promise<void> {
+export function initRegistry(): void {
   setConfigGetter(getConfig);
   const contributions = ConfigV2.Register.getContributions();
-  const readyPromises: Promise<void>[] = [];
 
   for (const contribution of contributions) {
     const { descriptor } = contribution;
@@ -68,44 +55,64 @@ export async function initRegistry(): Promise<void> {
     const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
     registerDescriptorPath(storePath, descriptor);
 
-    let resolveReady: () => void;
-    const readyPromise = new Promise<void>((resolve) => {
-      resolveReady = resolve;
-    });
-    readyPromises.push(readyPromise);
+    const userOriginPath = join(CONFIG_DIR, hierarchyPath, `${descriptor.name}.origin.jsonc`);
+    const userOverwritesPath = join(CONFIG_DIR, hierarchyPath, `${descriptor.name}.jsonc`);
 
-    let firstFire = true;
+    const gitOrigin = jsoncConfigProxy(join(REPO_ROOT, "config", hierarchyPath, `${descriptor.name}.origin.jsonc`));
+    const gitOverwrites = jsoncConfigProxy(join(REPO_ROOT, "config", hierarchyPath, `${descriptor.name}.jsonc`));
 
-    const storeDisposable = getConfigStore().watch(storePath, (raw) => {
-      const values = parseDocument(raw, descriptor);
+    const gitEff = effective(gitOrigin, gitOverwrites);
+    const gitEffProxy = readonlyProxy(gitEff);
+    const userOrigin = jsoncConfigProxy(userOriginPath);
+    const userOverwrites = jsoncConfigProxy(userOverwritesPath);
+
+    const { conflict } = propagate(gitEffProxy, userOrigin, userOverwrites);
+    if (conflict) {
+      console.warn(
+        `[config-v2] conflict: user overwrites for "${descriptor.name}" at ${hierarchyPath} ` +
+        `were based on a different upstream. Review ${userOverwritesPath}`,
+      );
+    }
+
+    const reloadValues = (): ConfigValues<FieldsRecord> => {
+      const freshUserOrigin = jsoncConfigProxy(userOriginPath);
+      const freshUserOverwrites = jsoncConfigProxy(userOverwritesPath);
+      return readTypedConfig(descriptor, freshUserOrigin, freshUserOverwrites);
+    };
+
+    const values = reloadValues();
+
+    const onFileChange = () => {
+      const freshValues = reloadValues();
       const entry = cacheByDescriptor.get(descriptor);
       if (entry) {
-        entry.values = values;
-      } else {
-        cacheByDescriptor.set(descriptor, { values, storePath, storeDisposable });
+        entry.values = freshValues;
       }
 
       const subs = subscribersByDescriptor.get(descriptor);
       if (subs) {
-        for (const cb of subs) cb(values);
+        for (const cb of subs) cb(freshValues);
       }
 
-      if (!firstFire) {
-        configV2ServerResource.notify({ path: storePath });
-      }
+      configV2ServerResource.notify({ path: storePath });
+    };
 
-      if (firstFire) {
-        firstFire = false;
-        resolveReady!();
-      }
+    const store = getConfigStore();
+    const userOverwritesStorePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
+    const userOriginStorePath = `${hierarchyPath}/${descriptor.name}.origin.jsonc`;
+
+    const disposables: Disposable[] = [];
+    disposables.push(store.watch(userOverwritesStorePath, onFileChange));
+    disposables.push(store.watch(userOriginStorePath, onFileChange));
+
+    cacheByDescriptor.set(descriptor, {
+      values,
+      storePath,
+      userOriginPath,
+      userOverwritesPath,
+      disposables,
     });
-
-    if (!cacheByDescriptor.has(descriptor)) {
-      cacheByDescriptor.set(descriptor, { values: descriptor.defaults, storePath, storeDisposable });
-    }
   }
-
-  await Promise.all(readyPromises);
 }
 
 export function shutdownRegistry(): void {
@@ -114,7 +121,7 @@ export function shutdownRegistry(): void {
     const { descriptor } = contribution;
     const entry = cacheByDescriptor.get(descriptor);
     if (entry) {
-      entry.storeDisposable.dispose();
+      for (const d of entry.disposables) d.dispose();
       cacheByDescriptor.delete(descriptor);
     }
     subscribersByDescriptor.delete(descriptor);
@@ -131,11 +138,11 @@ export function getConfig<F extends FieldsRecord>(descriptor: ConfigDescriptor<F
   return entry.values as ConfigValues<F>;
 }
 
-export async function setConfig<F extends FieldsRecord, K extends keyof F & string>(
+export function setConfig<F extends FieldsRecord, K extends keyof F & string>(
   descriptor: ConfigDescriptor<F>,
   key: K,
   value: InferFieldValue<F[K]>,
-): Promise<void> {
+): void {
   const entry = cacheByDescriptor.get(descriptor);
   if (!entry) {
     throw new Error(
@@ -145,10 +152,28 @@ export async function setConfig<F extends FieldsRecord, K extends keyof F & stri
 
   descriptor.fields[key]!.schema.parse(value);
 
-  const doc = { ...entry.values, [key]: value } as Record<string, unknown>;
-  const injected = injectCollectionIds(doc, descriptor.fields);
+  const userOverwrites = jsoncConfigProxy(entry.userOverwritesPath);
+  const userOrigin = jsoncConfigProxy(entry.userOriginPath);
 
-  await getConfigStore().write(entry.storePath, injected as JsonValue);
+  let base: Record<string, unknown>;
+  let hash: string | null;
+
+  if (userOverwrites.exists()) {
+    const ow = userOverwrites.read()!;
+    base = { ...(ow.content as Record<string, unknown>) };
+    hash = ow.hash;
+  } else if (userOrigin.exists()) {
+    const orig = userOrigin.read()!;
+    base = { ...(orig.content as Record<string, unknown>) };
+    hash = computeHash(orig.content);
+  } else {
+    base = { ...(descriptor.defaults as Record<string, unknown>) };
+    hash = null;
+  }
+
+  base[key] = value;
+  const injected = injectCollectionIds(base, descriptor.fields);
+  userOverwrites.write(injected as JsonValue, hash);
 }
 
 export function watchConfig<F extends FieldsRecord>(

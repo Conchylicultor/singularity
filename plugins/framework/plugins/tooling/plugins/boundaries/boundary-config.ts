@@ -25,6 +25,11 @@ export default defineBoundaries({
     allow("** -> plugin.plugin-meta.plugin-tree"),
     allow("** -> plugin.packages.retry"),
 
+    // Config origin codegen and check import config_v2 core (hash, types) and barrel-import
+    allow("tooling -> plugin.config_v2"),
+    allow("tooling -> plugin.config_v2.store"),
+    allow("tooling -> plugin.plugin-meta.barrel-import"),
+
     // Plugins can import other plugins
     allow("plugin.** -> plugin.**"),
   ],

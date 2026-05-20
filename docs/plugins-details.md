@@ -427,8 +427,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Exports (core):
-    - Types: `ConfigDescriptor`, `ConfigV2Values`, `ConfigValues`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`
-    - Values: `buildFieldsSchema`, `configV2Resource`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`
+    - Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Values`, `ConfigValues`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`
+    - Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2Resource`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`
   - Exports (web):
     - Values: `ConfigV2`, `useConfig`
   - Exports (server):
