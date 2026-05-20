@@ -25,14 +25,17 @@ export function ConversationView() {
       hideRightActions
     >
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="flex items-center border-b px-2 py-1.5">
-          <ActionBarView />
+        <div className="border-b">
+          <div className="mx-auto flex max-w-reading items-center px-2 py-1.5">
+            <ActionBarView />
+          </div>
         </div>
         <div className="min-h-0 flex-1 overflow-hidden">
           <JsonlPane conversation={conversation}>
             {showBottomBar && (
               <PromptInsertProvider>
-                <div className="flex shrink-0 flex-col gap-2 border-t border-border px-3 pt-1.5 pb-2">
+                <div className="shrink-0 border-t border-border">
+                <div className="mx-auto flex max-w-reading flex-col gap-2 px-3 pt-1.5 pb-2">
                   <Conversation.AbovePromptInput.Render>
                     {(item) => <item.component conversation={conversation} />}
                   </Conversation.AbovePromptInput.Render>
@@ -51,6 +54,7 @@ export function ConversationView() {
                       </div>
                     </div>
                   )}
+                </div>
                 </div>
               </PromptInsertProvider>
             )}
