@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
-import { buildEnrichedTree } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { buildEnrichedTree } from "./docgen";
 import { computeHash } from "@plugins/config_v2/core";
 import type { ConfigDescriptor, FieldDef } from "@plugins/config_v2/core";
 import type { JsonValue } from "@plugins/config_v2/plugins/store/core";

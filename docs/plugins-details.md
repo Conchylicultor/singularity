@@ -433,7 +433,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ConfigV2`, `useConfig`
   - Exports (server):
     - Values: `ConfigV2`, `getConfig`, `setConfig`, `watchConfig`
-  - Imported by: `build`, `primitives`
+  - Imported by: `build`, `checks`, `codegen`, `primitives`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
@@ -1068,10 +1068,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (core):
             - Types: `AllowEdge`, `BoundaryConfig`, `DenyEdge`, `Edge`, `RuntimeName`, `ZoneDefinition`
             - Values: `allow`, `boundaryRulesCheck`, `createBoundaryCheck`, `defineBoundaries`, `deny`, `zone`
+        - **`checks`** — Check runner and built-in checks for ./singularity check
+          - Exports (core):
+            - Types: `Check`, `CheckResult`, `RunChecksOptions`
+            - Values: `CHECKS`, `listAllChecks`, `runChecks`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Exports (core):
             - Types: `GenerateDocsOptions`, `PluginNode`, `PluginTree`, `Runtime`
-            - Values: `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `generatePluginDocs`, `generatePluginRegistry`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `pluginRegistryPath`, `pluginRoutesDocPath`, `renderCompactDoc`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderPluginRegistry`, `renderRoutesDoc`
+            - Values: `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `pluginRegistryPath`, `pluginRoutesDocPath`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderPluginRegistry`, `renderRoutesDoc`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Exports (core):
             - Types: `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`

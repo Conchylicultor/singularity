@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { checkBroadcasts } from "../broadcasts";
-import { CHECKS, listAllChecks, runChecks } from "@tooling/checks";
+import { CHECKS, listAllChecks, runChecks } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 
 export function registerCheck(program: Command) {
   const cmd = program

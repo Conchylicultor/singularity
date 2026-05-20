@@ -22,3 +22,5 @@ export {
   renderPluginRegistry,
   type Runtime,
 } from "./plugin-registry-gen";
+
+export { generateConfigOrigins, renderConfigOriginContent } from "./config-origin-gen";

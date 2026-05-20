@@ -10,7 +10,7 @@ async function getRoot(): Promise<string> {
 
 // Only this check's own source may mention the raw string (for matching).
 const ALLOWED_PATHS = [
-  "tooling/src/checks/no-raw-sse.ts",
+  "plugins/framework/plugins/tooling/plugins/checks/core/no-raw-sse.ts",
 ];
 
 export const noRawSse: Check = {

@@ -9,6 +9,7 @@
   - Types: `Check`, `CheckResult`
 - Sub-plugins:
   - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
+  - **`checks`** — Check runner and built-in checks for ./singularity check
   - **`codegen`** — Plugin doc generation and registry codegen
   - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
   - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config

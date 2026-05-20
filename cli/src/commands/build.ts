@@ -8,7 +8,7 @@ import { generatePluginDocs, collectAllPlugins, generatePluginRegistry } from "@
 import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot } from "../git/main-repo-root";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
-import { runChecks } from "@tooling/checks";
+import { runChecks } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   libpqEnv,
   readDatabaseConfig,
@@ -564,7 +564,7 @@ export function registerBuild(program: Command) {
       // 4b. Generate config origin files from defineConfig contributions
       endSpan = buildProfilerStart("configOrigins", "build:codegen", "generate config origins");
       console.log("Generating config origins...");
-      const { generateConfigOrigins } = await import("@tooling/config-origin-gen");
+      const { generateConfigOrigins } = await import("@plugins/framework/plugins/tooling/plugins/codegen/core");
       await generateConfigOrigins({ root });
       endSpan();
 

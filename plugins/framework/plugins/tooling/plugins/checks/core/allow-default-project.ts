@@ -2,7 +2,7 @@ import ts from "typescript";
 import { readFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 import type { Check } from "./types";
-import { discoverAllowDefaultProject } from "../eslint/allow-default-project";
+import { discoverAllowDefaultProject } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
@@ -69,7 +69,7 @@ export const allowDefaultProjectInSync: Check = {
 
     // 1. Collect all files covered by tsconfig projects (walk reference chains)
     const leafTsconfigs = collectLeafTsconfigs(join(root, "tsconfig.json"));
-    for (const standalone of ["tooling/tsconfig.json", "cli/tsconfig.json"]) {
+    for (const standalone of ["plugins/framework/plugins/tooling/tsconfig.json", "cli/tsconfig.json"]) {
       const abs = resolve(root, standalone);
       if (!leafTsconfigs.includes(abs)) {
         leafTsconfigs.push(...collectLeafTsconfigs(abs));
@@ -99,7 +99,7 @@ export const allowDefaultProjectInSync: Check = {
       return {
         ok: false,
         message: `Files discovered for allowDefaultProject that are already covered by a tsconfig project:\n${conflicts.map((f) => `  ${f}`).join("\n")}`,
-        hint: "Either exclude the file from the tsconfig's include, or add it to isInLocalTsconfigInclude() in tooling/src/eslint/allow-default-project.ts.",
+        hint: "Either exclude the file from the tsconfig's include, or add it to isInLocalTsconfigInclude() in plugins/framework/plugins/tooling/plugins/lint/core/allow-default-project.ts.",
       };
     }
 

@@ -4,8 +4,8 @@
  * then remove `shared/index.ts` barrel files that are no longer imported.
  *
  * Usage:
- *   bun tooling/src/checks/scripts/fix-shared-to-relative.ts           # apply fixes
- *   bun tooling/src/checks/scripts/fix-shared-to-relative.ts --dry-run # preview only
+ *   bun plugins/framework/plugins/tooling/plugins/checks/core/scripts/fix-shared-to-relative.ts           # apply fixes
+ *   bun plugins/framework/plugins/tooling/plugins/checks/core/scripts/fix-shared-to-relative.ts --dry-run # preview only
  */
 
 import { existsSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "fs";

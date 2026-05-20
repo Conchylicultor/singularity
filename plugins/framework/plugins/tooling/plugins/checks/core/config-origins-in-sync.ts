@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join, relative } from "path";
 import type { Check } from "./types";
-import { renderConfigOriginContent } from "@tooling/config-origin-gen";
+import { renderConfigOriginContent } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { computeHash } from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import type { JsonValue } from "@plugins/config_v2/plugins/store/core";

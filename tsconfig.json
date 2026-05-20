@@ -2,8 +2,7 @@
   "compilerOptions": {
     "paths": {
       "@/*": ["./plugins/framework/plugins/web-core/web/*"],
-      "@plugins/*": ["./plugins/*"],
-      "@tooling/*": ["./tooling/src/*"]
+      "@plugins/*": ["./plugins/*"]
     }
   },
   "files": [],

@@ -7,10 +7,10 @@
  * its `name`, and enables every contributed rule as `"error"` scoped to the
  * plugin's own subtree.
  *
- * The CLI runs ESLint via `tooling/src/checks/eslint.ts` (`./singularity check
- * --eslint`); there's no separate npm script to keep in sync.
+ * The CLI runs ESLint via `plugins/framework/plugins/tooling/plugins/checks/core/eslint.ts`
+ * (`./singularity check --eslint`); there's no separate npm script to keep in sync.
  *
- * Global lint rules (promise-safety, etc.) live in `tooling/src/lint/` and are
+ * Global lint rules (promise-safety, etc.) live in `plugins/framework/plugins/tooling/plugins/lint/core/` and are
  * registered in baseConfigs below — they apply to all `**\/*.{ts,tsx}` files.
  */
 

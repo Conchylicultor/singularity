@@ -32,7 +32,7 @@ export const typescript: Check = {
       runTsc(`${root}/plugins/framework/plugins/web-core`, ["-p", "tsconfig.app.json"]),
       runTsc(`${root}/plugins/framework/plugins/server-core`, []),
       runTsc(`${root}/plugins/framework/plugins/central-core`, []),
-      runTsc(`${root}/tooling`, []),
+      runTsc(`${root}/plugins/framework/plugins/tooling`, []),
     ]);
 
     if (web.ok && server.ok && central.ok && tooling.ok) return { ok: true };

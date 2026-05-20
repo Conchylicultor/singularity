@@ -11,7 +11,7 @@ async function getRoot(): Promise<string> {
 const ALLOWED_PATHS = [
   "plugins/primitives/plugins/networking/",
   "cli/",
-  "tooling/",
+  "plugins/framework/plugins/tooling/plugins/checks/core/no-raw-event-source.ts",
 ];
 
 export const noRawEventSource: Check = {

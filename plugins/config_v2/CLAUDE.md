@@ -12,7 +12,7 @@
   - Values: `ConfigV2`, `useConfig`
 - Exports (server):
   - Values: `ConfigV2`, `getConfig`, `setConfig`, `watchConfig`
-- Imported by: `build`, `primitives`
+- Imported by: `build`, `checks`, `codegen`, `primitives`
 - Sub-plugins:
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
   - **`store`** — ConfigStore abstraction and JSONC-on-disk backend. Reads/writes formatted JSONC files with atomic writes and file-watching.

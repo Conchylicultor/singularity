@@ -11,8 +11,7 @@
     "noUnusedParameters": true,
     "types": ["@types/bun"],
     "paths": {
-      "@plugins/*": ["../plugins/*"],
-      "@tooling/*": ["../tooling/src/*"]
+      "@plugins/*": ["../plugins/*"]
     }
   },
   "include": ["src", "../plugins/packages/plugins/*/shared"]

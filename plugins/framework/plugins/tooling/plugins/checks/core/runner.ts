@@ -46,8 +46,6 @@ export const CHECKS: Check[] = [
   eslintCheck,
 ];
 
-export type { Check, CheckResult } from "./types";
-
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
     stdout: "pipe",
@@ -56,11 +54,6 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-/**
- * Discover per-plugin custom checks. Each plugin may export a `check/index.ts`
- * whose default export is `Check | Check[]`. Discovery is purely runtime —
- * no codegen, no registry file. Built-in checks always win on id collision.
- */
 async function loadPluginChecks(root: string): Promise<Check[]> {
   const pluginsRoot = join(root, "plugins");
   if (!existsSync(pluginsRoot)) return [];

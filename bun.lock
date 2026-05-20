@@ -681,6 +681,10 @@
       "name": "@singularity/plugin-framework-tooling-boundaries",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks": {
+      "name": "@singularity/plugin-framework-tooling-checks",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/codegen": {
       "name": "@singularity/plugin-framework-tooling-codegen",
       "version": "0.0.1",
@@ -2124,6 +2128,8 @@
     "@singularity/plugin-framework-tooling": ["@singularity/plugin-framework-tooling@workspace:plugins/framework/plugins/tooling"],
 
     "@singularity/plugin-framework-tooling-boundaries": ["@singularity/plugin-framework-tooling-boundaries@workspace:plugins/framework/plugins/tooling/plugins/boundaries"],
+
+    "@singularity/plugin-framework-tooling-checks": ["@singularity/plugin-framework-tooling-checks@workspace:plugins/framework/plugins/tooling/plugins/checks"],
 
     "@singularity/plugin-framework-tooling-codegen": ["@singularity/plugin-framework-tooling-codegen@workspace:plugins/framework/plugins/tooling/plugins/codegen"],
 
