@@ -67,6 +67,7 @@ import debugLogsPlugin from "@plugins/debug/plugins/logs/server";
 import debugMemoryPlugin from "@plugins/debug/plugins/memory/server";
 import debugProfilingBootPlugin from "@plugins/debug/plugins/profiling/plugins/boot/server";
 import debugProfilingBuildPlugin from "@plugins/debug/plugins/profiling/plugins/build/server";
+import debugProfilingPushPlugin from "@plugins/debug/plugins/profiling/plugins/push/server";
 import debugProfilingStatsPlugin from "@plugins/debug/plugins/profiling/plugins/stats/server";
 import debugWorktreeCleanupPlugin from "@plugins/debug/plugins/worktree-cleanup/server";
 import eventsTestPlugin from "@plugins/events-test/server";
@@ -95,6 +96,7 @@ import reviewPluginChangesPlugin from "@plugins/review/plugins/plugin-changes/se
 import screenshotPlugin from "@plugins/screenshot/server";
 import statsCommitsPlugin from "@plugins/stats/plugins/commits/server";
 import statsCostPlugin from "@plugins/stats/plugins/cost/server";
+import statsPushesPlugin from "@plugins/stats/plugins/pushes/server";
 import statsTasksPlugin from "@plugins/stats/plugins/tasks/server";
 import tasksCorePlugin from "@plugins/tasks-core/server";
 import tasksAutoStartPlugin from "@plugins/tasks/plugins/auto-start/server";
@@ -167,6 +169,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (debugMemoryPlugin as ServerPluginDefinition).dependsOn = [infraEndpointsPlugin, infraPathsPlugin, infraWorktreePlugin];
 (debugProfilingBootPlugin as ServerPluginDefinition).dependsOn = [infraEndpointsPlugin];
 (debugProfilingBuildPlugin as ServerPluginDefinition).dependsOn = [infraEndpointsPlugin, infraPathsPlugin];
+(debugProfilingPushPlugin as ServerPluginDefinition).dependsOn = [infraEndpointsPlugin, infraPathsPlugin];
 (debugProfilingStatsPlugin as ServerPluginDefinition).dependsOn = [infraEndpointsPlugin];
 (debugWorktreeCleanupPlugin as ServerPluginDefinition).dependsOn = [databaseAdminPlugin, infraEndpointsPlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
 (eventsTestPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEndpointsPlugin, infraEventsPlugin, infraJobsPlugin];
@@ -189,6 +192,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (reviewPluginChangesPlugin as ServerPluginDefinition).dependsOn = [codeExplorerPlugin, conversationsConversationViewCodePlugin, infraEndpointsPlugin, infraPathsPlugin, tasksCorePlugin];
 (statsCommitsPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsConversationCategoryPlugin, databasePlugin, infraEndpointsPlugin, infraPathsPlugin, infraWorktreePlugin];
 (statsCostPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
+(statsPushesPlugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
 (statsTasksPlugin as ServerPluginDefinition).dependsOn = [tasksCorePlugin];
 (tasksCorePlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraAttachmentsPlugin, infraEventsPlugin, primitivesRankPlugin];
 (tasksAutoStartPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEntityExtensionsPlugin, tasksCorePlugin];
@@ -266,6 +270,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (debugMemoryPlugin as ServerPluginDefinition)._hierarchyPath = "debug/memory";
 (debugProfilingBootPlugin as ServerPluginDefinition)._hierarchyPath = "debug/profiling/boot";
 (debugProfilingBuildPlugin as ServerPluginDefinition)._hierarchyPath = "debug/profiling/build";
+(debugProfilingPushPlugin as ServerPluginDefinition)._hierarchyPath = "debug/profiling/push";
 (debugProfilingStatsPlugin as ServerPluginDefinition)._hierarchyPath = "debug/profiling/stats";
 (debugWorktreeCleanupPlugin as ServerPluginDefinition)._hierarchyPath = "debug/worktree-cleanup";
 (eventsTestPlugin as ServerPluginDefinition)._hierarchyPath = "events-test";
@@ -294,6 +299,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (screenshotPlugin as ServerPluginDefinition)._hierarchyPath = "screenshot";
 (statsCommitsPlugin as ServerPluginDefinition)._hierarchyPath = "stats/commits";
 (statsCostPlugin as ServerPluginDefinition)._hierarchyPath = "stats/cost";
+(statsPushesPlugin as ServerPluginDefinition)._hierarchyPath = "stats/pushes";
 (statsTasksPlugin as ServerPluginDefinition)._hierarchyPath = "stats/tasks";
 (tasksCorePlugin as ServerPluginDefinition)._hierarchyPath = "tasks-core";
 (tasksAutoStartPlugin as ServerPluginDefinition)._hierarchyPath = "tasks/auto-start";
@@ -372,6 +378,7 @@ export const plugins: ServerPluginDefinition[] = [
   debugMemoryPlugin,
   debugProfilingBootPlugin,
   debugProfilingBuildPlugin,
+  debugProfilingPushPlugin,
   debugProfilingStatsPlugin,
   debugWorktreeCleanupPlugin,
   eventsTestPlugin,
@@ -400,6 +407,7 @@ export const plugins: ServerPluginDefinition[] = [
   screenshotPlugin,
   statsCommitsPlugin,
   statsCostPlugin,
+  statsPushesPlugin,
   statsTasksPlugin,
   tasksCorePlugin,
   tasksAutoStartPlugin,

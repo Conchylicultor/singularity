@@ -1001,7 +1001,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` "debug-profiling"
         - `DebugApp.Sidebar` "Profiling" → `component`
-      - Slot contributors: `boot`, `build`, `stats`
+      - Slot contributors: `boot`, `build`, `push`, `stats`
       - Plugins:
         - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
           - Exports (shared):
@@ -1014,12 +1014,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Profiling.Section` → `BuildSection`
           - Imported by: `build-info`, `build-logs`, `build-profiling`
+        - **`push`** — Push contention profiling for the Gantt debug pane. Push contention profiling data endpoint.
+          - Exports (shared):
+            - Values: `getPushProfiling`
+          - Contributes:
+            - `Profiling.Section` → `PushSection`
         - **`stats`** — Stats endpoint profiling for the Gantt debug pane. Stats endpoint profiling data endpoint.
           - Exports (shared):
             - Values: `getStatsProfiling`
           - Contributes:
             - `Profiling.Section` → `StatsSection`
-          - Imported by: `commits`, `cost`, `tasks`
+          - Imported by: `commits`, `cost`, `pushes`, `tasks`
     - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
       - Exports (web):
         - Values: `queuePane`
@@ -1672,6 +1677,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
       - Server:
         - Uses: `config.Config`, `database.db`, `tasks-core._conversations`
+    - **`pushes`** — Push contention stats: wait time, throughput, and step breakdown charts. Push contention stats: wait time, throughput, and step breakdown.
+      - Exports (shared):
+        - Values: `getPushesStepBreakdown`, `getPushesThroughput`, `getPushesWaitTime`
+      - Contributes:
+        - `Stats.Chart` "Pushes" → `PushesSection`
     - **`tasks`** — Task-based stats: active (open) tasks over time.
       - Exports (shared):
         - Values: `getTasksCumulative`, `getTasksDaily`

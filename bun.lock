@@ -625,6 +625,10 @@
       "name": "@singularity/plugin-debug-profiling-build",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/profiling/plugins/push": {
+      "name": "@singularity/plugin-debug-profiling-push",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/profiling/plugins/stats": {
       "name": "@singularity/plugin-debug-profiling-stats",
       "version": "0.0.1",
@@ -1201,6 +1205,10 @@
       "dependencies": {
         "ccusage": "^18.0.11",
       },
+    },
+    "plugins/stats/plugins/pushes": {
+      "name": "@singularity/plugin-stats-pushes",
+      "version": "0.0.1",
     },
     "plugins/stats/plugins/tasks": {
       "name": "@singularity/plugin-stats-tasks",
@@ -2181,6 +2189,8 @@
 
     "@singularity/plugin-debug-profiling-build": ["@singularity/plugin-debug-profiling-build@workspace:plugins/debug/plugins/profiling/plugins/build"],
 
+    "@singularity/plugin-debug-profiling-push": ["@singularity/plugin-debug-profiling-push@workspace:plugins/debug/plugins/profiling/plugins/push"],
+
     "@singularity/plugin-debug-profiling-stats": ["@singularity/plugin-debug-profiling-stats@workspace:plugins/debug/plugins/profiling/plugins/stats"],
 
     "@singularity/plugin-debug-queue": ["@singularity/plugin-debug-queue@workspace:plugins/debug/plugins/queue"],
@@ -2430,6 +2440,8 @@
     "@singularity/plugin-stats-commits": ["@singularity/plugin-stats-commits@workspace:plugins/stats/plugins/commits"],
 
     "@singularity/plugin-stats-cost": ["@singularity/plugin-stats-cost@workspace:plugins/stats/plugins/cost"],
+
+    "@singularity/plugin-stats-pushes": ["@singularity/plugin-stats-pushes@workspace:plugins/stats/plugins/pushes"],
 
     "@singularity/plugin-stats-tasks": ["@singularity/plugin-stats-tasks@workspace:plugins/stats/plugins/tasks"],
 
