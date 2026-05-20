@@ -4,9 +4,9 @@ interface Driver {
 }
 
 const DRIVERS: Driver[] = [
-  { name: "regen-docs", script: "cli/git-merge-drivers/regen-docs.sh" },
-  { name: "regen-claudemd", script: "cli/git-merge-drivers/regen-claudemd.sh" },
-  { name: "regen-migrations", script: "cli/git-merge-drivers/regen-migrations.sh" },
+  { name: "regen-docs", script: "plugins/framework/plugins/cli/scripts/regen-docs.sh" },
+  { name: "regen-claudemd", script: "plugins/framework/plugins/cli/scripts/regen-claudemd.sh" },
+  { name: "regen-migrations", script: "plugins/framework/plugins/cli/scripts/regen-migrations.sh" },
 ];
 
 async function gitConfigGet(key: string, cwd: string): Promise<string | null> {

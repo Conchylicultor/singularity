@@ -15,8 +15,7 @@ const ALLOWED_PATHS = [
   "plugins/infra/plugins/paths/check/index.ts",
   "plugins/infra/plugins/paths/server/internal/paths.ts",
   "plugins/infra/plugins/paths/server/internal/bins.ts",
-  // Non-plugin runtimes that cannot import from @plugins — each has its own canonical paths file.
-  "cli/src/paths.ts",
+  // CLI bin/ imports from @plugins/infra/paths/server — no homedir() calls, no allowlist entry needed.
   // Tooling inlines the subset of paths it needs (HOME_DIR, libpqEnv) to avoid depending on cli/.
   "plugins/framework/plugins/tooling/plugins/guards/core/guards/main-edits.ts",
   "plugins/framework/plugins/tooling/plugins/checks/core/migrations-in-sync.ts",

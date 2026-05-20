@@ -34,7 +34,7 @@ async function exec(cmd: string[], cwd?: string): Promise<void> {
 // Spawns a fresh process so checks see the post-rebase code on disk,
 // not the stale module cache from process start.
 async function runChecksSubprocess(root: string): Promise<boolean> {
-  const proc = Bun.spawn(["bun", "cli/src/index.ts", "check"], {
+  const proc = Bun.spawn(["bun", "plugins/framework/plugins/cli/bin/index.ts", "check"], {
     cwd: root,
     stdout: "inherit",
     stderr: "inherit",
@@ -123,12 +123,12 @@ async function postRebaseNormalize(root: string, pushId: string): Promise<void> 
   console.log("Normalizing artifacts auto-resolved during rebase...");
 
   if (ranMigrations) {
-    await exec(["bun", "cli/src/index.ts", "regen-migrations"], root);
+    await exec(["bun", "plugins/framework/plugins/cli/bin/index.ts", "regen-migrations"], root);
     rmSync(migrationsMarker, { force: true });
   }
 
   if (ranDocs) {
-    await exec(["bun", "cli/src/index.ts", "regen-docs"], root);
+    await exec(["bun", "plugins/framework/plugins/cli/bin/index.ts", "regen-docs"], root);
     rmSync(docsMarker, { force: true });
 
     const conflicted = findClaudeMdConflicts(root);

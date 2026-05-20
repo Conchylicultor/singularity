@@ -1,4 +1,4 @@
-# Auto-generated artifacts: resolved by custom merge drivers in cli/git-merge-drivers/
+# Auto-generated artifacts: resolved by custom merge drivers in plugins/framework/plugins/cli/scripts/
 # plus a post-rebase normalize step in `./singularity push` that regenerates
 # canonical content from the rebased source tree. See research/2026-05-02-cli-push-merge-driver-regen.md.
 docs/plugins-compact.md                       merge=regen-docs

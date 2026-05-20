@@ -58,7 +58,7 @@ export async function checkBroadcasts(command: BroadcastCommand): Promise<void> 
   const branch = await gitOutput(["rev-parse", "--abbrev-ref", "HEAD"]);
   if (!branch || branch === "main") return;
 
-  const raw = await gitOutput(["show", "origin/main:cli/broadcasts.json"]);
+  const raw = await gitOutput(["show", "origin/main:plugins/framework/plugins/cli/broadcasts.json"]);
   if (!raw) return;
 
   let entries: Broadcast[];

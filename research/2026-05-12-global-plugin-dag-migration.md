@@ -175,43 +175,19 @@ Root config file updates:
 
 ## Phase 6: `cli/` → `plugins/framework/plugins/cli/`
 
-**Last** because it depends on tooling's final location.
+**Last** because it depends on tooling's final location (Phase 7, done).
 
-### What moves
+Detailed implementation plan: [`research/2026-05-20-phase6-cli-to-plugin.md`](./2026-05-20-phase6-cli-to-plugin.md)
 
-```
-plugins/framework/plugins/cli/
-  src/               ← no zone structure (pure binary, no cross-plugin API)
-    index.ts         ← Commander entry
-    commands/
-    git/
-    migrations.ts, broadcasts.ts, paths.ts
-```
+### Summary
 
-### Import paths
-
-- `@tooling/*` already retargeted by Phase 7.
-- `@plugins/*` paths in tsconfig shift to reflect deeper nesting.
-
-### Entry point
-
-The `singularity` shell script at repo root: `exec bun cli/src/index.ts "$@"` → `exec bun plugins/framework/plugins/cli/src/index.ts "$@"`.
-
-Self-referential calls in `push.ts` (CLI spawns itself as subprocess): `bun cli/src/index.ts check` → `bun plugins/framework/plugins/cli/src/index.ts check`. Grep for all `cli/src/index.ts` references.
-
-### Boundary checker
-
-- `boundary.config.ts`: remove `zone("cli", { match: "cli" })`. Becomes `plugin.framework.cli`.
-
-### Key risks
-
-- **Entry point is the critical path.** If `./singularity build` can't run, nothing can be verified. Update the shell script first, verify it works, then proceed with the rest.
-- Self-invocation in `push.ts` must use the new path.
+Pure leaf — nothing imports from CLI. Move `cli/` → `plugins/framework/plugins/cli/`, renaming `src/` → `bin/` and `git-merge-drivers/` → `scripts/` to match existing framework plugin conventions (`server-core/bin/`, `server-core/scripts/`). No `core/` — CLI has no public API. Update the `singularity` shell script entry point first (critical path), then 3 self-invocation paths in `push.ts`, 3 merge-driver script paths in `register-merge-drivers.ts`, 1 `git show` path in `broadcasts.ts`. Remove the `cli` zone and its edge from `boundary-config.ts` (subsumed by `plugin.framework.cli` via `plugin.** -> plugin.**`). Retarget `@plugins/*` alias in `cli/tsconfig.json` from `../plugins/*` to `../../../../plugins/*`. Remove `"cli"` from root `package.json` workspaces (`plugins/**` glob covers the new location).
 
 ### Done when
 
 - `./singularity build`, `./singularity check`, and `./singularity push` (dry-run) all work.
 - `cli/` deleted from repo root.
+- Root `package.json` workspaces is `["plugins/**"]` only.
 
 ---
 

@@ -4,7 +4,7 @@ import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
-import { generatePluginDocs, collectAllPlugins, generatePluginRegistry } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot } from "../git/main-repo-root";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
@@ -564,7 +564,6 @@ export function registerBuild(program: Command) {
       // 4b. Generate config origin files from defineConfig contributions
       endSpan = buildProfilerStart("configOrigins", "build:codegen", "generate config origins");
       console.log("Generating config origins...");
-      const { generateConfigOrigins } = await import("@plugins/framework/plugins/tooling/plugins/codegen/core");
       await generateConfigOrigins({ root });
       endSpan();
 
