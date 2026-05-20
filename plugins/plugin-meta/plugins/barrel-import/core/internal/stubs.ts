@@ -1,3 +1,5 @@
+import { registerAutoStubs } from "./auto-stubs.generated";
+
 let registered = false;
 
 /**
@@ -188,10 +190,6 @@ export function registerBarrelStubs(_repoRoot: string): void {
       }));
 
       // ── Server plugin barrels that fail outside the real server ─────
-      // These plugins throw at module top-level (env checks, secrets, DB
-      // pools). 12+ consumer plugins import Config/db at top level and
-      // hit TDZ when the source barrel evaluation failed.
-
       const configFieldKind = Symbol("config.field");
       build.module("@plugins/config/server", () => ({
         exports: {
@@ -220,89 +218,16 @@ export function registerBarrelStubs(_repoRoot: string): void {
         loader: "object",
       }));
 
-      // ── DOM-heavy packages that access window/document at import ───
-      // build.module() is the only reliable approach for Bun runtime
-      // plugins (onResolve+onLoad virtual namespaces break for static
-      // imports within ESM module graphs).
-      build.module("@xterm/xterm", () => ({
-        exports: { Terminal: noop, __esModule: true, default: noop },
-        loader: "object",
-      }));
-      build.module("@xterm/addon-fit", () => ({
-        exports: { FitAddon: noop, __esModule: true, default: noop },
-        loader: "object",
-      }));
-      build.module("@xterm/addon-web-links", () => ({
-        exports: { WebLinksAddon: noop, __esModule: true, default: noop },
-        loader: "object",
-      }));
+      // ── Auto-generated stubs for npm packages ─────────────────────
+      // Reads .d.ts entry points to discover named exports at build time.
+      // To add a package: edit auto-stub-packages.ts and run ./singularity build.
+      registerAutoStubs(build);
 
-      // ── CJS-bridge packages that conflict with virtual ESM React ────
-      // These packages use a CJS bridge (require("react")) which
-      // conflicts with the virtual ESM react module above.
-      const dragReturn = { attributes: {}, listeners: {}, setNodeRef: noop, transform: null, isDragging: false };
-      build.module("@dnd-kit/core", () => ({
-        exports: {
-          DndContext: noop, DragOverlay: noop, PointerSensor: noop,
-          pointerWithin: noop, closestCenter: noop,
-          useDraggable: () => dragReturn,
-          useDroppable: () => ({ setNodeRef: noop, isOver: false }),
-          useSensor: () => ({}), useSensors: () => [],
-          __esModule: true,
-        },
+      // ── Manually-stubbed CSS subpath (package uses export *) ───────
+      build.module("@xyflow/react/dist/style.css", () => ({
+        exports: {},
         loader: "object",
       }));
-      build.module("@dnd-kit/sortable", () => ({
-        exports: {
-          SortableContext: noop,
-          useSortable: () => ({ ...dragReturn, transition: null }),
-          arrayMove: (arr: unknown[]) => arr,
-          verticalListSortingStrategy: {},
-          horizontalListSortingStrategy: {},
-          __esModule: true,
-        },
-        loader: "object",
-      }));
-      build.module("@dnd-kit/utilities", () => ({
-        exports: { CSS: { Transform: { toString: () => "" }, Transition: { toString: () => "" } }, __esModule: true },
-        loader: "object",
-      }));
-
-      build.module("react-diff-view", () => ({
-        exports: {
-          Diff: noop, Hunk: noop, Decoration: noop,
-          parseDiff: () => [], expandFromRawCode: noop,
-          getCollapsedLinesCountBetween: () => 0,
-          __esModule: true,
-        },
-        loader: "object",
-      }));
-      build.module("react-resizable-panels", () => ({
-        exports: {
-          Group: noop, Panel: noop, Separator: noop,
-          isCoarsePointer: () => false,
-          useDefaultLayout: () => [], useGroupCallbackRef: () => ({}),
-          useGroupRef: () => ({}), usePanelCallbackRef: () => ({}),
-          usePanelRef: () => ({}),
-          __esModule: true,
-        },
-        loader: "object",
-      }));
-
-      // ── CSS subpath imports from packages ──────────────────────────
-      // These can't be caught by the generic CSS onLoad when the parent
-      // package is stubbed, so register them explicitly.
-      const cssModules = [
-        "@xterm/xterm/css/xterm.css",
-        "@xyflow/react/dist/style.css",
-        "react-diff-view/style/index.css",
-      ];
-      for (const mod of cssModules) {
-        build.module(mod, () => ({
-          exports: {},
-          loader: "object",
-        }));
-      }
 
       // ── CSS imports → empty ───────────────────────────────────────
       build.onLoad({ filter: /\.css$/ }, () => ({

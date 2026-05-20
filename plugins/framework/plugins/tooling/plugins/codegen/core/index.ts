@@ -24,3 +24,9 @@ export {
 } from "./plugin-registry-gen";
 
 export { generateConfigOrigins, renderConfigOriginContent } from "./config-origin-gen";
+
+export {
+  generateBarrelStubs,
+  renderBarrelStubs,
+  barrelStubsPath,
+} from "./barrel-stubs-gen";

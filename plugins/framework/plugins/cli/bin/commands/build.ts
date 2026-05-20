@@ -4,7 +4,7 @@ import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
-import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins, generateBarrelStubs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot } from "../git/main-repo-root";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
@@ -565,6 +565,11 @@ export function registerBuild(program: Command) {
       endSpan = buildProfilerStart("bunInstall", "build:setup", "bun install");
       console.log("Installing dependencies...");
       await exec(["bun", "install"], root);
+      endSpan();
+
+      // 1b. Regenerate barrel-import auto-stubs from .d.ts files.
+      endSpan = buildProfilerStart("barrelStubs", "build:codegen", "barrel stubs");
+      await generateBarrelStubs({ root });
       endSpan();
 
       // 2a. Regenerate plugin registry files — must happen before central

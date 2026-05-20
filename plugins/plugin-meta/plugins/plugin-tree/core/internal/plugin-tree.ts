@@ -83,6 +83,7 @@ export interface PluginNode {
   collapsed: boolean;
   runtimes: Record<Runtime, boolean>;
   children: PluginNode[];
+  facets: Record<string, unknown>;
 
   exports: Record<Runtime | "core" | "shared", BarrelExport[]>;
   slots: SlotDef[];
@@ -739,6 +740,7 @@ function collectPlugin(dir: string, pluginsRoot: string): CollectedPlugin {
         central: !!centralIndex,
       },
       children: [],
+      facets: {},
       exports: {
         web: webExports,
         server: serverExports,

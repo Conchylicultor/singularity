@@ -14,3 +14,5 @@ export type {
   PluginNode,
   PluginTree,
 } from "./internal/plugin-tree";
+export { defineFacet, getFacet, setFacet } from "./internal/facets";
+export type { FacetDef } from "./internal/facets";
