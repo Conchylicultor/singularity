@@ -16,7 +16,7 @@ dist/
 dist.staging.*/
 dist.old.*/
 /gateway/gateway
-web/.build.lock
+**/.build.lock
 
 # TypeScript
 *.tsbuildinfo
