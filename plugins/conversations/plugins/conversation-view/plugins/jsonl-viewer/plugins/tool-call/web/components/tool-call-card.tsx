@@ -1,9 +1,6 @@
 import { type ReactNode } from "react";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
-import {
-  TokenBadge,
-  formatTime,
-} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { TokenBadge } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import type { ToolCallEvent } from "../../core";
 
 interface ToolCallCardProps {
@@ -54,12 +51,11 @@ export function ToolCallCard({
             ))}
           </span>
         )}
-        <span
-          className={`flex shrink-0 items-center gap-2 ${summary ? "" : "ml-auto"}`}
-        >
-          {event.usage ? <TokenBadge usage={event.usage} /> : null}
-          <span className="tabular-nums">{formatTime(event.at)}</span>
-        </span>
+        {event.usage ? (
+          <span className={summary ? "" : "ml-auto"}>
+            <TokenBadge usage={event.usage} />
+          </span>
+        ) : null}
       </button>
       {open && <div id={contentId}>{children}</div>}
     </div>
