@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { generatePluginDocs } from "@tooling/docgen";
+import { generatePluginDocs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 async function getWorktreeRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {

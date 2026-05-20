@@ -5,7 +5,7 @@ import {
   pluginRegistryPath,
   renderPluginRegistry,
   type Runtime,
-} from "../plugin-registry-gen";
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {

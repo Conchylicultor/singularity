@@ -24,6 +24,7 @@
   "exclude": [
     "../../../plugin-meta/plugins/plugin-tree/**",
     "../../../plugin-meta/plugins/barrel-import/**",
+    "../tooling/**",
     "**/node_modules"
   ],
   "include": [

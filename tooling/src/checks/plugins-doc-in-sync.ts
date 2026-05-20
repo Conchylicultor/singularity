@@ -10,7 +10,7 @@ import {
   renderDetailsDoc,
   renderPluginClaudeMd,
   renderRoutesDoc,
-} from "../docgen";
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {

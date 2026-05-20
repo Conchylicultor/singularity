@@ -2,7 +2,7 @@ import { existsSync } from "fs";
 import { join } from "path";
 import type { Check } from "./types";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { pluginClaudeMdPath } from "../docgen";
+import { pluginClaudeMdPath } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {

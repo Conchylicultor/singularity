@@ -30,6 +30,9 @@ export default defineBoundaries({
     allow("tooling -> plugin.config_v2.store"),
     allow("tooling -> plugin.plugin-meta.barrel-import"),
 
+    // CLI can import build-time tooling plugins
+    allow("cli -> plugin.framework.tooling.**"),
+
     // Plugins can import other plugins
     allow("plugin.** -> plugin.**"),
   ],

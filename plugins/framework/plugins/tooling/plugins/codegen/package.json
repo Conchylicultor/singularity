@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-codegen",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Plugin doc generation and registry codegen"
+}
