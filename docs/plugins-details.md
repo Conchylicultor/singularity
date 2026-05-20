@@ -1068,6 +1068,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (core):
             - Types: `AllowEdge`, `BoundaryConfig`, `DenyEdge`, `Edge`, `RuntimeName`, `ZoneDefinition`
             - Values: `allow`, `boundaryRulesCheck`, `createBoundaryCheck`, `defineBoundaries`, `deny`, `zone`
+        - **`codegen`** — Plugin doc generation and registry codegen
+          - Exports (core):
+            - Types: `GenerateDocsOptions`, `PluginNode`, `PluginTree`, `Runtime`
+            - Values: `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `generatePluginDocs`, `generatePluginRegistry`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `pluginRegistryPath`, `pluginRoutesDocPath`, `renderCompactDoc`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderPluginRegistry`, `renderRoutesDoc`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Exports (core):
             - Types: `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`
