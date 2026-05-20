@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
 import { useDroppable } from "@dnd-kit/core";
 import { Input } from "@/components/ui/input";
@@ -51,15 +51,38 @@ export function SortableReorderItem({
   itemKey,
   storageId,
   editMode,
+  label,
   wrapperClassName,
   children,
 }: {
   itemKey: string;
   storageId: string;
   editMode: boolean;
+  label: string;
   wrapperClassName?: string;
   children: ReactNode;
 }) {
+  const ctx = useContext(ReorderAreaContext);
+  const isHorizontal = ctx?.orientation === "horizontal";
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [isEmpty, setIsEmpty] = useState(false);
+
+  useLayoutEffect(() => {
+    if (!editMode) {
+      setIsEmpty(false);
+      return;
+    }
+    const el = contentRef.current;
+    if (!el) return;
+
+    const check = () => setIsEmpty(el.childNodes.length === 0);
+    check();
+
+    const observer = new MutationObserver(check);
+    observer.observe(el, { childList: true });
+    return () => observer.disconnect();
+  }, [editMode]);
+
   function handleHide(e: React.MouseEvent) {
     e.stopPropagation();
     void fetch(`/api/reorder/${storageId}`, {
@@ -96,9 +119,24 @@ export function SortableReorderItem({
               <MdClose className="size-2.5" />
             </button>
           )}
-          <div className={cn("contents", editMode && "pointer-events-none")}>
+          <div
+            ref={contentRef}
+            className={cn(editMode ? "pointer-events-none" : "contents")}
+          >
             {children}
           </div>
+          {editMode && isEmpty && (
+            <div
+              className={cn(
+                "pointer-events-none select-none italic text-muted-foreground/50",
+                isHorizontal
+                  ? "px-2 py-0.5 text-[10px] whitespace-nowrap"
+                  : "px-3 py-1.5 text-center text-xs",
+              )}
+            >
+              {label}
+            </div>
+          )}
           {editMode && <GroupingZone itemKey={itemKey} />}
         </>
       )}
