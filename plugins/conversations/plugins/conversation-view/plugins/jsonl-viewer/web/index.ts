@@ -11,6 +11,7 @@ export { useLastAssistantEvent } from "./components/last-assistant-context";
 export { RowActionButton } from "./components/row-action-button";
 export { CopyTextAction } from "./components/copy-button";
 export { formatTime } from "./utils";
+export { Timestamp } from "./components/timestamp";
 export { useStickyReport } from "./components/section-sticky-context";
 
 export default {

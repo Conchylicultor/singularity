@@ -4,18 +4,8 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useConversations } from "@plugins/conversations/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { cn } from "@/lib/utils";
-
-function formatRelativeTime(date: Date): string {
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 export function WelcomeView() {
   const { active, recentGone, totalGoneCount, isLoading } = useConversations();
@@ -98,9 +88,7 @@ export function WelcomeView() {
                     >
                       {conversation.title ?? "Starting..."}
                     </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {formatRelativeTime(conversation.createdAt)}
-                    </span>
+                    <RelativeTime date={conversation.createdAt} className="text-[10px] text-muted-foreground" />
                   </div>
                   <MdArrowForward className="size-3.5 text-muted-foreground/50 shrink-0" />
                 </button>

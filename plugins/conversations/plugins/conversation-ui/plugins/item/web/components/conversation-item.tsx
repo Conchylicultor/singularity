@@ -1,6 +1,6 @@
 import type { ConversationKind } from "@plugins/tasks-core/core";
 import type { ConversationStatus } from "@plugins/conversations/core";
-import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { formatRelativeTime, RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { cn } from "@/lib/utils";
@@ -91,10 +91,10 @@ export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
 
 export function ConvRelativeTime({ conv }: { conv: ConversationItemConv }) {
   const isSystem = conv.kind === "system";
-  const time = formatRelativeTime(conv.createdAt);
   return (
     <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/60">
-      {isSystem && conv.spawnedBy ? `${conv.spawnedBy} · ${time}` : time}
+      {isSystem && conv.spawnedBy ? `${conv.spawnedBy} · ` : null}
+      <RelativeTime date={conv.createdAt} />
     </span>
   );
 }

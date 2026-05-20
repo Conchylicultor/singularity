@@ -1,20 +1,11 @@
-import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-
-function isToday(d: Date): boolean {
-  const now = new Date();
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  );
+export function formatAbsoluteTime(d: Date): string {
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 }
 
 export function formatTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  if (isToday(d)) return time;
-  return `${formatRelativeTime(d)} · ${time}`;
+  return formatAbsoluteTime(d);
 }
 
 export function formatTokenCount(n: number): string {

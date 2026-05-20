@@ -4,7 +4,7 @@ import {
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { pluginHealthReviewsDescriptor } from "../../shared/schemas";
 import type { PluginStaleness, ReviewTaskSummary } from "../../core";
 
@@ -121,7 +121,7 @@ export function HealthSection({ node }: { node: PluginNode }) {
                     {r.axis}
                   </td>
                   <td className="py-1.5 pr-3 text-muted-foreground">
-                    {formatRelativeTime(new Date(r.createdAt))}
+                    <RelativeTime date={new Date(r.createdAt)} />
                   </td>
                   <td className="py-1.5 pr-3 text-muted-foreground">
                     {r.staleness?.commitsSince ?? "—"}

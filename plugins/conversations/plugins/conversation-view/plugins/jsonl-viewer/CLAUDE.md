@@ -12,7 +12,7 @@
   - Values: `JsonlEventsPayloadSchema`, `jsonlEventsResource`
 - Exports (web):
   - Types: `EventRendererContribution`, `OverlayContribution`, `RowActionContribution`
-  - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
+  - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
 - Contributes:
   - `JsonlViewer.RowAction` "timestamp" → `TimestampAction`
   - `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
