@@ -26,7 +26,7 @@ export const exitCleanTool = Mcp.tool({
 Only call this in response to the push-and-exit prompt. If anything went wrong or there's something worth surfacing, call \`flag_raise\` instead.`,
   inputSchema: {},
   async handler(_args, { conversationId }) {
-    await setStatus(conversationId, "clean", null);
+    setStatus(conversationId, "clean", null);
     await updateConversation(conversationId, { closeRequested: true });
     await exitCleanFinalizeJob.enqueue(
       { conversationId },
@@ -57,7 +57,7 @@ Only call this in response to the push-and-exit prompt.`,
       ),
   },
   async handler({ reason }, { conversationId }) {
-    await setStatus(conversationId, "flag", reason);
+    setStatus(conversationId, "flag", reason);
     return {
       content: [{ type: "text", text: JSON.stringify({ ok: true }) }],
     };

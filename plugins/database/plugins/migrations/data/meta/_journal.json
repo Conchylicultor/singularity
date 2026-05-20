@@ -701,6 +701,13 @@
       "tag": "20260518_122951_4bc753a5__remove_quick_prompts",
       "hash": "4bc753a5",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1779299657000,
+      "tag": "20260520_175417_d5575a29__remove_push_and_exit_jobs",
+      "hash": "d5575a29",
+      "breakpoints": true
     }
   ]
 }

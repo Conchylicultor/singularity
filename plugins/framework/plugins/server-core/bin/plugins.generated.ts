@@ -147,7 +147,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (conversationsConversationViewLaunchPromptsPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraAttachmentsPlugin, infraEndpointsPlugin, primitivesRankPlugin];
 (conversationsConversationViewNotesPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEndpointsPlugin, infraEntityExtensionsPlugin, tasksCorePlugin];
 (conversationsConversationViewPromptTemplatesPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databasePlugin, infraAttachmentsPlugin, infraEndpointsPlugin, primitivesRankPlugin];
-(conversationsConversationViewPushAndExitPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, databasePlugin, infraEndpointsPlugin, infraJobsPlugin, infraMcpPlugin, tasksCorePlugin];
+(conversationsConversationViewPushAndExitPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraEndpointsPlugin, infraJobsPlugin, infraMcpPlugin, tasksCorePlugin];
 (conversationsConversationViewResumePlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraEndpointsPlugin, tasksCorePlugin];
 (conversationsConversationViewTurnSummaryPlugin as ServerPluginDefinition).dependsOn = [configPlugin, conversationsPlugin, databasePlugin, infraClaudeCliPlugin, infraEntityExtensionsPlugin, infraEventsPlugin, infraJobsPlugin, tasksCorePlugin];
 (conversationsConversationsViewGroupedPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEndpointsPlugin, primitivesRankPlugin, tasksCorePlugin];

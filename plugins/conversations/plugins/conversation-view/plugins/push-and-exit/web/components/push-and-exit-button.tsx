@@ -3,7 +3,7 @@ import { MdDeleteForever, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react
 import { LogOut, Play } from "lucide-react";
 import { isDraftEmpty, conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, useConversation } from "@plugins/conversations/web";
-import { isActiveStatus } from "@plugins/conversations/core";
+import { isActiveStatus, hasLiveProcess } from "@plugins/conversations/core";
 import { toast } from "@plugins/notifications/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -82,12 +82,12 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
 
   useEffect(() => {
     if (!busy) return;
-    if (isActiveStatus(live.status)) return;
+    if (hasLiveProcess(live.status)) return;
     void fetch(
       `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
       { method: "DELETE" },
     );
-  }, [busy, job, live.status, conversation.id]);
+  }, [busy, live.status, conversation.id]);
 
   useEffect(() => {
     if (job?.status !== "clean") return;
