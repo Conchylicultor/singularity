@@ -86,9 +86,10 @@ agent see the actual outcome instead of executing a stale plan.`,
       ),
     autostart: z
       .enum(["sonnet", "opus"])
+      .default("opus")
       .describe(
-        "Auto-launch model. Default to \"opus\" unless the task is purely mechanical " +
-        "refactoring (no design decisions, no unknowns) — use \"sonnet\" only then."
+        "Auto-launch model. Defaults to \"opus\". Use \"sonnet\" only for purely mechanical " +
+        "refactoring (no design decisions, no unknowns)."
       ),
   },
   async handler(
