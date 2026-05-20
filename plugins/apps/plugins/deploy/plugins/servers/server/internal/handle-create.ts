@@ -20,6 +20,7 @@ export const handleCreate = implement(createServer, async ({ body }) => {
       sshUser: body.sshUser ?? "root",
     })
     .returning();
+  if (!row) throw new HttpError(500, "insert returned no row");
   if (body.sshPrivateKey) {
     await setSecret({ namespace: "deploy-ssh", key: id }, body.sshPrivateKey);
   }

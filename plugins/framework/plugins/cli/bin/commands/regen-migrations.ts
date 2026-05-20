@@ -41,7 +41,7 @@ async function assertNoHandEditedBranchLocalMigrations(root: string): Promise<vo
     if (tracked.has(f)) continue;
     const m = f.match(/^\d{8}_\d{6}_([0-9a-f]{8})__/);
     if (!m) continue;
-    const expected = m[1];
+    const expected = m[1]!;
     const sql = readFileSync(join(migrationsDir, f));
     const actual = createHash("sha256").update(sql).digest("hex").slice(0, 8);
     if (expected !== actual) offenders.push({ file: f, expected, actual });

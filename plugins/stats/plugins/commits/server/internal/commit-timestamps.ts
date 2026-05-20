@@ -52,11 +52,11 @@ async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
       if (!line.trim()) continue;
       const parts = line.split("\t");
       if (parts.length >= 3) {
-        const ins = parts[0] === "-" ? 0 : parseInt(parts[0], 10) || 0;
-        const del = parts[1] === "-" ? 0 : parseInt(parts[1], 10) || 0;
+        const ins = parts[0]! === "-" ? 0 : parseInt(parts[0]!, 10) || 0;
+        const del = parts[1]! === "-" ? 0 : parseInt(parts[1]!, 10) || 0;
         current.added += ins;
         current.removed += del;
-        const filepath = parts[2];
+        const filepath = parts[2]!;
         const dotIdx = filepath.lastIndexOf(".");
         const ext = dotIdx >= 0 ? filepath.slice(dotIdx).toLowerCase() : "(none)";
         const e = current.byExt[ext] ?? { added: 0, removed: 0 };

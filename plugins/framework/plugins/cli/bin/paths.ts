@@ -16,6 +16,7 @@ interface DatabaseConfig {
     port: number;
     user: string;
   };
+  services: unknown[];
 }
 
 let cachedConfig: DatabaseConfig | null = null;

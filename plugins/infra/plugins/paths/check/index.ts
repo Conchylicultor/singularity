@@ -59,7 +59,7 @@ const check: Check = {
         if (seen.has(line)) continue;
         seen.add(line);
 
-        const path = line.split(":", 1)[0];
+        const path = line.split(":", 1)[0]!;
         if (ALLOWED_PATHS.includes(path)) continue;
         if (path.startsWith("research/")) continue;
 

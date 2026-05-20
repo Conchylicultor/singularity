@@ -32,7 +32,7 @@ export function parseMarkdownSections(raw: string): {
     const m = line.match(headerRe);
     if (m) {
       sawAnyHeader = true;
-      current = m[1].toLowerCase() as "summary" | "caveats" | "actions";
+      current = m[1]!.toLowerCase() as "summary" | "caveats" | "actions";
       continue;
     }
     if (current) buckets[current].push(line);

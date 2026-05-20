@@ -45,7 +45,7 @@ export const handleCreateDefinition = implement(createDefinitionEndpoint, async 
     steps: body.steps as Parameters<typeof createDefinition>[0]["steps"],
     entryStepId: body.entryStepId,
   });
-  return serializeDefinition(row);
+  return serializeDefinition(row!);
 });
 
 export const handleGetDefinition = implement(getDefinitionEndpoint, async ({ params }) => {
@@ -119,11 +119,11 @@ export const handleCreateExecution = implement(createExecutionEndpoint, async ({
   }
 
   await workflowRunJob.enqueue(
-    { executionId: execution.id },
-    { jobKey: execution.id },
+    { executionId: execution!.id },
+    { jobKey: execution!.id },
   );
 
-  return serializeExecution(execution, []);
+  return serializeExecution(execution!, []);
 });
 
 export const handleGetExecution = implement(getExecutionEndpoint, async ({ params }) => {

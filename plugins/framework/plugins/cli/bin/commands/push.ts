@@ -174,7 +174,7 @@ async function getMainWorktree(): Promise<string> {
     console.error("Could not determine main worktree");
     process.exit(1);
   }
-  return match[1];
+  return match[1]!;
 }
 
 async function getCurrentBranch(): Promise<string> {

@@ -38,7 +38,7 @@ export const noRawEventSource: Check = {
     const offenders = out
       .split("\n")
       .filter((line) => {
-        const path = line.split(":", 1)[0];
+        const path = line.split(":", 1)[0]!;
         if (ALLOWED_PATHS.some((p) => path.startsWith(p))) return false;
         if (path.startsWith("research/")) return false;
         return true;

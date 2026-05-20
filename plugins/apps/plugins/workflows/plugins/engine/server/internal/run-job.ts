@@ -76,18 +76,18 @@ export const workflowRunJob = defineJob({
         }),
       );
 
-      await updateExecutionStep(execStep.id, {
+      await updateExecutionStep(execStep!.id, {
         status: "running",
         startedAt: new Date(),
       });
       await updateExecution(input.executionId, {
-        currentStepId: execStep.id,
+        currentStepId: execStep!.id,
         status: "running",
       });
 
       const executor = getExecutor(stepDef.pluginId);
       if (!executor) {
-        await updateExecutionStep(execStep.id, {
+        await updateExecutionStep(execStep!.id, {
           status: "failed",
           error: `No executor registered for "${stepDef.pluginId}"`,
           completedAt: new Date(),
@@ -101,21 +101,21 @@ export const workflowRunJob = defineJob({
 
       let result: StepResult;
       try {
-        result = await ctx.step(`exec-${execStep.id}`, () =>
+        result = await ctx.step(`exec-${execStep!.id}`, () =>
           executor.run({
             execution: { id: input.executionId, definitionId },
-            step: { ...execStep, input: lastOutput },
+            step: { ...execStep!, input: lastOutput },
             ctx,
           }),
         );
       } catch (err) {
         if (isSuspendSignal(err)) {
-          await updateExecutionStep(execStep.id, { status: "suspended" });
+          await updateExecutionStep(execStep!.id, { status: "suspended" });
           await updateExecution(input.executionId, { status: "suspended" });
           throw err;
         }
         const msg = err instanceof Error ? err.message : String(err);
-        await updateExecutionStep(execStep.id, {
+        await updateExecutionStep(execStep!.id, {
           status: "failed",
           error: msg,
           completedAt: new Date(),
@@ -127,7 +127,7 @@ export const workflowRunJob = defineJob({
         throw err;
       }
 
-      await updateExecutionStep(execStep.id, {
+      await updateExecutionStep(execStep!.id, {
         status: "completed",
         output: result.output,
         completedAt: new Date(),
@@ -135,7 +135,7 @@ export const workflowRunJob = defineJob({
       lastOutput = result.output ?? null;
 
       if (result.branchKey && stepDef.nextStepMapping?.[result.branchKey]) {
-        currentStepId = stepDef.nextStepMapping[result.branchKey];
+        currentStepId = stepDef.nextStepMapping[result.branchKey] ?? null;
       } else {
         currentStepId = stepDef.next;
       }

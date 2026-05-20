@@ -56,7 +56,7 @@ async function pushTextWithImages(text: string, at: string, out: JsonlEvent[]): 
     const before = text.slice(last, m.index);
     if (before) segments.push({ kind: "text", value: before });
 
-    const path = m[1];
+    const path = m[1]!;
     const ext = path.slice(path.lastIndexOf(".") + 1).toLowerCase();
     try {
       const f = Bun.file(path);

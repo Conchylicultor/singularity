@@ -68,16 +68,16 @@ function tryParseQuestion(line: string): ParsedQuestion | null {
   if (colMatch) {
     return {
       entityType: "column",
-      entityName: colMatch[1],
-      context: colMatch[2],
+      entityName: colMatch[1]!,
+      context: colMatch[2]!,
       question: line.trim(),
     };
   }
   const entityMatch = QUESTION_ENTITY_RE.exec(line);
   if (entityMatch) {
     return {
-      entityType: entityMatch[2],
-      entityName: entityMatch[1],
+      entityType: entityMatch[2]!,
+      entityName: entityMatch[1]!,
       context: null,
       question: line.trim(),
     };
@@ -91,15 +91,15 @@ function tryParseOption(
 ): PromptOption | null {
   const createMatch = OPTION_CREATE_RE.exec(line);
   if (createMatch) {
-    return { index, action: "create", label: `+ ${createMatch[1].trim()}` };
+    return { index, action: "create", label: `+ ${createMatch[1]!.trim()}` };
   }
   const renameMatch = OPTION_RENAME_RE.exec(line);
   if (renameMatch) {
     return {
       index,
       action: "rename",
-      label: `~ ${renameMatch[1].trim()} › ${renameMatch[2].trim()}`,
-      fromName: renameMatch[1].trim(),
+      label: `~ ${renameMatch[1]!.trim()} › ${renameMatch[2]!.trim()}`,
+      fromName: renameMatch[1]!.trim(),
     };
   }
   return null;
@@ -194,7 +194,7 @@ export async function runDrizzleKitWithPrompts(opts: {
         return;
       }
       try {
-        optIdx = resolveAnswer(prompt, answers[promptIndex]);
+        optIdx = resolveAnswer(prompt, answers[promptIndex]!);
       } catch (e: unknown) {
         console.error(`\n${e instanceof Error ? e.message : String(e)}`);
         proc.kill();
@@ -603,12 +603,12 @@ function regenerateJournal(migrationsDir: string): void {
     if (!m) throw new Error(`unreachable: ${f}`);
     const [, date, time, hash] = m;
     const when = Date.UTC(
-      +date.slice(0, 4),
-      +date.slice(4, 6) - 1,
-      +date.slice(6, 8),
-      +time.slice(0, 2),
-      +time.slice(2, 4),
-      +time.slice(4, 6),
+      +date!.slice(0, 4),
+      +date!.slice(4, 6) - 1,
+      +date!.slice(6, 8),
+      +time!.slice(0, 2),
+      +time!.slice(2, 4),
+      +time!.slice(4, 6),
     );
     return {
       version: "7",

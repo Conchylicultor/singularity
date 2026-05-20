@@ -38,7 +38,7 @@ const typedHandlers: Check = {
 
     const offenders: string[] = [];
     for (const line of out.split("\n")) {
-      const path = line.split(":", 1)[0];
+      const path = line.split(":", 1)[0]!;
 
       if (
         !path.startsWith("plugins/") ||

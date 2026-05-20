@@ -20,12 +20,12 @@ export async function rewindLastUserTurn(path: string): Promise<string | null> {
 
   // Find the last non-empty line
   let lastIdx = lines.length - 1;
-  while (lastIdx >= 0 && !lines[lastIdx].trim()) lastIdx--;
+  while (lastIdx >= 0 && !lines[lastIdx]!.trim()) lastIdx--;
   if (lastIdx < 0) return null;
 
   let obj: Record<string, unknown>;
   try {
-    obj = JSON.parse(lines[lastIdx]);
+    obj = JSON.parse(lines[lastIdx]!);
   } catch {
     return null;
   }

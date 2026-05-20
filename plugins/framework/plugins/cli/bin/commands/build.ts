@@ -133,7 +133,7 @@ async function acquireBuildLock(lockPath: string): Promise<() => void> {
       const m = target.match(/^pid-(\d+)-/);
       if (m) {
         try {
-          process.kill(parseInt(m[1], 10), 0);
+          process.kill(parseInt(m[1]!, 10), 0);
         } catch {
           try {
             await unlink(lockPath);
@@ -248,9 +248,9 @@ async function databaseReady(name: string): Promise<boolean> {
   const env = libpqEnv();
   const { Client } = await import("pg");
   const c = new Client({
-    host: env.PGHOST,
-    port: parseInt(env.PGPORT, 10),
-    user: env.PGUSER,
+    host: env.PGHOST!,
+    port: parseInt(env.PGPORT!, 10),
+    user: env.PGUSER!,
     database: name,
     connectionTimeoutMillis: 1500,
   });
@@ -282,7 +282,7 @@ async function waitForPg(): Promise<void> {
     async (attempt) => {
       const c = new Client({
         host: env.PGHOST,
-        port: parseInt(env.PGPORT, 10),
+        port: parseInt(env.PGPORT!, 10),
         user: env.PGUSER,
         database: "postgres",
         connectionTimeoutMillis: 1500,

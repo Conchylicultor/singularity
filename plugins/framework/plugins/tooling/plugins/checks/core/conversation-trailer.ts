@@ -31,9 +31,8 @@ async function commitsAheadOfMain(): Promise<{ sha: string; trailer: string }[]>
   ]);
   if (exitCode !== 0 || !stdout) return [];
   return stdout.split("\n").map((line) => {
-    const [sha, trailer] = line.split("\0");
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-    return { sha, trailer: (trailer ?? "").trim() };
+    const parts = line.split("\0");
+    return { sha: parts[0]!, trailer: (parts[1] ?? "").trim() };
   });
 }
 
