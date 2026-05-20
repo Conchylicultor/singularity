@@ -23,6 +23,7 @@ import authPlugin from "@plugins/auth/server";
 import backupGoogleDrivePlugin from "@plugins/backup/plugins/google-drive/server";
 import backupLocalPlugin from "@plugins/backup/plugins/local/server";
 import backupPlugin from "@plugins/backup/server";
+import buildBuildLogsPlugin from "@plugins/build/plugins/build-logs/server";
 import buildBuildProfilingPlugin from "@plugins/build/plugins/build-profiling/server";
 import buildPlugin from "@plugins/build/server";
 import codeExplorerFileResolvePlugin from "@plugins/code-explorer/plugins/file-resolve/server";
@@ -125,6 +126,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (backupGoogleDrivePlugin as ServerPluginDefinition).dependsOn = [authPlugin, backupPlugin, configPlugin];
 (backupLocalPlugin as ServerPluginDefinition).dependsOn = [backupPlugin, configPlugin, infraPathsPlugin];
 (backupPlugin as ServerPluginDefinition).dependsOn = [configPlugin, databaseAdminPlugin, databasePlugin, infraEndpointsPlugin, infraJobsPlugin, infraPathsPlugin];
+(buildBuildLogsPlugin as ServerPluginDefinition).dependsOn = [infraEndpointsPlugin, infraPathsPlugin];
 (buildBuildProfilingPlugin as ServerPluginDefinition).dependsOn = [infraEndpointsPlugin, infraPathsPlugin];
 (buildPlugin as ServerPluginDefinition).dependsOn = [config_v2Plugin, databasePlugin, debugLogsPlugin, infraEndpointsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin, infraPathsPlugin];
 (codeExplorerFileResolvePlugin as ServerPluginDefinition).dependsOn = [codeExplorerPlugin, infraEndpointsPlugin, infraPathsPlugin];
@@ -220,6 +222,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (backupGoogleDrivePlugin as ServerPluginDefinition)._hierarchyPath = "backup/google-drive";
 (backupLocalPlugin as ServerPluginDefinition)._hierarchyPath = "backup/local";
 (backupPlugin as ServerPluginDefinition)._hierarchyPath = "backup";
+(buildBuildLogsPlugin as ServerPluginDefinition)._hierarchyPath = "build/build-logs";
 (buildBuildProfilingPlugin as ServerPluginDefinition)._hierarchyPath = "build/build-profiling";
 (buildPlugin as ServerPluginDefinition)._hierarchyPath = "build";
 (codeExplorerFileResolvePlugin as ServerPluginDefinition)._hierarchyPath = "code-explorer/file-resolve";
@@ -325,6 +328,7 @@ export const plugins: ServerPluginDefinition[] = [
   backupGoogleDrivePlugin,
   backupLocalPlugin,
   backupPlugin,
+  buildBuildLogsPlugin,
   buildBuildProfilingPlugin,
   buildPlugin,
   codeExplorerFileResolvePlugin,

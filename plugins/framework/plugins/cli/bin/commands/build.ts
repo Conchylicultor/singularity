@@ -17,6 +17,7 @@ import {
   WORKTREES_DIR,
 } from "../paths";
 import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profiler";
+import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const CENTRAL_ROUTES_FILE = join(SINGULARITY_DIR, "central-routes.json");
@@ -178,28 +179,73 @@ async function exec(
   }
 }
 
-class BuildStepError extends Error {
-  constructor(public readonly step: string) {
-    super(`Build step "${step}" failed`);
-    this.name = "BuildStepError";
-  }
+
+interface StepOutput {
+  lines: Array<{ text: string; stream: "stdout" | "stderr" }>;
+  exitCode: number;
 }
 
-async function execOrThrow(
+async function execBuffered(
   cmd: string[],
   cwd: string,
-  step: string,
   env?: Record<string, string>,
-): Promise<void> {
+): Promise<StepOutput> {
+  const lines: StepOutput["lines"] = [];
   const proc = Bun.spawn(cmd, {
     cwd,
-    stdout: "inherit",
-    stderr: "inherit",
+    stdout: "pipe",
+    stderr: "pipe",
     env: env ? { ...process.env, ...env } : undefined,
   });
+
+  async function collect(
+    stream: ReadableStream<Uint8Array> | null,
+    type: "stdout" | "stderr",
+  ) {
+    if (!stream) return;
+    const decoder = new TextDecoder();
+    let partial = "";
+    for await (const chunk of stream) {
+      const text = partial + decoder.decode(chunk, { stream: true });
+      const parts = text.split("\n");
+      partial = parts.pop()!;
+      for (const line of parts) {
+        if (line) lines.push({ text: line, stream: type });
+      }
+    }
+    if (partial) lines.push({ text: partial, stream: type });
+  }
+
+  await Promise.all([
+    collect(proc.stdout, "stdout"),
+    collect(proc.stderr, "stderr"),
+  ]);
   const exitCode = await proc.exited;
-  if (exitCode !== 0) {
-    throw new BuildStepError(step);
+  return { lines, exitCode };
+}
+
+interface StepResult {
+  id: string;
+  label: string;
+  lines: Array<{ text: string; stream: "stdout" | "stderr" }>;
+  durationMs: number;
+  success: boolean;
+}
+
+function printStepResults(results: StepResult[]): void {
+  for (const result of results) {
+    const icon = result.success ? "✓" : "✗";
+    const duration = (result.durationMs / 1000).toFixed(1);
+    const header = `── ${result.label} ${icon} (${duration}s) `;
+    const pad = Math.max(0, 60 - header.length);
+    console.log(header + "─".repeat(pad));
+    for (const line of result.lines) {
+      if (line.stream === "stderr") {
+        process.stderr.write(`  ${line.text}\n`);
+      } else {
+        process.stdout.write(`  ${line.text}\n`);
+      }
+    }
   }
 }
 
@@ -602,43 +648,77 @@ export function registerBuild(program: Command) {
 
       console.log("Running checks, type-checking, and building frontend in parallel...");
 
-      const parallel: Array<Promise<void>> = [];
+      const parallel: Array<Promise<StepResult>> = [];
 
       if (!opts.skipChecks) {
         parallel.push(
-          (async () => {
+          (async (): Promise<StepResult> => {
+            const lines: StepResult["lines"] = [];
+            const start = performance.now();
             const ok = await runChecks(undefined, {
               onCheckDone: (id, durationMs, wallStartMs) => {
                 pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
               },
+              log: (line, stream) => {
+                lines.push({ text: line, stream });
+              },
             });
-            if (!ok) throw new BuildStepError("checks");
+            return {
+              id: "checks",
+              label: "checks",
+              lines,
+              durationMs: Math.round(performance.now() - start),
+              success: ok,
+            };
           })(),
         );
       }
 
       for (const target of runtimeTargets) {
         parallel.push(
-          (async () => {
+          (async (): Promise<StepResult> => {
             const end = buildProfilerStart(`tsc:${target.name}`, "build:validation", `tsc ${target.name}`);
-            await execOrThrow([process.execPath, "x", "tsc", ...target.args], target.dir, `tsc ${target.name}`);
+            const start = performance.now();
+            const output = await execBuffered([process.execPath, "x", "tsc", ...target.args], target.dir);
             end();
+            return {
+              id: `tsc:${target.name}`,
+              label: `tsc ${target.name}`,
+              lines: output.lines,
+              durationMs: Math.round(performance.now() - start),
+              success: output.exitCode === 0,
+            };
           })(),
         );
       }
 
       parallel.push(
-        (async () => {
+        (async (): Promise<StepResult> => {
           const end = buildProfilerStart("viteBuild", "build:frontend", "vite build");
-          await execOrThrow(["bun", "run", "build"], webDir, "vite build", { VITE_OUT_DIR: stagingName });
+          const start = performance.now();
+          const output = await execBuffered(["bun", "run", "build"], webDir, { VITE_OUT_DIR: stagingName });
           end();
+          return {
+            id: "viteBuild",
+            label: "vite build",
+            lines: output.lines,
+            durationMs: Math.round(performance.now() - start),
+            success: output.exitCode === 0,
+          };
         })(),
       );
 
-      const results = await Promise.allSettled(parallel);
-      const failures = results
-        .filter((r): r is PromiseRejectedResult => r.status === "rejected")
-        .map((r) => (r.reason instanceof BuildStepError ? r.reason.step : String(r.reason)));
+      const stepResults = await Promise.all(parallel);
+
+      for (const result of stepResults) {
+        pushBuildStepLog(result);
+      }
+
+      printStepResults(stepResults);
+
+      const failures = stepResults
+        .filter((r) => !r.success)
+        .map((r) => r.label);
 
       if (failures.length > 0) {
         await rm(stagingPath, { recursive: true, force: true });
@@ -722,6 +802,7 @@ export function registerBuild(program: Command) {
       // 4. Restart the backend if the gateway has it running
       if (!opts.restart) {
         writeBuildProfile(name);
+        writeBuildLogs(name);
         console.log(`Deployed to http://${name}.localhost:9000 (restart skipped)`);
         return;
       }
@@ -758,6 +839,7 @@ export function registerBuild(program: Command) {
       }
 
       writeBuildProfile(name);
+      writeBuildLogs(name);
       console.log(`Deployed to http://${name}.localhost:9000`);
     });
 }

@@ -59,7 +59,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Plugins:
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
-    - **`build-logs`** — Live log stream section in the build detail pane.
+    - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.
     - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane. Per-run build profiling data endpoint.
 
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.

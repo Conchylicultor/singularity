@@ -368,7 +368,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
       - Contributes:
         - `BuildDetailSlots.Section` "info" → `BuildInfo`
-    - **`build-logs`** — Live log stream section in the build detail pane.
+    - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.
+      - Exports (shared):
+        - Types: `BuildLogsResponse`, `BuildStepLog`
+        - Values: `BuildLogsResponseSchema`, `getBuildRunLogs`
       - Contributes:
         - `BuildDetailSlots.Section` "logs" → `BuildLogSection`
     - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane. Per-run build profiling data endpoint.

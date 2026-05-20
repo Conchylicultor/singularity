@@ -74,6 +74,10 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
     const src = join(profileDir, `${worktreeName}-build-profile.json`);
     const dst = join(profileDir, `${worktreeName}-build-profile-${buildId}.json`);
     try { copyFileSync(src, dst); } catch { /* no profile written — that's fine */ }
+
+    const logsSrc = join(profileDir, `${worktreeName}-build-logs.json`);
+    const logsDst = join(profileDir, `${worktreeName}-build-logs-${buildId}.json`);
+    try { copyFileSync(logsSrc, logsDst); } catch { /* no logs written — that's fine */ }
   }
 
   await db

@@ -68,6 +68,7 @@ export async function listAllChecks(): Promise<Check[]> {
 
 export interface RunChecksOptions {
   onCheckDone?: (id: string, durationMs: number, wallStartMs: number) => void;
+  log?: (line: string, stream: "stdout" | "stderr") => void;
 }
 
 export async function runChecks(ids?: string[], options?: RunChecksOptions): Promise<boolean> {
@@ -93,23 +94,27 @@ export async function runChecks(ids?: string[], options?: RunChecksOptions): Pro
     }),
   );
 
+  const log = options?.log ?? ((line: string, stream: "stdout" | "stderr") =>
+    stream === "stderr" ? console.error(line) : console.log(line));
+
   let allOk = true;
   for (const { check, result, durationMs, wallStart } of results) {
     options?.onCheckDone?.(check.id, durationMs, wallStart);
     if (result.ok) {
-      console.log(`• ${check.id} ... ok`);
+      log(`• ${check.id} ... ok`, "stdout");
     } else {
       allOk = false;
-      console.log(`• ${check.id} ... FAIL`);
-      console.error(`  ${result.message}`);
-      if (result.hint) console.error(`  hint: ${result.hint}`);
+      log(`• ${check.id} ... FAIL`, "stdout");
+      log(`  ${result.message}`, "stderr");
+      if (result.hint) log(`  hint: ${result.hint}`, "stderr");
     }
   }
   if (!allOk) {
-    console.error(
+    log(
       "\nIf you cannot fix the failing check(s): STOP, report the failure to the user, and wait for instructions. " +
         "Do NOT work around check failures — not by disabling checks, editing check code, " +
         "expanding skip lists, committing via raw git, or any other means.",
+      "stderr",
     );
   }
   return allOk;

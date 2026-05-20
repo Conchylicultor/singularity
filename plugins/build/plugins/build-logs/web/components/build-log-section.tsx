@@ -1,15 +1,109 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, type ReactElement } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { MdContentCopy } from "react-icons/md";
+import { MdContentCopy, MdCheck, MdClose } from "react-icons/md";
 import { toast } from "@plugins/notifications/web";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { useStickyScroll, JumpToBottomButton } from "@plugins/primitives/plugins/auto-scroll/web";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+  CollapsibleChevron,
+} from "@plugins/primitives/plugins/collapsible/web";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getBuildRunLogs } from "../../shared/endpoints";
+import type { BuildStepLog } from "../../shared/endpoints";
 import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/debug/plugins/logs/core";
+
+export function BuildLogSection({ runId }: { runId: string }): ReactElement {
+  const { data } = useEndpoint(getBuildRunLogs, { id: runId });
+
+  const hasPersistedLogs = data && data.steps.length > 0;
+
+  if (hasPersistedLogs) {
+    return <PersistedLogs steps={data.steps} />;
+  }
+
+  return <LiveLogs />;
+}
+
+function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
+  const copyAll = useCallback(() => {
+    const text = steps
+      .map((s) => {
+        const header = `── ${s.label} ${s.success ? "✓" : "✗"} (${(s.durationMs / 1000).toFixed(1)}s)`;
+        const body = s.lines.map((l) => `  ${l.text}`).join("\n");
+        return body ? `${header}\n${body}` : header;
+      })
+      .join("\n\n");
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ type: "build", description: "Logs copied to clipboard", variant: "info" });
+    });
+  }, [steps]);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center justify-between pb-1">
+        <span className="text-xs font-medium text-muted-foreground">Logs</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-6"
+          onClick={copyAll}
+          aria-label="Copy logs"
+        >
+          <MdContentCopy className="size-3" />
+        </Button>
+      </div>
+      {steps.map((step) => (
+        <StepSection key={step.id} step={step} />
+      ))}
+    </div>
+  );
+}
+
+function StepSection({ step }: { step: BuildStepLog }): ReactElement {
+  const duration = (step.durationMs / 1000).toFixed(1);
+
+  return (
+    <Collapsible defaultOpen={!step.success || step.lines.length <= 6}>
+      <div className="rounded border bg-muted/30 overflow-hidden">
+        <CollapsibleTrigger className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted/50 transition-colors">
+          <CollapsibleChevron className="size-3 text-muted-foreground" />
+          {step.success ? (
+            <MdCheck className="size-3.5 text-emerald-500 shrink-0" />
+          ) : (
+            <MdClose className="size-3.5 text-destructive shrink-0" />
+          )}
+          <span className="font-medium">{step.label}</span>
+          <span className="text-muted-foreground ml-auto">{duration}s</span>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          {step.lines.length > 0 && (
+            <div className="border-t px-3 py-2 font-mono text-xs leading-5 max-h-64 overflow-y-auto">
+              {step.lines.map((line, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "whitespace-pre-wrap break-all",
+                    line.stream === "stderr" ? "text-destructive" : "text-foreground",
+                  )}
+                >
+                  {line.text}
+                </div>
+              ))}
+            </div>
+          )}
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
 
-export function BuildLogSection({ runId: _runId }: { runId: string }) {
+function LiveLogs(): ReactElement {
   const [entries, setEntries] = useState<LogEntryWire[]>([]);
   const lastSeqRef = useRef<number>(0);
 
@@ -56,7 +150,9 @@ export function BuildLogSection({ runId: _runId }: { runId: string }) {
   return (
     <div className="relative flex flex-col">
       <div className="flex items-center justify-between pb-1">
-        <span className="text-xs font-medium text-muted-foreground">Logs</span>
+        <span className="text-xs font-medium text-muted-foreground">
+          Logs <span className="text-muted-foreground/60 ml-1">Live</span>
+        </span>
         <Button
           variant="ghost"
           size="icon"
