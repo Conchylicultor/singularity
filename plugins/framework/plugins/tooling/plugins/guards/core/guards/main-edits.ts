@@ -1,8 +1,6 @@
-import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 import { defineGuard } from "../define-guard";
-
-const HOME_DIR = homedir();
 import type { FileInput } from "../types";
 
 export const mainEditsGuard = defineGuard<FileInput>({

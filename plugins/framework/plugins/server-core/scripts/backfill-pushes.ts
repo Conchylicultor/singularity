@@ -19,7 +19,6 @@ import { Pool } from "pg";
 import { pgTable, text, timestamp, uniqueIndex, index } from "drizzle-orm/pg-core";
 
 const DRY_RUN = !process.argv.includes("--write");
-const GIT = Bun.which("git") ?? "git";
 
 // ── inline schema (avoid importing server internals) ─────────────────────────
 
@@ -145,7 +144,7 @@ if (!worktree) {
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { GIT, SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 
 const dbConfigPath = join(SINGULARITY_DIR, "database.json");
 let host = "localhost", port = "5432", user = process.env.USER ?? "postgres";

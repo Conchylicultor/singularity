@@ -1,11 +1,11 @@
 import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
-import { homedir } from "node:os";
 import { basename, join, relative, resolve } from "path";
+import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 import type { Check } from "./types";
 
 const PROMPT_RE = /Is .+? (column in .+? table|table|schema|enum|view|sequence|role|policy) created or renamed/;
 
-const DATABASE_CONFIG_PATH = join(homedir(), ".singularity", "database.json");
+const DATABASE_CONFIG_PATH = join(SINGULARITY_DIR, "database.json");
 
 function libpqEnv(): Record<string, string> {
   let config: { connection: { host: string; port: number; user: string } };

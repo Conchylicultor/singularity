@@ -13,12 +13,9 @@ async function getRoot(): Promise<string> {
 const ALLOWED_PATHS = [
   // The check itself and the paths plugin source files.
   "plugins/infra/plugins/paths/check/index.ts",
-  "plugins/infra/plugins/paths/server/internal/paths.ts",
+  "plugins/infra/plugins/paths/core/internal/paths.ts",
   "plugins/infra/plugins/paths/server/internal/bins.ts",
   // CLI bin/ imports from @plugins/infra/paths/server — no homedir() calls, no allowlist entry needed.
-  // Tooling inlines the subset of paths it needs (HOME_DIR, libpqEnv) to avoid depending on cli/.
-  "plugins/framework/plugins/tooling/plugins/guards/core/guards/main-edits.ts",
-  "plugins/framework/plugins/tooling/plugins/checks/core/migrations-in-sync.ts",
   // Database plugin owns its own embedded-PG path constants and config
   // reader. Lives in shared/ so server, central, and CLI can all import
   // from a sanctioned location.
@@ -44,7 +41,7 @@ const PATTERNS = [
 const check: Check = {
   id: "paths:no-hardcoded-paths",
   description:
-    "Filesystem paths must come from @plugins/infra/paths/server; no homedir() calls or hardcoded path strings in TS",
+    "Filesystem paths must come from @plugins/infra/plugins/paths/{core,server}; no homedir() calls or hardcoded path strings in TS",
   async run() {
     const root = await getRoot();
     const seen = new Set<string>();
@@ -81,7 +78,7 @@ const check: Check = {
     return {
       ok: false,
       message: `hardcoded path found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
-      hint: "Import path constants from `@plugins/infra/paths/server` (e.g. HOME_DIR, SINGULARITY_DIR, BACKUPS_DIR, GIT) instead of constructing paths from homedir() or hardcoding binary paths.",
+      hint: "Import path constants from `@plugins/infra/plugins/paths/core` (e.g. HOME_DIR, SINGULARITY_DIR) or `@plugins/infra/plugins/paths/server` (e.g. GIT, CLAUDE, TMUX) instead of constructing paths from homedir() or hardcoding binary paths.",
     };
   },
 };

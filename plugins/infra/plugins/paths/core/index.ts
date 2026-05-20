@@ -17,10 +17,4 @@ export {
   CLAUDE_SESSIONS_DIR,
   MAIN_WORKTREE_NAME,
   isMain,
-} from "../core/internal/paths";
-
-export { GIT, PGREP, CLAUDE, TMUX } from "./internal/bins";
-
-// No `satisfies ServerPluginDefinition` — this barrel is transitively imported
-// by secrets/central, whose tsconfig lacks the @server alias.
-export default { id: "paths", name: "Paths" };
+} from "./internal/paths";
