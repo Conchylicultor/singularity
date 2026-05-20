@@ -1,8 +1,23 @@
 import { useMemo, useState } from "react";
 import { MdBolt, MdChevronRight, MdExpandMore } from "react-icons/md";
 import { SearchInput, filterTree, collectAllIds } from "@plugins/primitives/plugins/search/web";
+import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { cn } from "@/lib/utils";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
+
+function collectAllExpandableIds(nodes: PluginNode[]): Set<string> {
+  const set = new Set<string>();
+  function walk(ns: PluginNode[]) {
+    for (const n of ns) {
+      if (n.children.length > 0) {
+        set.add(n.hierarchyId);
+        walk(n.children);
+      }
+    }
+  }
+  walk(nodes);
+  return set;
+}
 
 interface PluginTreeProps {
   plugins: PluginNode[];
@@ -11,11 +26,8 @@ interface PluginTreeProps {
 }
 
 export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
-  const [expanded, setExpanded] = useState<Set<string>>(() => {
-    const set = new Set<string>();
-    for (const p of plugins) if (p.children.length > 0) set.add(p.hierarchyId);
-    return set;
-  });
+  const allExpandable = useMemo(() => collectAllExpandableIds(plugins), [plugins]);
+  const [expanded, setExpanded] = useState<Set<string>>(() => collectAllExpandableIds(plugins));
   const [filter, setFilter] = useState("");
 
   const toggle = (id: string) =>
@@ -47,14 +59,23 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
       )
     : expanded;
 
+  const isAllExpanded = allExpandable.size > 0 && [...allExpandable].every((id) => expanded.has(id));
+
+  const toggleAll = () => {
+    setExpanded(isAllExpanded ? new Set() : new Set(allExpandable));
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="px-3 py-2.5 border-b">
-        <SearchInput
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder="Filter plugins"
-        />
+      <div className="flex items-center gap-2 px-3 py-2.5 border-b">
+        <div className="flex-1">
+          <SearchInput
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="Filter plugins"
+          />
+        </div>
+        <ExpandAllButton allExpanded={isAllExpanded} onToggle={toggleAll} />
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto py-1">
         {filtered.map((p) => (
