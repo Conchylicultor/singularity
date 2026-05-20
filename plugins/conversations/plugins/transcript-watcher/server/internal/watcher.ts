@@ -143,8 +143,8 @@ async function processRoom(room: Room): Promise<void> {
     if (!(await file.exists())) return;
     const mtime = file.lastModified;
     if (mtime === room.lastMtimeMs) return;
-    room.lastMtimeMs = mtime;
     const events = await readJsonlEvents(room.transcriptPath);
+    room.lastMtimeMs = Math.max(mtime, room.lastMtimeMs);
     room.lastEvents = events;
     fanOut(room, events);
   // eslint-disable-next-line promise-safety/no-bare-catch
