@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MdStop } from "react-icons/md";
 import {
   type ConversationRecord,
   isDraftEmpty,
@@ -9,7 +8,6 @@ import { useConversation } from "@plugins/conversations/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import { toast } from "@plugins/notifications/web";
-import { Button } from "@/components/ui/button";
 
 export function PromptInput({ conversation }: { conversation: ConversationRecord }) {
   const live = useConversation(conversation.id) ?? conversation;
@@ -17,10 +15,8 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
     scope: conversation.id,
   });
   const [sending, setSending] = useState(false);
-  const [stopping, setStopping] = useState(false);
 
   const disabled = live.status === "gone" || live.status === "done" || live.status === "starting";
-  const working = live.status === "working";
 
   const insertRef = useRef<((text: string) => void) | null>(null);
   const promptInsert = usePromptInsert();
@@ -59,28 +55,6 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
     }
   }, [conversation.id, disabled, sending, clearDraft]);
 
-  async function stop() {
-    if (!working || stopping) return;
-    setStopping(true);
-    try {
-      const res = await fetch(
-        `/api/conversations/${encodeURIComponent(conversation.id)}/stop`,
-        { method: "POST" },
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = (await res.json()) as { ok: boolean; rewindText: string | null };
-      if (data.rewindText) setDraft(data.rewindText);
-    } catch (err) {
-      toast({
-        type: "conversation",
-        description: `Failed to stop: ${err instanceof Error ? err.message : String(err)}`,
-        variant: "error",
-      });
-    } finally {
-      setStopping(false);
-    }
-  }
-
   const placeholder = disabled
     ? live.status === "done"
       ? "Conversation is done"
@@ -90,42 +64,25 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
     : "Send a message — Enter to send, Shift+Enter for newline";
 
   return (
-    <div className="flex items-end gap-2">
-      <div className="min-w-0 flex-1">
-        <PromptEditor
-          value={draft}
-          onChange={setDraft}
-          onSubmit={send}
-          submitMode="enter"
-          placeholder={placeholder}
-          disabled={disabled || sending}
-          autoFocus
-          minRows={1}
-          maxHeight="10rem"
-          namespace={`prompt-input-${conversation.id}`}
-          onError={(msg) =>
-            toast({
-              type: "conversation",
-              description: `Editor error: ${msg}`,
-              variant: "error",
-            })
-          }
-          insertRef={insertRef}
-        />
-      </div>
-      {working && (
-        <Button
-          variant="default"
-          size="icon-sm"
-          title={stopping ? "Stopping…" : "Stop"}
-          aria-label="Stop"
-          disabled={stopping}
-          onClick={stop}
-          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-        >
-          <MdStop className="size-4" />
-        </Button>
-      )}
-    </div>
+    <PromptEditor
+      value={draft}
+      onChange={setDraft}
+      onSubmit={send}
+      submitMode="enter"
+      placeholder={placeholder}
+      disabled={disabled || sending}
+      autoFocus
+      minRows={1}
+      maxHeight="10rem"
+      namespace={`prompt-input-${conversation.id}`}
+      onError={(msg) =>
+        toast({
+          type: "conversation",
+          description: `Editor error: ${msg}`,
+          variant: "error",
+        })
+      }
+      insertRef={insertRef}
+    />
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MdDeleteForever, MdReplay, MdRocketLaunch, MdSend } from "react-icons/md";
+import { MdDeleteForever, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";
 import { LogOut, Play } from "lucide-react";
 import { isDraftEmpty, conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, useConversation } from "@plugins/conversations/web";
@@ -24,7 +24,7 @@ import {
   type JobState,
 } from "../../shared/resources";
 
-type Mode = "send" | "push-and-exit" | "exit" | "drop-and-exit" | "go" | "restore";
+type Mode = "send" | "push-and-exit" | "exit" | "drop-and-exit" | "go" | "restore" | "stop";
 
 export function PushAndExitButton(_: PromptEditorActionProps) {
   const { conversation } = conversationPane.useData();
@@ -45,8 +45,9 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
 
   const busy = pending || job?.status === "running";
 
-  const [draft, , clearDraft] = useDraft("conversation:prompt", "", { scope: conversation.id });
+  const [draft, setDraft, clearDraft] = useDraft("conversation:prompt", "", { scope: conversation.id });
   const [sending, setSending] = useState(false);
+  const [stopping, setStopping] = useState(false);
   const draftRef = useRef(draft);
   draftRef.current = draft;
 
@@ -59,6 +60,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const mode: Mode = useMemo(() => {
     if (isNotRunning) return "restore";
     if (!isDraftEmpty(draft)) return "send";
+    if (live.status === "working" && !busy) return "stop";
     if (conversationsLoading) {
       return "push-and-exit";
     }
@@ -76,7 +78,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         isActiveStatus(c.status),
     );
     return hasOtherActiveInWorktree ? "exit" : "drop-and-exit";
-  }, [isNotRunning, draft, files, pushesResult, active, conversationsLoading, conversation.attemptId, conversation.id, conversation.worktreePath]);
+  }, [isNotRunning, draft, files, pushesResult, active, conversationsLoading, conversation.attemptId, conversation.id, conversation.worktreePath, live.status, busy]);
 
   useEffect(() => {
     if (!busy) return;
@@ -113,7 +115,9 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const hasSession = !!live.claudeSessionId;
   const disabled = mode === "restore"
     ? busy || !hasSession
-    : busy || sending || live.status === "starting";
+    : mode === "stop"
+      ? stopping
+      : busy || sending || live.status === "starting";
 
   async function onClick() {
     if (disabled) return;
@@ -178,6 +182,25 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
           description: `Go failed: ${err instanceof Error ? err.message : String(err)}`,
           variant: "error",
         });
+      }
+    } else if (mode === "stop") {
+      setStopping(true);
+      try {
+        const res = await fetch(
+          `/api/conversations/${encodeURIComponent(conversation.id)}/stop`,
+          { method: "POST" },
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as { ok: boolean; rewindText: string | null };
+        if (data.rewindText) setDraft(data.rewindText);
+      } catch (err) {
+        toast({
+          type: "conversation",
+          description: `Failed to stop: ${err instanceof Error ? err.message : String(err)}`,
+          variant: "error",
+        });
+      } finally {
+        setStopping(false);
       }
     } else if (mode === "push-and-exit") {
       setPending(true);
@@ -275,33 +298,41 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         ? sending
           ? "Sending…"
           : "Send"
-        : mode === "go"
-          ? "Go"
-          : mode === "push-and-exit"
-            ? busy
-              ? "Pushing…"
-              : "Push & Exit"
-            : mode === "exit"
-              ? "Exit"
-              : "Drop & Exit";
+        : mode === "stop"
+          ? stopping
+            ? "Stopping…"
+            : "Stop"
+          : mode === "go"
+            ? "Go"
+            : mode === "push-and-exit"
+              ? busy
+                ? "Pushing…"
+                : "Push & Exit"
+              : mode === "exit"
+                ? "Exit"
+                : "Drop & Exit";
 
   const Icon =
     mode === "restore"
       ? MdReplay
       : mode === "send"
         ? MdSend
-        : mode === "go"
-          ? Play
-          : mode === "push-and-exit"
-            ? MdRocketLaunch
-            : mode === "exit"
-              ? LogOut
-              : MdDeleteForever;
+        : mode === "stop"
+          ? MdStop
+          : mode === "go"
+            ? Play
+            : mode === "push-and-exit"
+              ? MdRocketLaunch
+              : mode === "exit"
+                ? LogOut
+                : MdDeleteForever;
 
   const buttonClass =
-    mode === "go"
-      ? "gap-1.5 bg-[oklch(0.44_0.13_145)] hover:bg-[oklch(0.50_0.13_145)] text-white"
-      : "gap-1.5 bg-[oklch(0.44_0.09_240)] hover:bg-[oklch(0.5_0.09_240)] text-white";
+    mode === "stop"
+      ? "gap-1.5 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+      : mode === "go"
+        ? "gap-1.5 bg-[oklch(0.44_0.13_145)] hover:bg-[oklch(0.50_0.13_145)] text-white"
+        : "gap-1.5 bg-[oklch(0.44_0.09_240)] hover:bg-[oklch(0.5_0.09_240)] text-white";
   const buttonVariant = "default" as const;
 
   return (
