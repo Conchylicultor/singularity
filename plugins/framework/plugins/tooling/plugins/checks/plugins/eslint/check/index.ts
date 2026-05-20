@@ -89,7 +89,7 @@ const check: Check = {
   description: "ESLint rules pass (global + plugin-contributed)",
   async run() {
     const root = await getRoot();
-    const cacheLocation = join(root, "node_modules", ".cache", "eslint");
+    const cacheLocation = join(root, ".cache", "eslint");
     bustCacheIfStale(root, cacheLocation);
     const proc = Bun.spawn(
       [process.execPath, "x", "eslint", ".", "--cache", "--cache-location", cacheLocation],

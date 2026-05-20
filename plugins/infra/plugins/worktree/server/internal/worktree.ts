@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 
 let cachedRepoRoot: string | null = null;
@@ -23,6 +26,20 @@ export async function worktreePathFor(id: string): Promise<string> {
   return `${root}/.claude/worktrees/${id}`;
 }
 
+async function copyEslintCacheToWorktree(repoRoot: string, wtPath: string): Promise<void> {
+  const newLocation = join(repoRoot, ".cache", "eslint");
+  const legacyLocation = join(repoRoot, "node_modules", ".cache", "eslint");
+  const sourcePath = existsSync(newLocation) ? newLocation : legacyLocation;
+  if (!existsSync(sourcePath)) return;
+
+  const raw = await Bun.file(sourcePath).text();
+  const rewritten = raw.replaceAll(repoRoot, wtPath);
+
+  const destPath = join(wtPath, ".cache", "eslint");
+  await mkdir(join(wtPath, ".cache"), { recursive: true });
+  await Bun.write(destPath, rewritten);
+}
+
 export async function setupWorktree(id: string, wtPath: string): Promise<void> {
   const repoRoot = await ensureMainWorktreeRoot();
   const branch = `claude-web/${id}`;
@@ -30,6 +47,10 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
     [GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"],
     { stdout: "pipe", stderr: "pipe" },
   ).exited;
+  try {
+    await copyEslintCacheToWorktree(repoRoot, wtPath);
+  // eslint-disable-next-line promise-safety/no-bare-catch
+  } catch {}
   // Trust the mise config so agents can run build commands without hitting
   // "config file is not trusted" errors. No-op if mise is not installed.
   try {

@@ -21,6 +21,9 @@ dist.old.*/
 # TypeScript
 *.tsbuildinfo
 
+# Caches
+.cache/
+
 # Transient dirs created by ./singularity check (e.g. migrations-in-sync)
 .check-*/
 
