@@ -18,18 +18,33 @@ interface AskUserQuestionInput {
   questions: Question[];
 }
 
-const RESULT_PREFIX = 'User has answered your questions: ';
-const RESULT_SUFFIX = '. You can now continue with the user\'s answers in mind.';
+const KNOWN_PREFIXES = [
+  'Your questions have been answered: ',
+  'User has answered your questions: ',
+];
+const KNOWN_SUFFIXES = [
+  '. You can now continue with these answers in mind.',
+  '. You can now continue with the user\'s answers in mind.',
+];
+
+function extractPayload(content: string): string {
+  for (const prefix of KNOWN_PREFIXES) {
+    const pi = content.indexOf(prefix);
+    if (pi === -1) continue;
+    for (const suffix of KNOWN_SUFFIXES) {
+      const si = content.lastIndexOf(suffix);
+      if (si !== -1 && si > pi) return content.slice(pi + prefix.length, si);
+    }
+    return content.slice(pi + prefix.length);
+  }
+  return content;
+}
 
 function parseAnswerMap(
   content: string,
   questions: Question[],
 ): Record<string, string> {
-  const prefixIdx = content.indexOf(RESULT_PREFIX);
-  const suffixIdx = content.lastIndexOf(RESULT_SUFFIX);
-  if (prefixIdx === -1 || suffixIdx === -1) return {};
-
-  const payload = content.slice(prefixIdx + RESULT_PREFIX.length, suffixIdx);
+  const payload = extractPayload(content);
 
   const answers: Record<string, string> = {};
   const anchors: { question: string; valueStart: number }[] = [];
