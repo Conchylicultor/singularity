@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
-import { MdBolt, MdChevronRight, MdExpandMore } from "react-icons/md";
+import { useCallback, useMemo, useState } from "react";
+import { MdChevronRight, MdExpandMore } from "react-icons/md";
 import { SearchInput, filterTree, collectAllIds } from "@plugins/primitives/plugins/search/web";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { cn } from "@/lib/utils";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import { Publish } from "../slots";
+import { PluginTreeProvider, usePluginTree } from "../context";
 
 function collectAllExpandableIds(nodes: PluginNode[]): Set<string> {
   const set = new Set<string>();
@@ -19,6 +21,17 @@ function collectAllExpandableIds(nodes: PluginNode[]): Set<string> {
   return set;
 }
 
+function collectSubtreeIds(node: PluginNode): string[] {
+  const ids: string[] = [];
+  if (node.children.length > 0) {
+    ids.push(node.hierarchyId);
+    for (const child of node.children) {
+      ids.push(...collectSubtreeIds(child));
+    }
+  }
+  return ids;
+}
+
 interface PluginTreeProps {
   plugins: PluginNode[];
   selected: string | null;
@@ -30,13 +43,16 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
   const [expanded, setExpanded] = useState<Set<string>>(() => collectAllExpandableIds(plugins));
   const [filter, setFilter] = useState("");
 
-  const toggle = (id: string) =>
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const toggle = useCallback(
+    (id: string) =>
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      }),
+    [],
+  );
 
   const filtered = useMemo(() => {
     const needle = filter.trim().toLowerCase();
@@ -49,15 +65,19 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
     );
   }, [plugins, filter]);
 
-  const effectiveExpanded = filter.trim()
-    ? new Set<string>(
-        collectAllIds(
-          filtered,
-          (n) => n.hierarchyId,
-          (n) => n.children,
-        ),
-      )
-    : expanded;
+  const effectiveExpanded = useMemo(
+    () =>
+      filter.trim()
+        ? new Set<string>(
+            collectAllIds(
+              filtered,
+              (n) => n.hierarchyId,
+              (n) => n.children,
+            ),
+          )
+        : expanded,
+    [filter, filtered, expanded],
+  );
 
   const isAllExpanded = allExpandable.size > 0 && [...allExpandable].every((id) => expanded.has(id));
 
@@ -65,37 +85,62 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
     setExpanded(isAllExpanded ? new Set() : new Set(allExpandable));
   };
 
+  const expandDescendants = useCallback(
+    (node: PluginNode) =>
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        for (const id of collectSubtreeIds(node)) next.add(id);
+        return next;
+      }),
+    [],
+  );
+
+  const collapseDescendants = useCallback(
+    (node: PluginNode) =>
+      setExpanded((prev) => {
+        const next = new Set(prev);
+        for (const id of collectSubtreeIds(node)) next.delete(id);
+        return next;
+      }),
+    [],
+  );
+
+  const ctxValue = useMemo(
+    () => ({ expanded: effectiveExpanded, toggle, expandDescendants, collapseDescendants }),
+    [effectiveExpanded, toggle, expandDescendants, collapseDescendants],
+  );
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-2 px-3 py-2.5 border-b">
-        <div className="flex-1">
-          <SearchInput
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filter plugins"
-          />
-        </div>
-        <ExpandAllButton allExpanded={isAllExpanded} onToggle={toggleAll} />
-      </div>
-      <div className="flex-1 min-h-0 overflow-y-auto py-1">
-        {filtered.map((p) => (
-          <TreeRow
-            key={p.hierarchyId}
-            node={p}
-            depth={0}
-            selected={selected}
-            expanded={effectiveExpanded}
-            onSelect={onSelect}
-            onToggle={toggle}
-          />
-        ))}
-        {filtered.length === 0 && (
-          <div className="px-3 py-6 text-center text-xs text-muted-foreground">
-            No plugins match "{filter}"
+    <PluginTreeProvider value={ctxValue}>
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="flex items-center gap-2 px-3 py-2.5 border-b">
+          <div className="flex-1">
+            <SearchInput
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Filter plugins"
+            />
           </div>
-        )}
+          <ExpandAllButton allExpanded={isAllExpanded} onToggle={toggleAll} />
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto py-1">
+          {filtered.map((p) => (
+            <TreeRow
+              key={p.hierarchyId}
+              node={p}
+              depth={0}
+              selected={selected}
+              onSelect={onSelect}
+            />
+          ))}
+          {filtered.length === 0 && (
+            <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+              No plugins match &quot;{filter}&quot;
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </PluginTreeProvider>
   );
 }
 
@@ -103,19 +148,11 @@ interface TreeRowProps {
   node: PluginNode;
   depth: number;
   selected: string | null;
-  expanded: Set<string>;
   onSelect: (id: string) => void;
-  onToggle: (id: string) => void;
 }
 
-function TreeRow({
-  node,
-  depth,
-  selected,
-  expanded,
-  onSelect,
-  onToggle,
-}: TreeRowProps) {
+function TreeRow({ node, depth, selected, onSelect }: TreeRowProps) {
+  const { expanded, toggle } = usePluginTree();
   const isOpen = expanded.has(node.hierarchyId);
   const isSelected = node.hierarchyId === selected;
   const hasChildren = node.children.length > 0;
@@ -133,7 +170,7 @@ function TreeRow({
           }
         }}
         className={cn(
-          "flex h-7 w-full cursor-pointer select-none items-center gap-1 pr-2 text-left transition-colors",
+          "group/row flex h-7 w-full cursor-pointer select-none items-center gap-1 pr-2 text-left transition-colors",
           isSelected
             ? "bg-accent"
             : "hover:bg-accent/40 focus-visible:bg-accent/40",
@@ -145,7 +182,7 @@ function TreeRow({
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onToggle(node.hierarchyId);
+              toggle(node.hierarchyId);
             }}
             aria-label={isOpen ? "Collapse" : "Expand"}
             className="inline-flex size-4 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted-foreground/10"
@@ -169,12 +206,9 @@ function TreeRow({
         >
           {node.name}
         </span>
-        {node.loadBearing && (
-          <MdBolt
-            className="size-3.5 shrink-0 text-amber-500/90"
-            aria-label="Load-bearing"
-          />
-        )}
+        <Publish.TreeRowBadge.Render>
+          {(item) => <item.component node={node} />}
+        </Publish.TreeRowBadge.Render>
       </div>
       {isOpen &&
         hasChildren &&
@@ -184,12 +218,9 @@ function TreeRow({
             node={c}
             depth={depth + 1}
             selected={selected}
-            expanded={expanded}
             onSelect={onSelect}
-            onToggle={onToggle}
           />
         ))}
     </>
   );
 }
-

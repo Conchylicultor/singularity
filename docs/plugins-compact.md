@@ -38,6 +38,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
                 - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
                 - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
         - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
+          - Plugins:
+            - **`child-count`** — Recursive child count badge in the publish plugin tree row.
+            - **`expand-collapse`** — Expand/collapse all descendants button in the publish plugin tree row.
+            - **`load-bearing`** — Load-bearing badge in the publish plugin tree row.
         - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
     - **`sonata`** [1 sub-plugin] — Sonata — extensible piano and music app.
     - **`workflows`** [4 sub-plugins] — Workflows app.

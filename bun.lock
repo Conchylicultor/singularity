@@ -159,6 +159,18 @@
       "name": "@singularity/plugin-apps-forge-publish",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/forge/plugins/publish/plugins/child-count": {
+      "name": "@singularity/plugin-apps-forge-publish-child-count",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/forge/plugins/publish/plugins/expand-collapse": {
+      "name": "@singularity/plugin-apps-forge-publish-expand-collapse",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/forge/plugins/publish/plugins/load-bearing": {
+      "name": "@singularity/plugin-apps-forge-publish-load-bearing",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/forge/plugins/shell": {
       "name": "@singularity/plugin-apps-forge-shell",
       "version": "0.0.1",
@@ -1967,6 +1979,12 @@
     "@singularity/plugin-apps-forge-catalog-tables-sample-rows": ["@singularity/plugin-apps-forge-catalog-tables-sample-rows@workspace:plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/sample-rows"],
 
     "@singularity/plugin-apps-forge-publish": ["@singularity/plugin-apps-forge-publish@workspace:plugins/apps/plugins/forge/plugins/publish"],
+
+    "@singularity/plugin-apps-forge-publish-child-count": ["@singularity/plugin-apps-forge-publish-child-count@workspace:plugins/apps/plugins/forge/plugins/publish/plugins/child-count"],
+
+    "@singularity/plugin-apps-forge-publish-expand-collapse": ["@singularity/plugin-apps-forge-publish-expand-collapse@workspace:plugins/apps/plugins/forge/plugins/publish/plugins/expand-collapse"],
+
+    "@singularity/plugin-apps-forge-publish-load-bearing": ["@singularity/plugin-apps-forge-publish-load-bearing@workspace:plugins/apps/plugins/forge/plugins/publish/plugins/load-bearing"],
 
     "@singularity/plugin-apps-forge-shell": ["@singularity/plugin-apps-forge-shell@workspace:plugins/apps/plugins/forge/plugins/shell"],
 

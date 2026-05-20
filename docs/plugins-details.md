@@ -211,9 +211,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                   - Server:
                     - Uses: `database.db`
         - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
+          - Exports (web):
+            - Types: `TreeRowBadgeContribution`
+            - Values: `Publish`, `usePluginTree`
           - Contributes:
             - `Pane.Register` "publish"
             - `Forge.Sidebar` "Publish" → `component`
+          - Plugins:
+            - **`child-count`** — Recursive child count badge in the publish plugin tree row.
+              - Contributes:
+                - `Publish.TreeRowBadge` "child-count" → `ChildCountBadge`
+            - **`expand-collapse`** — Expand/collapse all descendants button in the publish plugin tree row.
+              - Contributes:
+                - `Publish.TreeRowBadge` "expand-collapse" → `ExpandCollapseButton`
+            - **`load-bearing`** — Load-bearing badge in the publish plugin tree row.
+              - Contributes:
+                - `Publish.TreeRowBadge` "load-bearing" → `LoadBearingBadge`
         - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
           - Exports (web):
             - Values: `Forge`
