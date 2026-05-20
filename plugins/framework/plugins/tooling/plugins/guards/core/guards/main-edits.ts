@@ -33,9 +33,17 @@ export const mainEditsGuard = defineGuard<FileInput>({
       };
     }
 
+    const worktreeMarker = "/.claude/worktrees/";
+    const markerIdx = ctx.cwd.indexOf(worktreeMarker);
+    const repoRoot = markerIdx !== -1 ? ctx.cwd.slice(0, markerIdx) : null;
+    const relPath =
+      repoRoot && f.startsWith(`${repoRoot}/`) ? f.slice(repoRoot.length) : null;
+
     return {
       blocked: `Refusing to edit ${f} — this path is not in the allowlist (worktree ${ctx.cwd}, ~/.claude/projects/*/memory/, /tmp).`,
-      hint: `Your worktree IS your working copy of the repo — it contains everything the main repo does, including .claude/skills/ and .claude/settings.json. Edit those files at ${ctx.cwd}/.claude/** instead of the shared root.`,
+      hint: relPath
+        ? `Edit \`${ctx.cwd}${relPath}\` instead — your worktree IS your working copy of the repo.`
+        : `Your worktree IS your working copy of the repo — it contains everything the main repo does, including .claude/skills/ and .claude/settings.json. Edit those files at ${ctx.cwd}/.claude/** instead of the shared root.`,
     };
   },
 });
