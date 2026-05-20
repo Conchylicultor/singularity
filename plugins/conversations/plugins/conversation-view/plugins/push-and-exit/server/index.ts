@@ -4,7 +4,6 @@ import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { exitCleanFinalizeJob } from "./internal/exit-clean-finalize-job";
 import { exitCleanTool, flagRaiseTool } from "./internal/mcp-tools";
-import { pushAndExitJob } from "./internal/push-and-exit-job";
 import { pushAndExitResource } from "./internal/state";
 import { _pushAndExitJobs } from "./internal/tables";
 import { handleStart } from "./internal/handle-start";
@@ -36,5 +35,5 @@ export default {
     [startPushAndExit.route]:  handleStart,
     [cancelPushAndExit.route]: handleCancel,
   },
-  register: [pushAndExitJob, exitCleanFinalizeJob, exitCleanTool, flagRaiseTool],
+  register: [exitCleanFinalizeJob, exitCleanTool, flagRaiseTool],
 } satisfies ServerPluginDefinition;

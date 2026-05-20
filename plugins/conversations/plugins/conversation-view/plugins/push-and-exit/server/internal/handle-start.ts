@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { sendTurn } from "@plugins/conversations/server";
 import { startPushAndExit } from "../../shared/endpoints";
-import { pushAndExitJob } from "./push-and-exit-job";
+import { PUSH_AND_EXIT_PROMPT } from "./prompt";
 import { pushAndExitResource } from "./state";
 import { _pushAndExitJobs } from "./tables";
 
@@ -24,6 +25,6 @@ export const handleStart = implement(startPushAndExit, async ({ params }) => {
       set: { status: "running", detail: null, updatedAt: new Date() },
     });
   pushAndExitResource.notify();
-  await pushAndExitJob.enqueue({ conversationId: id }, { jobKey: id });
+  await sendTurn(id, PUSH_AND_EXIT_PROMPT);
   return { ok: true };
 });
