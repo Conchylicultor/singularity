@@ -23,6 +23,7 @@ dist.old.*/
 
 # Caches
 .cache/
+.eslintcache
 
 # Transient dirs created by ./singularity check (e.g. migrations-in-sync)
 .check-*/
