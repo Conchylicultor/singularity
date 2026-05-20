@@ -38,7 +38,7 @@ Controls how the new task connects to the target:
 
 **Follow-up (the common case):**
 
-  { "title": "Add dark mode support", "description": "Plan first. ...", "autostart": "opus" }
+  { "title": "Add dark mode support", "description": "... Plan first.", "autostart": "opus" }
 
 **Linear chain** — use \`target\` to chain off the previous task:
 
@@ -67,7 +67,7 @@ agent see the actual outcome instead of executing a stale plan.`,
       .optional()
       .describe(
         "Optional longer description of the problem or issue. Describe WHAT is wrong or needed, not HOW to fix it. " +
-        "Start with \"Plan first.\" to instruct the executing agent to write its own plan before implementing — " +
+        "End with \"Plan first.\" to instruct the executing agent to write its own plan before implementing — " +
         "do this for any non-mechanical task, even if a broader plan already exists."
       ),
     relation: z
@@ -86,11 +86,9 @@ agent see the actual outcome instead of executing a stale plan.`,
       ),
     autostart: z
       .enum(["sonnet", "opus"])
-      .nullable()
       .describe(
         "Auto-launch model. Default to \"opus\" unless the task is purely mechanical " +
-        "refactoring (no design decisions, no unknowns) — use \"sonnet\" only then. " +
-        "Pass null to leave in the user's queue without auto-launching."
+        "refactoring (no design decisions, no unknowns) — use \"sonnet\" only then."
       ),
   },
   async handler(
@@ -117,11 +115,9 @@ agent see the actual outcome instead of executing a stale plan.`,
       rewireDependencies({ newTaskId: task.id, targetId, relation }),
     );
 
-    if (autostart) {
-      const deps = relation === "followup" ? [targetId]
-        : await getTaskDependencyIds(task.id);
-      await armTaskAutoStart({ taskId: task.id, model: autostart, dependencies: deps });
-    }
+    const deps = relation === "followup" ? [targetId]
+      : await getTaskDependencyIds(task.id);
+    await armTaskAutoStart({ taskId: task.id, model: autostart, dependencies: deps });
 
     return {
       content: [
