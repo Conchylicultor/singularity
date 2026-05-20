@@ -7,22 +7,21 @@ import { isMain } from "@plugins/infra/plugins/paths/server";
 import { ConfigV2, getConfig } from "@plugins/config_v2/server";
 import { db } from "@plugins/database/server";
 import { handleBuild } from "./internal/handle-build";
-import { handleBuildStatus } from "./internal/handle-build-status";
 import { buildRunJob } from "./internal/build-run-job";
 import { getMainAheadCount } from "./internal/git-status";
 import { mainAheadCountResource } from "./internal/main-ahead-resource";
 import { buildHistoryResource } from "./internal/build-history-resource";
+import { frontendHashResource } from "./internal/frontend-hash-resource";
 import { _buildRuns } from "./internal/tables";
 import { buildConfig } from "../shared";
-import { triggerBuildEndpoint, getBuildStatus } from "../core/endpoints";
+import { triggerBuildEndpoint } from "../core/endpoints";
 
 export default {
   id: "build",
   name: "Build",
-  contributions: [ConfigV2.Register({ descriptor: buildConfig }), Resource.Declare(mainAheadCountResource), Resource.Declare(buildHistoryResource)],
+  contributions: [ConfigV2.Register({ descriptor: buildConfig }), Resource.Declare(mainAheadCountResource), Resource.Declare(buildHistoryResource), Resource.Declare(frontendHashResource)],
   httpRoutes: {
     [triggerBuildEndpoint.route]: handleBuild,
-    [getBuildStatus.route]: handleBuildStatus,
   },
   register: [buildRunJob],
   onReady: async () => {

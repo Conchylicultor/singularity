@@ -3,7 +3,6 @@ import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { buildConfig } from "../../shared";
 import { isBuildInflight, triggerBuild } from "./run-build";
-import { setLastAutoBuildAt } from "./auto-build-tracker";
 
 export const buildRunJob = defineJob({
   name: "build.run",
@@ -13,7 +12,6 @@ export const buildRunJob = defineJob({
     if (isBuildInflight()) return;
     const { autoBuild } = getConfig(buildConfig);
     if (!autoBuild) return;
-    setLastAutoBuildAt(new Date().toISOString());
     triggerBuild("auto");
   },
 });

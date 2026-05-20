@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "@plugins/notifications/web";
-import { getHealth, waitForRestart } from "@plugins/health/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { MdOpenInFull } from "react-icons/md";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
@@ -8,42 +7,43 @@ import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { mainAheadCountResource, buildHistoryResource } from "../../shared";
+import { mainAheadCountResource, buildHistoryResource, frontendHashResource } from "../../shared";
 import { BuildPopoverContent } from "./build-popover-content";
 import { buildPane, buildDetailPane } from "../panes";
 
-interface BuildStatus {
-  frontendHash: string;
-  autoBuildAt: string | null;
-}
-
-async function getBuildStatus(): Promise<BuildStatus | null> {
-  try {
-    const res = await fetch("/api/build/status");
-    if (!res.ok) return null;
-    return res.json() as Promise<BuildStatus>;
-  } catch {
-    return null;
-  }
-}
-
 export function BuildButton() {
   const [open, setOpen] = useState(false);
-  const [autoBuilding, setAutoBuilding] = useState(false);
   const [staleTab, setStaleTab] = useState(false);
-  const [loaded, setLoaded] = useState(false);
   const openPane = useOpenPane();
-  const initialHashRef = useRef<string | null>(null);
-  const lastAutoBuildAtRef = useRef<string | null | undefined>(undefined);
 
+  // --- Frontend hash (stale-tab detection) ---
+  const hashResult = useResource(frontendHashResource);
+  const currentHash = hashResult.pending ? "" : hashResult.data.hash;
+  const initialHashRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (hashResult.pending) return;
+    if (!currentHash) return;
+    if (initialHashRef.current === null) {
+      initialHashRef.current = currentHash;
+    } else if (currentHash !== initialHashRef.current) {
+      setStaleTab(true);
+    }
+  }, [hashResult.pending, currentHash]);
+
+  // --- Main ahead count ---
   const aheadResult = useResource(mainAheadCountResource);
   const mainAheadCount = aheadResult.pending ? 0 : (aheadResult.data?.count ?? 0);
 
+  // --- Build history ---
   const historyResult = useResource(buildHistoryResource);
-  const latestRun = historyResult.pending ? undefined : historyResult.data[0];
+  const historyData = historyResult.pending ? undefined : historyResult.data;
+  const latestRun = historyData?.[0];
   const building = latestRun?.finishedAt === null;
   const trackedBuildRef = useRef<string | null>(null);
+  const initializedRef = useRef(false);
 
+  // Build completion toast
   useEffect(() => {
     if (!latestRun) return;
 
@@ -62,43 +62,33 @@ export function BuildButton() {
     }
   }, [latestRun?.id, latestRun?.finishedAt]);
 
-  function applyStatus(status: BuildStatus) {
-    if (initialHashRef.current === null) {
-      initialHashRef.current = status.frontendHash;
-      setLoaded(true);
-    } else if (status.frontendHash && status.frontendHash !== initialHashRef.current) {
-      setStaleTab(true);
-    }
-    if (lastAutoBuildAtRef.current === undefined) {
-      lastAutoBuildAtRef.current = status.autoBuildAt;
-    } else if (status.autoBuildAt && status.autoBuildAt !== lastAutoBuildAtRef.current) {
-      lastAutoBuildAtRef.current = status.autoBuildAt;
-      toast({ type: "build", description: "Auto-build triggered by new push", variant: "info" });
-      setAutoBuilding(true);
-      getHealth().then((before) => {
-        if (!before) { setAutoBuilding(false); return; }
-        waitForRestart(before.startedAt).then(() => setAutoBuilding(false));
-      });
-    }
-  }
+  // Auto-build toast — detect new in-flight auto-triggered row
+  const lastSeenAutoRef = useRef<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!historyData) return;
 
-    async function poll() {
-      const status = await getBuildStatus();
-      if (status && !cancelled) applyStatus(status);
+    // Mark initialized after first non-pending delivery to suppress toast on load
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      // Seed the ref with the current auto-build id (if any) so we don't toast on load
+      const currentAuto = historyData.find(
+        (r) => r.trigger === "auto" && r.finishedAt === null,
+      );
+      lastSeenAutoRef.current = currentAuto?.id ?? null;
+      return;
     }
 
-    poll();
-    const interval = setInterval(poll, 30_000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    const autoRun = historyData.find(
+      (r) => r.trigger === "auto" && r.finishedAt === null,
+    );
+    if (autoRun && autoRun.id !== lastSeenAutoRef.current) {
+      lastSeenAutoRef.current = autoRun.id;
+      toast({ type: "build", description: "Auto-build triggered by new push", variant: "info" });
+    }
+  }, [historyData]);
 
-  const spinning = building || autoBuilding;
+  const loaded = !hashResult.pending;
 
   return (
     <InlinePopover
@@ -106,8 +96,8 @@ export function BuildButton() {
       onOpenChange={setOpen}
       trigger={
         <button className="inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground">
-          <Spinner spinning={spinning} className="size-4" />
-          {spinning ? "Building…" : "Build"}
+          <Spinner spinning={building} className="size-4" />
+          {building ? "Building…" : "Build"}
           {mainAheadCount > 0 ? (
             <WithTooltip content={`main is ${mainAheadCount} commit${mainAheadCount !== 1 ? "s" : ""} ahead of this worktree`}>
               <span className="block size-2 rounded-full bg-amber-400" />

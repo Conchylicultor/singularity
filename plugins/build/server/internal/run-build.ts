@@ -6,6 +6,7 @@ import { Log } from "@plugins/debug/plugins/logs/server";
 import { REPO_ROOT, SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 import { _buildRuns } from "./tables";
 import { buildHistoryResource } from "./build-history-resource";
+import { frontendHashResource } from "./frontend-hash-resource";
 
 const buildLog = Log.channel("build");
 
@@ -80,4 +81,5 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
     .set({ finishedAt: new Date(), exitCode })
     .where(eq(_buildRuns.id, buildId));
   buildHistoryResource.notify();
+  frontendHashResource.notify();
 }

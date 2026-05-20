@@ -349,13 +349,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Defines:
     - DB schema: `plugins/build/server/internal/tables.ts`
   - Exports (core):
-    - Types: `BuildRun`, `MainAheadCount`
-    - Values: `buildHistoryResource`, `BuildRunSchema`, `getBuildStatus`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
+    - Types: `BuildRun`, `FrontendHash`, `MainAheadCount`
+    - Values: `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
   - Exports (web):
     - Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`
   - Exports (shared):
-    - Types: `BuildRun`, `MainAheadCount`
-    - Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
+    - Types: `BuildRun`, `FrontendHash`, `MainAheadCount`
+    - Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
   - Contributes:
     - `Shell.Toolbar` → `BuildButton`
     - `Pane.Register` "build"
@@ -363,7 +363,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Register: `defineJob('build.run')`
     - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
-    - Resources: `build.history` (push), `build.mainAheadCount` (push)
+    - Resources: `build.frontendHash` (push), `build.history` (push), `build.mainAheadCount` (push)
   - Plugins:
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
       - Contributes:
@@ -1097,7 +1097,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Core.Root` → `ReconnectWatcher`
     - `Shell.Toolbar` → `HealthDot`
-  - Imported by: `build`
 
 - **`improve`**
   - Defines:

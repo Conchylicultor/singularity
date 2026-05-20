@@ -13,6 +13,14 @@ export const mainAheadCountResource = resourceDescriptor<MainAheadCount>(
   { count: 0 },
 );
 
+export const FrontendHashSchema = z.object({ hash: z.string() });
+export type FrontendHash = z.infer<typeof FrontendHashSchema>;
+export const frontendHashResource = resourceDescriptor<FrontendHash>(
+  "build.frontendHash",
+  FrontendHashSchema,
+  { hash: "" },
+);
+
 export const BuildRunSchema = z.object({
   id: z.string(),
   trigger: z.enum(["manual", "auto"]),
