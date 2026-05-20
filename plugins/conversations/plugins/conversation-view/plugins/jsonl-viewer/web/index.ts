@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { JsonlViewer } from "./slots";
 import { RawJsonAction } from "./components/raw-json-button";
+import { TimestampAction } from "./components/timestamp-action";
 
 export { JsonlViewer } from "./slots";
 export type { EventRendererContribution, OverlayContribution, RowActionContribution } from "./slots";
@@ -19,6 +20,7 @@ export default {
   description:
     "Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds.",
   contributions: [
+    JsonlViewer.RowAction({ id: "timestamp", component: TimestampAction }),
     JsonlViewer.RowAction({ id: "raw-json", component: RawJsonAction }),
   ],
 } satisfies PluginDefinition;

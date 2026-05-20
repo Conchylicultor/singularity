@@ -619,7 +619,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateTask`
         - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
           - Defines:
-            - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.RowAction`, `JsonlViewer.Overlay`
+            - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.Overlay`
           - Exports (core):
             - Types: `JsonlEventsResponse`
             - Values: `JsonlEventsPayloadSchema`, `jsonlEventsResource`
@@ -627,6 +627,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Types: `EventRendererContribution`, `OverlayContribution`, `RowActionContribution`
             - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
           - Contributes:
+            - `JsonlViewer.RowAction` "timestamp" → `TimestampAction`
             - `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
           - Server:
             - Uses: `tasks-core.getConversationClaudeSessionId`
@@ -636,6 +637,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Contributes:
                 - `JsonlViewer.EventRenderer` "assistant-text" → `AssistantTextRow`
+                - `JsonlViewer.RowAction` "stop-reason" → `StopReasonAction`
                 - `JsonlViewer.RowAction` "markdown-toggle" → `MarkdownToggleAction`
                 - `JsonlViewer.RowAction` "copy-assistant-text" → `CopyAssistantTextAction`
             - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.

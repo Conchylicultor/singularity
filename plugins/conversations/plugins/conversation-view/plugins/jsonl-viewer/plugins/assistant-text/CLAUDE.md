@@ -7,6 +7,7 @@
 - Description: Renders assistant text events in the JSONL viewer, with optional markdown rendering.
 - Contributes:
   - `JsonlViewer.EventRenderer` "assistant-text" → `AssistantTextRow`
+  - `JsonlViewer.RowAction` "stop-reason" → `StopReasonAction`
   - `JsonlViewer.RowAction` "markdown-toggle" → `MarkdownToggleAction`
   - `JsonlViewer.RowAction` "copy-assistant-text" → `CopyAssistantTextAction`
 

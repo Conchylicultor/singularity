@@ -2,11 +2,10 @@ import {
   ActiveDataIdentityProvider,
   useActiveDataSegments,
 } from "@plugins/active-data/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import {
-  formatTime,
+  JsonlViewer,
   useRowMarkdown,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
@@ -23,15 +22,6 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
   return (
     <ContentScope>
       <div className="rounded-md border border-border/60 bg-background px-3 py-2">
-        <SectionLabel className="mb-1 flex items-center gap-2 text-[10px]">
-          <span>Assistant</span>
-          <span className="tabular-nums">{formatTime(e.at)}</span>
-          <div className="ml-auto flex items-center gap-2">
-            {e.stopReason ? (
-              <span className="text-muted-foreground/70">{e.stopReason}</span>
-            ) : null}
-          </div>
-        </SectionLabel>
         {markdownMode ? (
           <div className="text-sm leading-6">
             {(() => {
@@ -63,6 +53,11 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
         ) : (
           <div className="whitespace-pre-wrap break-words text-sm">{e.text}</div>
         )}
+      </div>
+      <div className="flex items-center gap-1.5 px-1 pt-1 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
+        <JsonlViewer.RowAction.Render>
+          {(item) => <item.component event={e} />}
+        </JsonlViewer.RowAction.Render>
       </div>
     </ContentScope>
   );

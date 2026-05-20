@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { formatTime, useStickyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { JsonlViewer, useStickyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 
 type UserTextEvent = Extract<JsonlEvent, { kind: "user-text" }>;
@@ -89,10 +88,6 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
   return (
     <ContentScope>
       <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2">
-        <SectionLabel className="mb-1 flex items-center gap-2 text-[10px]">
-          <span>User</span>
-          <span className="tabular-nums">{formatTime(e.at)}</span>
-        </SectionLabel>
         <div
           className={showCollapsed ? "max-h-48 overflow-hidden" : ""}
           style={showCollapsed ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}
@@ -124,6 +119,11 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
             )}
           </button>
         ) : null}
+      </div>
+      <div className="flex items-center gap-1.5 px-1 pt-1 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
+        <JsonlViewer.RowAction.Render>
+          {(item) => <item.component event={e} />}
+        </JsonlViewer.RowAction.Render>
       </div>
     </ContentScope>
   );
