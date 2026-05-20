@@ -8,6 +8,7 @@ import {
   getConversation,
   getConversationRuntime,
   updateConversation,
+  updateTask,
 } from "@plugins/tasks-core/server";
 import { Runtime } from "./runtime";
 import { DEFAULT_MODEL, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
@@ -211,6 +212,8 @@ export async function resumeConversation(id: string): Promise<Conversation> {
     resumeSessionId: row.claudeSessionId,
     model: row.model,
   });
+
+  await updateTask(row.taskId, { drop: false, hold: false });
 
   return (await getConversation(id)) as Conversation;
 }
