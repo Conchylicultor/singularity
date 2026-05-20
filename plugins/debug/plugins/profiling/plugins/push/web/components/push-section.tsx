@@ -57,13 +57,6 @@ const DEFAULT_STYLE = {
 
 const WAIT_COLOR = "bg-amber-400 dark:bg-amber-500";
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 function formatTickMs(ms: number): string {
   if (ms === 0) return "0";
   if (ms < 1000) return `${ms}ms`;
@@ -98,7 +91,7 @@ export function PushSection(): ReactElement | null {
     <>
       <PushTimeAxis totalMs={data.totalMs} />
       {data.groups.map((group) => (
-        <PushWorktreeGroup
+        <PushAttemptRow
           key={group.worktree}
           group={group}
           totalMs={data.totalMs}
@@ -146,7 +139,7 @@ function PushTimeAxis({ totalMs }: { totalMs: number }): ReactElement {
   );
 }
 
-function PushWorktreeGroup({
+function PushAttemptRow({
   group,
   totalMs,
 }: {
@@ -155,18 +148,26 @@ function PushWorktreeGroup({
 }): ReactElement {
   const { hovered, setHovered } = useProfilingContext();
 
+  const lastPush = group.pushes[group.pushes.length - 1]!;
+  const lastStyle = OUTCOME_STYLES[lastPush.outcome] ?? DEFAULT_STYLE;
+  const totalDuration = group.pushes.reduce(
+    (sum, p) => sum + p.waitMs + p.holdMs,
+    0,
+  );
+
   return (
-    <div className="border-b">
-      <div className="px-4 py-1">
-        <span className="text-xs font-semibold text-muted-foreground">
+    <div className="flex items-center gap-2 border-b px-4 py-1">
+      <div className="flex w-40 shrink-0 items-center gap-1.5 truncate">
+        <div
+          className={cn("size-2 shrink-0 rounded-full", lastStyle.color)}
+        />
+        <span className="truncate font-mono text-[11px] text-muted-foreground">
           {group.worktree.replace(/^claude-web\//, "")}
         </span>
       </div>
-      <div className="space-y-0.5 px-4 pb-2">
+      <div className="relative h-5 flex-1 overflow-hidden rounded bg-muted/30">
         {group.pushes.map((push) => {
           const style = OUTCOME_STYLES[push.outcome] ?? DEFAULT_STYLE;
-          const total = push.waitMs + push.holdMs;
-          const label = `${formatTime(push.startedAt)} (${push.outcome})`;
 
           const waitSpan: Span | null =
             push.waitMs > 0
@@ -191,52 +192,42 @@ function PushWorktreeGroup({
           const isPushHovered = hovered?.id === pushSpan.id;
 
           return (
-            <div key={push.pushId} className="flex items-center gap-2 py-0.5">
-              <div className="flex w-40 shrink-0 items-center gap-1.5 truncate">
-                <div
-                  className={cn("size-2 shrink-0 rounded-full", style.color)}
-                />
-                <span className="truncate font-mono text-[11px] text-muted-foreground">
-                  {label}
-                </span>
-              </div>
-              <div className="relative h-5 flex-1 overflow-hidden rounded bg-muted/30">
-                {waitSpan && (
-                  <div
-                    className={cn(
-                      "absolute top-0 h-full rounded-l transition-opacity",
-                      WAIT_COLOR,
-                      isWaitHovered ? "opacity-100" : "opacity-50",
-                    )}
-                    style={{
-                      left: `${(push.startMs / totalMs) * 100}%`,
-                      width: `${Math.max((push.waitMs / totalMs) * 100, 0.3)}%`,
-                    }}
-                    onMouseEnter={() => setHovered(waitSpan)}
-                    onMouseLeave={() => setHovered(null)}
-                  />
-                )}
+            <span key={push.pushId}>
+              {waitSpan && (
                 <div
                   className={cn(
-                    "absolute top-0 h-full transition-opacity",
-                    style.color,
-                    push.waitMs > 0 ? "rounded-r" : "rounded",
-                    isPushHovered ? "opacity-100" : "opacity-70",
+                    "absolute top-0 h-full rounded-l transition-opacity",
+                    WAIT_COLOR,
+                    isWaitHovered ? "opacity-100" : "opacity-50",
                   )}
                   style={{
-                    left: `${((push.startMs + push.waitMs) / totalMs) * 100}%`,
-                    width: `${Math.max((push.holdMs / totalMs) * 100, 0.3)}%`,
+                    left: `${(push.startMs / totalMs) * 100}%`,
+                    width: `${Math.max((push.waitMs / totalMs) * 100, 0.3)}%`,
                   }}
-                  onMouseEnter={() => setHovered(pushSpan)}
+                  onMouseEnter={() => setHovered(waitSpan)}
                   onMouseLeave={() => setHovered(null)}
                 />
-              </div>
-              <div className="w-16 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground">
-                {formatDuration(total)}
-              </div>
-            </div>
+              )}
+              <div
+                className={cn(
+                  "absolute top-0 h-full transition-opacity",
+                  style.color,
+                  push.waitMs > 0 ? "rounded-r" : "rounded",
+                  isPushHovered ? "opacity-100" : "opacity-70",
+                )}
+                style={{
+                  left: `${((push.startMs + push.waitMs) / totalMs) * 100}%`,
+                  width: `${Math.max((push.holdMs / totalMs) * 100, 0.3)}%`,
+                }}
+                onMouseEnter={() => setHovered(pushSpan)}
+                onMouseLeave={() => setHovered(null)}
+              />
+            </span>
           );
         })}
+      </div>
+      <div className="w-16 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground">
+        {formatDuration(totalDuration)}
       </div>
     </div>
   );
