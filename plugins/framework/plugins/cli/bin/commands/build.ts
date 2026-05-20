@@ -8,7 +8,7 @@ import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generate
 import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot } from "../git/main-repo-root";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
-import { runChecks } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { runChecks, discoverTscTargets } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   libpqEnv,
   readDatabaseConfig,
@@ -598,8 +598,7 @@ export function registerBuild(program: Command) {
       // up and nothing is published. `--skip-checks` still skips checks.
       const stagingName = `${STAGING_PREFIX}${process.pid}`;
       const stagingPath = resolve(webDir, stagingName);
-      const worktreeCentralDir = resolve(root, "plugins/framework/plugins/central-core");
-      const hasCentral = existsSync(join(worktreeCentralDir, "bin", "index.ts"));
+      const runtimeTargets = discoverTscTargets(root).filter((t) => t.hasEntrypoint);
 
       console.log("Running checks, type-checking, and building frontend in parallel...");
 
@@ -618,19 +617,11 @@ export function registerBuild(program: Command) {
         );
       }
 
-      parallel.push(
-        (async () => {
-          const end = buildProfilerStart("tscServer", "build:validation", "tsc server");
-          await execOrThrow([process.execPath, "x", "tsc"], resolve(root, "plugins/framework/plugins/server-core"), "tsc server");
-          end();
-        })(),
-      );
-
-      if (hasCentral) {
+      for (const target of runtimeTargets) {
         parallel.push(
           (async () => {
-            const end = buildProfilerStart("tscCentral", "build:validation", "tsc central");
-            await execOrThrow([process.execPath, "x", "tsc"], worktreeCentralDir, "tsc central");
+            const end = buildProfilerStart(`tsc:${target.name}`, "build:validation", `tsc ${target.name}`);
+            await execOrThrow([process.execPath, "x", "tsc", ...target.args], target.dir, `tsc ${target.name}`);
             end();
           })(),
         );

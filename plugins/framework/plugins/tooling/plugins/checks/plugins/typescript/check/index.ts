@@ -1,3 +1,5 @@
+import { discoverTscTargets } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
@@ -25,26 +27,26 @@ async function runTsc(cwd: string, args: string[]): Promise<{ ok: true } | { ok:
 
 const check: Check = {
   id: "typescript",
-  description: "Frontend, server, and tooling pass tsc --noEmit (no type errors)",
+  description: "All framework plugins with a tsconfig.json pass tsc --noEmit",
   async run() {
     const root = await getRoot();
+    const targets = discoverTscTargets(root);
 
-    const [web, server, central, tooling] = await Promise.all([
-      runTsc(`${root}/plugins/framework/plugins/web-core`, ["-p", "tsconfig.app.json"]),
-      runTsc(`${root}/plugins/framework/plugins/server-core`, []),
-      runTsc(`${root}/plugins/framework/plugins/central-core`, []),
-      runTsc(`${root}/plugins/framework/plugins/tooling`, []),
-    ]);
+    const results = await Promise.all(
+      targets.map(async (t) => ({ target: t, result: await runTsc(t.dir, t.args) })),
+    );
 
-    if (web.ok && server.ok && central.ok && tooling.ok) return { ok: true };
+    const failures = results.filter((r) => !r.result.ok);
+    if (failures.length === 0) return { ok: true };
 
-    const sections: string[] = [];
-    if (!web.ok) sections.push(`web:\n    ${web.errors.split("\n").join("\n    ")}`);
-    if (!server.ok) sections.push(`server:\n    ${server.errors.split("\n").join("\n    ")}`);
-    if (!central.ok) sections.push(`central:\n    ${central.errors.split("\n").join("\n    ")}`);
-    if (!tooling.ok) sections.push(`tooling:\n    ${tooling.errors.split("\n").join("\n    ")}`);
+    const sections = failures.map(({ target, result }) => {
+      const errors = (result as { ok: false; errors: string }).errors;
+      return `${target.name}:\n    ${errors.split("\n").join("\n    ")}`;
+    });
 
-    const combined = `${web.ok ? "" : web.errors}\n${server.ok ? "" : server.errors}\n${central.ok ? "" : central.errors}\n${tooling.ok ? "" : tooling.errors}`;
+    const combined = failures
+      .map((r) => (r.result as { ok: false; errors: string }).errors)
+      .join("\n");
     const hasMissingModule = /error TS2307: Cannot find module/.test(combined);
     const hint = hasMissingModule
       ? "A \"Cannot find module\" error for a dep you didn't touch is usually a missing workspace link — run ./singularity build first (it re-runs bun install) and re-push. Otherwise: fix type errors before pushing; if a cast is necessary, fix the type definition instead."

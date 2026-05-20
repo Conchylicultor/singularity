@@ -16,7 +16,12 @@ interface DatabaseConfig {
     port: number;
     user: string;
   };
-  services: unknown[];
+  services: Array<{
+    name: string;
+    start: string[];
+    ready: { unix: string } | { tcp: string };
+    watchdog?: { intervalSec?: number };
+  }>;
 }
 
 let cachedConfig: DatabaseConfig | null = null;

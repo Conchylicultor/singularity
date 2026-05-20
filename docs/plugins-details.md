@@ -1070,8 +1070,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `allow`, `boundaryRulesCheck`, `createBoundaryCheck`, `defineBoundaries`, `deny`, `zone`
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Exports (core):
-            - Types: `Check`, `CheckResult`, `RunChecksOptions`
-            - Values: `listAllChecks`, `runChecks`
+            - Types: `Check`, `CheckResult`, `RunChecksOptions`, `TscTarget`
+            - Values: `discoverTscTargets`, `listAllChecks`, `runChecks`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Exports (core):
             - Types: `GenerateDocsOptions`, `PluginNode`, `PluginTree`, `Runtime`
