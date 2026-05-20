@@ -6,7 +6,7 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { formatTime } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { formatTime, useStickyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 
 type UserTextEvent = Extract<JsonlEvent, { kind: "user-text" }>;
@@ -77,6 +77,7 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
   const openPane = useOpenPane();
   const collapsible = isLong(e.text);
   const [expanded, setExpanded] = useState(false);
+  const reportSticky = useStickyReport();
   const showCollapsed = collapsible && !expanded;
 
   const onFileOpen = (path: string) =>
@@ -107,7 +108,7 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
         {collapsible ? (
           <button
             type="button"
-            onClick={() => setExpanded((v) => !v)}
+            onClick={() => setExpanded((v) => { const next = !v; reportSticky(next); return next; })}
             className="mt-1 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
             {expanded ? (

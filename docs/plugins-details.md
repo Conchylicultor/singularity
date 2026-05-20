@@ -625,7 +625,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `JsonlEventsPayloadSchema`, `jsonlEventsResource`
           - Exports (web):
             - Types: `EventRendererContribution`, `OverlayContribution`, `RowActionContribution`
-            - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`
+            - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `TokenBadge`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
           - Contributes:
             - `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
           - Server:

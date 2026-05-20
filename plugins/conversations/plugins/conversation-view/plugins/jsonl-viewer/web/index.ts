@@ -11,6 +11,7 @@ export { RowActionButton } from "./components/row-action-button";
 export { TokenBadge } from "./components/token-badge";
 export { CopyTextAction } from "./components/copy-button";
 export { formatTime } from "./utils";
+export { useStickyReport } from "./components/section-sticky-context";
 
 export default {
   id: "conversation-jsonl-viewer",

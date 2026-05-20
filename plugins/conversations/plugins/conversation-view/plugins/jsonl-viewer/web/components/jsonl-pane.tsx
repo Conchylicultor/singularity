@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   JumpToBottomButton,
@@ -11,6 +11,7 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
+import { StickyReportProvider } from "./section-sticky-context";
 import { JsonlViewer } from "../slots";
 
 interface UsageTotals {
@@ -82,6 +83,24 @@ function PendingContentIndicator() {
   );
 }
 
+function StickyUserHeader({ children }: { children: ReactNode }) {
+  const [expanded, setExpanded] = useState(false);
+  const report = useCallback((v: boolean) => setExpanded(v), []);
+  return (
+    <StickyReportProvider value={report}>
+      <div
+        className={
+          expanded
+            ? "z-10 bg-background pb-0.5"
+            : "sticky top-0 z-10 bg-background pb-0.5 shadow-[0_2px_6px_-2px_rgba(0,0,0,0.1)]"
+        }
+      >
+        {children}
+      </div>
+    </StickyReportProvider>
+  );
+}
+
 function EventSections({ events, children }: { events: JsonlEvent[]; children?: ReactNode }) {
   const sections = useMemo(() => {
     const result: { start: number; end: number }[] = [];
@@ -124,9 +143,9 @@ function EventSections({ events, children }: { events: JsonlEvent[]; children?: 
         }
         return (
           <div key={section.start} className="flex flex-col gap-2">
-            <div className="sticky top-0 z-10 bg-background pb-0.5 shadow-[0_2px_6px_-2px_rgba(0,0,0,0.1)]">
+            <StickyUserHeader>
               {renderEvent(section.start)}
-            </div>
+            </StickyUserHeader>
             {Array.from({ length: section.end - section.start - 1 }, (_, j) =>
               renderEvent(section.start + 1 + j),
             )}
