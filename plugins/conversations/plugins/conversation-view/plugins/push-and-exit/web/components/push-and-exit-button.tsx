@@ -60,7 +60,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const mode: Mode = useMemo(() => {
     if (isNotRunning) return "restore";
     if (!isDraftEmpty(draft)) return "send";
-    if (live.status === "working" && !busy) return "stop";
+    if (live.status === "working") return "stop";
     if (conversationsLoading) {
       return "push-and-exit";
     }
@@ -78,7 +78,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         isActiveStatus(c.status),
     );
     return hasOtherActiveInWorktree ? "exit" : "drop-and-exit";
-  }, [isNotRunning, draft, files, pushesResult, active, conversationsLoading, conversation.attemptId, conversation.id, conversation.worktreePath, live.status, busy]);
+  }, [isNotRunning, draft, files, pushesResult, active, conversationsLoading, conversation.attemptId, conversation.id, conversation.worktreePath, live.status]);
 
   useEffect(() => {
     if (!busy) return;
