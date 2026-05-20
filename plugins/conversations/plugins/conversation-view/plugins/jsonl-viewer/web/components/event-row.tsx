@@ -27,7 +27,7 @@ function InlineActions({ event }: { event: JsonlEvent }) {
   const actions = JsonlViewer.RowAction.useContributions();
   if (actions.length === 0) return null;
   return (
-    <div className="flex items-center justify-end gap-1 px-1 h-6 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
+    <div className="flex items-center justify-end gap-1 px-1 pt-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
       <JsonlViewer.RowAction.Render>
         {(item) => <item.component event={event} />}
       </JsonlViewer.RowAction.Render>
