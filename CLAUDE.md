@@ -69,7 +69,6 @@ Think carefully about the plugin's boundaries, APIs, etc. when designing plugins
 ├── web/              # Frontend bootstrap (SPA shell, plugin registry)
 ├── gateway/          # Namespace proxy (Go). See [`gateway/CLAUDE.md`](gateway/CLAUDE.md)
 ├── cli/              # Agent CLI (TypeScript, Commander.js)
-├── tooling/          # Repo tooling: checks, guards, lint rules, boundary engine
 ├── sidequests/       # Independent side projects (see Sidequests section below)
 └── research/         # Research docs and plans
 ```
@@ -115,7 +114,7 @@ Run repo validation checks (e.g. `schema.ts` matches committed migrations):
 ./singularity check --migrations-in-sync  # run a single check
 ```
 
-Checks also run automatically as the first step of `push`, and (unless `--skip-checks` is passed) at the start of `build` after migration/doc generation. New built-in checks live in `tooling/src/checks/` and are registered in `tooling/src/checks/index.ts`.
+Checks also run automatically as the first step of `push`, and (unless `--skip-checks` is passed) at the start of `build` after migration/doc generation. New built-in checks live in `plugins/framework/plugins/tooling/plugins/checks/core/` and are registered in `plugins/framework/plugins/tooling/plugins/checks/core/index.ts`.
 
 Plugins can also contribute their own checks (no codegen, no registry edits — discovered at runtime):
 
@@ -202,7 +201,7 @@ When working on this project, follow these instructions thoughtfully:
 - **Group related plugins under an umbrella.** For 2+ related plugins, prefer an umbrella parent (`plugins/<umbrella>/plugins/<child>/`) over flat top-level entries. This keeps `plugins/` readable as semantic categories rather than an unbounded flat list. The umbrella doesn't need to re-export children's APIs — each sub-plugin owns its barrel.
 - **Subagents default to Sonnet.** When spawning any `Agent` call, always pass `model: "sonnet"` explicitly. Never omit the model and let it default to Opus. Only use Opus for load-bearing, complex implementation tasks — research, lookup, synthesis, and reporting are all Sonnet work.
 - **On breakage, rebase to HEAD first.** When the build fails to start or something is broken in an unexpected way, rebase the worktree branch onto `main` (`git fetch origin main && git rebase origin/main`) — the issue may already be fixed upstream.
-- **Promise handling — never swallow rejections.** Two global ESLint rules enforce this (`tooling/src/lint/promise-safety/`):
+- **Promise handling — never swallow rejections.** Two global ESLint rules enforce this (`plugins/framework/plugins/tooling/plugins/lint/core/promise-safety/`):
   - `promise-safety/no-floating-promises` — every promise must be explicitly handled.
   - `promise-safety/no-bare-catch` — `.catch(() => {})` and `.catch(console.error)` are banned because they silently swallow errors and hide bugs.
 

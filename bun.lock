@@ -1272,13 +1272,6 @@
       "name": "@singularity/plugin-worktree-switcher",
       "version": "0.0.1",
     },
-    "tooling": {
-      "name": "@singularity/tooling",
-      "devDependencies": {
-        "@types/bun": "latest",
-        "typescript": "~5.8.3",
-      },
-    },
   },
   "packages": {
     "@asamuzakjp/css-color": ["@asamuzakjp/css-color@5.1.9", "", { "dependencies": { "@csstools/css-calc": "^3.1.1", "@csstools/css-color-parser": "^4.0.2", "@csstools/css-parser-algorithms": "^4.0.0", "@csstools/css-tokenizer": "^4.0.0" } }, "sha512-zd9c/Wdso6v1U7v6w3i/hbAr4K7NaSHImdpvmLt+Y9ea5BhilnIGNkfhOJ7FEIuPipAnE9tZeDOll05WDT0kgg=="],
@@ -2390,8 +2383,6 @@
     "@singularity/plugin-welcome": ["@singularity/plugin-welcome@workspace:plugins/welcome"],
 
     "@singularity/plugin-worktree-switcher": ["@singularity/plugin-worktree-switcher@workspace:plugins/worktree-switcher"],
-
-    "@singularity/tooling": ["@singularity/tooling@workspace:tooling"],
 
     "@singularity/web": ["@singularity/web@workspace:plugins/framework/plugins/web-core"],
 
