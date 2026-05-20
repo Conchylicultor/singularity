@@ -11,23 +11,11 @@ function UnknownEventRow({ event }: { event: JsonlEvent }) {
   );
 }
 
-function OverlayActions({ event }: { event: JsonlEvent }) {
+function HoverActions({ event }: { event: JsonlEvent }) {
   const actions = JsonlViewer.RowAction.useContributions();
   if (actions.length === 0) return null;
   return (
-    <div className="absolute right-1 top-1 z-10 flex items-center gap-1 px-0.5 py-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
-      <JsonlViewer.RowAction.Render>
-        {(item) => <item.component event={event} />}
-      </JsonlViewer.RowAction.Render>
-    </div>
-  );
-}
-
-function InlineActions({ event }: { event: JsonlEvent }) {
-  const actions = JsonlViewer.RowAction.useContributions();
-  if (actions.length === 0) return null;
-  return (
-    <div className="flex items-center justify-end gap-1 px-1 pt-0.5 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
+    <div className="absolute right-1 top-1 z-10 flex items-center gap-1 rounded-lg px-1.5 py-0.5 opacity-0 shadow-sm backdrop-blur-2xl transition-opacity group-hover/row:opacity-100 focus-within:opacity-100">
       <JsonlViewer.RowAction.Render>
         {(item) => <item.component event={event} />}
       </JsonlViewer.RowAction.Render>
@@ -38,7 +26,6 @@ function InlineActions({ event }: { event: JsonlEvent }) {
 export function EventRow({ event, index }: { event: JsonlEvent; index: number }) {
   const renderers = JsonlViewer.EventRenderer.useContributions();
   const match = renderers.find((c) => c.kind === event.kind);
-  const isUserText = event.kind === "user-text";
   return (
     <RowMarkdownProvider>
       <div className="group/row relative" data-event-index={index}>
@@ -47,7 +34,7 @@ export function EventRow({ event, index }: { event: JsonlEvent; index: number })
         ) : (
           <UnknownEventRow event={event} />
         )}
-        {isUserText ? <InlineActions event={event} /> : <OverlayActions event={event} />}
+        <HoverActions event={event} />
       </div>
     </RowMarkdownProvider>
   );
