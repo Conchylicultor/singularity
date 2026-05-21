@@ -327,6 +327,8 @@ export function registerPush(program: Command) {
               console.error(
                 "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
                   "(your commit is still on HEAD; use `git reset --soft HEAD~1` to unstage it if needed).\n\n" +
+                  "If the failure is unrelated to your commits (e.g. a pre-existing issue on main), " +
+                  "try rebasing onto the latest main (`git fetch origin main && git rebase origin/main`) and re-running — the issue may already be fixed upstream.\n\n" +
                   "If you cannot fix the failing check(s): STOP, report the failure to the user, and wait for instructions. " +
                   "Do NOT work around check failures — not by disabling checks, editing check code, " +
                   "expanding skip lists, committing via raw git, or any other means.",
@@ -437,6 +439,8 @@ export function registerPush(program: Command) {
               `Checks failed after rebasing ${branch} onto main. ` +
                 `Fix the issue and re-run ./singularity push ` +
                 `(your commits are on ${branch}; use \`git reset --soft HEAD~1\` to unstage the last one if needed).\n\n` +
+                `If the failure is unrelated to your commits (e.g. a pre-existing issue on main), ` +
+                `try rebasing onto the latest main (\`git fetch origin main && git rebase origin/main\`) and re-running — the issue may already be fixed upstream.\n\n` +
                 `If you cannot fix the failing check(s): STOP, report the failure to the user, and wait for instructions. ` +
                 `Do NOT work around check failures — not by disabling checks, editing check code, ` +
                 `expanding skip lists, committing via raw git, or any other means.`,
