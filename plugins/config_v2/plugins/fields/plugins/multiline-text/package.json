@@ -1,0 +1,5 @@
+{
+  "name": "@singularity/plugin-config_v2-fields-multiline-text",
+  "private": true,
+  "description": "Multi-line text field type for config_v2."
+}

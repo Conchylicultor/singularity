@@ -81,6 +81,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`avatar`** — Avatar field type (icon + color picker).
         - **`list`** — Sortable list field type with stable UUID identity and fractional-index ordering.
+        - **`multiline-text`** — Multi-line text field type.
         - **`primitives`** — Basic field types: bool, text, int, float.
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
 

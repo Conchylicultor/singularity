@@ -457,7 +457,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
   - Exports (server):
     - Values: `ConfigV2`, `getConfig`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-  - Imported by: `avatar`, `build`, `codegen`, `list`, `primitives`, `settings`
+  - Imported by: `avatar`, `build`, `codegen`, `list`, `multiline-text`, `primitives`, `settings`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
@@ -476,6 +476,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `isListFieldDef`, `listField`, `listFieldType`
           - Contributes:
             - `Fields.Renderer` "list" → `ListRenderer`
+        - **`multiline-text`** — Multi-line text field type.
+          - Exports (core):
+            - Types: `MultilineTextFieldDef`
+            - Values: `multilineTextField`, `multilineTextFieldType`
+          - Contributes:
+            - `Fields.Renderer` "multiline-text" → `MultilineTextRenderer`
         - **`primitives`** — Basic field types: bool, text, int, float.
           - Exports (core):
             - Types: `BoolFieldDef`, `FloatFieldDef`, `IntFieldDef`, `TextFieldDef`

@@ -283,6 +283,9 @@
     "plugins/config_v2/plugins/fields/plugins/list": {
       "name": "@singularity/plugin-config_v2-fields-list",
     },
+    "plugins/config_v2/plugins/fields/plugins/multiline-text": {
+      "name": "@singularity/plugin-config_v2-fields-multiline-text",
+    },
     "plugins/config_v2/plugins/fields/plugins/primitives": {
       "name": "@singularity/plugin-config_v2-fields-primitives",
     },
@@ -2060,6 +2063,8 @@
     "@singularity/plugin-config_v2-fields-avatar": ["@singularity/plugin-config_v2-fields-avatar@workspace:plugins/config_v2/plugins/fields/plugins/avatar"],
 
     "@singularity/plugin-config_v2-fields-list": ["@singularity/plugin-config_v2-fields-list@workspace:plugins/config_v2/plugins/fields/plugins/list"],
+
+    "@singularity/plugin-config_v2-fields-multiline-text": ["@singularity/plugin-config_v2-fields-multiline-text@workspace:plugins/config_v2/plugins/fields/plugins/multiline-text"],
 
     "@singularity/plugin-config_v2-fields-primitives": ["@singularity/plugin-config_v2-fields-primitives@workspace:plugins/config_v2/plugins/fields/plugins/primitives"],
 
