@@ -1459,8 +1459,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `IconButton`
     - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
       - Exports (web):
-        - Types: `LaunchButtonsProps`, `LaunchRequest`
-        - Values: `LaunchButtons`, `useLaunchConversation`
+        - Types: `LaunchAgentPopoverProps`, `LaunchButtonsProps`, `LaunchRequest`
+        - Values: `LaunchAgentPopover`, `LaunchButtons`, `useLaunchConversation`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
       - Exports (core):
         - Types: `ResourceDescriptor`, `ResourceOrigin`
