@@ -457,13 +457,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
   - Exports (server):
     - Values: `ConfigV2`, `getConfig`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-  - Imported by: `build`, `codegen`, `list`, `primitives`, `settings`
+  - Imported by: `avatar`, `build`, `codegen`, `list`, `primitives`, `settings`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
         - Types: `FieldRendererComponent`, `FieldRendererProps`
         - Values: `FieldRenderer`, `Fields`
       - Plugins:
+        - **`avatar`** — Avatar field type (icon + color picker).
+          - Exports (core):
+            - Types: `AvatarFieldDef`, `AvatarSpec`, `SvgNode`
+            - Values: `avatarField`, `avatarFieldType`
+          - Contributes:
+            - `Fields.Renderer` "avatar" → `AvatarRenderer`
         - **`list`** — Sortable list field type with stable UUID identity and fractional-index ordering.
           - Exports (core):
             - Types: `ListFieldDef`, `ListItem`

@@ -1,5 +1,43 @@
 # config_v2
 
+See [config v2 vision](../../research/2026-05-16-config-v2-vision.md) for the
+full design rationale, planned field types, and storage model.
+
+## Declaring config (plugin author)
+
+```ts
+import { defineConfig } from "@plugins/config_v2/core";
+import { boolField, textField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
+import { avatarField } from "@plugins/config_v2/plugins/fields/plugins/avatar/core";
+import { listField } from "@plugins/config_v2/plugins/fields/plugins/list/core";
+
+export const myConfig = defineConfig("my-plugin", {
+  fields: {
+    enabled: boolField({ label: "Enabled", default: true }),
+    name: textField({ label: "Display name" }),
+    icon: avatarField({ label: "Icon" }),
+    items: listField({
+      label: "Items",
+      itemFields: {
+        title: textField({ label: "Title" }),
+      },
+    }),
+  },
+});
+```
+
+Each field carries its Zod schema, default value, and UI metadata. The
+settings pane renders fields automatically — no manual registration. Available
+field types live under `plugins/fields/plugins/`; see
+[fields/CLAUDE.md](plugins/fields/CLAUDE.md) to add new ones.
+
+## Reading config
+
+**Web:** `useConfig(myConfig)` returns reactive values that update live.
+
+**Server:** `getConfig(myConfig)` reads the current value from the in-memory
+cache. `watchConfig(myConfig, cb)` notifies on changes.
+
 ## Three-layer config model
 
 Config flows through three layers, each with a human-editable override mechanism:
@@ -65,7 +103,7 @@ Overwrites are **full copies**, not deltas. `setConfig` writes `{ ...currentValu
   - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
 - Exports (server):
   - Values: `ConfigV2`, `getConfig`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-- Imported by: `build`, `codegen`, `list`, `primitives`, `settings`
+- Imported by: `avatar`, `build`, `codegen`, `list`, `primitives`, `settings`
 - Sub-plugins:
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
   - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.

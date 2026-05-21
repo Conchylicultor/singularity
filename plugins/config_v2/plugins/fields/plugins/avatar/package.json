@@ -1,0 +1,5 @@
+{
+  "name": "@singularity/plugin-config_v2-fields-avatar",
+  "private": true,
+  "description": "Avatar field type for config_v2: icon + color picker."
+}
