@@ -35,6 +35,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "build", hierarchyPath: "build", loader: () => import("@plugins/build/server"), dependsOn: ["config_v2", "database", "debug/plugins/logs", "infra/plugins/endpoints", "infra/plugins/events", "infra/plugins/git-watcher", "infra/plugins/jobs", "infra/plugins/paths"] },
   { pluginPath: "code-explorer/plugins/file-resolve", hierarchyPath: "code-explorer/file-resolve", loader: () => import("@plugins/code-explorer/plugins/file-resolve/server"), dependsOn: ["code-explorer", "infra/plugins/endpoints", "infra/plugins/paths"] },
   { pluginPath: "code-explorer", hierarchyPath: "code-explorer", loader: () => import("@plugins/code-explorer/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/paths", "infra/plugins/worktree", "tasks-core"] },
+  { pluginPath: "config_v2/plugins/settings", hierarchyPath: "config_v2/settings", loader: () => import("@plugins/config_v2/plugins/settings/server"), dependsOn: ["config_v2"] },
   { pluginPath: "config_v2", hierarchyPath: "config_v2", loader: () => import("@plugins/config_v2/server"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "config", hierarchyPath: "config", loader: () => import("@plugins/config/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/paths", "infra/plugins/secrets"] },
   { pluginPath: "conversations-recover", hierarchyPath: "conversations-recover", loader: () => import("@plugins/conversations-recover/server"), dependsOn: ["conversations", "infra/plugins/endpoints", "tasks-core"] },

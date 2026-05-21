@@ -1089,11 +1089,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`central-core`**
       - Exports (core):
         - Types: `CentralPluginDefinition`, `DependsOnEntry`, `HttpHandler`, `Registration`, `Resource`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `WsData`, `WsHandler`
-        - Values: `defineResource`, `handleResourceHttp`, `notificationsWsHandler`
+        - Values: `centralCollectedDir`, `defineResource`, `handleResourceHttp`, `notificationsWsHandler`
     - **`server-core`**
       - Exports (core):
         - Types: `ConfigDescriptorLike`, `DependsOnEntry`, `HttpHandler`, `PhaseId`, `Registration`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `Span`, `WsData`, `WsHandler`
-        - Values: `collectContributions`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `notificationsWsHandler`, `profilerStart`, `reportServerError`, `Resource`, `setErrorReporter`, `withNotifyBatch`
+        - Values: `collectContributions`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `notificationsWsHandler`, `profilerStart`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `withNotifyBatch`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Exports (core):
         - Types: `Check`, `CheckResult`
@@ -1105,7 +1105,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Exports (core):
             - Types: `Check`, `CheckResult`, `RunChecksOptions`, `TscTarget`
-            - Values: `discoverTscTargets`, `listAllChecks`, `runChecks`
+            - Values: `checkCollectedDir`, `discoverTscTargets`, `listAllChecks`, `runChecks`
           - Plugins:
             - **`allow-default-project`**
             - **`barrel-stubs-in-sync`**
@@ -1129,19 +1129,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`typescript`**
         - **`codegen`** — Plugin doc generation and registry codegen
           - Exports (core):
-            - Types: `GenerateDocsOptions`, `PluginNode`, `PluginTree`, `Runtime`
-            - Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `pluginRegistryPath`, `pluginRoutesDocPath`, `renderBarrelStubs`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderPluginRegistry`, `renderRoutesDoc`
+            - Types: `CollectedDirDef`, `DiscoveredCollectedDir`, `GenerateDocsOptions`, `PluginNode`, `PluginTree`
+            - Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `collectedDirRegistryPath`, `defineCollectedDir`, `discoverCollectedDirs`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `isCollectedDirDef`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `pluginRoutesDocPath`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderRoutesDoc`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Exports (core):
             - Types: `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`
             - Values: `createContext`, `defineGuard`, `GUARDS`, `parseShell`
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Exports (core):
-            - Values: `discoverAllowDefaultProject`, `findPluginDirs`, `promiseSafetyRules`
+            - Values: `discoverAllowDefaultProject`, `findPluginDirs`, `lintCollectedDir`, `promiseSafetyRules`
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
       - Exports (core):
         - Types: `Contribution`, `DocMeta`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `Slot`
-        - Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`
+        - Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `webCollectedDir`
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Exports (web):
