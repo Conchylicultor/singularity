@@ -10,11 +10,12 @@ export async function armTaskAutoStart(args: {
   taskId: string;
   model: "opus" | "sonnet";
   dependencies: readonly string[];
+  cause: string;
 }): Promise<void> {
-  const { taskId, model } = args;
+  const { taskId, model, cause } = args;
   await setTaskAutoStart(taskId, { model });
 
   if (!(await hasBlockingDep(taskId))) {
-    await maybeLaunchTaskJob.enqueue({ taskId });
+    await maybeLaunchTaskJob.enqueue({ taskId, cause });
   }
 }

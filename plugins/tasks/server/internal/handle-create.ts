@@ -61,6 +61,7 @@ export const handleCreate = implement(createTaskEndpoint, async ({ body }) => {
       taskId: row.id,
       model: body.autoStart.model ?? "sonnet",
       dependencies,
+      cause: "user-launch",
     });
     // Re-fetch so the response reflects the autoStart columns and any
     // dependencies we just wrote.

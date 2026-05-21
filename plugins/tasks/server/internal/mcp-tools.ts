@@ -118,7 +118,7 @@ agent see the actual outcome instead of executing a stale plan.`,
 
     const deps = relation === "followup" ? [targetId]
       : await getTaskDependencyIds(task.id);
-    await armTaskAutoStart({ taskId: task.id, model: autostart, dependencies: deps });
+    await armTaskAutoStart({ taskId: task.id, model: autostart, dependencies: deps, cause: "mcp-add-task" });
 
     return {
       content: [

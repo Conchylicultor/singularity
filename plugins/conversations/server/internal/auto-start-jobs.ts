@@ -24,9 +24,12 @@ import { createConversation } from "./lifecycle";
 // others see the marker already cleared and exit.
 export const maybeLaunchTaskJob = defineJob({
   name: "tasks.maybe-launch",
-  input: z.object({ taskId: z.string() }),
+  input: z.object({
+    taskId: z.string(),
+    cause: z.string().default("dep-resolved"),
+  }),
   event: z.never(),
-  run: async ({ input: { taskId } }) => {
+  run: async ({ input: { taskId, cause } }) => {
     // Main-only: a forked sub-worktree DB inherits the autoStart marker and
     // taskStatusChanged triggers from main at fork time, so the same job
     // would fire independently in every worktree's worker — each calling
@@ -69,7 +72,7 @@ export const maybeLaunchTaskJob = defineJob({
       taskId,
       model,
       prompt: buildTaskPrompt(t),
-      spawnedBy: "auto-start",
+      spawnedBy: cause,
     });
   },
 });
@@ -94,7 +97,7 @@ export const maybeLaunchDependentsJob = defineJob({
     if (event.status !== "done" && event.status !== "dropped") return;
     const dependents = await listArmedDependentsOf(event.taskId);
     await Promise.all(
-      dependents.map((taskId) => maybeLaunchTaskJob.enqueue({ taskId })),
+      dependents.map((taskId) => maybeLaunchTaskJob.enqueue({ taskId, cause: "dep-resolved" })),
     );
   },
 });

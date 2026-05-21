@@ -4,6 +4,8 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { toast } from "@plugins/notifications/web";
 import { tasksResource } from "@plugins/tasks/core";
 
+const CAUSALITY_VALUES = new Set(["user-launch", "dep-resolved", "mcp-add-task"]);
+
 export function AutoLaunchWatcher() {
   const result = useResource(conversationsResource);
   const tasksResult = useResource(tasksResource);
@@ -19,12 +21,21 @@ export function AutoLaunchWatcher() {
       return;
     }
     for (const conv of active) {
-      if (!seenIdsRef.current.has(conv.id as string) && conv.spawnedBy === "auto-start") {
+      if (
+        !seenIdsRef.current.has(conv.id as string) &&
+        CAUSALITY_VALUES.has(conv.spawnedBy as string)
+      ) {
         const model = conv.model === "opus" ? "Opus" : "Sonnet";
         const tasks = tasksResult.pending ? [] : tasksResult.data;
         const task = tasks.find((t) => t.id === conv.taskId);
-        const taskLabel = task?.title ? ` · ${task.title}` : "";
-        toast({ type: "task", description: `Auto-started queued task${taskLabel} · ${model}`, variant: "info", linkTo: `/c/${conv.id}` });
+        const taskTitle = task?.title ?? "";
+        const description =
+          conv.spawnedBy === "dep-resolved" && taskTitle
+            ? `${taskTitle} unblocked · ${model}`
+            : taskTitle
+              ? `${taskTitle} started · ${model}`
+              : `Started · ${model}`;
+        toast({ type: "task", description, variant: "info", linkTo: `/c/${conv.id}` });
       }
       seenIdsRef.current.add(conv.id as string);
     }

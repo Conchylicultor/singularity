@@ -146,6 +146,7 @@ export const handleCreateChain = implement(createTaskChain, async ({ body }) => 
           taskId: newTask.id,
           model: card.launch,
           dependencies: depsForAutoStart,
+          cause: "user-launch",
         });
       }
     }

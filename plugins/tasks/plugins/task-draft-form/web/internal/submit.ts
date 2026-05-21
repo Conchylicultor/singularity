@@ -99,8 +99,8 @@ export function describeOutcome(outcome: SubmitOutcome, cards: CardDraft[]): str
   if (cards.length === 1) {
     const card = cards[0]!;
     if (card.model === "queue") return "Queued";
-    return `Launched with ${card.model === "sonnet" ? "Sonnet" : "Opus"}`;
+    return "Created";
   }
   if (outcome.launchedCount === 0) return `Queued ${outcome.totalCount} tasks`;
-  return `Chained ${outcome.totalCount} tasks (${outcome.launchedCount} armed)`;
+  return `Created ${outcome.totalCount} tasks`;
 }

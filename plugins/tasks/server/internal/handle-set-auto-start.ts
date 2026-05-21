@@ -15,6 +15,7 @@ export const handleSetAutoStart = implement(setTaskAutoStart, async ({ params, b
     taskId: params.id,
     model: body.model,
     dependencies: task.dependencies,
+    cause: "user-launch",
   });
   // return undefined → implement() sends 204
 });
