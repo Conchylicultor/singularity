@@ -1,13 +1,16 @@
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { ActionBarView } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { HeaderView } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { Conversation } from "../slots";
 import { conversationPane } from "../panes";
 import { PromptInsertProvider } from "../prompt-insert-context";
+import { ActiveRelateSync } from "./active-relate-sync";
 import { JsonlPane } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
 export function ConversationView() {
-  const { conversation } = conversationPane.useData();
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
   const promptBarItems = Conversation.PromptBar.useContributions();
   const promptInputItems = Conversation.PromptInput.useContributions();
   const abovePromptInputItems = Conversation.AbovePromptInput.useContributions();
@@ -18,7 +21,17 @@ export function ConversationView() {
     promptBarItems.length > 0 ||
     abovePromptInputItems.length > 0;
 
+  if (!conversation) {
+    return (
+      <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+        Loading conversation…
+      </div>
+    );
+  }
+
   return (
+    <>
+    <ActiveRelateSync />
     <PaneChrome
       pane={conversationPane}
       title={<HeaderView />}
@@ -62,5 +75,6 @@ export function ConversationView() {
         </div>
       </div>
     </PaneChrome>
+    </>
   );
 }

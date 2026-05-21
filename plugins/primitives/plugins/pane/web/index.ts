@@ -11,6 +11,7 @@ export {
   setBasePath,
   getBasePath,
   stripBasePath,
+  useMatchForChain,
   useMatchForPath,
   usePathname,
   useSyncPaneRegistry,

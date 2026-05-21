@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { convTerminalPane } from "../panes";
 
 export function TerminalButton() {
-  const { conversation } = conversationPane.useData();
-  const { isOpen, toggle } = convTerminalPane.useToggle({ convId: conversation.id });
+  const { convId } = conversationPane.useParams();
+  const { isOpen, toggle } = convTerminalPane.useToggle({ convId }, { input: { convId } });
 
   return (
     <Button

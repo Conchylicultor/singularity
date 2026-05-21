@@ -1,7 +1,6 @@
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
-import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
 import {
   useResolvedFile,
@@ -13,7 +12,6 @@ import { useFileRenderers } from "./components/use-file-renderers";
 
 export const filePeekPane = Pane.define({
   id: "file-peek",
-  after: [conversationPane, taskDetailPane],
   segment: "file/:worktree/:filePath*",
   component: FilePeekPaneBody,
   chrome: { history: false },

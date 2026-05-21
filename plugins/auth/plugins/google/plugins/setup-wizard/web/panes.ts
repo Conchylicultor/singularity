@@ -4,7 +4,7 @@ import { GoogleSetupPane } from "./components/google-setup-pane";
 
 export const googleSetupPane = Pane.define({
   id: "google-setup",
-  after: [accountsPane],
+  defaultAncestors: [accountsPane],
   segment: "google/setup",
   component: GoogleSetupPane,
   chrome: { title: "Connect Google", history: false, close: true },

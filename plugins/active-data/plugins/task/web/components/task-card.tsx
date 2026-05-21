@@ -1,6 +1,7 @@
 import { useId, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { taskSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
@@ -47,8 +48,9 @@ export function TaskCard({
 }) {
   const initial = content.trim();
   const editorNs = useId();
-  const { conversation } = conversationPane.useData();
-  const hostTaskId = conversation.taskId;
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
+  const hostTaskId = conversation?.taskId ?? null;
 
   const binding = useActiveDataBinding<TaskBinding>(TaskBindingSchema);
 
@@ -237,17 +239,19 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
 }
 
 function TaskChip({ taskId }: { taskId: string }) {
-  const { conversation } = conversationPane.useData();
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
   const tasksResult = useResource(tasksResource);
   const openPane = useOpenPane();
   const task = tasksResult.pending ? undefined : tasksResult.data.find((t) => t.id === taskId);
   const title = task?.title.trim() || "Untitled task";
+  if (!conversation) return null;
   return (
     <button
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        openPane(taskSidePane, { convId: conversation.id, taskId }, { mode: "push" });
+        openPane(taskSidePane, { taskId }, { mode: "push", input: { convId: conversation.id } });
       }}
       className="bg-muted text-primary hover:bg-muted/80 inline-flex max-w-full items-center gap-1.5 rounded px-1.5 py-0.5 align-baseline text-xs hover:underline"
       title={title}

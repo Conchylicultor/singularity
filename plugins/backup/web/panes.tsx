@@ -3,7 +3,6 @@ import { BackupPanel } from "./components/backup-panel";
 
 export const backupPane = Pane.define({
   id: "backup",
-  after: [null],
   segment: "debug/backup",
   component: BackupBody,
 });

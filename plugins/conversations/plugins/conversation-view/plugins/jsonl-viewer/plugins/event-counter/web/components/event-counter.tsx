@@ -4,8 +4,8 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 
 export function EventCounter() {
-  const { conversation } = conversationPane.useData();
-  const result = useResource(jsonlEventsResource, { id: conversation.id });
+  const { convId } = conversationPane.useParams();
+  const result = useResource(jsonlEventsResource, { id: convId });
   const count = useMemo(
     () => (result.pending ? 0 : result.data.length),
     [result],

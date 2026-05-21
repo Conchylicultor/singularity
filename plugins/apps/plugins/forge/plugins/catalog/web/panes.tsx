@@ -3,7 +3,6 @@ import { CatalogView } from "./components/catalog-view";
 
 export const catalogPane = Pane.define({
   id: "catalog",
-  after: [null],
   segment: "catalog",
   component: CatalogBody,
   chrome: false,

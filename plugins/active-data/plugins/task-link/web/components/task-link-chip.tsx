@@ -22,7 +22,7 @@ const TASK_STATUS_DOT: Record<TaskStatus, string> = {
 export function TaskLinkChip({ content }: { content: string; attrs: Record<string, string> }) {
   const taskId = content.trim();
   const result = useResource(tasksResource);
-  const conversation = conversationPane.useDataMaybe()?.conversation;
+  const convId = conversationPane.useChainEntry()?.params.convId ?? null;
   const openPane = useOpenPane();
   const task = useMemo(
     () => (result.pending ? null : result.data.find((t) => t.id === taskId) ?? null),
@@ -38,8 +38,8 @@ export function TaskLinkChip({ content }: { content: string; attrs: Record<strin
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        if (conversation) {
-          openPane(taskSidePane, { convId: conversation.id, taskId }, { mode: "push" });
+        if (convId) {
+          openPane(taskSidePane, { taskId }, { mode: "push", input: { convId } });
         } else {
           openPane(taskDetailPane, { taskId }, { mode: "push" });
         }

@@ -3,7 +3,6 @@ import { SettingsPanel } from "./components/settings-panel";
 
 export const settingsPane = Pane.define({
   id: "settings",
-  after: [null],
   segment: "settings",
   component: SettingsBody,
 });

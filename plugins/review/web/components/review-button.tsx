@@ -5,8 +5,8 @@ import { convReviewPane } from "../panes";
 import { Review } from "../slots";
 
 export function ReviewButton() {
-  const { conversation } = conversationPane.useData();
-  const { isOpen, toggle } = convReviewPane.useToggle({ convId: conversation.id });
+  const { convId } = conversationPane.useParams();
+  const { isOpen, toggle } = convReviewPane.useToggle({ convId }, { input: { convId } });
   const sections = Review.Section.useContributions();
 
   return (
@@ -22,7 +22,7 @@ export function ReviewButton() {
       <MdRateReview className="size-4" />
       {sections.map((s) => {
         const S = s.summary;
-        return S ? <S key={s.id} conversationId={conversation.id} source={{ kind: "working" }} /> : null;
+        return S ? <S key={s.id} conversationId={convId} source={{ kind: "working" }} /> : null;
       })}
     </Button>
   );

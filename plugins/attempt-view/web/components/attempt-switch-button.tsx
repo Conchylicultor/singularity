@@ -1,20 +1,22 @@
 import { MdSplitscreen } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { attemptsResource } from "@plugins/tasks/core";
 import { Button } from "@/components/ui/button";
 import { attemptPane } from "../panes";
 
 export function AttemptSwitchButton() {
-  const { conversation } = conversationPane.useData();
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
   const result = useResource(attemptsResource);
 
-  const attempt = result.pending ? null : result.data.find((a) => a.id === conversation.attemptId) ?? null;
+  const attempt = result.pending ? null : result.data.find((a) => a.id === conversation?.attemptId) ?? null;
   const count = attempt?.conversations.length ?? 0;
 
   const { isOpen, toggle } = attemptPane.useToggle(
-    { attemptId: conversation.attemptId },
-    { action: "unwrap", side: "left" },
+    { attemptId: conversation?.attemptId ?? "" },
+    { action: "unwrap", side: "left", input: { convId } },
   );
 
   return (

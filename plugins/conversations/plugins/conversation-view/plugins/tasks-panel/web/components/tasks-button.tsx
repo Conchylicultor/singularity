@@ -1,5 +1,6 @@
 import { MdChecklist } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { Button } from "@/components/ui/button";
 import { useTask } from "@plugins/tasks/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
@@ -17,10 +18,11 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 export function TasksButton() {
-  const { conversation } = conversationPane.useData();
-  const { isOpen, toggle } = convTasksPane.useToggle({ convId: conversation.id });
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
+  const { isOpen, toggle } = convTasksPane.useToggle({ convId }, { input: { convId } });
 
-  const task = useTask(conversation.taskId);
+  const task = useTask(conversation?.taskId ?? null);
   const dotClass = task ? STATUS_DOT[task.status] : undefined;
 
   return (

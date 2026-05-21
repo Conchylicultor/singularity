@@ -3,7 +3,6 @@ import { TableDetail } from "./slots";
 
 export const tableDetailPane = Pane.define({
   id: "table-detail",
-  after: ["catalog"],
   segment: "t/:pluginId/:tableName",
   component: TableDetailBody,
   width: 600,

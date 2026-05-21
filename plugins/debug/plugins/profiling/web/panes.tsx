@@ -3,7 +3,6 @@ import { GanttView } from "./components/gantt-view";
 
 export const profilingPane = Pane.define({
   id: "debug-profiling",
-  after: [null],
   segment: "profiling",
   component: ProfilingBody,
 });

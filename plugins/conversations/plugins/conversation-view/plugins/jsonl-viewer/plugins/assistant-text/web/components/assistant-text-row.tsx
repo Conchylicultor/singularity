@@ -13,7 +13,7 @@ type AssistantTextEvent = Extract<JsonlEvent, { kind: "assistant-text" }>;
 export function AssistantTextRow({ event }: { event: JsonlEvent }) {
   const e = event as AssistantTextEvent;
   const { markdownMode } = useRowMarkdown();
-  const { conversation } = conversationPane.useData();
+  const { convId } = conversationPane.useParams();
   const segments = useActiveDataSegments(e.text);
 
   return (
@@ -36,7 +36,7 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
                 return (
                   <ActiveDataIdentityProvider
                     key={i}
-                    conversationId={conversation.id}
+                    conversationId={convId}
                     messageId={e.messageId}
                     tag={seg.tag}
                     occurrenceIndex={idx}

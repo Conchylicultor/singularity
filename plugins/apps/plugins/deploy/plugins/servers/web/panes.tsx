@@ -1,5 +1,5 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Pane, PaneChrome, type, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Deploy } from "@plugins/apps/plugins/deploy/plugins/shell/web";
 import { serversResource, type Server } from "../shared";
 import { ServersList } from "./components/servers-list";
@@ -8,7 +8,6 @@ import { AddServerForm } from "./components/add-server-form";
 
 export const serversRootPane = Pane.define({
   id: "deploy-servers",
-  after: [null],
   segment: "deploy",
   component: ServersRoot,
   chrome: false,
@@ -17,7 +16,7 @@ export const serversRootPane = Pane.define({
 
 export const addServerPane = Pane.define({
   id: "deploy-add-server",
-  after: [serversRootPane],
+  defaultAncestors: [serversRootPane],
   segment: "add",
   component: AddServerBody,
   chrome: { title: "Add Server" },
@@ -26,10 +25,9 @@ export const addServerPane = Pane.define({
 
 export const serverDetailPane = Pane.define({
   id: "deploy-server-detail",
-  after: [serversRootPane],
+  defaultAncestors: [serversRootPane],
   segment: "s/:serverId",
   component: ServerDetailBody,
-  provides: type<{ server: Server }>(),
 });
 
 function ServersRoot() {
@@ -65,21 +63,19 @@ function ServerDetailBody() {
   }
 
   return (
-    <serverDetailPane.Provider value={{ server }}>
-      <PaneChrome pane={serverDetailPane} title={server.name}>
-        <ServerDetailContent serverId={serverId} />
-      </PaneChrome>
-    </serverDetailPane.Provider>
+    <PaneChrome pane={serverDetailPane} title={server.name}>
+      <ServerDetailContent serverId={serverId} server={server} />
+    </PaneChrome>
   );
 }
 
-function ServerDetailContent({ serverId }: { serverId: string }) {
+function ServerDetailContent({ serverId, server }: { serverId: string; server: Server }) {
   const sections = Deploy.Section.useContributions();
   const sorted = [...sections].sort((a, b) => a.order - b.order);
 
   return (
     <div className="h-full overflow-auto">
-      <ServerDetail />
+      <ServerDetail server={server} />
       <div className="flex flex-col gap-4 p-4">
         {sorted.map((s) => (
           <section key={s.id} className="bg-card rounded-lg border p-4">

@@ -1,6 +1,7 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Avatar, DEFAULT_AGENT_AVATAR, type SvgNode } from "@plugins/primitives/plugins/avatar/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { agentLaunchesResource, agentsResource } from "../../shared/resources";
 import { agentSidePane } from "../panes";
 import { cn } from "@/lib/utils";
@@ -11,13 +12,14 @@ function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
 }
 
 export function AgentAvatarTitlePrefix() {
-  const { conversation } = conversationPane.useData();
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
   const launchesResult = useResource(agentLaunchesResource);
   const agentsResult = useResource(agentsResource);
 
   const launches = launchesResult.pending ? [] : launchesResult.data;
   const agentsList = agentsResult.pending ? [] : agentsResult.data;
-  const launch = launches.find((l) => l.taskId === conversation.taskId);
+  const launch = launches.find((l) => l.taskId === conversation?.taskId);
   const agent = launch ? agentsList.find((a) => a.id === launch.agentId) : null;
   const agentId = launch?.agentId;
 
@@ -25,7 +27,7 @@ export function AgentAvatarTitlePrefix() {
     agentId: agentId ?? "",
   });
 
-  if (conversation.kind !== "agent") return null;
+  if (!conversation || conversation.kind !== "agent") return null;
 
   return (
     <button

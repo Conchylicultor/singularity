@@ -3,6 +3,7 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { agentReportPane } from "../panes";
 
 interface AgentInput {
@@ -47,13 +48,14 @@ export function AgentToolView({ event }: ToolRendererProps) {
   const result = event.result;
 
   const openPane = useOpenPane();
+  const convId = conversationPane.useChainEntry()?.params.convId;
 
   const openReport = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     openPane(
       agentReportPane,
       { toolUseId: event.toolUseId },
-      { mode: "push" },
+      { mode: "push", input: convId ? { convId } : undefined },
     );
   };
 

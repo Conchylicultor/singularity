@@ -1,11 +1,10 @@
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
 import { SummaryPane } from "./components/summary-pane";
 
 export const convSummaryPane = Pane.define({
   id: "conv-summary",
-  after: [conversationPane],
   segment: "summary",
+  input: type<{ convId: string }>(),
   component: ConvSummaryBody,
   chrome: { history: false },
 });

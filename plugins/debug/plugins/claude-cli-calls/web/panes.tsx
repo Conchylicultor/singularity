@@ -3,7 +3,6 @@ import { CallsView } from "./components/calls-view";
 
 export const claudeCliCallsPane = Pane.define({
   id: "claude-cli-calls",
-  after: [null],
   segment: "claude-cli-calls",
   component: CallsBody,
 });

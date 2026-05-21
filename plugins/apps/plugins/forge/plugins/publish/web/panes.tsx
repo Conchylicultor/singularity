@@ -3,7 +3,6 @@ import { PublishView } from "./components/publish-view";
 
 export const publishPane = Pane.define({
   id: "publish",
-  after: [null],
   segment: "publish",
   component: PublishBody,
   chrome: false,

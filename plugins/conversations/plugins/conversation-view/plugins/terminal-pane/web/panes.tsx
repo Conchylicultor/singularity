@@ -1,11 +1,10 @@
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
 import { TerminalPaneBody } from "./components/terminal-pane-body";
 
 export const convTerminalPane = Pane.define({
   id: "conv-terminal",
-  after: [conversationPane],
   segment: "terminal",
+  input: type<{ convId: string }>(),
   component: ConvTerminalBody,
   chrome: { keepMountedWhenCollapsed: true },
 });

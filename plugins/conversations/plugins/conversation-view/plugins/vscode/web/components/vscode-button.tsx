@@ -1,9 +1,12 @@
 import { MdCode } from "react-icons/md";
 import { PaneIconAction } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
 
 export function VscodeButton() {
-  const { conversation } = conversationPane.useData();
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
+  if (!conversation) return null;
   return (
     <PaneIconAction
       label="VSCode"

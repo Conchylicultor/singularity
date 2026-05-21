@@ -4,12 +4,12 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 
 export function AllowMonitorChip() {
-  const { conversation } = conversationPane.useData();
+  const { convId } = conversationPane.useParams();
   const { data } = useQuery<{ allowFiles: string[] }>({
-    queryKey: ["allow-files", conversation.id],
+    queryKey: ["allow-files", convId],
     queryFn: () =>
       fetch(
-        `/api/conversations/${encodeURIComponent(conversation.id)}/allow-files`,
+        `/api/conversations/${encodeURIComponent(convId)}/allow-files`,
       ).then((r) => r.json()),
     refetchInterval: 3_000,
   });

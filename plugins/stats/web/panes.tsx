@@ -3,7 +3,6 @@ import { StatsPanel } from "./components/stats-panel";
 
 export const statsPane = Pane.define({
   id: "stats",
-  after: [null],
   segment: "stats",
   component: StatsBody,
 });

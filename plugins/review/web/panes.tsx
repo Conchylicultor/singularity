@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -9,15 +9,17 @@ import { type Source, SourceTabs, groupPushes } from "./source";
 
 export const convReviewPane = Pane.define({
   id: "conv-review",
-  after: [conversationPane],
   segment: "review",
+  input: type<{ convId: string }>(),
   component: ConvReviewBody,
   width: 720,
 });
 
 function ConvReviewBody() {
-  const { conversation: paneConversation } = conversationPane.useData();
-  const conversation = useConversationById(paneConversation.id);
+  const { convId: inputConvId } = convReviewPane.useInput();
+  const chainEntry = conversationPane.useChainEntry();
+  const convId = inputConvId ?? chainEntry?.params.convId;
+  const conversation = useConversationById(convId ?? null);
   const [source, setSource] = useState<Source>({ kind: "working" });
 
   const pushesQ = useResource(pushesResource);
@@ -29,6 +31,8 @@ function ConvReviewBody() {
     return groupPushes(rows);
   }, [pushesQ, conversation]);
 
+  if (!convId) return null;
+
   return (
     <PaneChrome pane={convReviewPane} title="Review">
       <div className="flex h-full flex-col">
@@ -38,7 +42,7 @@ function ConvReviewBody() {
           pushGroups={pushGroups}
         />
         <div className="min-h-0 flex-1 overflow-auto">
-          <Review.Host conversationId={paneConversation.id} source={source} />
+          <Review.Host conversationId={convId} source={source} />
         </div>
       </div>
     </PaneChrome>

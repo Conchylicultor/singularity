@@ -6,7 +6,7 @@ import { ConversationTitle } from "./components/conversation-title";
 
 export { Conversation } from "./slots";
 export type { ConversationRecord } from "./slots";
-export { conversationPane, ConversationProvide } from "./panes";
+export { conversationPane } from "./panes";
 export { ConversationView } from "./components/conversation-view";
 export { draftToPlainText, isDraftEmpty } from "./prompt-draft-utils";
 export { PromptInsertProvider, usePromptInsert } from "./prompt-insert-context";

@@ -7,12 +7,14 @@ import { taskSidePane } from "../panes";
 
 export function SideTaskBody() {
   const { taskId } = taskSidePane.useParams();
-  const { conversation } = conversationPane.useData();
+  const { convId: inputConvId } = taskSidePane.useInput();
+  const chainEntry = conversationPane.useChainEntry();
+  const convId = inputConvId ?? chainEntry?.params.convId ?? "";
   const task = useTask(taskId);
   const openPane = useOpenPane();
   const navigate = useCallback(
-    (id: string) => openPane(taskSidePane, { convId: conversation.id, taskId: id }, { mode: "swap" }),
-    [conversation.id, openPane],
+    (id: string) => openPane(taskSidePane, { taskId: id }, { mode: "swap", input: { convId } }),
+    [convId, openPane],
   );
 
   return (

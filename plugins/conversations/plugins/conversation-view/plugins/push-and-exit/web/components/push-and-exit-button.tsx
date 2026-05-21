@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { MdDeleteForever, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";
 import { LogOut, Play } from "lucide-react";
 import { isDraftEmpty, conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useConversations, useConversation } from "@plugins/conversations/web";
+import { useConversations, useConversation, useConversationById } from "@plugins/conversations/web";
 import { isActiveStatus, hasLiveProcess } from "@plugins/conversations/core";
 import { toast } from "@plugins/notifications/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
@@ -27,10 +27,11 @@ import {
 type Mode = "send" | "push-and-exit" | "exit" | "drop-and-exit" | "go" | "restore" | "stop";
 
 export function PushAndExitButton(_: PromptEditorActionProps) {
-  const { conversation } = conversationPane.useData();
-  const live = useConversation(conversation.id) ?? conversation;
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
+  const live = useConversation(convId) ?? conversation;
   const jobsResult = useResource(pushAndExitResource);
-  const job = jobsResult.pending ? undefined : (jobsResult.data[conversation.id] as JobState | undefined);
+  const job = jobsResult.pending ? undefined : (jobsResult.data[convId] as JobState | undefined);
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
@@ -45,19 +46,20 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
 
   const busy = pending || job?.status === "running";
 
-  const [draft, setDraft, clearDraft] = useDraft("conversation:prompt", "", { scope: conversation.id });
+  const [draft, setDraft, clearDraft] = useDraft("conversation:prompt", "", { scope: convId });
   const [sending, setSending] = useState(false);
   const [stopping, setStopping] = useState(false);
   const draftRef = useRef(draft);
   draftRef.current = draft;
 
-  const { files } = useEditedFiles(conversation.id);
+  const { files } = useEditedFiles(convId);
   const pushesResult = useResource(pushesResource);
   const { active, isLoading: conversationsLoading } = useConversations();
 
-  const isNotRunning = live.status === "gone" || live.status === "done";
+  const isNotRunning = live?.status === "gone" || live?.status === "done";
 
   const mode: Mode = useMemo(() => {
+    if (!conversation || !live) return "exit";
     if (isNotRunning) return "restore";
     if (!isDraftEmpty(draft)) return "send";
     if (live.status === "working") return "stop";
@@ -73,30 +75,30 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     if (hasPush) return "exit";
     const hasOtherActiveInWorktree = active.some(
       (c) =>
-        c.id !== conversation.id &&
+        c.id !== convId &&
         c.worktreePath === conversation.worktreePath &&
         isActiveStatus(c.status),
     );
     return hasOtherActiveInWorktree ? "exit" : "drop-and-exit";
-  }, [isNotRunning, draft, files, pushesResult, active, conversationsLoading, conversation.attemptId, conversation.id, conversation.worktreePath, live.status]);
+  }, [isNotRunning, draft, files, pushesResult, active, conversationsLoading, conversation, convId, live]);
 
   useEffect(() => {
-    if (!busy) return;
+    if (!busy || !live) return;
     if (hasLiveProcess(live.status)) return;
     void fetch(
-      `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
+      `/api/conversations/${encodeURIComponent(convId)}/push-and-exit`,
       { method: "DELETE" },
     );
-  }, [busy, live.status, conversation.id]);
+  }, [busy, live, convId]);
 
   useEffect(() => {
     if (job?.status !== "clean") return;
     toast({ type: "conversation", description: "Pushed and closed", variant: "success" });
     void fetch(
-      `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
+      `/api/conversations/${encodeURIComponent(convId)}/push-and-exit`,
       { method: "DELETE" },
     );
-  }, [job?.status, conversation.id]);
+  }, [job?.status, convId]);
 
   useEffect(() => {
     if (job?.status !== "error") return;
@@ -107,10 +109,12 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       variant: "error",
     });
     void fetch(
-      `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
+      `/api/conversations/${encodeURIComponent(convId)}/push-and-exit`,
       { method: "DELETE" },
     );
-  }, [job, conversation.id]);
+  }, [job, convId]);
+
+  if (!conversation || !live) return null;
 
   const hasSession = !!live.claudeSessionId;
   const disabled = mode === "restore"
@@ -124,7 +128,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     if (mode === "restore") {
       try {
         const res = await fetch(
-          `/api/conversations/${encodeURIComponent(conversation.id)}/resume`,
+          `/api/conversations/${encodeURIComponent(convId)}/resume`,
           { method: "POST" },
         );
         if (!res.ok) {
@@ -147,7 +151,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       setSending(true);
       try {
         const res = await fetch(
-          `/api/conversations/${encodeURIComponent(conversation.id)}/turn`,
+          `/api/conversations/${encodeURIComponent(convId)}/turn`,
           {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -168,7 +172,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     } else if (mode === "go") {
       try {
         const res = await fetch(
-          `/api/conversations/${encodeURIComponent(conversation.id)}/turn`,
+          `/api/conversations/${encodeURIComponent(convId)}/turn`,
           {
             method: "POST",
             headers: { "content-type": "application/json" },
@@ -187,7 +191,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       setStopping(true);
       try {
         const res = await fetch(
-          `/api/conversations/${encodeURIComponent(conversation.id)}/stop`,
+          `/api/conversations/${encodeURIComponent(convId)}/stop`,
           { method: "POST" },
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -206,7 +210,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       setPending(true);
       try {
         const res = await fetch(
-          `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
+          `/api/conversations/${encodeURIComponent(convId)}/push-and-exit`,
           { method: "POST" },
         );
         if (!res.ok && res.status !== 409) {
@@ -224,7 +228,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     } else if (mode === "exit") {
       try {
         const res = await fetch(
-          `/api/conversations/${encodeURIComponent(conversation.id)}/exit`,
+          `/api/conversations/${encodeURIComponent(convId)}/exit`,
           { method: "POST" },
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -239,7 +243,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     } else {
       try {
         const res = await fetch(
-          `/api/conversations/${encodeURIComponent(conversation.id)}/drop-and-exit`,
+          `/api/conversations/${encodeURIComponent(convId)}/drop-and-exit`,
           { method: "POST" },
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -261,11 +265,11 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   async function onClose() {
     try {
       await fetch(
-        `/api/conversations/${encodeURIComponent(conversation.id)}/close`,
+        `/api/conversations/${encodeURIComponent(convId)}/close`,
         { method: "POST" },
       );
       await fetch(
-        `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
+        `/api/conversations/${encodeURIComponent(convId)}/push-and-exit`,
         { method: "DELETE" },
       );
       toast({ type: "conversation", description: "Conversation closed", variant: "success" });
@@ -280,7 +284,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
 
   function onKeepOpen() {
     void fetch(
-      `/api/conversations/${encodeURIComponent(conversation.id)}/push-and-exit`,
+      `/api/conversations/${encodeURIComponent(convId)}/push-and-exit`,
       { method: "DELETE" },
     );
   }

@@ -1,5 +1,6 @@
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 
 export function toRelativePath(filePath: string, attemptId: string): string {
@@ -13,8 +14,12 @@ interface ToolFilePathProps {
 }
 
 export function ToolFilePath({ filePath }: ToolFilePathProps) {
-  const { conversation } = conversationPane.useData();
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
   const openPane = useOpenPane();
+
+  if (!conversation) return null;
+
   const relativePath = toRelativePath(filePath, conversation.attemptId);
 
   if (!filePath) return null;

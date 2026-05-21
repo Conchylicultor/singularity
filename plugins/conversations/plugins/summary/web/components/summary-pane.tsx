@@ -9,6 +9,7 @@ import {
   type ConversationSummary,
 } from "../../shared/resources";
 import { PHASE_CLASSES, PHASE_LABEL } from "./phase-styles";
+import { convSummaryPane } from "../panes";
 
 // Bound the spinner so a wedged Sonnet conversation eventually surfaces
 // rather than hanging the chip forever. Matches the server-side reaper
@@ -16,10 +17,12 @@ import { PHASE_CLASSES, PHASE_LABEL } from "./phase-styles";
 const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
 
 export function SummaryPane() {
-  const { conversation } = conversationPane.useData();
+  const { convId: inputConvId } = convSummaryPane.useInput();
+  const chainEntry = conversationPane.useChainEntry();
+  const convId = inputConvId ?? chainEntry?.params.convId;
   const summariesResult = useResource(conversationSummariesResource);
   const summaries: ConversationSummary[] | undefined =
-    summariesResult.pending ? undefined : summariesResult.data[conversation.id];
+    summariesResult.pending ? undefined : summariesResult.data[convId ?? ""];
   const latest = summaries?.[0];
 
   const [pendingSince, setPendingSince] = useState<number | null>(null);
@@ -54,10 +57,11 @@ export function SummaryPane() {
 
   async function onSummarize() {
     if (pendingSince !== null) return;
+    if (!convId) return;
     setPendingSince(Date.now());
     try {
       const res = await fetch(
-        `/api/conversation-summary/${encodeURIComponent(conversation.id)}/generate`,
+        `/api/conversation-summary/${encodeURIComponent(convId)}/generate`,
         { method: "POST" },
       );
       if (!res.ok) {

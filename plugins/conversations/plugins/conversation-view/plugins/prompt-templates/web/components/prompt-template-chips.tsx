@@ -8,7 +8,7 @@ import { ResponsiveOverflow } from "@plugins/primitives/plugins/responsive-overf
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useConversation } from "@plugins/conversations/web";
+import { useConversation, useConversationById } from "@plugins/conversations/web";
 import { postConversationTurn } from "@plugins/conversations/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/notifications/web";
@@ -77,13 +77,14 @@ export function FloatingTemplateChips({
   getContent,
   clearContent,
 }: PromptEditorActionProps) {
-  const { conversation } = conversationPane.useData();
-  const live = useConversation(conversation.id) ?? conversation;
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
+  const live = useConversation(convId) ?? conversation;
   const templatesResult = useResource(promptTemplatesResource);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const { pinnedCount } = useConfigValues(promptTemplatesConfig, "conversation-prompt-templates");
 
-  const canSend = live.status === "waiting" && sendingId === null;
+  const canSend = live?.status === "waiting" && sendingId === null;
 
   const pinnedTemplates = useMemo(
     () => templatesResult.pending ? [] : templatesResult.data.slice(0, pinnedCount),
@@ -97,7 +98,7 @@ export function FloatingTemplateChips({
       const existing = getContent().trim();
       const text = existing ? `${t.prompt}\n\n${existing}` : t.prompt;
       void fetchEndpoint(usePromptTemplate, { id: t.id });
-      await fetchEndpoint(postConversationTurn, { id: conversation.id }, { body: { text } });
+      await fetchEndpoint(postConversationTurn, { id: convId }, { body: { text } });
       clearContent();
     } catch (err) {
       toast({

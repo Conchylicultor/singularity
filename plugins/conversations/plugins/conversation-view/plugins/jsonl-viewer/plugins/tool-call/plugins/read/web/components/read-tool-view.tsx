@@ -4,6 +4,7 @@ import {
   ToolFilePath,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { CodeWithLineNumbers } from "./code-with-line-numbers";
 import { ReadImageView } from "./read-image-view";
 
@@ -47,7 +48,10 @@ function LineRangeBadge({
 
 export function ReadToolView({ event }: ToolRendererProps) {
   const { file_path, offset, limit } = event.input as ReadInput;
-  const { conversation } = conversationPane.useData();
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
+
+  if (!conversation) return null;
 
   const summary = (
     <span className="flex min-w-0 items-center gap-2">

@@ -1,13 +1,11 @@
 import {
   createContext,
-  createElement,
   useCallback,
   useContext,
   useMemo,
   useRef,
   useSyncExternalStore,
   type ComponentType,
-  type ReactNode,
 } from "react";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane as PaneSlots } from "./slots";
@@ -34,19 +32,21 @@ export interface PaneSlot {
   instanceId: number;
   paneId: string;
   params: Record<string, string>;
+  input: Record<string, string>;
 }
 
 function createSlot(
   paneId: string,
   params: Record<string, string>,
+  input: Record<string, string> = {},
 ): PaneSlot {
-  return { instanceId: nextInstanceId++, paneId, params };
+  return { instanceId: nextInstanceId++, paneId, params, input };
 }
 
 // ---------------------------------------------------------------------------
-// `type<T>()` — a phantom marker used to declare the `provides` shape at the
-// type level. The runtime value is irrelevant; only the generic parameter is
-// read by `InferProvides`.
+// `type<T>()` — a phantom marker used to declare the `input` shape at the
+// type level. The runtime value is irrelevant; only the generic parameter
+// matters.
 // ---------------------------------------------------------------------------
 
 export interface TypeMarker<T> {
@@ -98,24 +98,14 @@ interface NormalizedChrome {
 
 export interface PaneInternal {
   id: string;
-  /** Valid predecessor pane IDs. `null` means the pane can appear at root (position 0). */
-  after: Set<string | null>;
+  /** Default ancestors to prepend when opening this pane from scratch (no caller context). */
+  defaultAncestors: Array<{ id: string }>;
   /** Own URL segment (no leading slash). Used by the chain URL parser/builder. */
   segment: string;
   component: ComponentType;
   chrome: NormalizedChrome;
   /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
   width?: number;
-  /**
-   * Optional component that loads the pane's `provides` data and renders
-   * `<thisPane.Provider value={data}>{children}</thisPane.Provider>` so
-   * descendant panes can read it via `pane.useData()`. Layout renderers
-   * (e.g. Miller) compose the chain's `provide` components above the chain
-   * body so sibling columns share ancestor data even though they're not
-   * nested in the React tree.
-   */
-  provide?: ComponentType<{ children: ReactNode }>;
-  dataContext: ReturnType<typeof createContext<unknown>>;
   actionsSlot: Slot<{ component: ComponentType; position?: "left" | "right" }>;
 }
 
@@ -123,8 +113,6 @@ export interface PaneInternal {
 // pane.close / pane.expand / parseUrl read from it; nobody writes to it
 // outside the sync hook.
 const registry = new Map<string, PaneInternal>();
-
-const DATA_NOT_PROVIDED = Symbol("pane.data-not-provided");
 
 // ---------------------------------------------------------------------------
 // Path helpers.
@@ -173,6 +161,8 @@ export interface MatchEntry {
   params: Record<string, string>;
   /** All params accumulated from the chain root up to and including this pane. */
   fullParams: Record<string, string>;
+  /** Caller-provided input data, persisted in the slot (not in the URL). */
+  input: Record<string, string>;
 }
 
 export interface PaneMatch {
@@ -236,7 +226,6 @@ export function parseUrl(pathname: string): PaneSlot[] | null {
   const urlSegments = normalized ? normalized.split("/") : [];
 
   let cursor = 0;
-  const ancestorIds = new Set<string>();
   const chain: PaneSlot[] = [];
 
   while (cursor < urlSegments.length) {
@@ -247,8 +236,6 @@ export function parseUrl(pathname: string): PaneSlot[] | null {
     } | null = null;
 
     for (const pane of registry.values()) {
-      if (!isAfterSatisfied(pane, chain.length === 0, ancestorIds)) continue;
-
       const result = matchSegmentParts(pane.segment, urlSegments, cursor);
       if (!result) continue;
       if (!bestMatch || result.consumed > bestMatch.consumed) {
@@ -260,13 +247,11 @@ export function parseUrl(pathname: string): PaneSlot[] | null {
 
     chain.push(createSlot(bestMatch.pane.id, bestMatch.params));
     cursor += bestMatch.consumed;
-    ancestorIds.add(bestMatch.pane.id);
   }
 
-  // Root URL ("/") — find panes with empty/root segment that can be root.
+  // Root URL ("/") — find any pane with an empty/root segment.
   if (chain.length === 0) {
     for (const pane of registry.values()) {
-      if (!pane.after.has(null)) continue;
       if (!pane.segment || pane.segment === "/" || pane.segment === "") {
         chain.push(createSlot(pane.id, {}));
         break;
@@ -343,7 +328,13 @@ function setChain(chain: PaneSlot[], replace = false): void {
   currentChain = chain;
   notifyChainListeners();
   const url = buildChainUrl(chain);
-  navigate(url, replace);
+  const serialized = chain.map(s => ({ paneId: s.paneId, params: s.params, input: s.input }));
+  const fullUrl = applyBasePath(url);
+  if (fullUrl === window.location.pathname && replace) return;
+  const method = replace ? "replaceState" : "pushState";
+  window.history[method]({ chain: serialized }, "", fullUrl);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+  window.dispatchEvent(new CustomEvent("shell:navigate"));
 }
 
 function chainsEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
@@ -356,18 +347,23 @@ function chainsEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
     for (const k of ak) {
       if (a[i]!.params[k] !== b[i]!.params[k]) return false;
     }
+    const ai = Object.keys(a[i]!.input);
+    const bi = Object.keys(b[i]!.input);
+    if (ai.length !== bi.length) return false;
+    for (const k of ai) {
+      if (a[i]!.input[k] !== b[i]!.input[k]) return false;
+    }
   }
   return true;
 }
 
 export function restoreChain(
-  slots: Array<{ paneId: string; params: Record<string, string> }>,
+  slots: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string> }>,
 ): void {
   if (typeof window === "undefined") return;
-  const chain: PaneSlot[] = slots.map((s) => createSlot(s.paneId, s.params));
-  const valid = validateChain(chain);
-  if (valid.length === 0) return;
-  setChain(valid);
+  const chain: PaneSlot[] = slots.map((s) => createSlot(s.paneId, s.params, s.input ?? {}));
+  if (chain.length === 0) return;
+  setChain(chain);
 }
 
 export function syncChainFromUrl(pathname: string): void {
@@ -391,6 +387,7 @@ function resolveChain(chain: PaneSlot[]): PaneMatch | null {
       pane,
       params: { ...slot.params },
       fullParams: { ...accumulated },
+      input: { ...slot.input },
     });
   }
   return { chain: entries };
@@ -406,92 +403,6 @@ function extractOwnParams(
     if (name in allParams) own[name] = allParams[name]!;
   }
   return own;
-}
-
-function buildFreshChain(
-  target: PaneInternal,
-  params: Record<string, string>,
-): PaneSlot[] {
-  const path: PaneInternal[] = [target];
-  let current = target;
-  while (!current.after.has(null) && current.after.size > 0) {
-    let found = false;
-    for (const predId of current.after) {
-      if (predId === null) continue;
-      const pred = registry.get(predId);
-      if (pred) {
-        path.unshift(pred);
-        current = pred;
-        found = true;
-        break;
-      }
-    }
-    if (!found) break;
-  }
-
-  const chain = getChain();
-  return path.map((pane) => {
-    const own = extractOwnParams(pane, params);
-    // Inherit missing params from the current chain for ancestor panes
-    const existing = chain.find((s) => s.paneId === pane.id);
-    if (existing) {
-      for (const name of segmentParamNames(pane.segment)) {
-        if (!(name in own) && name in existing.params) {
-          own[name] = existing.params[name]!;
-        }
-      }
-    }
-    return createSlot(pane.id, own);
-  });
-}
-
-function isAfterSatisfied(
-  pane: PaneInternal,
-  isRoot: boolean,
-  ancestorIds: Set<string>,
-): boolean {
-  if (pane.after.size === 0) return true;
-  if (isRoot) return pane.after.has(null);
-  for (const a of pane.after) {
-    if (a !== null && ancestorIds.has(a)) return true;
-  }
-  return false;
-}
-
-function findValidPositions(
-  target: PaneInternal,
-  chain: PaneSlot[],
-): number[] {
-  const positions: number[] = [];
-  for (let i = 0; i <= chain.length; i++) {
-    const ancestorIds = new Set(chain.slice(0, i).map((s) => s.paneId));
-    const leftOk = isAfterSatisfied(target, i === 0, ancestorIds);
-    const rightOk =
-      i === chain.length
-        ? true
-        : i > 0
-          ? true
-          : (() => {
-              const rightPane = registry.get(chain[0]!.paneId);
-              if (!rightPane) return false;
-              return isAfterSatisfied(rightPane, false, new Set([target.id]));
-            })();
-    if (leftOk && rightOk) positions.push(i);
-  }
-  return positions;
-}
-
-function validateChain(chain: PaneSlot[]): PaneSlot[] {
-  const result: PaneSlot[] = [];
-  const ancestorIds = new Set<string>();
-  for (let i = 0; i < chain.length; i++) {
-    const pane = registry.get(chain[i]!.paneId);
-    if (!pane) break;
-    if (!isAfterSatisfied(pane, i === 0, ancestorIds)) break;
-    result.push(chain[i]!);
-    ancestorIds.add(pane.id);
-  }
-  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -550,8 +461,16 @@ function applyBasePath(rawUrl: string): string {
 
 function handleLocationChange(): void {
   if (typeof window === "undefined") return;
-  const pathname = stripBasePath(window.location.pathname, currentBasePath);
-  syncChainFromUrl(pathname);
+  const state = window.history.state as { chain?: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string> }> } | null;
+  if (state?.chain) {
+    const newChain = state.chain.map(s => createSlot(s.paneId, s.params, s.input ?? {}));
+    if (chainsEqual(currentChain, newChain)) return;
+    currentChain = newChain;
+    notifyChainListeners();
+  } else {
+    const pathname = stripBasePath(window.location.pathname, currentBasePath);
+    syncChainFromUrl(pathname);
+  }
 }
 
 if (typeof window !== "undefined") {
@@ -562,19 +481,6 @@ if (typeof window !== "undefined") {
 // ---------------------------------------------------------------------------
 // Navigation + location hook.
 // ---------------------------------------------------------------------------
-
-function navigate(url: string, replace = false): void {
-  if (typeof window === "undefined") return;
-  const fullUrl = applyBasePath(url);
-  if (window.location.pathname === fullUrl) return;
-  if (replace) {
-    window.history.replaceState({}, "", fullUrl);
-  } else {
-    window.history.pushState({}, "", fullUrl);
-  }
-  window.dispatchEvent(new PopStateEvent("popstate"));
-  window.dispatchEvent(new CustomEvent("shell:navigate"));
-}
 
 export function usePathname(): string {
   return useSyncExternalStore(
@@ -607,24 +513,25 @@ export interface PaneToggleOpts {
   action?: "close" | "unwrap";
   side?: "left" | "right";
   mode?: PaneOpenMode;
+  input?: Record<string, string>;
 }
 
 export interface PaneChainEntry<OwnParams = Record<string, string>> {
   instanceId: number;
   params: OwnParams;
   fullParams: Record<string, string>;
+  input: Record<string, string>;
 }
 
 export interface PaneObject<
   FullParams = {},
-  Provides = void,
   OwnParams = FullParams,
+  Input = Record<string, string>,
 > {
   id: string;
-  Provider: ComponentType<{ value: Provides; children: ReactNode }>;
   useParams(): OwnParams;
-  useData(): Provides;
-  useDataMaybe(): Provides | null;
+  /** Read the caller-provided input data for this pane (persisted in the slot, not in the URL). */
+  useInput(): Input;
   /** Find this pane in the current chain. Returns its params or null if absent. */
   useChainEntry(): PaneChainEntry<OwnParams> | null;
   /** Find all instances of this pane in the current chain (for panes that can appear multiple times). */
@@ -651,15 +558,7 @@ export interface PaneObject<
 }
 
 function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
-  const { dataContext, actionsSlot } = internal;
-
-  const Provider = ({
-    value,
-    children,
-  }: {
-    value: unknown;
-    children: ReactNode;
-  }) => createElement(dataContext.Provider, { value }, children);
+  const { actionsSlot } = internal;
 
   function useParams(): Record<string, string> {
     const match = useContext(PaneMatchContext);
@@ -682,12 +581,24 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     return entry.params;
   }
 
+  function useInput(): Record<string, string> {
+    const match = useContext(PaneMatchContext);
+    const instanceId = useContext(PaneInstanceContext);
+    if (!match) return {};
+    if (instanceId !== undefined) {
+      const entry = match.chain.find(e => e.instanceId === instanceId);
+      if (entry?.pane === internal) return entry.input;
+    }
+    const entry = match.chain.find(e => e.pane === internal);
+    return entry?.input ?? {};
+  }
+
   function useChainEntry(): PaneChainEntry | null {
     const match = useContext(PaneMatchContext);
     if (!match) return null;
     const entry = match.chain.find((e) => e.pane === internal);
     if (!entry) return null;
-    return { instanceId: entry.instanceId, params: entry.params, fullParams: entry.fullParams };
+    return { instanceId: entry.instanceId, params: entry.params, fullParams: entry.fullParams, input: entry.input };
   }
 
   function useChainEntries(): PaneChainEntry[] {
@@ -695,22 +606,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     if (!match) return [];
     return match.chain
       .filter((e) => e.pane === internal)
-      .map((e) => ({ instanceId: e.instanceId, params: e.params, fullParams: e.fullParams }));
-  }
-
-  function useData(): unknown {
-    const value = useContext(dataContext);
-    if (value === DATA_NOT_PROVIDED) {
-      throw new Error(
-        `Pane "${internal.id}".useData() called but the pane component did not render <${internal.id}.Provider>.`,
-      );
-    }
-    return value;
-  }
-
-  function useDataMaybe(): unknown {
-    const value = useContext(dataContext);
-    return value === DATA_NOT_PROVIDED ? null : value;
+      .map((e) => ({ instanceId: e.instanceId, params: e.params, fullParams: e.fullParams, input: e.input }));
   }
 
   function close(instanceId: number): void {
@@ -729,7 +625,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     const idx = chain.findIndex((s) => s.instanceId === instanceId);
     if (idx < 0) return;
     const newChain = [...chain.slice(0, idx), ...chain.slice(idx + 1)];
-    setChain(validateChain(newChain));
+    setChain(newChain);
   }
 
   function promote(instanceId: number): void {
@@ -741,7 +637,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     for (let i = 0; i <= idx; i++) {
       Object.assign(fullParams, chain[i]!.params);
     }
-    openPaneImpl(internal, fullParams, { root: true });
+    openPaneImpl(internal, fullParams, { root: true, input: chain[idx]!.input });
   }
 
   function back(): void {
@@ -788,6 +684,9 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     const action = opts?.action ?? "close";
     const mode = opts?.mode ?? "push";
     const side = opts?.side;
+    const input = opts?.input;
+    const inputRef = useRef(input);
+    inputRef.current = input;
 
     const callerIndex =
       callerInstanceId !== undefined
@@ -806,7 +705,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
           close(targetSlot.instanceId);
         }
       } else {
-        openPaneFn(paneObject, paramsRef.current, { mode, side });
+        openPaneFn(paneObject, paramsRef.current, { mode, side, input: inputRef.current });
       }
     }, [targetSlot, action, openPaneFn, mode, side]);
 
@@ -815,10 +714,8 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
 
   const paneObject: PaneObject<any, any, any> = {
     id: internal.id,
-    Provider: Provider as ComponentType<{ value: unknown; children: ReactNode }>,
     useParams,
-    useData,
-    useDataMaybe,
+    useInput,
     useChainEntry,
     useChainEntries,
     close,
@@ -858,57 +755,34 @@ function normalizeChrome<Params>(
 // ParentParams defaults to `{}` so that top-level panes (no parent) end up
 // with `{} & InferParams<Path>` = `InferParams<Path>`. Using
 // `Record<string, never>` as the default would clash with any own params.
-interface DefineArgs<Path extends string, Provides, ParentParams> {
+interface DefineArgs<Path extends string, ParentParams, Input> {
   id: string;
-  /**
-   * Valid predecessors in the layout chain. `null` means the pane can appear
-   * at root (position 0). Accepts PaneObject references, string pane IDs
-   * (for forward references), or null.
-   */
-  after?: Array<PaneObject<any, any, any> | string | null>;
+  /** Optional default ancestors to prepend when opening this pane from scratch (no caller context). */
+  defaultAncestors?: Array<PaneObject<any, any, any>>;
   /** Own URL segment (no leading slash). */
   segment?: Path;
   component: ComponentType;
-  provides?: TypeMarker<Provides>;
+  /** Declares the typed shape of caller-provided input data (runtime no-op, type-level only). */
+  input?: TypeMarker<Input>;
   chrome?: PaneChromeConfig<ParentParams & InferParams<Path>> | false;
   /**
    * Default column width in pixels. Read by layout renderers (e.g. Miller
    * columns). The leaf column ignores this and flex-grows. Defaults to 400.
    */
   width?: number;
-  /**
-   * Component that loads the pane's `provides` data and wraps children in
-   * `<thisPane.Provider value={data}>`. Required when `provides` is set if
-   * descendant panes will read via `useData()` — Miller renders sibling
-   * columns rather than nesting them, so the wrapper is composed at the
-   * chain level (not from inside the pane's own component).
-   *
-   * When data is still loading, return a loading element to suspend the
-   * chain render; once loaded, render the Provider with children.
-   */
-  provide?: ComponentType<{ children: ReactNode }>;
 }
 
 function define<
   Path extends string = "",
-  Provides = void,
   ParentParams = {},
+  Input = Record<string, string>,
 >(
-  args: DefineArgs<Path, Provides, ParentParams>,
+  args: DefineArgs<Path, ParentParams, Input>,
 ): PaneObject<
   ParentParams & InferParams<Path>,
-  Provides,
-  InferParams<Path>
+  InferParams<Path>,
+  Input
 > {
-  const afterSet: Set<string | null> = args.after
-    ? new Set(
-        args.after.map((p) => {
-          if (p === null) return null;
-          if (typeof p === "string") return p;
-          return p._internal.id;
-        }),
-      )
-    : new Set<string | null>();
   const segment = (args.segment ?? "").replace(/^\/+/, "");
 
   if (segment && segment.startsWith(":")) {
@@ -918,8 +792,9 @@ function define<
     );
   }
 
-  const dataContext = createContext<unknown>(DATA_NOT_PROVIDED);
-  dataContext.displayName = `PaneData(${args.id})`;
+  const defaultAncestors: Array<{ id: string }> = (args.defaultAncestors ?? []).map(
+    (p) => ({ id: p._internal.id }),
+  );
 
   const actionsSlot = defineSlot<{
     component: ComponentType;
@@ -928,20 +803,18 @@ function define<
 
   const internal: PaneInternal = {
     id: args.id,
-    after: afterSet,
+    defaultAncestors,
     segment,
     component: args.component,
     chrome: normalizeChrome(args.chrome),
     width: args.width,
-    provide: args.provide,
-    dataContext,
     actionsSlot,
   };
 
   return makePaneObject(internal) as PaneObject<
     ParentParams & InferParams<Path>,
-    Provides,
-    InferParams<Path>
+    InferParams<Path>,
+    Input
   >;
 }
 
@@ -980,10 +853,13 @@ export function useSyncPaneRegistry(): void {
 // Memoized match used by MillerColumns.
 // ---------------------------------------------------------------------------
 
-export function useMatchForPath(_pathname: string): PaneMatch | null {
+export function useMatchForChain(): PaneMatch | null {
   const chain = useChain();
   return useMemo(() => resolveChain(chain), [chain]);
 }
+
+/** @deprecated Use useMatchForChain */
+export const useMatchForPath = (_pathname: string) => useMatchForChain();
 
 // ---------------------------------------------------------------------------
 // openPaneImpl — non-positional open logic (shared by useOpenPane fallbacks).
@@ -992,66 +868,44 @@ export function useMatchForPath(_pathname: string): PaneMatch | null {
 function openPaneImpl(
   internal: PaneInternal,
   params: Record<string, string>,
-  opts?: { root?: boolean },
+  opts?: { root?: boolean; input?: Record<string, string> },
 ): void {
   const replace = internal.chrome.enabled && !internal.chrome.history;
   const chain = getChain();
   const ownParams = extractOwnParams(internal, params);
+  const input = opts?.input ?? {};
 
   if (!opts?.root) {
-    // If already in chain, update params or no-op
     const existingIdx = chain.findIndex((s) => s.paneId === internal.id);
     if (existingIdx >= 0) {
-      const existing = chain[existingIdx]!.params;
-      const same =
-        Object.keys(ownParams).length === Object.keys(existing).length &&
-        Object.keys(ownParams).every((k) => ownParams[k] === existing[k]);
-      if (same) return;
+      const existing = chain[existingIdx]!;
+      const sameParams =
+        Object.keys(ownParams).length === Object.keys(existing.params).length &&
+        Object.keys(ownParams).every((k) => ownParams[k] === existing.params[k]);
+      const sameInput =
+        Object.keys(input).length === Object.keys(existing.input).length &&
+        Object.keys(input).every((k) => input[k] === existing.input[k]);
+      if (sameParams && sameInput) return;
       const newChain = chain.slice(0, existingIdx + 1);
-      newChain[existingIdx] = createSlot(internal.id, ownParams);
+      newChain[existingIdx] = createSlot(internal.id, ownParams, input);
       setChain(newChain, replace);
       return;
     }
-
-    // Try insertion into current chain
-    const positions = findValidPositions(internal, chain);
-    if (positions.length > 0) {
-      const ancestorParamKeys = Object.keys(params).filter(
-        (k) => !(k in ownParams),
-      );
-      for (let p = positions.length - 1; p >= 0; p--) {
-        const pos = positions[p]!;
-        let paramsMatch = true;
-        if (ancestorParamKeys.length > 0) {
-          for (let j = 0; j < pos; j++) {
-            const entry = chain[j]!;
-            for (const key of ancestorParamKeys) {
-              if (
-                key in entry.params &&
-                entry.params[key] !== params[key]
-              ) {
-                paramsMatch = false;
-                break;
-              }
-            }
-            if (!paramsMatch) break;
-          }
-        }
-        if (paramsMatch) {
-          const newChain = [
-            ...chain.slice(0, pos),
-            createSlot(internal.id, ownParams),
-            ...chain.slice(pos),
-          ];
-          setChain(validateChain(newChain), replace);
-          return;
-        }
-      }
-    }
   }
 
-  // root forced, or no valid insertion position — build fresh chain
-  setChain(buildFreshChain(internal, params), replace);
+  // Build fresh chain from defaultAncestors
+  const ancestorSlots: PaneSlot[] = [];
+  for (const ancestor of internal.defaultAncestors) {
+    const ancestorInternal = registry.get(ancestor.id);
+    if (!ancestorInternal) continue;
+    // Inherit params from existing chain if available
+    const existingSlot = chain.find(s => s.paneId === ancestor.id);
+    const ancestorParams = existingSlot
+      ? existingSlot.params
+      : extractOwnParams(ancestorInternal, params);
+    ancestorSlots.push(createSlot(ancestor.id, ancestorParams));
+  }
+  setChain([...ancestorSlots, createSlot(internal.id, ownParams, input)], replace);
 }
 
 export type PaneOpenMode = "root" | "push" | "swap";
@@ -1059,10 +913,10 @@ export type PaneOpenMode = "root" | "push" | "swap";
 export function openPane(
   target: PaneObject<any, any, any>,
   params: Record<string, string>,
-  opts: { mode: "root" },
+  opts: { mode: "root"; input?: Record<string, string> },
 ): void {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- overload narrows mode to "root" but the check keeps this future-proof for additional modes
-  openPaneImpl(target._internal, params, { root: opts.mode === "root" });
+  openPaneImpl(target._internal, params, { root: opts.mode === "root", input: opts.input });
 }
 
 // ---------------------------------------------------------------------------
@@ -1072,7 +926,7 @@ export function openPane(
 export function useOpenPane(): (
   target: PaneObject<any, any, any>,
   params: Record<string, string>,
-  opts: { mode: PaneOpenMode; side?: "left" | "right" },
+  opts: { mode: PaneOpenMode; side?: "left" | "right"; input?: Record<string, string> },
 ) => void {
   const callerInstanceId = useContext(PaneInstanceContext);
 
@@ -1080,12 +934,13 @@ export function useOpenPane(): (
     (
       target: PaneObject<any, any, any>,
       params: Record<string, string>,
-      opts: { mode: PaneOpenMode; side?: "left" | "right" },
+      opts: { mode: PaneOpenMode; side?: "left" | "right"; input?: Record<string, string> },
     ) => {
       const targetInternal = target._internal;
+      const input = opts.input ?? {};
 
       if (opts.mode === "root" || callerInstanceId === undefined) {
-        openPaneImpl(targetInternal, params, { root: opts.mode === "root" });
+        openPaneImpl(targetInternal, params, { root: opts.mode === "root", input });
         return;
       }
 
@@ -1094,7 +949,7 @@ export function useOpenPane(): (
         (s) => s.instanceId === callerInstanceId,
       );
       if (callerIndex < 0) {
-        openPaneImpl(targetInternal, params);
+        openPaneImpl(targetInternal, params, { input });
         return;
       }
 
@@ -1108,13 +963,16 @@ export function useOpenPane(): (
       // which entity is shown without growing the chain (e.g. clicking a
       // dependency chip switches the task detail to a different task).
       if (opts.mode === "swap" && targetInternal.id === callerPaneId) {
-        const existing = currentChain[callerIndex]!.params;
-        const same =
-          Object.keys(ownParams).length === Object.keys(existing).length &&
-          Object.keys(ownParams).every((k) => ownParams[k] === existing[k]);
-        if (same) return;
+        const existing = currentChain[callerIndex]!;
+        const sameParams =
+          Object.keys(ownParams).length === Object.keys(existing.params).length &&
+          Object.keys(ownParams).every((k) => ownParams[k] === existing.params[k]);
+        const sameInput =
+          Object.keys(input).length === Object.keys(existing.input).length &&
+          Object.keys(input).every((k) => input[k] === existing.input[k]);
+        if (sameParams && sameInput) return;
         const newChain = currentChain.slice(0, callerIndex + 1);
-        newChain[callerIndex] = createSlot(targetInternal.id, ownParams);
+        newChain[callerIndex] = createSlot(targetInternal.id, ownParams, input);
         setChain(newChain, replace);
         return;
       }
@@ -1126,10 +984,10 @@ export function useOpenPane(): (
         if (!alreadyAncestor) {
           const newChain = [
             ...currentChain.slice(0, callerIndex),
-            createSlot(targetInternal.id, ownParams),
+            createSlot(targetInternal.id, ownParams, input),
             ...currentChain.slice(callerIndex),
           ];
-          setChain(validateChain(newChain), replace);
+          setChain(newChain, replace);
           return;
         }
       }
@@ -1137,9 +995,9 @@ export function useOpenPane(): (
       // push right (default): truncate after caller, append target
       const newChain = [
         ...currentChain.slice(0, callerIndex + 1),
-        createSlot(targetInternal.id, ownParams),
+        createSlot(targetInternal.id, ownParams, input),
       ];
-      setChain(validateChain(newChain), replace);
+      setChain(newChain, replace);
     },
     [callerInstanceId],
   );

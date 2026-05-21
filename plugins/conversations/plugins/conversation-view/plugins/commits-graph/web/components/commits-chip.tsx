@@ -2,22 +2,24 @@ import { useMemo } from "react";
 import { MdAltRoute, MdPublish } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { Button } from "@/components/ui/button";
 import { pushesResource } from "@plugins/tasks/core";
 import { commitDeltaResource } from "../../shared/resources";
 import { convCommitsGraphPane } from "../panes";
 
 export function CommitsChip() {
-  const { conversation } = conversationPane.useData();
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
   const deltaResult = useResource(commitDeltaResource, {
-    attemptId: conversation.attemptId,
+    attemptId: conversation?.attemptId ?? "",
   });
   const pushesResult = useResource(pushesResource);
   const pushCount = useMemo(
-    () => pushesResult.pending ? 0 : pushesResult.data.filter((p) => p.attemptId === conversation.attemptId).length,
-    [pushesResult, conversation.attemptId],
+    () => pushesResult.pending ? 0 : pushesResult.data.filter((p) => p.attemptId === conversation?.attemptId).length,
+    [pushesResult, conversation?.attemptId],
   );
-  const { isOpen, toggle } = convCommitsGraphPane.useToggle({ convId: conversation.id });
+  const { isOpen, toggle } = convCommitsGraphPane.useToggle({ convId }, { input: { convId } });
 
   if (deltaResult.pending) return null;
   if (deltaResult.data.mergeBase === null) return null;

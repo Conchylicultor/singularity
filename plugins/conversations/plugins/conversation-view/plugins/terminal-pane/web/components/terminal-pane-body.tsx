@@ -1,19 +1,34 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { terminalPane } from "@plugins/terminal/web";
+import { convTerminalPane } from "../panes";
 
 const TMUX = "tmux";
 
 export function TerminalPaneBody() {
-  const { conversation } = conversationPane.useData();
+  const { convId: inputConvId } = convTerminalPane.useInput();
+  const chainEntry = conversationPane.useChainEntry();
+  const convId = inputConvId ?? chainEntry?.params.convId;
+  const conversation = useConversationById(convId ?? null);
+  if (!conversation) return null;
+  return <TerminalPaneInner convId={conversation.id} status={conversation.status} />;
+}
 
+function TerminalPaneInner({
+  convId,
+  status,
+}: {
+  convId: string;
+  status: string;
+}) {
   const TerminalComponent = useMemo(
     () =>
       terminalPane({
-        command: [TMUX, "-u", "attach", "-t", conversation.id],
-        title: conversation.id,
+        command: [TMUX, "-u", "attach", "-t", convId],
+        title: convId,
       }).component,
-    [conversation.id],
+    [convId],
   );
 
   // After Resume re-spawns the tmux session, the existing PTY (which exited
@@ -21,7 +36,7 @@ export function TerminalPaneBody() {
   // the conversation transitions from gone to live so the TerminalComponent
   // remounts and reattaches.
   const [reattachKey, setReattachKey] = useState(0);
-  const wasDisconnected = conversation.status === "gone" || conversation.status === "done";
+  const wasDisconnected = status === "gone" || status === "done";
   const wasDisconnectedRef = useRef(wasDisconnected);
   useEffect(() => {
     if (wasDisconnectedRef.current && !wasDisconnected) {

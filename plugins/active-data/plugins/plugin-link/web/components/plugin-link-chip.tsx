@@ -34,7 +34,7 @@ export function PluginLinkChip({
   attrs: Record<string, string>;
 }) {
   const id = content.trim();
-  const conversation = conversationPane.useDataMaybe()?.conversation;
+  const convId = conversationPane.useChainEntry()?.params.convId ?? null;
   const openPane = useOpenPane();
 
   const { data } = useQuery<PluginTreePayload>({
@@ -73,8 +73,8 @@ export function PluginLinkChip({
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        if (conversation) {
-          openPane(pluginConvSidePane, { convId: conversation.id, pluginId: resolvedId }, { mode: "push" });
+        if (convId) {
+          openPane(pluginConvSidePane, { convId, pluginId: resolvedId }, { mode: "push" });
         } else {
           openPane(pluginViewPane, { pluginId: resolvedId }, { mode: "push" });
         }

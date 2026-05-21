@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/markdown/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 
@@ -20,10 +21,11 @@ function isExternalUrl(src: string): boolean {
 }
 
 export function ImgEnhancer({ children }: { children: ReactNode }) {
-  const conv = conversationPane.useDataMaybe();
-  const task = taskDetailPane.useDataMaybe();
+  const convId = conversationPane.useChainEntry()?.params.convId ?? null;
+  const conversation = useConversationById(convId);
+  const taskEntry = taskDetailPane.useChainEntry();
   const openPane = useOpenPane();
-  const worktree = conv?.conversation.attemptId ?? (task ? "main" : undefined);
+  const worktree = conversation?.attemptId ?? (taskEntry ? "main" : undefined);
 
   const onFileOpen = useMemo(() => {
     if (!worktree) return undefined;

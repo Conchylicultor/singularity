@@ -1,13 +1,11 @@
-import { Fragment, useContext, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
+import { Fragment, useContext, useLayoutEffect, useMemo, useRef } from "react";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
   PaneBasePathContext,
   PaneInstanceContext,
   PaneMatchContext,
   setBasePath,
-  stripBasePath,
-  useMatchForPath,
-  usePathname,
+  useMatchForChain,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
 import { Column } from "./column";
@@ -17,14 +15,12 @@ export function MillerColumns() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- synchronous write before useSyncPaneRegistry
   useMemo(() => { setBasePath(basePath); }, [basePath]);
 
-  // Must run before useMatchForPath so the matcher sees the current
+  // Must run before useMatchForChain so the matcher sees the current
   // contribution set on first render. Must run AFTER setBasePath so that
-  // handleLocationChange() strips the base path correctly on initial load.
+  // the chain store sees the correct base path on initial load.
   useSyncPaneRegistry();
 
-  const rawPathname = usePathname();
-  const pathname = stripBasePath(rawPathname, basePath);
-  const match = useMatchForPath(pathname);
+  const match = useMatchForChain();
 
   const ref = useRef<HTMLDivElement>(null);
   const lastLength = useRef(0);
@@ -40,30 +36,18 @@ export function MillerColumns() {
 
   return (
     <PaneMatchContext.Provider value={match}>
-      <PluginErrorBoundary slot="layouts.miller" label={pathname}>
+      <PluginErrorBoundary slot="layouts.miller" label={basePath}>
         <div ref={ref} className="flex h-full overflow-x-auto">
-          {match.chain.map((entry, i) => {
-            let column: ReactNode = (
-              <Column
-                entry={entry}
-                isLast={i === match.chain.length - 1}
-              />
-            );
-            // Wrap with providers from chain[0..i], innermost (i) wraps closest.
-            // Always wrap at j === i to set PaneInstanceContext for the column itself.
-            for (let j = i; j >= 0; j--) {
-              const chainEntry = match.chain[j]!;
-              const Provide = chainEntry.pane.provide;
-              if (Provide || j === i) {
-                column = (
-                  <PaneInstanceContext.Provider value={chainEntry.instanceId}>
-                    {Provide ? <Provide>{column}</Provide> : column}
-                  </PaneInstanceContext.Provider>
-                );
-              }
-            }
-            return <Fragment key={entry.instanceId}>{column}</Fragment>;
-          })}
+          {match.chain.map((entry, i) => (
+            <Fragment key={entry.instanceId}>
+              <PaneInstanceContext.Provider value={entry.instanceId}>
+                <Column
+                  entry={entry}
+                  isLast={i === match.chain.length - 1}
+                />
+              </PaneInstanceContext.Provider>
+            </Fragment>
+          ))}
         </div>
       </PluginErrorBoundary>
     </PaneMatchContext.Provider>

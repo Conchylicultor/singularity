@@ -5,6 +5,7 @@ import {
   RowActionButton,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
 import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
@@ -12,12 +13,13 @@ const MODELS = Object.keys(MODEL_REGISTRY) as ConversationModel[];
 
 export function ForkSessionAction({ event }: { event: JsonlEvent }) {
   const lastAssistant = useLastAssistantEvent();
-  const { conversation } = conversationPane.useData();
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
   const { launch, launching } = useLaunchConversation({
-    getRequest: () => ({ forkFromConversationId: conversation.id }),
+    getRequest: () => ({ forkFromConversationId: convId }),
   });
 
-  if (event !== lastAssistant || !conversation.claudeSessionId) return null;
+  if (event !== lastAssistant || !conversation?.claudeSessionId) return null;
 
   return (
     <>

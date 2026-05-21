@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { serverDetailPane } from "../panes";
+import type { Server } from "../../shared";
 import { ServerStatusBadge } from "./server-status-badge";
 
-export function ServerDetail() {
-  const { server } = serverDetailPane.useData();
+export function ServerDetail({ server }: { server: Server }) {
   const [deleting, setDeleting] = useState(false);
 
   async function handleDelete() {

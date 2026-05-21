@@ -1,16 +1,18 @@
 import { useMemo } from "react";
 import { MdArticle } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { Button } from "@/components/ui/button";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { convDocsPane, isDocFile } from "../panes";
 import { usePushedDocFiles } from "../use-pushed-doc-files";
 
 export function DocsButton() {
-  const { conversation } = conversationPane.useData();
-  const { files } = useEditedFiles(conversation.id);
-  const pushedDocs = usePushedDocFiles(conversation.attemptId);
-  const { isOpen, toggle } = convDocsPane.useToggle({ convId: conversation.id });
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
+  const { files } = useEditedFiles(convId);
+  const pushedDocs = usePushedDocFiles(conversation?.attemptId ?? "");
+  const { isOpen, toggle } = convDocsPane.useToggle({ convId }, { input: { convId } });
 
   const workingDocs = useMemo(() => files.filter((f) => isDocFile(f.path)), [files]);
 

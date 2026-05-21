@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { FilePaneView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
@@ -11,9 +12,23 @@ import { DocRow } from "./doc-row";
 type DocFile = EditedFile & { worktree: string };
 
 export function DocsPane() {
-  const { conversation } = conversationPane.useData();
-  const { files } = useEditedFiles(conversation.id);
-  const pushedDocs = usePushedDocFiles(conversation.attemptId);
+  const { convId: inputConvId } = convDocsPane.useInput();
+  const chainEntry = conversationPane.useChainEntry();
+  const convId = inputConvId ?? chainEntry?.params.convId;
+  const conversation = useConversationById(convId ?? null);
+  if (!conversation) return null;
+  return <DocsPaneInner convId={conversation.id} attemptId={conversation.attemptId} />;
+}
+
+function DocsPaneInner({
+  convId,
+  attemptId,
+}: {
+  convId: string;
+  attemptId: string;
+}) {
+  const { files } = useEditedFiles(convId);
+  const pushedDocs = usePushedDocFiles(attemptId);
 
   const docs = useMemo<DocFile[]>(() => {
     const byPath = new Map<string, DocFile>();
@@ -24,11 +39,11 @@ export function DocsPane() {
     // Working tree docs override pushed (current state takes precedence)
     for (const f of files) {
       if (isDocFile(f.path)) {
-        byPath.set(f.path, { ...f, worktree: conversation.attemptId });
+        byPath.set(f.path, { ...f, worktree: attemptId });
       }
     }
     return [...byPath.values()].sort((a, b) => a.path.localeCompare(b.path));
-  }, [files, pushedDocs, conversation.attemptId]);
+  }, [files, pushedDocs, attemptId]);
 
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
 

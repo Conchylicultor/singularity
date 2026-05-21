@@ -11,9 +11,11 @@ interface AgentInput {
 
 export function AgentReportPaneBody() {
   const { toolUseId } = agentReportPane.useParams();
-  const { conversation } = conversationPane.useData();
+  const { convId: inputConvId } = agentReportPane.useInput();
+  const chainEntry = conversationPane.useChainEntry();
+  const convId = inputConvId ?? chainEntry?.params.convId;
   const eventsResult = useResource(jsonlEventsResource, {
-    id: conversation.id,
+    id: convId ?? "",
   });
   const events = eventsResult.pending ? [] : eventsResult.data;
 

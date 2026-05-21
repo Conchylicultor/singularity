@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   PluginDetail,
   type PluginNode,
@@ -9,7 +8,6 @@ import {
 
 export const pluginConvSidePane = Pane.define({
   id: "plugin-conv-side",
-  after: [conversationPane],
   segment: "plugin/:pluginId",
   component: PluginConvSideBody,
   width: 600,

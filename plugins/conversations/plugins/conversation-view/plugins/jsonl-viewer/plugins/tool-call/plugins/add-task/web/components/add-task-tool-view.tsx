@@ -38,7 +38,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const taskId = result?.task_id;
 
   const tasksResult = useResource(tasksResource);
-  const { conversation } = conversationPane.useData();
+  const { convId } = conversationPane.useParams();
   const openPane = useOpenPane();
   const task = useMemo(
     () => (tasksResult.pending || !taskId) ? null : (tasksResult.data.find((t) => t.id === taskId) ?? null),
@@ -48,7 +48,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const openTask = (e: React.MouseEvent) => {
     if (!taskId) return;
     e.stopPropagation();
-    openPane(taskSidePane, { convId: conversation.id, taskId }, { mode: "push" });
+    openPane(taskSidePane, { taskId }, { mode: "push", input: { convId } });
   };
 
   const summary = (

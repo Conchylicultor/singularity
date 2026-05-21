@@ -42,8 +42,8 @@ function truncate(text: string): string {
 }
 
 export function MessageToc() {
-  const { conversation } = conversationPane.useData();
-  const result = useResource(jsonlEventsResource, { id: conversation.id });
+  const { convId } = conversationPane.useParams();
+  const result = useResource(jsonlEventsResource, { id: convId });
   const entries = useMemo(() => result.pending ? [] : extractUserEntries(result.data), [result]);
 
   if (entries.length === 0) return null;

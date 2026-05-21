@@ -1,38 +1,40 @@
 # Pane
 
 The unified pane primitive. One pane = one URL segment + one component.
-Nested URLs map to a chain of panes (root → leaf); the layout renderer
-(currently Miller columns) arranges the chain as a horizontal sequence of
-columns. Ancestor data flows to descendants via typed `provides` /
-`provide` / `useData()`.
+The runtime source of truth is the **chain store** (`currentChain:
+PaneSlot[]`), not the URL. The URL is derived for deep linking; on
+navigation the chain is persisted in `history.state` so back/forward
+works without re-parsing. The layout renderer (currently Miller columns)
+arranges the chain as a horizontal sequence of columns. Each pane is
+self-contained: it receives `input` from its opener and self-fetches
+any data it needs.
 
 Design rationale lives in:
 
 - `research/2026-04-23-global-unified-pane-manager-v2.md` — core design.
 - `research/2026-04-23-global-unified-pane-manager-v3.md` — refinements
   (`.open()` takes full params; `useParams()` is own-only; prefix matching).
-- `research/2026-04-30-plugins-miller-columns.md` — layout renderer that
-  introduced sibling-column rendering and the `provide` field.
+- `research/2026-04-30-plugins-miller-columns.md` — layout renderer.
+- `research/2026-05-15-global-remove-after-pane-state.md` — chain-first
+  architecture, `after:` removal, `input`/`useInput()`, `defaultAncestors`.
 
 ## Define a pane
 
 ```ts
 // plugins/tasks/web/panes.ts
-import { Pane, type } from "@plugins/primitives/plugins/pane/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 
 export const tasksRootPane = Pane.define({
   id: "tasks-root",
-  after: [null],          // root-only pane
   segment: "tasks",
   component: TasksRoot,
 });
 
 export const taskDetailPane = Pane.define({
   id: "task-detail",
-  after: [tasksRootPane],  // needs tasksRootPane as ancestor
-  segment: "t/:taskId",   // full: /tasks/t/:taskId
+  defaultAncestors: [tasksRootPane],  // hint: prepend tasksRootPane when opening from scratch
+  segment: "t/:taskId",
   component: TaskDetail,
-  provides: type<{ task: Task }>(),
 });
 ```
 
@@ -62,45 +64,36 @@ fine but never match — register every pane your plugin owns.
 Rules:
 
 - `id` is a stable string; used for slot keys and debug output.
-- `after` (optional) — constrains where this pane can appear in the
-  chain. Uses **ancestor semantics**: the pane is valid at position `i`
-  if any entry in `after` matches a pane ID somewhere in positions
-  0..i-1 (not just the direct predecessor). Special values:
-  - `[null]` — root-only (position 0).
-  - `[paneA]` — needs `paneA` somewhere above.
-  - `[null, paneA]` — root or after `paneA`.
-  - omitted — valid at **any** position (root or non-root).
-  Use `after` only when the pane depends on ancestor-provided data (via
-  `useData()`) or when its segment collides with another pane's. Do NOT
-  use `after` to control insertion direction — use `side` on the
-  `openPane` call instead (see **Navigate** below).
+- `defaultAncestors` (optional) — a hint for `openPane` when no caller
+  context exists. When a pane is opened via `.open()` or `openPane()`
+  without being inside an existing chain, the runtime prepends the listed
+  ancestors to build a complete chain. This is purely a convenience for
+  "open from scratch" — it does NOT constrain where the pane can appear.
+  Any pane can appear at any position in the chain.
 - `segment` is the pane's own URL fragment (no leading slash). Supports
   `:param` and `:rest*` (wildcard). Omit for "no URL segment of my own".
   **Segments with params must have a static prefix** (e.g. `t/:taskId`,
-  not bare `:taskId`) to avoid URL parsing ambiguity.
+  not bare `:taskId`) to avoid URL parsing ambiguity. Segments must be
+  globally unique across all registered panes.
 - `component` renders the pane body.
 - `width` (optional) — default column width in pixels for layout
   renderers that arrange panes as columns (Miller). Last column flex-grows
   regardless. Defaults to 400.
-- `provide` (optional) — required when `provides:` is set AND descendants
-  may read via `useData()` from sibling columns. See **Provide data** below.
+- `input` (optional) — `type<T>()` marker declaring the shape of
+  non-URL state this pane accepts at creation time. See **Input** below.
 
-## Read params and ancestor data
+## Read params
 
 ```tsx
 function TaskDetail() {
-  const { task } = taskDetailPane.useData();               // typed
-  return <PaneChrome pane={taskDetailPane} title={task.title}>…</PaneChrome>;
-}
-
-function SomeDescendant() {
-  const { task } = taskDetailPane.useData();               // typed
-  const { convId } = taskConversationPane.useParams();     // typed, own-only
+  const { taskId } = taskDetailPane.useParams();           // typed, own-only
+  const task = useTask(taskId);                             // self-fetch
+  return <PaneChrome pane={taskDetailPane} title={task?.title}>…</PaneChrome>;
 }
 ```
 
 `useParams()` is own-only: it returns only the `:name` segments from *this*
-pane's `path`, not any inherited from ancestors. Reading an ancestor's
+pane's `segment`, not any inherited from ancestors. Reading an ancestor's
 params is explicit: `ancestorPane.useParams()`.
 
 ## Query the chain from outside a pane
@@ -125,54 +118,35 @@ Each entry exposes `{ instanceId, params, fullParams }`. Use
 `instanceId` with `pane.close(instanceId)` when you need to close the
 specific instance you found.
 
-## Provide data
+## Input
 
-When a pane declares `provides: type<T>()` AND any descendant pane reads
-that data via `pane.useData()`, the pane MUST also set `provide:` — a
-component that loads the data and wraps children in
-`<thisPane.Provider value={data}>{children}</thisPane.Provider>`.
+Panes can receive non-URL state at creation time via `input`. Input is
+persisted in `history.state` alongside the chain, so it survives
+back/forward navigation and doesn't depend on the opener pane remaining
+in the chain.
 
-```tsx
-function ConversationPaneProvide({ children }: { children: ReactNode }) {
-  const { convId } = conversationPane.useParams();
-  const conv = useConversation(convId);
-  if (!conv) return <LoadingPlaceholder />;
-  return (
-    <conversationPane.Provider value={{ conversation: conv }}>
-      {children}
-    </conversationPane.Provider>
-  );
-}
-
-export const conversationPane = Pane.define({
-  id: "conversation",
-  path: "/c/:convId",
-  component: ConversationView,
-  provides: type<{ conversation: ConversationRecord }>(),
-  provide: ConversationPaneProvide,
+```ts
+export const myPane = Pane.define({
+  id: "my-pane",
+  segment: "my/:id",
+  component: MyPaneBody,
+  input: type<{ preloadedTitle: string }>(),
 });
+
+// Opening with input:
+openPane(myPane, { id: "123" }, { input: { preloadedTitle: "Hello" } });
+
+// Reading input inside the pane:
+function MyPaneBody() {
+  const { preloadedTitle } = myPane.useInput();
+  // preloadedTitle is available even if the opener pane is closed
+}
 ```
 
-Why this exists: the layout renderer (Miller columns) arranges sibling
-panes side-by-side as separate columns rather than nesting child panes
-inside the parent's React tree. A Provider rendered inside the parent's
-own component therefore can't reach sibling columns. `provide` is
-composed by the layout renderer at the chain level — wrapped around the
-entire row of columns — so every descendant has access to every
-ancestor's provided data. The pane's own `component` does not need to
-render the Provider; it just calls `pane.useData()` and trusts the
-chain-level wrapper.
-
-Loading state: a `provide` component may return a placeholder element
-when data isn't ready (instead of `<Provider>{children}</Provider>`).
-That suspends the chain — the placeholder replaces the entire row of
-columns until data resolves. Pick the placeholder UI carefully: a tall
-"Loading X…" message is usually fine.
-
-If a pane sets `provides:` but no descendant ever reads the data via a
-sibling column (the data is only used by the pane's own component or by
-children rendered via `<Outlet/>`), `provide` is optional — render
-`<pane.Provider>` inside the component as before.
+Use `input` for data the pane needs but that doesn't belong in the URL
+(too long, not meaningful as a deep link, or ephemeral context from the
+opener). The canonical data should still be fetched by the pane itself
+— `input` provides optimistic/preloaded values, not the source of truth.
 
 ## Navigate
 
@@ -227,19 +201,15 @@ opt out with `chrome: false` in `Pane.define`.
 
 ```tsx
 function TaskDetailBody() {
-  const { task } = taskDetailPane.useData();   // provided at the chain level via `provide`
+  const { taskId } = taskDetailPane.useParams();
+  const task = useTask(taskId);                 // self-fetch
   return (
-    <PaneChrome pane={taskDetailPane} title={task.title}>
-      <TaskDetailSections taskId={task.id} />
+    <PaneChrome pane={taskDetailPane} title={task?.title}>
+      <TaskDetailSections taskId={taskId} />
     </PaneChrome>
   );
 }
 ```
-
-If the pane provides data to descendants, load it in `provide` (see
-**Provide data** above) — not inside the visual component. The visual
-component reads via `useData()` and trusts the provider was wrapped at
-the chain level.
 
 Title resolution: the `title` prop wins; otherwise PaneChrome falls
 back to the pane's `chrome.title` config (`string | (params) =>
@@ -267,12 +237,12 @@ import { PaneIconAction } from "@plugins/primitives/plugins/pane/web";
 import { MdRocketLaunch } from "react-icons/md";
 
 function OpenAppButton() {
-  const { task } = taskDetailPane.useData();
+  const { taskId } = taskDetailPane.useParams();
   return (
     <PaneIconAction
       label="Open app"
       icon={MdRocketLaunch}
-      onClick={() => window.open(`/foo/${task.id}`)}
+      onClick={() => window.open(`/foo/${taskId}`)}
     />
   );
 }
@@ -304,7 +274,6 @@ a meaningful "back" target).
 ```ts
 Pane.define({
   id: "agent-side",
-  after: [conversationPane],
   segment: "agent/:agentId",
   component: AgentSideBody,
   chrome: { promote: false },
@@ -326,17 +295,23 @@ renders directly inside its column with no chrome wrapper.
 
 ## Router
 
+The **chain store** is the single source of truth at runtime. Navigation
+APIs (`openPane`, `pane.open()`, `restoreChain`) mutate the chain
+directly. Each mutation:
+
+1. Updates `currentChain` (the in-memory `PaneSlot[]`).
+2. Derives the URL via `buildChainUrl()`.
+3. Pushes (or replaces) a `history.state` entry containing the
+   serialized chain (paneId, params, input per slot).
+
+On `popstate` (back/forward), the chain is restored from
+`history.state` — no URL re-parsing needed. URL parsing (`parseUrl`)
+is only a fallback for initial page load and shared deep links.
+
 The shell mounts a layout renderer once (currently `<MillerColumns/>`
 from `@plugins/layouts/plugins/miller/web`). The renderer reads the
-URL, picks the longest matching pane chain via `matchRegistry`, and
-arranges the chain as a horizontal sequence of columns — root on the
-left, leaf on the right. The legacy `<PaneRouter/>` (which mounts only
-the root and relies on nested `<Outlet/>` calls) is still exported but
-not mounted anywhere.
-
-`<Outlet/>` is also exported but unused by current panes; under Miller
-each pane is rendered in its own column rather than nested inside the
-parent. Pane components no longer call `<Outlet/>`.
+chain via `useMatchForChain()` and arranges it as a horizontal sequence
+of columns — root on the left, leaf on the right.
 
 The router rebuilds its lookup table from the
 `Pane.Register` contribution list synchronously on every render via
@@ -363,7 +338,7 @@ See "Open questions" in the design doc.
   - Slots: `Pane.Register`
 - Exports (web):
   - Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `TypeMarker`
-  - Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `parseUrl`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
+  - Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `parseUrl`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useMatchForChain`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
 - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `worktree-cleanup`
 
 <!-- AUTOGENERATED:END -->

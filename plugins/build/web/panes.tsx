@@ -5,14 +5,13 @@ import { BuildDetail } from "./slots";
 
 export const buildPane = Pane.define({
   id: "build",
-  after: [null],
   segment: "build",
   component: BuildPaneBody,
 });
 
 export const buildDetailPane = Pane.define({
   id: "build-detail",
-  after: [buildPane],
+  defaultAncestors: [buildPane],
   segment: "r/:runId",
   component: BuildDetailBody,
   width: 480,

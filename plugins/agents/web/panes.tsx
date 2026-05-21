@@ -1,10 +1,7 @@
 import type { ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
-import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
-import {
-  conversationPane,
-} from "@plugins/conversations/plugins/conversation-view/web";
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { AgentSideBody } from "./components/agent-side-body";
 import { agentsResource, type Agent } from "../shared/resources";
 import { Agents as AgentsSlots } from "./slots";
@@ -14,7 +11,6 @@ import { SystemAgentDetail } from "./components/system-agent-detail";
 
 export const agentsRootPane = Pane.define({
   id: "agents-root",
-  after: [null],
   segment: "agents",
   component: AgentsRoot,
   // No chrome; the agents list is its own UI.
@@ -24,23 +20,21 @@ export const agentsRootPane = Pane.define({
 
 export const agentDetailPane = Pane.define({
   id: "agent-detail",
-  after: [agentsRootPane],
-  segment: "a/:id",
+  defaultAncestors: [agentsRootPane],
+  segment: "ag/:id",
   component: AgentDetailBody,
-  provides: type<{ agent: Agent }>(),
   width: 360,
 });
 
 export const systemAgentDetailPane = Pane.define({
   id: "agent-system-detail",
-  after: [agentsRootPane],
+  defaultAncestors: [agentsRootPane],
   segment: "system/:systemId",
   component: SystemAgentDetailBody,
 });
 
 export const agentSidePane = Pane.define({
   id: "agent-side",
-  after: [conversationPane],
   segment: "agent/:agentId",
   component: AgentSideBody,
   chrome: {
@@ -101,12 +95,7 @@ function AgentDetailBody(): ReactElement {
     </PaneChrome>
   );
 
-  if (!agent) return wrapped;
-  return (
-    <agentDetailPane.Provider value={{ agent }}>
-      {wrapped}
-    </agentDetailPane.Provider>
-  );
+  return wrapped;
 }
 
 function SystemAgentDetailBody(): ReactElement {

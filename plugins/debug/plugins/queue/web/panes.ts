@@ -3,7 +3,6 @@ import { QueueView } from "./components/queue-view";
 
 export const queuePane = Pane.define({
   id: "queue",
-  after: [null],
   segment: "queue",
   component: QueueView,
 });

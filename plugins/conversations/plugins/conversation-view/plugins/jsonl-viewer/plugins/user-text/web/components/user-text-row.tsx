@@ -3,6 +3,7 @@ import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { useStickyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
@@ -72,12 +73,15 @@ function SegmentedContent({
 
 export function UserTextRow({ event }: { event: JsonlEvent }) {
   const e = event as UserTextEvent;
-  const { conversation } = conversationPane.useData();
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
   const openPane = useOpenPane();
   const collapsible = isLong(e.text);
   const [expanded, setExpanded] = useState(false);
   const reportSticky = useStickyReport();
   const showCollapsed = collapsible && !expanded;
+
+  if (!conversation) return null;
 
   const onFileOpen = (path: string) =>
     openPane(filePeekPane, {

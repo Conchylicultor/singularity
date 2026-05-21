@@ -10,13 +10,13 @@ import { PHASE_CLASSES, PHASE_LABEL } from "./phase-styles";
 import { convSummaryPane } from "../panes";
 
 export function SummarizeButton() {
-  const { conversation } = conversationPane.useData();
+  const { convId } = conversationPane.useParams();
   const summariesResult = useResource(conversationSummariesResource);
   const summaries: ConversationSummary[] | undefined =
-    summariesResult.pending ? undefined : summariesResult.data[conversation.id];
+    summariesResult.pending ? undefined : summariesResult.data[convId];
   const latest = summaries?.[0];
 
-  const { isOpen, toggle } = convSummaryPane.useToggle({ convId: conversation.id });
+  const { isOpen, toggle } = convSummaryPane.useToggle({ convId }, { input: { convId } });
 
   if (!latest) {
     return (

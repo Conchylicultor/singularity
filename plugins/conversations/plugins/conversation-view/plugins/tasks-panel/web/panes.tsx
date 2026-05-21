@@ -1,11 +1,10 @@
-import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Pane, type } from "@plugins/primitives/plugins/pane/web";
 import { TasksPane } from "./components/tasks-pane";
 
 export const convTasksPane = Pane.define({
   id: "conv-tasks",
-  after: [conversationPane],
-  segment: "tasks",
+  segment: "tp",
+  input: type<{ convId: string }>(),
   component: TasksPane,
   chrome: { history: false },
 });

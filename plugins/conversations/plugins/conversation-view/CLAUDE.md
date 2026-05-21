@@ -9,7 +9,7 @@
   - Slots: `Conversation.PromptInput`
 - Exports (web):
   - Types: `ConversationRecord`
-  - Values: `Conversation`, `conversationPane`, `ConversationProvide`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
+  - Values: `Conversation`, `conversationPane`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
 - Contributes:
   - `Pane.Register` "conversation"
   - `Conversation.Header` → `ConversationTitle`

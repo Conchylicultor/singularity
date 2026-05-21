@@ -4,7 +4,6 @@ import { ConfigDetail } from "../components/config-detail";
 
 export const configNavPane = Pane.define({
   id: "config-v2-nav",
-  after: [null],
   segment: "config",
   component: ConfigNavBody,
   chrome: false,
@@ -13,7 +12,7 @@ export const configNavPane = Pane.define({
 
 export const configDetailPane = Pane.define({
   id: "config-v2-detail",
-  after: [configNavPane],
+  defaultAncestors: [configNavPane],
   segment: "cd/:configPath",
   component: ConfigDetailBody,
   width: 500,
