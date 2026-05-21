@@ -4,7 +4,7 @@ import { PluginProvider, loadPlugins } from "@plugins/framework/plugins/web-sdk/
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { pluginEntries } from "../plugins";
+import { webEntries } from "@plugins/framework/plugins/web-sdk/core/web.generated";
 
 const SIDEBAR_SLOTS = new Set(["shell.sidebar"]);
 const SHELL_SLOTS = new Set(["core.root"]);
@@ -29,7 +29,7 @@ function Wrapper({
 }
 
 it("plugin contributions render without crashing", async () => {
-  const { plugins, errors } = await loadPlugins(pluginEntries);
+  const { plugins, errors } = await loadPlugins(webEntries);
   expect(errors).toHaveLength(0);
   for (const plugin of plugins) {
     for (const contribution of plugin.contributions ?? []) {

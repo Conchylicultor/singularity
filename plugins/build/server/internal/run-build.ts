@@ -55,7 +55,7 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
     streamType: "stdout" | "stderr",
   ) {
     if (!stream) return;
-    for await (const chunk of stream) {
+    for await (const chunk of stream as unknown as AsyncIterable<Uint8Array>) {
       for (const line of decoder.decode(chunk).split("\n")) {
         if (line) buildLog.publish(line, streamType);
       }

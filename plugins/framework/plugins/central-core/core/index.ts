@@ -1,3 +1,4 @@
+export { centralCollectedDir } from "./collected-dir";
 export { defineResource, handleResourceHttp, notificationsWsHandler } from "./resources";
 export type {
   DependsOnEntry,

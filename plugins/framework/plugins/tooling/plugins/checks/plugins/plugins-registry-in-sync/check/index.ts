@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from "fs";
 import { relative } from "path";
 import {
-  pluginRegistryPath,
-  renderPluginRegistry,
-  type Runtime,
+  discoverCollectedDirs,
+  renderCollectedDirRegistry,
+  collectedDirRegistryPath,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -17,16 +17,15 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-const RUNTIMES: Runtime[] = ["web", "server", "central"];
-
 const check: Check = {
   id: "plugins-registry-in-sync",
   description:
-    "plugins/framework/plugins/web-core/web/plugins.generated.ts, plugins/framework/plugins/server-core/bin/plugins.generated.ts, and plugins/framework/plugins/central-core/bin/plugins.generated.ts match the current plugin source",
+    "All collected dir registries (web, server, central, check, lint, ...) match the current plugin source",
   async run() {
     const root = await getRoot();
-    for (const runtime of RUNTIMES) {
-      const file = pluginRegistryPath(root, runtime);
+    const defs = await discoverCollectedDirs(root);
+    for (const def of defs) {
+      const file = collectedDirRegistryPath(def);
       const rel = relative(root, file);
       if (!existsSync(file)) {
         return {
@@ -35,7 +34,7 @@ const check: Check = {
           hint: "Run `./singularity build` to generate it.",
         };
       }
-      if (readFileSync(file, "utf8") !== renderPluginRegistry({ root, runtime })) {
+      if (readFileSync(file, "utf8") !== renderCollectedDirRegistry({ root, def })) {
         return {
           ok: false,
           message: `${rel} is out of sync with plugin source`,

@@ -9,23 +9,15 @@ const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 
 // Framework-level files exempt from cross-plugin boundary checks (both the
 // import grammar (R4) and the "default-import is registry-only" rule (R5)).
+// Generated files (*.generated.ts) are exempt from R9 via a pattern check
+// in the inline-import section below — they use dynamic import() by design.
 //
-// Principled exemptions:
-//   - web-core/web/plugins.ts / server-core/bin/plugins.ts / central-core/bin/plugins.ts: plugin
-//     registries (today, 1-line re-exports of the .generated.ts twins).
-//   - web-core/web/plugins.generated.ts / server-core/bin/plugins.generated.ts /
-//     central-core/bin/plugins.generated.ts: codegen output of `./singularity build`,
-//     emits one default-import per plugin barrel by design.
-//
+// App.tsx and its test import the generated web plugin registry directly
+// (re-exporting from the web-sdk barrel would pollute TSC's module graph
+// in server/central tsconfigs via transitive import chains).
 const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
-  "plugins/framework/plugins/web-core/web/plugins.ts",
-  "plugins/framework/plugins/web-core/web/plugins.generated.ts",
-  "plugins/framework/plugins/server-core/bin/plugins.ts",
-  "plugins/framework/plugins/server-core/bin/plugins.generated.ts",
-  "plugins/framework/plugins/server-core/bin/index.ts",
-  "plugins/framework/plugins/central-core/bin/plugins.ts",
-  "plugins/framework/plugins/central-core/bin/plugins.generated.ts",
-  "plugins/framework/plugins/central-core/bin/index.ts",
+  "plugins/framework/plugins/web-core/web/App.tsx",
+  "plugins/framework/plugins/web-core/web/__tests__/plugin-render.test.tsx",
 ]);
 
 const VALID_RUNTIMES = new Set(["web", "server", "central", "core", "shared"]);
@@ -210,7 +202,7 @@ const check: Check = {
       // the boundary system. Use a top-level `import type { X } from "…"` instead.
       // Framework files (plugin registries) are exempt — their dynamic imports
       // are the resilient-loading mechanism, not accidental boundary bypasses.
-      if (!FRAMEWORK_FILES.has(relFile)) {
+      if (!FRAMEWORK_FILES.has(relFile) && !relFile.endsWith(".generated.ts")) {
         for (const inlinePath of extractInlineImports(src)) {
           const resolved = resolveImport(inlinePath, pluginSet);
           if (!resolved) continue;
@@ -288,7 +280,7 @@ const check: Check = {
             rule: "default-import",
             file: relFile,
             message: `default import from \`${imp.path}\` is not allowed outside the plugin registries`,
-            fix: `other plugins may only use named imports. The default export (PluginDefinition) is consumed exclusively by \`plugins/framework/plugins/web-core/web/plugins.ts\` and \`plugins/framework/plugins/server-core/bin/plugins.ts\`.`,
+            fix: `other plugins may only use named imports. The default export (PluginDefinition) is consumed exclusively by the generated registry files (e.g. \`web.generated.ts\`, \`server.generated.ts\`).`,
           });
         }
 

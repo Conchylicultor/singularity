@@ -1,13 +1,13 @@
 import type { PluginDefinition } from "./types";
 
 export interface PluginEntry {
-  name: string;
+  pluginPath: string;
   hierarchyPath?: string;
-  loader: () => Promise<{ default: PluginDefinition }>;
+  loader: () => Promise<{ default: unknown }>;
 }
 
 export interface PluginLoadError {
-  name: string;
+  pluginPath: string;
   error: unknown;
 }
 
@@ -23,12 +23,12 @@ export async function loadPlugins(
     const result = results[i]!;
     const entry = entries[i]!;
     if (result.status === "fulfilled") {
-      const plugin = result.value.default;
+      const plugin = result.value.default as PluginDefinition;
       if (entry.hierarchyPath) plugin._hierarchyPath = entry.hierarchyPath;
       plugins.push(plugin);
     } else {
-      console.error(`[plugin.${entry.name}] failed to load`, result.reason);
-      errors.push({ name: entry.name, error: result.reason });
+      console.error(`[plugin.${entry.pluginPath}] failed to load`, result.reason);
+      errors.push({ pluginPath: entry.pluginPath, error: result.reason });
     }
   }
   return { plugins, errors };

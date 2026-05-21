@@ -35,15 +35,14 @@ export default defineBoundaries({
 
   // Composition roots that wire plugins together — exempt from boundary checks
   exclude: [
-    "plugins/framework/plugins/web-core/web/plugins.ts",
-    "plugins/framework/plugins/web-core/web/plugins.generated.ts",
+    "plugins/framework/plugins/web-sdk/core/web.generated.ts",
     "plugins/framework/plugins/web-core/web/App.tsx",
-    "plugins/framework/plugins/server-core/bin/plugins.ts",
-    "plugins/framework/plugins/server-core/bin/plugins.generated.ts",
+    "plugins/framework/plugins/server-core/core/server.generated.ts",
     "plugins/framework/plugins/server-core/bin/index.ts",
-    "plugins/framework/plugins/central-core/bin/plugins.ts",
-    "plugins/framework/plugins/central-core/bin/plugins.generated.ts",
+    "plugins/framework/plugins/central-core/core/central.generated.ts",
     "plugins/framework/plugins/central-core/bin/index.ts",
+    "plugins/framework/plugins/tooling/plugins/checks/core/check.generated.ts",
+    "plugins/framework/plugins/tooling/plugins/lint/core/lint.generated.ts",
     "eslint.config.ts",
   ],
 });

@@ -1,15 +1,4 @@
-import { existsSync } from "fs";
-import { join, sep } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { Check } from "./types";
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 function isCheck(value: unknown): value is Check {
   return (
@@ -21,39 +10,24 @@ function isCheck(value: unknown): value is Check {
   );
 }
 
-async function loadAllChecks(root: string): Promise<Check[]> {
-  const pluginsRoot = join(root, "plugins");
-  if (!existsSync(pluginsRoot)) return [];
-
-  const tree = buildPluginTree(pluginsRoot);
+async function loadAllChecks(): Promise<Check[]> {
+  const { checkEntries } = await import("./check.generated");
+  const results = await Promise.allSettled(
+    checkEntries.map((e: { pluginPath: string; loader: () => Promise<{ default: unknown }> }) => e.loader()),
+  );
   const out: Check[] = [];
   const seenIds = new Set<string>();
-
-  for (const node of tree.byDir.values()) {
-    const checkBarrel = join(node.dir, "check", "index.ts");
-    if (!existsSync(checkBarrel)) continue;
-    const pluginRel = node.dir
-      .slice(pluginsRoot.length + 1)
-      .split(sep)
-      .join("/");
-    let mod: { default?: unknown };
-    try {
-      mod = await import(checkBarrel);
-    } catch (err) {
-      console.warn(`  [check loader] failed to import ${pluginRel}/check/index.ts: ${err}`);
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i]!;
+    const e = checkEntries[i]!;
+    if (r.status === "rejected") {
+      console.warn(`[check] failed: ${e.pluginPath}`, r.reason);
       continue;
     }
-    const exported = mod.default;
+    const exported = (r.value as { default?: unknown }).default;
     const checks = Array.isArray(exported) ? exported : exported ? [exported] : [];
     for (const c of checks) {
-      if (!isCheck(c)) {
-        console.warn(`  [check loader] ${pluginRel}/check/index.ts: skipping non-Check export`);
-        continue;
-      }
-      if (seenIds.has(c.id)) {
-        console.warn(`  [check loader] ${pluginRel}/check: duplicate id "${c.id}"; skipping`);
-        continue;
-      }
+      if (!isCheck(c) || seenIds.has(c.id)) continue;
       seenIds.add(c.id);
       out.push(c);
     }
@@ -62,8 +36,7 @@ async function loadAllChecks(root: string): Promise<Check[]> {
 }
 
 export async function listAllChecks(): Promise<Check[]> {
-  const root = await getRoot();
-  return loadAllChecks(root);
+  return loadAllChecks();
 }
 
 export interface RunChecksOptions {

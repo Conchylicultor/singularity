@@ -17,11 +17,14 @@ export {
 } from "./docgen";
 
 export {
+  collectedDirRegistryPath,
+  discoverCollectedDirs,
   generatePluginRegistry,
-  pluginRegistryPath,
-  renderPluginRegistry,
-  type Runtime,
+  renderCollectedDirRegistry,
+  type DiscoveredCollectedDir,
 } from "./plugin-registry-gen";
+
+export { defineCollectedDir, isCollectedDirDef, type CollectedDirDef } from "./collected-dir";
 
 export { generateConfigOrigins, renderConfigOriginContent } from "./config-origin-gen";
 

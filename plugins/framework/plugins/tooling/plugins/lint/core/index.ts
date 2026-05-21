@@ -1,3 +1,4 @@
+export { lintCollectedDir } from "./collected-dir";
 export { promiseSafetyRules } from "./promise-safety/index";
 export {
   discoverAllowDefaultProject,

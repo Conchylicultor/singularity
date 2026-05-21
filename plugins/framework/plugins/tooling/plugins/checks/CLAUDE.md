@@ -7,7 +7,7 @@
 - Description: Check runner and built-in checks for ./singularity check
 - Exports (core):
   - Types: `Check`, `CheckResult`, `RunChecksOptions`, `TscTarget`
-  - Values: `discoverTscTargets`, `listAllChecks`, `runChecks`
+  - Values: `checkCollectedDir`, `discoverTscTargets`, `listAllChecks`, `runChecks`
 - Sub-plugins:
   - **`allow-default-project`**
   - **`barrel-stubs-in-sync`**

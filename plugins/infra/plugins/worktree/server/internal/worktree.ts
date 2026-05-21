@@ -33,7 +33,7 @@ async function copyEslintCacheToWorktree(repoRoot: string, wtPath: string): Prom
   if (!existsSync(sourcePath)) return;
 
   const raw = await Bun.file(sourcePath).text();
-  const rewritten = raw.replaceAll(repoRoot, wtPath);
+  const rewritten = raw.split(repoRoot).join(wtPath);
 
   const destPath = join(wtPath, ".cache", "eslint");
   await mkdir(join(wtPath, ".cache"), { recursive: true });

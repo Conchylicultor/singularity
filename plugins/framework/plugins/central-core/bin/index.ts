@@ -1,12 +1,36 @@
-import type { WsData, HttpHandler, WsHandler } from "@plugins/framework/plugins/central-core/core";
-import { plugins } from "./plugins";
+import type { WsData, HttpHandler, WsHandler, CentralPluginDefinition } from "@plugins/framework/plugins/central-core/core";
 import { notificationsWsHandler, handleResourceHttp } from "@plugins/framework/plugins/central-core/core";
+import { centralEntries } from "../core/central.generated";
 import { topoSortPlugins } from "./topo";
+
+// ── Load all central plugins ───────────────────────────────────
+const loadResults = await Promise.allSettled(
+  centralEntries.map((e) => e.loader() as Promise<{ default: CentralPluginDefinition }>),
+);
+const byPath = new Map<string, CentralPluginDefinition>();
+for (let i = 0; i < loadResults.length; i++) {
+  const r = loadResults[i]!;
+  const e = centralEntries[i]!;
+  if (r.status === "rejected") {
+    console.error(`[plugin.${e.pluginPath}] load failed`, r.reason);
+    continue;
+  }
+  const plugin = r.value.default;
+  plugin._hierarchyPath = e.hierarchyPath;
+  byPath.set(e.pluginPath, plugin);
+}
+for (const e of centralEntries) {
+  const plugin = byPath.get(e.pluginPath);
+  if (!plugin) continue;
+  plugin.dependsOn = e.dependsOn
+    .map((p) => byPath.get(p))
+    .filter((d): d is CentralPluginDefinition => d !== undefined);
+}
+const ordered = topoSortPlugins([...byPath.values()]);
 
 // Phase 1 — register: sequential, topo-sorted. Each plugin's `register`
 // array holds Registration tokens; the framework calls `.register()` on
 // each in order. See server/src/index.ts for the same pattern.
-const ordered = topoSortPlugins(plugins);
 for (const p of ordered) {
   for (const r of p.register ?? []) {
     try {

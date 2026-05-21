@@ -1,3 +1,4 @@
+export { serverCollectedDir } from "./collected-dir";
 export {
   collectContributions,
   defineServerContribution,

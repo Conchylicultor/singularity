@@ -1,3 +1,4 @@
+export { webCollectedDir } from "./collected-dir";
 export { defineSlot, Core } from "./slots";
 export type { Slot } from "./slots";
 export { defineCommand } from "./commands";

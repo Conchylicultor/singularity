@@ -3,7 +3,7 @@ import { PluginProvider, Core, loadPlugins } from "@plugins/framework/plugins/we
 import type { PluginDefinition, PluginLoadError } from "@plugins/framework/plugins/web-sdk/core";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { NotificationsProvider } from "@plugins/primitives/plugins/live-state/web";
-import { pluginEntries } from "./plugins";
+import { webEntries } from "@plugins/framework/plugins/web-sdk/core/web.generated";
 import { PluginLoadErrors } from "./components/plugin-load-errors";
 
 function RootRenderer() {
@@ -28,7 +28,7 @@ export default function App() {
   const [state, setState] = useState<LoadedState | null>(null);
 
   useEffect(() => {
-    void loadPlugins(pluginEntries).then(setState);
+    void loadPlugins(webEntries).then(setState);
   }, []);
 
   if (!state) return null;

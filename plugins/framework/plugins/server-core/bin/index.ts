@@ -5,9 +5,34 @@ import {
   collectContributions,
   reportServerError,
 } from "@plugins/framework/plugins/server-core/core";
-import type { WsData, HttpHandler, WsHandler } from "@plugins/framework/plugins/server-core/core";
-import { plugins } from "./plugins";
+import type { WsData, HttpHandler, WsHandler, ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { serverEntries } from "../core/server.generated";
 import { topoSortPlugins } from "./topo";
+
+// ── Load all server plugins ────────────────────────────────────
+const loadResults = await Promise.allSettled(
+  serverEntries.map((e) => e.loader() as Promise<{ default: ServerPluginDefinition }>),
+);
+const byPath = new Map<string, ServerPluginDefinition>();
+for (let i = 0; i < loadResults.length; i++) {
+  const r = loadResults[i]!;
+  const e = serverEntries[i]!;
+  if (r.status === "rejected") {
+    console.error(`[plugin.${e.pluginPath}] load failed`, r.reason);
+    continue;
+  }
+  const plugin = r.value.default;
+  plugin._hierarchyPath = e.hierarchyPath;
+  byPath.set(e.pluginPath, plugin);
+}
+for (const e of serverEntries) {
+  const plugin = byPath.get(e.pluginPath);
+  if (!plugin) continue;
+  plugin.dependsOn = e.dependsOn
+    .map((p) => byPath.get(p))
+    .filter((d): d is ServerPluginDefinition => d !== undefined);
+}
+const ordered = topoSortPlugins([...byPath.values()]);
 
 // Phase 1 — register: sequential, topo-sorted. Each plugin's `register`
 // array holds Registration tokens returned by helpers like `Mcp.tool`,
@@ -15,7 +40,6 @@ import { topoSortPlugins } from "./topo";
 // `UNSAFE_installDurableHooks`. This is the only place plugins write to
 // global registries. A failure here is fatal: a half-initialized registry
 // would let `onReady` run against an inconsistent world.
-const ordered = topoSortPlugins(plugins);
 for (const p of ordered) {
   for (const r of p.register ?? []) {
     const end = profilerStart(`register:${p.id}`, "register", p.id, p.id);
