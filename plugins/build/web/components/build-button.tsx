@@ -54,10 +54,11 @@ export function BuildButton() {
 
     if (trackedBuildRef.current === latestRun.id) {
       trackedBuildRef.current = null;
+      const linkTo = `/build/r/${latestRun.id}`;
       if (latestRun.exitCode === 0) {
-        toast({ type: "build", description: "Build succeeded", variant: "success" });
+        toast({ type: "build", description: "Build succeeded", variant: "success", linkTo });
       } else {
-        toast({ type: "build", description: `Build failed (exit ${latestRun.exitCode})`, variant: "error" });
+        toast({ type: "build", description: `Build failed (exit ${latestRun.exitCode})`, variant: "error", linkTo });
       }
     }
   }, [latestRun?.id, latestRun?.finishedAt]);

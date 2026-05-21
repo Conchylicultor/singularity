@@ -25,6 +25,7 @@
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
   - Resources: `build.frontendHash` (push), `build.history` (push), `build.mainAheadCount` (push)
 - Sub-plugins:
+  - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.
   - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
   - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.
   - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane. Per-run build profiling data endpoint.

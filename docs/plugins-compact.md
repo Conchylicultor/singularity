@@ -62,6 +62,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Plugins:
+    - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
     - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.
     - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane. Per-run build profiling data endpoint.

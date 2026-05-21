@@ -5,6 +5,9 @@
 ## Plugin reference
 
 - Description: Live log stream section in the build detail pane. Per-run build log data endpoint.
+- Exports (core):
+  - Types: `BuildLogsResponse`, `BuildStepLog`
+  - Values: `BuildLogsResponseSchema`, `getBuildRunLogs`
 - Exports (shared):
   - Types: `BuildLogsResponse`, `BuildStepLog`
   - Values: `BuildLogsResponseSchema`, `getBuildRunLogs`

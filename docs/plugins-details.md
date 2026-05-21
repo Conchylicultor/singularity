@@ -379,10 +379,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
     - Resources: `build.frontendHash` (push), `build.history` (push), `build.mainAheadCount` (push)
   - Plugins:
+    - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.
+      - Contributes:
+        - `BuildDetailSlots.Section` "fix" → `BuildFixSection`
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
       - Contributes:
         - `BuildDetailSlots.Section` "info" → `BuildInfo`
     - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.
+      - Exports (core):
+        - Types: `BuildLogsResponse`, `BuildStepLog`
+        - Values: `BuildLogsResponseSchema`, `getBuildRunLogs`
       - Exports (shared):
         - Types: `BuildLogsResponse`, `BuildStepLog`
         - Values: `BuildLogsResponseSchema`, `getBuildRunLogs`
@@ -1052,7 +1058,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `getBuildProfiling`
           - Contributes:
             - `Profiling.Section` → `BuildSection`
-          - Imported by: `build-info`, `build-logs`, `build-profiling`
+          - Imported by: `build-fix`, `build-info`, `build-logs`, `build-profiling`
         - **`push`** — Push contention profiling for the Gantt debug pane. Push contention profiling data endpoint.
           - Exports (shared):
             - Values: `getPushProfiling`
