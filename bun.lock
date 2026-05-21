@@ -359,6 +359,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-drop-and-exit",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/drop-dependents": {
+      "name": "@singularity/plugin-conversations-conversation-view-drop-dependents",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/exit": {
       "name": "@singularity/plugin-conversations-conversation-view-exit",
       "version": "0.0.1",
@@ -2082,6 +2086,8 @@
     "@singularity/plugin-conversations-conversation-view-dependencies": ["@singularity/plugin-conversations-conversation-view-dependencies@workspace:plugins/conversations/plugins/conversation-view/plugins/dependencies"],
 
     "@singularity/plugin-conversations-conversation-view-drop-and-exit": ["@singularity/plugin-conversations-conversation-view-drop-and-exit@workspace:plugins/conversations/plugins/conversation-view/plugins/drop-and-exit"],
+
+    "@singularity/plugin-conversations-conversation-view-drop-dependents": ["@singularity/plugin-conversations-conversation-view-drop-dependents@workspace:plugins/conversations/plugins/conversation-view/plugins/drop-dependents"],
 
     "@singularity/plugin-conversations-conversation-view-exit": ["@singularity/plugin-conversations-conversation-view-exit@workspace:plugins/conversations/plugins/conversation-view/plugins/exit"],
 

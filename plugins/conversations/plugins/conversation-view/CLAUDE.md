@@ -13,7 +13,7 @@
 - Contributes:
   - `Pane.Register` "conversation"
   - `Conversation.Header` → `ConversationTitle`
-- Slot contributors: `agents`, `allow-monitor`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `dependencies`, `docs-button`, `drop-and-exit`, `event-counter`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `model`, `notes`, `open-app`, `prompt-input`, `review`, `status`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+- Slot contributors: `agents`, `allow-monitor`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `dependencies`, `docs-button`, `drop-and-exit`, `drop-dependents`, `event-counter`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `model`, `notes`, `open-app`, `prompt-input`, `review`, `status`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
 - Sub-plugins:
   - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
   - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
@@ -22,6 +22,7 @@
   - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
   - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
   - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
+  - **`drop-dependents`** — Prompt-bar button that drops the task and all its transitive dependents, then closes the conversation.
   - **`exit`** — Toolbar button that closes the conversation without changing any task state.
   - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
   - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.

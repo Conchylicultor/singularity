@@ -1,0 +1,77 @@
+import { useMemo } from "react";
+import { MdDeleteSweep } from "react-icons/md";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversation } from "@plugins/conversations/web";
+import { toast } from "@plugins/notifications/web";
+import { tasksResource, type Task } from "@plugins/tasks/core";
+import { Button } from "@/components/ui/button";
+import { dropDependents } from "../../shared";
+
+function countTransitiveDependents(taskId: string, tasks: readonly Task[]): number {
+  const dependentsOf = new Map<string, string[]>();
+  for (const t of tasks) {
+    for (const depId of t.dependencies) {
+      const list = dependentsOf.get(depId);
+      if (list) list.push(t.id);
+      else dependentsOf.set(depId, [t.id]);
+    }
+  }
+  const seen = new Set<string>();
+  const stack = dependentsOf.get(taskId) ?? [];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    if (seen.has(cur)) continue;
+    seen.add(cur);
+    const next = dependentsOf.get(cur);
+    if (next) stack.push(...next);
+  }
+  return seen.size;
+}
+
+export function DropDependentsButton({
+  conversation,
+}: {
+  conversation: ConversationRecord;
+}) {
+  const live = useConversation(conversation.id) ?? conversation;
+  const tasksResult = useResource(tasksResource);
+  const allTasks = useMemo(() => (tasksResult.pending ? [] : tasksResult.data), [tasksResult]);
+  const dependentCount = useMemo(
+    () => countTransitiveDependents(conversation.taskId, allTasks),
+    [conversation.taskId, allTasks],
+  );
+
+  const { mutate, isPending } = useEndpointMutation(dropDependents, {
+    onSuccess: (data) => {
+      toast({
+        type: "conversation",
+        description: `Dropped ${data.dropped} task(s) and closed conversation`,
+        variant: "success",
+      });
+    },
+    onError: (err) => toast({
+      type: "conversation",
+      description: `Drop dependents failed: ${err.message}`,
+      variant: "error",
+    }),
+  });
+
+  if (dependentCount === 0) return null;
+
+  const disabled = isPending || live.status === "gone" || live.status === "done" || live.status === "starting";
+
+  return (
+    <Button
+      variant="destructive"
+      size="icon-sm"
+      title={isPending ? "Dropping…" : `Drop task + ${dependentCount} dependent(s) & Exit`}
+      aria-label={`Drop task and ${dependentCount} dependents and exit`}
+      disabled={disabled}
+      onClick={() => mutate({ params: { id: conversation.id } })}
+    >
+      <MdDeleteSweep className="size-3.5" />
+    </Button>
+  );
+}

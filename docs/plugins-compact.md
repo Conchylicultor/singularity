@@ -105,6 +105,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
         - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
         - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
+        - **`drop-dependents`** — Prompt-bar button that drops the task and all its transitive dependents, then closes the conversation.
         - **`exit`** — Toolbar button that closes the conversation without changing any task state.
         - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
         - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.

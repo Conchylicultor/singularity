@@ -99,6 +99,7 @@ export {
   updateTask,
   updateTaskTitle,
   deleteTask,
+  dropTaskTree,
   addTaskDependency,
   removeTaskDependency,
   ensureMetaTask,

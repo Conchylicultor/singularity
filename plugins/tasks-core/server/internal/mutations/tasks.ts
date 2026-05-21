@@ -240,6 +240,50 @@ export async function removeTaskDependency(
   return true;
 }
 
+export async function dropTaskTree(id: string): Promise<number> {
+  const allDeps = await db
+    .select({
+      taskId: _taskDependencies.taskId,
+      dependsOnTaskId: _taskDependencies.dependsOnTaskId,
+    })
+    .from(_taskDependencies);
+  const dependentsOf = new Map<string, string[]>();
+  for (const row of allDeps) {
+    const list = dependentsOf.get(row.dependsOnTaskId);
+    if (list) list.push(row.taskId);
+    else dependentsOf.set(row.dependsOnTaskId, [row.taskId]);
+  }
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  const stack = [id];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    if (seen.has(cur)) continue;
+    seen.add(cur);
+    ids.push(cur);
+    const deps = dependentsOf.get(cur);
+    if (deps) stack.push(...deps);
+  }
+
+  const now = new Date();
+  const befores = new Map<string, TaskStatus | null>();
+  for (const tid of ids) {
+    befores.set(tid, await readTaskStatus(tid));
+  }
+
+  await db
+    .update(_tasks)
+    .set({ droppedAt: now, heldAt: null, updatedAt: now })
+    .where(inArray(_tasks.id, ids));
+
+  tasksResource.notify();
+
+  for (const tid of ids) {
+    await emitStatusChangeIfChanged(tid, befores.get(tid) ?? null);
+  }
+  return ids.length;
+}
+
 // Idempotently ensures the meta-task exists. Returns true iff this call
 // inserted the row (used as a one-shot signal for backfills).
 export async function ensureMetaTask(id: string, title: string): Promise<boolean> {
