@@ -15,6 +15,7 @@ import {
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import type { Disposable, JsonValue } from "../../core";
 import { REPO_ROOT, CONFIG_DIR } from "@plugins/infra/plugins/paths/server";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
 import { configV2ServerResource, getDescriptorByStorePath, registerDescriptorPath, setConfigGetter } from "./resource";
@@ -32,10 +33,29 @@ const subscribersByDescriptor = new WeakMap<ConfigDescriptor, Set<(values: Confi
 
 function injectCollectionIds(
   doc: Record<string, unknown>,
-  _fields: FieldsRecord,
+  fields: FieldsRecord,
 ): Record<string, unknown> {
-  // No-op until listField is implemented
-  return doc;
+  const result = { ...doc };
+  for (const [key, field] of Object.entries(fields)) {
+    if (!("itemFields" in field)) continue;
+    const arr = result[key];
+    if (!Array.isArray(arr)) continue;
+    let lastRank: Rank | null = null;
+    result[key] = arr.map((item: Record<string, unknown>) => {
+      const out = { ...item };
+      if (!out.id || typeof out.id !== "string") {
+        out.id = crypto.randomUUID();
+      }
+      if (!out.rank || typeof out.rank !== "string") {
+        lastRank = Rank.between(lastRank, null);
+        out.rank = lastRank.toString();
+      } else {
+        lastRank = Rank.from(out.rank as string);
+      }
+      return out;
+    });
+  }
+  return result;
 }
 
 export function initRegistry(): void {
@@ -77,7 +97,11 @@ export function initRegistry(): void {
     const reloadValues = (): ConfigValues<FieldsRecord> => {
       const freshUserOrigin = jsoncConfigProxy(userOriginPath);
       const freshUserOverwrites = jsoncConfigProxy(userOverwritesPath);
-      return readTypedConfig(descriptor, freshUserOrigin, freshUserOverwrites);
+      const raw = readTypedConfig(descriptor, freshUserOrigin, freshUserOverwrites);
+      return injectCollectionIds(
+        raw as Record<string, unknown>,
+        descriptor.fields,
+      ) as ConfigValues<FieldsRecord>;
     };
 
     const values = reloadValues();

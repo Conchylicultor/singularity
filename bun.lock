@@ -273,6 +273,9 @@
     "plugins/config_v2/plugins/fields": {
       "name": "@singularity/plugin-config_v2-fields",
     },
+    "plugins/config_v2/plugins/fields/plugins/list": {
+      "name": "@singularity/plugin-config_v2-fields-list",
+    },
     "plugins/config_v2/plugins/fields/plugins/primitives": {
       "name": "@singularity/plugin-config_v2-fields-primitives",
     },
@@ -2044,6 +2047,8 @@
     "@singularity/plugin-config_v2": ["@singularity/plugin-config_v2@workspace:plugins/config_v2"],
 
     "@singularity/plugin-config_v2-fields": ["@singularity/plugin-config_v2-fields@workspace:plugins/config_v2/plugins/fields"],
+
+    "@singularity/plugin-config_v2-fields-list": ["@singularity/plugin-config_v2-fields-list@workspace:plugins/config_v2/plugins/fields/plugins/list"],
 
     "@singularity/plugin-config_v2-fields-primitives": ["@singularity/plugin-config_v2-fields-primitives@workspace:plugins/config_v2/plugins/fields/plugins/primitives"],
 

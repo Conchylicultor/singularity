@@ -65,7 +65,7 @@ Overwrites are **full copies**, not deltas. `setConfig` writes `{ ...currentValu
   - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
 - Exports (server):
   - Values: `ConfigV2`, `getConfig`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-- Imported by: `build`, `codegen`, `primitives`, `settings`
+- Imported by: `build`, `codegen`, `list`, `primitives`, `settings`
 - Sub-plugins:
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
   - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.

@@ -1,0 +1,5 @@
+{
+  "name": "@singularity/plugin-config_v2-fields-list",
+  "private": true,
+  "description": "Sortable list field type with stable UUID identity and fractional-index ordering."
+}

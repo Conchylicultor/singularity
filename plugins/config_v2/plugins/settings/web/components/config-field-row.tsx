@@ -6,6 +6,19 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { FieldDef } from "@plugins/config_v2/core";
 import { setConfigField, resetConfigField } from "../../core";
 
+function isFieldModified(field: FieldDef, value: unknown, defaultValue: unknown): boolean {
+  if ("itemFields" in field && Array.isArray(value) && Array.isArray(defaultValue)) {
+    const strip = (arr: unknown[]) =>
+      arr.map((item) => {
+        if (!item || typeof item !== "object") return item;
+        const { id: _id, rank: _rank, ...rest } = item as Record<string, unknown>;
+        return rest;
+      });
+    return JSON.stringify(strip(value)) !== JSON.stringify(strip(defaultValue));
+  }
+  return value !== defaultValue;
+}
+
 export function ConfigFieldRow({
   fieldKey,
   field,
@@ -19,7 +32,7 @@ export function ConfigFieldRow({
   defaultValue: unknown;
   storePath: string;
 }) {
-  const isModified = value !== defaultValue;
+  const isModified = isFieldModified(field, value, defaultValue);
 
   const handleChange = useCallback(
     (newValue: unknown) => {

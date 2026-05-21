@@ -451,13 +451,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
   - Exports (server):
     - Values: `ConfigV2`, `getConfig`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-  - Imported by: `build`, `codegen`, `primitives`, `settings`
+  - Imported by: `build`, `codegen`, `list`, `primitives`, `settings`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
         - Types: `FieldRendererComponent`, `FieldRendererProps`
         - Values: `FieldRenderer`, `Fields`
       - Plugins:
+        - **`list`** — Sortable list field type with stable UUID identity and fractional-index ordering.
+          - Exports (core):
+            - Types: `ListFieldDef`, `ListItem`
+            - Values: `isListFieldDef`, `listField`, `listFieldType`
+          - Contributes:
+            - `Fields.Renderer` "list" → `ListRenderer`
         - **`primitives`** — Basic field types: bool, text, int, float.
           - Exports (core):
             - Types: `BoolFieldDef`, `FloatFieldDef`, `IntFieldDef`, `TextFieldDef`
