@@ -234,11 +234,15 @@ export function JsonlPane({
           </div>
         </div>
         {totals && (
-          <div
-            className="pointer-events-auto absolute bottom-2 right-3 rounded-md border border-border/60 bg-background/85 px-2 py-1 tabular-nums text-xs text-muted-foreground shadow-sm backdrop-blur"
-            title={`Latest context: ${totals.latestContext.toLocaleString()} tokens\nTotal output: ${totals.output.toLocaleString()} tokens`}
-          >
-            {formatTokenCount(totals.latestContext)} ctx · {formatTokenCount(totals.output)} out
+          <div className="pointer-events-none absolute bottom-2 left-0 right-0 z-10">
+            <div className="mx-auto flex max-w-reading justify-end px-3">
+              <span
+                className="pointer-events-auto tabular-nums text-xs text-muted-foreground/60"
+                title={`Latest context: ${totals.latestContext.toLocaleString()} tokens\nTotal output: ${totals.output.toLocaleString()} tokens`}
+              >
+                {formatTokenCount(totals.latestContext)} ctx · {formatTokenCount(totals.output)} out
+              </span>
+            </div>
           </div>
         )}
         {overlays.map((o) => <o.component key={o.id} />)}
