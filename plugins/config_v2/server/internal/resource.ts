@@ -23,6 +23,10 @@ export function registerDescriptorPath(path: string, descriptor: ConfigDescripto
   descriptorByPath.set(path, descriptor);
 }
 
+export function getDescriptorByStorePath(path: string): ConfigDescriptor | undefined {
+  return descriptorByPath.get(path);
+}
+
 export function setConfigGetter(getter: ConfigGetter): void {
   configGetter = getter;
 }

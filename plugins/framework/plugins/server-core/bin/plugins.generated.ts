@@ -28,6 +28,7 @@ import buildBuildProfilingPlugin from "@plugins/build/plugins/build-profiling/se
 import buildPlugin from "@plugins/build/server";
 import codeExplorerFileResolvePlugin from "@plugins/code-explorer/plugins/file-resolve/server";
 import codeExplorerPlugin from "@plugins/code-explorer/server";
+import config_v2SettingsPlugin from "@plugins/config_v2/plugins/settings/server";
 import config_v2Plugin from "@plugins/config_v2/server";
 import configPlugin from "@plugins/config/server";
 import conversationsRecoverPlugin from "@plugins/conversations-recover/server";
@@ -132,6 +133,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (buildPlugin as ServerPluginDefinition).dependsOn = [config_v2Plugin, databasePlugin, debugLogsPlugin, infraEndpointsPlugin, infraEventsPlugin, infraGitWatcherPlugin, infraJobsPlugin, infraPathsPlugin];
 (codeExplorerFileResolvePlugin as ServerPluginDefinition).dependsOn = [codeExplorerPlugin, infraEndpointsPlugin, infraPathsPlugin];
 (codeExplorerPlugin as ServerPluginDefinition).dependsOn = [infraEndpointsPlugin, infraPathsPlugin, infraWorktreePlugin, tasksCorePlugin];
+(config_v2SettingsPlugin as ServerPluginDefinition).dependsOn = [config_v2Plugin];
 (config_v2Plugin as ServerPluginDefinition).dependsOn = [infraPathsPlugin];
 (configPlugin as ServerPluginDefinition).dependsOn = [databasePlugin, infraEndpointsPlugin, infraPathsPlugin, infraSecretsPlugin];
 (conversationsRecoverPlugin as ServerPluginDefinition).dependsOn = [conversationsPlugin, infraEndpointsPlugin, tasksCorePlugin];
@@ -229,6 +231,7 @@ import uiTokensTypographyPlugin from "@plugins/ui/plugins/tokens/plugins/typogra
 (buildPlugin as ServerPluginDefinition)._hierarchyPath = "build";
 (codeExplorerFileResolvePlugin as ServerPluginDefinition)._hierarchyPath = "code-explorer/file-resolve";
 (codeExplorerPlugin as ServerPluginDefinition)._hierarchyPath = "code-explorer";
+(config_v2SettingsPlugin as ServerPluginDefinition)._hierarchyPath = "config_v2/settings";
 (config_v2Plugin as ServerPluginDefinition)._hierarchyPath = "config_v2";
 (configPlugin as ServerPluginDefinition)._hierarchyPath = "config";
 (conversationsRecoverPlugin as ServerPluginDefinition)._hierarchyPath = "conversations-recover";
@@ -336,6 +339,7 @@ export const plugins: ServerPluginDefinition[] = [
   buildPlugin,
   codeExplorerFileResolvePlugin,
   codeExplorerPlugin,
+  config_v2SettingsPlugin,
   config_v2Plugin,
   configPlugin,
   conversationsRecoverPlugin,

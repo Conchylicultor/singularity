@@ -117,7 +117,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `DebugApp`
           - Contributes:
             - `Apps.App` "Debug" → `DebugLayout`
-          - Imported by: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `draw-on-app`, `edit-mode`, `health`, `improve`, `notifications`, `screenshot`, `stats`, `task-detail`, `theme`, `theme-customizer`, `toaster`, `worktree-switcher`
+          - Imported by: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `draw-on-app`, `edit-mode`, `health`, `improve`, `notifications`, `screenshot`, `settings`, `stats`, `task-detail`, `theme`, `theme-customizer`, `toaster`, `worktree-switcher`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -373,6 +373,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Toolbar` → `BuildButton`
     - `Pane.Register` "build"
     - `Pane.Register` "build-detail"
+    - `ConfigV2.WebRegister`
   - Server:
     - Register: `defineJob('build.run')`
     - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
@@ -446,10 +447,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`
     - Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2Resource`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`
   - Exports (web):
-    - Values: `ConfigV2`, `useConfig`
+    - Types: `ConfigRegistration`
+    - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
   - Exports (server):
-    - Values: `ConfigV2`, `getConfig`, `setConfig`, `watchConfig`
-  - Imported by: `build`, `codegen`, `primitives`
+    - Values: `ConfigV2`, `getConfig`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
+  - Imported by: `build`, `codegen`, `primitives`, `settings`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
@@ -465,6 +467,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Fields.Renderer` "text" → `TextRenderer`
             - `Fields.Renderer` "int" → `IntRenderer`
             - `Fields.Renderer` "float" → `FloatRenderer`
+    - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
+      - Exports (core):
+        - Values: `resetConfigField`, `setConfigField`
+      - Contributes:
+        - `Pane.Register` "config-v2-nav"
+        - `Pane.Register` "config-v2-detail"
+        - `Shell.Sidebar` "Config" → `component`
+      - Server:
+        - Uses: `config_v2.resetConfigByPath`, `config_v2.setConfigByPath`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:
@@ -1458,7 +1469,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `TypeMarker`
         - Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `parseUrl`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
-      - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `worktree-cleanup`
+      - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `worktree-cleanup`
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
       - Exports (web):
         - Values: `useDraft`

@@ -17,7 +17,7 @@ import type { Disposable, JsonValue } from "../../core";
 import { REPO_ROOT, CONFIG_DIR } from "@plugins/infra/plugins/paths/server";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
-import { configV2ServerResource, registerDescriptorPath, setConfigGetter } from "./resource";
+import { configV2ServerResource, getDescriptorByStorePath, registerDescriptorPath, setConfigGetter } from "./resource";
 
 interface CacheEntry {
   values: ConfigValues<FieldsRecord>;
@@ -170,6 +170,20 @@ export function setConfig<F extends FieldsRecord, K extends keyof F & string>(
   base[key] = value;
   const injected = injectCollectionIds(base, descriptor.fields);
   userOverwrites.write(injected as JsonValue, hash);
+}
+
+export function setConfigByPath(storePath: string, key: string, value: unknown): void {
+  const descriptor = getDescriptorByStorePath(storePath);
+  if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
+  setConfig(descriptor, key as keyof typeof descriptor.fields & string, value as never);
+}
+
+export function resetConfigByPath(storePath: string, key: string): void {
+  const descriptor = getDescriptorByStorePath(storePath);
+  if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
+  const defaultValue = (descriptor.defaults as Record<string, unknown>)[key];
+  if (defaultValue === undefined) throw new Error(`No field "${key}" in "${descriptor.name}"`);
+  setConfig(descriptor, key as keyof typeof descriptor.fields & string, defaultValue as never);
 }
 
 export function watchConfig<F extends FieldsRecord>(

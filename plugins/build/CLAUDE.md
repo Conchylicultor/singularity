@@ -19,6 +19,7 @@
   - `Shell.Toolbar` → `BuildButton`
   - `Pane.Register` "build"
   - `Pane.Register` "build-detail"
+  - `ConfigV2.WebRegister`
 - Server:
   - Register: `defineJob('build.run')`
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`

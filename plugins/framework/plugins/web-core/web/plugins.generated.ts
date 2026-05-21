@@ -60,6 +60,7 @@ export const pluginEntries: PluginEntry[] = [
   { name: "code-explorer", hierarchyPath: "code-explorer", loader: () => import("@plugins/code-explorer/web") },
   { name: "config_v2/plugins/fields/plugins/primitives", hierarchyPath: "config_v2/fields/primitives", loader: () => import("@plugins/config_v2/plugins/fields/plugins/primitives/web") },
   { name: "config_v2/plugins/fields", hierarchyPath: "config_v2/fields", loader: () => import("@plugins/config_v2/plugins/fields/web") },
+  { name: "config_v2/plugins/settings", hierarchyPath: "config_v2/settings", loader: () => import("@plugins/config_v2/plugins/settings/web") },
   { name: "config_v2", hierarchyPath: "config_v2", loader: () => import("@plugins/config_v2/web") },
   { name: "config", hierarchyPath: "config", loader: () => import("@plugins/config/web") },
   { name: "conversations-recover", hierarchyPath: "conversations-recover", loader: () => import("@plugins/conversations-recover/web") },

@@ -5,7 +5,7 @@ import { initRegistry, shutdownRegistry } from "./internal/registry";
 import { configV2ServerResource } from "./internal/resource";
 
 export { ConfigV2 } from "./internal/contribution";
-export { getConfig, setConfig, watchConfig } from "./internal/registry";
+export { getConfig, setConfig, setConfigByPath, resetConfigByPath, watchConfig } from "./internal/registry";
 
 export default {
   id: "config-v2",

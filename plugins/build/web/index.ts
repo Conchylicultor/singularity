@@ -1,6 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Shell } from "@plugins/shell/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { ConfigV2 } from "@plugins/config_v2/web";
+import { buildConfig } from "../shared/config";
 import { BuildButton } from "./components/build-button";
 import { buildPane, buildDetailPane } from "./panes";
 
@@ -19,5 +21,6 @@ export default {
     }),
     Pane.Register({ pane: buildPane }),
     Pane.Register({ pane: buildDetailPane }),
+    ConfigV2.WebRegister({ descriptor: buildConfig }),
   ],
 } satisfies PluginDefinition;
