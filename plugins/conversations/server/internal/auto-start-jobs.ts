@@ -43,6 +43,10 @@ export const maybeLaunchTaskJob = defineJob({
       );
       return;
     }
+    // dropTaskTree drops a whole subtree then emits taskStatusChanged for each
+    // node — the dependents (also dropped) would pass hasBlockingDep because
+    // dropped deps are non-blocking. Bail if the task itself is dropped/held.
+    if (t.droppedAt || t.heldAt) return;
     const ext = await getTaskAutoStart(taskId);
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!ext) {
