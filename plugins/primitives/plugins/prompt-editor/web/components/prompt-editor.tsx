@@ -88,7 +88,7 @@ function ToolbarRow() {
     <div className="flex items-center px-2 pb-1.5" onMouseDown={focusEditor}>
       <PromptEditorSlots.FloatingAction.Render>
         {(item) => (
-          <div className={cn(!editable && !item.alwaysActive && disabledPartCls)}>
+          <div className={cn("min-w-0", !editable && !item.alwaysActive && disabledPartCls)}>
             <item.component
               insertText={insertText}
               getContent={getContent}
