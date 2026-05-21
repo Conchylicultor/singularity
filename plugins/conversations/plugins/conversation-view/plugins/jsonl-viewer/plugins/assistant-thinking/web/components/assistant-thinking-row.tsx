@@ -1,5 +1,4 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { Timestamp } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import {
   useCollapsible,
   CollapsibleChevron,
@@ -19,7 +18,6 @@ export function AssistantThinkingRow({ event }: { event: JsonlEvent }) {
       >
         <CollapsibleChevron open={open} className="size-3" />
         <span>Thinking</span>
-        <Timestamp at={e.at} className="tabular-nums" />
       </button>
       {open && (
         <div
