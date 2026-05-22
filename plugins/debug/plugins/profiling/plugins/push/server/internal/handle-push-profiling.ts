@@ -11,6 +11,7 @@ interface PushEntry {
   startMs: number;
   waitMs: number;
   holdMs: number;
+  conversationId: string | null;
 }
 
 interface BuildEntry {
@@ -88,6 +89,7 @@ export const handlePushProfiling = implement(
         startMs: pushOffset,
         waitMs: record.waitMs,
         holdMs: record.holdMs,
+        conversationId: record.conversationId,
       });
     }
 

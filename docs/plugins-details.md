@@ -278,7 +278,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Pane.Register` "attempt"
     - `Conversation.ActionBar` → `AttemptSwitchButton`
-  - Imported by: `attempt`
+  - Imported by: `attempt`, `push`
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Defines:

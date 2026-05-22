@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import {
   formatDuration,
   useProfilingContext,
   type Span,
 } from "@plugins/debug/plugins/profiling/web";
+import { attemptPane } from "@plugins/attempt-view/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +18,7 @@ interface PushEntry {
   startMs: number;
   waitMs: number;
   holdMs: number;
+  conversationId: string | null;
 }
 
 interface BuildEntry {
@@ -161,6 +165,7 @@ function PushAttemptRow({
   totalMs: number;
 }): ReactElement {
   const { hovered, setHovered } = useProfilingContext();
+  const openPane = useOpenPane();
 
   const lastPush = group.pushes[group.pushes.length - 1];
   const lastStyle = lastPush
@@ -170,8 +175,28 @@ function PushAttemptRow({
     group.pushes.reduce((sum, p) => sum + p.waitMs + p.holdMs, 0) +
     group.builds.reduce((sum, b) => sum + b.durationMs, 0);
 
+  const handleClick = useMemo(() => {
+    const uniqueConvIds = [
+      ...new Set(
+        group.pushes
+          .map((p) => p.conversationId)
+          .filter((id): id is string => id != null),
+      ),
+    ];
+    if (uniqueConvIds.length === 1) {
+      return () =>
+        openPane(conversationPane, { convId: uniqueConvIds[0]! }, { mode: "push" });
+    }
+    const attemptId = group.worktree.split("/").pop() ?? group.worktree;
+    return () =>
+      openPane(attemptPane, { attemptId }, { mode: "push" });
+  }, [group, openPane]);
+
   return (
-    <div className="flex items-center gap-2 px-4 py-1">
+    <div
+      className="flex cursor-pointer items-center gap-2 px-4 py-1 hover:bg-muted/50"
+      onClick={handleClick}
+    >
       <div className="flex w-40 shrink-0 items-center gap-1.5 truncate">
         <div
           className={cn("size-2 shrink-0 rounded-full", lastStyle.color)}
