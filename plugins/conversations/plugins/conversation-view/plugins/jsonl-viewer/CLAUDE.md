@@ -19,7 +19,11 @@
 - Server:
   - Uses: `tasks-core.getConversationClaudeSessionId`
   - Resources: `jsonl-events` (push)
+<<<<<<< .merge_file_xe8Cpn
 - Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `user-image`, `user-text`
+=======
+- Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `tool-call`, `unknown`, `user-image`, `user-text`
+>>>>>>> .merge_file_mqfaIy
 - Sub-plugins:
   - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
   - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
@@ -29,6 +33,7 @@
   - **`system`** — Renders system events in the JSONL viewer.
   - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.
   - **`tool-call`** — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
+  - **`unknown`** — Renders unknown JSONL event types as collapsible sections with the raw payload.
   - **`user-image`** — Renders inline image thumbnails for user-image events.
   - **`user-text`** — Renders user text events in the JSONL viewer.
 
