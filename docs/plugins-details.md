@@ -722,7 +722,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
-          - Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `user-image`, `user-text`
+          - Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
           - Plugins:
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Contributes:
@@ -799,6 +799,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
                   - Contributes:
                     - `JsonlViewerTool.Renderer` "Write" → `WriteToolView`
+            - **`unknown`** — Renders unknown JSONL event types as collapsible sections with the raw payload.
+              - Contributes:
+                - `JsonlViewer.EventRenderer` "unknown" → `UnknownRow`
             - **`user-image`** — Renders inline image thumbnails for user-image events.
               - Contributes:
                 - `JsonlViewer.EventRenderer` "user-image" → `UserImageRow`

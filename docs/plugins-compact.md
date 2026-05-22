@@ -141,6 +141,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
                 - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
                 - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
+            - **`unknown`** — Renders unknown JSONL event types as collapsible sections with the raw payload.
             - **`user-image`** — Renders inline image thumbnails for user-image events.
             - **`user-text`** — Renders user text events in the JSONL viewer.
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
