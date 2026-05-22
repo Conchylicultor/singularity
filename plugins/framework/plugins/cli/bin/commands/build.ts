@@ -733,6 +733,7 @@ export function registerBuild(program: Command) {
 
       if (failures.length > 0) {
         await rm(stagingPath, { recursive: true, force: true });
+        writeBuildLogs(name);
         console.error(`\nBuild failed: ${failures.join(", ")}`);
         process.exit(1);
       }
