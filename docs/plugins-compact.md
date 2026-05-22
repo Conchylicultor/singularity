@@ -139,6 +139,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
                 - **`flag-raise`** — Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.
                 - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
                 - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
+                - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
             - **`user-image`** — Renders inline image thumbnails for user-image events.
             - **`user-text`** — Renders user text events in the JSONL viewer.

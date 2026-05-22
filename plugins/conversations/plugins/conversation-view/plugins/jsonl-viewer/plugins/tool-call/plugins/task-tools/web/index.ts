@@ -1,0 +1,26 @@
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { TaskCreateToolView } from "./components/task-create-tool-view";
+import { TaskUpdateToolView } from "./components/task-update-tool-view";
+import { TaskGetToolView } from "./components/task-get-tool-view";
+import { TaskListToolView } from "./components/task-list-tool-view";
+import { TaskOutputToolView } from "./components/task-output-tool-view";
+import { TaskStopToolView } from "./components/task-stop-tool-view";
+import { TaskProgressOverlay } from "./components/task-progress-overlay";
+
+export default {
+  id: "conversation-jsonl-viewer-tool-call-task-tools",
+  name: "JSONL Viewer: Claude Code task tool renderers",
+  description:
+    "Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.",
+  contributions: [
+    JsonlViewerTool.Renderer({ name: "TaskCreate", component: TaskCreateToolView }),
+    JsonlViewerTool.Renderer({ name: "TaskUpdate", component: TaskUpdateToolView }),
+    JsonlViewerTool.Renderer({ name: "TaskGet", component: TaskGetToolView }),
+    JsonlViewerTool.Renderer({ name: "TaskList", component: TaskListToolView }),
+    JsonlViewerTool.Renderer({ name: "TaskOutput", component: TaskOutputToolView }),
+    JsonlViewerTool.Renderer({ name: "TaskStop", component: TaskStopToolView }),
+    JsonlViewer.Overlay({ id: "task-progress", component: TaskProgressOverlay }),
+  ],
+} satisfies PluginDefinition;

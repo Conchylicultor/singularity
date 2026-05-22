@@ -722,7 +722,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
-          - Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `tool-call`, `user-image`, `user-text`
+          - Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `user-image`, `user-text`
           - Plugins:
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Contributes:
@@ -759,7 +759,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Contributes:
                 - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
                 - `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
-              - Slot contributors: `add-task`, `agent`, `ask-user-question`, `bash`, `edit`, `flag-raise`, `read`, `skill`, `write`
+              - Slot contributors: `add-task`, `agent`, `ask-user-question`, `bash`, `edit`, `flag-raise`, `read`, `skill`, `task-tools`, `write`
               - Plugins:
                 - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
                   - Contributes:
@@ -787,6 +787,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
                   - Contributes:
                     - `JsonlViewerTool.Renderer` "Skill" → `SkillToolView`
+                - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.
+                  - Contributes:
+                    - `JsonlViewerTool.Renderer` "TaskCreate" → `TaskCreateToolView`
+                    - `JsonlViewerTool.Renderer` "TaskUpdate" → `TaskUpdateToolView`
+                    - `JsonlViewerTool.Renderer` "TaskGet" → `TaskGetToolView`
+                    - `JsonlViewerTool.Renderer` "TaskList" → `TaskListToolView`
+                    - `JsonlViewerTool.Renderer` "TaskOutput" → `TaskOutputToolView`
+                    - `JsonlViewerTool.Renderer` "TaskStop" → `TaskStopToolView`
+                    - `JsonlViewer.Overlay` "task-progress" → `TaskProgressOverlay`
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
                   - Contributes:
                     - `JsonlViewerTool.Renderer` "Write" → `WriteToolView`

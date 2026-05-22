@@ -19,7 +19,7 @@
 - Server:
   - Uses: `tasks-core.getConversationClaudeSessionId`
   - Resources: `jsonl-events` (push)
-- Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `tool-call`, `user-image`, `user-text`
+- Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `user-image`, `user-text`
 - Sub-plugins:
   - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
   - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
