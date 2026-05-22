@@ -18,6 +18,7 @@ import {
 } from "../paths";
 import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profiler";
 import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
+import { appendBuildLog } from "../build-log-writer-global";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const CENTRAL_ROUTES_FILE = join(SINGULARITY_DIR, "central-routes.json");
@@ -508,6 +509,8 @@ export function registerBuild(program: Command) {
       "DANGER: allow running build from the main branch. Agents MUST NOT pass this flag without explicit user approval in the current conversation.",
     )
     .action(async (opts: { migrationName?: string; resetMigration?: boolean; customMigration?: boolean; migrationAnswers?: string; restart: boolean; skipChecks?: boolean; allowMain?: boolean }) => {
+      const buildStartedAt = new Date();
+
       let endSpan = buildProfilerStart("ensureHooksPath", "build:preflight", "ensureHooksPath");
       await ensureHooksPath();
       endSpan();
@@ -540,6 +543,16 @@ export function registerBuild(program: Command) {
 
       const root = await getWorktreeRoot();
       const name = basename(root);
+
+      appendBuildLog({
+        phase: "started",
+        worktree: name,
+        branch,
+        startedAt: buildStartedAt.toISOString(),
+        completedAt: null,
+        totalMs: 0,
+        success: false,
+      });
 
       endSpan = buildProfilerStart("nameValidation", "build:preflight", "name validation");
       if (!NAME_REGEX.test(name)) {
@@ -735,6 +748,15 @@ export function registerBuild(program: Command) {
       if (failures.length > 0) {
         await rm(stagingPath, { recursive: true, force: true });
         writeBuildLogs(name);
+        appendBuildLog({
+          phase: "completed",
+          worktree: name,
+          branch,
+          startedAt: buildStartedAt.toISOString(),
+          completedAt: new Date().toISOString(),
+          totalMs: Date.now() - buildStartedAt.getTime(),
+          success: false,
+        });
         console.error(`\nBuild failed: ${failures.join(", ")}`);
         process.exit(1);
       }
@@ -819,6 +841,15 @@ export function registerBuild(program: Command) {
       if (!opts.restart) {
         writeBuildProfile(name);
         writeBuildLogs(name);
+        appendBuildLog({
+          phase: "completed",
+          worktree: name,
+          branch,
+          startedAt: buildStartedAt.toISOString(),
+          completedAt: new Date().toISOString(),
+          totalMs: Date.now() - buildStartedAt.getTime(),
+          success: true,
+        });
         console.log(`Deployed to http://${name}.localhost:9000 (restart skipped)`);
         return;
       }
@@ -856,6 +887,15 @@ export function registerBuild(program: Command) {
 
       writeBuildProfile(name);
       writeBuildLogs(name);
+      appendBuildLog({
+        phase: "completed",
+        worktree: name,
+        branch,
+        startedAt: buildStartedAt.toISOString(),
+        completedAt: new Date().toISOString(),
+        totalMs: Date.now() - buildStartedAt.getTime(),
+        success: true,
+      });
       console.log(`Deployed to http://${name}.localhost:9000`);
     });
 }

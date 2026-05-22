@@ -17,9 +17,18 @@ interface PushEntry {
   holdMs: number;
 }
 
+interface BuildEntry {
+  worktree: string;
+  startMs: number;
+  durationMs: number;
+  success: boolean;
+  crashed: boolean;
+}
+
 interface WorktreeGroup {
   worktree: string;
   pushes: PushEntry[];
+  builds: BuildEntry[];
 }
 
 interface PushData {
@@ -56,6 +65,9 @@ const DEFAULT_STYLE = {
 };
 
 const WAIT_COLOR = "bg-amber-400 dark:bg-amber-500";
+const BUILD_COLOR = "bg-sky-400 dark:bg-sky-500";
+const BUILD_FAILED_COLOR = "bg-sky-700 dark:bg-sky-800";
+const BUILD_CRASHED_COLOR = "bg-red-400 dark:bg-red-500";
 
 function formatTickMs(ms: number): string {
   if (ms === 0) return "0";
@@ -114,7 +126,7 @@ function PushTimeAxis({ totalMs }: { totalMs: number }): ReactElement {
           as="span"
           className="text-[10px] font-medium tracking-wider"
         >
-          Push
+          Push & Build
         </SectionLabel>
         <span className="text-[10px] font-medium tabular-nums text-foreground">
           {formatDuration(totalMs)}
@@ -148,12 +160,13 @@ function PushAttemptRow({
 }): ReactElement {
   const { hovered, setHovered } = useProfilingContext();
 
-  const lastPush = group.pushes[group.pushes.length - 1]!;
-  const lastStyle = OUTCOME_STYLES[lastPush.outcome] ?? DEFAULT_STYLE;
-  const totalDuration = group.pushes.reduce(
-    (sum, p) => sum + p.waitMs + p.holdMs,
-    0,
-  );
+  const lastPush = group.pushes[group.pushes.length - 1];
+  const lastStyle = lastPush
+    ? (OUTCOME_STYLES[lastPush.outcome] ?? DEFAULT_STYLE)
+    : { color: "bg-sky-500", bg: "bg-sky-50 dark:bg-sky-950/30" };
+  const totalDuration =
+    group.pushes.reduce((sum, p) => sum + p.waitMs + p.holdMs, 0) +
+    group.builds.reduce((sum, b) => sum + b.durationMs, 0);
 
   return (
     <div className="flex items-center gap-2 border-b px-4 py-1">
@@ -166,6 +179,43 @@ function PushAttemptRow({
         </span>
       </div>
       <div className="relative h-5 flex-1 overflow-hidden rounded bg-muted/30">
+        {group.builds.map((build, i) => {
+          const buildLabel = build.crashed
+            ? "build (crashed)"
+            : build.success
+              ? "build (ok)"
+              : "build (failed)";
+          const buildColor = build.crashed
+            ? BUILD_CRASHED_COLOR
+            : build.success
+              ? BUILD_COLOR
+              : BUILD_FAILED_COLOR;
+          const buildSpan: Span = {
+            id: `build:${group.worktree}:${i}`,
+            phase: group.worktree,
+            label: buildLabel,
+            startMs: build.startMs,
+            durationMs: build.durationMs,
+          };
+          const isBuildHovered = hovered?.id === buildSpan.id;
+
+          return (
+            <div
+              key={buildSpan.id}
+              className={cn(
+                "absolute top-0 h-full rounded transition-opacity",
+                buildColor,
+                isBuildHovered ? "opacity-100" : "opacity-40",
+              )}
+              style={{
+                left: `${(build.startMs / totalMs) * 100}%`,
+                width: `${Math.max((build.durationMs / totalMs) * 100, 0.3)}%`,
+              }}
+              onMouseEnter={() => setHovered(buildSpan)}
+              onMouseLeave={() => setHovered(null)}
+            />
+          );
+        })}
         {group.pushes.map((push) => {
           const style = OUTCOME_STYLES[push.outcome] ?? DEFAULT_STYLE;
 
