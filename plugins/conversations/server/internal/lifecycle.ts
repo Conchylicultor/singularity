@@ -14,6 +14,7 @@ import { Runtime } from "./runtime";
 import { DEFAULT_MODEL, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { Conversation, ConversationKind } from "@plugins/tasks-core/core";
 import { forkDatabase } from "@plugins/database/plugins/admin/server";
+import { forkConfig } from "@plugins/config_v2/server";
 import { reportForkError } from "./fork-errors";
 import { setupWorktree, worktreePathFor } from "@plugins/infra/plugins/worktree/server";
 import { conversationCreated } from "./tables-created-event";
@@ -110,6 +111,7 @@ export async function createConversation(
       console.error(`[conversations] db fork failed for ${thisAttemptId}`, err);
       reportForkError(thisAttemptId, err);
     });
+    void forkConfig(thisAttemptId);
     await createAttempt({ id: thisAttemptId, taskId, worktreePath });
     conversationId = newId(CONVERSATION_PREFIX);
   }

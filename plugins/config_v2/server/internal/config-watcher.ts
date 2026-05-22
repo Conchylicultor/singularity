@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import * as parcel from "@parcel/watcher";
-import { CONFIG_DIR } from "@plugins/infra/plugins/paths/server";
+import { CONFIG_DIR } from "./config-dir";
 import type { Disposable } from "../../core";
 
 const DEBOUNCE_MS = 100;

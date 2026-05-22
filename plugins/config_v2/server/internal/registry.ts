@@ -14,7 +14,8 @@ import {
 } from "../../core";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import type { Disposable, JsonValue } from "../../core";
-import { REPO_ROOT, CONFIG_DIR } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { CONFIG_DIR } from "./config-dir";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";

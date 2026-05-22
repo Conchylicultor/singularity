@@ -5,6 +5,7 @@ import { initRegistry, shutdownRegistry } from "./internal/registry";
 import { configV2ServerResource } from "./internal/resource";
 
 export { ConfigV2 } from "./internal/contribution";
+export { forkConfig } from "./internal/fork";
 export { getConfig, setConfig, setConfigByPath, resetConfigByPath, watchConfig } from "./internal/registry";
 
 export default {

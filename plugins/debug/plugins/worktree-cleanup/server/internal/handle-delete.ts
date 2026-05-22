@@ -1,7 +1,9 @@
-import { stat } from "node:fs/promises";
+import { rm, stat } from "node:fs/promises";
+import { join } from "node:path";
 import { getAttempt } from "@plugins/tasks-core/server";
 import { dropDatabase } from "@plugins/database/plugins/admin/server";
 import { removeWorktree } from "@plugins/infra/plugins/worktree/server";
+import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 
 export async function handleDelete(
   _req: Request,
@@ -41,6 +43,9 @@ export async function handleDelete(
 
       emit({ step: "database" });
       await dropDatabase(id);
+
+      emit({ step: "config" });
+      await rm(join(SINGULARITY_DIR, "config", id), { recursive: true, force: true });
 
       emit({ ok: true });
       controller.close();
