@@ -1,0 +1,5 @@
+{
+  "name": "@singularity/plugin-config_v2-fields-color",
+  "private": true,
+  "description": "Color field type for config_v2: hex color with a popover picker."
+}

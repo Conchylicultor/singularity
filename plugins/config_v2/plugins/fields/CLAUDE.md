@@ -93,6 +93,7 @@ No other file needs editing.
   - Values: `FieldRenderer`, `Fields`
 - Sub-plugins:
   - **`avatar`** — Avatar field type (icon + color picker).
+  - **`color`** — Color field type: hex color string with a popover color picker.
   - **`enum`** — Enum field type: single-choice from a fixed set of options.
   - **`list`** — Sortable list field type with stable UUID identity and fractional-index ordering.
   - **`multiline-text`** — Multi-line text field type.

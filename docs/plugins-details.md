@@ -468,7 +468,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
   - Exports (server):
     - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getConfig`, `getRawFileContent`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-  - Imported by: `avatar`, `build`, `codegen`, `commits`, `conversation-category`, `conversations`, `enum`, `list`, `multiline-text`, `object`, `primitives`, `settings`
+  - Imported by: `avatar`, `build`, `codegen`, `color`, `commits`, `conversation-category`, `conversations`, `enum`, `list`, `multiline-text`, `object`, `primitives`, `settings`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
@@ -481,6 +481,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `avatarField`, `avatarFieldType`
           - Contributes:
             - `Fields.Renderer` "avatar" → `AvatarRenderer`
+        - **`color`** — Color field type: hex color string with a popover color picker.
+          - Exports (core):
+            - Types: `ColorFieldDef`
+            - Values: `colorField`, `colorFieldType`
+          - Contributes:
+            - `Fields.Renderer` "color" → `ColorRenderer`
         - **`enum`** — Enum field type: single-choice from a fixed set of options.
           - Exports (core):
             - Types: `EnumFieldDef`, `EnumOption`
