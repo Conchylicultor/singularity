@@ -378,6 +378,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-dependencies",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/dependent-count": {
+      "name": "@singularity/plugin-conversations-conversation-view-dependent-count",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/drop-and-exit": {
       "name": "@singularity/plugin-conversations-conversation-view-drop-and-exit",
       "version": "0.0.1",
@@ -2137,6 +2141,8 @@
     "@singularity/plugin-conversations-conversation-view-commits-graph": ["@singularity/plugin-conversations-conversation-view-commits-graph@workspace:plugins/conversations/plugins/conversation-view/plugins/commits-graph"],
 
     "@singularity/plugin-conversations-conversation-view-dependencies": ["@singularity/plugin-conversations-conversation-view-dependencies@workspace:plugins/conversations/plugins/conversation-view/plugins/dependencies"],
+
+    "@singularity/plugin-conversations-conversation-view-dependent-count": ["@singularity/plugin-conversations-conversation-view-dependent-count@workspace:plugins/conversations/plugins/conversation-view/plugins/dependent-count"],
 
     "@singularity/plugin-conversations-conversation-view-drop-and-exit": ["@singularity/plugin-conversations-conversation-view-drop-and-exit@workspace:plugins/conversations/plugins/conversation-view/plugins/drop-and-exit"],
 

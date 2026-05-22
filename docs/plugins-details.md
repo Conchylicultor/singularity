@@ -540,7 +540,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Register: `defineJob('tasks.maybe-launch')`, `defineJob('tasks.maybe-launch-dependents')`, `defineTriggerEvent('conversation.created')`, `defineTriggerEvent('conversation.turn-completed')`, `defineTriggerEvent('conversation.userTurnSent')`
     - Uses: `config_v2.forkConfig`, `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.notifyConversationsChanged`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTask`, `tasks-core.updateTaskTitle`
-  - Imported by: `agents`, `attempt-view`, `code-explorer`, `code-review`, `commits-graph`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `docs-button`, `drop-and-exit`, `drop-dependents`, `exit`, `file-changes`, `fork-session`, `grouped`, `history`, `hold-and-exit`, `improve`, `markdown-extensions`, `model`, `new-child-task`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `read`, `resume`, `review`, `runtime-api`, `runtime-tmux`, `status`, `summary`, `task`, `task-header`, `task-title`, `tasks`, `tasks-panel`, `terminal-pane`, `tool-call`, `turn-summary`, `user-text`, `vscode`, `welcome`
+  - Imported by: `agents`, `attempt-view`, `code-explorer`, `code-review`, `commits-graph`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `dependent-count`, `docs-button`, `drop-and-exit`, `drop-dependents`, `exit`, `file-changes`, `fork-session`, `grouped`, `history`, `hold-and-exit`, `improve`, `markdown-extensions`, `model`, `new-child-task`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `read`, `resume`, `review`, `runtime-api`, `runtime-tmux`, `status`, `summary`, `task`, `task-header`, `task-title`, `tasks`, `tasks-panel`, `terminal-pane`, `tool-call`, `turn-summary`, `user-text`, `vscode`, `welcome`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
       - Defines:
@@ -591,7 +591,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Pane.Register` "conversation"
         - `Conversation.Header` → `ConversationTitle`
-      - Slot contributors: `agents`, `allow-monitor`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `dependencies`, `docs-button`, `drop-and-exit`, `drop-dependents`, `event-counter`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `model`, `notes`, `open-app`, `prompt-input`, `review`, `status`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
+      - Slot contributors: `agents`, `allow-monitor`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `dependencies`, `dependent-count`, `docs-button`, `drop-and-exit`, `drop-dependents`, `event-counter`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `model`, `notes`, `open-app`, `prompt-input`, `review`, `status`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Exports (web):
@@ -658,6 +658,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
           - Contributes:
             - `Conversation.PromptBar` "Deps" → `DependenciesButton`
+        - **`dependent-count`** — Shows the count of tasks transitively blocked by the current conversation's task.
+          - Contributes:
+            - `Conversation.ActionBar` → `DependentCountChip`
         - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
           - Exports (shared):
             - Values: `dropAndExit`
@@ -1790,7 +1793,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
   - Exports (core):
     - Types: `AddDependencyBody`, `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `CreateTaskBody`, `InsertBetweenBody`, `Push`, `SetAutoStartBody`, `Task`, `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelate`, `TaskChainRelateMode`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`, `UpdateTaskBody`
-    - Values: `AddDependencyBodySchema`, `addTaskDependency`, `attemptsResource`, `clearTaskAutoStart`, `createTask`, `CreateTaskBodySchema`, `createTaskChain`, `deleteTask`, `getRepoInfo`, `getTask`, `getTaskAttachments`, `InsertBetweenBodySchema`, `insertTaskBetween`, `listTasks`, `pushesResource`, `removeTaskDependency`, `SetAutoStartBodySchema`, `setTaskAutoStart`, `TaskChainCardSchema`, `TaskChainLaunchSchema`, `TaskChainRelateModeSchema`, `TaskChainRelateSchema`, `TaskChainSubmitBodySchema`, `TaskChainSubmitResponseSchema`, `TaskChainTargetSchema`, `tasksResource`, `updateTask`, `UpdateTaskBodySchema`
+    - Values: `AddDependencyBodySchema`, `addTaskDependency`, `attemptsResource`, `clearTaskAutoStart`, `countTransitiveDependents`, `createTask`, `CreateTaskBodySchema`, `createTaskChain`, `deleteTask`, `getRepoInfo`, `getTask`, `getTaskAttachments`, `InsertBetweenBodySchema`, `insertTaskBetween`, `listTasks`, `pushesResource`, `removeTaskDependency`, `SetAutoStartBodySchema`, `setTaskAutoStart`, `TaskChainCardSchema`, `TaskChainLaunchSchema`, `TaskChainRelateModeSchema`, `TaskChainRelateSchema`, `TaskChainSubmitBodySchema`, `TaskChainSubmitResponseSchema`, `TaskChainTargetSchema`, `tasksResource`, `updateTask`, `UpdateTaskBodySchema`
   - Exports (web):
     - Types: `AutoStartModel`, `TaskPatch`
     - Values: `deleteTask`, `patchTask`, `setAutoStart`, `useTask`

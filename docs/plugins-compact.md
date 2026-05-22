@@ -111,6 +111,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
                 - **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
         - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
+        - **`dependent-count`** — Shows the count of tasks transitively blocked by the current conversation's task.
         - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
         - **`drop-dependents`** — Prompt-bar button that drops the task and all its transitive dependents, then closes the conversation.
         - **`exit`** — Toolbar button that closes the conversation without changing any task state.
