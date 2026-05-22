@@ -77,7 +77,7 @@ export const handlePushProfiling = implement(
     };
 
     for (const record of recentPushes) {
-      const wt = record.branch;
+      const wt = record.worktree ?? record.branch;
       const pushOffset =
         new Date(record.lockRequestedAt).getTime() - originMs;
 
@@ -94,7 +94,7 @@ export const handlePushProfiling = implement(
     }
 
     for (const record of recentBuilds) {
-      const wt = record.branch;
+      const wt = record.worktree;
       const buildOffset = new Date(record.startedAt).getTime() - originMs;
 
       getGroup(wt).builds.push({
