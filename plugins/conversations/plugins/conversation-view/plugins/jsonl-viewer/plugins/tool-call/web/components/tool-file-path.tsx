@@ -2,6 +2,7 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 
 export function toRelativePath(filePath: string, attemptId: string): string {
   const marker = `/${attemptId}/`;
@@ -33,15 +34,24 @@ export function ToolFilePath({ filePath }: ToolFilePathProps) {
   };
 
   return (
-    <button
-      onClick={openFile}
-      className="w-max max-w-full overflow-hidden whitespace-nowrap font-mono text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-      style={{ direction: "rtl", textOverflow: "ellipsis" }}
-      title={relativePath}
-    >
-      <span style={{ direction: "ltr", unicodeBidi: "embed" }}>
-        {relativePath}
-      </span>
-    </button>
+    <span className="group/path inline-flex items-center gap-0.5 max-w-full min-w-0">
+      <button
+        onClick={openFile}
+        className="min-w-0 max-w-full overflow-hidden whitespace-nowrap font-mono text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        style={{ direction: "rtl", textOverflow: "ellipsis" }}
+        title={relativePath}
+      >
+        <span style={{ direction: "ltr", unicodeBidi: "embed" }}>
+          {relativePath}
+        </span>
+      </button>
+      <CopyButton
+        text={relativePath}
+        title="Copy path"
+        className="size-5 opacity-0 group-hover/path:opacity-100 transition-opacity shrink-0"
+        iconClassName="size-2.5"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </span>
   );
 }
