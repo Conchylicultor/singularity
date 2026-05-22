@@ -21,6 +21,7 @@ sibling plugins (e.g. publish's tree component).
   - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
 - Contributes:
   - `Pane.Register` "plugin-view"
+- Endpoint callers: `catalog`, `plugin-link`, `publish`
 - Sub-plugins:
   - **`public-api`** — Displays the plugin's public exports, slots, routes, and consumer relationships.
   - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.

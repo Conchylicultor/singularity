@@ -28,6 +28,13 @@ export interface CommandDef {
   groupName: string;
 }
 
+export interface RouteDef {
+  route: string;
+  type: "http" | "ws";
+  runtime: "server" | "central";
+  name?: string;
+}
+
 export interface Contribution {
   slot: string;
   props: Record<string, string>;
@@ -378,7 +385,7 @@ function parseBarrelExports(src: string): BarrelExport[] {
   );
 }
 
-function walkFiles(dir: string, out: string[]): void {
+export function walkFiles(dir: string, out: string[]): void {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });

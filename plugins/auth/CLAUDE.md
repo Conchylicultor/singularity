@@ -100,6 +100,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
   - `Shell.Sidebar` "Accounts" → `component`
 - Imported by: `google`, `google-drive`, `notion`, `setup-wizard`
 - Slot contributors: `google`, `notion`
+- Endpoint callers: `setup-wizard`
 - Sub-plugins:
   - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
   - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
