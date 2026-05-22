@@ -16,7 +16,7 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
   });
   const [sending, setSending] = useState(false);
 
-  const disabled = live.status === "gone" || live.status === "done" || live.status === "starting";
+  const disabled = live.status === "gone" || live.status === "done" || live.status === "starting" || !!live.waitingFor;
 
   const insertRef = useRef<((text: string) => void) | null>(null);
   const promptInsert = usePromptInsert();
@@ -56,11 +56,13 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
   }, [conversation.id, disabled, sending, clearDraft]);
 
   const placeholder = disabled
-    ? live.status === "done"
-      ? "Conversation is done"
-      : live.status === "gone"
-        ? "Conversation is disconnected"
-        : "Starting…"
+    ? live.waitingFor
+      ? "Waiting for your answer in the terminal"
+      : live.status === "done"
+        ? "Conversation is done"
+        : live.status === "gone"
+          ? "Conversation is disconnected"
+          : "Starting…"
     : "Send a message — Enter to send, Shift+Enter for newline";
 
   return (
