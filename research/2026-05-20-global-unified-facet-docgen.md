@@ -26,6 +26,8 @@ interface PluginNode {
 
 ### Facet Definition
 
+Facet primitives live in `facets/core` (`@plugins/plugin-meta/plugins/facets/core`):
+
 ```typescript
 interface FacetDef<T> { id: string; _phantom?: T; }
 function defineFacet<T>(id: string): FacetDef<T>;
@@ -34,6 +36,8 @@ function setFacet<T>(node: PluginNode, def: FacetDef<T>, data: T): void;
 ```
 
 ### Each Facet Exports
+
+Each facet sub-plugin lives under `plugins/plugin-meta/plugins/facets/plugins/<name>/` and exposes `facet/index.ts`:
 
 ```typescript
 export const facetDef: FacetDef<MyData>;
@@ -54,6 +58,28 @@ findAllPluginDirs() → collectCoreFields() → importAllBarrels()
   → for each facet: relate(allNodes)
   → PluginTree
 ```
+
+### Dependency Graph
+
+```
+barrel-import  (leaf — no cross-plugin deps)
+     │
+     ▼
+facets/core ─────────── owns: Facet, FacetDef, defineFacet, getFacet, setFacet, loadFacets
+     │
+     ▼
+plugin-tree/core ────── owns: PluginNode, type defs, parsing helpers, buildPluginTree, enrichPluginTreeDocs
+     │                  imports from facets/core: setFacet, loadFacets
+     │
+     ├─────────────────────────────────────────────┐
+     ▼                                             ▼
+facets/plugins/*         ←── imports from      codegen/docgen.ts
+  (facet sub-plugins)       plugin-tree/core:   plugin-view/server
+                            parsing helpers,    plugin-changes/server
+                            type defs           etc.
+```
+
+No cycles. `plugin-tree → facets/core` is one-way. `facets/plugins/* → plugin-tree/core` is a separate plugin pair.
 
 ### Wildcard Bun Stub
 
@@ -86,73 +112,66 @@ This means `relate()` receives the full tree and reads other facets via `getFace
 
 ```
 plugins/plugin-meta/plugins/facets/
-  core/index.ts          — registry: allFacets array, iteration helpers
+  core/index.ts          — barrel: Facet/FacetDef primitives + loadFacets + collectedDir
+  core/facets.ts         — Facet, FacetDef, defineFacet, getFacet, setFacet
+  core/load-facets.ts    — loadFacets(): discovers and loads facet sub-plugins
+  core/collected-dir.ts  — defineCollectedDir("facet")
+  core/facet.generated.ts — auto-populated registry
   plugins/
-    exports/core/        — extract + relate + renderDoc
-    slots/core/
-    commands/core/
-    contributions/core/
-    routes/core/
-    resources/core/
-    db-schema/core/
-    cross-refs/core/
-    registrations/core/
+    commands/facet/      — ✅ done (reference implementation)
+    exports/facet/
+    slots/facet/
+    contributions/facet/
+    routes/facet/
+    resources/facet/
+    db-schema/facet/
+    cross-refs/facet/
+    registrations/facet/
 ```
 
 ## Implementation Steps
 
 Each step is one agent conversation. Every step must pass `./singularity build` and produce byte-identical doc output until the final cleanup.
 
-### Step 1: Foundation
+### Step 1: Foundation ✅ Done
 
-**Goal**: `defineFacet` primitive + wildcard Bun stub.
+**Completed.** Facet primitives (`defineFacet`, `getFacet`, `setFacet`, `Facet`, `FacetDef`) live in `facets/core`. `PluginNode.facets: Record<string, unknown>` initialized to `{}` in `collectPlugin`. Parsing helpers (`readIfExists`, `stripTypes`, `matchBracket`, `parseDefineGroup`) exported from `plugin-tree/core`. `facet` registered as a runtime zone in boundary checker, `findAllPluginDirs`, tsconfig, and lint config.
 
-- Create `plugins/plugin-meta/plugins/plugin-tree/core/internal/facets.ts` — `defineFacet()`, `getFacet()`, `setFacet()`
-- Add `facets: Record<string, unknown>` to `PluginNode` in `plugin-tree.ts` (additive, non-breaking — initialize to `{}` in `collectPlugin`)
-- Export from `plugin-tree/core/index.ts`
-- In `barrel-import/core/internal/stubs.ts`: add wildcard `build.onResolve` for unrecognized `node_modules/` specifiers → empty proxy module. Remove individual stubs for `@xterm/*`, `@dnd-kit/*`, `react-diff-view`, `react-resizable-panels`, etc. Keep React, web-sdk/core, config/server, database/server stubs.
+### Step 2: First Facet (commands) ✅ Done
 
-**Verify**: `./singularity build` succeeds. All ~150 barrel imports still work. Doc output unchanged.
+**Completed.** Commands facet at `facets/plugins/commands/facet/index.ts` validates the full pattern: codegen discovery, `loadFacets()`, `extract()` per node via `setFacet()`, `relate()` loop. Dual-write: `collectPlugin()` still populates `node.commands`, facet independently populates `node.facets["commands"]`. Doc output byte-identical (docgen still reads `node.commands`).
 
-### Step 2: Facets Umbrella + First Facets (exports, slots, commands)
+See `research/2026-05-22-global-commands-facet-validation.md` for the detailed validation report.
 
-**Goal**: Prove the facet pattern end-to-end with three simple facets.
+### Step 3: Remaining Facets (exports, slots, contributions, routes, resources, db-schema, cross-refs, registrations)
 
-- Create `plugins/plugin-meta/plugins/facets/` umbrella with `package.json`
-- Create `exports`, `slots`, `commands` facet plugins (each with only `core/index.ts`)
-- Each facet: move the relevant parsing helpers from `plugin-tree.ts`, implement `extract()` and `renderDoc()`
-- `exports.relate()` computes per-symbol `consumers[]` (moves `buildSymbolConsumers` logic)
-- Wire into `buildPluginTree()`: after `collectPlugin()`, call each facet's `extract()` and `setFacet()`. Old monolithic fields still populated in parallel.
-- Create `facets/core/index.ts` with `allFacets` registry array
+**Goal**: All metadata lives in facets. Monolithic fields are now redundant (but still populated via dual-write).
 
-**Verify**: Doc output byte-identical. Plugin-view API unchanged.
+- Create 8 remaining facet sub-plugins, each with `facet/index.ts`
+- `exports` facet: move `parseBarrelExports` logic. `relate()` computes per-symbol `consumers[]` using `cross-refs` facet data.
+- `slots` facet: reuse `parseDefineGroup("defineSlot")`. `relate()` computes `contributors` using `contributions` facet data.
+- `contributions` facet: merges static parsing (`extractContributionsBlock`) + runtime enrichment from barrel imports. **Note**: `extract()` for this facet needs the imported barrel modules — the extract context must include `{ dir, importedModules }`.
+- `routes` facet: move `parseRouteMap`. `relate()` computes `endpointCallers`.
+- `resources` facet: move `parseResources`.
+- `db-schema` facet: move `findDbFiles`, `parseTableNames`, `parseEntityExtensionCalls`. `relate()` computes `extendedBy` cross-refs.
+- `cross-refs` facet: move `parseServerApiUses`. `relate()` computes `importedBy`.
+- `registrations` facet: extracts from imported `mod.default.register[]`. Needs barrel modules in extract context.
 
-### Step 3: Remaining Facets (contributions, routes, resources, db-schema, cross-refs, registrations)
-
-**Goal**: All metadata lives in facets. Monolithic fields are now redundant (but still populated).
-
-- Create the remaining 6 facet plugins
-- `contributions` facet merges static parsing + runtime enrichment from `enrichPluginTreeDocs()`
-- `cross-refs` facet owns `apiUses` extraction (`parseServerApiUses`) and `importedBy` computation
-- `routes.relate()` computes `endpointCallers`
-- `db-schema.relate()` computes entity extension cross-refs (`extendedBy`)
-- `registrations` facet extracts from imported `mod.default.register[]`
-- `slots.relate()` computes `contributors` by reading `contributions` facet data from all plugins
+**Extract context evolution**: The `commands` facet uses `{ dir: string }`. Facets that need barrel imports (`contributions`, `registrations`) will need `{ dir, importedModules }`. The typed `ExtractContext` should be formalized at this step — currently each facet casts from `unknown` internally.
 
 **Verify**: Doc output byte-identical.
 
 ### Step 4: Unified Pipeline
 
-**Goal**: `buildPluginTree()` uses the faceted pipeline. `enrichPluginTreeDocs()` is eliminated.
+**Goal**: `enrichPluginTreeDocs()` uses the faceted pipeline as its primary enrichment path. The hardcoded extraction in `collectPlugin()` becomes redundant.
 
-- Refactor `buildPluginTree()`: core field collection → import all barrels → extract all facets → assemble tree → relate all facets
-- Remove `enrichPluginTreeDocs()` as a separate function. The tree is always enriched.
+- Refactor `enrichPluginTreeDocs()`: Pass 1 (barrel imports) stays. Pass 2 (contributions/registrations) is replaced by the facet extraction loop (already wired as Pass 3 — promote it). Pass 3 becomes the relate pass.
 - Add `{ skipBarrelImport?: boolean }` escape hatch for callers that only need core fields (e.g. `plugin-registry-gen.ts`, `plugin-boundaries.ts` — they read only `dir`, `name`, `runtimes`, `path`)
 - Backward-compat shim: populate old monolithic fields from facets (temporary)
-- Update `buildEnrichedTree()` in `docgen.ts` to just call `buildPluginTree()`
+- `buildEnrichedTree()` in `docgen.ts` continues to call `buildPluginTree()` then `enrichPluginTreeDocs()` — no change needed there.
 
 **Callers of `buildPluginTree()` (all must still work)**:
-- `docgen.ts` — uses enriched tree → works (now always enriched)
+- `docgen.ts` — uses enriched tree → works (enrichment includes facets)
 - `tree-handler.ts` — reads all fields → works via compat shim
 - `compute-plugin-diff.ts` — reads slots, contributions, exports, routes, apiUses, resources, tables → works via compat shim
 - `plugin-registry-gen.ts` — reads only dir/name/runtimes → pass `skipBarrelImport: true`
@@ -177,10 +196,9 @@ Each step is one agent conversation. Every step must pass `./singularity build` 
 **Goal**: Remove all dead code and the backward-compat shim.
 
 - Remove old monolithic fields from `PluginNode` (exports, slots, commands, contributions, server, central, webApiUses, coreApiUses, sharedApiUses, dbFiles, tables, importedBy, slotContributors, endpointCallers, entityExtensions, extendedBy, runtimeContributions, runtimeRegistrations)
-- Remove backward-compat shim from `buildPluginTree()`
+- Remove backward-compat shim from `enrichPluginTreeDocs()`
 - Delete dead parsing helpers from `plugin-tree.ts` that were moved to facets
 - Unify the API `PluginNode` type in `plugin-view/core/types.ts` — either import from `plugin-tree/core` or keep as a view model assembled from facets
-- Delete `enrichPluginTreeDocs` export from `plugin-tree/core/index.ts`
 - Remove stale type exports
 
 **Verify**: Full build + all checks. No remaining references to old fields.
@@ -188,9 +206,9 @@ Each step is one agent conversation. Every step must pass `./singularity build` 
 ## Dependency Graph
 
 ```
-Step 1 (foundation)
-  └─ Step 2 (first 3 facets)
-       └─ Step 3 (remaining 6 facets)
+Step 1 (foundation) ✅
+  └─ Step 2 (commands facet) ✅
+       └─ Step 3 (remaining 8 facets)
             └─ Step 4 (unified pipeline)
                  └─ Step 5 (consumer migration)
                       └─ Step 6 (cleanup)
@@ -200,11 +218,13 @@ Step 1 (foundation)
 
 | File | Role |
 |------|------|
-| `plugins/plugin-meta/plugins/plugin-tree/core/internal/plugin-tree.ts` | Tree builder (~1083 lines, major refactor target) |
+| `plugins/plugin-meta/plugins/facets/core/facets.ts` | Facet primitives (defineFacet, getFacet, setFacet) |
+| `plugins/plugin-meta/plugins/facets/core/load-facets.ts` | Facet loader (loadFacets) |
+| `plugins/plugin-meta/plugins/facets/core/facet.generated.ts` | Auto-populated facet registry |
+| `plugins/plugin-meta/plugins/plugin-tree/core/internal/plugin-tree.ts` | Tree builder (~1100 lines, major refactor target) |
 | `plugins/framework/plugins/tooling/plugins/codegen/core/docgen.ts` | Markdown rendering (renderPluginBody → facet loop) |
 | `plugins/plugin-meta/plugins/plugin-view/server/internal/tree-handler.ts` | API handler (toApiNode + buildSymbolConsumers → facet reads) |
 | `plugins/plugin-meta/plugins/plugin-view/core/types.ts` | API PluginNode type (unify with core type) |
-| `plugins/plugin-meta/plugins/barrel-import/core/internal/stubs.ts` | Bun stubs (wildcard replacement) |
 | `plugins/review/plugins/plugin-changes/server/internal/compute-plugin-diff.ts` | Diff consumer (reads slots, exports, routes, etc.) |
 | `plugins/framework/plugins/tooling/plugins/codegen/core/config-origin-gen.ts` | Config origin consumer |
 
@@ -217,12 +237,13 @@ Step 1 (foundation)
 | 2-3s import added to fast-path callers (checks, boundaries) | `skipBarrelImport` option for callers that only need core fields. |
 | Facet inter-dependencies during relate() create ordering issues | All relate() runs after all extract() — facets read each other's Phase 1 data freely. |
 | plugin-view UI depends on specific API PluginNode shape | Keep API shape stable through Step 5. Unify in Step 6. |
+| New `collectedDir` runtime type needs infra registration | Discovered during Step 1: must add to KNOWN_PLUGIN_DIRS, findAllPluginDirs, tsconfig, lint allow-default-project. |
 
 ## Verification
 
 At every step:
 1. `./singularity build` succeeds
-2. `diff` on `docs/plugins-compact.md`, `docs/plugins-details.md`, `docs/routes.md` — must be empty
+2. `diff` on `docs/plugins-compact.md`, `docs/plugins-details.md`, `docs/routes.md` — must be empty (modulo new facet plugin entries)
 3. Spot-check 2-3 per-plugin `CLAUDE.md` files for identical autogen blocks
 4. Plugin-view API at `GET /api/plugin-view/tree` returns identical JSON (compare before/after)
 5. `./singularity check` passes all checks
