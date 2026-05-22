@@ -8,17 +8,17 @@ import { triggerTableRegistry } from "./registry";
 
 // The events plugin's dispatcher is itself a registered job. `emit()` enqueues
 // one of these per matching trigger row; the handler resolves the trigger's
-// target job, parses `jobWith` against the target's `input` schema and
-// `eventPayload` against its `event` schema (separately — no merge), invokes
-// `target.run({ input, event, ctx })`, and (for oneShot triggers) removes the
-// trigger row on success.
+// target job, validates the event payload against the target's event schema,
+// and enqueues the target via `target.enqueue()`. This gives the target its
+// own graphile queue row, its own `workflowRunId`, and its own dedup key —
+// the same path as a direct `.enqueue()` call.
 //
-// Pre-run failures (schema drift) throw so Graphile retries and eventually
-// marks the job as permanently failed — visible in the worker queue rather
-// than silently swallowed. Unknown targets (stale triggers referencing deleted
-// jobs) are self-healed: the orphaned trigger row is removed and dispatch
-// returns without throwing. Post-run failures (oneShot cleanup) log at error
-// level but don't throw to avoid re-running the target.
+// For oneShot triggers, the trigger row is deleted after the target is
+// durably enqueued — the trigger has served its purpose. If the target
+// later fails, graphile retries it independently.
+//
+// Unknown targets (stale triggers referencing deleted jobs) are self-healed:
+// the orphaned trigger row is removed and dispatch returns without throwing.
 export const eventsDispatchJob = defineJob({
   name: "events.dispatch",
   input: z.object({
@@ -29,10 +29,8 @@ export const eventsDispatchJob = defineJob({
     eventPayload: z.record(z.unknown()),
     oneShot: z.boolean(),
   }),
-  // The dispatcher itself never reads an event payload — it only delivers
-  // them to other jobs.
   event: z.never(),
-  run: async ({ input: p, ctx }) => {
+  run: async ({ input: p }) => {
     const target = UNSAFE_getRegisteredJob(p.jobName);
     if (!target) {
       const msg = `[events] removing stale trigger ${p.triggerId}: job "${p.jobName}" no longer exists (event "${p.eventName}")`;
@@ -47,16 +45,10 @@ export const eventsDispatchJob = defineJob({
       }
       return;
     }
-    const parsedInput = target.inputSchema.safeParse(p.jobWith);
-    if (!parsedInput.success) {
-      const err = new Error(
-        `[events] input drift for job "${p.jobName}" (event "${p.eventName}", trigger ${p.triggerId}): ${parsedInput.error.message}`,
-      );
-      reportServerError({ message: err.message, stack: err.stack ?? null });
-      throw err;
-    }
-    // `event: z.never()` is the sentinel for "this job ignores events"; skip
-    // the parse and pass undefined. Otherwise validate the payload too.
+
+    // Validate the event payload before enqueuing. `z.never()` means the
+    // target ignores events — pass undefined. The target's input schema is
+    // validated inside `enqueue()` itself (via `spec.input.parse()`).
     const isNeverEvent =
       // biome-ignore lint/suspicious/noExplicitAny: zod's _def.typeName is private but stable.
       (target.eventSchema._def as any)?.typeName === "ZodNever";
@@ -72,7 +64,9 @@ export const eventsDispatchJob = defineJob({
       }
       eventArg = parsedEvent.data;
     }
-    await target.run({ input: parsedInput.data, event: eventArg, ctx });
+
+    await target.enqueue(p.jobWith, { _event: eventArg });
+
     if (p.oneShot) {
       const table = triggerTableRegistry.get(p.eventName);
       if (!table) {

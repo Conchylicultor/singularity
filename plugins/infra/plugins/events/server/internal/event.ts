@@ -7,9 +7,7 @@ import {
   pgTable,
 } from "drizzle-orm/pg-core";
 import {
-  DEFAULT_MAX_ATTEMPTS,
   type EnqueueTx,
-  UNSAFE_getRegisteredJob,
 } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
@@ -217,39 +215,30 @@ async function dispatch<T>(
 
   if (rows.length === 0) return;
 
-  // Enqueue one events-dispatch job per matching row. Execution (including
-  // retries, oneShot deletes, and preservation on permanent failure) happens
-  // inside the dispatch job — see `./dispatch-job.ts`. emit() resolves once
-  // jobs are durable in `graphile_worker.jobs`, not when handlers finish.
-  //
-  // maxAttempts is threaded from the target job's definition so the wrapper
-  // dispatch job inherits the target's retry budget — otherwise every
-  // event-triggered call would get the Layer-1 default regardless of what
-  // `defineJob({ maxAttempts })` declared. Unknown target → fall through to
-  // DEFAULT_MAX_ATTEMPTS; the dispatcher's preservation branch returns
-  // without throwing, so retries never actually run in that case.
+  // Enqueue one events-dispatch job per matching row. The dispatch job
+  // validates the event payload, enqueues the target via `target.enqueue()`,
+  // and handles oneShot cleanup. emit() resolves once dispatch jobs are
+  // durable in `graphile_worker.jobs`, not when target handlers finish.
   //
   // When `tx` is provided, `eventsDispatchJob.enqueue` writes the queue row
   // on the caller's connection (see plugins/jobs/server/internal/registry.ts),
   // so the job lives or dies with the caller's transaction.
   await Promise.all(
     rows.map((row) => {
-      // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
-      const jobName = (row as any).jobName as string;
-      const target = UNSAFE_getRegisteredJob(jobName);
       return eventsDispatchJob.enqueue(
         {
           eventName: def.name,
           // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
           triggerId: (row as any).id as string,
-          jobName,
+          // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
+          jobName: (row as any).jobName as string,
           // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
           jobWith: ((row as any).jobWith ?? {}) as Record<string, unknown>,
           eventPayload: (payload ?? {}) as Record<string, unknown>,
           // biome-ignore lint/suspicious/noExplicitAny: row shape is dynamic per table.
           oneShot: (row as any).oneShot as boolean,
         },
-        { maxAttempts: target?.maxAttempts ?? DEFAULT_MAX_ATTEMPTS, tx },
+        { tx },
       );
     }),
   );

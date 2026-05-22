@@ -147,10 +147,7 @@ async function dispatch(
   });
 
   try {
-    // Layer-1 has no event source — direct enqueues always see event=undefined.
-    // Event-triggered invocations go through the events dispatcher, which
-    // calls target.run({ input, event, ctx }) directly with both fields.
-    await job.run({ input: payload.input, event: undefined, ctx });
+    await job.run({ input: payload.input, event: payload.event, ctx });
   } catch (err) {
     if (isSuspendSignal(err)) {
       // Graphile sees a successful run — the current job completes and the

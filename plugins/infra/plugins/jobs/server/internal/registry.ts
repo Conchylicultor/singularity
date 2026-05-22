@@ -118,6 +118,12 @@ export interface EnqueueOpts {
    * (current default; safe for post-commit emit).
    */
   tx?: EnqueueTx;
+  /**
+   * Event payload threaded by the events dispatcher. Stored in the
+   * graphile queue row and delivered to the handler as `event`. Internal
+   * plumbing — only the dispatch job should set this.
+   */
+  _event?: unknown;
 }
 
 export interface DefineJobSpec<
@@ -183,6 +189,7 @@ export interface JobTaskPayload {
   jobName: string;
   workflowRunId: string;
   input: unknown;
+  event?: unknown;
 }
 
 export function defineJob<
@@ -219,6 +226,7 @@ export function defineJob<
       jobName: spec.name,
       workflowRunId,
       input: parsed,
+      event: opts?._event,
     };
 
     if (opts?.tx) {
