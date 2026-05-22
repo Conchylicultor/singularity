@@ -6,7 +6,7 @@ import { configV2ServerResource, configV2ConflictsServerResource } from "./inter
 
 export { ConfigV2 } from "./internal/contribution";
 export { forkConfig } from "./internal/fork";
-export { getConfig, setConfig, setConfigByPath, resetConfigByPath, watchConfig, acknowledgeConflictByPath, deleteOverrideByPath } from "./internal/registry";
+export { getConfig, setConfig, setConfigByPath, resetConfigByPath, watchConfig, acknowledgeConflictByPath, deleteOverrideByPath, getRawFileContent } from "./internal/registry";
 
 export default {
   id: "config-v2",

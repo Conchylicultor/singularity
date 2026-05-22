@@ -20,3 +20,9 @@ export const deleteOverride = defineEndpoint({
   route: "POST /api/config-v2/delete-override",
   body: z.object({ storePath: z.string() }),
 });
+
+export const getConfigRawFile = defineEndpoint({
+  route: "GET /api/config-v2/raw-file",
+  query: z.object({ storePath: z.string() }),
+  response: z.object({ origin: z.string().nullable(), override: z.string().nullable() }),
+});

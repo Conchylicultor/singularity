@@ -1,6 +1,6 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/core";
-import { setConfigByPath, resetConfigByPath, acknowledgeConflictByPath, deleteOverrideByPath } from "@plugins/config_v2/server";
-import { setConfigField, resetConfigField, acknowledgeConflict, deleteOverride } from "../../core";
+import { setConfigByPath, resetConfigByPath, acknowledgeConflictByPath, deleteOverrideByPath, getRawFileContent } from "@plugins/config_v2/server";
+import { setConfigField, resetConfigField, acknowledgeConflict, deleteOverride, getConfigRawFile } from "../../core";
 
 export const handleSetField = implement(setConfigField, async ({ body }) => {
   try {
@@ -29,6 +29,14 @@ export const handleAcknowledgeConflict = implement(acknowledgeConflict, async ({
 export const handleDeleteOverride = implement(deleteOverride, async ({ body }) => {
   try {
     deleteOverrideByPath(body.storePath);
+  } catch (err) {
+    throw new HttpError(400, err instanceof Error ? err.message : String(err));
+  }
+});
+
+export const handleGetRawFile = implement(getConfigRawFile, async ({ query }) => {
+  try {
+    return getRawFileContent(query.storePath);
   } catch (err) {
     throw new HttpError(400, err instanceof Error ? err.message : String(err));
   }

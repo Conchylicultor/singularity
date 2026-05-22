@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { setConfigField, resetConfigField, acknowledgeConflict, deleteOverride } from "../core";
-import { handleSetField, handleResetField, handleAcknowledgeConflict, handleDeleteOverride } from "./internal/handlers";
+import { setConfigField, resetConfigField, acknowledgeConflict, deleteOverride, getConfigRawFile } from "../core";
+import { handleSetField, handleResetField, handleAcknowledgeConflict, handleDeleteOverride, handleGetRawFile } from "./internal/handlers";
 
 export default {
   id: "config-v2-settings",
@@ -11,5 +11,6 @@ export default {
     [resetConfigField.route]: handleResetField,
     [acknowledgeConflict.route]: handleAcknowledgeConflict,
     [deleteOverride.route]: handleDeleteOverride,
+    [getConfigRawFile.route]: handleGetRawFile,
   },
 } satisfies ServerPluginDefinition;

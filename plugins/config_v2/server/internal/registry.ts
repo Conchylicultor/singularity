@@ -1,4 +1,4 @@
-import { unlinkSync } from "node:fs";
+import { readFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import type {
   ConfigDescriptor,
@@ -241,6 +241,27 @@ export function acknowledgeConflictByPath(storePath: string): void {
 
   const newHash = computeHash(originData.content);
   userOverwrites.write(ow.content, newHash);
+}
+
+export function getRawFileContent(storePath: string): { origin: string | null; override: string | null } {
+  const descriptor = getDescriptorByStorePath(storePath);
+  if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
+
+  const entry = cacheByDescriptor.get(descriptor);
+  if (!entry) throw new Error(`No cache entry for "${storePath}"`);
+
+  const readRaw = (path: string): string | null => {
+    try {
+      return readFileSync(path, "utf-8");
+    } catch {
+      return null;
+    }
+  };
+
+  return {
+    origin: readRaw(entry.userOriginPath),
+    override: readRaw(entry.userOverwritesPath),
+  };
 }
 
 export function deleteOverrideByPath(storePath: string): void {

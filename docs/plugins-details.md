@@ -467,7 +467,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `ConfigRegistration`
     - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
   - Exports (server):
-    - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getConfig`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
+    - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getConfig`, `getRawFileContent`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
   - Imported by: `avatar`, `build`, `codegen`, `commits`, `conversation-category`, `conversations`, `enum`, `list`, `multiline-text`, `primitives`, `settings`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
@@ -510,13 +510,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Fields.Renderer` "float" → `FloatRenderer`
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
       - Exports (core):
-        - Values: `acknowledgeConflict`, `deleteOverride`, `resetConfigField`, `setConfigField`
+        - Values: `acknowledgeConflict`, `deleteOverride`, `getConfigRawFile`, `resetConfigField`, `setConfigField`
       - Contributes:
         - `Pane.Register` "config-v2-nav"
         - `Pane.Register` "config-v2-detail"
         - `Shell.Sidebar` "Config" → `ConfigSidebarButton`
       - Server:
-        - Uses: `config_v2.acknowledgeConflictByPath`, `config_v2.deleteOverrideByPath`, `config_v2.resetConfigByPath`, `config_v2.setConfigByPath`
+        - Uses: `config_v2.acknowledgeConflictByPath`, `config_v2.deleteOverrideByPath`, `config_v2.getRawFileContent`, `config_v2.resetConfigByPath`, `config_v2.setConfigByPath`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:
