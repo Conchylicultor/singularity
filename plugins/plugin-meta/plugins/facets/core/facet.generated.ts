@@ -14,4 +14,5 @@ export interface CollectedEntry {
 
 export const facetEntries: CollectedEntry[] = [
   { pluginPath: "plugin-meta/plugins/facets/plugins/commands", hierarchyPath: "plugin-meta/facets/commands", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/commands/facet"), dependsOn: [] },
+  { pluginPath: "plugin-meta/plugins/facets/plugins/slots", hierarchyPath: "plugin-meta/facets/slots", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/slots/facet"), dependsOn: [] },
 ];

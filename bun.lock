@@ -962,6 +962,10 @@
       "name": "@singularity/plugin-plugin-meta-facets-commands",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/facets/plugins/slots": {
+      "name": "@singularity/plugin-plugin-meta-facets-slots",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/plugin-health": {
       "name": "@singularity/plugin-plugin-meta-plugin-health",
       "version": "0.0.1",
@@ -2395,6 +2399,8 @@
     "@singularity/plugin-plugin-meta-facets": ["@singularity/plugin-plugin-meta-facets@workspace:plugins/plugin-meta/plugins/facets"],
 
     "@singularity/plugin-plugin-meta-facets-commands": ["@singularity/plugin-plugin-meta-facets-commands@workspace:plugins/plugin-meta/plugins/facets/plugins/commands"],
+
+    "@singularity/plugin-plugin-meta-facets-slots": ["@singularity/plugin-plugin-meta-facets-slots@workspace:plugins/plugin-meta/plugins/facets/plugins/slots"],
 
     "@singularity/plugin-plugin-meta-plugin-health": ["@singularity/plugin-plugin-meta-plugin-health@workspace:plugins/plugin-meta/plugins/plugin-health"],
 

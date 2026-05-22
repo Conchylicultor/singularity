@@ -4,24 +4,24 @@ import {
   defineFacet,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import {
-  type CommandDef,
+  type SlotDef,
   readIfExists,
   stripTypes,
   parseDefineGroup,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 
-export const commandsFacetDef = defineFacet<CommandDef[]>("commands");
+export const slotsFacetDef = defineFacet<SlotDef[]>("slots");
 
-export default createFacet<CommandDef[]>({
-  def: commandsFacetDef,
+export default createFacet<SlotDef[]>({
+  def: slotsFacetDef,
 
   extract(ctx) {
-    const src = readIfExists(join(ctx.dir, "web", "commands.ts"));
+    const src = readIfExists(join(ctx.dir, "web", "slots.ts"));
     if (!src) return [];
     return parseDefineGroup(
       stripTypes(src),
-      "defineCommand",
-      (memberName, commandId, groupName) => ({ memberName, commandId, groupName }),
+      "defineSlot",
+      (memberName, slotId, groupName) => ({ memberName, slotId, groupName }),
     );
   },
 
@@ -29,7 +29,7 @@ export default createFacet<CommandDef[]>({
     if (data.length === 0) return [];
     const subIndent = `${ctx.bodyIndent}  `;
     return [
-      `${subIndent}- Commands: ${data.map((c) => `\`${c.groupName}.${c.memberName}\``).join(", ")}`,
+      `${subIndent}- Slots: ${data.map((s) => `\`${s.groupName}.${s.memberName}\``).join(", ")}`,
     ];
   },
 });

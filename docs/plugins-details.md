@@ -1363,10 +1363,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `AUTO_STUB_CSS`, `AUTO_STUB_PACKAGES`, `importBarrel`, `registerBarrelStubs`
     - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
       - Exports (core):
-        - Types: `Facet`, `FacetDef`
-        - Values: `defineFacet`, `facetCollectedDir`, `getFacet`, `loadFacets`, `setFacet`
+        - Types: `ExtractContext`, `Facet`, `FacetDef`, `RenderDocContext`
+        - Values: `createFacet`, `defineFacet`, `facetCollectedDir`, `getFacet`, `loadFacets`, `setFacet`
       - Plugins:
         - **`commands`**
+        - **`slots`**
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Defines:
         - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`

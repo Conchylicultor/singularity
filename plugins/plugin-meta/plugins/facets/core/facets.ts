@@ -3,15 +3,32 @@ export interface FacetDef<T> {
   _phantom?: T;
 }
 
+export interface ExtractContext {
+  dir: string;
+}
+
+export interface RenderDocContext {
+  bodyIndent: string;
+}
+
 export interface Facet {
   def: FacetDef<unknown>;
-  extract: (ctx: unknown) => unknown;
+  extract: (ctx: ExtractContext) => unknown;
   relate?: (ctx: unknown) => void;
-  renderDoc: (data: unknown, ctx: unknown) => string[];
+  renderDoc: (data: unknown, ctx: RenderDocContext) => string[];
 }
 
 export function defineFacet<T>(id: string): FacetDef<T> {
   return { id };
+}
+
+export function createFacet<T>(impl: {
+  def: FacetDef<T>;
+  extract: (ctx: ExtractContext) => T;
+  relate?: (ctx: unknown) => void;
+  renderDoc: (data: T, ctx: RenderDocContext) => string[];
+}): Facet {
+  return impl as Facet;
 }
 
 export function getFacet<T>(node: { facets: Record<string, unknown> }, def: FacetDef<T>): T | undefined {
