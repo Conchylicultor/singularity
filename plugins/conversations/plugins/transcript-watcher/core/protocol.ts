@@ -80,5 +80,11 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     outputFile: z.string().optional(),
     extra: z.record(z.string()).optional(),
   }),
+  z.object({
+    kind: z.literal("unknown"),
+    at: z.string(),
+    type: z.string(),
+    raw: z.unknown(),
+  }),
 ]);
 export type JsonlEvent = z.infer<typeof JsonlEventSchema>;

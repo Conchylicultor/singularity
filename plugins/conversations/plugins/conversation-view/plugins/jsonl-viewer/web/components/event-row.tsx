@@ -3,10 +3,11 @@ import { JsonlViewer } from "../slots";
 import { RowMarkdownProvider } from "./row-markdown-context";
 
 function UnknownEventRow({ event }: { event: JsonlEvent }) {
+  const label = event.kind === "unknown" ? event.type : event.kind;
   return (
     <div className="px-3 py-1.5 text-xs text-muted-foreground font-mono">
-      <span className="text-yellow-500">Unknown {event.kind} event.</span>{" "}
-      Payload: {JSON.stringify(event)}
+      <span className="text-yellow-500">Unknown {label} event.</span>{" "}
+      Payload: {JSON.stringify(event.kind === "unknown" ? event.raw : event)}
     </div>
   );
 }

@@ -378,6 +378,13 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
       if (text) events.push({ kind: "summary", at: ts, text });
       continue;
     }
+
+    events.push({
+      kind: "unknown",
+      at: ts,
+      type: typeof type === "string" ? type : "unknown",
+      raw: obj,
+    });
   }
 
   // Second pass: resolve deferred results that arrived before their call
