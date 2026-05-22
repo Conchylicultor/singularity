@@ -55,6 +55,7 @@ export const generateTurnSummaryJob = defineJob({
       messageId: z.string().nullable().optional(),
     })
     .passthrough(),
+  dedup: "none",
   maxAttempts: 2,
   run: async ({ event }) => {
     const { enabled } = await readConfig(turnSummaryConfig);

@@ -22,6 +22,7 @@ export const workflowRunJob = defineJob({
   name: "workflows.run",
   input: z.object({ executionId: z.string() }),
   event: z.never(),
+  dedup: { key: (input) => input.executionId },
   run: async ({ input, ctx }) => {
     const initResult = await ctx.step("init", async (): Promise<InitResult | null> => {
       const [execution] = await db

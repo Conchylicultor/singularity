@@ -29,9 +29,10 @@ export interface JobCtx {
   attempt: number;
   /**
    * Stable identity for this workflow run across suspends and resumes.
-   * When `jobKey` was passed to `enqueue`, this is `${jobName}:${jobKey}`
-   * (namespaced so two different jobs picking the same natural id don't
-   * collide on `_jobWaits` / `_jobSteps`); otherwise a generated uuid.
+   * For `dedup: "singleton"` or `dedup: { key }`, this is
+   * `${jobName}:${effectiveKey}` (namespaced so two different jobs
+   * picking the same natural id don't collide on `_jobWaits` /
+   * `_jobSteps`); for `dedup: "none"`, a generated uuid.
    * Used as the key for the step and wait logs.
    */
   workflowRunId: string;
@@ -81,6 +82,7 @@ export interface RegisteredJob {
    * regardless of the schema (Layer-1 has no event source).
    */
   eventSchema: z.ZodType;
+  dedup: "singleton" | "none" | "keyed";
   run: (args: {
     input: unknown;
     event: unknown;
@@ -99,15 +101,6 @@ export interface RegisteredJob {
 }
 
 export interface EnqueueOpts {
-  /**
-   * Caller-supplied workflow identity, scoped to *this* `defineJob`. Two
-   * enqueues of the same job with the same `jobKey` collapse into one
-   * graphile-worker row (replace mode) and share `workflowRunId`, so
-   * step/wait memoization carries across retries. Different jobs that
-   * pass the same `jobKey` do NOT collide — `enqueue` namespaces the
-   * underlying graphile key and `workflowRunId` by job name.
-   */
-  jobKey?: string;
   maxAttempts?: number;
   runAt?: Date;
   /**
@@ -125,6 +118,11 @@ export interface EnqueueOpts {
    */
   _event?: unknown;
 }
+
+export type Dedup<S extends z.ZodType> =
+  | "singleton"
+  | "none"
+  | { key: (input: z.infer<S>) => string };
 
 export interface DefineJobSpec<
   N extends string,
@@ -148,6 +146,7 @@ export interface DefineJobSpec<
    * `.enqueue()` always passes `event: undefined` regardless of schema.
    */
   event: E;
+  dedup: Dedup<S>;
   /**
    * Handler body. Receives `{ input, event, ctx }` as a single object.
    *
@@ -183,8 +182,8 @@ export interface JobFactory<
 // dispatch time so adding jobs at runtime (future) doesn't require a restart.
 export const jobRegistry = new Map<string, RegisteredJob>();
 
-// Internal payload shape the worker sees. `workflowRunId` is new — generated
-// at enqueue time from `jobKey` when present, else `crypto.randomUUID()`.
+// Internal payload shape the worker sees. `workflowRunId` is derived from
+// the dedup strategy at enqueue time.
 export interface JobTaskPayload {
   jobName: string;
   workflowRunId: string;
@@ -209,17 +208,18 @@ export function defineJob<
     // Parse once at enqueue time so the serialized payload is already in
     // the post-transform shape; the worker re-parses as a safety check.
     const parsed = spec.input.parse(input);
-    // Namespace the user's `jobKey` by job name to derive both the
-    // `workflowRunId` and the graphile-level dedup key. Two `defineJob`s
-    // that pick the same natural identifier (e.g. `conversationId`) used
-    // to share a `workflowRunId` here, which collided in `_jobWaits` /
-    // `_jobSteps` and made `jobs.resume`'s `addJob` clobber the other
-    // workflow's resume row. Per-job namespacing makes the collision
-    // structurally impossible — each `defineJob` gets its own keyspace.
-    const workflowRunId = opts?.jobKey
-      ? `${spec.name}:${opts.jobKey}`
+
+    let effectiveJobKey: string | undefined;
+    if (spec.dedup === "singleton") {
+      effectiveJobKey = "_";
+    } else if (spec.dedup !== "none") {
+      effectiveJobKey = spec.dedup.key(parsed as z.infer<typeof spec.input>);
+    }
+
+    const workflowRunId = effectiveJobKey
+      ? `${spec.name}:${effectiveJobKey}`
       : randomUUID();
-    const graphileJobKey = opts?.jobKey ? workflowRunId : null;
+    const graphileJobKey = effectiveJobKey ? workflowRunId : null;
     const maxAttempts =
       opts?.maxAttempts ?? spec.maxAttempts ?? DEFAULT_MAX_ATTEMPTS;
     const payload: JobTaskPayload = {
@@ -284,6 +284,12 @@ export function defineJob<
         name: spec.name,
         inputSchema: spec.input,
         eventSchema: spec.event,
+        dedup:
+          spec.dedup === "singleton"
+            ? "singleton"
+            : spec.dedup === "none"
+              ? "none"
+              : "keyed",
         run: spec.run as RegisteredJob["run"],
         maxAttempts: spec.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
         enqueue,

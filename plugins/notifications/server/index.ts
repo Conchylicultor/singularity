@@ -33,7 +33,7 @@ export default {
   async onReady() {
     await ttlCleanupJob.enqueue(
       {},
-      { jobKey: "notifications.ttl-cleanup", runAt: new Date(Date.now() + 3_600_000) },
+      { runAt: new Date(Date.now() + 3_600_000) },
     );
   },
 } satisfies ServerPluginDefinition;

@@ -30,6 +30,7 @@ export const eventsDispatchJob = defineJob({
     oneShot: z.boolean(),
   }),
   event: z.never(),
+  dedup: "none",
   run: async ({ input: p }) => {
     const target = UNSAFE_getRegisteredJob(p.jobName);
     if (!target) {

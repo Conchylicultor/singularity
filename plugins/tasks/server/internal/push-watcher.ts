@@ -145,6 +145,7 @@ export async function runInitialReconcile(): Promise<void> {
 export const pushIngestJob = defineJob({
   name: "tasks.push-ingest",
   input: z.object({}),
+  dedup: "none",
   event: z.object({
     refName: z.string(),
     sha: z.string(),

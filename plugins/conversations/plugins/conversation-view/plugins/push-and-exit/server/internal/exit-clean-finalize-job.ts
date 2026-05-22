@@ -19,6 +19,7 @@ export const exitCleanFinalizeJob = defineJob({
   input: z.object({ conversationId: z.string() }),
   // Direct-enqueue only (spawned by the exit_clean MCP tool).
   event: z.never(),
+  dedup: { key: (input) => input.conversationId },
   maxAttempts: 3,
   run: async ({ input: { conversationId }, ctx }) => {
     await afterTurn(ctx, conversationId, { timeoutMs: FINALIZE_TIMEOUT_MS });

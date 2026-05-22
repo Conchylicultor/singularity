@@ -19,6 +19,7 @@ export const taskStatusPinJob = defineJob({
     status: z.string(),
     previousStatus: z.string(),
   }).passthrough(),
+  dedup: "none",
   maxAttempts: 2,
   run: async ({ event }) => {
     const becameBlocked = event?.status === "blocked" && event.previousStatus !== "blocked";

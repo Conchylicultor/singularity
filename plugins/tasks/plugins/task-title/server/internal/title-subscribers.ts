@@ -5,6 +5,7 @@ import { scheduleTaskTitleUpgrade } from "./generate-title";
 export const titleOnConversationCreatedJob = defineJob({
   name: "task-title.on-conversation-created",
   input: z.object({}).passthrough(),
+  dedup: "none",
   event: z.object({
     taskId: z.string(),
     prompt: z.string().optional(),
@@ -20,6 +21,7 @@ export const titleOnConversationCreatedJob = defineJob({
 export const titleOnUserTurnSentJob = defineJob({
   name: "task-title.on-user-turn-sent",
   input: z.object({}).passthrough(),
+  dedup: "none",
   event: z.object({
     taskId: z.string(),
     text: z.string(),

@@ -34,6 +34,7 @@ export const jobsResumeJob = defineJob({
   // object so the payload is captured verbatim and stored in
   // `_jobWaits.payloadJson` for the awaiting workflow to read on resume.
   event: z.record(z.unknown()),
+  dedup: "none",
   // Bumped — resolving a wait involves two DB writes and a target enqueue;
   // each is idempotent, so safe to retry on transient failure.
   maxAttempts: 5,

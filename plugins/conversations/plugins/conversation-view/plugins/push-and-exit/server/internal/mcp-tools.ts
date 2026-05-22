@@ -28,10 +28,7 @@ Only call this in response to the push-and-exit prompt. If anything went wrong o
   async handler(_args, { conversationId }) {
     setStatus(conversationId, "clean", null);
     await updateConversation(conversationId, { closeRequested: true });
-    await exitCleanFinalizeJob.enqueue(
-      { conversationId },
-      { jobKey: conversationId },
-    );
+    await exitCleanFinalizeJob.enqueue({ conversationId });
     return {
       content: [
         {

@@ -8,6 +8,7 @@ import { _improvePendingGroups } from "./tables";
 export const applyGroupJob = defineJob({
   name: "improve.apply-group",
   input: z.object({}),
+  dedup: "none",
   event: z
     .object({
       conversationId: z.string(),

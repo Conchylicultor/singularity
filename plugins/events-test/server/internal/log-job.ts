@@ -32,6 +32,7 @@ export const logPing = defineJob({
   name: "events_test.log",
   input: z.object({ label: z.string() }),
   event: z.object({ userId: z.string(), message: z.string() }),
+  dedup: "none",
   run: ({ input: { label }, event, ctx }) => {
     if (seenRuns.has(ctx.jobId)) return;
     seenRuns.add(ctx.jobId);

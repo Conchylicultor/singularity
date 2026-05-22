@@ -118,10 +118,7 @@ export const handleCreateExecution = implement(createExecutionEndpoint, async ({
     throw err;
   }
 
-  await workflowRunJob.enqueue(
-    { executionId: execution!.id },
-    { jobKey: execution!.id },
-  );
+  await workflowRunJob.enqueue({ executionId: execution!.id });
 
   return serializeExecution(execution!, []);
 });

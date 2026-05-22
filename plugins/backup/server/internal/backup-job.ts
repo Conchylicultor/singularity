@@ -14,6 +14,7 @@ export const backupRunJob = defineJob({
     trigger: z.enum(["manual", "periodic"]),
   }),
   event: z.never(),
+  dedup: "singleton",
   maxAttempts: 2,
   run: async ({ input }) => {
     const runId = crypto.randomUUID();
@@ -76,7 +77,7 @@ export const backupRunJob = defineJob({
         );
         await backupRunJob.enqueue(
           { trigger: "periodic" },
-          { jobKey: "backup.periodic", runAt },
+          { runAt },
         );
       }
     }

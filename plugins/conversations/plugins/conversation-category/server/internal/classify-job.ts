@@ -62,6 +62,7 @@ export const classifyConversationJob = defineJob({
       conversationId: z.string(),
     })
     .passthrough(),
+  dedup: "none",
   maxAttempts: 2,
   run: async ({ input, event }) => {
     const conversationId = input.conversationId ?? event?.conversationId;

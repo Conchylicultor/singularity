@@ -26,10 +26,7 @@ export default {
 
     const { periodicIntervalHours } = await readConfig(backupConfig);
     if (periodicIntervalHours > 0) {
-      await backupRunJob.enqueue(
-        { trigger: "periodic" },
-        { jobKey: "backup.periodic" },
-      );
+      await backupRunJob.enqueue({ trigger: "periodic" });
     }
   },
 } satisfies ServerPluginDefinition;

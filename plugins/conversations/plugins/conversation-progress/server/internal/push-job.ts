@@ -19,6 +19,7 @@ export const markProgressPushedJob = defineJob({
       attemptId: z.string().optional(),
     })
     .passthrough(),
+  dedup: "none",
   maxAttempts: 2,
   run: async ({ event }) => {
     const conversationId = event?.conversationId;

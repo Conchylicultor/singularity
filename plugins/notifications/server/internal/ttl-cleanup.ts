@@ -13,6 +13,7 @@ export const ttlCleanupJob = defineJob({
   name: "notifications.ttl-cleanup",
   input: z.object({}),
   event: z.never(),
+  dedup: "singleton",
   async run() {
     const dismissedCutoff = new Date(Date.now() - DISMISSED_TTL_MS);
     await db
@@ -35,7 +36,7 @@ export const ttlCleanupJob = defineJob({
 
     await ttlCleanupJob.enqueue(
       {},
-      { jobKey: "notifications.ttl-cleanup", runAt: new Date(Date.now() + NEXT_RUN_MS) },
+      { runAt: new Date(Date.now() + NEXT_RUN_MS) },
     );
   },
 });

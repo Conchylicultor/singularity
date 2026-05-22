@@ -8,6 +8,7 @@ export const buildRunJob = defineJob({
   name: "build.run",
   input: z.object({}),
   event: z.never(),
+  dedup: "singleton",
   run: async () => {
     if (isBuildInflight()) return;
     const { autoBuild } = getConfig(buildConfig);

@@ -29,6 +29,7 @@ export const maybeLaunchTaskJob = defineJob({
     cause: z.string().default("dep-resolved"),
   }),
   event: z.never(),
+  dedup: "none",
   run: async ({ input: { taskId, cause } }) => {
     // Main-only: a forked sub-worktree DB inherits the autoStart marker and
     // taskStatusChanged triggers from main at fork time, so the same job
@@ -88,6 +89,7 @@ export const maybeLaunchTaskJob = defineJob({
 export const maybeLaunchDependentsJob = defineJob({
   name: "tasks.maybe-launch-dependents",
   input: z.object({}),
+  dedup: "none",
   event: z
     .object({
       taskId: z.string(),
