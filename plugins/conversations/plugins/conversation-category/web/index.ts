@@ -1,15 +1,14 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Config } from "@plugins/config/web";
+import { ConfigV2 } from "@plugins/config_v2/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationCategoryConfig } from "../shared";
 import { CategoryChipToolbar } from "./components/category-chip-toolbar";
-import { CategoryColorSettings } from "./components/category-color-settings";
 import { CategoryAvatarRow } from "./components/category-avatar-row";
 
 export { autoColorKey } from "./internal/colors";
 export type { ColorKey } from "./internal/colors";
-export { useCategoryColors } from "./internal/use-category-colors";
+export { useCategoryAvatars } from "./internal/use-category-avatars";
 
 export default {
   id: "conversation-category",
@@ -18,14 +17,7 @@ export default {
     "Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover.",
   contributions: [
     Conversation.Header({ id: "category", component: CategoryChipToolbar }),
-    Config.Spec(conversationCategoryConfig),
-    Config.Section({
-      id: "category-colors",
-      title: "Category avatars",
-      description:
-        "Click an avatar to pick its icon and color. The avatar appears in the conversation list. Leave unchanged for automatic coloring.",
-      component: CategoryColorSettings,
-    }),
+    ConfigV2.WebRegister({ descriptor: conversationCategoryConfig }),
     Item.Avatar({
       match: (conv) => conv.kind !== "agent",
       component: CategoryAvatarRow,

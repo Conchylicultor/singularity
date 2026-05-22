@@ -445,8 +445,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Sidebar` "Settings" → `component`
   - Server:
     - Uses: `database.db`
-  - Imported by: `auth`, `backup`, `chart`, `code-review`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `segmented-progress-bar`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
-  - Slot contributors: `code-review`, `commits`, `conversation-category`, `launch-prompts`, `prompt-templates`, `theme-customizer`
+  - Imported by: `auth`, `backup`, `chart`, `code-review`, `color-adjust`, `color-palette`, `commits`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `segmented-progress-bar`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
+  - Slot contributors: `code-review`, `commits`, `launch-prompts`, `prompt-templates`, `theme-customizer`
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Exports (core):
@@ -457,7 +457,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
   - Exports (server):
     - Values: `ConfigV2`, `getConfig`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-  - Imported by: `avatar`, `build`, `codegen`, `list`, `multiline-text`, `primitives`, `settings`
+  - Imported by: `avatar`, `build`, `codegen`, `commits`, `conversation-category`, `list`, `multiline-text`, `primitives`, `settings`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
@@ -521,25 +521,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
       - Defines:
-        - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables-colors.ts`
         - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
         - Entity extension of: `tasks-core` (table `conversations_ext_category`)
       - Exports (web):
         - Types: `ColorKey`
-        - Values: `autoColorKey`, `useCategoryColors`
+        - Values: `autoColorKey`, `useCategoryAvatars`
       - Exports (server):
-        - Values: `_conversationCategoryColors`, `categoryColorsResource`, `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`, `conversationCategoryConfig`
+        - Values: `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`, `conversationCategoryConfig`
       - Exports (shared):
-        - Types: `ConversationCategoriesPayload`, `ConversationCategory`, `SetCategoryBody`, `SetColorBody`
-        - Values: `classifyConversation`, `clearConversationCategory`, `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`, `deleteCategoryColor`, `getCategoryColors`, `SetCategoryBodySchema`, `setCategoryColor`, `SetColorBodySchema`, `setConversationCategory`
+        - Types: `ConversationCategoriesPayload`, `ConversationCategory`, `SetCategoryBody`
+        - Values: `classifyConversation`, `clearConversationCategory`, `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`, `SetCategoryBodySchema`, `setConversationCategory`
       - Contributes:
         - `Conversation.Header` → `CategoryChipToolbar`
-        - `Config.Spec`
-        - `Config.Section` "Category avatars" → `CategoryColorSettings`
+        - `ConfigV2.WebRegister`
         - `Item.Avatar` → `CategoryAvatarRow`
       - Server:
         - Register: `defineJob('conversation-category.classify')`
-        - Uses: `config.Config`, `config.readConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
+        - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.Turn`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
     - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
       - Defines:
         - DB schema: `plugins/conversations/plugins/conversation-progress/server/internal/tables.ts`
@@ -1723,7 +1721,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Config.Spec`
         - `Config.Section` "Excluded path toggles" → `ExcludedPathToggles`
       - Server:
-        - Uses: `config.Config`, `config.readConfig`, `database.db`
+        - Uses: `config.Config`, `config.readConfig`, `config_v2.getConfig`, `database.db`
     - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, sourced from ccusage.
       - Exports (shared):
         - Values: `costConfig`, `getCostAvgPerConversation`, `getCostCumulative`, `getCostDaily`, `getCostDailyByFamily`, `getCostDistribution`, `getCostSessions`, `getCostTokenMix`, `getCostTotals`

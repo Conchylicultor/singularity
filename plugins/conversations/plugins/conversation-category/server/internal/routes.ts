@@ -1,4 +1,4 @@
-import { readConfig } from "@plugins/config/server";
+import { getConfig } from "@plugins/config_v2/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import type { HttpHandler } from "@plugins/framework/plugins/server-core/core";
 import { conversationCategoryConfig } from "../../shared/config";
@@ -30,8 +30,9 @@ export const handleSetCategory = implement(setConversationCategory, async ({ par
   // Validate against the configured list — the UI offers these as choices,
   // but a stale tab or direct API caller could pass anything; reject early
   // so the chip never displays a label that's not in the picker.
-  const { categories } = await readConfig(conversationCategoryConfig);
-  if (!categories.includes(body.category)) {
+  const { categories } = getConfig(conversationCategoryConfig);
+  const categoryNames = categories.map((c) => c.name);
+  if (!categoryNames.includes(body.category)) {
     throw new HttpError(400, `category "${body.category}" is not in the configured list`);
   }
 

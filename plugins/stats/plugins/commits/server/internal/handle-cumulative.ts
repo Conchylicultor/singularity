@@ -49,7 +49,7 @@ export async function handleCumulative(req: Request): Promise<Response> {
       }
       return { date, byCategory: { ...running } };
     });
-    const configOrder = await getConfigCategoryOrder();
+    const configOrder = getConfigCategoryOrder();
     const resp = Response.json({ points, categories: configOrder });
     resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
     return resp;

@@ -12,10 +12,6 @@ export {
   classifyConversation,
   setConversationCategory,
   clearConversationCategory,
-  getCategoryColors,
-  setCategoryColor,
-  deleteCategoryColor,
   SetCategoryBodySchema,
-  SetColorBodySchema,
 } from "./endpoints";
-export type { SetCategoryBody, SetColorBody } from "./endpoints";
+export type { SetCategoryBody } from "./endpoints";

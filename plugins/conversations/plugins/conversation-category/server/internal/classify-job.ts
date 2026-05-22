@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { readConfig } from "@plugins/config/server";
+import { getConfig } from "@plugins/config_v2/server";
 import {
   readConversationTurns,
   type Turn,
@@ -94,9 +94,9 @@ export const classifyConversationJob = defineJob({
       return;
     }
 
-    const { autoClassify, categories } = await readConfig(conversationCategoryConfig);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; config value is boolean at runtime
-    if (!autoClassify) return;
+    const config = getConfig(conversationCategoryConfig);
+    if (!config.autoClassify) return;
+    const categories = config.categories.map((c) => c.name);
     if (categories.length === 0) return;
 
     let raw: string;

@@ -1,0 +1,7 @@
+// @hash 2ce0036aa76c
+{
+  // Automatically classify conversations into categories after each assistant turn. Manual re-classify is always available from the toolbar chip.
+  "autoClassify": true,
+  // Labels Haiku can pick from when classifying a conversation. Reorder freely; the last label is also the fallback when Haiku's reply doesn't match any entry, so a catch-all (e.g. "Other") at the end is recommended.
+  "categories": []
+}

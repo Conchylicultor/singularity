@@ -708,6 +708,13 @@
       "tag": "20260520_175417_d5575a29__remove_push_and_exit_jobs",
       "hash": "d5575a29",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1779441481000,
+      "tag": "20260522_091801_1da8cc8e__drop_category_colors_table",
+      "hash": "1da8cc8e",
+      "breakpoints": true
     }
   ]
 }

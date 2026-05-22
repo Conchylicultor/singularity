@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import {
   autoColorKey,
-  useCategoryColors,
+  useCategoryAvatars,
 } from "@plugins/conversations/plugins/conversation-category/web";
 import {
   ChartState,
@@ -48,14 +48,14 @@ const UNKNOWN_KEY = "Unknown";
 const UNKNOWN_COLOR = "#94a3b8";
 
 function useCategoryColorFn(): (cat: string) => string {
-  const overrides = useCategoryColors();
+  const avatars = useCategoryAvatars();
   return useCallback(
     (cat: string): string => {
       if (cat === UNKNOWN_KEY) return UNKNOWN_COLOR;
-      const colorKey = overrides[cat]?.colorKey ?? autoColorKey(cat);
+      const colorKey = avatars[cat]?.color ?? autoColorKey(cat);
       return COLOR_KEY_HEX[colorKey] ?? UNKNOWN_COLOR;
     },
-    [overrides],
+    [avatars],
   );
 }
 

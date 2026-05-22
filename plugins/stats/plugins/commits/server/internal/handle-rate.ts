@@ -80,7 +80,7 @@ export async function handleRate(req: Request): Promise<Response> {
     const points = [...counts.entries()]
       .sort((a, b) => (a[0] < b[0] ? -1 : 1))
       .map(([k, v]) => ({ bucket: k, byCategory: v }));
-    const configOrder = await getConfigCategoryOrder();
+    const configOrder = getConfigCategoryOrder();
     const resp = Response.json({ bucket, points, categories: configOrder });
     resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
     return resp;

@@ -4,7 +4,7 @@ import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { toast } from "@plugins/notifications/web";
-import { useConfigValues } from "@plugins/config/web";
+import { useConfig } from "@plugins/config_v2/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { conversationCategoryConfig } from "../../shared";
 import { useCategoryFor } from "../internal/use-category";
@@ -15,10 +15,8 @@ export function CategoryChipToolbar() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
   const category = useCategoryFor(convId);
-  const { categories } = useConfigValues(
-    conversationCategoryConfig,
-    "conversation-category",
-  );
+  const config = useConfig(conversationCategoryConfig);
+  const categories = config.categories.map((c) => c.name);
   const [busy, setBusy] = useState<"classify" | "set" | null>(null);
   const [open, setOpen] = useState(false);
   if (!conversation) return null;

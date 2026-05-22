@@ -29,7 +29,6 @@ const ALLOWED = new Map<string, number>([
   ["plugins/code-explorer/web/components/file-tree-view.tsx", 1],
   ["plugins/config/web/internal/config-client.ts", 2],
   ["plugins/conversations-recover/web/components/recovery-view.tsx", 1],
-  ["plugins/conversations/plugins/conversation-category/web/components/category-color-settings.tsx", 1],
   ["plugins/conversations/plugins/conversation-view/plugins/code/plugins/docs-button/web/use-pushed-doc-files.ts", 1],
   ["plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web/components/diff-view.tsx", 1],
   ["plugins/review/plugins/code-review/web/components/review-sections-settings.tsx", 3],
