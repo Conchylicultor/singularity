@@ -18,6 +18,7 @@ export {
   parseUrl,
   buildChainUrl,
   getChain,
+  reorderChain,
   restoreChain,
   openPane,
   useOpenPane,

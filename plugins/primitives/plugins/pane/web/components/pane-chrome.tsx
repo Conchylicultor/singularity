@@ -60,8 +60,9 @@ export function PaneChrome({ pane, title, actions, hideRightActions, children }:
   return (
     <div className="flex h-full flex-col">
       <div
-        className="flex h-10 items-center gap-2 border-b px-2"
+        className={`flex h-10 items-center gap-2 border-b px-2${layoutCtx?.dragHandleProps ? " cursor-grab active:cursor-grabbing" : ""}`}
         onDoubleClick={layoutCtx?.onDoubleClickHeader}
+        {...layoutCtx?.dragHandleProps}
       >
         {chrome.history && <PaneHistoryButtons pane={pane} />}
         {resolvedTitle != null &&

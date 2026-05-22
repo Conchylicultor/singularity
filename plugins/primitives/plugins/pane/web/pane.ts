@@ -357,6 +357,17 @@ function chainsEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
   return true;
 }
 
+export function reorderChain(fromIndex: number, toIndex: number): void {
+  if (typeof window === "undefined") return;
+  const chain = [...currentChain];
+  if (fromIndex < 0 || fromIndex >= chain.length) return;
+  if (toIndex < 0 || toIndex >= chain.length) return;
+  if (fromIndex === toIndex) return;
+  const [item] = chain.splice(fromIndex, 1);
+  chain.splice(toIndex, 0, item!);
+  setChain(chain);
+}
+
 export function restoreChain(
   slots: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string> }>,
 ): void {

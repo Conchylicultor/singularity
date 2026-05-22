@@ -14,9 +14,10 @@ const DEFAULT_WIDTH = 400;
 interface ColumnProps {
   entry: MatchEntry;
   isLast: boolean;
+  dragHandleProps?: Record<string, unknown>;
 }
 
-export function Column({ entry, isLast }: ColumnProps) {
+export function Column({ entry, isLast, dragHandleProps }: ColumnProps) {
   const [collapsed, toggleCollapse] = useColumnCollapse(entry.pane.id);
   const [isMaximized, toggleMaximize] = useColumnMaximize(entry.pane.id);
   const [width, setWidth] = useColumnWidth(
@@ -82,7 +83,7 @@ export function Column({ entry, isLast }: ColumnProps) {
               : "flex h-full shrink-0 flex-col overflow-hidden"
         }
       >
-        <PaneLayoutContext.Provider value={{ onDoubleClickHeader: toggleMaximize }}>
+        <PaneLayoutContext.Provider value={{ onDoubleClickHeader: toggleMaximize, dragHandleProps }}>
           <Component />
         </PaneLayoutContext.Provider>
       </div>

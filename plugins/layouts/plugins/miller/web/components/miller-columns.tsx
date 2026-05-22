@@ -1,13 +1,19 @@
-import { Fragment, useContext, useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useContext, useLayoutEffect, useMemo, useRef } from "react";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
+  getChain,
   PaneBasePathContext,
   PaneInstanceContext,
   PaneMatchContext,
+  reorderChain,
   setBasePath,
   useMatchForChain,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
+import {
+  SortableItem,
+  SortableList,
+} from "@plugins/primitives/plugins/sortable-list/web";
 import { Column } from "./column";
 
 export function MillerColumns() {
@@ -32,22 +38,52 @@ export function MillerColumns() {
     lastLength.current = len;
   }, [match?.chain.length]);
 
+  const handleMove = useCallback((activeId: string, overId: string) => {
+    const chain = getChain();
+    const fromIdx = chain.findIndex((s) => String(s.instanceId) === activeId);
+    const toIdx = chain.findIndex((s) => String(s.instanceId) === overId);
+    if (fromIdx >= 0 && toIdx >= 0) {
+      reorderChain(fromIdx, toIdx);
+    }
+  }, []);
+
   if (!match) return null;
+
+  const itemIds = match.chain.map((e) => String(e.instanceId));
 
   return (
     <PaneMatchContext.Provider value={match}>
       <PluginErrorBoundary slot="layouts.miller" label={basePath}>
         <div ref={ref} className="flex h-full overflow-x-auto">
-          {match.chain.map((entry, i) => (
-            <Fragment key={entry.instanceId}>
-              <PaneInstanceContext.Provider value={entry.instanceId}>
-                <Column
-                  entry={entry}
-                  isLast={i === match.chain.length - 1}
-                />
-              </PaneInstanceContext.Provider>
-            </Fragment>
-          ))}
+          <SortableList
+            items={itemIds}
+            onMove={handleMove}
+            orientation="horizontal"
+          >
+            {match.chain.map((entry, i) => {
+              const isLast = i === match.chain.length - 1;
+              return (
+                <SortableItem
+                  key={entry.instanceId}
+                  id={String(entry.instanceId)}
+                  handle
+                  className={(state) =>
+                    `flex h-full${isLast ? " min-w-[200px] flex-1" : " shrink-0"}${state.isDragging ? " opacity-50" : ""}`
+                  }
+                >
+                  {(state) => (
+                    <PaneInstanceContext.Provider value={entry.instanceId}>
+                      <Column
+                        entry={entry}
+                        isLast={isLast}
+                        dragHandleProps={state.handleProps}
+                      />
+                    </PaneInstanceContext.Provider>
+                  )}
+                </SortableItem>
+              );
+            })}
+          </SortableList>
         </div>
       </PluginErrorBoundary>
     </PaneMatchContext.Provider>

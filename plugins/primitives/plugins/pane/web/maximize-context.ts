@@ -7,4 +7,5 @@ import { createContext } from "react";
  */
 export const PaneLayoutContext = createContext<{
   onDoubleClickHeader: () => void;
+  dragHandleProps?: Record<string, unknown>;
 } | null>(null);
