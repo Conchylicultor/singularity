@@ -77,6 +77,7 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     toolUseId: z.string().optional(),
     status: z.string(),
     summary: z.string(),
+    outputFile: z.string().optional(),
     extra: z.record(z.string()).optional(),
   }),
 ]);

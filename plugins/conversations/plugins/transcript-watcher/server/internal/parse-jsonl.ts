@@ -18,7 +18,7 @@ const IMAGE_MIME: Record<string, string> = {
 
 type Segment = { kind: "text"; value: string } | { kind: "image"; mime: string; data: string };
 
-const KNOWN_NOTIFICATION_KEYS = new Set(["task-id", "tool-use-id", "status", "summary"]);
+const KNOWN_NOTIFICATION_KEYS = new Set(["task-id", "tool-use-id", "status", "summary", "output-file"]);
 
 function extractTaskNotifications(text: string, at: string, out: JsonlEvent[]): string {
   const re = /<task-notification>([\s\S]*?)<\/task-notification>/g;
@@ -45,6 +45,7 @@ function extractTaskNotifications(text: string, at: string, out: JsonlEvent[]): 
     const toolUseId = str(parsed["tool-use-id"]) || undefined;
     const status = str(parsed["status"]);
     const summary = str(parsed["summary"]);
+    const outputFile = str(parsed["output-file"]) || undefined;
 
     const extra: Record<string, string> = {};
     for (const [k, v] of Object.entries(parsed)) {
@@ -62,6 +63,7 @@ function extractTaskNotifications(text: string, at: string, out: JsonlEvent[]): 
         toolUseId,
         status,
         summary,
+        outputFile,
         extra: Object.keys(extra).length > 0 ? extra : undefined,
       });
     }
