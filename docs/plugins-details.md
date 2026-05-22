@@ -300,6 +300,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Sidebar` "Accounts" → `component`
   - Imported by: `google`, `google-drive`, `notion`, `setup-wizard`
   - Slot contributors: `google`, `notion`
+  - Endpoint callers: `setup-wizard`
   - Plugins:
     - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
       - Exports (shared):
@@ -380,6 +381,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineJob('build.run')`
     - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
     - Resources: `build.frontendHash` (push), `build.history` (push), `build.mainAheadCount` (push)
+  - Endpoint callers: `build-profiling`
   - Plugins:
     - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
       - Exports (core):
@@ -547,6 +549,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineJob('tasks.maybe-launch')`, `defineJob('tasks.maybe-launch-dependents')`, `defineTriggerEvent('conversation.created')`, `defineTriggerEvent('conversation.turn-completed')`, `defineTriggerEvent('conversation.userTurnSent')`
     - Uses: `config_v2.forkConfig`, `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.notifyConversationsChanged`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTask`, `tasks-core.updateTaskTitle`
   - Imported by: `agents`, `attempt-view`, `code-explorer`, `code-review`, `commits-graph`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `dependent-count`, `docs-button`, `drop-and-exit`, `drop-dependents`, `exit`, `file-changes`, `fork-session`, `grouped`, `history`, `hold-and-exit`, `improve`, `markdown-extensions`, `model`, `new-child-task`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `read`, `resume`, `review`, `runtime-api`, `runtime-tmux`, `status`, `summary`, `task`, `task-header`, `task-title`, `tasks`, `tasks-panel`, `terminal-pane`, `tool-call`, `turn-summary`, `user-text`, `vscode`, `welcome`
+  - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `resume`, `transcript-api`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
       - Defines:
@@ -1286,6 +1289,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register: `defineJob('events.dispatch')`, `UNSAFE_installDurableHooks()`
         - Uses: `database.db`
         - Resources: `event-emissions` (invalidate), `event-triggers` (invalidate)
+      - Endpoint callers: `queue`
     - **`git-watcher`** — Watches local git refs (refs/heads/main by default) via @parcel/watcher. Emits the git.refAdvanced trigger event and notifies the refHeadResource live-state resource on every advance.
       - Defines:
         - DB schema: `plugins/infra/plugins/git-watcher/server/internal/tables-ref-advanced.ts`
@@ -1307,6 +1311,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register: `defineJob('jobs.resume')`
         - Uses: `database.db`
         - Resources: `jobs-list` (invalidate)
+      - Endpoint callers: `queue`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Exports (server):
         - Types: `McpTool`, `McpToolContext`, `McpToolResult`
@@ -1377,6 +1382,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`commands`**
         - **`resources`**
+        - **`routes`**
         - **`slots`**
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Defines:
@@ -1395,8 +1401,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Resources: `plugin-health-reviews` (push)
     - **`plugin-tree`**
       - Exports (core):
-        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `ResourceDef`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`
-        - Values: `buildPluginTree`, `enrichPluginTreeDocs`, `matchBracket`, `parseDefineGroup`, `parseResources`, `readIfExists`, `stripTypes`
+        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `ResourceDef`, `RouteDef`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`
+        - Values: `buildPluginTree`, `enrichPluginTreeDocs`, `matchBracket`, `parseDefineGroup`, `parseResources`, `readIfExists`, `stripTypes`, `walkFiles`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Exports (core):
         - Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `EntityExtensionInfo`, `EntityExtensionRef`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`, `TableInfo`
@@ -1406,6 +1412,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
       - Contributes:
         - `Pane.Register` "plugin-view"
+      - Endpoint callers: `catalog`, `plugin-link`, `publish`
       - Plugins:
         - **`public-api`** — Displays the plugin's public exports, slots, routes, and consumer relationships.
           - Contributes:
@@ -1680,6 +1687,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `_reorderGroupMembers`, `_reorderGroups`, `reorderGroupsResource`
       - Server:
         - Uses: `database.db`
+      - Endpoint callers: `reorder`
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Exports (web):
@@ -1809,6 +1817,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Register: `mcpTool('add_task')`, `defineJob('tasks.push-ingest')`
     - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.getTaskDependencyIds`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listDependentIds`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.taskAttachments`, `tasks-core.updateTask`
+  - Endpoint callers: `dependencies`, `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-graph`, `task-header`, `task-list`, `tree`
   - Plugins:
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
       - Defines:
