@@ -26,7 +26,7 @@ export {
 
 export { defineCollectedDir, isCollectedDirDef, type CollectedDirDef } from "./collected-dir";
 
-export { generateConfigOrigins, renderConfigOriginContent } from "./config-origin-gen";
+export { generateConfigOrigins, propagateConfigToUser, renderConfigOriginContent } from "./config-origin-gen";
 
 export {
   generateBarrelStubs,

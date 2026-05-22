@@ -4,7 +4,7 @@ import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
-import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins, generateBarrelStubs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins, propagateConfigToUser, generateBarrelStubs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot } from "../git/main-repo-root";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
@@ -641,6 +641,12 @@ export function registerBuild(program: Command) {
       endSpan = buildProfilerStart("configOrigins", "build:codegen", "generate config origins");
       console.log("Generating config origins...");
       await generateConfigOrigins({ root });
+      endSpan();
+
+      // 4c. Propagate git config to user config dir (~/.singularity/config/<worktree>/)
+      endSpan = buildProfilerStart("propagateConfig", "build:codegen", "propagate config to user");
+      console.log("Propagating config to user...");
+      await propagateConfigToUser({ root, worktreeName: name, singularityDir: SINGULARITY_DIR });
       endSpan();
 
       // 3c–5. Run validation (checks, tsc) and the Vite build in parallel.

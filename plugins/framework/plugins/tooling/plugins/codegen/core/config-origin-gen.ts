@@ -1,9 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync } from "fs";
+import { randomUUID } from "crypto";
 import { dirname, join } from "path";
+import { parse as parseJsonc } from "jsonc-parser";
 import { buildEnrichedTree } from "./docgen";
-import { computeHash } from "@plugins/config_v2/core";
-import type { ConfigDescriptor, FieldDef } from "@plugins/config_v2/core";
-import type { JsonValue } from "@plugins/config_v2/core";
+import { computeHash, effective, propagate, readonlyProxy } from "@plugins/config_v2/core";
+import type { ConfigDescriptor, ConfigProxy, FieldDef, JsonValue } from "@plugins/config_v2/core";
 import {
   registerBarrelStubs,
   importBarrel,
@@ -116,6 +117,79 @@ export async function generateConfigOrigins(opts: {
     if (content !== existing) {
       mkdirSync(dirname(filePath), { recursive: true });
       writeFileSync(filePath, content);
+    }
+  }
+}
+
+const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
+
+function fileConfigProxy(filePath: string): ConfigProxy {
+  return {
+    read() {
+      if (!existsSync(filePath)) return null;
+      const raw = readFileSync(filePath, "utf-8");
+      const match = HASH_RE.exec(raw);
+      const hash = match ? match[1]! : null;
+      const body = match ? raw.slice(match[0].length) : raw;
+      const content = parseJsonc(body) as JsonValue;
+      return { content, hash };
+    },
+    write(content: JsonValue, hash: string | null) {
+      let str = "";
+      if (hash !== null) str += `// @hash ${hash}\n`;
+      str += JSON.stringify(content, null, 2) + "\n";
+      const tmp = `${filePath}.tmp-${randomUUID()}`;
+      try {
+        mkdirSync(dirname(filePath), { recursive: true });
+        writeFileSync(tmp, str, "utf-8");
+        renameSync(tmp, filePath);
+      } catch (err) {
+        try {
+          unlinkSync(tmp);
+        } catch (unlinkErr: unknown) {
+          if ((unlinkErr as NodeJS.ErrnoException).code !== "ENOENT")
+            throw unlinkErr;
+        }
+        throw err;
+      }
+    },
+    exists() {
+      return existsSync(filePath);
+    },
+  };
+}
+
+export async function propagateConfigToUser(opts: {
+  root: string;
+  worktreeName: string;
+  singularityDir: string;
+}): Promise<void> {
+  const configs = await discoverConfigs(opts.root);
+  const userConfigDir = join(opts.singularityDir, "config", opts.worktreeName);
+
+  for (const { hierarchyPath, descriptor } of configs) {
+    const gitOrigin = fileConfigProxy(
+      join(opts.root, "config", hierarchyPath, `${descriptor.name}.origin.jsonc`),
+    );
+    const gitOverwrites = fileConfigProxy(
+      join(opts.root, "config", hierarchyPath, `${descriptor.name}.jsonc`),
+    );
+
+    const gitEff = effective(gitOrigin, gitOverwrites);
+    const gitEffProxy = readonlyProxy(gitEff);
+    const userOrigin = fileConfigProxy(
+      join(userConfigDir, hierarchyPath, `${descriptor.name}.origin.jsonc`),
+    );
+    const userOverwrites = fileConfigProxy(
+      join(userConfigDir, hierarchyPath, `${descriptor.name}.jsonc`),
+    );
+
+    const { conflict } = propagate(gitEffProxy, userOrigin, userOverwrites);
+    if (conflict) {
+      console.warn(
+        `[config-v2] conflict: user overwrites for "${descriptor.name}" at ${hierarchyPath} ` +
+        `were based on a different upstream. Review ${join(userConfigDir, hierarchyPath, `${descriptor.name}.jsonc`)}`,
+      );
     }
   }
 }

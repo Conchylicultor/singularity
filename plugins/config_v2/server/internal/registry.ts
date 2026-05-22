@@ -6,15 +6,11 @@ import type {
   InferFieldValue,
 } from "../../core";
 import {
-  readonlyProxy,
   computeHash,
-  effective,
-  propagate,
   readTypedConfig,
 } from "../../core";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import type { Disposable, JsonValue } from "../../core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { CONFIG_DIR } from "./config-dir";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
@@ -78,24 +74,6 @@ export function initRegistry(): void {
 
     const userOriginPath = join(CONFIG_DIR, hierarchyPath, `${descriptor.name}.origin.jsonc`);
     const userOverwritesPath = join(CONFIG_DIR, hierarchyPath, `${descriptor.name}.jsonc`);
-
-    const gitOrigin = jsoncConfigProxy(join(REPO_ROOT, "config", hierarchyPath, `${descriptor.name}.origin.jsonc`));
-    const gitOverwrites = jsoncConfigProxy(join(REPO_ROOT, "config", hierarchyPath, `${descriptor.name}.jsonc`));
-
-    const gitEff = effective(gitOrigin, gitOverwrites);
-    const userOrigin = jsoncConfigProxy(userOriginPath);
-    const userOverwrites = jsoncConfigProxy(userOverwritesPath);
-
-    if (gitEff !== undefined) {
-      const gitEffProxy = readonlyProxy(gitEff);
-      const { conflict } = propagate(gitEffProxy, userOrigin, userOverwrites);
-      if (conflict) {
-        console.warn(
-          `[config-v2] conflict: user overwrites for "${descriptor.name}" at ${hierarchyPath} ` +
-          `were based on a different upstream. Review ${userOverwritesPath}`,
-        );
-      }
-    }
 
     const reloadValues = (): ConfigValues<FieldsRecord> => {
       const freshUserOrigin = jsoncConfigProxy(userOriginPath);
