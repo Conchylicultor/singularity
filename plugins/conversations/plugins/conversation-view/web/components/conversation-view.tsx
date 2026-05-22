@@ -38,10 +38,8 @@ export function ConversationView() {
       hideRightActions
     >
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="border-b">
-          <div className="mx-auto flex max-w-reading items-center px-2 py-1.5">
-            <ActionBarView />
-          </div>
+        <div className="flex items-center border-b px-2 py-1.5">
+          <ActionBarView />
         </div>
         <div className="min-h-0 flex-1 overflow-hidden">
           <JsonlPane conversation={conversation}>
