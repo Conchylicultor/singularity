@@ -62,6 +62,10 @@ func (r *Registry) List() []*Worktree {
 }
 
 // LoadAll scans cfg.RegistryDir once at startup, populating the registry.
+// Supports two layouts:
+//   - new: <name>/spec.json  (subdirectory per worktree)
+//   - legacy: <name>.json    (flat file, written by old CLI versions)
+//
 // Creates the directory if missing.
 func (r *Registry) LoadAll() error {
 	if err := os.MkdirAll(r.cfg.RegistryDir, 0o755); err != nil {
@@ -72,18 +76,23 @@ func (r *Registry) LoadAll() error {
 		return fmt.Errorf("read registry dir: %w", err)
 	}
 	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
-			continue
+		if e.IsDir() {
+			specPath := filepath.Join(r.cfg.RegistryDir, e.Name(), "spec.json")
+			if _, err := os.Stat(specPath); err == nil {
+				r.loadFile(specPath)
+			}
+		} else if strings.HasSuffix(e.Name(), ".json") {
+			r.loadLegacyFile(filepath.Join(r.cfg.RegistryDir, e.Name()))
 		}
-		r.loadFile(filepath.Join(r.cfg.RegistryDir, e.Name()))
 	}
 	slog.Info("registry loaded", "count", len(r.byName), "dir", r.cfg.RegistryDir)
 	return nil
 }
 
 // Watch blocks until ctx is done, calling Upsert/Remove in response to
-// fsnotify events on the registry directory. Writes are debounced 100ms to
-// handle editors that perform write-rename-close.
+// fsnotify events. Watches for both new-style subdirectory spec.json and
+// legacy flat <name>.json files. Writes are debounced 100ms to handle
+// editors that perform write-rename-close.
 func (r *Registry) Watch(ctx context.Context) error {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -92,6 +101,14 @@ func (r *Registry) Watch(ctx context.Context) error {
 	defer w.Close()
 	if err := w.Add(r.cfg.RegistryDir); err != nil {
 		return err
+	}
+
+	// Watch each existing subdirectory for spec.json changes.
+	entries, _ := os.ReadDir(r.cfg.RegistryDir)
+	for _, e := range entries {
+		if e.IsDir() {
+			_ = w.Add(filepath.Join(r.cfg.RegistryDir, e.Name()))
+		}
 	}
 
 	debounce := make(map[string]*time.Timer)
@@ -105,21 +122,54 @@ func (r *Registry) Watch(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
-			if !strings.HasSuffix(ev.Name, ".json") {
+
+			// New subdirectory created — start watching it and load its spec if present.
+			if ev.Op&fsnotify.Create != 0 {
+				if info, err := os.Stat(ev.Name); err == nil && info.IsDir() {
+					_ = w.Add(ev.Name)
+					specPath := filepath.Join(ev.Name, "spec.json")
+					if _, serr := os.Stat(specPath); serr == nil {
+						r.loadFile(specPath)
+					}
+					continue
+				}
+			}
+
+			base := filepath.Base(ev.Name)
+			if !strings.HasSuffix(base, ".json") {
 				continue
 			}
-			if ev.Op&(fsnotify.Create|fsnotify.Write) != 0 {
-				path := ev.Name
-				debounceMu.Lock()
-				if t, exists := debounce[path]; exists {
-					t.Stop()
+
+			if base == "spec.json" {
+				// New format: <name>/spec.json inside a subdirectory.
+				if ev.Op&(fsnotify.Create|fsnotify.Write) != 0 {
+					path := ev.Name
+					debounceMu.Lock()
+					if t, exists := debounce[path]; exists {
+						t.Stop()
+					}
+					debounce[path] = time.AfterFunc(100*time.Millisecond, func() {
+						r.loadFile(path)
+					})
+					debounceMu.Unlock()
+				} else if ev.Op&(fsnotify.Remove|fsnotify.Rename) != 0 {
+					r.remove(nameFromPath(ev.Name))
 				}
-				debounce[path] = time.AfterFunc(100*time.Millisecond, func() {
-					r.loadFile(path)
-				})
-				debounceMu.Unlock()
-			} else if ev.Op&(fsnotify.Remove|fsnotify.Rename) != 0 {
-				r.remove(nameFromPath(ev.Name))
+			} else if filepath.Dir(ev.Name) == r.cfg.RegistryDir {
+				// Legacy format: flat <name>.json in the top-level directory.
+				if ev.Op&(fsnotify.Create|fsnotify.Write) != 0 {
+					path := ev.Name
+					debounceMu.Lock()
+					if t, exists := debounce[path]; exists {
+						t.Stop()
+					}
+					debounce[path] = time.AfterFunc(100*time.Millisecond, func() {
+						r.loadLegacyFile(path)
+					})
+					debounceMu.Unlock()
+				} else if ev.Op&(fsnotify.Remove|fsnotify.Rename) != 0 {
+					r.remove(legacyNameFromPath(ev.Name))
+				}
 			}
 		case werr, ok := <-w.Errors:
 			if !ok {
@@ -181,6 +231,26 @@ func (r *Registry) loadFile(path string) {
 	r.upsert(name, spec)
 }
 
+// loadLegacyFile loads a flat <name>.json spec. If a new-style subdirectory
+// spec already registered this name, the legacy file is skipped.
+func (r *Registry) loadLegacyFile(path string) {
+	name := legacyNameFromPath(path)
+	if !nameRegex.MatchString(name) {
+		return
+	}
+	// New-style subdirectory takes precedence — skip legacy if it exists.
+	newPath := filepath.Join(r.cfg.RegistryDir, name, "spec.json")
+	if _, err := os.Stat(newPath); err == nil {
+		return
+	}
+	spec, err := loadSpec(path)
+	if err != nil {
+		slog.Warn("failed to load legacy spec", "path", path, "err", err)
+		return
+	}
+	r.upsert(name, spec)
+}
+
 func (r *Registry) upsert(name string, spec *Spec) {
 	r.mu.Lock()
 	wt, exists := r.byName[name]
@@ -236,7 +306,13 @@ func loadSpec(path string) (*Spec, error) {
 	return &spec, nil
 }
 
+// nameFromPath extracts the worktree name from a new-style path: <dir>/<name>/spec.json
 func nameFromPath(p string) string {
+	return filepath.Base(filepath.Dir(p))
+}
+
+// legacyNameFromPath extracts the worktree name from a legacy path: <dir>/<name>.json
+func legacyNameFromPath(p string) string {
 	return strings.TrimSuffix(filepath.Base(p), ".json")
 }
 

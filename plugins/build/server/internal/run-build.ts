@@ -79,9 +79,9 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
   if (exitCode !== 0 && allLines.length > 0) {
     const worktreeName = process.env.SINGULARITY_WORKTREE;
     if (worktreeName) {
-      const worktreesDir = join(SINGULARITY_DIR, "worktrees");
-      mkdirSync(worktreesDir, { recursive: true });
-      const logPath = join(worktreesDir, `${worktreeName}-build-logs-${buildId}.json`);
+      const worktreeDir = join(SINGULARITY_DIR, "worktrees", worktreeName);
+      mkdirSync(worktreeDir, { recursive: true });
+      const logPath = join(worktreeDir, `build-logs-${buildId}.json`);
       if (!existsSync(logPath)) {
         const tmp = `${logPath}.tmp.${process.pid}`;
         const logs = {

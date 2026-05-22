@@ -10,7 +10,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 - Serves each worktree's `web/dist` as static files directly (no backend spawn needed for page loads)
 - Lazy-spawns the backend on the first `/api/*` or `/ws/*` request; tears it down after 10 minutes idle
 - Hands each backend a Unix domain socket at `~/.singularity/sockets/<name>.sock`; backends read `SOCKET_PATH` from env. Gateway dials the socket directly — no TCP between gateway and backend.
-- Discovers worktrees from `~/.singularity/worktrees/<name>.json`
+- Discovers worktrees from `~/.singularity/worktrees/<name>/spec.json`
 - Exposes `/gateway/*` on every host as an API for apps to query gateway state
 - **Supervises configured services** (e.g. embedded Postgres) via a generic process supervisor. See "Service supervision" below.
 
@@ -35,7 +35,7 @@ everything else  → static file from web/dist (SPA fallback for extensionless p
 
 ## Worktree Registry
 
-Location: `~/.singularity/worktrees/<name>.json`. Filename = worktree identifier = subdomain.
+Location: `~/.singularity/worktrees/<name>/spec.json`. Directory name = worktree identifier = subdomain.
 
 ```json
 {
@@ -44,7 +44,7 @@ Location: `~/.singularity/worktrees/<name>.json`. Filename = worktree identifier
 }
 ```
 
-Two fields, both required, both absolute paths. The gateway hardcodes the launch convention (`bun bin/index.ts`, `SOCKET_PATH` env var, 15s readiness timeout). No per-worktree overrides in v1.
+Two fields, both required, both absolute paths. The gateway hardcodes the launch convention (`bun bin/index.ts`, `SOCKET_PATH` env var, 15s readiness timeout). No per-worktree overrides in v1. Other per-worktree files (build logs, profiling data) also live in the same subdirectory.
 
 ## File Structure
 

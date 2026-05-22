@@ -18,16 +18,19 @@ interface BuildProfile {
 function readBuildRunProfile(buildId: string): BuildProfile | null {
   const name = process.env.SINGULARITY_WORKTREE;
   if (!name) return null;
-  try {
-    const path = join(
-      SINGULARITY_DIR,
-      "worktrees",
-      `${name}-build-profile-${buildId}.json`,
-    );
-    return JSON.parse(readFileSync(path, "utf-8")) as BuildProfile;
-  } catch {
-    return null;
+  const filename = `build-profile-${buildId}.json`;
+  const worktreesDir = join(SINGULARITY_DIR, "worktrees");
+  for (const path of [
+    join(worktreesDir, name, filename),
+    join(worktreesDir, `${name}-${filename}`),
+  ]) {
+    try {
+      return JSON.parse(readFileSync(path, "utf-8")) as BuildProfile;
+    } catch {
+      continue;
+    }
   }
+  return null;
 }
 
 export const handleBuildRunProfiling = implement(getBuildRunProfile, ({ params }) => {

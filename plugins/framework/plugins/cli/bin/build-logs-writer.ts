@@ -1,6 +1,6 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { WORKTREES_DIR } from "./paths";
+import { worktreeDataDir } from "./paths";
 
 export interface BuildStepLog {
   id: string;
@@ -22,12 +22,13 @@ export function pushBuildStepLog(step: BuildStepLog): void {
 
 export function writeBuildLogs(name: string): void {
   const logs: BuildLogs = { steps };
-  mkdirSync(WORKTREES_DIR, { recursive: true });
+  const dir = worktreeDataDir(name);
+  mkdirSync(dir, { recursive: true });
   const buildId = process.env.SINGULARITY_BUILD_ID;
   const filename = buildId
-    ? `${name}-build-logs-${buildId}.json`
-    : `${name}-build-logs.json`;
-  const path = join(WORKTREES_DIR, filename);
+    ? `build-logs-${buildId}.json`
+    : `build-logs.json`;
+  const path = join(dir, filename);
   const tmp = `${path}.tmp.${process.pid}`;
   writeFileSync(tmp, JSON.stringify(logs, null, 2) + "\n");
   renameSync(tmp, path);

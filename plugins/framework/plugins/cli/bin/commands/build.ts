@@ -595,9 +595,10 @@ export function registerBuild(program: Command) {
       const mainRoot = await getMainRepoRoot();
       const centralDir = resolve(mainRoot, "plugins/framework/plugins/central-core");
       if (existsSync(join(centralDir, "bin", "index.ts"))) {
-        mkdirSync(WORKTREES_DIR, { recursive: true });
+        const centralSpecDir = join(WORKTREES_DIR, "central");
+        mkdirSync(centralSpecDir, { recursive: true });
         writeFileSync(
-          join(WORKTREES_DIR, "central.json"),
+          join(centralSpecDir, "spec.json"),
           JSON.stringify({ server: centralDir }, null, 2) + "\n",
         );
       }
@@ -764,9 +765,10 @@ export function registerBuild(program: Command) {
         web: livePath,
       };
 
-      mkdirSync(WORKTREES_DIR, { recursive: true });
+      const worktreeDir = join(WORKTREES_DIR, name);
+      mkdirSync(worktreeDir, { recursive: true });
       writeFileSync(
-        join(WORKTREES_DIR, `${name}.json`),
+        join(worktreeDir, "spec.json"),
         JSON.stringify(spec, null, 2) + "\n",
       );
       endSpan();
@@ -781,8 +783,10 @@ export function registerBuild(program: Command) {
       // always main's central-core/ — see comment at the early write above.
       if (existsSync(join(centralDir, "bin", "index.ts"))) {
         const centralSpec = { server: centralDir };
+        const centralRegDir = join(WORKTREES_DIR, "central");
+        mkdirSync(centralRegDir, { recursive: true });
         writeFileSync(
-          join(WORKTREES_DIR, "central.json"),
+          join(centralRegDir, "spec.json"),
           JSON.stringify(centralSpec, null, 2) + "\n",
         );
 
