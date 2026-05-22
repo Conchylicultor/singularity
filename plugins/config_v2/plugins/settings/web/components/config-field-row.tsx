@@ -16,6 +16,9 @@ function isFieldModified(field: FieldDef, value: unknown, defaultValue: unknown)
       });
     return JSON.stringify(strip(value)) !== JSON.stringify(strip(defaultValue));
   }
+  if ("subFields" in field && typeof value === "object" && typeof defaultValue === "object") {
+    return JSON.stringify(value) !== JSON.stringify(defaultValue);
+  }
   return value !== defaultValue;
 }
 

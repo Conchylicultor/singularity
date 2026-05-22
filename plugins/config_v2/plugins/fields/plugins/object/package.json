@@ -1,0 +1,5 @@
+{
+  "name": "@singularity/plugin-config_v2-fields-object",
+  "private": true,
+  "description": "Object field type: fixed-structure named sub-fields grouped into a single value."
+}

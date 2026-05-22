@@ -103,7 +103,7 @@ Overwrites are **full copies**, not deltas. `setConfig` writes `{ ...currentValu
   - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
 - Exports (server):
   - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getConfig`, `getRawFileContent`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-- Imported by: `avatar`, `build`, `codegen`, `commits`, `conversation-category`, `conversations`, `enum`, `list`, `multiline-text`, `primitives`, `settings`
+- Imported by: `avatar`, `build`, `codegen`, `commits`, `conversation-category`, `conversations`, `enum`, `list`, `multiline-text`, `object`, `primitives`, `settings`
 - Sub-plugins:
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
   - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.

@@ -468,7 +468,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
   - Exports (server):
     - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getConfig`, `getRawFileContent`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-  - Imported by: `avatar`, `build`, `codegen`, `commits`, `conversation-category`, `conversations`, `enum`, `list`, `multiline-text`, `primitives`, `settings`
+  - Imported by: `avatar`, `build`, `codegen`, `commits`, `conversation-category`, `conversations`, `enum`, `list`, `multiline-text`, `object`, `primitives`, `settings`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
@@ -499,6 +499,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `multilineTextField`, `multilineTextFieldType`
           - Contributes:
             - `Fields.Renderer` "multiline-text" → `MultilineTextRenderer`
+        - **`object`** — Object field type: fixed-structure named sub-fields grouped into a single value.
+          - Exports (core):
+            - Types: `ObjectFieldDef`
+            - Values: `isObjectFieldDef`, `objectField`, `objectFieldType`
+          - Contributes:
+            - `Fields.Renderer` "object" → `ObjectRenderer`
         - **`primitives`** — Basic field types: bool, text, int, float.
           - Exports (core):
             - Types: `BoolFieldDef`, `FloatFieldDef`, `IntFieldDef`, `TextFieldDef`

@@ -68,27 +68,57 @@ async function discoverConfigs(root: string): Promise<DiscoveredConfig[]> {
   return results;
 }
 
+function renderFieldLines(
+  fields: Record<string, FieldDef>,
+  defaults: Record<string, unknown>,
+  indent: string,
+): string[] {
+  const lines: string[] = [];
+  const entries = Object.entries(fields);
+  for (let i = 0; i < entries.length; i++) {
+    const [key, field] = entries[i]! as [string, FieldDef];
+    const isLast = i === entries.length - 1;
+    const comma = isLast ? "" : ",";
+    const value = defaults[key];
+
+    if (field.meta.description) {
+      lines.push(`${indent}// ${field.meta.description}`);
+    }
+    if (field.meta.typeHint) {
+      lines.push(`${indent}// ${field.meta.typeHint}`);
+    }
+
+    if ("subFields" in field && typeof field.subFields === "object") {
+      const subFields = field.subFields as Record<string, FieldDef>;
+      const subDefaults =
+        value != null && typeof value === "object" && !Array.isArray(value)
+          ? (value as Record<string, unknown>)
+          : Object.fromEntries(
+              Object.entries(subFields).map(([k, f]) => [k, f.defaultValue]),
+            );
+      lines.push(`${indent}"${key}": {`);
+      lines.push(...renderFieldLines(subFields, subDefaults, `${indent}  `));
+      lines.push(`${indent}}${comma}`);
+    } else {
+      lines.push(`${indent}"${key}": ${JSON.stringify(value)}${comma}`);
+    }
+  }
+  return lines;
+}
+
 function renderOriginJsonc(descriptor: ConfigDescriptor): string {
   const hash = computeHash(descriptor.defaults as unknown as JsonValue);
   const lines: string[] = [];
   lines.push(`// @hash ${hash}`);
   lines.push("{");
 
-  const entries = Object.entries(descriptor.fields);
-  for (let i = 0; i < entries.length; i++) {
-    const [key, field] = entries[i]! as [string, FieldDef];
-    const isLast = i === entries.length - 1;
-    const comma = isLast ? "" : ",";
-    const value = JSON.stringify((descriptor.defaults as Record<string, unknown>)[key]);
-
-    if (field.meta.description) {
-      lines.push(`  // ${field.meta.description}`);
-    }
-    if (field.meta.typeHint) {
-      lines.push(`  // ${field.meta.typeHint}`);
-    }
-    lines.push(`  "${key}": ${value}${comma}`);
-  }
+  lines.push(
+    ...renderFieldLines(
+      descriptor.fields as Record<string, FieldDef>,
+      descriptor.defaults as Record<string, unknown>,
+      "  ",
+    ),
+  );
 
   lines.push("}");
   return lines.join("\n") + "\n";
