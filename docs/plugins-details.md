@@ -461,13 +461,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Exports (core):
-    - Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`
-    - Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2Resource`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`
+    - Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`
+    - Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`
   - Exports (web):
     - Types: `ConfigRegistration`
     - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
   - Exports (server):
-    - Values: `ConfigV2`, `forkConfig`, `getConfig`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
+    - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getConfig`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
   - Imported by: `avatar`, `build`, `codegen`, `commits`, `conversation-category`, `conversations`, `list`, `multiline-text`, `primitives`, `settings`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
@@ -504,13 +504,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Fields.Renderer` "float" → `FloatRenderer`
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
       - Exports (core):
-        - Values: `resetConfigField`, `setConfigField`
+        - Values: `acknowledgeConflict`, `deleteOverride`, `resetConfigField`, `setConfigField`
       - Contributes:
         - `Pane.Register` "config-v2-nav"
         - `Pane.Register` "config-v2-detail"
-        - `Shell.Sidebar` "Config" → `component`
+        - `Shell.Sidebar` "Config" → `ConfigSidebarButton`
       - Server:
-        - Uses: `config_v2.resetConfigByPath`, `config_v2.setConfigByPath`
+        - Uses: `config_v2.acknowledgeConflictByPath`, `config_v2.deleteOverrideByPath`, `config_v2.resetConfigByPath`, `config_v2.setConfigByPath`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:
