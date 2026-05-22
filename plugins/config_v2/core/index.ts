@@ -13,8 +13,14 @@ export type {
   InferFieldValue,
   InferFieldsObject,
 } from "./internal/types";
-export { configV2Resource, configV2ValuesSchema } from "./internal/resource";
-export type { ConfigV2Values } from "./internal/resource";
+export {
+  configV2Resource,
+  configV2ValuesSchema,
+  configV2ConflictEntrySchema,
+  configV2ConflictsSchema,
+  configV2ConflictsResource,
+} from "./internal/resource";
+export type { ConfigV2Values, ConfigV2Conflicts } from "./internal/resource";
 export type { ConfigProxy } from "./internal/config-proxy";
 export {
   computeHash,

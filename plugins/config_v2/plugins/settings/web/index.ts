@@ -1,9 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdTune } from "react-icons/md";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Shell } from "@plugins/shell/web";
 import { configNavPane, configDetailPane } from "./internal/panes";
+import { ConfigSidebarButton } from "./components/config-sidebar-button";
 
 export default {
   id: "config-v2-settings",
@@ -14,7 +14,9 @@ export default {
     Pane.Register({ pane: configDetailPane }),
     Shell.Sidebar({
       id: "config-v2",
-      ...sidebarNavItem({ title: "Config", icon: MdTune, onClick: () => openPane(configNavPane, {}, { mode: "root" }) }),
+      title: "Config",
+      icon: MdTune,
+      component: ConfigSidebarButton,
     }),
   ],
 } satisfies PluginDefinition;

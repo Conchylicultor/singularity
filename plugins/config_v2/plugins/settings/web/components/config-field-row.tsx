@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { MdUndo } from "react-icons/md";
+import { MdUndo, MdWarning } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -19,20 +19,30 @@ function isFieldModified(field: FieldDef, value: unknown, defaultValue: unknown)
   return value !== defaultValue;
 }
 
+function formatOriginValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  return JSON.stringify(value);
+}
+
 export function ConfigFieldRow({
   fieldKey,
   field,
   value,
   defaultValue,
   storePath,
+  originValue,
 }: {
   fieldKey: string;
   field: FieldDef;
   value: unknown;
   defaultValue: unknown;
   storePath: string;
+  originValue?: unknown;
 }) {
   const isModified = isFieldModified(field, value, defaultValue);
+  const hasConflict =
+    originValue !== undefined &&
+    JSON.stringify(value) !== JSON.stringify(originValue);
 
   const handleChange = useCallback(
     (newValue: unknown) => {
@@ -45,29 +55,50 @@ export function ConfigFieldRow({
     void fetchEndpoint(resetConfigField, {}, { body: { storePath, key: fieldKey } });
   }, [storePath, fieldKey]);
 
+  const handleAcceptOrigin = useCallback(() => {
+    void fetchEndpoint(setConfigField, {}, { body: { storePath, key: fieldKey, value: originValue } });
+  }, [storePath, fieldKey, originValue]);
+
   return (
-    <div className="group flex items-center gap-2 rounded-md py-1.5 pl-0 pr-2">
-      <div
-        className={cn(
-          "h-8 w-0.5 shrink-0 rounded-full transition-colors",
-          isModified ? "bg-primary" : "bg-transparent",
-        )}
-      />
-      <div className="min-w-0 flex-1">
-        <FieldRenderer field={field} value={value} onChange={handleChange} />
+    <div>
+      <div className="group flex items-center gap-2 rounded-md py-1.5 pl-0 pr-2">
+        <div
+          className={cn(
+            "h-8 w-0.5 shrink-0 rounded-full transition-colors",
+            hasConflict ? "bg-amber-500" : isModified ? "bg-primary" : "bg-transparent",
+          )}
+        />
+        <div className="min-w-0 flex-1">
+          <FieldRenderer field={field} value={value} onChange={handleChange} />
+        </div>
+        <button
+          type="button"
+          onClick={handleReset}
+          className={cn(
+            "shrink-0 rounded-sm p-1 text-muted-foreground hover:text-foreground",
+            "opacity-0 transition-opacity",
+            isModified && "group-hover:opacity-100",
+          )}
+          aria-label={`Reset ${field.meta.label ?? fieldKey}`}
+        >
+          <MdUndo className="size-3.5" />
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={handleReset}
-        className={cn(
-          "shrink-0 rounded-sm p-1 text-muted-foreground hover:text-foreground",
-          "opacity-0 transition-opacity",
-          isModified && "group-hover:opacity-100",
-        )}
-        aria-label={`Reset ${field.meta.label ?? fieldKey}`}
-      >
-        <MdUndo className="size-3.5" />
-      </button>
+      {hasConflict && (
+        <div className="ml-3 flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs text-amber-700 dark:text-amber-300">
+          <MdWarning className="size-3 shrink-0" />
+          <span className="flex-1 truncate">
+            Upstream: {formatOriginValue(originValue)}
+          </span>
+          <button
+            type="button"
+            onClick={handleAcceptOrigin}
+            className="shrink-0 rounded-sm bg-amber-500/20 px-1.5 py-0.5 font-medium hover:bg-amber-500/30"
+          >
+            Accept
+          </button>
+        </div>
+      )}
     </div>
   );
 }

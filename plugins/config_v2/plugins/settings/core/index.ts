@@ -1,1 +1,6 @@
-export { setConfigField, resetConfigField } from "./internal/endpoints";
+export {
+  setConfigField,
+  resetConfigField,
+  acknowledgeConflict,
+  deleteOverride,
+} from "./internal/endpoints";

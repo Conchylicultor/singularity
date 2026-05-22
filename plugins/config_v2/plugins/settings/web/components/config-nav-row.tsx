@@ -1,7 +1,9 @@
 import { useMemo } from "react";
+import { MdWarning } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { useConfig } from "@plugins/config_v2/web";
 import type { ConfigRegistration } from "@plugins/config_v2/web";
+import { useConflicts } from "../internal/use-conflicts";
 
 export function ConfigNavRow({
   registration,
@@ -14,6 +16,8 @@ export function ConfigNavRow({
 }) {
   const values = useConfig(registration.descriptor);
   const defaults = registration.descriptor.defaults as Record<string, unknown>;
+  const conflicts = useConflicts();
+  const hasConflict = registration.storePath in conflicts;
 
   const modifiedCount = useMemo(() => {
     let count = 0;
@@ -33,10 +37,14 @@ export function ConfigNavRow({
       )}
     >
       <span className="truncate">{registration.pluginName}</span>
-      {modifiedCount > 0 && (
-        <span className="ml-2 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-          {modifiedCount}
-        </span>
+      {hasConflict ? (
+        <MdWarning className="ml-2 size-4 shrink-0 text-amber-500 dark:text-amber-400" />
+      ) : (
+        modifiedCount > 0 && (
+          <span className="ml-2 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+            {modifiedCount}
+          </span>
+        )
       )}
     </button>
   );

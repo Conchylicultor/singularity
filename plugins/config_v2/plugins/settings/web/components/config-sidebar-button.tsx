@@ -1,0 +1,32 @@
+import { MdTune } from "react-icons/md";
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "@/components/ui/sidebar";
+import { openPane } from "@plugins/primitives/plugins/pane/web";
+import { configNavPane } from "../internal/panes";
+import { useConflicts } from "../internal/use-conflicts";
+
+export function ConfigSidebarButton() {
+  const conflicts = useConflicts();
+  const hasConflicts = Object.keys(conflicts).length > 0;
+
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          onClick={() => openPane(configNavPane, {}, { mode: "root" })}
+        >
+          <span className="relative">
+            <MdTune className="size-4" />
+            {hasConflicts && (
+              <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500" />
+            )}
+          </span>
+          <span>Config</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    </SidebarMenu>
+  );
+}

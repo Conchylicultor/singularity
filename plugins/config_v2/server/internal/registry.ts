@@ -1,3 +1,4 @@
+import { unlinkSync } from "node:fs";
 import { join } from "node:path";
 import type {
   ConfigDescriptor,
@@ -15,7 +16,7 @@ import { CONFIG_DIR } from "./config-dir";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
-import { configV2ServerResource, getDescriptorByStorePath, registerDescriptorPath, setConfigGetter } from "./resource";
+import { configV2ServerResource, configV2ConflictsServerResource, getDescriptorByStorePath, registerDescriptorPath, setConfigGetter } from "./resource";
 
 interface CacheEntry {
   values: ConfigValues<FieldsRecord>;
@@ -100,6 +101,7 @@ export function initRegistry(): void {
       }
 
       configV2ServerResource.notify({ path: storePath });
+      configV2ConflictsServerResource.notify();
     };
 
     const disposables: Disposable[] = [];
@@ -218,4 +220,35 @@ export function watchConfig<F extends FieldsRecord>(
       subs!.delete(wrappedCb);
     },
   };
+}
+
+export function acknowledgeConflictByPath(storePath: string): void {
+  const descriptor = getDescriptorByStorePath(storePath);
+  if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
+
+  const entry = cacheByDescriptor.get(descriptor);
+  if (!entry) throw new Error(`No cache entry for "${storePath}"`);
+
+  const userOverwrites = jsoncConfigProxy(entry.userOverwritesPath);
+  const userOrigin = jsoncConfigProxy(entry.userOriginPath);
+
+  if (!userOverwrites.exists()) throw new Error(`No override file for "${storePath}"`);
+  const ow = userOverwrites.read();
+  if (!ow) throw new Error(`Cannot read override for "${storePath}"`);
+
+  const originData = userOrigin.read();
+  if (!originData) throw new Error(`Cannot read origin for "${storePath}"`);
+
+  const newHash = computeHash(originData.content);
+  userOverwrites.write(ow.content, newHash);
+}
+
+export function deleteOverrideByPath(storePath: string): void {
+  const descriptor = getDescriptorByStorePath(storePath);
+  if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
+
+  const entry = cacheByDescriptor.get(descriptor);
+  if (!entry) throw new Error(`No cache entry for "${storePath}"`);
+
+  unlinkSync(entry.userOverwritesPath);
 }

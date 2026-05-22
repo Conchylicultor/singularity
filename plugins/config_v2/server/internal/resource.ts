@@ -1,7 +1,10 @@
+import { join } from "node:path";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { configV2ValuesSchema } from "../../core";
-import type { ConfigV2Values } from "../../core";
+import { configV2ValuesSchema, configV2ConflictsSchema, hasConflict } from "../../core";
+import type { ConfigV2Values, ConfigV2Conflicts } from "../../core";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord } from "../../core";
+import { CONFIG_DIR } from "./config-dir";
+import { jsoncConfigProxy } from "./jsonc-proxy";
 
 type ConfigGetter = <F extends FieldsRecord>(d: ConfigDescriptor<F>) => ConfigValues<F>;
 
@@ -17,6 +20,37 @@ export const configV2ServerResource = defineResource<ConfigV2Values, { path: str
     if (!descriptor || !configGetter) return {};
     return configGetter(descriptor) as ConfigV2Values;
   },
+});
+
+function computeAllConflicts(): ConfigV2Conflicts {
+  const conflicts: ConfigV2Conflicts = {};
+  for (const [storePath, descriptor] of descriptorByPath) {
+    const parts = storePath.replace(/\.jsonc$/, "").split("/");
+    const dir = parts.slice(0, -1).join("/");
+    const name = parts[parts.length - 1]!;
+
+    const userOriginPath = join(CONFIG_DIR, dir, `${name}.origin.jsonc`);
+    const userOverwritesPath = join(CONFIG_DIR, dir, `${name}.jsonc`);
+
+    const origin = jsoncConfigProxy(userOriginPath);
+    const overwrites = jsoncConfigProxy(userOverwritesPath);
+
+    if (hasConflict(origin, overwrites)) {
+      const originData = origin.read();
+      const originValues = originData
+        ? (originData.content as Record<string, unknown>)
+        : (descriptor.defaults as Record<string, unknown>);
+      conflicts[storePath] = { originValues };
+    }
+  }
+  return conflicts;
+}
+
+export const configV2ConflictsServerResource = defineResource<ConfigV2Conflicts>({
+  key: "config-v2.conflicts",
+  mode: "push",
+  schema: configV2ConflictsSchema,
+  loader: () => computeAllConflicts(),
 });
 
 export function registerDescriptorPath(path: string, descriptor: ConfigDescriptor): void {

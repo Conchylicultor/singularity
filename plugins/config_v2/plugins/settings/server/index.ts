@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { setConfigField, resetConfigField } from "../core";
-import { handleSetField, handleResetField } from "./internal/handlers";
+import { setConfigField, resetConfigField, acknowledgeConflict, deleteOverride } from "../core";
+import { handleSetField, handleResetField, handleAcknowledgeConflict, handleDeleteOverride } from "./internal/handlers";
 
 export default {
   id: "config-v2-settings",
@@ -9,5 +9,7 @@ export default {
   httpRoutes: {
     [setConfigField.route]: handleSetField,
     [resetConfigField.route]: handleResetField,
+    [acknowledgeConflict.route]: handleAcknowledgeConflict,
+    [deleteOverride.route]: handleDeleteOverride,
   },
 } satisfies ServerPluginDefinition;
