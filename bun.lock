@@ -239,6 +239,10 @@
       "name": "@singularity/plugin-build",
       "version": "0.0.1",
     },
+    "plugins/build/plugins/build-commits": {
+      "name": "@singularity/plugin-build-build-commits",
+      "version": "0.0.1",
+    },
     "plugins/build/plugins/build-fix": {
       "name": "@singularity/plugin-build-build-fix",
       "version": "0.0.1",
@@ -1006,6 +1010,10 @@
     },
     "plugins/primitives/plugins/command-palette": {
       "name": "@singularity/plugin-primitives-command-palette",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/commit-list": {
+      "name": "@singularity/plugin-primitives-commit-list",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/copy-to-clipboard": {
@@ -2044,6 +2052,8 @@
 
     "@singularity/plugin-build": ["@singularity/plugin-build@workspace:plugins/build"],
 
+    "@singularity/plugin-build-build-commits": ["@singularity/plugin-build-build-commits@workspace:plugins/build/plugins/build-commits"],
+
     "@singularity/plugin-build-build-fix": ["@singularity/plugin-build-build-fix@workspace:plugins/build/plugins/build-fix"],
 
     "@singularity/plugin-build-build-info": ["@singularity/plugin-build-build-info@workspace:plugins/build/plugins/build-info"],
@@ -2399,6 +2409,8 @@
     "@singularity/plugin-primitives-color-picker": ["@singularity/plugin-primitives-color-picker@workspace:plugins/primitives/plugins/color-picker"],
 
     "@singularity/plugin-primitives-command-palette": ["@singularity/plugin-primitives-command-palette@workspace:plugins/primitives/plugins/command-palette"],
+
+    "@singularity/plugin-primitives-commit-list": ["@singularity/plugin-primitives-commit-list@workspace:plugins/primitives/plugins/commit-list"],
 
     "@singularity/plugin-primitives-copy-to-clipboard": ["@singularity/plugin-primitives-copy-to-clipboard@workspace:plugins/primitives/plugins/copy-to-clipboard"],
 

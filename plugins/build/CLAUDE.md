@@ -12,6 +12,8 @@
   - Values: `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
 - Exports (web):
   - Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`
+- Exports (server):
+  - Values: `_buildRuns`
 - Exports (shared):
   - Types: `BuildRun`, `FrontendHash`, `MainAheadCount`
   - Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
@@ -25,6 +27,7 @@
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
   - Resources: `build.frontendHash` (push), `build.history` (push), `build.mainAheadCount` (push)
 - Sub-plugins:
+  - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
   - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.
   - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
   - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.

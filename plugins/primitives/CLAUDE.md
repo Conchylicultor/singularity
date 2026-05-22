@@ -13,6 +13,7 @@
   - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
   - **`color-picker`** — Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.
   - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
+  - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser and commit row types for reuse across plugins.
   - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
   - **`cursor-pagination`** — Cursor-pagination primitive: useCursorPagination hook with frozen-cursor capture, useInfiniteQuery wiring, IntersectionObserver auto-fetch, and ScrollSentinel component.
   - **`data-table`** — Sortable/filterable flex-layout data table primitive.

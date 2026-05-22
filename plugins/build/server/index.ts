@@ -13,6 +13,7 @@ import { mainAheadCountResource } from "./internal/main-ahead-resource";
 import { buildHistoryResource } from "./internal/build-history-resource";
 import { frontendHashResource } from "./internal/frontend-hash-resource";
 import { _buildRuns } from "./internal/tables";
+export { _buildRuns } from "./internal/tables";
 import { buildConfig } from "../shared";
 import { triggerBuildEndpoint } from "../core/endpoints";
 

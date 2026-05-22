@@ -366,6 +366,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
   - Exports (web):
     - Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`
+  - Exports (server):
+    - Values: `_buildRuns`
   - Exports (shared):
     - Types: `BuildRun`, `FrontendHash`, `MainAheadCount`
     - Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
@@ -379,6 +381,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
     - Resources: `build.frontendHash` (push), `build.history` (push), `build.mainAheadCount` (push)
   - Plugins:
+    - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
+      - Exports (core):
+        - Values: `getBuildRunCommits`
+      - Exports (shared):
+        - Values: `getBuildRunCommits`
+      - Contributes:
+        - `BuildDetailSlots.Section` "commits" → `BuildCommitsSection`
+      - Server:
+        - Uses: `build._buildRuns`, `database.db`
     - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.
       - Contributes:
         - `BuildDetailSlots.Section` "fix" → `BuildFixSection`
@@ -988,7 +999,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Exports (server):
     - Values: `awaitDbReady`, `db`, `isTransientDbError`
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `claude-cli`, `code-review`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `code-review`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Exports (server):
@@ -1068,7 +1079,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `getBuildProfiling`
           - Contributes:
             - `Profiling.Section` → `BuildSection`
-          - Imported by: `build-fix`, `build-info`, `build-logs`, `build-profiling`
+          - Imported by: `build-commits`, `build-fix`, `build-info`, `build-logs`, `build-profiling`
         - **`push`** — Push contention profiling for the Gantt debug pane. Push contention profiling data endpoint.
           - Exports (shared):
             - Values: `getPushProfiling`
@@ -1420,6 +1431,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `CommandPalette`, `CommandPaletteCommands`
       - Contributes:
         - `Core.Root` → `CommandPaletteRoot`
+    - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser and commit row types for reuse across plugins.
+      - Exports (core):
+        - Types: `CommitRow`
+        - Values: `CommitRowSchema`
+      - Exports (web):
+        - Types: `CommitRow`
+        - Values: `COMMIT_ROW_HEIGHT`, `CommitRail`, `CommitRowItem`, `CommitRowSchema`, `MergeBaseMarker`
+      - Exports (server):
+        - Values: `LOG_FORMAT`, `parseGitLog`, `runGit`
     - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
       - Exports (web):
         - Types: `CopyButtonProps`

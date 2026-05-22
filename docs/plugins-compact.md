@@ -62,6 +62,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Plugins:
+    - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
     - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
     - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.
@@ -281,6 +282,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
     - **`color-picker`** — Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.
     - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
+    - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser and commit row types for reuse across plugins.
     - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
     - **`cursor-pagination`** — Cursor-pagination primitive: useCursorPagination hook with frozen-cursor capture, useInfiniteQuery wiring, IntersectionObserver auto-fetch, and ScrollSentinel component.
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.

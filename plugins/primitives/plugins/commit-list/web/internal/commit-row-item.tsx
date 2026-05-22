@@ -1,0 +1,63 @@
+import type { CommitRow } from "../../core";
+import { CommitRail, COMMIT_ROW_HEIGHT } from "./commit-rail";
+
+function formatRelative(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "";
+  const diff = Date.now() - t;
+  const sec = Math.round(diff / 1000);
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.round(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 48) return `${hr}h ago`;
+  const day = Math.round(hr / 24);
+  if (day < 14) return `${day}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+export function CommitRowItem({
+  commit,
+  isFirst,
+  isLast,
+  color,
+  pushed = false,
+  onClick,
+}: {
+  commit: CommitRow;
+  isFirst: boolean;
+  isLast: boolean;
+  color: string;
+  pushed?: boolean;
+  onClick?: (commit: CommitRow) => void;
+}) {
+  return (
+    <li
+      className={`flex items-center gap-2 border-b border-border/50 pl-2 pr-3${onClick ? " cursor-pointer hover:bg-accent/50" : ""}`}
+      style={{ height: COMMIT_ROW_HEIGHT }}
+      onClick={onClick ? () => onClick(commit) : undefined}
+    >
+      <CommitRail isFirst={isFirst} isLast={isLast} color={color} />
+      <span
+        className="font-mono text-xs text-muted-foreground"
+        title={commit.sha}
+      >
+        {commit.shortSha}
+      </span>
+      <span className="flex-1 truncate" title={commit.subject}>
+        {commit.subject}
+      </span>
+      {pushed && (
+        <span className="shrink-0 rounded px-1.5 py-0.5 text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+          pushed
+        </span>
+      )}
+      <span className="hidden truncate text-xs text-muted-foreground sm:inline">
+        {commit.authorName}
+      </span>
+      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+        {formatRelative(commit.authoredAt)}
+      </span>
+    </li>
+  );
+}
