@@ -2,7 +2,7 @@ import { MdAutoFixHigh } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
-import { buildHistoryResource } from "@plugins/build/core";
+import { type BuildRun, buildHistoryResource } from "@plugins/build/core";
 import { getBuildRunLogs } from "@plugins/build/plugins/build-logs/core";
 
 export function BuildFixSection({ runId }: { runId: string }) {
@@ -12,10 +12,23 @@ export function BuildFixSection({ runId }: { runId: string }) {
   const isFailed = run && run.finishedAt !== null && run.exitCode !== 0;
   if (!isFailed) return null;
 
-  return <BuildFixButton runId={runId} />;
+  return <BuildFixButton runId={runId} run={run} />;
 }
 
-function BuildFixButton({ runId }: { runId: string }) {
+function formatBuildInfo(run: BuildRun): string {
+  const lines: string[] = [];
+  lines.push(`Build ID: ${run.id}`);
+  if (run.commitHash) lines.push(`Commit: ${run.commitHash}`);
+  lines.push(`Exit code: ${run.exitCode}`);
+  if (run.startedAt && run.finishedAt) {
+    const durationMs = new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime();
+    const durationSec = Math.round(durationMs / 1000);
+    lines.push(`Duration: ${durationSec}s`);
+  }
+  return lines.join("\n");
+}
+
+function BuildFixButton({ runId, run }: { runId: string; run: BuildRun }) {
   const logsResult = useEndpoint(getBuildRunLogs, { id: runId });
   const logs = logsResult.data;
 
@@ -42,6 +55,7 @@ function BuildFixButton({ runId }: { runId: string }) {
           .join("\n\n");
 
         const parts = ["Investigate and fix this build failure on main."];
+        parts.push(`Build info:\n${formatBuildInfo(run)}`);
         if (errorText) parts.push(`Build output:\n\n${errorText}`);
         if (userText.trim()) parts.push(`Additional context: ${userText.trim()}`);
 
