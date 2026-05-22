@@ -1,12 +1,10 @@
-import parcel from "@parcel/watcher";
+import { createFileWatcher, type FileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { getConversationClaudeSessionId } from "@plugins/tasks-core/server";
 import { findTranscriptPath } from "./find-transcript-path";
 import { readJsonlEvents } from "./parse-jsonl";
 import type { JsonlEvent } from "../../core";
-
-const RECONCILE_MS = 30_000;
 
 type Listener = (events: JsonlEvent[]) => void;
 
@@ -23,56 +21,36 @@ const rooms = new Map<string, Room>();
 // Reverse index: transcript file path → conversationId, for O(1) parcel dispatch.
 const pathToConvId = new Map<string, string>();
 
-let subscription: parcel.AsyncSubscription | null = null;
-let reconcileTimer: ReturnType<typeof setInterval> | null = null;
+let watcher: FileWatcher | null = null;
 
 export async function startTranscriptWatcher(): Promise<void> {
-  try {
-    subscription = await parcel.subscribe(
-      CLAUDE_PROJECTS_DIR,
-      (err, events) => {
-        if (err) {
-          console.error("[transcript-watcher] watcher error", err);
-          return;
-        }
-        for (const ev of events) {
-          if (!ev.path.endsWith(".jsonl")) continue;
-          const convId = pathToConvId.get(ev.path);
-          if (!convId) continue;
-          const room = rooms.get(convId);
-          if (room) void processRoom(room);
-        }
-      },
-    );
-  // eslint-disable-next-line promise-safety/no-bare-catch
-  } catch (err) {
-    console.error("[transcript-watcher] failed to open parcel subscription", err);
-  }
-
-  reconcileTimer = setInterval(() => {
-    for (const room of rooms.values()) {
-      if (room.transcriptPath) void processRoom(room);
-    }
-  }, RECONCILE_MS);
+  watcher = await createFileWatcher({
+    dirs: [CLAUDE_PROJECTS_DIR],
+    onChange: (events) => {
+      for (const ev of events) {
+        const convId = pathToConvId.get(ev.path);
+        if (!convId) continue;
+        const room = rooms.get(convId);
+        if (room) void processRoom(room);
+      }
+    },
+    onReconcile: () => {
+      for (const room of rooms.values()) {
+        if (room.transcriptPath) void processRoom(room);
+      }
+    },
+    extensions: [".jsonl"],
+    debounceMs: 0,
+  });
 }
 
 export async function stopTranscriptWatcher(): Promise<void> {
-  if (reconcileTimer) {
-    clearInterval(reconcileTimer);
-    reconcileTimer = null;
-  }
   for (const room of rooms.values()) {
     room.abort.abort();
   }
   rooms.clear();
   pathToConvId.clear();
-  if (subscription) {
-    // eslint-disable-next-line promise-safety/no-bare-catch
-    await subscription.unsubscribe().catch((err) =>
-      console.error("[transcript-watcher] unsubscribe failed", err),
-    );
-    subscription = null;
-  }
+  if (watcher) { await watcher.stop(); watcher = null; }
 }
 
 export function watchTranscript(

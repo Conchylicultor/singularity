@@ -1299,6 +1299,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `database.db`
         - Resources: `event-emissions` (invalidate), `event-triggers` (invalidate)
       - Endpoint callers: `queue`
+    - **`file-watcher`** — Shared @parcel/watcher primitive with debounce, ceiling, and reconcile timer management.
+      - Exports (server):
+        - Types: `FileWatcher`, `FileWatcherOptions`
+        - Values: `createFileWatcher`
     - **`git-watcher`** — Watches local git refs (refs/heads/main by default) via @parcel/watcher. Emits the git.refAdvanced trigger event and notifies the refHeadResource live-state resource on every advance.
       - Defines:
         - DB schema: `plugins/infra/plugins/git-watcher/server/internal/tables-ref-advanced.ts`
