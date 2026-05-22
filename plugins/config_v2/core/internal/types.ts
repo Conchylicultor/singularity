@@ -16,6 +16,7 @@ export interface FieldMeta {
   label?: string;
   description?: string;
   placeholder?: string;
+  typeHint?: string;
 }
 
 export interface FieldType<T = unknown> {

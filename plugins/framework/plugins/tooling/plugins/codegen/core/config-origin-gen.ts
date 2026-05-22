@@ -84,6 +84,9 @@ function renderOriginJsonc(descriptor: ConfigDescriptor): string {
     if (field.meta.description) {
       lines.push(`  // ${field.meta.description}`);
     }
+    if (field.meta.typeHint) {
+      lines.push(`  // ${field.meta.typeHint}`);
+    }
     lines.push(`  "${key}": ${value}${comma}`);
   }
 

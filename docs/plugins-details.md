@@ -468,7 +468,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
   - Exports (server):
     - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getConfig`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-  - Imported by: `avatar`, `build`, `codegen`, `commits`, `conversation-category`, `conversations`, `list`, `multiline-text`, `primitives`, `settings`
+  - Imported by: `avatar`, `build`, `codegen`, `commits`, `conversation-category`, `conversations`, `enum`, `list`, `multiline-text`, `primitives`, `settings`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
@@ -481,6 +481,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `avatarField`, `avatarFieldType`
           - Contributes:
             - `Fields.Renderer` "avatar" → `AvatarRenderer`
+        - **`enum`** — Enum field type: single-choice from a fixed set of options.
+          - Exports (core):
+            - Types: `EnumFieldDef`, `EnumOption`
+            - Values: `enumField`, `enumFieldType`
+          - Contributes:
+            - `Fields.Renderer` "enum" → `EnumRenderer`
         - **`list`** — Sortable list field type with stable UUID identity and fractional-index ordering.
           - Exports (core):
             - Types: `ListFieldDef`, `ListItem`

@@ -1,0 +1,5 @@
+{
+  "name": "@singularity/plugin-config_v2-fields-enum",
+  "private": true,
+  "description": "Enum field type for config_v2: single-choice from a fixed set."
+}

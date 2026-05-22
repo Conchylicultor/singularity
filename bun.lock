@@ -284,6 +284,9 @@
     "plugins/config_v2/plugins/fields/plugins/avatar": {
       "name": "@singularity/plugin-config_v2-fields-avatar",
     },
+    "plugins/config_v2/plugins/fields/plugins/enum": {
+      "name": "@singularity/plugin-config_v2-fields-enum",
+    },
     "plugins/config_v2/plugins/fields/plugins/list": {
       "name": "@singularity/plugin-config_v2-fields-list",
     },
@@ -2079,6 +2082,8 @@
     "@singularity/plugin-config_v2-fields": ["@singularity/plugin-config_v2-fields@workspace:plugins/config_v2/plugins/fields"],
 
     "@singularity/plugin-config_v2-fields-avatar": ["@singularity/plugin-config_v2-fields-avatar@workspace:plugins/config_v2/plugins/fields/plugins/avatar"],
+
+    "@singularity/plugin-config_v2-fields-enum": ["@singularity/plugin-config_v2-fields-enum@workspace:plugins/config_v2/plugins/fields/plugins/enum"],
 
     "@singularity/plugin-config_v2-fields-list": ["@singularity/plugin-config_v2-fields-list@workspace:plugins/config_v2/plugins/fields/plugins/list"],
 
