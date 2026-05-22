@@ -35,10 +35,15 @@ export interface Contribution {
   panePath?: string;
 }
 
+export interface ResourceDef {
+  key: string;
+  mode: string;
+}
+
 export interface RuntimeDetail {
   httpRoutes: string[];
   wsRoutes: string[];
-  resources: { key: string; mode: string }[];
+  resources: ResourceDef[];
   apiUses: string[];
 }
 
@@ -460,7 +465,7 @@ function parseServerApiUses(serverDir: string, selfName: string, runtime: "web" 
   return Array.from(uses).sort();
 }
 
-function parseResources(serverDir: string): { key: string; mode: string }[] {
+export function parseResources(serverDir: string): ResourceDef[] {
   const files: string[] = [];
   walkFiles(serverDir, files);
   const out: { key: string; mode: string }[] = [];

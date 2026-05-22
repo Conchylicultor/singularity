@@ -1376,6 +1376,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `createFacet`, `defineFacet`, `facetCollectedDir`, `getFacet`, `loadFacets`, `setFacet`
       - Plugins:
         - **`commands`**
+        - **`resources`**
         - **`slots`**
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Defines:
@@ -1394,8 +1395,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Resources: `plugin-health-reviews` (push)
     - **`plugin-tree`**
       - Exports (core):
-        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`
-        - Values: `buildPluginTree`, `enrichPluginTreeDocs`, `matchBracket`, `parseDefineGroup`, `readIfExists`, `stripTypes`
+        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `ResourceDef`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`
+        - Values: `buildPluginTree`, `enrichPluginTreeDocs`, `matchBracket`, `parseDefineGroup`, `parseResources`, `readIfExists`, `stripTypes`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Exports (core):
         - Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `EntityExtensionInfo`, `EntityExtensionRef`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`, `TableInfo`

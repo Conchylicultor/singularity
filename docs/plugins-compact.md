@@ -270,6 +270,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
       - Plugins:
         - **`commands`**
+        - **`resources`**
         - **`slots`**
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
     - **`plugin-tree`**
