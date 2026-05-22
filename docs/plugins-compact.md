@@ -270,6 +270,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
       - Plugins:
         - **`commands`**
+        - **`cross-refs`**
         - **`resources`**
         - **`routes`**
         - **`slots`**

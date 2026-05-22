@@ -284,6 +284,9 @@
     "plugins/config_v2/plugins/fields/plugins/avatar": {
       "name": "@singularity/plugin-config_v2-fields-avatar",
     },
+    "plugins/config_v2/plugins/fields/plugins/color": {
+      "name": "@singularity/plugin-config_v2-fields-color",
+    },
     "plugins/config_v2/plugins/fields/plugins/enum": {
       "name": "@singularity/plugin-config_v2-fields-enum",
     },
@@ -968,6 +971,14 @@
     },
     "plugins/plugin-meta/plugins/facets/plugins/cross-refs": {
       "name": "@singularity/plugin-plugin-meta-facets-cross-refs",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/resources": {
+      "name": "@singularity/plugin-plugin-meta-facets-resources",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/routes": {
+      "name": "@singularity/plugin-plugin-meta-facets-routes",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/facets/plugins/slots": {
@@ -2098,6 +2109,8 @@
 
     "@singularity/plugin-config_v2-fields-avatar": ["@singularity/plugin-config_v2-fields-avatar@workspace:plugins/config_v2/plugins/fields/plugins/avatar"],
 
+    "@singularity/plugin-config_v2-fields-color": ["@singularity/plugin-config_v2-fields-color@workspace:plugins/config_v2/plugins/fields/plugins/color"],
+
     "@singularity/plugin-config_v2-fields-enum": ["@singularity/plugin-config_v2-fields-enum@workspace:plugins/config_v2/plugins/fields/plugins/enum"],
 
     "@singularity/plugin-config_v2-fields-list": ["@singularity/plugin-config_v2-fields-list@workspace:plugins/config_v2/plugins/fields/plugins/list"],
@@ -2411,6 +2424,10 @@
     "@singularity/plugin-plugin-meta-facets-commands": ["@singularity/plugin-plugin-meta-facets-commands@workspace:plugins/plugin-meta/plugins/facets/plugins/commands"],
 
     "@singularity/plugin-plugin-meta-facets-cross-refs": ["@singularity/plugin-plugin-meta-facets-cross-refs@workspace:plugins/plugin-meta/plugins/facets/plugins/cross-refs"],
+
+    "@singularity/plugin-plugin-meta-facets-resources": ["@singularity/plugin-plugin-meta-facets-resources@workspace:plugins/plugin-meta/plugins/facets/plugins/resources"],
+
+    "@singularity/plugin-plugin-meta-facets-routes": ["@singularity/plugin-plugin-meta-facets-routes@workspace:plugins/plugin-meta/plugins/facets/plugins/routes"],
 
     "@singularity/plugin-plugin-meta-facets-slots": ["@singularity/plugin-plugin-meta-facets-slots@workspace:plugins/plugin-meta/plugins/facets/plugins/slots"],
 
