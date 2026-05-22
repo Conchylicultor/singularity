@@ -11,11 +11,16 @@ export type { Span, PhaseConfig, ProfilingContextValue } from "./components/shar
 export {
   GanttSection,
   SpanDetail,
+  TimeAxis,
   ProfilingContext,
   useProfilingContext,
   formatDuration,
   groupByPhase,
 } from "./components/shared";
+export { useGanttZoom } from "./components/use-gantt-zoom";
+export type { ZoomWindow } from "./components/use-gantt-zoom";
+export { DragSelection } from "./components/drag-selection";
+export type { DragState } from "./components/drag-selection";
 
 export default {
   id: "debug-profiling",

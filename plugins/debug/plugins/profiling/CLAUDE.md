@@ -8,8 +8,8 @@
 - Defines:
   - Slots: `Profiling.Section`
 - Exports (web):
-  - Types: `PhaseConfig`, `ProfilingContextValue`, `Span`
-  - Values: `formatDuration`, `GanttSection`, `groupByPhase`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `useProfilingContext`
+  - Types: `DragState`, `PhaseConfig`, `ProfilingContextValue`, `Span`, `ZoomWindow`
+  - Values: `DragSelection`, `formatDuration`, `GanttSection`, `groupByPhase`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `TimeAxis`, `useGanttZoom`, `useProfilingContext`
 - Contributes:
   - `Pane.Register` "debug-profiling"
   - `DebugApp.Sidebar` "Profiling" → `component`

@@ -1,13 +1,24 @@
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactElement,
+} from "react";
 import {
   formatDuration,
+  TimeAxis,
   useProfilingContext,
+  useGanttZoom,
+  DragSelection,
   type Span,
+  type DragState,
 } from "@plugins/debug/plugins/profiling/web";
 import { attemptPane } from "@plugins/attempt-view/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { cn } from "@/lib/utils";
 
 interface PushEntry {
@@ -73,18 +84,17 @@ const BUILD_COLOR = "bg-sky-400 dark:bg-sky-500";
 const BUILD_FAILED_COLOR = "bg-sky-700 dark:bg-sky-800";
 const BUILD_CRASHED_COLOR = "bg-red-400 dark:bg-red-500";
 
-function formatTickMs(ms: number): string {
-  if (ms === 0) return "0";
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60_000) return `${(ms / 1000).toFixed(0)}s`;
-  const minutes = Math.floor(ms / 60_000);
-  const seconds = Math.round((ms % 60_000) / 1000);
-  return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`;
-}
+
+const LABEL_WIDTH = 160;
+const DURATION_WIDTH = 64;
+const MIN_DRAG_PX = 4;
 
 export function PushSection(): ReactElement | null {
   const { refreshKey } = useProfilingContext();
   const [data, setData] = useState<PushData | null>(null);
+  const zoom = useGanttZoom();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -103,56 +113,79 @@ export function PushSection(): ReactElement | null {
 
   if (!data || data.groups.length === 0) return null;
 
+  function getBarBounds(): { left: number; width: number } | null {
+    const el = containerRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const left = rect.left + LABEL_WIDTH;
+    const width = rect.width - LABEL_WIDTH - DURATION_WIDTH;
+    return width > 0 ? { left, width } : null;
+  }
+
+  function handlePointerDown(e: PointerEvent): void {
+    if (e.button !== 0) return;
+    const bounds = getBarBounds();
+    if (!bounds) return;
+    if (e.clientX < bounds.left || e.clientX > bounds.left + bounds.width)
+      return;
+
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const start = (e.clientX - bounds.left) / bounds.width;
+    setDrag({ start, current: start });
+
+    const target = e.currentTarget as HTMLElement;
+    const onMove = (me: Event): void => {
+      const pe = me as globalThis.PointerEvent;
+      const frac = Math.max(
+        0,
+        Math.min(1, (pe.clientX - bounds.left) / bounds.width),
+      );
+      setDrag((prev) => (prev ? { ...prev, current: frac } : null));
+    };
+    const onUp = (ue: Event): void => {
+      target.releasePointerCapture((ue as globalThis.PointerEvent).pointerId);
+      target.removeEventListener("pointermove", onMove);
+      target.removeEventListener("pointerup", onUp);
+      target.removeEventListener("pointercancel", onUp);
+      setDrag((prev) => {
+        if (!prev) return null;
+        const pxDelta = Math.abs(prev.current - prev.start) * bounds.width;
+        if (pxDelta >= MIN_DRAG_PX) {
+          zoom.zoomTo(prev.start, prev.current, data!.totalMs);
+        }
+        return null;
+      });
+    };
+    target.addEventListener("pointermove", onMove);
+    target.addEventListener("pointerup", onUp);
+    target.addEventListener("pointercancel", onUp);
+  }
+
   return (
-    <>
-      <PushTimeAxis totalMs={data.totalMs} />
+    <div
+      ref={containerRef}
+      className="relative select-none"
+      onPointerDown={handlePointerDown}
+      onDoubleClick={zoom.isZoomed ? zoom.reset : undefined}
+    >
+      <TimeAxis
+        title="Push & Build"
+        totalMs={data.totalMs}
+        zoomWindow={zoom.zoomWindow}
+        onZoomReset={zoom.reset}
+      />
       <div className="border-b">
         {data.groups.map((group) => (
           <PushAttemptRow
             key={group.worktree}
             group={group}
             totalMs={data.totalMs}
+            toLeftPct={zoom.toLeftPct}
+            toWidthPct={zoom.toWidthPct}
           />
         ))}
       </div>
-    </>
-  );
-}
-
-function PushTimeAxis({ totalMs }: { totalMs: number }): ReactElement {
-  const tickCount = 6;
-  const ticks = Array.from({ length: tickCount + 1 }, (_, i) =>
-    Math.round((i / tickCount) * totalMs),
-  );
-
-  return (
-    <div className="relative flex h-6 border-b px-4">
-      <div className="flex w-40 shrink-0 items-center gap-1.5">
-        <SectionLabel
-          as="span"
-          className="text-[10px] font-medium tracking-wider"
-        >
-          Push & Build
-        </SectionLabel>
-        <span className="text-[10px] font-medium tabular-nums text-foreground">
-          {formatDuration(totalMs)}
-        </span>
-      </div>
-      <div className="relative flex-1">
-        {ticks.map((ms) => (
-          <div
-            key={ms}
-            className="absolute top-0 flex h-full flex-col items-center"
-            style={{ left: `${(ms / totalMs) * 100}%` }}
-          >
-            <div className="h-2 w-px bg-border" />
-            <span className="text-[9px] tabular-nums text-muted-foreground">
-              {formatTickMs(ms)}
-            </span>
-          </div>
-        ))}
-      </div>
-      <div className="w-16 shrink-0" />
+      <DragSelection drag={drag} />
     </div>
   );
 }
@@ -160,9 +193,13 @@ function PushTimeAxis({ totalMs }: { totalMs: number }): ReactElement {
 function PushAttemptRow({
   group,
   totalMs,
+  toLeftPct,
+  toWidthPct,
 }: {
   group: WorktreeGroup;
   totalMs: number;
+  toLeftPct: (ms: number, totalMs: number) => string;
+  toWidthPct: (durationMs: number, totalMs: number) => string;
 }): ReactElement {
   const { hovered, setHovered } = useProfilingContext();
   const openPane = useOpenPane();
@@ -235,8 +272,8 @@ function PushAttemptRow({
                 isBuildHovered ? "opacity-100" : "opacity-40",
               )}
               style={{
-                left: `${(build.startMs / totalMs) * 100}%`,
-                width: `${Math.max((build.durationMs / totalMs) * 100, 0.3)}%`,
+                left: toLeftPct(build.startMs, totalMs),
+                width: toWidthPct(build.durationMs, totalMs),
               }}
               onMouseEnter={() => setHovered(buildSpan)}
               onMouseLeave={() => setHovered(null)}
@@ -278,8 +315,8 @@ function PushAttemptRow({
                     isWaitHovered ? "opacity-100" : "opacity-50",
                   )}
                   style={{
-                    left: `${(push.startMs / totalMs) * 100}%`,
-                    width: `${Math.max((push.waitMs / totalMs) * 100, 0.3)}%`,
+                    left: toLeftPct(push.startMs, totalMs),
+                    width: toWidthPct(push.waitMs, totalMs),
                   }}
                   onMouseEnter={() => setHovered(waitSpan)}
                   onMouseLeave={() => setHovered(null)}
@@ -293,8 +330,8 @@ function PushAttemptRow({
                   isPushHovered ? "opacity-100" : "opacity-70",
                 )}
                 style={{
-                  left: `${((push.startMs + push.waitMs) / totalMs) * 100}%`,
-                  width: `${Math.max((push.holdMs / totalMs) * 100, 0.3)}%`,
+                  left: toLeftPct(push.startMs + push.waitMs, totalMs),
+                  width: toWidthPct(push.holdMs, totalMs),
                 }}
                 onMouseEnter={() => setHovered(pushSpan)}
                 onMouseLeave={() => setHovered(null)}

@@ -1,6 +1,16 @@
-import { createContext, useContext, type ReactElement } from "react";
+import {
+  createContext,
+  useContext,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactElement,
+} from "react";
+import { MdClose } from "react-icons/md";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { cn } from "@/lib/utils";
+import { useGanttZoom, type ZoomWindow } from "./use-gantt-zoom";
+import { DragSelection, type DragState } from "./drag-selection";
 
 export interface Span {
   id: string;
@@ -67,6 +77,70 @@ export function groupByPhase(spans: Span[]): {
   return { all, visible };
 }
 
+const LABEL_WIDTH = 160; // w-40
+const DURATION_WIDTH = 64; // w-16
+const MIN_DRAG_PX = 4;
+
+function useGanttDrag(
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  onZoom: (startFraction: number, endFraction: number) => void,
+): {
+  drag: DragState | null;
+  handlePointerDown: (e: PointerEvent) => void;
+} {
+  const [drag, setDrag] = useState<DragState | null>(null);
+
+  function getBarBounds(): { left: number; width: number } | null {
+    const el = containerRef.current;
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    const left = rect.left + LABEL_WIDTH;
+    const width = rect.width - LABEL_WIDTH - DURATION_WIDTH;
+    return width > 0 ? { left, width } : null;
+  }
+
+  function handlePointerDown(e: PointerEvent): void {
+    if (e.button !== 0) return;
+    const bounds = getBarBounds();
+    if (!bounds) return;
+    if (e.clientX < bounds.left || e.clientX > bounds.left + bounds.width)
+      return;
+
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const start = (e.clientX - bounds.left) / bounds.width;
+    setDrag({ start, current: start });
+
+    const target = e.currentTarget as HTMLElement;
+    const onMove = (me: Event): void => {
+      const pe = me as globalThis.PointerEvent;
+      const frac = Math.max(
+        0,
+        Math.min(1, (pe.clientX - bounds.left) / bounds.width),
+      );
+      setDrag((prev) => (prev ? { ...prev, current: frac } : null));
+    };
+    const onUp = (ue: Event): void => {
+      target.releasePointerCapture((ue as globalThis.PointerEvent).pointerId);
+      target.removeEventListener("pointermove", onMove);
+      target.removeEventListener("pointerup", onUp);
+      target.removeEventListener("pointercancel", onUp);
+      setDrag((prev) => {
+        if (!prev) return null;
+        const pxDelta = Math.abs(prev.current - prev.start) * bounds.width;
+        if (pxDelta >= MIN_DRAG_PX) {
+          onZoom(prev.start, prev.current);
+        }
+        return null;
+      });
+    };
+    target.addEventListener("pointermove", onMove);
+    target.addEventListener("pointerup", onUp);
+    target.addEventListener("pointercancel", onUp);
+  }
+
+  return { drag, handlePointerDown };
+}
+
 export function GanttSection({
   title,
   totalMs,
@@ -83,10 +157,27 @@ export function GanttSection({
   visibleByPhase: Map<string, Span[]>;
 }): ReactElement {
   const { hovered, setHovered } = useProfilingContext();
+  const zoom = useGanttZoom();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const { drag, handlePointerDown } = useGanttDrag(
+    containerRef,
+    (s, e) => zoom.zoomTo(s, e, totalMs),
+  );
 
   return (
-    <>
-      <TimeAxis title={title} totalMs={totalMs} />
+    <div
+      ref={containerRef}
+      className="relative select-none"
+      onPointerDown={handlePointerDown}
+      onDoubleClick={zoom.isZoomed ? zoom.reset : undefined}
+    >
+      <TimeAxis
+        title={title}
+        totalMs={totalMs}
+        zoomWindow={zoom.zoomWindow}
+        onZoomReset={zoom.reset}
+      />
       {phaseOrder.map((phase) => {
         const allSpans = allByPhase.get(phase);
         if (!allSpans || allSpans.length === 0) return null;
@@ -102,41 +193,79 @@ export function GanttSection({
             total={totalMs}
             hovered={hovered}
             onHover={setHovered}
+            toLeftPct={zoom.toLeftPct}
+            toWidthPct={zoom.toWidthPct}
           />
         );
       })}
-    </>
+      <DragSelection drag={drag} />
+    </div>
   );
 }
 
-function TimeAxis({
+export function TimeAxis({
   title,
   totalMs,
+  zoomWindow,
+  onZoomReset,
 }: {
   title: string;
   totalMs: number;
+  zoomWindow?: ZoomWindow | null;
+  onZoomReset?: () => void;
 }): ReactElement {
   const tickCount = 6;
+  const viewStart = zoomWindow?.startMs ?? 0;
+  const viewEnd = zoomWindow?.endMs ?? totalMs;
+  const viewRange = viewEnd - viewStart;
+
   const ticks = Array.from({ length: tickCount + 1 }, (_, i) =>
-    Math.round((i / tickCount) * totalMs),
+    Math.round(viewStart + (i / tickCount) * viewRange),
   );
 
   return (
     <div className="relative flex h-6 border-b px-4">
       <div className="flex w-40 shrink-0 items-center gap-1.5">
-        <SectionLabel as="span" className="text-[10px] font-medium tracking-wider">
+        <SectionLabel
+          as="span"
+          className="text-[10px] font-medium tracking-wider"
+        >
           {title}
         </SectionLabel>
-        <span className="text-[10px] font-medium tabular-nums text-foreground">
-          {formatDuration(totalMs)}
-        </span>
+        {zoomWindow ? (
+          <>
+            <span className="text-[10px] font-medium tabular-nums text-blue-500 dark:text-blue-400">
+              {formatTickMs(zoomWindow.startMs)}–
+              {formatTickMs(zoomWindow.endMs)}
+            </span>
+            <button
+              className="flex items-center text-muted-foreground hover:text-foreground"
+              onClick={(e) => {
+                e.stopPropagation();
+                onZoomReset?.();
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+            >
+              <MdClose className="size-3" />
+            </button>
+          </>
+        ) : (
+          <span className="text-[10px] font-medium tabular-nums text-foreground">
+            {formatDuration(totalMs)}
+          </span>
+        )}
       </div>
       <div className="relative flex-1">
         {ticks.map((ms) => (
           <div
             key={ms}
             className="absolute top-0 flex h-full flex-col items-center"
-            style={{ left: `${(ms / totalMs) * 100}%` }}
+            style={{
+              left:
+                viewRange > 0
+                  ? `${((ms - viewStart) / viewRange) * 100}%`
+                  : "0%",
+            }}
           >
             <div className="h-2 w-px bg-border" />
             <span className="text-[9px] tabular-nums text-muted-foreground">
@@ -157,6 +286,8 @@ function PhaseGroup({
   total,
   hovered,
   onHover,
+  toLeftPct,
+  toWidthPct,
 }: {
   config: PhaseConfig;
   allSpans: Span[];
@@ -164,6 +295,8 @@ function PhaseGroup({
   total: number;
   hovered: Span | null;
   onHover: (s: Span | null) => void;
+  toLeftPct: (ms: number, totalMs: number) => string;
+  toWidthPct: (durationMs: number, totalMs: number) => string;
 }): ReactElement {
   const phaseStart = Math.min(...allSpans.map((s) => s.startMs));
   const phaseEnd = Math.max(...allSpans.map((s) => s.startMs + s.durationMs));
@@ -198,6 +331,8 @@ function PhaseGroup({
               color={config.color}
               isHovered={hovered?.id === span.id}
               onHover={onHover}
+              toLeftPct={toLeftPct}
+              toWidthPct={toWidthPct}
             />
           ))}
         </div>
@@ -212,16 +347,17 @@ function SpanRow({
   color,
   isHovered,
   onHover,
+  toLeftPct,
+  toWidthPct,
 }: {
   span: Span;
   total: number;
   color: string;
   isHovered: boolean;
   onHover: (s: Span | null) => void;
+  toLeftPct: (ms: number, totalMs: number) => string;
+  toWidthPct: (durationMs: number, totalMs: number) => string;
 }): ReactElement {
-  const leftPct = `${(span.startMs / total) * 100}%`;
-  const widthPct = `${Math.max((span.durationMs / total) * 100, 0.3)}%`;
-
   return (
     <div
       className="flex items-center gap-2 py-0.5"
@@ -238,7 +374,10 @@ function SpanRow({
             color,
             isHovered ? "opacity-100" : "opacity-70",
           )}
-          style={{ left: leftPct, width: widthPct }}
+          style={{
+            left: toLeftPct(span.startMs, total),
+            width: toWidthPct(span.durationMs, total),
+          }}
         />
       </div>
       <div className="w-16 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground">
