@@ -74,7 +74,7 @@ function ServerDetailContent({ serverId, server }: { serverId: string; server: S
   const sorted = [...sections].sort((a, b) => a.order - b.order);
 
   return (
-    <div className="h-full overflow-auto">
+    <>
       <ServerDetail server={server} />
       <div className="flex flex-col gap-4 p-4">
         {sorted.map((s) => (
@@ -84,6 +84,6 @@ function ServerDetailContent({ serverId, server }: { serverId: string; server: S
           </section>
         ))}
       </div>
-    </div>
+    </>
   );
 }

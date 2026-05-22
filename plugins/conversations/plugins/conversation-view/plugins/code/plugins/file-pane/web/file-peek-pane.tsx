@@ -88,14 +88,12 @@ function FilePeekPaneBody() {
 
   return (
     <PaneChrome pane={filePeekPane} title={title} hideRightActions>
-      <div className="h-full min-h-0 overflow-auto">
-        <FileContent
-          worktree={worktree}
-          path={effectivePath}
-          line={line}
-          active={renderers.active}
-        />
-      </div>
+      <FileContent
+        worktree={worktree}
+        path={effectivePath}
+        line={line}
+        active={renderers.active}
+      />
     </PaneChrome>
   );
 }

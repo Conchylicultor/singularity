@@ -34,7 +34,7 @@ export function CallsView() {
   );
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col">
       <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
         <FilterGroup label="Model">
           <FilterChip active={modelChip.value === "all"} onClick={() => modelChip.setValue("all")}>

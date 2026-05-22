@@ -91,8 +91,7 @@ export function MessageToc() {
         <button
           type="button"
           onClick={() => {
-            const container = document.querySelector("[data-event-index]")
-              ?.closest(".overflow-auto");
+            const container = document.querySelector("[data-pane-scroll]");
             container?.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
           }}
           className="flex w-full items-center justify-center border-t border-border/40 py-1 text-muted-foreground hover:bg-accent hover:text-foreground"

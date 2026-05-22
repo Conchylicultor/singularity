@@ -216,6 +216,22 @@ back to the pane's `chrome.title` config (`string | (params) =>
 string`). Use the prop when the title needs loaded data; use the config
 when it's static or derivable from URL params.
 
+### Scroll responsibility
+
+PaneChrome's content wrapper is `overflow-y-auto` — it scrolls by
+default. Pane bodies should not add `overflow-*` on their root div.
+
+- **Simple content** → do nothing. PaneChrome scrolls.
+- **Header + scrollable body** → root is `flex h-full flex-col`.
+  Sub-header is fixed, body is `flex-1 min-h-0 overflow-auto`.
+  PaneChrome's scroll is naturally inert (`h-full` fills it exactly).
+- **Custom viewport** (terminal, canvas) → root is `h-full`.
+  `overflow-hidden` on root is acceptable as a defensive measure.
+
+Exception: if the pane needs a ref to the scroll container (e.g.
+IntersectionObserver root), it may keep its own `overflow-y-auto`
+div with `h-full` — PaneChrome's scroll stays inert.
+
 ### Actions
 
 Each pane auto-creates an `Actions` slot. Other plugins contribute:

@@ -81,7 +81,7 @@ export function SummaryPane() {
   const isPending = pendingSince !== null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-auto p-3 text-sm">
+    <div className="flex flex-col gap-3 p-3 text-sm">
       <Button
         size="sm"
         variant="outline"

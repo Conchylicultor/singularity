@@ -37,9 +37,7 @@ function BuildDetailBody(): ReactElement {
 
   return (
     <PaneChrome pane={buildDetailPane} title="Build Run">
-      <div className="h-full overflow-auto">
-        <BuildDetail.Host runId={runId} />
-      </div>
+      <BuildDetail.Host runId={runId} />
     </PaneChrome>
   );
 }

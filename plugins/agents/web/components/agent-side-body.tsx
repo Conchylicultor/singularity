@@ -11,9 +11,7 @@ export function AgentSideBody() {
 
   return (
     <PaneChrome pane={agentSidePane} title={agent?.name ?? "Agent"}>
-      <div className="h-full min-h-0 overflow-auto">
-        <AgentDetail agentId={agentId} />
-      </div>
+      <AgentDetail agentId={agentId} />
     </PaneChrome>
   );
 }

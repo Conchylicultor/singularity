@@ -43,16 +43,10 @@ function TaskDetailBody(): ReactElement {
   const { taskId } = taskDetailPane.useParams();
   const task = useTask(taskId);
 
-  const body = (
-    <div className="h-full overflow-auto">
-      <TaskDetail key={taskId} taskId={taskId} />
-    </div>
-  );
-
   return (
     <TaskDetailFlushProvider>
       <PaneChrome pane={taskDetailPane} title={task?.title}>
-        {body}
+        <TaskDetail key={taskId} taskId={taskId} />
       </PaneChrome>
     </TaskDetailFlushProvider>
   );

@@ -80,7 +80,7 @@ export function MemoryPanel() {
   }, [files]);
 
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className="flex h-full">
       {/* File list */}
       <div className="flex w-56 shrink-0 flex-col border-r">
         <div className="flex items-center justify-between border-b px-3 py-2">

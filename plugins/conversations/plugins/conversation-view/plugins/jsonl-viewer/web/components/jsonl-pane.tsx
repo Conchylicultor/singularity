@@ -209,6 +209,7 @@ export function JsonlPane({
       <div className="relative min-h-0 flex-1">
         <div
           ref={sticky.scrollRef}
+          data-pane-scroll
           className={`h-full overflow-auto transition-opacity ${isGone ? "opacity-50" : ""}`}
         >
           <div ref={sticky.contentRef}>

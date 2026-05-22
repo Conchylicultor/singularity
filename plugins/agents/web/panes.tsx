@@ -71,8 +71,8 @@ function AgentDetailBody(): ReactElement {
   const agent = agentsResult.pending ? null : (agentsResult.data.find((a: Agent) => a.id === id) ?? null);
   const views = AgentsSlots.View.useContributions();
 
-  const body = (
-    <div className="h-full overflow-auto">
+  return (
+    <PaneChrome pane={agentDetailPane} title={agent?.name}>
       <AgentDetail key={id} agentId={id} />
       {views.length > 0 && (
         <div className="flex flex-col gap-4 px-6 pb-6">
@@ -86,16 +86,8 @@ function AgentDetailBody(): ReactElement {
           ))}
         </div>
       )}
-    </div>
-  );
-
-  const wrapped = (
-    <PaneChrome pane={agentDetailPane} title={agent?.name}>
-      {body}
     </PaneChrome>
   );
-
-  return wrapped;
 }
 
 function SystemAgentDetailBody(): ReactElement {
@@ -116,9 +108,7 @@ function SystemAgentDetailBody(): ReactElement {
   const Component = descriptor.component ?? SystemAgentDetail;
   return (
     <PaneChrome pane={systemAgentDetailPane} title={descriptor.name}>
-      <div className="h-full overflow-auto">
-        <Component descriptor={descriptor} />
-      </div>
+      <Component descriptor={descriptor} />
     </PaneChrome>
   );
 }

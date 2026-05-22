@@ -67,7 +67,7 @@ export function CommitsGraphBody() {
   const hasAgentWork = commits.length > 0 || landedCommits.length > 0;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden text-sm">
+    <div className="flex h-full flex-col text-sm">
       <header className="border-b border-border px-4 py-2 text-xs text-muted-foreground">
         <div className="flex items-baseline gap-2">
           <span className="font-mono text-foreground">{branchLabel}</span>

@@ -159,7 +159,7 @@ export function ThemeCustomizerBody() {
 
   return (
     <PaneChrome pane={themeCustomizerPane} title="Theme Customizer">
-      <div className="flex flex-col gap-4 overflow-y-auto h-full">
+      <div className="flex flex-col gap-4">
         <div className="px-6 pt-4 flex flex-col gap-4">
           <GlobalPresetPicker />
           <TokenModeSelector mode={tokenMode} onChange={setTokenMode} />

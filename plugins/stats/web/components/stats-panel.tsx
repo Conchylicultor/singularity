@@ -15,7 +15,7 @@ function StatsContent() {
   const { showEmptyDays, setShowEmptyDays } = useShowEmptyDays();
 
   return (
-    <div className="h-full overflow-auto p-6">
+    <div className="p-6">
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <div className="flex justify-end gap-2">
           <a

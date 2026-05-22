@@ -14,7 +14,7 @@ export function QueueView() {
   const [tab, setTab] = useState<Tab>("jobs");
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex h-full flex-col">
       <div className="flex items-center gap-1 border-b px-3 py-2">
         <TabButton active={tab === "jobs"} onClick={() => setTab("jobs")}>
           <MdWorkOutline className="size-4" /> Jobs

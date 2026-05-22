@@ -30,7 +30,7 @@ export function AgentReportPaneBody() {
 
   return (
     <PaneChrome pane={agentReportPane} title={title}>
-      <div className="h-full overflow-auto p-4">
+      <div className="p-4">
         {!result ? (
           <div className="text-sm text-muted-foreground">
             {!event ? "Event not found." : "Agent is still running…"}
