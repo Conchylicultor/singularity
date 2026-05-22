@@ -78,8 +78,8 @@ function FilePeekPaneBody() {
   }
 
   const title = (
-    <span className="flex min-w-0 flex-1 items-center gap-2">
-      <span className="min-w-0 flex-1 overflow-hidden">
+    <span className="flex min-w-0 items-center gap-2">
+      <span className="min-w-0 overflow-hidden">
         <FilepathBreadcrumb path={effectivePath} />
       </span>
       <FileTabs {...renderers} />
