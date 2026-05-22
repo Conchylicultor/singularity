@@ -83,16 +83,18 @@ export function initRegistry(): void {
     const gitOverwrites = jsoncConfigProxy(join(REPO_ROOT, "config", hierarchyPath, `${descriptor.name}.jsonc`));
 
     const gitEff = effective(gitOrigin, gitOverwrites);
-    const gitEffProxy = readonlyProxy(gitEff);
     const userOrigin = jsoncConfigProxy(userOriginPath);
     const userOverwrites = jsoncConfigProxy(userOverwritesPath);
 
-    const { conflict } = propagate(gitEffProxy, userOrigin, userOverwrites);
-    if (conflict) {
-      console.warn(
-        `[config-v2] conflict: user overwrites for "${descriptor.name}" at ${hierarchyPath} ` +
-        `were based on a different upstream. Review ${userOverwritesPath}`,
-      );
+    if (gitEff !== undefined) {
+      const gitEffProxy = readonlyProxy(gitEff);
+      const { conflict } = propagate(gitEffProxy, userOrigin, userOverwrites);
+      if (conflict) {
+        console.warn(
+          `[config-v2] conflict: user overwrites for "${descriptor.name}" at ${hierarchyPath} ` +
+          `were based on a different upstream. Review ${userOverwritesPath}`,
+        );
+      }
     }
 
     const reloadValues = (): ConfigValues<FieldsRecord> => {

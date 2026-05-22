@@ -6,12 +6,14 @@ import type { JsonValue } from "./types";
 export function effective(
   origin: ConfigProxy,
   overwrites: ConfigProxy,
-): JsonValue {
+): JsonValue | undefined {
   if (overwrites.exists()) {
     const ow = overwrites.read();
     if (ow) return ow.content;
   }
-  return origin.read()!.content;
+  const originData = origin.read();
+  if (!originData) return undefined;
+  return originData.content;
 }
 
 export function hasConflict(
