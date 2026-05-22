@@ -5,6 +5,7 @@ import {
   registerBarrelStubs,
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
+import { loadFacets, setFacet } from "@plugins/plugin-meta/plugins/facets/core";
 
 // ── Public types ────────────────────────────────────────────────────
 
@@ -134,13 +135,13 @@ interface RawExtRef {
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function readIfExists(path: string): string | null {
+export function readIfExists(path: string): string | null {
   return existsSync(path) ? readFileSync(path, "utf8") : null;
 }
 
 const transpiler = new Bun.Transpiler({ loader: "ts" });
 
-function stripTypes(src: string): string {
+export function stripTypes(src: string): string {
   try {
     return transpiler.transformSync(src);
   } catch {
@@ -161,7 +162,7 @@ function parseBoolField(src: string, field: string): boolean {
   return m?.[1] === "true";
 }
 
-function matchBracket(src: string, start: number, open: string, close: string): number {
+export function matchBracket(src: string, start: number, open: string, close: string): number {
   let depth = 0;
   for (let i = start; i < src.length; i++) {
     const c = src[i];
@@ -183,7 +184,7 @@ function matchBracket(src: string, start: number, open: string, close: string): 
   return -1;
 }
 
-function parseDefineGroup<T>(
+export function parseDefineGroup<T>(
   src: string,
   builder: "defineSlot" | "defineCommand",
   make: (memberName: string, id: string, groupName: string) => T,
@@ -557,7 +558,8 @@ function findAllPluginDirs(pluginsRoot: string): string[] {
     const hasCore = existsSync(join(dir, "core", "index.ts"));
     const hasCheck = existsSync(join(dir, "check", "index.ts"));
     const hasLint = existsSync(join(dir, "lint", "index.ts"));
-    const hasBarrel = hasWeb || hasServer || hasCentral || hasShared || hasCore || hasCheck || hasLint;
+    const hasFacet = existsSync(join(dir, "facet", "index.ts"));
+    const hasBarrel = hasWeb || hasServer || hasCentral || hasShared || hasCore || hasCheck || hasLint || hasFacet;
     const isUmbrella =
       !hasBarrel &&
       existsSync(join(dir, "plugins")) &&
@@ -1082,5 +1084,17 @@ export async function enrichPluginTreeDocs(
 
     if (contributions.length > 0) node.runtimeContributions = contributions;
     if (registrations.length > 0) node.runtimeRegistrations = registrations;
+  }
+
+  // Pass 3: facet extraction (dual-write alongside monolithic fields)
+  const facets = await loadFacets();
+  for (const node of tree.byDir.values()) {
+    for (const facet of facets) {
+      const data = facet.extract({ dir: node.dir });
+      setFacet(node, facet.def, data);
+    }
+  }
+  for (const facet of facets) {
+    if (facet.relate) facet.relate({ tree });
   }
 }

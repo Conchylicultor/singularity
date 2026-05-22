@@ -49,7 +49,8 @@ export function findPluginDirs(root: string): string[] {
       existsSync(join(dir, "server", "index.ts")) ||
       existsSync(join(dir, "central", "index.ts")) ||
       existsSync(join(dir, "check", "index.ts")) ||
-      existsSync(join(dir, "lint", "index.ts")),
+      existsSync(join(dir, "lint", "index.ts")) ||
+      existsSync(join(dir, "facet", "index.ts")),
   );
 }
 

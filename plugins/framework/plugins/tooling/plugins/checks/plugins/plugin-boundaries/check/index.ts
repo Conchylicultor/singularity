@@ -29,6 +29,7 @@ const KNOWN_PLUGIN_DIRS = new Set([
   "plugins",
   "lint",
   "check",
+  "facet",
   "scripts",
   "bin",
 ]);

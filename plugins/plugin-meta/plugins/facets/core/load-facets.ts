@@ -1,4 +1,4 @@
-import type { Facet } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import type { Facet } from "./facets";
 
 function isFacet(value: unknown): value is Facet {
   return (

@@ -1351,7 +1351,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `AUTO_STUB_CSS`, `AUTO_STUB_PACKAGES`, `importBarrel`, `registerBarrelStubs`
     - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
       - Exports (core):
-        - Values: `facetCollectedDir`, `loadFacets`
+        - Types: `Facet`, `FacetDef`
+        - Values: `defineFacet`, `facetCollectedDir`, `getFacet`, `loadFacets`, `setFacet`
+      - Plugins:
+        - **`commands`**
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Defines:
         - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`
@@ -1369,8 +1372,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Resources: `plugin-health-reviews` (push)
     - **`plugin-tree`**
       - Exports (core):
-        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `Facet`, `FacetDef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`
-        - Values: `buildPluginTree`, `defineFacet`, `enrichPluginTreeDocs`, `getFacet`, `setFacet`
+        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`
+        - Values: `buildPluginTree`, `enrichPluginTreeDocs`, `matchBracket`, `parseDefineGroup`, `readIfExists`, `stripTypes`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Exports (core):
         - Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `EntityExtensionInfo`, `EntityExtensionRef`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`, `TableInfo`

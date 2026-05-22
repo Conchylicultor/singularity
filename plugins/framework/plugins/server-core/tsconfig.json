@@ -16,6 +16,7 @@
     "../../../../**/plugins/*/server",
     "../../../../**/plugins/*/core",
     "../../../../**/plugins/*/shared",
-    "../../../../**/plugins/*/check"
+    "../../../../**/plugins/*/check",
+    "../../../../**/plugins/*/facet"
   ]
 }

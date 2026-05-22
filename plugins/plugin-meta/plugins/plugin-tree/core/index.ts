@@ -1,4 +1,4 @@
-export { buildPluginTree, enrichPluginTreeDocs } from "./internal/plugin-tree";
+export { buildPluginTree, enrichPluginTreeDocs, readIfExists, stripTypes, matchBracket, parseDefineGroup } from "./internal/plugin-tree";
 export type {
   Runtime,
   BarrelExport,
@@ -14,5 +14,3 @@ export type {
   PluginNode,
   PluginTree,
 } from "./internal/plugin-tree";
-export { defineFacet, getFacet, setFacet } from "./internal/facets";
-export type { Facet, FacetDef } from "./internal/facets";
