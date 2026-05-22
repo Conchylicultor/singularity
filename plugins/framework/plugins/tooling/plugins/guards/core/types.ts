@@ -1,12 +1,15 @@
-export type Verdict = { kind: "allow" } | { kind: "deny"; reason: string };
+export type AllowVerdict = { kind: "allow" };
+export type DenyVerdict = { kind: "deny"; reason: string; fatal?: boolean };
+export type Verdict = AllowVerdict | DenyVerdict;
 
 export type ToolMatcher = "Bash" | "Write" | "Edit" | "Read" | "NotebookEdit" | "Agent";
 
 export interface GuardContext {
   cwd: string;
   hasBypass(token: string): boolean;
-  allow(): Verdict;
-  deny(reason: string): Verdict;
+  allow(): AllowVerdict;
+  deny(reason: string): DenyVerdict;
+  fatal(reason: string): DenyVerdict;
 }
 
 export interface BashInput { command?: string }

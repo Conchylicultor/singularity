@@ -44,7 +44,7 @@ export const repeatedCommandGuard: Guard<BashInput> = {
     writeFileSync(path, JSON.stringify(state));
 
     if (state.count >= THRESHOLD) {
-      return ctx.deny(
+      return ctx.fatal(
         `Blocked: you have run the exact same command ${state.count} times in a row:\n\n` +
           `  ${cmd}\n\n` +
           `This looks like a polling loop. The command is unlikely to produce a different result on the next attempt.\n\n` +

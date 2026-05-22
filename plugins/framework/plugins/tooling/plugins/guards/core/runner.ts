@@ -37,6 +37,7 @@ export async function runHook(input: HookInput): Promise<void> {
     if (verdict.kind === "deny") {
       process.stdout.write(
         JSON.stringify({
+          ...(verdict.fatal ? { continue: false, stopReason: verdict.reason } : {}),
           hookSpecificOutput: {
             hookEventName: "PreToolUse",
             permissionDecision: "deny",

@@ -1197,7 +1197,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `collectedDirRegistryPath`, `defineCollectedDir`, `discoverCollectedDirs`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `isCollectedDirDef`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `pluginRoutesDocPath`, `propagateConfigToUser`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderRoutesDoc`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Exports (core):
-            - Types: `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`
+            - Types: `AllowVerdict`, `DenyVerdict`, `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`
             - Values: `createContext`, `defineGuard`, `GUARDS`, `parseShell`
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Exports (core):
