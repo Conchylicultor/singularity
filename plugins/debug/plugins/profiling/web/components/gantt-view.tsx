@@ -13,7 +13,7 @@ export function GanttView(): ReactElement {
 
   return (
     <ProfilingContext.Provider value={{ hovered, setHovered, refreshKey }}>
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col overflow-hidden">
         <div className="flex items-center border-b px-4 py-2">
           <div className="flex-1" />
           <button
