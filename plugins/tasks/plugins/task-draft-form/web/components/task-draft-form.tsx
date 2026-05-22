@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useState, type ReactNode } from "react";
-import { MdAdd } from "react-icons/md";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { MdAdd, MdScience } from "react-icons/md";
 import {
   DndContext,
   PointerSensor,
@@ -59,6 +59,16 @@ export interface TaskDraftFormProps {
 
 const NEW_CARD_DEFAULT_MODEL: ChainModel = "sonnet";
 
+function useIsAgentWorktree(): boolean {
+  return useMemo(() => {
+    const host = window.location.hostname;
+    const wt = host.endsWith(".localhost")
+      ? host.replace(/\.localhost$/, "")
+      : "head";
+    return wt !== "head" && wt !== "singularity";
+  }, []);
+}
+
 export function makeCard(model: ChainModel): CardDraft {
   return {
     localId: crypto.randomUUID(),
@@ -93,6 +103,7 @@ export function TaskDraftForm({
   heading,
   footerStart,
 }: TaskDraftFormProps) {
+  const isAgentWorktree = useIsAgentWorktree();
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -157,7 +168,15 @@ export function TaskDraftForm({
   };
 
   return (
-    <div className="flex w-[480px] flex-col gap-2">
+    <div
+      className={`flex w-[480px] flex-col gap-2 ${isAgentWorktree ? "rounded-lg border-2 border-red-500/60 p-3" : ""}`}
+    >
+      {isAgentWorktree && (
+        <div className="flex items-center gap-1.5 text-xs font-medium text-red-500">
+          <MdScience className="size-3.5" />
+          Experimental — tasks target main from an agent worktree
+        </div>
+      )}
       <div className="text-muted-foreground text-xs font-medium">
         {heading ?? "Draft tasks"}
       </div>
