@@ -58,7 +58,11 @@ export function writeBuildProfile(name: string): void {
         : Math.max(...spans.map((s) => s.startMs + s.durationMs)),
   };
   mkdirSync(WORKTREES_DIR, { recursive: true });
-  const path = join(WORKTREES_DIR, `${name}-build-profile.json`);
+  const buildId = process.env.SINGULARITY_BUILD_ID;
+  const filename = buildId
+    ? `${name}-build-profile-${buildId}.json`
+    : `${name}-build-profile.json`;
+  const path = join(WORKTREES_DIR, filename);
   const tmp = `${path}.tmp.${process.pid}`;
   writeFileSync(tmp, JSON.stringify(profile, null, 2) + "\n");
   renameSync(tmp, path);

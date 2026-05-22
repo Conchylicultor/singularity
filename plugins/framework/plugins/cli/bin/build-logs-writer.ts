@@ -23,7 +23,11 @@ export function pushBuildStepLog(step: BuildStepLog): void {
 export function writeBuildLogs(name: string): void {
   const logs: BuildLogs = { steps };
   mkdirSync(WORKTREES_DIR, { recursive: true });
-  const path = join(WORKTREES_DIR, `${name}-build-logs.json`);
+  const buildId = process.env.SINGULARITY_BUILD_ID;
+  const filename = buildId
+    ? `${name}-build-logs-${buildId}.json`
+    : `${name}-build-logs.json`;
+  const path = join(WORKTREES_DIR, filename);
   const tmp = `${path}.tmp.${process.pid}`;
   writeFileSync(tmp, JSON.stringify(logs, null, 2) + "\n");
   renameSync(tmp, path);

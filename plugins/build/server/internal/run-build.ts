@@ -1,9 +1,7 @@
-import { copyFileSync } from "node:fs";
-import { join } from "node:path";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { Log } from "@plugins/debug/plugins/logs/server";
-import { REPO_ROOT, SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { _buildRuns } from "./tables";
 import { buildHistoryResource } from "./build-history-resource";
 import { frontendHashResource } from "./frontend-hash-resource";
@@ -46,6 +44,7 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
     stdout: "pipe",
     stderr: "pipe",
     detached: true,
+    env: { ...process.env, SINGULARITY_BUILD_ID: buildId },
   });
 
   const decoder = new TextDecoder();
@@ -67,18 +66,6 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
 
   const exitCode = await proc.exited;
   buildLog.publish(exitCode === 0 ? "Build succeeded" : `Build failed (exit ${exitCode})`);
-
-  const worktreeName = process.env.SINGULARITY_WORKTREE;
-  if (worktreeName) {
-    const profileDir = join(SINGULARITY_DIR, "worktrees");
-    const src = join(profileDir, `${worktreeName}-build-profile.json`);
-    const dst = join(profileDir, `${worktreeName}-build-profile-${buildId}.json`);
-    try { copyFileSync(src, dst); } catch { /* no profile written — that's fine */ }
-
-    const logsSrc = join(profileDir, `${worktreeName}-build-logs.json`);
-    const logsDst = join(profileDir, `${worktreeName}-build-logs-${buildId}.json`);
-    try { copyFileSync(logsSrc, logsDst); } catch { /* no logs written — that's fine */ }
-  }
 
   await db
     .update(_buildRuns)
