@@ -102,13 +102,15 @@ export function PushSection(): ReactElement | null {
   return (
     <>
       <PushTimeAxis totalMs={data.totalMs} />
-      {data.groups.map((group) => (
-        <PushAttemptRow
-          key={group.worktree}
-          group={group}
-          totalMs={data.totalMs}
-        />
-      ))}
+      <div className="border-b">
+        {data.groups.map((group) => (
+          <PushAttemptRow
+            key={group.worktree}
+            group={group}
+            totalMs={data.totalMs}
+          />
+        ))}
+      </div>
     </>
   );
 }
@@ -169,7 +171,7 @@ function PushAttemptRow({
     group.builds.reduce((sum, b) => sum + b.durationMs, 0);
 
   return (
-    <div className="flex items-center gap-2 border-b px-4 py-1">
+    <div className="flex items-center gap-2 px-4 py-1">
       <div className="flex w-40 shrink-0 items-center gap-1.5 truncate">
         <div
           className={cn("size-2 shrink-0 rounded-full", lastStyle.color)}
