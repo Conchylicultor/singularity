@@ -1,9 +1,22 @@
 # Auto-generated artifacts: resolved by custom merge drivers in plugins/framework/plugins/cli/scripts/
 # plus a post-rebase normalize step in `./singularity push` that regenerates
-# canonical content from the rebased source tree. See research/2026-05-02-cli-push-merge-driver-regen.md.
-docs/plugins-compact.md                       merge=regen-docs
-docs/plugins-details.md                       merge=regen-docs
+# canonical content from the rebased source tree.
+
+# Plugin docs (fully generated)
+docs/plugins-compact.md                       merge=regen-generated
+docs/plugins-details.md                       merge=regen-generated
+docs/routes.md                                merge=regen-generated
+
+# Per-plugin CLAUDE.md (mixed: hand-written prose + autogen block)
 plugins/**/CLAUDE.md                          merge=regen-claudemd
+
+# Plugin registry codegen
+plugins/**/*.generated.ts                     merge=regen-generated
+
+# Config origin files
+config/**/*.origin.jsonc                      merge=regen-generated
+
+# Database migrations (separate: hand-edit safety check before regen)
 plugins/database/plugins/migrations/data/*.sql                merge=regen-migrations
 plugins/database/plugins/migrations/data/meta/_journal.json   merge=regen-migrations
 plugins/database/plugins/migrations/data/meta/*_snapshot.json merge=regen-migrations

@@ -104,9 +104,9 @@ function findClaudeMdConflicts(root: string): string[] {
  *   - migrations marker: regen-migrations runs the hand-edit detector first
  *     (aborts loudly if any branch-local .sql was hand-edited), then resets
  *     branch-local files and re-runs drizzle-kit generate.
- *   - docs marker: regen-docs rewrites all autogen blocks (incl. inside
- *     CLAUDE.md files), erasing any benign autogen-only conflict markers left
- *     by regen-claudemd. We then scan plugins/**\/CLAUDE.md for residual
+ *   - generated marker: regen-generated rewrites all deterministic codegen
+ *     (plugin registries, barrel stubs, docs, config origins, CLAUDE.md
+ *     autogen blocks). We then scan plugins/**\/CLAUDE.md for residual
  *     conflict markers — those would be in hand-written prose, a real
  *     conflict the agent must resolve.
  */
@@ -115,11 +115,11 @@ async function postRebaseNormalize(root: string, pushId: string): Promise<void> 
   // git-dir may be relative to cwd (".git") or absolute; resolve via cwd.
   const markerDir = gitDir.startsWith("/") ? join(gitDir, "singularity-merge-markers") : join(root, gitDir, "singularity-merge-markers");
   const migrationsMarker = join(markerDir, "migrations");
-  const docsMarker = join(markerDir, "docs");
+  const generatedMarker = join(markerDir, "generated");
   const ranMigrations = existsSync(migrationsMarker);
-  const ranDocs = existsSync(docsMarker);
+  const ranGenerated = existsSync(generatedMarker);
 
-  if (!ranMigrations && !ranDocs) return; // clean rebase, no auto-resolve happened
+  if (!ranMigrations && !ranGenerated) return; // clean rebase, no auto-resolve happened
 
   console.log("Normalizing artifacts auto-resolved during rebase...");
 
@@ -128,9 +128,9 @@ async function postRebaseNormalize(root: string, pushId: string): Promise<void> 
     rmSync(migrationsMarker, { force: true });
   }
 
-  if (ranDocs) {
-    await exec(["bun", "plugins/framework/plugins/cli/bin/index.ts", "regen-docs"], root);
-    rmSync(docsMarker, { force: true });
+  if (ranGenerated) {
+    await exec(["bun", "plugins/framework/plugins/cli/bin/index.ts", "regen-generated"], root);
+    rmSync(generatedMarker, { force: true });
 
     const conflicted = findClaudeMdConflicts(root);
     if (conflicted.length) {

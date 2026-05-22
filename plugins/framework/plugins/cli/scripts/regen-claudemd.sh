@@ -12,5 +12,5 @@ git merge-file -p "$2" "$1" "$3" > "$2.tmp" 2>/dev/null || true
 mv "$2.tmp" "$2"
 GITDIR=$(git rev-parse --git-dir)
 mkdir -p "$GITDIR/singularity-merge-markers"
-touch "$GITDIR/singularity-merge-markers/docs"
+touch "$GITDIR/singularity-merge-markers/generated"
 exit 0

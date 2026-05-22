@@ -1,5 +1,10 @@
 import type { Command } from "commander";
-import { generatePluginDocs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  generateBarrelStubs,
+  generatePluginRegistry,
+  generatePluginDocs,
+  generateConfigOrigins,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 async function getWorktreeRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
@@ -14,15 +19,19 @@ async function getWorktreeRoot(): Promise<string> {
   return out.trim();
 }
 
-export function registerRegenDocs(program: Command) {
+export function registerRegenGenerated(program: Command) {
   program
-    .command("regen-docs")
+    .command("regen-generated")
     .description(
-      "Regenerate plugins-compact.md, plugins-details.md, and per-plugin CLAUDE.md autogen blocks. " +
+      "Regenerate all non-migration codegen artifacts: barrel stubs, plugin registries, " +
+        "plugin docs (compact/details/routes/CLAUDE.md autogen blocks), and config origins. " +
         "Used by the post-rebase normalize step in `push`. Idempotent.",
     )
     .action(async () => {
       const root = await getWorktreeRoot();
+      await generateBarrelStubs({ root });
+      await generatePluginRegistry({ root });
       await generatePluginDocs({ root });
+      await generateConfigOrigins({ root });
     });
 }

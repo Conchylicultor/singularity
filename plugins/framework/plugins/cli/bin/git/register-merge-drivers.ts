@@ -4,10 +4,12 @@ interface Driver {
 }
 
 const DRIVERS: Driver[] = [
-  { name: "regen-docs", script: "plugins/framework/plugins/cli/scripts/regen-docs.sh" },
+  { name: "regen-generated", script: "plugins/framework/plugins/cli/scripts/regen-generated.sh" },
   { name: "regen-claudemd", script: "plugins/framework/plugins/cli/scripts/regen-claudemd.sh" },
   { name: "regen-migrations", script: "plugins/framework/plugins/cli/scripts/regen-migrations.sh" },
 ];
+
+const STALE_DRIVERS = ["regen-docs"];
 
 async function gitConfigGet(key: string, cwd: string): Promise<string | null> {
   const proc = Bun.spawn(["git", "config", "--local", "--get", key], {
@@ -33,8 +35,9 @@ async function gitConfigSet(key: string, value: string, cwd: string): Promise<vo
 
 /**
  * Idempotently install custom merge drivers used by .gitattributes to
- * auto-resolve conflicts in deterministically-generated files (docs,
- * drizzle migrations) during `git rebase` in `./singularity push`.
+ * auto-resolve conflicts in deterministically-generated files (codegen
+ * registries, docs, config origins, drizzle migrations) during
+ * `git rebase` in `./singularity push`.
  *
  * Drivers themselves are trivial — they accept the upstream side. The
  * canonicalization happens in the post-rebase normalize step in `push.ts`,
@@ -48,5 +51,13 @@ export async function registerMergeDrivers(root: string): Promise<void> {
     if (current === want) continue;
     await gitConfigSet(key, want, root);
     console.log(`Registered merge driver: ${d.name}`);
+  }
+  for (const name of STALE_DRIVERS) {
+    const key = `merge.${name}.driver`;
+    if (await gitConfigGet(key, root)) {
+      const proc = Bun.spawn(["git", "config", "--local", "--unset", key], { cwd: root, stdout: "pipe", stderr: "pipe" });
+      await proc.exited;
+      console.log(`Removed stale merge driver: ${name}`);
+    }
   }
 }
