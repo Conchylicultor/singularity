@@ -944,6 +944,10 @@
       "name": "@singularity/plugin-plugin-meta-barrel-import",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/facets": {
+      "name": "@singularity/plugin-plugin-meta-facets",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/plugin-health": {
       "name": "@singularity/plugin-plugin-meta-plugin-health",
       "version": "0.0.1",
@@ -2363,6 +2367,8 @@
     "@singularity/plugin-plugin-meta": ["@singularity/plugin-plugin-meta@workspace:plugins/plugin-meta"],
 
     "@singularity/plugin-plugin-meta-barrel-import": ["@singularity/plugin-plugin-meta-barrel-import@workspace:plugins/plugin-meta/plugins/barrel-import"],
+
+    "@singularity/plugin-plugin-meta-facets": ["@singularity/plugin-plugin-meta-facets@workspace:plugins/plugin-meta/plugins/facets"],
 
     "@singularity/plugin-plugin-meta-plugin-health": ["@singularity/plugin-plugin-meta-plugin-health@workspace:plugins/plugin-meta/plugins/plugin-health"],
 

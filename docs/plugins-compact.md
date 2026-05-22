@@ -262,6 +262,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
     - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
+    - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
     - **`plugin-tree`**
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.

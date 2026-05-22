@@ -3,6 +3,13 @@ export interface FacetDef<T> {
   _phantom?: T;
 }
 
+export interface Facet {
+  def: FacetDef<unknown>;
+  extract: (ctx: unknown) => unknown;
+  relate?: (ctx: unknown) => void;
+  renderDoc: (data: unknown, ctx: unknown) => string[];
+}
+
 export function defineFacet<T>(id: string): FacetDef<T> {
   return { id };
 }
