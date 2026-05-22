@@ -176,6 +176,8 @@ export async function propagateConfigToUser(opts: {
     );
 
     const gitEff = effective(gitOrigin, gitOverwrites);
+    if (gitEff === undefined) continue;
+
     const gitEffProxy = readonlyProxy(gitEff);
     const userOrigin = fileConfigProxy(
       join(userConfigDir, hierarchyPath, `${descriptor.name}.origin.jsonc`),

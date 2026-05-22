@@ -1159,7 +1159,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`codegen`** — Plugin doc generation and registry codegen
           - Exports (core):
             - Types: `CollectedDirDef`, `DiscoveredCollectedDir`, `GenerateDocsOptions`, `PluginNode`, `PluginTree`
-            - Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `collectedDirRegistryPath`, `defineCollectedDir`, `discoverCollectedDirs`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `isCollectedDirDef`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `pluginRoutesDocPath`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderRoutesDoc`
+            - Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `collectedDirRegistryPath`, `defineCollectedDir`, `discoverCollectedDirs`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `isCollectedDirDef`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `pluginRoutesDocPath`, `propagateConfigToUser`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderRoutesDoc`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Exports (core):
             - Types: `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`
