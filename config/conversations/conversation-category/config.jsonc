@@ -2,13 +2,13 @@
 {
   "autoClassify": true,
   "categories": [
-    { "name": "General question", "avatar": { "icon": "question_mark", "color": "sky", "svgNodes": [{ "tag": "path", "attr": { "d": "M11.07 12.85c.77-1.39 2.25-2.21 3.11-3.44.91-1.29.4-3.7-2.18-3.7-1.69 0-2.52 1.28-2.87 2.34L6.54 6.96C7.25 4.83 9.18 3 11.99 3c2.35 0 3.96 1.07 4.78 2.41.7 1.15 1.11 3.3.03 4.9-1.2 1.77-2.35 2.31-2.97 3.45-.25.46-.35.76-.35 2.24h-2.89c-.01-.78-.13-2.05.48-3.15zM14 20c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2z" }, "child": [] }] } },
-    { "name": "Feature (small)", "avatar": { "icon": "star_outline", "color": "amber", "svgNodes": [{ "tag": "path", "attr": { "d": "m22 9.24-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z" }, "child": [] }] } },
-    { "name": "Feature (big)", "avatar": { "icon": "star_rate", "color": "amber", "svgNodes": [{ "tag": "path", "attr": { "d": "M14.43 10 12 2l-2.43 8H2l6.18 4.41L5.83 22 12 17.31 18.18 22l-2.35-7.59L22 10z" }, "child": [] }] } },
-    { "name": "Infra (small)", "avatar": { "icon": "factory", "color": "emerald", "svgNodes": [{ "tag": "path", "attr": { "d": "M22 10v12H2V10l7-3v2l5-2v3h8zm-4.8-1.5L18 2h3l.8 6.5h-4.6zM11 18h2v-4h-2v4zm-4 0h2v-4H7v4zm10-4h-2v4h2v-4z" }, "child": [] }] } },
-    { "name": "Infra (load bearing)", "avatar": { "icon": "factory", "color": "emerald", "svgNodes": [{ "tag": "path", "attr": { "d": "M22 10v12H2V10l7-3v2l5-2v3h8zm-4.8-1.5L18 2h3l.8 6.5h-4.6zM11 18h2v-4h-2v4zm-4 0h2v-4H7v4zm10-4h-2v4h2v-4z" }, "child": [] }] } },
-    { "name": "Bug (small)", "avatar": { "icon": "bug_report", "color": "rose", "svgNodes": [{ "tag": "path", "attr": { "d": "M20 8h-2.81a5.985 5.985 0 0 0-1.82-1.96L17 4.41 15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5c-.49 0-.96.06-1.41.17L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z" }, "child": [] }] } },
-    { "name": "Bug (critical)", "avatar": { "icon": "bug_report", "color": "rose", "svgNodes": [{ "tag": "path", "attr": { "d": "M20 8h-2.81a5.985 5.985 0 0 0-1.82-1.96L17 4.41 15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5c-.49 0-.96.06-1.41.17L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z" }, "child": [] }] } },
-    { "name": "Other", "avatar": { "icon": "question_mark", "color": "sky", "svgNodes": [{ "tag": "path", "attr": { "d": "M11.07 12.85c.77-1.39 2.25-2.21 3.11-3.44.91-1.29.4-3.7-2.18-3.7-1.69 0-2.52 1.28-2.87 2.34L6.54 6.96C7.25 4.83 9.18 3 11.99 3c2.35 0 3.96 1.07 4.78 2.41.7 1.15 1.11 3.3.03 4.9-1.2 1.77-2.35 2.31-2.97 3.45-.25.46-.35.76-.35 2.24h-2.89c-.01-.78-.13-2.05.48-3.15zM14 20c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2z" }, "child": [] }] } }
+    { "name": "General question", "avatar": { "icon": "question_mark", "color": "sky" } },
+    { "name": "Feature (small)", "avatar": { "icon": "star_outline", "color": "amber" } },
+    { "name": "Feature (big)", "avatar": { "icon": "star_rate", "color": "amber" } },
+    { "name": "Infra (small)", "avatar": { "icon": "factory", "color": "emerald" } },
+    { "name": "Infra (load bearing)", "avatar": { "icon": "factory", "color": "emerald" } },
+    { "name": "Bug (small)", "avatar": { "icon": "bug_report", "color": "rose" } },
+    { "name": "Bug (critical)", "avatar": { "icon": "bug_report", "color": "rose" } },
+    { "name": "Other", "avatar": { "icon": "question_mark", "color": "sky" } }
   ]
 }

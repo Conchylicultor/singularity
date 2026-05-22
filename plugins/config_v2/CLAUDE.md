@@ -97,7 +97,7 @@ Overwrites are **full copies**, not deltas. `setConfig` writes `{ ...currentValu
 - Description: Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 - Exports (core):
   - Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`
-  - Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2Resource`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`
+  - Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2Resource`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`
 - Exports (web):
   - Types: `ConfigRegistration`
   - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`

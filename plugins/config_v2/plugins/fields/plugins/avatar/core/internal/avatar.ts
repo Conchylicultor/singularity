@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   defineFieldType,
+  getFieldResolver,
   type FieldDef,
   type FieldMeta,
 } from "@plugins/config_v2/core";
@@ -25,11 +26,15 @@ const svgNodeSchema: z.ZodType<SvgNode> = z.lazy(() =>
   }),
 );
 
-const avatarSpecSchema: z.ZodType<AvatarSpec> = z.object({
+const avatarSpecSchema = z.object({
   icon: z.string().nullable(),
   color: z.string().nullable(),
-  svgNodes: z.array(svgNodeSchema).nullable(),
-});
+  svgNodes: z.array(svgNodeSchema).nullable().optional(),
+}).transform((val): AvatarSpec => {
+  const resolver = getFieldResolver("avatar");
+  if (resolver) return resolver(val) as AvatarSpec;
+  return { icon: val.icon, color: val.color, svgNodes: val.svgNodes ?? null };
+}) as z.ZodType<AvatarSpec>;
 
 export const avatarFieldType = defineFieldType<AvatarSpec>("avatar");
 

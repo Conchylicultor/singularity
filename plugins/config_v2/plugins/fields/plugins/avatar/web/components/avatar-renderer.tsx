@@ -23,7 +23,7 @@ const AvatarRenderer: FieldRendererComponent<AvatarSpec> = ({
           </p>
         ) : null}
       </div>
-      <AvatarPicker value={value} onChange={onChange}>
+      <AvatarPicker value={value} onChange={(next) => onChange({ icon: next.icon, color: next.color, svgNodes: null })}>
         <Avatar
           icon={value.icon}
           color={value.color}

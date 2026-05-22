@@ -101,6 +101,7 @@ const baseConfigs: Linter.Config[] = [
       "**/.check-*/**",
       ".claude/worktrees/**",
       "plugins/framework/plugins/web-core/dist/**",
+      "**/*.generated.ts",
     ],
   },
 ];

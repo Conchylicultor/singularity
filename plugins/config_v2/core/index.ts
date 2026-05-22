@@ -22,6 +22,10 @@ export {
   readonlyProxy,
 } from "./internal/config-proxy";
 export {
+  registerFieldResolver,
+  getFieldResolver,
+} from "./internal/field-resolvers";
+export {
   effective,
   hasConflict,
   propagate,
