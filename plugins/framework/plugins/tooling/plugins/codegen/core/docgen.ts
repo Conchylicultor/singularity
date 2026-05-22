@@ -228,10 +228,19 @@ const ROUTES_HEADER =
   "All HTTP and WebSocket routes exposed by server and central plugins. " +
   "Only plugins with at least one route (directly or in a descendant) are shown.\n\n";
 
-export async function buildEnrichedTree(root: string): Promise<PluginTree> {
-  const tree = buildPluginTree(resolve(root, "plugins"));
-  await enrichPluginTreeDocs(tree, root);
-  return tree;
+const enrichedTreeCache = new Map<string, Promise<PluginTree>>();
+
+export function buildEnrichedTree(root: string): Promise<PluginTree> {
+  let cached = enrichedTreeCache.get(root);
+  if (!cached) {
+    cached = (async () => {
+      const tree = buildPluginTree(resolve(root, "plugins"));
+      await enrichPluginTreeDocs(tree, root);
+      return tree;
+    })();
+    enrichedTreeCache.set(root, cached);
+  }
+  return cached;
 }
 
 export async function renderCompactDoc({ root }: GenerateDocsOptions): Promise<string> {
