@@ -57,7 +57,7 @@ export interface TaskDraftFormProps {
   footerStart?: ReactNode;
 }
 
-const NEW_CARD_DEFAULT_MODEL: ChainModel = "sonnet";
+const NEW_CARD_DEFAULT_MODEL: ChainModel = "opus";
 
 function useIsAgentWorktree(): boolean {
   return useMemo(() => {

@@ -18,7 +18,7 @@ import type {
 } from "@plugins/tasks/core";
 import { useActiveRelateContext } from "../active-relate-context";
 
-const HEAD_DEFAULT_MODEL: ChainModel = "sonnet";
+const HEAD_DEFAULT_MODEL: ChainModel = "opus";
 
 function freshCards(): CardDraft[] {
   return [makeCard(HEAD_DEFAULT_MODEL)];
