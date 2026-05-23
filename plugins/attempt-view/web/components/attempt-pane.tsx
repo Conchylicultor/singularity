@@ -1,6 +1,10 @@
 import { MdVerticalSplit } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { PaneInstanceContext, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import {
+  PaneChrome,
+  PaneInstanceContext,
+  useOpenPane,
+} from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
@@ -129,26 +133,20 @@ export function AttemptPane() {
     0,
   );
 
+  const title = (
+    <span className="flex items-center gap-1.5">
+      Attempts
+      {totalConversations > 0 && (
+        <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
+          {totalConversations}
+        </span>
+      )}
+    </span>
+  );
+
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b px-3 py-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-medium">Attempts</span>
-          {totalConversations > 0 && (
-            <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
-              {totalConversations}
-            </span>
-          )}
-        </div>
-        {attempt ? (
-          <div className="text-muted-foreground truncate font-mono text-xs">
-            {attempt.worktreePath.split("/").pop()}
-          </div>
-        ) : (
-          <div className="text-muted-foreground text-xs">Loading…</div>
-        )}
-      </div>
-      <div className="min-h-0 flex-1 overflow-auto p-2">
+    <PaneChrome pane={attemptPane} title={title}>
+      <div className="p-2">
         {taskAttempts.length === 0 ? (
           <p className="text-muted-foreground px-2 py-1 text-sm">
             No attempts.
@@ -168,6 +166,6 @@ export function AttemptPane() {
           </div>
         )}
       </div>
-    </div>
+    </PaneChrome>
   );
 }
