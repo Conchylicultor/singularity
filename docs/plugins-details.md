@@ -459,7 +459,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Sidebar` "Settings" → `component`
   - Server:
     - Uses: `database.db`
-  - Imported by: `auth`, `chart`, `code-review`, `color-palette`, `commits`, `google`, `launch-prompts`, `notion`, `prompt-templates`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `typography`
+  - Imported by: `auth`, `code-review`, `commits`, `google`, `launch-prompts`, `notion`, `prompt-templates`, `setup-wizard`, `theme-customizer`
   - Slot contributors: `code-review`, `commits`, `launch-prompts`, `prompt-templates`, `theme-customizer`
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
@@ -471,7 +471,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useSetConfig`
   - Exports (server):
     - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getConfig`, `getRawFileContent`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-  - Imported by: `avatar`, `backup`, `build`, `codegen`, `color`, `color-adjust`, `commits`, `conversation-category`, `conversations`, `cost`, `enum`, `google-drive`, `list`, `local`, `model-provider`, `multiline-text`, `object`, `primitives`, `segmented-progress-bar`, `settings`, `theme-customizer`, `theme-engine`, `turn-summary`
+  - Imported by: `avatar`, `backup`, `build`, `chart`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `conversations`, `cost`, `enum`, `google-drive`, `list`, `local`, `model-provider`, `multiline-text`, `object`, `primitives`, `segmented-progress-bar`, `settings`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
@@ -2017,11 +2017,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `chartConfig`, `chartGroup`
           - Contributes:
             - `Chart.Preset` "Default"
+            - `ConfigV2.WebRegister`
             - `ThemeEngine.TokenGroup` "Chart"
             - `ThemeEngine.VariantGroup` "Chart" → `ChartPicker`
             - `ThemeCustomizer.Section` "chart" → `ChartSection`
           - Server:
-            - Uses: `config.Config`
+            - Uses: `config_v2.ConfigV2`
         - **`color-adjust`** — Cross-cutting color adjustment transform for all color token groups.
           - Defines:
             - Slots: `ColorAdjust.Preset`
@@ -2059,6 +2060,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Types: `ColorPaletteTokenValues`
             - Values: `colorPaletteConfig`, `colorPaletteGroup`
           - Contributes:
+            - `ConfigV2.WebRegister`
             - `ColorPalette.Preset` "Default"
             - `ColorPalette.Preset` "Ocean"
             - `ColorPalette.Preset` "Warm"
@@ -2066,7 +2068,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `ThemeEngine.VariantGroup` "Color Palette" → `ColorPalettePicker`
             - `ThemeCustomizer.Section` "color-palette" → `ColorPaletteSection`
           - Server:
-            - Uses: `config.Config`
+            - Uses: `config_v2.ConfigV2`
         - **`shadow`** — Shadow token group with switchable presets.
           - Defines:
             - Slots: `Shadow.Preset`
@@ -2075,17 +2077,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `Shadow`
           - Exports (shared):
             - Types: `ShadowParams`, `ShadowTokenValues`
-            - Values: `buildShadowTiers`, `shadowConfig`, `shadowGroup`
+            - Values: `buildShadowTiers`, `DEFAULT_SHADOW_PARAMS`, `shadowConfig`, `shadowGroup`
           - Contributes:
             - `Shadow.Preset` "Default"
             - `Shadow.Preset` "None"
             - `Shadow.Preset` "Elevated"
             - `Shadow.Preset` "Heavy"
+            - `ConfigV2.WebRegister`
             - `ThemeEngine.TokenGroup` "Shadow"
             - `ThemeEngine.VariantGroup` "Shadow" → `ShadowPicker`
             - `ThemeCustomizer.Section` "shadow" → `ShadowSection`
           - Server:
-            - Uses: `config.Config`
+            - Uses: `config_v2.ConfigV2`
         - **`shape`** — Shape token group (border-radius) with switchable presets.
           - Defines:
             - Slots: `Shape.Preset`
@@ -2100,11 +2103,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Shape.Preset` "Sharp"
             - `Shape.Preset` "Rounded"
             - `Shape.Preset` "Pill"
+            - `ConfigV2.WebRegister`
             - `ThemeEngine.TokenGroup` "Shape"
             - `ThemeEngine.VariantGroup` "Shape" → `ShapePicker`
             - `ThemeCustomizer.Section` "shape" → `ShapeSection`
           - Server:
-            - Uses: `config.Config`
+            - Uses: `config_v2.ConfigV2`
         - **`sidebar-palette`** — Sidebar palette token group with switchable presets.
           - Defines:
             - Slots: `SidebarPalette.Preset`
@@ -2117,11 +2121,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `SidebarPalette.Preset` "Default"
             - `SidebarPalette.Preset` "Warm"
+            - `ConfigV2.WebRegister`
             - `ThemeEngine.TokenGroup` "Sidebar Palette"
             - `ThemeEngine.VariantGroup` "Sidebar Palette" → `SidebarPalettePicker`
             - `ThemeCustomizer.Section` "sidebar-palette" → `SidebarPaletteSection`
           - Server:
-            - Uses: `config.Config`
+            - Uses: `config_v2.ConfigV2`
         - **`typography`** — Typography token group (fonts, letter-spacing) with switchable presets.
           - Defines:
             - Slots: `Typography.Preset`
@@ -2133,11 +2138,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `typographyConfig`, `typographyGroup`
           - Contributes:
             - `Typography.Preset` "Default"
+            - `ConfigV2.WebRegister`
             - `ThemeEngine.TokenGroup` "Typography"
             - `ThemeEngine.VariantGroup` "Typography" → `TypographyPicker`
             - `ThemeCustomizer.Section` "typography" → `TypographySection`
           - Server:
-            - Uses: `config.Config`
+            - Uses: `config_v2.ConfigV2`
 
 - **`welcome`** — Landing pane shown at `/`.
   - Exports (web):
