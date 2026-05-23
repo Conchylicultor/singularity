@@ -1,13 +1,10 @@
 import { useCallback } from "react";
-import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
-import { type Task } from "@plugins/tasks/core";
 import { patchTask, setAutoStart, useTask } from "@plugins/tasks/web";
 import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
-import { buildTaskPrompt } from "@plugins/tasks-core/core";
-import { useFlushAll, useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
+import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { StatusBadge } from "@plugins/tasks/plugins/task-status/web";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,8 +19,6 @@ import { AuthorDisplay } from "./author-display";
 export function TaskHeader({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
   const autoStart = useTaskAutoStart(taskId);
-  const flushAll = useFlushAll();
-
   const titleField = useEditableField({
     value: task?.title ?? "",
     onSave: (v) => patchTask(taskId, { title: v.trim() || "Untitled" }),
@@ -44,14 +39,6 @@ export function TaskHeader({ taskId }: { taskId: string }) {
     (model: "opus" | "sonnet" | "none") => setAutoStart(taskId, model),
     [taskId],
   );
-
-  const buildLaunchRequest = useCallback(async () => {
-    await flushAll();
-    const fresh = await fetch(`/api/tasks/${taskId}`).then((r) =>
-      r.ok ? (r.json() as Promise<Task>) : null,
-    );
-    return { taskId, prompt: buildTaskPrompt(fresh ?? task ?? {}) };
-  }, [taskId, task, flushAll]);
 
   if (!task) return null;
 
@@ -133,15 +120,6 @@ export function TaskHeader({ taskId }: { taskId: string }) {
             <SelectItem value="opus">Opus</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-      <div className="flex justify-end">
-        <LaunchButtons
-          size="sm"
-          getRequest={buildLaunchRequest}
-          disabled={!titleField.value.trim()}
-          className="w-auto"
-          openAfterLaunch={false}
-        />
       </div>
     </div>
   );

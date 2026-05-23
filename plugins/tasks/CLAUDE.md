@@ -16,7 +16,7 @@
 - Server:
   - Register: `mcpTool('add_task')`, `defineJob('tasks.push-ingest')`
   - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.getTaskDependencyIds`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listDependentIds`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.taskAttachments`, `tasks-core.updateTask`
-- Endpoint callers: `dependencies`, `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-graph`, `task-header`, `task-list`, `tree`
+- Endpoint callers: `dependencies`, `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-graph`, `task-list`, `tree`
 - Sub-plugins:
   - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
   - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
