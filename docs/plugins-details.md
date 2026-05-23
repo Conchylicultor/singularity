@@ -1401,6 +1401,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`contributions`**
         - **`cross-refs`**
         - **`db-schema`**
+        - **`exports`**
         - **`registrations`**
         - **`resources`**
         - **`routes`**
@@ -1423,7 +1424,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`plugin-tree`**
       - Exports (core):
         - Types: `BarrelExport`, `CommandDef`, `Contribution`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `ResourceDef`, `RouteDef`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`
-        - Values: `buildPluginTree`, `enrichPluginTreeDocs`, `matchBracket`, `parseDefineGroup`, `parseResources`, `readIfExists`, `stripTypes`, `walkFiles`
+        - Values: `buildPluginTree`, `enrichPluginTreeDocs`, `matchBracket`, `parseBarrelExports`, `parseDefineGroup`, `parseResources`, `readIfExists`, `stripTypes`, `walkFiles`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Exports (core):
         - Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `EntityExtensionInfo`, `EntityExtensionRef`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`, `TableInfo`

@@ -30,6 +30,7 @@ See `plugins/commands/` for the reference implementation.
   - **`contributions`**
   - **`cross-refs`**
   - **`db-schema`**
+  - **`exports`**
   - **`registrations`**
   - **`resources`**
   - **`routes`**

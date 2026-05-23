@@ -993,6 +993,10 @@
       "name": "@singularity/plugin-plugin-meta-facets-db-schema",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/facets/plugins/exports": {
+      "name": "@singularity/plugin-plugin-meta-facets-exports",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/facets/plugins/registrations": {
       "name": "@singularity/plugin-plugin-meta-facets-registrations",
       "version": "0.0.1",
@@ -2458,6 +2462,8 @@
     "@singularity/plugin-plugin-meta-facets-cross-refs": ["@singularity/plugin-plugin-meta-facets-cross-refs@workspace:plugins/plugin-meta/plugins/facets/plugins/cross-refs"],
 
     "@singularity/plugin-plugin-meta-facets-db-schema": ["@singularity/plugin-plugin-meta-facets-db-schema@workspace:plugins/plugin-meta/plugins/facets/plugins/db-schema"],
+
+    "@singularity/plugin-plugin-meta-facets-exports": ["@singularity/plugin-plugin-meta-facets-exports@workspace:plugins/plugin-meta/plugins/facets/plugins/exports"],
 
     "@singularity/plugin-plugin-meta-facets-registrations": ["@singularity/plugin-plugin-meta-facets-registrations@workspace:plugins/plugin-meta/plugins/facets/plugins/registrations"],
 

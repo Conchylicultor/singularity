@@ -1,4 +1,4 @@
-export { buildPluginTree, enrichPluginTreeDocs, readIfExists, stripTypes, matchBracket, parseDefineGroup, parseResources, walkFiles } from "./internal/plugin-tree";
+export { buildPluginTree, enrichPluginTreeDocs, readIfExists, stripTypes, matchBracket, parseBarrelExports, parseDefineGroup, parseResources, walkFiles } from "./internal/plugin-tree";
 export type {
   Runtime,
   BarrelExport,

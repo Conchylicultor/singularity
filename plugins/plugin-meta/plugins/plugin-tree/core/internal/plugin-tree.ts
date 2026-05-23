@@ -342,7 +342,7 @@ function parseRouteMap(src: string, field: "httpRoutes" | "wsRoutes"): string[] 
   return keys;
 }
 
-function parseBarrelExports(src: string): BarrelExport[] {
+export function parseBarrelExports(src: string): BarrelExport[] {
   const map = new Map<string, "type" | "value">();
   const setIfUnset = (name: string, kind: "type" | "value") => {
     if (!map.has(name)) map.set(name, kind);
