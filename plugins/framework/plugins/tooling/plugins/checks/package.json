@@ -2,5 +2,8 @@
   "name": "@singularity/plugin-framework-tooling-checks",
   "version": "0.0.1",
   "private": true,
-  "description": "Check runner and built-in checks for ./singularity check"
+  "description": "Check runner and built-in checks for ./singularity check",
+  "singularity": {
+    "collapsed": true
+  }
 }

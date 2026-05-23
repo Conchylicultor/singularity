@@ -11,6 +11,7 @@ export { ToolFilePath, toRelativePath } from "./components/tool-file-path";
 export default {
   id: "conversation-jsonl-viewer-tool-call",
   name: "JSONL Viewer: Tool call renderer",
+  collapsed: true,
   description:
     "Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.",
   contributions: [

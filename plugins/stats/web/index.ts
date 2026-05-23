@@ -12,6 +12,7 @@ export { useShowEmptyDays } from "./components/stats-context";
 export default {
   id: "stats",
   name: "Stats",
+  collapsed: true,
   description: "Root plugin hosting stacked chart contributions from child plugins.",
   contributions: [
     Pane.Register({ pane: statsPane }),

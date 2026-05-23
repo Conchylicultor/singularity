@@ -21,6 +21,7 @@ import { ActiveDataMarkdownEnhancer } from "./internal/markdown-enhancer";
 export default {
   id: "active-data",
   name: "Active Data",
+  collapsed: true,
   description:
     "Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify().",
   contributions: [
