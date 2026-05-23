@@ -18,8 +18,8 @@ interface ColumnProps {
 }
 
 export function Column({ entry, isLast, dragHandleProps }: ColumnProps) {
-  const [collapsed, toggleCollapse] = useColumnCollapse(entry.pane.id);
-  const [isMaximized, toggleMaximize] = useColumnMaximize(entry.pane.id);
+  const [collapsed, toggleCollapse] = useColumnCollapse(entry.uuid);
+  const [isMaximized, toggleMaximize] = useColumnMaximize(entry.uuid);
   const [width, setWidth] = useColumnWidth(
     entry.pane.id,
     entry.pane.width ?? DEFAULT_WIDTH,

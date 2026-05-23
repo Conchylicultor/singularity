@@ -30,6 +30,7 @@ let nextInstanceId = 0;
 
 export interface PaneSlot {
   instanceId: number;
+  uuid: string;
   paneId: string;
   params: Record<string, string>;
   input: Record<string, string>;
@@ -39,8 +40,9 @@ function createSlot(
   paneId: string,
   params: Record<string, string>,
   input: Record<string, string> = {},
+  uuid?: string,
 ): PaneSlot {
-  return { instanceId: nextInstanceId++, paneId, params, input };
+  return { instanceId: nextInstanceId++, uuid: uuid ?? crypto.randomUUID(), paneId, params, input };
 }
 
 // ---------------------------------------------------------------------------
@@ -156,6 +158,7 @@ export function matchPath(
 
 export interface MatchEntry {
   instanceId: number;
+  uuid: string;
   pane: PaneInternal;
   /** Own-only params (only `:name`s from this pane's `segment`). */
   params: Record<string, string>;
@@ -328,7 +331,7 @@ function setChain(chain: PaneSlot[], replace = false): void {
   currentChain = chain;
   notifyChainListeners();
   const url = buildChainUrl(chain);
-  const serialized = chain.map(s => ({ paneId: s.paneId, params: s.params, input: s.input }));
+  const serialized = chain.map(s => ({ paneId: s.paneId, params: s.params, input: s.input, uuid: s.uuid }));
   const fullUrl = applyBasePath(url);
   if (fullUrl === window.location.pathname && replace) return;
   const method = replace ? "replaceState" : "pushState";
@@ -395,6 +398,7 @@ function resolveChain(chain: PaneSlot[]): PaneMatch | null {
     Object.assign(accumulated, slot.params);
     entries.push({
       instanceId: slot.instanceId,
+      uuid: slot.uuid,
       pane,
       params: { ...slot.params },
       fullParams: { ...accumulated },
@@ -472,9 +476,9 @@ function applyBasePath(rawUrl: string): string {
 
 function handleLocationChange(): void {
   if (typeof window === "undefined") return;
-  const state = window.history.state as { chain?: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string> }> } | null;
+  const state = window.history.state as { chain?: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string>; uuid?: string }> } | null;
   if (state?.chain) {
-    const newChain = state.chain.map(s => createSlot(s.paneId, s.params, s.input ?? {}));
+    const newChain = state.chain.map(s => createSlot(s.paneId, s.params, s.input ?? {}, s.uuid));
     if (chainsEqual(currentChain, newChain)) return;
     currentChain = newChain;
     notifyChainListeners();
@@ -529,6 +533,7 @@ export interface PaneToggleOpts {
 
 export interface PaneChainEntry<OwnParams = Record<string, string>> {
   instanceId: number;
+  uuid: string;
   params: OwnParams;
   fullParams: Record<string, string>;
   input: Record<string, string>;
@@ -609,7 +614,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     if (!match) return null;
     const entry = match.chain.find((e) => e.pane === internal);
     if (!entry) return null;
-    return { instanceId: entry.instanceId, params: entry.params, fullParams: entry.fullParams, input: entry.input };
+    return { instanceId: entry.instanceId, uuid: entry.uuid, params: entry.params, fullParams: entry.fullParams, input: entry.input };
   }
 
   function useChainEntries(): PaneChainEntry[] {
@@ -617,7 +622,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     if (!match) return [];
     return match.chain
       .filter((e) => e.pane === internal)
-      .map((e) => ({ instanceId: e.instanceId, params: e.params, fullParams: e.fullParams, input: e.input }));
+      .map((e) => ({ instanceId: e.instanceId, uuid: e.uuid, params: e.params, fullParams: e.fullParams, input: e.input }));
   }
 
   function close(instanceId: number): void {
