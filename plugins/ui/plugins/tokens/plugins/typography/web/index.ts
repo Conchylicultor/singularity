@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { ConfigV2 } from "@plugins/config_v2/web";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { typographyGroup } from "../shared";
@@ -17,13 +18,13 @@ export default {
   description: "Typography token group (fonts, letter-spacing) with switchable presets.",
   contributions: [
     ...builtInPresets.map((p) => Typography.Preset(p)),
+    ConfigV2.WebRegister({ descriptor: typographyConfig }),
     ThemeEngine.TokenGroup({
       id: "typography",
       label: "Typography",
       descriptor: typographyGroup,
       usePresets: () => Typography.Preset.useContributions(),
       configDescriptor: typographyConfig,
-      pluginId: "ui-tokens-typography",
     }),
     ThemeEngine.VariantGroup({
       componentId: "typography",

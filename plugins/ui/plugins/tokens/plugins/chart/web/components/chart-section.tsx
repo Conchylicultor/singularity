@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { useConfigValues, setConfigValue } from "@plugins/config/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   ColorAdjustContext,
   transformValues,
@@ -7,86 +7,71 @@ import {
 import {
   TokenRow,
   TokenModeContext,
-  type TokenMode,
 } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { chartGroup } from "../../shared";
 import { chartConfig } from "../internal/config";
 import { Chart } from "../slots";
 
-const PLUGIN_ID = "ui-tokens-chart";
-
-function setOverride(
-  key: string,
-  value: string,
-  currentOverrides: string,
-  mode: TokenMode,
-) {
-  const current = JSON.parse(currentOverrides || "{}") as {
-    light?: Record<string, string>;
-    dark?: Record<string, string>;
-  };
-  if (mode === "both" || mode === "light") {
-    if (!current.light) current.light = {};
-    current.light[key] = value;
-  }
-  if (mode === "both" || mode === "dark") {
-    if (!current.dark) current.dark = {};
-    current.dark[key] = value;
-  }
-  void setConfigValue(`${PLUGIN_ID}.overrides`, JSON.stringify(current));
-}
-
-function resetOverride(
-  key: string,
-  currentOverrides: string,
-  mode: TokenMode,
-) {
-  const current = JSON.parse(currentOverrides || "{}") as {
-    light?: Record<string, string>;
-    dark?: Record<string, string>;
-  };
-  if (mode === "both" || mode === "light") {
-    if (current.light) delete current.light[key];
-  }
-  if (mode === "both" || mode === "dark") {
-    if (current.dark) delete current.dark[key];
-  }
-  void setConfigValue(`${PLUGIN_ID}.overrides`, JSON.stringify(current));
-}
-
 export function ChartSection({ search }: { search: string }) {
-  const config = useConfigValues(chartConfig, PLUGIN_ID);
+  const config = useConfig(chartConfig) as {
+    preset: string;
+    overrides: { light: Record<string, string>; dark: Record<string, string> };
+  };
+  const setConfig = useSetConfig(chartConfig);
   const presets = Chart.Preset.useContributions();
   const adjustment = useContext(ColorAdjustContext);
   const tokenMode = useContext(TokenModeContext);
 
   const active = presets.find((p) => p.id === config.preset) ?? presets[0];
-  const overrides = JSON.parse((config.overrides as string) || "{}") as {
-    light?: Record<string, string>;
-    dark?: Record<string, string>;
-  };
+  const overrides = config.overrides;
+  const lightOverrides = Object.fromEntries(
+    Object.entries(overrides.light).filter(([, v]) => v !== "")
+  );
+  const darkOverrides = Object.fromEntries(
+    Object.entries(overrides.dark).filter(([, v]) => v !== "")
+  );
   const lightValues = active
     ? transformValues(
-        { ...active.light, ...(overrides.light ?? {}) },
+        { ...active.light, ...lightOverrides },
         adjustment,
       )
     : {};
   const darkValues = active
     ? transformValues(
-        { ...active.dark, ...(overrides.dark ?? {}) },
+        { ...active.dark, ...darkOverrides },
         adjustment,
       )
     : {};
   const activeValues = tokenMode === "dark" ? darkValues : lightValues;
   const activeOverrideKeys = new Set(
-    Object.keys(
-      tokenMode === "dark" ? (overrides.dark ?? {}) : (overrides.light ?? {}),
-    ),
+    Object.keys(tokenMode === "dark" ? darkOverrides : lightOverrides),
   );
 
   const schema = chartGroup.schema;
   const vars = chartGroup.vars;
   const allKeys = Object.keys(schema) as (keyof typeof schema)[];
+
+  const setOverride = (key: string, value: string) => {
+    const newOverrides = { ...overrides };
+    if (tokenMode === "both" || tokenMode === "light") {
+      newOverrides.light = { ...newOverrides.light, [key]: value };
+    }
+    if (tokenMode === "both" || tokenMode === "dark") {
+      newOverrides.dark = { ...newOverrides.dark, [key]: value };
+    }
+    setConfig("overrides", newOverrides);
+  };
+
+  const resetOverride = (key: string) => {
+    const newOverrides = { ...overrides };
+    if (tokenMode === "both" || tokenMode === "light") {
+      newOverrides.light = { ...newOverrides.light, [key]: "" };
+    }
+    if (tokenMode === "both" || tokenMode === "dark") {
+      newOverrides.dark = { ...newOverrides.dark, [key]: "" };
+    }
+    setConfig("overrides", newOverrides);
+  };
 
   return (
     <div className="flex flex-col gap-1">
@@ -101,7 +86,7 @@ export function ChartSection({ search }: { search: string }) {
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/50"
             }`}
-            onClick={() => void setConfigValue(`${PLUGIN_ID}.preset`, p.id)}
+            onClick={() => setConfig("preset", p.id)}
           >
             <span
               className="size-2.5 rounded-full border border-border/50"
@@ -120,10 +105,9 @@ export function ChartSection({ search }: { search: string }) {
           const value = activeValues[key] ?? schema[key]?.default ?? "";
           const isOverridden = activeOverrideKeys.has(key as string);
           const isSplit =
-            overrides.light?.[key as string] !==
-              overrides.dark?.[key as string] &&
-            (overrides.light?.[key as string] !== undefined ||
-              overrides.dark?.[key as string] !== undefined);
+            overrides.light[key as string] !== overrides.dark[key as string] &&
+            (overrides.light[key as string] !== "" ||
+              overrides.dark[key as string] !== "");
 
           return (
             <TokenRow
@@ -134,21 +118,8 @@ export function ChartSection({ search }: { search: string }) {
               isOverridden={isOverridden}
               isSplit={isSplit}
               search={search}
-              onValueChange={(newValue) =>
-                setOverride(
-                  key as string,
-                  newValue,
-                  config.overrides as string,
-                  tokenMode,
-                )
-              }
-              onReset={() =>
-                resetOverride(
-                  key as string,
-                  config.overrides as string,
-                  tokenMode,
-                )
-              }
+              onValueChange={(newValue) => setOverride(key as string, newValue)}
+              onReset={() => resetOverride(key as string)}
             />
           );
         })}
@@ -156,4 +127,3 @@ export function ChartSection({ search }: { search: string }) {
     </div>
   );
 }
-

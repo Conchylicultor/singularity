@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
+import { ConfigV2 } from "@plugins/config_v2/web";
 import { colorPaletteGroup } from "../shared";
 import { colorPaletteConfig } from "./internal/config";
 import { ColorPalette } from "./slots";
@@ -17,6 +18,7 @@ export default {
   name: "UI: Color Palette",
   description: "Color palette token group with switchable presets.",
   contributions: [
+    ConfigV2.WebRegister({ descriptor: colorPaletteConfig }),
     ...builtInPresets.map((p) => ColorPalette.Preset(p)),
     ThemeEngine.TokenGroup({
       id: "color-palette",
@@ -24,7 +26,6 @@ export default {
       descriptor: colorPaletteGroup,
       usePresets: () => ColorPalette.Preset.useContributions(),
       configDescriptor: colorPaletteConfig,
-      pluginId: "ui-tokens-color-palette",
     }),
     ThemeEngine.VariantGroup({
       componentId: "color-palette",

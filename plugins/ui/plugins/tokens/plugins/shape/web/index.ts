@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { ConfigV2 } from "@plugins/config_v2/web";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { shapeGroup } from "../shared";
@@ -17,13 +18,13 @@ export default {
   description: "Shape token group (border-radius) with switchable presets.",
   contributions: [
     ...builtInPresets.map((p) => Shape.Preset(p)),
+    ConfigV2.WebRegister({ descriptor: shapeConfig }),
     ThemeEngine.TokenGroup({
       id: "shape",
       label: "Shape",
       descriptor: shapeGroup,
       usePresets: () => Shape.Preset.useContributions(),
       configDescriptor: shapeConfig,
-      pluginId: "ui-tokens-shape",
     }),
     ThemeEngine.VariantGroup({
       componentId: "shape",

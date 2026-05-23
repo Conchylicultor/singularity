@@ -1,9 +1,9 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Config } from "@plugins/config/server";
+import { ConfigV2 } from "@plugins/config_v2/server";
 import { shapeConfig } from "../shared";
 
 export default {
   id: "ui-tokens-shape",
   name: "UI: Shape",
-  contributions: [Config.Field(shapeConfig)],
+  contributions: [ConfigV2.Register({ descriptor: shapeConfig })],
 } satisfies ServerPluginDefinition;

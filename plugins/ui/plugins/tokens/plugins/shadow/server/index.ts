@@ -1,9 +1,9 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Config } from "@plugins/config/server";
+import { ConfigV2 } from "@plugins/config_v2/server";
 import { shadowConfig } from "../shared";
 
 export default {
   id: "ui-tokens-shadow",
   name: "UI: Shadow",
-  contributions: [Config.Field(shadowConfig)],
+  contributions: [ConfigV2.Register({ descriptor: shadowConfig })],
 } satisfies ServerPluginDefinition;

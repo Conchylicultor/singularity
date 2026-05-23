@@ -1,0 +1,26 @@
+// @hash fba810640135
+{
+  "preset": "default",
+  "overrides": {
+    "light": {
+      "sidebar": "",
+      "sidebarForeground": "",
+      "sidebarPrimary": "",
+      "sidebarPrimaryForeground": "",
+      "sidebarBorder": "",
+      "sidebarAccent": "",
+      "sidebarAccentForeground": "",
+      "sidebarRing": ""
+    },
+    "dark": {
+      "sidebar": "",
+      "sidebarForeground": "",
+      "sidebarPrimary": "",
+      "sidebarPrimaryForeground": "",
+      "sidebarBorder": "",
+      "sidebarAccent": "",
+      "sidebarAccentForeground": "",
+      "sidebarRing": ""
+    }
+  }
+}

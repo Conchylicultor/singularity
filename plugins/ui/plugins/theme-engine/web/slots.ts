@@ -1,7 +1,7 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import type { TokenGroupDescriptor } from "../core";
-import type { ConfigDescriptor } from "@plugins/config/core";
+import type { ConfigDescriptor } from "@plugins/config_v2/core";
 
 export interface VariantGroupContribution {
   componentId: string;
@@ -22,7 +22,10 @@ export interface TokenGroupContribution {
   descriptor: TokenGroupDescriptor;
   usePresets: () => TokenGroupPreset[];
   configDescriptor: ConfigDescriptor;
-  pluginId: string;
+  resolve?: (
+    preset: TokenGroupPreset,
+    overrides: Record<string, unknown>,
+  ) => { light: Record<string, string>; dark: Record<string, string> };
 }
 
 export interface GlobalPresetContribution {

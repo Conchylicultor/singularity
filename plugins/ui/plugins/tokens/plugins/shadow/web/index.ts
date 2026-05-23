@@ -1,7 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { ConfigV2 } from "@plugins/config_v2/web";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
-import { shadowGroup } from "../shared";
+import type { ShadowParams } from "../shared";
+import { shadowGroup, buildShadowTiers, DEFAULT_SHADOW_PARAMS } from "../shared";
 import { shadowConfig } from "./internal/config";
 import { Shadow } from "./slots";
 import { ShadowPicker } from "./components/shadow-picker";
@@ -17,13 +19,31 @@ export default {
   description: "Shadow token group with switchable presets.",
   contributions: [
     ...builtInPresets.map((p) => Shadow.Preset(p)),
+    ConfigV2.WebRegister({ descriptor: shadowConfig }),
     ThemeEngine.TokenGroup({
       id: "shadow",
       label: "Shadow",
       descriptor: shadowGroup,
       usePresets: () => Shadow.Preset.useContributions(),
       configDescriptor: shadowConfig,
-      pluginId: "ui-tokens-shadow",
+      resolve: (preset, overrides) => {
+        const shadowPreset = preset as {
+          params?: ShadowParams;
+          light: Record<string, string>;
+          dark: Record<string, string>;
+        };
+        const baseParams = shadowPreset.params ?? DEFAULT_SHADOW_PARAMS;
+        const merged = { ...baseParams };
+        const ov = overrides as Record<string, string>;
+        for (const [key, value] of Object.entries(ov)) {
+          if (value !== "") {
+            (merged as Record<string, unknown>)[key] =
+              key === "opacity" ? parseFloat(value) : value;
+          }
+        }
+        const tiers = buildShadowTiers(merged);
+        return { light: tiers, dark: tiers };
+      },
     }),
     ThemeEngine.VariantGroup({
       componentId: "shadow",

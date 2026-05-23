@@ -1,9 +1,9 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Config } from "@plugins/config/server";
+import { ConfigV2 } from "@plugins/config_v2/server";
 import { colorPaletteConfig } from "../shared";
 
 export default {
   id: "ui-tokens-color-palette",
   name: "UI: Color Palette",
-  contributions: [Config.Field(colorPaletteConfig)],
+  contributions: [ConfigV2.Register({ descriptor: colorPaletteConfig })],
 } satisfies ServerPluginDefinition;

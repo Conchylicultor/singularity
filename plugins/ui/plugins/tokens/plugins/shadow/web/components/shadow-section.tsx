@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { MdUndo } from "react-icons/md";
-import { useConfigValues, setConfigValue } from "@plugins/config/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -12,29 +12,27 @@ import {
   ColorPickerPopover,
 } from "@plugins/primitives/plugins/color-picker/web";
 import type { ShadowParams } from "../../shared";
-import { buildShadowTiers, shadowGroup } from "../../shared";
+import { buildShadowTiers, shadowGroup, DEFAULT_SHADOW_PARAMS } from "../../shared";
 import { shadowConfig } from "../internal/config";
 import { Shadow } from "../slots";
 
-const PLUGIN_ID = "ui-tokens-shadow";
-
-const DEFAULT_PARAMS: ShadowParams = {
-  color: "0 0 0",
-  opacity: 0.1,
-  blur: "3px",
-  spread: "0px",
-  offsetX: "0",
-  offsetY: "1px",
+type ShadowOverrides = {
+  color: string;
+  opacity: string;
+  blur: string;
+  spread: string;
+  offsetX: string;
+  offsetY: string;
 };
 
-function parseJson(value: unknown): Record<string, unknown> {
-  if (typeof value === "object" && value !== null) return value as Record<string, unknown>;
-  try {
-    return JSON.parse(String(value) || "{}") as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
+const EMPTY_OVERRIDES: ShadowOverrides = {
+  color: "",
+  opacity: "",
+  blur: "",
+  spread: "",
+  offsetX: "",
+  offsetY: "",
+};
 
 function channelsToOklch(channels: string): string {
   return `oklch(${channels})`;
@@ -49,28 +47,18 @@ function oklchToChannels(oklchCss: string): string | null {
   return `${l} ${c} ${h}`;
 }
 
-function getActiveParams(
-  active: { params?: ShadowParams } | undefined,
-  storedParams: unknown,
+function mergeParams(
+  base: ShadowParams,
+  overrides: ShadowOverrides,
 ): ShadowParams {
-  const base: ShadowParams = active?.params ?? DEFAULT_PARAMS;
-  const partial = parseJson(storedParams) as Partial<ShadowParams>;
-  return { ...base, ...partial };
-}
-
-function writeParams(partial: Partial<ShadowParams>, base: ShadowParams) {
-  const merged = { ...base, ...partial };
-  const tokens = buildShadowTiers(merged);
-  void setConfigValue(`${PLUGIN_ID}.params`, JSON.stringify(partial));
-  void setConfigValue(
-    `${PLUGIN_ID}.overrides`,
-    JSON.stringify({ light: tokens, dark: tokens }),
-  );
-}
-
-function resetParams() {
-  void setConfigValue(`${PLUGIN_ID}.params`, "{}");
-  void setConfigValue(`${PLUGIN_ID}.overrides`, "{}");
+  const merged = { ...base };
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value !== "") {
+      (merged as Record<string, unknown>)[key] =
+        key === "opacity" ? parseFloat(value) : value;
+    }
+  }
+  return merged;
 }
 
 type ParamKey = keyof ShadowParams;
@@ -88,13 +76,15 @@ function ParamInput({
   value,
   isOverridden,
   baseParams,
-  storedPartial,
+  overrides,
+  setConfig,
 }: {
   paramKey: ParamKey;
   value: string | number;
   isOverridden: boolean;
   baseParams: ShadowParams;
-  storedPartial: Partial<ShadowParams>;
+  overrides: ShadowOverrides;
+  setConfig: (key: "preset" | "overrides", value: unknown) => void;
 }) {
   const [localValue, setLocalValue] = useState(String(value));
   const inputRef = useRef<HTMLInputElement>(null);
@@ -106,18 +96,15 @@ function ParamInput({
   const commit = () => {
     const newVal = paramKey === "opacity" ? parseFloat(localValue) : localValue;
     if (String(newVal) === String(baseParams[paramKey])) {
-      const next = { ...storedPartial };
-      delete next[paramKey];
-      writeParams(next, baseParams);
+      setConfig("overrides", { ...overrides, [paramKey]: "" });
     } else {
-      writeParams({ ...storedPartial, [paramKey]: newVal }, baseParams);
+      const stringValue = paramKey === "opacity" ? localValue : localValue;
+      setConfig("overrides", { ...overrides, [paramKey]: stringValue });
     }
   };
 
   const handleReset = () => {
-    const next = { ...storedPartial };
-    delete next[paramKey];
-    writeParams(next, baseParams);
+    setConfig("overrides", { ...overrides, [paramKey]: "" });
   };
 
   return (
@@ -149,16 +136,20 @@ function ParamInput({
 }
 
 export function ShadowSection({ search }: { search: string }) {
-  const config = useConfigValues(shadowConfig, PLUGIN_ID);
+  const config = useConfig(shadowConfig) as {
+    preset: string;
+    overrides: ShadowOverrides;
+  };
+  const setConfig = useSetConfig(shadowConfig);
   const presets = Shadow.Preset.useContributions();
 
   const active = presets.find((p) => p.id === config.preset) ?? presets[0];
-  const storedPartial = parseJson(config.params) as Partial<ShadowParams>;
-  const baseParams: ShadowParams = active?.params ?? DEFAULT_PARAMS;
-  const mergedParams = getActiveParams(active, config.params);
-  const hasOverrides = Object.keys(storedPartial).length > 0;
+  const overrides = config.overrides;
+  const baseParams: ShadowParams = (active as { params?: ShadowParams } | undefined)?.params ?? DEFAULT_SHADOW_PARAMS;
+  const mergedParams = mergeParams(baseParams, overrides);
+  const hasOverrides = Object.values(overrides).some((v) => v !== "");
 
-  const tokens = hasOverrides ? buildShadowTiers(mergedParams) : (active?.light ?? buildShadowTiers(DEFAULT_PARAMS));
+  const tokens = hasOverrides ? buildShadowTiers(mergedParams) : (active?.light ?? buildShadowTiers(DEFAULT_SHADOW_PARAMS));
 
   const schema = shadowGroup.schema;
   type ShadowKey = keyof typeof schema;
@@ -180,7 +171,7 @@ export function ShadowSection({ search }: { search: string }) {
   if (search && !matchesSearch(search.toLowerCase())) return null;
 
   const colorOklch = channelsToOklch(mergedParams.color);
-  const colorIsOverridden = "color" in storedPartial;
+  const colorIsOverridden = overrides.color !== "";
 
   return (
     <div className="flex flex-col gap-1">
@@ -196,8 +187,8 @@ export function ShadowSection({ search }: { search: string }) {
                 : "border-border text-muted-foreground hover:border-primary/50"
             }`}
             onClick={() => {
-              void setConfigValue(`${PLUGIN_ID}.preset`, p.id);
-              resetParams();
+              setConfig("preset", p.id);
+              setConfig("overrides", EMPTY_OVERRIDES);
             }}
           >
             <span
@@ -227,11 +218,9 @@ export function ShadowSection({ search }: { search: string }) {
                     const param = oklchToChannels(oklch);
                     if (!param) return;
                     if (param === baseParams.color) {
-                      const next = { ...storedPartial };
-                      delete next.color;
-                      writeParams(next, baseParams);
+                      setConfig("overrides", { ...overrides, color: "" });
                     } else {
-                      writeParams({ ...storedPartial, color: param }, baseParams);
+                      setConfig("overrides", { ...overrides, color: param });
                     }
                   }}
                 />
@@ -242,9 +231,7 @@ export function ShadowSection({ search }: { search: string }) {
               <button
                 type="button"
                 onClick={() => {
-                  const next = { ...storedPartial };
-                  delete next.color;
-                  writeParams(next, baseParams);
+                  setConfig("overrides", { ...overrides, color: "" });
                 }}
                 title="Reset to preset value"
                 className={`shrink-0 text-muted-foreground hover:text-foreground transition-opacity ${
@@ -260,7 +247,7 @@ export function ShadowSection({ search }: { search: string }) {
 
             {/* Numeric/text param rows */}
             {PARAM_FIELDS.map(({ key, label }) => {
-              const isOverridden = key in storedPartial;
+              const isOverridden = overrides[key] !== "";
               return (
                 <div
                   key={key}
@@ -274,7 +261,8 @@ export function ShadowSection({ search }: { search: string }) {
                     value={mergedParams[key]}
                     isOverridden={isOverridden}
                     baseParams={baseParams}
-                    storedPartial={storedPartial}
+                    overrides={overrides}
+                    setConfig={setConfig}
                   />
                 </div>
               );
@@ -284,7 +272,7 @@ export function ShadowSection({ search }: { search: string }) {
               <button
                 type="button"
                 className="self-start mt-1 px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded hover:bg-muted/50 transition-colors"
-                onClick={resetParams}
+                onClick={() => setConfig("overrides", EMPTY_OVERRIDES)}
               >
                 Reset all
               </button>

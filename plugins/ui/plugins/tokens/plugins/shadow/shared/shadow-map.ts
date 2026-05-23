@@ -1,5 +1,14 @@
 import type { ShadowTokenValues } from "./group";
 
+export const DEFAULT_SHADOW_PARAMS: ShadowParams = {
+  color: "0 0 0",
+  opacity: 0.1,
+  blur: "3px",
+  spread: "0px",
+  offsetX: "0",
+  offsetY: "1px",
+};
+
 export interface ShadowParams {
   color: string;
   opacity: number;

@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { ConfigV2 } from "@plugins/config_v2/web";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { sidebarPaletteGroup } from "../shared";
@@ -18,13 +19,13 @@ export default {
   description: "Sidebar palette token group with switchable presets.",
   contributions: [
     ...builtInPresets.map((p) => SidebarPalette.Preset(p)),
+    ConfigV2.WebRegister({ descriptor: sidebarPaletteConfig }),
     ThemeEngine.TokenGroup({
       id: "sidebar-palette",
       label: "Sidebar Palette",
       descriptor: sidebarPaletteGroup,
       usePresets: () => SidebarPalette.Preset.useContributions(),
       configDescriptor: sidebarPaletteConfig,
-      pluginId: "ui-tokens-sidebar-palette",
     }),
     ThemeEngine.VariantGroup({
       componentId: "sidebar-palette",

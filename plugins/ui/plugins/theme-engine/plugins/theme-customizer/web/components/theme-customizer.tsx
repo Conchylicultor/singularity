@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { MdTune } from "react-icons/md";
 import { PaneChrome, openPane } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { setConfigValue } from "@plugins/config/web";
-import { useConfig, useSetConfig } from "@plugins/config_v2/web";
+import { useConfig, useSetConfig, useConfigRegistrations } from "@plugins/config_v2/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { setConfigField } from "@plugins/config_v2/core";
 import { themeEngineConfig } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { themeCustomizerPane } from "../panes";
@@ -18,6 +19,7 @@ function GlobalPresetPicker() {
   const tokenGroups = ThemeEngine.TokenGroup.useContributions();
   const { globalPreset: activeId } = useConfig(themeEngineConfig);
   const setThemeEngineConfig = useSetConfig(themeEngineConfig);
+  const registrations = useConfigRegistrations();
 
   if (globalPresets.length === 0) return null;
 
@@ -28,7 +30,12 @@ function GlobalPresetPicker() {
     for (const [groupId, groupPresetId] of Object.entries(preset.groups)) {
       const group = tokenGroups.find((g) => g.id === groupId);
       if (group && groupPresetId) {
-        void setConfigValue(`${group.pluginId}.preset`, groupPresetId);
+        const reg = registrations.find((r) => r.descriptor === group.configDescriptor);
+        if (reg) {
+          void fetchEndpoint(setConfigField, {}, {
+            body: { storePath: reg.storePath, key: "preset", value: groupPresetId },
+          });
+        }
       }
     }
   };

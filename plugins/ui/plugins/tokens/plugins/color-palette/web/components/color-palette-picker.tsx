@@ -1,13 +1,11 @@
-import { useConfigValues, setConfigValue } from "@plugins/config/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { colorPaletteConfig } from "../internal/config";
 import { ColorPalette } from "../slots";
 
-const PLUGIN_ID = "ui-tokens-color-palette";
-const FULL_KEY = `${PLUGIN_ID}.preset`;
-
 export function ColorPalettePicker() {
   const presets = ColorPalette.Preset.useContributions();
-  const { preset: activeId } = useConfigValues(colorPaletteConfig, PLUGIN_ID);
+  const { preset: activeId } = useConfig(colorPaletteConfig);
+  const setConfig = useSetConfig(colorPaletteConfig);
 
   if (presets.length === 0) {
     return (
@@ -27,7 +25,7 @@ export function ColorPalettePicker() {
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:border-primary/50"
           }`}
-          onClick={() => setConfigValue(FULL_KEY, p.id)}
+          onClick={() => setConfig("preset", p.id)}
         >
           <span
             className="size-3 rounded-full border border-border"

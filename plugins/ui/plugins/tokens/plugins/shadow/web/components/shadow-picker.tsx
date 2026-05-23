@@ -1,13 +1,11 @@
-import { useConfigValues, setConfigValue } from "@plugins/config/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { shadowConfig } from "../internal/config";
 import { Shadow } from "../slots";
 
-const PLUGIN_ID = "ui-tokens-shadow";
-const FULL_KEY = `${PLUGIN_ID}.preset`;
-
 export function ShadowPicker() {
   const presets = Shadow.Preset.useContributions();
-  const { preset: activeId } = useConfigValues(shadowConfig, PLUGIN_ID);
+  const { preset: activeId } = useConfig(shadowConfig);
+  const setConfig = useSetConfig(shadowConfig);
 
   if (presets.length === 0) {
     return (
@@ -27,7 +25,7 @@ export function ShadowPicker() {
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:border-primary/50"
           }`}
-          onClick={() => setConfigValue(FULL_KEY, p.id)}
+          onClick={() => setConfig("preset", p.id)}
         >
           <span
             className="size-5 rounded-sm bg-background border border-border"

@@ -1,13 +1,11 @@
-import { useConfigValues, setConfigValue } from "@plugins/config/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { typographyConfig } from "../internal/config";
 import { Typography } from "../slots";
 
-const PLUGIN_ID = "ui-tokens-typography";
-const FULL_KEY = `${PLUGIN_ID}.preset`;
-
 export function TypographyPicker() {
   const presets = Typography.Preset.useContributions();
-  const { preset: activeId } = useConfigValues(typographyConfig, PLUGIN_ID);
+  const { preset: activeId } = useConfig(typographyConfig) as { preset: string };
+  const setConfig = useSetConfig(typographyConfig);
 
   if (presets.length === 0) {
     return (
@@ -27,7 +25,7 @@ export function TypographyPicker() {
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:border-primary/50"
           }`}
-          onClick={() => setConfigValue(FULL_KEY, p.id)}
+          onClick={() => setConfig("preset", p.id)}
         >
           <span className="text-xs" style={{ fontFamily: p.light.fontSans }}>
             Aa

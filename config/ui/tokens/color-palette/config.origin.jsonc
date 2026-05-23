@@ -1,0 +1,48 @@
+// @hash 68fd75178054
+{
+  "preset": "default",
+  "overrides": {
+    "light": {
+      "background": "",
+      "foreground": "",
+      "card": "",
+      "cardForeground": "",
+      "popover": "",
+      "popoverForeground": "",
+      "primary": "",
+      "primaryForeground": "",
+      "secondary": "",
+      "secondaryForeground": "",
+      "muted": "",
+      "mutedForeground": "",
+      "accent": "",
+      "accentForeground": "",
+      "destructive": "",
+      "destructiveForeground": "",
+      "border": "",
+      "input": "",
+      "ring": ""
+    },
+    "dark": {
+      "background": "",
+      "foreground": "",
+      "card": "",
+      "cardForeground": "",
+      "popover": "",
+      "popoverForeground": "",
+      "primary": "",
+      "primaryForeground": "",
+      "secondary": "",
+      "secondaryForeground": "",
+      "muted": "",
+      "mutedForeground": "",
+      "accent": "",
+      "accentForeground": "",
+      "destructive": "",
+      "destructiveForeground": "",
+      "border": "",
+      "input": "",
+      "ring": ""
+    }
+  }
+}

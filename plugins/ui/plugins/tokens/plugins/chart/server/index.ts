@@ -1,9 +1,9 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Config } from "@plugins/config/server";
+import { ConfigV2 } from "@plugins/config_v2/server";
 import { chartConfig } from "../shared";
 
 export default {
   id: "ui-tokens-chart",
   name: "UI: Chart",
-  contributions: [Config.Field(chartConfig)],
+  contributions: [ConfigV2.Register({ descriptor: chartConfig })],
 } satisfies ServerPluginDefinition;

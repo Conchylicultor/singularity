@@ -1,0 +1,20 @@
+// @hash 2fccfe227c99
+{
+  "preset": "default",
+  "overrides": {
+    "light": {
+      "chart-1": "",
+      "chart-2": "",
+      "chart-3": "",
+      "chart-4": "",
+      "chart-5": ""
+    },
+    "dark": {
+      "chart-1": "",
+      "chart-2": "",
+      "chart-3": "",
+      "chart-4": "",
+      "chart-5": ""
+    }
+  }
+}

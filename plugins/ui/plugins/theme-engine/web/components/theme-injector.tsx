@@ -1,5 +1,5 @@
 import { createContext, useContext, useLayoutEffect, useMemo } from "react";
-import { useConfigValues } from "@plugins/config/web";
+import { useConfig } from "@plugins/config_v2/web";
 import { ThemeEngine } from "../slots";
 import type {
   TokenGroupContribution,
@@ -48,32 +48,35 @@ function WithAdjustment({
 function GroupStyle({ group }: { group: TokenGroupContribution }) {
   const adjustment = useContext(ColorAdjustContext);
   const presets = group.usePresets();
-  const config = useConfigValues(group.configDescriptor, group.pluginId) as {
+  const config = useConfig(group.configDescriptor) as {
     preset: string;
-    overrides?: string;
+    overrides: Record<string, unknown>;
   };
   const active =
     presets.find((p) => p.id === config.preset) ?? presets[0] ?? null;
 
-  const overrides = useMemo(() => {
-    try {
-      return JSON.parse(config.overrides || "{}") as {
-        light?: Record<string, string>;
-        dark?: Record<string, string>;
-      };
-    } catch {
-      return {};
-    }
-  }, [config.overrides]);
+  const { mergedLight, mergedDark } = useMemo(() => {
+    if (!active) return { mergedLight: null, mergedDark: null };
 
-  const mergedLight = useMemo(
-    () => (active ? { ...active.light, ...(overrides.light ?? {}) } : null),
-    [active, overrides.light],
-  );
-  const mergedDark = useMemo(
-    () => (active ? { ...active.dark, ...(overrides.dark ?? {}) } : null),
-    [active, overrides.dark],
-  );
+    if (group.resolve) {
+      const resolved = group.resolve(active, config.overrides);
+      return { mergedLight: resolved.light, mergedDark: resolved.dark };
+    }
+
+    const ov = config.overrides as {
+      light?: Record<string, string>;
+      dark?: Record<string, string>;
+    };
+    const light = { ...active.light };
+    const dark = { ...active.dark };
+    for (const [k, v] of Object.entries(ov.light ?? {})) {
+      if (v !== "") light[k] = v;
+    }
+    for (const [k, v] of Object.entries(ov.dark ?? {})) {
+      if (v !== "") dark[k] = v;
+    }
+    return { mergedLight: light, mergedDark: dark };
+  }, [active, config.overrides, group]);
 
   useLayoutEffect(() => {
     if (!mergedLight || !mergedDark) return;

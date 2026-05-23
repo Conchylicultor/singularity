@@ -1,6 +1,23 @@
-import { defineConfig } from "@plugins/config/core";
+import { defineConfig } from "@plugins/config_v2/core";
+import { textField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
+import { objectField } from "@plugins/config_v2/plugins/fields/plugins/object/core";
+import { chartGroup } from "./group";
+
+const tokenSubFields = Object.fromEntries(
+  Object.entries(chartGroup.schema).map(
+    ([key, { label }]) => [key, textField({ default: "", label })]
+  )
+);
 
 export const chartConfig = defineConfig({
-  preset: { default: "default", label: "Chart preset" },
-  overrides: { default: "{}", label: "Chart overrides" },
+  fields: {
+    preset: textField({ default: "default", label: "Chart preset" }),
+    overrides: objectField({
+      label: "Token overrides",
+      subFields: {
+        light: objectField({ label: "Light", subFields: tokenSubFields }),
+        dark: objectField({ label: "Dark", subFields: tokenSubFields }),
+      },
+    }),
+  },
 });

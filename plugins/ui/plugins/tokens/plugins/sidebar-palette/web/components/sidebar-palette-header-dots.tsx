@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { useConfigValues } from "@plugins/config/web";
+import { useConfig } from "@plugins/config_v2/web";
 import {
   ColorAdjustContext,
   transformValues,
@@ -7,8 +7,6 @@ import {
 import { sidebarPaletteGroup } from "../../shared";
 import { sidebarPaletteConfig } from "../internal/config";
 import { SidebarPalette } from "../slots";
-
-const PLUGIN_ID = "ui-tokens-sidebar-palette";
 
 const REPRESENTATIVE_KEYS: (keyof typeof sidebarPaletteGroup.schema)[] = [
   "sidebar",
@@ -18,18 +16,21 @@ const REPRESENTATIVE_KEYS: (keyof typeof sidebarPaletteGroup.schema)[] = [
 ];
 
 export function SidebarPaletteHeaderDots() {
-  const config = useConfigValues(sidebarPaletteConfig, PLUGIN_ID);
+  const config = useConfig(sidebarPaletteConfig) as {
+    preset: string;
+    overrides: { light: Record<string, string>; dark: Record<string, string> };
+  };
   const presets = SidebarPalette.Preset.useContributions();
   const adjustment = useContext(ColorAdjustContext);
 
   const active = presets.find((p) => p.id === config.preset) ?? presets[0];
-  const overrides = JSON.parse((config.overrides as string) || "{}") as {
-    light?: Record<string, string>;
-    dark?: Record<string, string>;
-  };
+  const overrides = config.overrides;
+  const lightOverrideFiltered = Object.fromEntries(
+    Object.entries(overrides.light ?? {}).filter(([, v]) => v !== ""),
+  );
   const lightValues = active
     ? transformValues(
-        { ...active.light, ...(overrides.light ?? {}) },
+        { ...active.light, ...lightOverrideFiltered },
         adjustment,
       )
     : {};

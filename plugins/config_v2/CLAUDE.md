@@ -103,7 +103,11 @@ Overwrites are **full copies**, not deltas. `setConfig` writes `{ ...currentValu
   - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useSetConfig`
 - Exports (server):
   - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getConfig`, `getRawFileContent`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
+<<<<<<< .merge_file_eIZEfN
 - Imported by: `avatar`, `backup`, `build`, `codegen`, `color`, `color-adjust`, `commits`, `conversation-category`, `conversations`, `cost`, `enum`, `google-drive`, `list`, `local`, `model-provider`, `multiline-text`, `object`, `primitives`, `segmented-progress-bar`, `settings`, `theme-customizer`, `theme-engine`, `turn-summary`
+=======
+- Imported by: `avatar`, `backup`, `build`, `chart`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `conversations`, `cost`, `enum`, `google-drive`, `list`, `local`, `multiline-text`, `object`, `primitives`, `segmented-progress-bar`, `settings`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
+>>>>>>> .merge_file_EvekLQ
 - Sub-plugins:
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
   - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.

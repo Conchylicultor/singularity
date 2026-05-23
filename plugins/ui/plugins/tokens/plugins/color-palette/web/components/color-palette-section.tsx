@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { useConfigValues, setConfigValue } from "@plugins/config/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -19,8 +19,6 @@ import { colorPaletteGroup } from "../../shared";
 import { colorPaletteConfig } from "../internal/config";
 import { ColorPalette } from "../slots";
 
-const PLUGIN_ID = "ui-tokens-color-palette";
-
 interface GroupDef {
   label: string;
   keys: (keyof typeof colorPaletteGroup.schema)[];
@@ -38,77 +36,65 @@ const GROUPS: GroupDef[] = [
   { label: "Border & Input", keys: ["border", "input", "ring"] },
 ];
 
-function setOverride(
-  key: string,
-  value: string,
-  currentOverrides: string,
-  mode: TokenMode,
-) {
-  const current = JSON.parse(currentOverrides || "{}") as {
-    light?: Record<string, string>;
-    dark?: Record<string, string>;
-  };
-  if (mode === "both" || mode === "light") {
-    if (!current.light) current.light = {};
-    current.light[key] = value;
-  }
-  if (mode === "both" || mode === "dark") {
-    if (!current.dark) current.dark = {};
-    current.dark[key] = value;
-  }
-  void setConfigValue(`${PLUGIN_ID}.overrides`, JSON.stringify(current));
-}
-
-function resetOverride(
-  key: string,
-  currentOverrides: string,
-  mode: TokenMode,
-) {
-  const current = JSON.parse(currentOverrides || "{}") as {
-    light?: Record<string, string>;
-    dark?: Record<string, string>;
-  };
-  if (mode === "both" || mode === "light") {
-    if (current.light) delete current.light[key];
-  }
-  if (mode === "both" || mode === "dark") {
-    if (current.dark) delete current.dark[key];
-  }
-  void setConfigValue(`${PLUGIN_ID}.overrides`, JSON.stringify(current));
-}
-
 export function ColorPaletteSection({ search }: { search: string }) {
-  const config = useConfigValues(colorPaletteConfig, PLUGIN_ID);
+  const config = useConfig(colorPaletteConfig);
+  const setConfig = useSetConfig(colorPaletteConfig);
   const presets = ColorPalette.Preset.useContributions();
   const adjustment = useContext(ColorAdjustContext);
   const tokenMode = useContext(TokenModeContext);
 
   const active = presets.find((p) => p.id === config.preset) ?? presets[0];
-  const overrides = JSON.parse((config.overrides as string) || "{}") as {
-    light?: Record<string, string>;
-    dark?: Record<string, string>;
+  const overrides = config.overrides as {
+    light: Record<string, string>;
+    dark: Record<string, string>;
   };
+  const lightOverrides = Object.fromEntries(
+    Object.entries(overrides.light).filter(([, v]) => v !== ""),
+  );
+  const darkOverrides = Object.fromEntries(
+    Object.entries(overrides.dark).filter(([, v]) => v !== ""),
+  );
   const lightValues = active
-    ? transformValues(
-        { ...active.light, ...(overrides.light ?? {}) },
-        adjustment,
-      )
+    ? transformValues({ ...active.light, ...lightOverrides }, adjustment)
     : {};
   const darkValues = active
-    ? transformValues(
-        { ...active.dark, ...(overrides.dark ?? {}) },
-        adjustment,
-      )
+    ? transformValues({ ...active.dark, ...darkOverrides }, adjustment)
     : {};
   const activeValues = tokenMode === "dark" ? darkValues : lightValues;
   const activeOverrideKeys = new Set(
-    Object.keys(
-      tokenMode === "dark" ? (overrides.dark ?? {}) : (overrides.light ?? {}),
-    ),
+    Object.keys(tokenMode === "dark" ? darkOverrides : lightOverrides),
   );
 
   const schema = colorPaletteGroup.schema;
   const vars = colorPaletteGroup.vars;
+
+  function setOverride(key: string, value: string, mode: TokenMode) {
+    const newOverrides = {
+      light: { ...overrides.light },
+      dark: { ...overrides.dark },
+    };
+    if (mode === "both" || mode === "light") {
+      newOverrides.light[key] = value;
+    }
+    if (mode === "both" || mode === "dark") {
+      newOverrides.dark[key] = value;
+    }
+    setConfig("overrides", newOverrides);
+  }
+
+  function resetOverride(key: string, mode: TokenMode) {
+    const newOverrides = {
+      light: { ...overrides.light },
+      dark: { ...overrides.dark },
+    };
+    if (mode === "both" || mode === "light") {
+      newOverrides.light[key] = "";
+    }
+    if (mode === "both" || mode === "dark") {
+      newOverrides.dark[key] = "";
+    }
+    setConfig("overrides", newOverrides);
+  }
 
   return (
     <div className="flex flex-col gap-1">
@@ -123,7 +109,7 @@ export function ColorPaletteSection({ search }: { search: string }) {
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/50"
             }`}
-            onClick={() => void setConfigValue(`${PLUGIN_ID}.preset`, p.id)}
+            onClick={() => setConfig("preset", p.id)}
           >
             <span
               className="size-2.5 rounded-full border border-border/50"
@@ -174,10 +160,10 @@ export function ColorPaletteSection({ search }: { search: string }) {
                   const value = activeValues[key] ?? schema[key]?.default ?? "";
                   const isOverridden = activeOverrideKeys.has(key as string);
                   const isSplit =
-                    overrides.light?.[key as string] !==
-                      overrides.dark?.[key as string] &&
-                    (overrides.light?.[key as string] !== undefined ||
-                      overrides.dark?.[key as string] !== undefined);
+                    overrides.light[key as string] !==
+                      overrides.dark[key as string] &&
+                    (overrides.light[key as string] !== "" ||
+                      overrides.dark[key as string] !== "");
 
                   return (
                     <TokenRow
@@ -189,20 +175,9 @@ export function ColorPaletteSection({ search }: { search: string }) {
                       isSplit={isSplit}
                       search={search}
                       onValueChange={(newValue) =>
-                        setOverride(
-                          key as string,
-                          newValue,
-                          config.overrides as string,
-                          tokenMode,
-                        )
+                        setOverride(key as string, newValue, tokenMode)
                       }
-                      onReset={() =>
-                        resetOverride(
-                          key as string,
-                          config.overrides as string,
-                          tokenMode,
-                        )
-                      }
+                      onReset={() => resetOverride(key as string, tokenMode)}
                     />
                   );
                 })}

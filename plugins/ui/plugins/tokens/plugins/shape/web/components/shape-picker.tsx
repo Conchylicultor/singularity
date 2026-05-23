@@ -1,13 +1,11 @@
-import { useConfigValues, setConfigValue } from "@plugins/config/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { shapeConfig } from "../internal/config";
 import { Shape } from "../slots";
 
-const PLUGIN_ID = "ui-tokens-shape";
-const FULL_KEY = `${PLUGIN_ID}.preset`;
-
 export function ShapePicker() {
   const presets = Shape.Preset.useContributions();
-  const { preset: activeId } = useConfigValues(shapeConfig, PLUGIN_ID);
+  const { preset: activeId } = useConfig(shapeConfig);
+  const setConfig = useSetConfig(shapeConfig);
 
   if (presets.length === 0) {
     return (
@@ -27,7 +25,7 @@ export function ShapePicker() {
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:border-primary/50"
           }`}
-          onClick={() => setConfigValue(FULL_KEY, p.id)}
+          onClick={() => setConfig("preset", p.id)}
         >
           <span
             className="size-3 border border-current"

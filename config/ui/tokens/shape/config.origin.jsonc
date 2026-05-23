@@ -1,0 +1,14 @@
+// @hash 7685ff6883a5
+{
+  "preset": "default",
+  "overrides": {
+    "light": {
+      "radius": "",
+      "spacing": ""
+    },
+    "dark": {
+      "radius": "",
+      "spacing": ""
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { useConfigValues } from "@plugins/config/web";
+import { useConfig } from "@plugins/config_v2/web";
 import {
   ColorAdjustContext,
   transformValues,
@@ -7,8 +7,6 @@ import {
 import { colorPaletteGroup } from "../../shared";
 import { colorPaletteConfig } from "../internal/config";
 import { ColorPalette } from "../slots";
-
-const PLUGIN_ID = "ui-tokens-color-palette";
 
 const REPRESENTATIVE_KEYS: (keyof typeof colorPaletteGroup.schema)[] = [
   "primary",
@@ -23,20 +21,20 @@ const REPRESENTATIVE_KEYS: (keyof typeof colorPaletteGroup.schema)[] = [
 ];
 
 export function ColorPaletteHeaderDots() {
-  const config = useConfigValues(colorPaletteConfig, PLUGIN_ID);
+  const config = useConfig(colorPaletteConfig);
   const presets = ColorPalette.Preset.useContributions();
   const adjustment = useContext(ColorAdjustContext);
 
   const active = presets.find((p) => p.id === config.preset) ?? presets[0];
-  const overrides = JSON.parse((config.overrides as string) || "{}") as {
-    light?: Record<string, string>;
-    dark?: Record<string, string>;
+  const ov = config.overrides as {
+    light: Record<string, string>;
+    dark: Record<string, string>;
   };
+  const lightOverrides = Object.fromEntries(
+    Object.entries(ov.light).filter(([, v]) => v !== ""),
+  );
   const lightValues = active
-    ? transformValues(
-        { ...active.light, ...(overrides.light ?? {}) },
-        adjustment,
-      )
+    ? transformValues({ ...active.light, ...lightOverrides }, adjustment)
     : {};
 
   const schema = colorPaletteGroup.schema;

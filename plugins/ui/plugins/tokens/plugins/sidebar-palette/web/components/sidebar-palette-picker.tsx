@@ -1,16 +1,11 @@
-import { useConfigValues, setConfigValue } from "@plugins/config/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { sidebarPaletteConfig } from "../internal/config";
 import { SidebarPalette } from "../slots";
 
-const PLUGIN_ID = "ui-tokens-sidebar-palette";
-const FULL_KEY = `${PLUGIN_ID}.preset`;
-
 export function SidebarPalettePicker() {
   const presets = SidebarPalette.Preset.useContributions();
-  const { preset: activeId } = useConfigValues(
-    sidebarPaletteConfig,
-    PLUGIN_ID,
-  );
+  const { preset: activeId } = useConfig(sidebarPaletteConfig) as { preset: string };
+  const setConfig = useSetConfig(sidebarPaletteConfig);
 
   if (presets.length === 0) {
     return (
@@ -30,7 +25,7 @@ export function SidebarPalettePicker() {
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:border-primary/50"
           }`}
-          onClick={() => setConfigValue(FULL_KEY, p.id)}
+          onClick={() => setConfig("preset", p.id)}
         >
           <span
             className="size-3 rounded-full border border-border"

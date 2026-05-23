@@ -1,9 +1,9 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Config } from "@plugins/config/server";
+import { ConfigV2 } from "@plugins/config_v2/server";
 import { typographyConfig } from "../shared";
 
 export default {
   id: "ui-tokens-typography",
   name: "UI: Typography",
-  contributions: [Config.Field(typographyConfig)],
+  contributions: [ConfigV2.Register({ descriptor: typographyConfig })],
 } satisfies ServerPluginDefinition;

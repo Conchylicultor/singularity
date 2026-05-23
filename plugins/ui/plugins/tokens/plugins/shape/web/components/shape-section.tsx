@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { useConfigValues, setConfigValue } from "@plugins/config/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -9,73 +9,35 @@ import {
 import {
   TokenRow,
   TokenModeContext,
-  type TokenMode,
 } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { shapeGroup } from "../../shared";
 import { shapeConfig } from "../internal/config";
 import { Shape } from "../slots";
 
-const PLUGIN_ID = "ui-tokens-shape";
-
-function setOverride(
-  key: string,
-  value: string,
-  currentOverrides: string,
-  mode: TokenMode,
-) {
-  const current = JSON.parse(currentOverrides || "{}") as {
-    light?: Record<string, string>;
-    dark?: Record<string, string>;
-  };
-  if (mode === "both" || mode === "light") {
-    if (!current.light) current.light = {};
-    current.light[key] = value;
-  }
-  if (mode === "both" || mode === "dark") {
-    if (!current.dark) current.dark = {};
-    current.dark[key] = value;
-  }
-  void setConfigValue(`${PLUGIN_ID}.overrides`, JSON.stringify(current));
-}
-
-function resetOverride(
-  key: string,
-  currentOverrides: string,
-  mode: TokenMode,
-) {
-  const current = JSON.parse(currentOverrides || "{}") as {
-    light?: Record<string, string>;
-    dark?: Record<string, string>;
-  };
-  if (mode === "both" || mode === "light") {
-    if (current.light) delete current.light[key];
-  }
-  if (mode === "both" || mode === "dark") {
-    if (current.dark) delete current.dark[key];
-  }
-  void setConfigValue(`${PLUGIN_ID}.overrides`, JSON.stringify(current));
-}
-
 export function ShapeSection({ search }: { search: string }) {
-  const config = useConfigValues(shapeConfig, PLUGIN_ID);
+  const config = useConfig(shapeConfig) as {
+    preset: string;
+    overrides: { light: Record<string, string>; dark: Record<string, string> };
+  };
+  const setConfig = useSetConfig(shapeConfig);
   const presets = Shape.Preset.useContributions();
   const tokenMode = useContext(TokenModeContext);
 
   const active = presets.find((p) => p.id === config.preset) ?? presets[0];
-  const overrides = JSON.parse((config.overrides as string) || "{}") as {
-    light?: Record<string, string>;
-    dark?: Record<string, string>;
-  };
+  const overrides = config.overrides;
+  const modeOverrides = tokenMode === "dark" ? overrides.dark : overrides.light;
   const activeValues: Record<string, string> = active
     ? {
         ...(tokenMode === "dark" ? active.dark : active.light),
-        ...((tokenMode === "dark" ? overrides.dark : overrides.light) ?? {}),
+        ...Object.fromEntries(
+          Object.entries(modeOverrides).filter(([, v]) => v !== "")
+        ),
       }
     : {};
   const activeOverrideKeys = new Set(
-    Object.keys(
-      tokenMode === "dark" ? (overrides.dark ?? {}) : (overrides.light ?? {}),
-    ),
+    Object.entries(modeOverrides)
+      .filter(([, v]) => v !== "")
+      .map(([k]) => k),
   );
 
   const schema = shapeGroup.schema;
@@ -84,7 +46,6 @@ export function ShapeSection({ search }: { search: string }) {
   type ShapeKey = keyof typeof schema;
   const allKeys = Object.keys(schema) as ShapeKey[];
 
-  // Filter tokens by search
   const visibleKeys = allKeys.filter((key) => {
     const label = schema[key]?.label ?? (key as string);
     const cssVar = vars[key] ?? "";
@@ -94,6 +55,28 @@ export function ShapeSection({ search }: { search: string }) {
   });
 
   if (visibleKeys.length === 0) return null;
+
+  const setOverride = (key: string, value: string) => {
+    const newOverrides = { ...overrides };
+    if (tokenMode === "both" || tokenMode === "light") {
+      newOverrides.light = { ...newOverrides.light, [key]: value };
+    }
+    if (tokenMode === "both" || tokenMode === "dark") {
+      newOverrides.dark = { ...newOverrides.dark, [key]: value };
+    }
+    setConfig("overrides", newOverrides);
+  };
+
+  const resetOverride = (key: string) => {
+    const newOverrides = { ...overrides };
+    if (tokenMode === "both" || tokenMode === "light") {
+      newOverrides.light = { ...newOverrides.light, [key]: "" };
+    }
+    if (tokenMode === "both" || tokenMode === "dark") {
+      newOverrides.dark = { ...newOverrides.dark, [key]: "" };
+    }
+    setConfig("overrides", newOverrides);
+  };
 
   return (
     <div className="flex flex-col gap-1">
@@ -108,7 +91,7 @@ export function ShapeSection({ search }: { search: string }) {
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/50"
             }`}
-            onClick={() => void setConfigValue(`${PLUGIN_ID}.preset`, p.id)}
+            onClick={() => setConfig("preset", p.id)}
           >
             <span
               className="size-3 border border-current"
@@ -143,21 +126,8 @@ export function ShapeSection({ search }: { search: string }) {
                 value={value}
                 isOverridden={isOverridden}
                 search={search}
-                onValueChange={(newValue) =>
-                  setOverride(
-                    key as string,
-                    newValue,
-                    config.overrides as string,
-                    tokenMode,
-                  )
-                }
-                onReset={() =>
-                  resetOverride(
-                    key as string,
-                    config.overrides as string,
-                    tokenMode,
-                  )
-                }
+                onValueChange={(newValue) => setOverride(key as string, newValue)}
+                onReset={() => resetOverride(key as string)}
               />
             );
           })}
