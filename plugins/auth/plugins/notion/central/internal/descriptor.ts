@@ -4,7 +4,7 @@ import {
   type AuthIdentity,
   type AuthProviderDescriptor,
 } from "@plugins/auth/core";
-import { readGlobalConfig } from "@plugins/auth/central";
+import { readSecretConfig } from "@plugins/config_v2/plugins/fields/plugins/secret/central";
 import { notionAuthConfig } from "../../shared";
 
 interface NotionMe {
@@ -63,8 +63,8 @@ export const notionDescriptor: AuthProviderDescriptor = defineAuthProvider({
       if (idFromEnv && secretFromEnv) {
         return { clientId: idFromEnv, clientSecret: secretFromEnv };
       }
-      const cfg = await readGlobalConfig("auth-notion", notionAuthConfig);
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; readGlobalConfig returns "" for unset secrets
+      const cfg = await readSecretConfig(notionAuthConfig);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; readSecretConfig returns "" for unset secrets
       if (!cfg.clientId || !cfg.clientSecret) {
         throw new AuthCredentialsMissingError("notion");
       }

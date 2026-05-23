@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { openPane } from "@plugins/primitives/plugins/pane/web";
 import { Auth } from "@plugins/auth/web";
-import { Config } from "@plugins/config/web";
+import { ConfigV2 } from "@plugins/config_v2/web";
 import { SiGoogle } from "react-icons/si";
 import { googleAuthConfig } from "../shared";
 import { googleSetupPane } from "@plugins/auth/plugins/google/plugins/setup-wizard/web";
@@ -19,6 +19,6 @@ export default {
       helpUrl: "https://console.cloud.google.com/apis/credentials",
       configureCredentials: () => openPane(googleSetupPane, {}, { mode: "root" }),
     }),
-    Config.Spec(googleAuthConfig),
+    ConfigV2.WebRegister({ descriptor: googleAuthConfig }),
   ],
 } satisfies PluginDefinition;

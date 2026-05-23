@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { Fields } from "./internal/slots";
 export { FieldRenderer } from "./internal/field-renderer";
+export { ConfigFieldContext } from "./internal/config-field-context";
 export type {
   FieldRendererProps,
   FieldRendererComponent,

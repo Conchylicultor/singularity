@@ -5,7 +5,7 @@ import { resetConfigField, acknowledgeConflict, deleteOverride, getConfigRawFile
 
 export const handleSetField = implement(setConfigField, async ({ body }) => {
   try {
-    setConfigByPath(body.storePath, body.key, body.value);
+    await setConfigByPath(body.storePath, body.key, body.value);
   } catch (err) {
     throw new HttpError(400, err instanceof Error ? err.message : String(err));
   }
@@ -13,7 +13,7 @@ export const handleSetField = implement(setConfigField, async ({ body }) => {
 
 export const handleResetField = implement(resetConfigField, async ({ body }) => {
   try {
-    resetConfigByPath(body.storePath, body.key);
+    await resetConfigByPath(body.storePath, body.key);
   } catch (err) {
     throw new HttpError(400, err instanceof Error ? err.message : String(err));
   }

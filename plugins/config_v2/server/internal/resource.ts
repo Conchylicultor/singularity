@@ -5,6 +5,7 @@ import type { ConfigV2Values, ConfigV2Conflicts } from "../../core";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord } from "../../core";
 import { CONFIG_DIR } from "./config-dir";
 import { jsoncConfigProxy } from "./jsonc-proxy";
+import { hasFieldStorageProvider } from "./field-storage-providers";
 
 type ConfigGetter = <F extends FieldsRecord>(d: ConfigDescriptor<F>) => ConfigValues<F>;
 
@@ -18,7 +19,14 @@ export const configV2ServerResource = defineResource<ConfigV2Values, { path: str
   loader: ({ path }) => {
     const descriptor = descriptorByPath.get(path);
     if (!descriptor || !configGetter) return {};
-    return configGetter(descriptor) as ConfigV2Values;
+    const values = configGetter(descriptor) as ConfigV2Values;
+    const redacted = { ...values };
+    for (const [key, field] of Object.entries(descriptor.fields)) {
+      if (hasFieldStorageProvider(field.type.id)) {
+        redacted[key] = field.defaultValue;
+      }
+    }
+    return redacted;
   },
 });
 
@@ -63,4 +71,8 @@ export function getDescriptorByStorePath(path: string): ConfigDescriptor | undef
 
 export function setConfigGetter(getter: ConfigGetter): void {
   configGetter = getter;
+}
+
+export function getAllDescriptors(): [string, ConfigDescriptor][] {
+  return [...descriptorByPath.entries()];
 }

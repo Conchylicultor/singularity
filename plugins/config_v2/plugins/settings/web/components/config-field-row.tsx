@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { MdUndo, MdWarning } from "react-icons/md";
 import { cn } from "@/lib/utils";
-import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
+import { FieldRenderer, ConfigFieldContext } from "@plugins/config_v2/plugins/fields/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { FieldDef } from "@plugins/config_v2/core";
 import { setConfigField } from "@plugins/config_v2/core";
@@ -73,7 +73,9 @@ export function ConfigFieldRow({
           )}
         />
         <div className="min-w-0 flex-1">
-          <FieldRenderer field={field} value={value} onChange={handleChange} />
+          <ConfigFieldContext.Provider value={{ storePath, fieldKey }}>
+            <FieldRenderer field={field} value={value} onChange={handleChange} />
+          </ConfigFieldContext.Provider>
         </div>
         <button
           type="button"

@@ -333,11 +333,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `GOOGLE_DEFAULT_SCOPES`, `googleAuthConfig`
       - Contributes:
         - `Auth.Provider` "Google"
-        - `Config.Spec`
+        - `ConfigV2.WebRegister`
       - Server:
-        - Uses: `config.Config`
+        - Uses: `config_v2.ConfigV2`
       - Central:
-        - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
+        - Uses: `auth.registerAuthProvider`
       - Plugins:
         - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
           - Exports (web):
@@ -349,11 +349,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `notionAuthConfig`
       - Contributes:
         - `Auth.Provider` "Notion"
-        - `Config.Spec`
+        - `ConfigV2.WebRegister`
       - Server:
-        - Uses: `config.Config`
+        - Uses: `config_v2.ConfigV2`
       - Central:
-        - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
+        - Uses: `auth.registerAuthProvider`
 
 - **`backup`** — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.
   - Defines:
@@ -493,7 +493,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `GET /api/config/specs`
     - `PATCH /api/config`
     - `DELETE /api/config/:key`
-  - Imported by: `auth`, `google`, `notion`, `setup-wizard`, `theme-customizer`
+  - Imported by: `auth`, `theme-customizer`
   - Slot contributors: `theme-customizer`
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
@@ -504,13 +504,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `ConfigRegistration`
     - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useSetConfig`
   - Exports (server):
-    - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getConfig`, `getRawFileContent`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-  - Imported by: `avatar`, `backup`, `build`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `conversations`, `cost`, `enum`, `google-drive`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `object`, `primitives`, `prompt-templates`, `segmented-progress-bar`, `settings`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
+    - Types: `FieldStorageProvider`
+    - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getAllDescriptors`, `getConfig`, `getFieldStorageProvider`, `getRawFileContent`, `hasFieldStorageProvider`, `registerFieldStorageProvider`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
+  - Imported by: `avatar`, `backup`, `build`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `conversations`, `cost`, `enum`, `google`, `google-drive`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `primitives`, `prompt-templates`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
         - Types: `FieldRendererComponent`, `FieldRendererProps`
-        - Values: `FieldRenderer`, `Fields`
+        - Values: `ConfigFieldContext`, `FieldRenderer`, `Fields`
       - Plugins:
         - **`avatar`** — Avatar field type (icon + color picker).
           - Exports (core):
@@ -557,6 +558,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Fields.Renderer` "text" → `TextRenderer`
             - `Fields.Renderer` "int" → `IntRenderer`
             - `Fields.Renderer` "float" → `FloatRenderer`
+        - **`secret`** — Secret field type: encrypted storage with set/not-set metadata. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
+          - Exports (core):
+            - Types: `ConfigV2SecretMeta`, `SecretFieldDef`
+            - Values: `configV2SecretMetaResource`, `configV2SecretMetaSchema`, `secretField`, `secretFieldType`
+          - Exports (central):
+            - Values: `readSecretConfig`
+          - Contributes:
+            - `Fields.Renderer` "secret" → `SecretRenderer`
+          - Server:
+            - Uses: `config_v2.getAllDescriptors`, `config_v2.hasFieldStorageProvider`, `config_v2.registerFieldStorageProvider`
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
       - Exports (core):
         - Values: `acknowledgeConflict`, `deleteOverride`, `getConfigRawFile`, `resetConfigField`

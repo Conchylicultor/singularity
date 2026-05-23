@@ -4,7 +4,7 @@ import {
   type AuthIdentity,
   type AuthProviderDescriptor,
 } from "@plugins/auth/core";
-import { readGlobalConfig } from "@plugins/auth/central";
+import { readSecretConfig } from "@plugins/config_v2/plugins/fields/plugins/secret/central";
 import { googleAuthConfig, GOOGLE_DEFAULT_SCOPES } from "../../shared";
 
 interface GoogleUserInfo {
@@ -59,10 +59,10 @@ export const googleDescriptor: AuthProviderDescriptor = defineAuthProvider({
       if (idFromEnv) {
         return { clientId: idFromEnv, clientSecret: secretFromEnv };
       }
-      const cfg = await readGlobalConfig("auth-google", googleAuthConfig);
+      const cfg = await readSecretConfig(googleAuthConfig);
       // Google requires both; either missing means we can't complete the OAuth
       // flow, so treat the provider as unconfigured.
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; readGlobalConfig returns "" for unset secrets
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; readSecretConfig returns "" for unset secrets
       if (!cfg.clientId || !cfg.clientSecret) {
         throw new AuthCredentialsMissingError("google");
       }

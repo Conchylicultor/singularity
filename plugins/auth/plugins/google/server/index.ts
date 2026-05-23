@@ -1,15 +1,14 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Config } from "@plugins/config/server";
+import { ConfigV2 } from "@plugins/config_v2/server";
 import { googleAuthConfig } from "../shared";
 
 // Worktree-side registration carrier. The OAuth runtime (descriptor, refresh
 // loop, token store) lives in `../central/`. This stub exists solely so the
-// config plugin's registry — which discovers Config.Field contributions — can
-// render the Google credentials section in the per-worktree Settings UI and
-// migrate plaintext secrets into the secrets store. No HTTP routes, no onReady,
-// no internal/.
+// config plugin's registry — which discovers ConfigV2.Register contributions — can
+// render the Google credentials section in the per-worktree Settings UI.
+// No HTTP routes, no onReady, no internal/.
 export default {
   id: "auth-google",
   name: "Auth: Google",
-  contributions: [Config.Field(googleAuthConfig)],
+  contributions: [ConfigV2.Register({ descriptor: googleAuthConfig })],
 } satisfies ServerPluginDefinition;

@@ -7,6 +7,9 @@ import { configV2ServerResource, configV2ConflictsServerResource } from "./inter
 export { ConfigV2 } from "./internal/contribution";
 export { forkConfig } from "./internal/fork";
 export { getConfig, setConfig, setConfigByPath, resetConfigByPath, watchConfig, acknowledgeConflictByPath, deleteOverrideByPath, getRawFileContent } from "./internal/registry";
+export { getAllDescriptors } from "./internal/resource";
+export { registerFieldStorageProvider, getFieldStorageProvider, hasFieldStorageProvider } from "./internal/field-storage-providers";
+export type { FieldStorageProvider } from "./internal/field-storage-providers";
 
 export default {
   id: "config-v2",
@@ -15,7 +18,7 @@ export default {
   contributions: [Resource.Declare(configV2ServerResource), Resource.Declare(configV2ConflictsServerResource)],
   async onReady() {
     await initConfigWatcher();
-    initRegistry();
+    await initRegistry();
   },
   async onShutdown() {
     shutdownRegistry();

@@ -81,6 +81,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`multiline-text`** — Multi-line text field type.
         - **`object`** — Object field type: fixed-structure named sub-fields grouped into a single value.
         - **`primitives`** — Basic field types: bool, text, int, float.
+        - **`secret`** — Secret field type: encrypted storage with set/not-set metadata. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
 
 - **`conversations`** [load-bearing] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.

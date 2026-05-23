@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Auth } from "@plugins/auth/web";
-import { Config } from "@plugins/config/web";
+import { ConfigV2 } from "@plugins/config_v2/web";
 import { SiNotion } from "react-icons/si";
 import { notionAuthConfig } from "../shared";
 
@@ -16,6 +16,6 @@ export default {
       icon: SiNotion,
       helpUrl: "https://www.notion.so/my-integrations",
     }),
-    Config.Spec(notionAuthConfig),
+    ConfigV2.WebRegister({ descriptor: notionAuthConfig }),
   ],
 } satisfies PluginDefinition;

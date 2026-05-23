@@ -14,7 +14,8 @@ export interface CollectedEntry {
 
 export const centralEntries: CollectedEntry[] = [
   { pluginPath: "auth", hierarchyPath: "auth", loader: () => import("@plugins/auth/central"), dependsOn: ["infra/plugins/secrets"] },
-  { pluginPath: "auth/plugins/google", hierarchyPath: "auth/google", loader: () => import("@plugins/auth/plugins/google/central"), dependsOn: ["auth"] },
-  { pluginPath: "auth/plugins/notion", hierarchyPath: "auth/notion", loader: () => import("@plugins/auth/plugins/notion/central"), dependsOn: ["auth"] },
+  { pluginPath: "auth/plugins/google", hierarchyPath: "auth/google", loader: () => import("@plugins/auth/plugins/google/central"), dependsOn: ["auth", "config_v2/plugins/fields/plugins/secret"] },
+  { pluginPath: "auth/plugins/notion", hierarchyPath: "auth/notion", loader: () => import("@plugins/auth/plugins/notion/central"), dependsOn: ["auth", "config_v2/plugins/fields/plugins/secret"] },
+  { pluginPath: "config_v2/plugins/fields/plugins/secret", hierarchyPath: "config_v2/fields/secret", loader: () => import("@plugins/config_v2/plugins/fields/plugins/secret/central"), dependsOn: ["infra/plugins/secrets"] },
   { pluginPath: "infra/plugins/secrets", hierarchyPath: "infra/secrets", loader: () => import("@plugins/infra/plugins/secrets/central"), dependsOn: [] },
 ];

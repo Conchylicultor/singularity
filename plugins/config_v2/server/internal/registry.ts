@@ -17,6 +17,7 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
 import { configV2ServerResource, configV2ConflictsServerResource, getDescriptorByStorePath, registerDescriptorPath, setConfigGetter } from "./resource";
+import { getFieldStorageProvider } from "./field-storage-providers";
 
 interface CacheEntry {
   values: ConfigValues<FieldsRecord>;
@@ -56,7 +57,7 @@ function injectCollectionIds(
   return result;
 }
 
-export function initRegistry(): void {
+export async function initRegistry(): Promise<void> {
   setConfigGetter(getConfig);
   const contributions = ConfigV2.Register.getContributions();
 
@@ -87,6 +88,22 @@ export function initRegistry(): void {
     };
 
     const values = reloadValues();
+
+    for (const [key, field] of Object.entries(descriptor.fields)) {
+      const provider = getFieldStorageProvider(field.type.id);
+      if (provider) {
+        try {
+          const result = await provider.load(descriptor.name, key);
+          (values as Record<string, unknown>)[key] = result.value;
+        } catch (err) {
+          if (err instanceof Error && err.name === "SecretsMainOfflineError") {
+            // Provider unavailable — keep JSONC default
+          } else {
+            throw err;
+          }
+        }
+      }
+    }
 
     const onFileChange = () => {
       const freshValues = reloadValues();
@@ -141,11 +158,11 @@ export function getConfig<F extends FieldsRecord>(descriptor: ConfigDescriptor<F
   return entry.values as ConfigValues<F>;
 }
 
-export function setConfig<F extends FieldsRecord, K extends keyof F & string>(
+export async function setConfig<F extends FieldsRecord, K extends keyof F & string>(
   descriptor: ConfigDescriptor<F>,
   key: K,
   value: InferFieldValue<F[K]>,
-): void {
+): Promise<void> {
   const entry = cacheByDescriptor.get(descriptor);
   if (!entry) {
     throw new Error(
@@ -154,6 +171,18 @@ export function setConfig<F extends FieldsRecord, K extends keyof F & string>(
   }
 
   descriptor.fields[key]!.schema.parse(value);
+
+  const provider = getFieldStorageProvider(descriptor.fields[key]!.type.id);
+  if (provider) {
+    (entry.values as Record<string, unknown>)[key] = value;
+    await provider.save(descriptor.name, key, value as string);
+    const subs = subscribersByDescriptor.get(descriptor);
+    if (subs) {
+      for (const cb of subs) cb(entry.values);
+    }
+    configV2ServerResource.notify({ path: entry.storePath });
+    return;
+  }
 
   const userOverwrites = jsoncConfigProxy(entry.userOverwritesPath);
   const userOrigin = jsoncConfigProxy(entry.userOriginPath);
@@ -179,18 +208,37 @@ export function setConfig<F extends FieldsRecord, K extends keyof F & string>(
   userOverwrites.write(injected as JsonValue, hash);
 }
 
-export function setConfigByPath(storePath: string, key: string, value: unknown): void {
+export async function setConfigByPath(storePath: string, key: string, value: unknown): Promise<void> {
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
-  setConfig(descriptor, key as keyof typeof descriptor.fields & string, value as never);
+  await setConfig(descriptor, key as keyof typeof descriptor.fields & string, value as never);
 }
 
-export function resetConfigByPath(storePath: string, key: string): void {
+export async function resetConfigByPath(storePath: string, key: string): Promise<void> {
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
+
+  const field = descriptor.fields[key];
+  if (!field) throw new Error(`No field "${key}" in "${descriptor.name}"`);
+
+  const provider = getFieldStorageProvider(field.type.id);
+  if (provider) {
+    await provider.clear(descriptor.name, key);
+    const entry = cacheByDescriptor.get(descriptor);
+    if (entry) {
+      (entry.values as Record<string, unknown>)[key] = field.defaultValue;
+      const subs = subscribersByDescriptor.get(descriptor);
+      if (subs) {
+        for (const cb of subs) cb(entry.values);
+      }
+      configV2ServerResource.notify({ path: entry.storePath });
+    }
+    return;
+  }
+
   const defaultValue = (descriptor.defaults as Record<string, unknown>)[key];
   if (defaultValue === undefined) throw new Error(`No field "${key}" in "${descriptor.name}"`);
-  setConfig(descriptor, key as keyof typeof descriptor.fields & string, defaultValue as never);
+  await setConfig(descriptor, key as keyof typeof descriptor.fields & string, defaultValue as never);
 }
 
 export function watchConfig<F extends FieldsRecord>(

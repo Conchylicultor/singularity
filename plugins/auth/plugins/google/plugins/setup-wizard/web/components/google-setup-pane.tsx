@@ -7,10 +7,11 @@ import {
   startConnectFlow,
   currentWorktreeName,
 } from "@plugins/auth/web";
-import {
-  setConfigValue,
-  useSecretFieldSet,
-} from "@plugins/config/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { setConfigField } from "@plugins/config_v2/core";
+import { useConfigRegistrations } from "@plugins/config_v2/web";
+import { configV2SecretMetaResource } from "@plugins/config_v2/plugins/fields/plugins/secret/core";
 import { MdCheck, MdOpenInNew } from "react-icons/md";
 
 const REDIRECT_URI = "http://localhost:9000/api/auth/callback/google";
@@ -27,9 +28,12 @@ export function GoogleSetupPane() {
   const [saving, setSaving] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
-  const clientIdState = useSecretFieldSet("auth-google.clientId");
-  const clientSecretState = useSecretFieldSet("auth-google.clientSecret");
-  const credentialsSaved = clientIdState.set && clientSecretState.set;
+  const registrations = useConfigRegistrations();
+  const reg = registrations.find((r) => r.descriptor.name === "auth-google");
+  const storePath = reg?.storePath ?? "";
+  const metaResult = useResource(configV2SecretMetaResource, { path: storePath });
+  const secretMeta = metaResult.pending ? {} : metaResult.data;
+  const credentialsSaved = !!secretMeta.clientId?.set && !!secretMeta.clientSecret?.set;
   const status = useAccountStatus("google");
   const connected = status?.connected;
 
@@ -38,11 +42,13 @@ export function GoogleSetupPane() {
   }
 
   async function handleSaveCredentials() {
+    if (!storePath) return;
     setSaving(true);
     try {
-      if (clientId) await setConfigValue("auth-google.clientId", clientId);
+      if (clientId)
+        await fetchEndpoint(setConfigField, {}, { body: { storePath, key: "clientId", value: clientId } });
       if (clientSecret)
-        await setConfigValue("auth-google.clientSecret", clientSecret);
+        await fetchEndpoint(setConfigField, {}, { body: { storePath, key: "clientSecret", value: clientSecret } });
       setClientId("");
       setClientSecret("");
     } finally {

@@ -1,0 +1,7 @@
+// @hash 66614db4aa56
+{
+  // Notion integration client ID (https://www.notion.so/my-integrations).
+  "clientId": "",
+  // Notion integration client secret.
+  "clientSecret": ""
+}

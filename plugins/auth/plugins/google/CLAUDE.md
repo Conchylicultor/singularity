@@ -9,11 +9,11 @@
   - Values: `GOOGLE_DEFAULT_SCOPES`, `googleAuthConfig`
 - Contributes:
   - `Auth.Provider` "Google"
-  - `Config.Spec`
+  - `ConfigV2.WebRegister`
 - Server:
-  - Uses: `config.Config`
+  - Uses: `config_v2.ConfigV2`
 - Central:
-  - Uses: `auth.readGlobalConfig`, `auth.registerAuthProvider`
+  - Uses: `auth.registerAuthProvider`
 - Sub-plugins:
   - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
 
