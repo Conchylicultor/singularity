@@ -33,6 +33,13 @@
 - Server:
   - Uses: `conversations.createConversation`, `database.db`, `tasks-core.conversationsLiveResource`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`
   - Resources: `agent-launches` (push)
+  - `GET /api/agents`
+  - `POST /api/agents`
+  - `GET /api/agents/:id`
+  - `PATCH /api/agents/:id`
+  - `DELETE /api/agents/:id`
+  - `POST /api/agents/:id/launch`
+  - `GET /api/agents/:id/launches`
 - Imported by: `toggle`
 - Slot contributors: `toggle`
 - Extended by: `toggle` (table `agents_ext_auto_launch`)

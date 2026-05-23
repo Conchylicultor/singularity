@@ -77,6 +77,10 @@ If you're tempted to store `{ [item]: { enabled: boolean, … } }` as a JSON blo
   - `Shell.Sidebar` "Settings" → `component`
 - Server:
   - Uses: `database.db`
+  - `GET /api/config`
+  - `GET /api/config/specs`
+  - `PATCH /api/config`
+  - `DELETE /api/config/:key`
 - Imported by: `auth`, `google`, `notion`, `setup-wizard`, `theme-customizer`
 - Slot contributors: `theme-customizer`
 

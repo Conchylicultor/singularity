@@ -69,7 +69,7 @@ async function handleWorkingTree(conversationId: string): Promise<PluginChangesR
   ]);
 
   const worktreePluginsDir = join(conversation.worktreePath, "plugins");
-  const plugins = computePluginChanges(
+  const plugins = await computePluginChanges(
     worktreePluginsDir,
     mainPluginsDir,
     editedFiles,
@@ -103,7 +103,7 @@ async function handlePush(pushId: string): Promise<PluginChangesResponse> {
   ]);
 
   try {
-    const plugins = computePluginChanges(
+    const plugins = await computePluginChanges(
       join(headDir, "plugins"),
       join(baseDir, "plugins"),
       editedFiles,

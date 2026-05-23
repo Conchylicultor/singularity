@@ -1,12 +1,9 @@
-import type { DocMetaRegistration } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   createFacet,
-  defineFacet,
   type ExtractContext,
   type RenderDocContext,
 } from "@plugins/plugin-meta/plugins/facets/core";
-
-export const registrationsFacetDef = defineFacet<DocMetaRegistration[]>("registrations");
+import { type DocMetaRegistration, registrationsFacetDef } from "../core";
 
 export default createFacet<DocMetaRegistration[]>({
   def: registrationsFacetDef,

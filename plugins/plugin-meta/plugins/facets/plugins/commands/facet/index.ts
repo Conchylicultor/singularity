@@ -1,16 +1,13 @@
 import { join } from "path";
 import {
   createFacet,
-  defineFacet,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import {
-  type CommandDef,
   readIfExists,
   stripTypes,
   parseDefineGroup,
-} from "@plugins/plugin-meta/plugins/plugin-tree/core";
-
-export const commandsFacetDef = defineFacet<CommandDef[]>("commands");
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { type CommandDef, commandsFacetDef } from "../core";
 
 export default createFacet<CommandDef[]>({
   def: commandsFacetDef,

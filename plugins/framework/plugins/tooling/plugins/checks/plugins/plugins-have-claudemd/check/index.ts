@@ -19,7 +19,7 @@ const check: Check = {
   description: "every plugin has a CLAUDE.md (auto-generated, optionally with hand-written prose above the AUTOGEN fence)",
   async run() {
     const root = await getRoot();
-    const tree = buildPluginTree(join(root, "plugins"));
+    const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true });
     const missing: string[] = [];
     for (const info of tree.byDir.values()) {
       const file = pluginClaudeMdPath(info);

@@ -14,6 +14,7 @@
   - `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
 - Server:
   - Uses: `code-explorer.getRangeFiles`, `code-explorer.resolveParentSha`, `tasks-core.getConversation`, `tasks-core.listPushesByPushId`
+  - `GET /api/review/plugin-changes`
 - Sub-plugins:
   - **`api-changes`** — API surface diff section for per-plugin review cards.
   - **`file-changes`** — File-level diff section for per-plugin review cards.

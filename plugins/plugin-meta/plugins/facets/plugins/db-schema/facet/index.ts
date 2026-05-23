@@ -3,31 +3,17 @@ import { existsSync, readdirSync } from "fs";
 import { relative } from "path";
 import {
   createFacet,
-  defineFacet,
   getFacet,
 } from "@plugins/plugin-meta/plugins/facets/core";
+import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   readIfExists,
   stripTypes,
-} from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import type {
-  EntityExtension,
-  EntityExtensionRef,
-  TableDef,
-  PluginTree,
-} from "@plugins/plugin-meta/plugins/plugin-tree/core";
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { type DbSchemaFacetData, dbSchemaFacetDef } from "../core";
 
 // Repo root — 7 levels up from this facet file
 const REPO_ROOT = join(import.meta.dirname, "../../../../../../..");
-
-export interface DbSchemaFacetData {
-  dbFiles: string[];
-  tables: TableDef[];
-  entityExtensions: EntityExtension[];
-  extendedBy: EntityExtensionRef[];
-}
-
-export const dbSchemaFacetDef = defineFacet<DbSchemaFacetData>("db-schema");
 
 // ── Helpers ────────────────────────────────────────────────────────────
 

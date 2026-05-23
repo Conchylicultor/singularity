@@ -1021,6 +1021,10 @@
       "name": "@singularity/plugin-plugin-meta-facets-slots",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/parse-utils": {
+      "name": "@singularity/plugin-plugin-meta-parse-utils",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/plugin-health": {
       "name": "@singularity/plugin-plugin-meta-plugin-health",
       "version": "0.0.1",
@@ -2484,6 +2488,8 @@
     "@singularity/plugin-plugin-meta-facets-routes": ["@singularity/plugin-plugin-meta-facets-routes@workspace:plugins/plugin-meta/plugins/facets/plugins/routes"],
 
     "@singularity/plugin-plugin-meta-facets-slots": ["@singularity/plugin-plugin-meta-facets-slots@workspace:plugins/plugin-meta/plugins/facets/plugins/slots"],
+
+    "@singularity/plugin-plugin-meta-parse-utils": ["@singularity/plugin-plugin-meta-parse-utils@workspace:plugins/plugin-meta/plugins/parse-utils"],
 
     "@singularity/plugin-plugin-meta-plugin-health": ["@singularity/plugin-plugin-meta-plugin-health@workspace:plugins/plugin-meta/plugins/plugin-health"],
 

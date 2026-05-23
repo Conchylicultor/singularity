@@ -34,7 +34,7 @@ const check: Check = {
           hint: "Run `./singularity build` to generate it.",
         };
       }
-      if (readFileSync(file, "utf8") !== renderCollectedDirRegistry({ root, def })) {
+      if (readFileSync(file, "utf8") !== await renderCollectedDirRegistry({ root, def })) {
         return {
           ok: false,
           message: `${rel} is out of sync with plugin source`,

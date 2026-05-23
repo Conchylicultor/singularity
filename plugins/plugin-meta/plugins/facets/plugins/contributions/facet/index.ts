@@ -1,83 +1,158 @@
-import type { DocMetaContribution, PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { join } from "path";
+import type { PluginTree, PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   createFacet,
-  defineFacet,
   getFacet,
   type ExtractContext,
   type RenderDocContext,
 } from "@plugins/plugin-meta/plugins/facets/core";
+import { slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
+import { readIfExists, stripTypes } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  type Contribution,
+  type ContributionsFacetData,
+  type DocMetaContribution,
+  contributionsFacetDef,
+} from "../core";
+import {
+  parseImports,
+  extractContributionsBlock,
+  findCalls,
+  parsePropsBlock,
+  parsePaneDefinitions,
+} from "./internal/static-parse";
 
-export const contributionsFacetDef = defineFacet<DocMetaContribution[]>("contributions");
-
-export default createFacet<DocMetaContribution[]>({
+export default createFacet<ContributionsFacetData>({
   def: contributionsFacetDef,
 
-  extract(ctx: ExtractContext): DocMetaContribution[] {
-    const { importedModules } = ctx;
-    if (!importedModules || importedModules.length === 0) return [];
-
-    const contributions: DocMetaContribution[] = [];
-    for (const { mod } of importedModules) {
-      let def: Record<string, unknown> | undefined;
-      try {
-        def = mod.default as Record<string, unknown> | undefined;
-      } catch {
-        continue;
-      }
-      if (!def) continue;
-
-      const rawContributions = def.contributions as
-        | Array<Record<string, unknown> & { _slotId?: string; _doc?: { label?: string; detail?: string } }>
-        | undefined;
-      if (!rawContributions) continue;
-
-      for (const c of rawContributions) {
-        if (!c._slotId) continue;
-        const comp = c.component;
-        const componentName =
-          typeof comp === "function" && comp.name ? (comp.name as string) : undefined;
-        contributions.push({
-          slotId: c._slotId,
-          // slotDisplayName filled in by relate()
-          componentName,
-          doc: c._doc ?? {},
-        });
+  extract(ctx: ExtractContext): ContributionsFacetData {
+    // Static contributions from web barrel source
+    const staticContributions: Contribution[] = [];
+    const webIndex = readIfExists(join(ctx.dir, "web", "index.ts"));
+    if (webIndex) {
+      const webSrc = stripTypes(webIndex);
+      const paneDefs = parsePaneDefinitions(join(ctx.dir, "web"));
+      const block = extractContributionsBlock(webSrc);
+      if (block !== null) {
+        const importMap = parseImports(webSrc);
+        for (const call of findCalls(block)) {
+          const [head, ...rest] = call.callee.split(".");
+          const tail = rest.join(".");
+          const imp = importMap.get(head!);
+          const displayHead = imp && imp.original !== "default" ? imp.original : head!;
+          const slot = `${displayHead}.${tail}`;
+          const props = parsePropsBlock(call.argsBody);
+          const contribution: Contribution = { slot, props };
+          if (slot === "Pane.Register" && props["pane"]) {
+            const def = paneDefs.get(props["pane"].trim());
+            if (def) {
+              contribution.paneId = def.id;
+              contribution.panePath = def.path;
+            }
+          }
+          staticContributions.push(contribution);
+        }
       }
     }
-    return contributions;
+
+    // Runtime contributions from barrel imports (existing logic)
+    const runtimeContributions: DocMetaContribution[] = [];
+    const { importedModules } = ctx;
+    if (importedModules && importedModules.length > 0) {
+      for (const { mod } of importedModules) {
+        let def: Record<string, unknown> | undefined;
+        try {
+          def = mod.default as Record<string, unknown> | undefined;
+        } catch {
+          continue;
+        }
+        if (!def) continue;
+
+        const rawContributions = def.contributions as
+          | Array<Record<string, unknown> & { _slotId?: string; _doc?: { label?: string; detail?: string } }>
+          | undefined;
+        if (!rawContributions) continue;
+
+        for (const c of rawContributions) {
+          if (!c._slotId) continue;
+          const comp = c.component;
+          const componentName =
+            typeof comp === "function" && comp.name ? (comp.name as string) : undefined;
+          runtimeContributions.push({
+            slotId: c._slotId,
+            // slotDisplayName filled in by relate()
+            componentName,
+            doc: c._doc ?? {},
+          });
+        }
+      }
+    }
+
+    return { static: staticContributions, runtime: runtimeContributions };
   },
 
   relate(rawCtx) {
     const { tree } = rawCtx as { tree: PluginTree };
 
-    // Build slotId → displayName from node.slots (monolithic field, populated before facets run)
+    // Build slotId -> displayName from the slots facet
     const slotDisplayNames = new Map<string, string>();
     for (const node of tree.byDir.values()) {
-      for (const s of node.slots ?? []) {
+      const nodeSlots = getFacet(node, slotsFacetDef) ?? [];
+      for (const s of nodeSlots) {
         if (!slotDisplayNames.has(s.slotId)) {
-          slotDisplayNames.set(s.slotId, `${s.groupName}.${s.memberName}`);
+          slotDisplayNames.set(s.slotId, s.groupName === s.memberName ? s.groupName : `${s.groupName}.${s.memberName}`);
         }
       }
     }
 
-    // Fill display names into already-extracted contribution data
+    // Fill display names into already-extracted runtime contribution data
     for (const node of tree.byDir.values()) {
-      const contribs = getFacet(node, contributionsFacetDef);
-      if (!contribs || contribs.length === 0) continue;
-      for (const c of contribs) {
+      const data = getFacet(node, contributionsFacetDef);
+      if (!data || data.runtime.length === 0) continue;
+      for (const c of data.runtime) {
         if (!c.slotDisplayName) {
           c.slotDisplayName = slotDisplayNames.get(c.slotId);
         }
       }
     }
+
+    // Compute slotContributors across tree (from slots + static contributions)
+    // Only consider statically-defined slots (not _runtimeOnly) to match prior behavior
+    const slotGroupToOwner = new Map<string, PluginNode>();
+    for (const info of tree.byDir.values()) {
+      const nodeSlots = (getFacet(info, slotsFacetDef) ?? [])
+        .filter(s => !(s as { _runtimeOnly?: boolean })._runtimeOnly);
+      for (const slot of nodeSlots) {
+        if (!slotGroupToOwner.has(slot.groupName)) {
+          slotGroupToOwner.set(slot.groupName, info);
+        }
+      }
+    }
+    for (const contributor of tree.byDir.values()) {
+      const data = getFacet(contributor, contributionsFacetDef);
+      if (!data) continue;
+      const groups = new Set<string>();
+      for (const c of data.static) {
+        const head = c.slot.split(".")[0];
+        if (head) groups.add(head);
+      }
+      for (const group of groups) {
+        const owner = slotGroupToOwner.get(group);
+        if (!owner || owner === contributor) continue;
+        if (!owner.slotContributors.includes(contributor.name)) {
+          owner.slotContributors.push(contributor.name);
+        }
+      }
+    }
+    for (const info of tree.byDir.values()) info.slotContributors.sort();
   },
 
-  renderDoc(data: DocMetaContribution[], ctx: RenderDocContext): string[] {
-    if (data.length === 0) return [];
+  renderDoc(data: ContributionsFacetData, ctx: RenderDocContext): string[] {
+    if (data.runtime.length === 0) return [];
     const indent = `${ctx.bodyIndent}  `;
     const subIndent = `${ctx.bodyIndent}    `;
     const lines: string[] = [`${indent}- Contributes:`];
-    for (const c of data) {
+    for (const c of data.runtime) {
       const parts = [`\`${c.slotDisplayName ?? c.slotId}\``];
       if (c.doc.label) parts.push(`"${c.doc.label}"`);
       if (c.doc.detail) parts.push(`(${c.doc.detail})`);

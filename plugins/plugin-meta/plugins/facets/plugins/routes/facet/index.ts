@@ -1,20 +1,19 @@
 import { join } from "path";
 import {
   createFacet,
-  defineFacet,
   getFacet,
 } from "@plugins/plugin-meta/plugins/facets/core";
+import type {
+  PluginNode,
+  PluginTree,
+} from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
-  type RouteDef,
-  type PluginNode,
-  type PluginTree,
   readIfExists,
   stripTypes,
   matchBracket,
   walkFiles,
-} from "@plugins/plugin-meta/plugins/plugin-tree/core";
-
-export const routesFacetDef = defineFacet<RouteDef[]>("routes");
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { type RouteDef, routesFacetDef } from "../core";
 
 export default createFacet<RouteDef[]>({
   def: routesFacetDef,

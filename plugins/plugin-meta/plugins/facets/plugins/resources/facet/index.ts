@@ -2,19 +2,8 @@ import { existsSync } from "fs";
 import { join } from "path";
 import {
   createFacet,
-  defineFacet,
 } from "@plugins/plugin-meta/plugins/facets/core";
-import {
-  type ResourceDef,
-  parseResources,
-} from "@plugins/plugin-meta/plugins/plugin-tree/core";
-
-export interface ResourceFacetData {
-  server: ResourceDef[];
-  central: ResourceDef[];
-}
-
-export const resourcesFacetDef = defineFacet<ResourceFacetData>("resources");
+import { type ResourceFacetData, resourcesFacetDef, parseResources } from "../core";
 
 export default createFacet<ResourceFacetData>({
   def: resourcesFacetDef,

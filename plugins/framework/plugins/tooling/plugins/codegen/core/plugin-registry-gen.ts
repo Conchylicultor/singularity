@@ -102,9 +102,9 @@ function hasDefaultExport(file: string): boolean {
   );
 }
 
-function collectEntries(root: string, dir: string): CollectedRawEntry[] {
+async function collectEntries(root: string, dir: string): Promise<CollectedRawEntry[]> {
   const pluginsRoot = resolve(root, "plugins");
-  const tree = buildPluginTree(pluginsRoot);
+  const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
   const entries: CollectedRawEntry[] = [];
   for (const node of tree.byDir.values()) {
     const indexFile = join(node.dir, dir, "index.ts");
@@ -142,23 +142,26 @@ function walkTsFiles(dir: string, out: string[]): void {
 
 const IMPORT_FROM_RE = /from\s*["']([^"']+)["']/g;
 
-function collectImportPaths(pluginDir: string, dir: string): Set<string> {
+function collectImportPrefixes(pluginDir: string, dir: string, entryPrefixes: Set<string>): Set<string> {
   const subDir = join(pluginDir, dir);
   const files: string[] = [];
   walkTsFiles(subDir, files);
-  const paths = new Set<string>();
+  const prefixes = new Set<string>();
   for (const f of files) {
     const src = readFileSync(f, "utf8");
     let m: RegExpExecArray | null;
     IMPORT_FROM_RE.lastIndex = 0;
     while ((m = IMPORT_FROM_RE.exec(src))) {
       const mod = m[1]!;
-      if (mod.startsWith("@plugins/") && mod.endsWith(`/${dir}`)) {
-        paths.add(mod);
+      if (!mod.startsWith("@plugins/")) continue;
+      const lastSlash = mod.lastIndexOf("/");
+      if (lastSlash > 0) {
+        const prefix = mod.slice(0, lastSlash);
+        if (entryPrefixes.has(prefix)) prefixes.add(prefix);
       }
     }
   }
-  return paths;
+  return prefixes;
 }
 
 function buildDepsForDir(
@@ -166,18 +169,23 @@ function buildDepsForDir(
   entries: CollectedRawEntry[],
   dir: string,
 ): Map<string, string[]> {
-  const importPathToPluginPath = new Map<string, string>();
-  for (const e of entries) importPathToPluginPath.set(e.importPath, e.pluginPath);
+  const prefixToPluginPath = new Map<string, string>();
+  const entryPrefixes = new Set<string>();
+  for (const e of entries) {
+    const prefix = e.importPath.slice(0, e.importPath.lastIndexOf("/"));
+    prefixToPluginPath.set(prefix, e.pluginPath);
+    entryPrefixes.add(prefix);
+  }
 
   const pluginsRoot = resolve(root, "plugins");
   const result = new Map<string, string[]>();
 
   for (const e of entries) {
     const pluginDir = join(pluginsRoot, e.pluginPath);
-    const importPaths = collectImportPaths(pluginDir, dir);
+    const depPrefixes = collectImportPrefixes(pluginDir, dir, entryPrefixes);
     const deps: string[] = [];
-    for (const imp of importPaths) {
-      const depPath = importPathToPluginPath.get(imp);
+    for (const prefix of depPrefixes) {
+      const depPath = prefixToPluginPath.get(prefix);
       if (depPath && depPath !== e.pluginPath) deps.push(depPath);
     }
     if (deps.length > 0) {
@@ -190,12 +198,12 @@ function buildDepsForDir(
 
 // ── Renderer ───────────────────────────────────────────────────────
 
-export function renderCollectedDirRegistry(opts: {
+export async function renderCollectedDirRegistry(opts: {
   root: string;
   def: DiscoveredCollectedDir;
-}): string {
+}): Promise<string> {
   const { root, def } = opts;
-  const entries = collectEntries(root, def.dir);
+  const entries = await collectEntries(root, def.dir);
   const deps = buildDepsForDir(root, entries, def.dir);
   const exportName = `${def.dir}Entries`;
 
@@ -238,7 +246,7 @@ export async function generatePluginRegistry(opts: {
   const defs = await discoverCollectedDirs(opts.root);
   for (const def of defs) {
     const file = collectedDirRegistryPath(def);
-    const next = renderCollectedDirRegistry({ root: opts.root, def });
+    const next = await renderCollectedDirRegistry({ root: opts.root, def });
     const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
     if (next !== existing) writeFileSync(file, next);
   }

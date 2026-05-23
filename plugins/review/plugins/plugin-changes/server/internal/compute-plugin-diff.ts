@@ -87,13 +87,15 @@ function tableStrings(node: PluginNode): string[] {
   return node.tables.map((t) => t.name);
 }
 
-export function computePluginChanges(
+export async function computePluginChanges(
   worktreePluginsDir: string,
   mainPluginsDir: string,
   editedFiles: EditedFile[],
-): PluginChangeDiff[] {
-  const worktreeTree = buildPluginTree(worktreePluginsDir);
-  const mainTree = buildPluginTree(mainPluginsDir);
+): Promise<PluginChangeDiff[]> {
+  const [worktreeTree, mainTree] = await Promise.all([
+    buildPluginTree(worktreePluginsDir, { skipBarrelImport: true }),
+    buildPluginTree(mainPluginsDir, { skipBarrelImport: true }),
+  ]);
 
   const worktreeNodes = flattenTree(worktreeTree.roots);
   const mainNodes = flattenTree(mainTree.roots);

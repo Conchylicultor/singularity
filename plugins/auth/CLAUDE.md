@@ -98,6 +98,13 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 - Contributes:
   - `Pane.Register` "accounts"
   - `Shell.Sidebar` "Accounts" → `component`
+- Central:
+  - `GET /api/auth/start/:provider`
+  - `GET /api/auth/callback/:provider`
+  - `POST /api/auth/disconnect/:provider`
+  - `POST /api/auth/api-key/:provider`
+  - `GET /api/auth/state`
+  - `POST /api/auth/token`
 - Imported by: `google`, `google-drive`, `notion`, `setup-wizard`
 - Slot contributors: `google`, `notion`
 - Endpoint callers: `setup-wizard`

@@ -116,8 +116,8 @@ function tally(
   for (const child of node.children) tally(child, totals);
 }
 
-export const handleTree = implement(getPluginTree, () => {
-  const tree = buildPluginTree(PLUGINS_DIR);
+export const handleTree = implement(getPluginTree, async () => {
+  const tree = await buildPluginTree(PLUGINS_DIR, { skipBarrelImport: true });
   const symbolConsumers = buildSymbolConsumers(tree);
   const plugins = tree.roots.map((r) => toApiNode(r, symbolConsumers));
 

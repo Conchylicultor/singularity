@@ -76,9 +76,9 @@ const CENTRAL_RUNTIME_ROUTES: ReadonlyArray<string> = [
  * `/:param` to get a forward-routable prefix. WS routes are taken as-is
  * (literal paths).
  */
-function collectCentralRoutes(root: string): string[] {
+async function collectCentralRoutes(root: string): Promise<string[]> {
   const out = new Set<string>(CENTRAL_RUNTIME_ROUTES);
-  for (const p of collectAllPlugins(root)) {
+  for (const p of await collectAllPlugins(root)) {
     for (const route of p.central.httpRoutes) {
       const space = route.indexOf(" ");
       const path = space >= 0 ? route.slice(space + 1) : route;
@@ -93,7 +93,7 @@ function collectCentralRoutes(root: string): string[] {
 async function writeCentralRoutesManifest(root: string): Promise<void> {
   const manifest: CentralRoutesManifest = {
     backend: "central",
-    routes: collectCentralRoutes(root),
+    routes: await collectCentralRoutes(root),
   };
   mkdirSync(SINGULARITY_DIR, { recursive: true });
   const tmp = `${CENTRAL_ROUTES_FILE}.tmp.${process.pid}`;

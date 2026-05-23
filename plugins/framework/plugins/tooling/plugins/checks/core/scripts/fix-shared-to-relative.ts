@@ -56,7 +56,7 @@ function pluginForPath(relFile: string, pluginSet: Set<string>): string | null {
 const dryRun = process.argv.includes("--dry-run");
 const root = await getRoot();
 const pluginsRoot = join(root, "plugins");
-const tree = buildPluginTree(pluginsRoot);
+const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
 const pluginSet = new Set(Array.from(tree.byDir.values()).map((n) => n.path));
 
 const files: string[] = [];

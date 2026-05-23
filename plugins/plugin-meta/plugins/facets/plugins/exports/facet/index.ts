@@ -1,34 +1,21 @@
 import { join } from "path";
 import {
   createFacet,
-  defineFacet,
   getFacet,
 } from "@plugins/plugin-meta/plugins/facets/core";
+import type {
+  PluginNode,
+  PluginTree,
+} from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
-  type PluginNode,
-  type PluginTree,
   parseBarrelExports,
   readIfExists,
-} from "@plugins/plugin-meta/plugins/plugin-tree/core";
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
+import { type ExportedSymbol, type ExportsData, exportsFacetDef } from "../core";
 
 const RUNTIMES = ["core", "web", "server", "central", "shared"] as const;
 type Runtime = (typeof RUNTIMES)[number];
-
-export interface ExportedSymbol {
-  name: string;
-  kind: "type" | "value";
-  consumers: string[];
-}
-
-export interface ExportsData {
-  core: ExportedSymbol[];
-  web: ExportedSymbol[];
-  server: ExportedSymbol[];
-  central: ExportedSymbol[];
-  shared: ExportedSymbol[];
-}
-
-export const exportsFacetDef = defineFacet<ExportsData>("exports");
 
 export default createFacet<ExportsData>({
   def: exportsFacetDef,
@@ -54,12 +41,14 @@ export default createFacet<ExportsData>({
     for (const node of tree.byDir.values()) byName.set(node.name, node);
 
     for (const importer of tree.byDir.values()) {
+      const xrefs = getFacet(importer, crossRefsFacetDef);
+      if (!xrefs) continue;
       const allUses = [
-        ...importer.server.apiUses,
-        ...importer.central.apiUses,
-        ...importer.webApiUses,
-        ...importer.coreApiUses,
-        ...importer.sharedApiUses,
+        ...(xrefs.apiUses["server"] ?? []),
+        ...(xrefs.apiUses["central"] ?? []),
+        ...(xrefs.apiUses["web"] ?? []),
+        ...(xrefs.apiUses["core"] ?? []),
+        ...(xrefs.apiUses["shared"] ?? []),
       ];
       for (const use of allUses) {
         const dot = use.indexOf(".");

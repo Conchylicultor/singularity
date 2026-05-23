@@ -13,7 +13,7 @@ tree.
 3. Import parsing helpers and types (e.g. `CommandDef`, `parseDefineGroup`)
    from `@plugins/plugin-meta/plugins/plugin-tree/core`.
 4. Run `./singularity build` — codegen auto-populates `facet.generated.ts`,
-   and `enrichPluginTreeDocs()` calls your `extract()` on every plugin node.
+   and `buildPluginTree()` calls your `extract()` on every plugin node.
 
 See `plugins/commands/` for the reference implementation.
 

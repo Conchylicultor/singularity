@@ -26,6 +26,7 @@
   - Register: `defineJob('build.run')`
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
   - Resources: `build.frontendHash` (push), `build.history` (push), `build.mainAheadCount` (push)
+  - `POST /api/build`
 - Endpoint callers: `build-profiling`
 - Sub-plugins:
   - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.

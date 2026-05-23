@@ -20,6 +20,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `MarkdownEnhancerSlot`
   - Server:
     - Uses: `database.db`, `tasks-core._conversations`
+    - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
+    - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
   - Imported by: `assistant-text`, `attempt`, `conv`, `plugin-link`, `task`, `task-link`
   - Slot contributors: `attempt`, `conv`, `plugin-link`, `task`, `task-link`
   - Plugins:
@@ -77,6 +79,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Uses: `conversations.createConversation`, `database.db`, `tasks-core.conversationsLiveResource`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`
     - Resources: `agent-launches` (push)
+    - `GET /api/agents`
+    - `POST /api/agents`
+    - `GET /api/agents/:id`
+    - `PATCH /api/agents/:id`
+    - `DELETE /api/agents/:id`
+    - `POST /api/agents/:id/launch`
+    - `GET /api/agents/:id/launches`
   - Imported by: `toggle`
   - Slot contributors: `toggle`
   - Extended by: `toggle` (table `agents_ext_auto_launch`)
@@ -258,6 +267,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Register: `defineJob('workflows.run')`, `defineTriggerEvent('workflows.userInputSubmitted')`
             - Uses: `database.db`
             - Resources: `workflow-definitions` (push), `workflow-executions` (push)
+            - `GET /api/workflows/definitions`
+            - `POST /api/workflows/definitions`
+            - `GET /api/workflows/definitions/:id`
+            - `PATCH /api/workflows/definitions/:id`
+            - `DELETE /api/workflows/definitions/:id`
+            - `GET /api/workflows/executions`
+            - `POST /api/workflows/executions`
+            - `GET /api/workflows/executions/:id`
+            - `DELETE /api/workflows/executions/:id`
+            - `POST /api/workflows/executions/:execId/steps/:stepId/submit`
           - Slot contributors: `branch`
         - **`shell`** — App shell for the workflows app. Registers the /workflows app entry and defines WorkflowsApp.Sidebar/Toolbar slots.
           - Exports (web):
@@ -298,6 +317,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Contributes:
     - `Pane.Register` "accounts"
     - `Shell.Sidebar` "Accounts" → `component`
+  - Central:
+    - `GET /api/auth/start/:provider`
+    - `GET /api/auth/callback/:provider`
+    - `POST /api/auth/disconnect/:provider`
+    - `POST /api/auth/api-key/:provider`
+    - `GET /api/auth/state`
+    - `POST /api/auth/token`
   - Imported by: `google`, `google-drive`, `notion`, `setup-wizard`
   - Slot contributors: `google`, `notion`
   - Endpoint callers: `setup-wizard`
@@ -382,6 +408,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineJob('build.run')`
     - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
     - Resources: `build.frontendHash` (push), `build.history` (push), `build.mainAheadCount` (push)
+    - `POST /api/build`
   - Endpoint callers: `build-profiling`
   - Plugins:
     - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
@@ -393,6 +420,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `BuildDetailSlots.Section` "commits" → `BuildCommitsSection`
       - Server:
         - Uses: `build._buildRuns`, `database.db`
+        - `GET /api/build/runs/:id/commits`
     - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.
       - Contributes:
         - `BuildDetailSlots.Section` "fix" → `BuildFixSection`
@@ -408,6 +436,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `BuildLogsResponseSchema`, `getBuildRunLogs`
       - Contributes:
         - `BuildDetailSlots.Section` "logs" → `BuildLogSection`
+      - Server:
+        - `GET /api/build/runs/:id/logs`
     - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane. Per-run build profiling data endpoint.
       - Exports (shared):
         - Values: `getBuildRunProfile`
@@ -459,6 +489,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Sidebar` "Settings" → `component`
   - Server:
     - Uses: `database.db`
+    - `GET /api/config`
+    - `GET /api/config/specs`
+    - `PATCH /api/config`
+    - `DELETE /api/config/:key`
   - Imported by: `auth`, `google`, `notion`, `setup-wizard`, `theme-customizer`
   - Slot contributors: `theme-customizer`
 
@@ -532,6 +566,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Shell.Sidebar` "Config" → `ConfigSidebarButton`
       - Server:
         - Uses: `config_v2.acknowledgeConflictByPath`, `config_v2.deleteOverrideByPath`, `config_v2.getRawFileContent`, `config_v2.resetConfigByPath`, `config_v2.setConfigByPath`
+        - `POST /api/config-v2/reset-field`
+        - `POST /api/config-v2/acknowledge-conflict`
+        - `POST /api/config-v2/delete-override`
+        - `GET /api/config-v2/raw-file`
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Defines:
@@ -549,6 +587,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Register: `defineJob('tasks.maybe-launch')`, `defineJob('tasks.maybe-launch-dependents')`, `defineTriggerEvent('conversation.created')`, `defineTriggerEvent('conversation.turn-completed')`, `defineTriggerEvent('conversation.userTurnSent')`
     - Uses: `config_v2.forkConfig`, `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.notifyConversationsChanged`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTask`, `tasks-core.updateTaskTitle`
+    - `GET /api/conversations`
+    - `GET /api/conversations/gone`
+    - `GET /api/conversations/:id`
+    - `POST /api/conversations`
+    - `DELETE /api/conversations`
+    - `POST /api/conversations/:id/turn`
+    - `POST /api/conversations/:id/stop`
+    - `GET /api/conversations/:id/turns`
+    - `POST /api/conversations/:id/close`
   - Imported by: `agents`, `attempt-view`, `code-explorer`, `code-review`, `commits-graph`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `dependent-count`, `docs-button`, `drop-and-exit`, `drop-dependents`, `exit`, `file-changes`, `fork-session`, `grouped`, `history`, `hold-and-exit`, `improve`, `markdown-extensions`, `model`, `new-child-task`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `push-profiling`, `queue`, `read`, `resume`, `review`, `runtime-api`, `runtime-tmux`, `status`, `summary`, `task`, `task-header`, `task-title`, `tasks`, `tasks-panel`, `terminal-pane`, `tool-call`, `turn-summary`, `user-text`, `vscode`, `welcome`
   - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `resume`, `transcript-api`
   - Plugins:
@@ -1087,6 +1134,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `Pane.Register` "logs-channel"
         - `DebugApp.Sidebar` "Logs" → `component`
       - Server:
+        - `GET /api/logs/channels`
         - `WS /ws/logs`
     - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
       - Exports (web):
@@ -1308,6 +1356,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register: `defineJob('events.dispatch')`, `UNSAFE_installDurableHooks()`
         - Uses: `database.db`
         - Resources: `event-emissions` (invalidate), `event-triggers` (invalidate)
+        - `GET /api/events/emissions`
+        - `GET /api/events/triggers`
+        - `DELETE /api/events/triggers/:id`
+        - `PATCH /api/events/triggers/:id`
       - Endpoint callers: `queue`
     - **`file-watcher`** — Shared @parcel/watcher primitive with debounce, ceiling, and reconcile timer management.
       - Exports (server):
@@ -1334,6 +1386,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register: `defineJob('jobs.resume')`
         - Uses: `database.db`
         - Resources: `jobs-list` (invalidate)
+        - `GET /api/jobs`
+        - `POST /api/jobs/:id/retry`
+        - `DELETE /api/jobs/:id`
       - Endpoint callers: `queue`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Exports (server):
@@ -1356,6 +1411,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (central):
         - Types: `SecretMetadata`, `SecretRef`
         - Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `setSecret`
+      - Central:
+        - `POST /api/secrets/get`
+        - `POST /api/secrets/set`
+        - `POST /api/secrets/delete`
+        - `POST /api/secrets/has`
+        - `POST /api/secrets/meta`
+        - `POST /api/secrets/list`
     - **`worktree`**
       - Exports (server):
         - Values: `ensureMainWorktreeRoot`, `removeWorktree`, `setupWorktree`, `worktreePathFor`
@@ -1404,14 +1466,45 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `createFacet`, `defineFacet`, `facetCollectedDir`, `getFacet`, `loadFacets`, `setFacet`
       - Plugins:
         - **`commands`**
+          - Exports (core):
+            - Types: `CommandDef`
+            - Values: `commandsFacetDef`
         - **`contributions`**
+          - Exports (core):
+            - Types: `Contribution`, `ContributionsFacetData`, `DocMetaContribution`
+            - Values: `contributionsFacetDef`
         - **`cross-refs`**
+          - Exports (core):
+            - Types: `CrossRefsData`
+            - Values: `crossRefsFacetDef`
         - **`db-schema`**
+          - Exports (core):
+            - Types: `DbSchemaFacetData`, `EntityExtension`, `EntityExtensionRef`, `TableDef`
+            - Values: `dbSchemaFacetDef`
         - **`exports`**
+          - Exports (core):
+            - Types: `ExportedSymbol`, `ExportsData`
+            - Values: `exportsFacetDef`
         - **`registrations`**
+          - Exports (core):
+            - Types: `DocMetaRegistration`
+            - Values: `registrationsFacetDef`
         - **`resources`**
+          - Exports (core):
+            - Types: `ResourceDef`, `ResourceFacetData`
+            - Values: `parseResources`, `resourcesFacetDef`
         - **`routes`**
+          - Exports (core):
+            - Types: `RouteDef`
+            - Values: `routesFacetDef`
         - **`slots`**
+          - Exports (core):
+            - Types: `SlotDef`
+            - Values: `slotsFacetDef`
+    - **`parse-utils`**
+      - Exports (core):
+        - Types: `BarrelExport`
+        - Values: `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `stripTypes`, `walkFiles`
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Defines:
         - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`
@@ -1427,10 +1520,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register: `mcpTool('propose_task')`
         - Uses: `database.db`, `tasks-core._tasks`, `tasks-core.createTask`, `tasks-core.getConversation`
         - Resources: `plugin-health-reviews` (push)
+        - `GET /api/plugin-health/reviews`
+        - `GET /api/plugin-health/staleness/:pluginId`
+        - `GET /api/plugin-health/tasks/:reviewId`
     - **`plugin-tree`**
       - Exports (core):
-        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `ResourceDef`, `RouteDef`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`
-        - Values: `buildPluginTree`, `enrichPluginTreeDocs`, `matchBracket`, `parseBarrelExports`, `parseDefineGroup`, `parseResources`, `readIfExists`, `stripTypes`, `walkFiles`
+        - Types: `BarrelExport`, `CommandDef`, `Contribution`, `ContributionsFacetData`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `ResourceDef`, `RouteDef`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`
+        - Values: `buildPluginTree`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseResources`, `parseStringField`, `readIfExists`, `stripTypes`, `walkFiles`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Exports (core):
         - Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `EntityExtensionInfo`, `EntityExtensionRef`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`, `TableInfo`
@@ -1440,6 +1536,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
       - Contributes:
         - `Pane.Register` "plugin-view"
+      - Server:
+        - `GET /api/plugin-view/tree`
       - Endpoint callers: `catalog`, `plugin-link`, `publish`
       - Plugins:
         - **`public-api`** — Displays the plugin's public exports, slots, routes, and consumer relationships.
@@ -1715,6 +1813,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `_reorderGroupMembers`, `_reorderGroups`, `reorderGroupsResource`
       - Server:
         - Uses: `database.db`
+        - `POST /api/reorder/:slotId/groups`
+        - `PATCH /api/reorder/groups/:id`
+        - `DELETE /api/reorder/groups/:id`
+        - `POST /api/reorder/groups/:id/members`
+        - `DELETE /api/reorder/:slotId/groups/members/:contributionId`
       - Endpoint callers: `reorder`
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
@@ -1744,6 +1847,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
       - Server:
         - Uses: `code-explorer.getRangeFiles`, `code-explorer.resolveParentSha`, `tasks-core.getConversation`, `tasks-core.listPushesByPushId`
+        - `GET /api/review/plugin-changes`
       - Plugins:
         - **`api-changes`** — API surface diff section for per-plugin review cards.
           - Contributes:
@@ -1837,6 +1941,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Register: `mcpTool('add_task')`, `defineJob('tasks.push-ingest')`
     - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.Task`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.deleteTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.getTaskDependencyIds`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listDependentIds`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.taskAttachments`, `tasks-core.updateTask`
+    - `GET /api/tasks`
+    - `POST /api/tasks`
+    - `POST /api/tasks/chain`
+    - `POST /api/tasks/insert-between`
+    - `GET /api/tasks/:id`
+    - `PATCH /api/tasks/:id`
+    - `DELETE /api/tasks/:id`
+    - `GET /api/tasks/:id/attachments`
+    - `POST /api/tasks/:id/auto-start`
+    - `DELETE /api/tasks/:id/auto-start`
+    - `POST /api/tasks/:id/dependencies`
+    - `DELETE /api/tasks/:id/dependencies/:depId`
+    - `GET /api/repo-info`
   - Endpoint callers: `dependencies`, `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-graph`, `task-list`, `tree`
   - Plugins:
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
@@ -1964,10 +2081,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
           - Contributes:
-            - `SegmentedProgressBarSlots.Variant` "Dots" → `DotsRenderer`
+            - `SegmentedProgressBar.Variant` "Dots" → `DotsRenderer`
         - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.
           - Contributes:
-            - `SegmentedProgressBarSlots.Variant` "Segmented" → `SegmentedRenderer`
+            - `SegmentedProgressBar.Variant` "Segmented" → `SegmentedRenderer`
     - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
       - Defines:
         - Slots: `ThemeEngine.VariantGroup`, `ThemeEngine.TokenGroup`, `ThemeEngine.GlobalPreset`, `ThemeEngine.ColorTransform`

@@ -2,7 +2,6 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from "fs";
 import { join, relative, resolve } from "path";
 import {
   buildPluginTree,
-  enrichPluginTreeDocs,
   type PluginNode,
   type PluginTree,
   type BarrelExport,
@@ -199,8 +198,8 @@ export interface GenerateDocsOptions {
   root: string;
 }
 
-export function collectAllPlugins(root: string): PluginNode[] {
-  const tree = buildPluginTree(resolve(root, "plugins"));
+export async function collectAllPlugins(root: string): Promise<PluginNode[]> {
+  const tree = await buildPluginTree(resolve(root, "plugins"), { skipBarrelImport: true });
   return Array.from(tree.byDir.values());
 }
 
@@ -233,11 +232,7 @@ const enrichedTreeCache = new Map<string, Promise<PluginTree>>();
 export function buildEnrichedTree(root: string): Promise<PluginTree> {
   let cached = enrichedTreeCache.get(root);
   if (!cached) {
-    cached = (async () => {
-      const tree = buildPluginTree(resolve(root, "plugins"));
-      await enrichPluginTreeDocs(tree, root);
-      return tree;
-    })();
+    cached = buildPluginTree(resolve(root, "plugins"));
     enrichedTreeCache.set(root, cached);
   }
   return cached;

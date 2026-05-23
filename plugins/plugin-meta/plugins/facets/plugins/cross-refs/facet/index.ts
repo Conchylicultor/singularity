@@ -1,49 +1,17 @@
 import { basename, join } from "path";
-import { existsSync, readdirSync, readFileSync } from "fs";
+import { existsSync } from "fs";
 import {
   createFacet,
-  defineFacet,
   getFacet,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { walkFiles, readIfExists } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { type CrossRefsData, crossRefsFacetDef } from "../core";
 
 const RUNTIMES = ["server", "central", "web", "core", "shared"] as const;
 type Runtime = (typeof RUNTIMES)[number];
 
-export interface CrossRefsData {
-  apiUses: Record<Runtime, string[]>;
-  importedBy: string[];
-}
-
-export const crossRefsFacetDef = defineFacet<CrossRefsData>("cross-refs");
-
 // ── Helpers ────────────────────────────────────────────────────────────
-
-function walkFiles(dir: string, out: string[]): void {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const e of entries) {
-    const p = join(dir, e.name);
-    if (e.isDirectory()) {
-      if (e.name === "node_modules" || e.name === "plugins") continue;
-      walkFiles(p, out);
-    } else if (e.isFile() && /\.(ts|tsx)$/.test(e.name)) {
-      out.push(p);
-    }
-  }
-}
-
-function readIfExists(path: string): string | undefined {
-  try {
-    return readFileSync(path, "utf8");
-  } catch {
-    return undefined;
-  }
-}
 
 function parseApiUses(runtimeDir: string, selfName: string, runtime: Runtime): string[] {
   const files: string[] = [];

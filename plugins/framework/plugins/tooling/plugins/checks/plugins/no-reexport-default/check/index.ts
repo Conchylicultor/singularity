@@ -29,7 +29,7 @@ const check: Check = {
     const pluginsRoot = join(root, "plugins");
     if (!existsSync(pluginsRoot)) return { ok: true };
 
-    const tree = buildPluginTree(pluginsRoot);
+    const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
     const missing: string[] = [];
     const reexported: string[] = [];
 
