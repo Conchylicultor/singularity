@@ -43,10 +43,8 @@ export function TokenRow({
   const color = Color.fromCss(value);
   const isColor = color !== null;
 
-  const handleColorChange = (newHex: string) => {
-    const c = Color.fromCss(newHex);
-    if (!c) return;
-    onValueChange(c.toOklch());
+  const handleColorChange = (newOklch: string) => {
+    onValueChange(newOklch);
   };
 
   const handleTextBlur = () => {
@@ -70,7 +68,7 @@ export function TokenRow({
     <div className="flex items-center gap-2 py-1 px-2 rounded-md hover:bg-muted/50 group">
       {isColor ? (
         <ColorPickerPopover
-          value={color.toHex()}
+          value={value}
           onChange={handleColorChange}
         />
       ) : null}
@@ -84,7 +82,7 @@ export function TokenRow({
 
       {isColor ? (
         <span className="text-xs font-mono text-muted-foreground tabular-nums">
-          {color.toHex()}
+          {value}
         </span>
       ) : (
         <input

@@ -23,7 +23,7 @@ export function colorField(
   return Object.freeze({
     type: colorFieldType,
     schema: z.string(),
-    defaultValue: opts?.default ?? "#000000",
+    defaultValue: opts?.default ?? "oklch(0 0 0)",
     meta: {
       label: opts?.label,
       description: opts?.description,

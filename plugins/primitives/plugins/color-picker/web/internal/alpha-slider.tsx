@@ -28,7 +28,7 @@ export function AlphaSlider({
     onChange(x);
   });
 
-  const opaque = color.withAlpha(1).toHex();
+  const opaque = color.withAlpha(1).toOklch();
 
   return (
     <div

@@ -8,8 +8,11 @@ export interface SwatchGridProps {
   className?: string;
 }
 
-function normalize(css: string): string {
-  return Color.fromCss(css)?.toHex() ?? css.toLowerCase();
+function colorsMatch(a: string, b: string): boolean {
+  const ca = Color.fromCss(a);
+  const cb = Color.fromCss(b);
+  if (!ca || !cb) return a.toLowerCase() === b.toLowerCase();
+  return ca.equals(cb);
 }
 
 export function SwatchGrid({
@@ -18,12 +21,10 @@ export function SwatchGrid({
   onChange,
   className,
 }: SwatchGridProps) {
-  const normalizedValue = value != null ? normalize(value) : null;
-
   return (
     <div className={cn("flex flex-wrap gap-1.5", className)}>
       {colors.map((c) => {
-        const selected = normalizedValue === normalize(c);
+        const selected = value != null && colorsMatch(value, c);
         return (
           <button
             key={c}

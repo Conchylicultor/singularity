@@ -24,7 +24,7 @@ export function ColorPicker({
   className,
 }: ColorPickerProps) {
   const lastEmitted = useRef(value);
-  const [color, setColor] = useState(() => Color.fromCss(value) ?? Color.fromHex("#3b82f6"));
+  const [color, setColor] = useState(() => Color.fromCss(value) ?? Color.fromOklch(0.623, 0.214, 259.1));
 
   useEffect(() => {
     if (value !== lastEmitted.current) {
@@ -39,9 +39,9 @@ export function ColorPicker({
   const emit = useCallback(
     (next: Color) => {
       setColor(next);
-      const hex = next.toHex();
-      lastEmitted.current = hex;
-      onChange(hex);
+      const oklch = next.toOklch();
+      lastEmitted.current = oklch;
+      onChange(oklch);
     },
     [onChange],
   );

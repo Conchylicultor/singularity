@@ -1,9 +1,9 @@
 # color
 
-Color field type for config_v2. Stores a hex color string (e.g. `"#ff0000"`).
+Color field type for config_v2. Stores an oklch color string (e.g. `"oklch(0.628 0.258 29.2)"`).
 The web renderer wraps `ColorPickerPopover` from the `color-picker` primitive:
 a popover with color area, hue slider, optional alpha slider, optional swatches,
-and a hex input.
+and a format-cycling input (hex/oklch/hsl).
 
 ## Usage
 
@@ -15,8 +15,8 @@ const myConfig = defineConfig("my-plugin", {
     accent: colorField({
       label: "Accent color",
       description: "Primary accent color for the UI",
-      default: "#3b82f6",
-      swatches: ["#ef4444", "#3b82f6", "#22c55e", "#f59e0b"],
+      default: "oklch(0.623 0.214 259.1)",
+      swatches: ["oklch(0.577 0.245 27.3)", "oklch(0.623 0.214 259.1)", "oklch(0.565 0.179 162.5)", "oklch(0.769 0.188 70.1)"],
     }),
     highlight: colorField({
       label: "Highlight color",

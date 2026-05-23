@@ -36,16 +36,13 @@ function parseJson(value: unknown): Record<string, unknown> {
   }
 }
 
-function colorToHex(oklchChannels: string): string {
-  const parts = oklchChannels.trim().split(/\s+/);
-  const l = parseFloat(parts[0] ?? "0");
-  const c = parseFloat(parts[1] ?? "0");
-  const h = parseFloat(parts[2] ?? "0");
-  return Color.fromOklch(l, c, h).toHex();
+function channelsToOklch(channels: string): string {
+  return `oklch(${channels})`;
 }
 
-function hexToColorParam(hex: string): string {
-  const color = Color.fromHex(hex);
+function oklchToChannels(oklchCss: string): string | null {
+  const color = Color.fromCss(oklchCss);
+  if (!color) return null;
   const l = Math.round(color.l * 1000) / 1000;
   const c = Math.round(color.c * 1000) / 1000;
   const h = Math.round(color.h * 10) / 10;
@@ -182,7 +179,7 @@ export function ShadowSection({ search }: { search: string }) {
 
   if (search && !matchesSearch(search.toLowerCase())) return null;
 
-  const colorHex = colorToHex(mergedParams.color);
+  const colorOklch = channelsToOklch(mergedParams.color);
   const colorIsOverridden = "color" in storedPartial;
 
   return (
@@ -225,9 +222,10 @@ export function ShadowSection({ search }: { search: string }) {
               <span className="text-xs font-medium w-16 shrink-0">Color</span>
               <div className="flex items-center gap-2 flex-1">
                 <ColorPickerPopover
-                  value={colorHex}
-                  onChange={(hex) => {
-                    const param = hexToColorParam(hex);
+                  value={colorOklch}
+                  onChange={(oklch) => {
+                    const param = oklchToChannels(oklch);
+                    if (!param) return;
                     if (param === baseParams.color) {
                       const next = { ...storedPartial };
                       delete next.color;
