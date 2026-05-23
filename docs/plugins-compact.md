@@ -136,6 +136,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
         - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Named template chips that prepend text to the conversation prompt editor for editing before sending.
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
+        - **`push-profiling`** — Toolbar button showing push/build Gantt scoped to the last hour.
         - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
         - **`side-task`** — Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).
         - **`status`** — Displays the conversation status as a colored badge in the toolbar.
@@ -181,6 +182,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
         - **`build`** — Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
         - **`push`** — Push contention profiling for the Gantt debug pane. Push contention profiling data endpoint.
+          - Plugins:
+            - **`push-gantt`** — Reusable push/build Gantt chart component.
         - **`stats`** — Stats endpoint profiling for the Gantt debug pane. Stats endpoint profiling data endpoint.
     - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.

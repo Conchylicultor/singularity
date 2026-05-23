@@ -29,23 +29,83 @@ interface WorktreeGroup {
 }
 
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+const TWENTY_MINUTES = 20 * 60 * 1000;
+
+function matchesWorktree(wt: string, target: string): boolean {
+  return wt === target || wt === `claude-web/${target}` || wt.endsWith(`/${target}`);
+}
+
+function computeWorktreeWindow(
+  allPushRecords: ReturnType<typeof readContentionRecords>,
+  allBuildRecords: ReturnType<typeof readBuildLogRecords>,
+  worktree: string,
+  padding: number,
+): { cutoffStart: number; cutoffEnd: number } | null {
+  const timestamps: number[] = [];
+
+  for (const r of allPushRecords) {
+    const wt = r.worktree ?? r.branch;
+    if (!matchesWorktree(wt, worktree)) continue;
+    const start = new Date(r.lockRequestedAt).getTime();
+    timestamps.push(start, start + r.waitMs + r.holdMs);
+  }
+
+  for (const r of allBuildRecords) {
+    if (!matchesWorktree(r.worktree, worktree)) continue;
+    const start = new Date(r.startedAt).getTime();
+    timestamps.push(start, start + r.totalMs);
+  }
+
+  if (timestamps.length === 0) return null;
+
+  const min = Math.min(...timestamps);
+  const max = Math.max(...timestamps);
+  return { cutoffStart: min - padding, cutoffEnd: max + padding };
+}
 
 export const handlePushProfiling = implement(
   getPushProfiling,
-  () => {
-    const cutoff = Date.now() - TWENTY_FOUR_HOURS;
-
+  ({ query }) => {
     const allPushRecords = readContentionRecords();
-    const recentPushes = allPushRecords
-      .filter((r) => new Date(r.startedAt).getTime() >= cutoff)
-      .sort(
-        (a, b) =>
-          new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
-      );
-
     const allBuildRecords = readBuildLogRecords();
-    const recentBuilds = allBuildRecords.filter(
-      (r) => new Date(r.startedAt).getTime() >= cutoff,
+
+    let recentPushes: typeof allPushRecords;
+    let recentBuilds: typeof allBuildRecords;
+
+    if (query.worktree) {
+      const padding = query.padding ?? TWENTY_MINUTES;
+      const window = computeWorktreeWindow(
+        allPushRecords,
+        allBuildRecords,
+        query.worktree,
+        padding,
+      );
+      if (!window) return { groups: [], totalMs: 0 };
+
+      recentPushes = allPushRecords.filter((r) => {
+        const start = new Date(r.lockRequestedAt).getTime();
+        const end = start + r.waitMs + r.holdMs;
+        return end >= window.cutoffStart && start <= window.cutoffEnd;
+      });
+      recentBuilds = allBuildRecords.filter((r) => {
+        const start = new Date(r.startedAt).getTime();
+        const end = start + r.totalMs;
+        return end >= window.cutoffStart && start <= window.cutoffEnd;
+      });
+    } else {
+      const sinceMs = query.since ?? TWENTY_FOUR_HOURS;
+      const cutoff = Date.now() - sinceMs;
+      recentPushes = allPushRecords.filter(
+        (r) => new Date(r.startedAt).getTime() >= cutoff,
+      );
+      recentBuilds = allBuildRecords.filter(
+        (r) => new Date(r.startedAt).getTime() >= cutoff,
+      );
+    }
+
+    recentPushes.sort(
+      (a, b) =>
+        new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
     );
 
     if (recentPushes.length === 0 && recentBuilds.length === 0) {

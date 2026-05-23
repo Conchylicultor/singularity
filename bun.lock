@@ -540,6 +540,10 @@
     "plugins/conversations/plugins/conversation-view/plugins/push-counter": {
       "name": "@singularity/plugin-conversations-conversation-view-push-counter",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/push-profiling": {
+      "name": "@singularity/plugin-conversations-conversation-view-push-profiling",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/resume": {
       "name": "@singularity/plugin-conversations-conversation-view-resume",
       "version": "0.0.1",
@@ -689,6 +693,10 @@
     },
     "plugins/debug/plugins/profiling/plugins/push": {
       "name": "@singularity/plugin-debug-profiling-push",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt": {
+      "name": "@singularity/plugin-debug-profiling-push-push-gantt",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/profiling/plugins/stats": {
@@ -2267,6 +2275,8 @@
 
     "@singularity/plugin-conversations-conversation-view-push-counter": ["@singularity/plugin-conversations-conversation-view-push-counter@workspace:plugins/conversations/plugins/conversation-view/plugins/push-counter"],
 
+    "@singularity/plugin-conversations-conversation-view-push-profiling": ["@singularity/plugin-conversations-conversation-view-push-profiling@workspace:plugins/conversations/plugins/conversation-view/plugins/push-profiling"],
+
     "@singularity/plugin-conversations-conversation-view-resume": ["@singularity/plugin-conversations-conversation-view-resume@workspace:plugins/conversations/plugins/conversation-view/plugins/resume"],
 
     "@singularity/plugin-conversations-conversation-view-side-task": ["@singularity/plugin-conversations-conversation-view-side-task@workspace:plugins/conversations/plugins/conversation-view/plugins/side-task"],
@@ -2338,6 +2348,8 @@
     "@singularity/plugin-debug-profiling-build": ["@singularity/plugin-debug-profiling-build@workspace:plugins/debug/plugins/profiling/plugins/build"],
 
     "@singularity/plugin-debug-profiling-push": ["@singularity/plugin-debug-profiling-push@workspace:plugins/debug/plugins/profiling/plugins/push"],
+
+    "@singularity/plugin-debug-profiling-push-push-gantt": ["@singularity/plugin-debug-profiling-push-push-gantt@workspace:plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt"],
 
     "@singularity/plugin-debug-profiling-stats": ["@singularity/plugin-debug-profiling-stats@workspace:plugins/debug/plugins/profiling/plugins/stats"],
 

@@ -1,0 +1,26 @@
+import { Activity } from "lucide-react";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Button } from "@/components/ui/button";
+import { convPushProfilingPane } from "../panes";
+
+export function PushProfilingButton() {
+  const { convId } = conversationPane.useParams();
+  const { isOpen, toggle } = convPushProfilingPane.useToggle(
+    { convId },
+    { input: { convId } },
+  );
+
+  return (
+    <Button
+      variant={isOpen ? "secondary" : "ghost"}
+      size="sm"
+      title="Push profiling"
+      aria-label="Push profiling"
+      aria-pressed={isOpen}
+      onClick={toggle}
+      className="gap-1.5"
+    >
+      <Activity className="size-4" />
+    </Button>
+  );
+}
