@@ -1,4 +1,5 @@
 import { createFileWatcher, type FileWatcher } from "@plugins/infra/plugins/file-watcher/server";
+import { isMain } from "@plugins/infra/plugins/paths/server";
 import { gitCommonDir } from "./git-common-dir";
 import { readSha } from "./read-sha";
 import { refAdvanced } from "./tables-ref-advanced";
@@ -65,7 +66,7 @@ async function recompute(): Promise<void> {
     if (sha === previousSha) continue;
     lastKnownSha.set(refName, sha);
     refHeadResource.notify({ refName });
-    if (sha) {
+    if (sha && isMain()) {
       try {
         await refAdvanced.emit({ refName, sha, previousSha });
       // eslint-disable-next-line promise-safety/no-bare-catch

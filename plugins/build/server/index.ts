@@ -35,9 +35,9 @@ export default {
       buildHistoryResource.notify();
     }
 
+    await deleteTriggersFor(buildRunJob);
     if (!isMain()) return;
 
-    await deleteTriggersFor(buildRunJob);
     await trigger({
       on: refAdvanced.where({ refName: "refs/heads/main" }),
       do: buildRunJob,
