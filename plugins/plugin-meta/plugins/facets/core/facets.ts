@@ -5,6 +5,9 @@ export interface FacetDef<T> {
 
 export interface ExtractContext {
   dir: string;
+  // Barrel-imported modules for this plugin (populated by Pass 1 in enrichPluginTreeDocs).
+  // Undefined for facets that only need static file access.
+  importedModules?: { mod: Record<string, unknown>; runtime: "web" | "server" | "central" }[];
 }
 
 export interface RenderDocContext {

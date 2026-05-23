@@ -985,6 +985,10 @@
       "name": "@singularity/plugin-plugin-meta-facets-cross-refs",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/facets/plugins/registrations": {
+      "name": "@singularity/plugin-plugin-meta-facets-registrations",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/facets/plugins/resources": {
       "name": "@singularity/plugin-plugin-meta-facets-resources",
       "version": "0.0.1",
@@ -2442,6 +2446,8 @@
     "@singularity/plugin-plugin-meta-facets-commands": ["@singularity/plugin-plugin-meta-facets-commands@workspace:plugins/plugin-meta/plugins/facets/plugins/commands"],
 
     "@singularity/plugin-plugin-meta-facets-cross-refs": ["@singularity/plugin-plugin-meta-facets-cross-refs@workspace:plugins/plugin-meta/plugins/facets/plugins/cross-refs"],
+
+    "@singularity/plugin-plugin-meta-facets-registrations": ["@singularity/plugin-plugin-meta-facets-registrations@workspace:plugins/plugin-meta/plugins/facets/plugins/registrations"],
 
     "@singularity/plugin-plugin-meta-facets-resources": ["@singularity/plugin-plugin-meta-facets-resources@workspace:plugins/plugin-meta/plugins/facets/plugins/resources"],
 

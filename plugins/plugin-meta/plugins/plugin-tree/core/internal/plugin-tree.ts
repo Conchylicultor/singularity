@@ -1101,8 +1101,9 @@ export async function enrichPluginTreeDocs(
   // Pass 3: facet extraction (dual-write alongside monolithic fields)
   const facets = await loadFacets();
   for (const node of tree.byDir.values()) {
+    const nodeModules = importedModules.get(node.dir) ?? [];
     for (const facet of facets) {
-      const data = facet.extract({ dir: node.dir });
+      const data = facet.extract({ dir: node.dir, importedModules: nodeModules });
       setFacet(node, facet.def, data);
     }
   }

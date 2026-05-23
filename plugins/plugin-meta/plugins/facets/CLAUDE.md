@@ -28,6 +28,7 @@ See `plugins/commands/` for the reference implementation.
 - Sub-plugins:
   - **`commands`**
   - **`cross-refs`**
+  - **`registrations`**
   - **`resources`**
   - **`routes`**
   - **`slots`**

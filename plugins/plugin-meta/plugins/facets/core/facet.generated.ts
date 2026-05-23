@@ -15,6 +15,7 @@ export interface CollectedEntry {
 export const facetEntries: CollectedEntry[] = [
   { pluginPath: "plugin-meta/plugins/facets/plugins/commands", hierarchyPath: "plugin-meta/facets/commands", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/commands/facet"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/facets/plugins/cross-refs", hierarchyPath: "plugin-meta/facets/cross-refs", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/cross-refs/facet"), dependsOn: [] },
+  { pluginPath: "plugin-meta/plugins/facets/plugins/registrations", hierarchyPath: "plugin-meta/facets/registrations", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/registrations/facet"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/facets/plugins/resources", hierarchyPath: "plugin-meta/facets/resources", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/resources/facet"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/facets/plugins/routes", hierarchyPath: "plugin-meta/facets/routes", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/routes/facet"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/facets/plugins/slots", hierarchyPath: "plugin-meta/facets/slots", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/slots/facet"), dependsOn: [] },
