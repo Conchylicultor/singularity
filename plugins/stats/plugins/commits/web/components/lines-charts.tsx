@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { useConfigValues } from "@plugins/config/web";
+import { useConfig } from "@plugins/config_v2/web";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { commitsConfig } from "../../shared/config";
 import {
@@ -31,7 +30,7 @@ import {
   useFetchJson,
   yAxisFormatter,
 } from "./chart-primitives";
-import { ExcludedPathToggles, excludedPathStateResource } from "./excluded-path-toggles";
+import { ExcludedPathToggles } from "./excluded-path-toggles";
 
 const ADDED_COLOR = "var(--chart-added, #16a34a)";
 const REMOVED_COLOR = "var(--chart-removed, #dc2626)";
@@ -467,10 +466,8 @@ export function LinesRateBreakdownChart({ bucket, filterKey, dedup }: { bucket: 
 export function LinesChartsSection() {
   const [byType, setByType] = useState(false);
   const [bucket, setBucket] = useState<Bucket>("day");
-  const overridesResult = useResource(excludedPathStateResource);
-  const overrides = overridesResult.pending ? {} : overridesResult.data;
-  const { filterRebases } = useConfigValues(commitsConfig, "stats-commits");
-  const filterKey = JSON.stringify(overrides);
+  const { excludedPaths, filterRebases } = useConfig(commitsConfig);
+  const filterKey = JSON.stringify(excludedPaths);
 
   return (
     <div className="flex flex-col gap-6">

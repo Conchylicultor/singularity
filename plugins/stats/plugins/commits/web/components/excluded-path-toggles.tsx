@@ -1,28 +1,6 @@
-import { z } from "zod";
-import { resourceDescriptor, useResource } from "@plugins/primitives/plugins/live-state/web";
-import { useConfigValues } from "@plugins/config/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { cn } from "@/lib/utils";
 import { commitsConfig } from "../../shared/config";
-
-type PathStateMap = Record<string, boolean>;
-
-export const excludedPathStateResource = resourceDescriptor<PathStateMap>(
-  "stats-commits.excluded-path-state",
-  z.record(z.boolean()),
-  {},
-);
-
-async function setPathEnabled(path: string, enabled: boolean): Promise<void> {
-  const res = await fetch("/api/stats/commits/excluded-path-state", {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ path, enabled }),
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`PATCH excluded-path-state failed: ${res.status} ${text}`);
-  }
-}
 
 export interface ExcludedPathTogglesProps {
   /** If true, render pills right-aligned in a flat row (for chart header use). */
@@ -30,9 +8,8 @@ export interface ExcludedPathTogglesProps {
 }
 
 export function ExcludedPathToggles({ dense = false }: ExcludedPathTogglesProps) {
-  const { excludedPaths } = useConfigValues(commitsConfig, "stats-commits");
-  const overridesResult = useResource(excludedPathStateResource);
-  const overrides = overridesResult.pending ? {} : overridesResult.data;
+  const { excludedPaths } = useConfig(commitsConfig);
+  const setConfig = useSetConfig(commitsConfig);
 
   if (excludedPaths.length === 0) {
     return (
@@ -49,26 +26,30 @@ export function ExcludedPathToggles({ dense = false }: ExcludedPathTogglesProps)
         dense ? "justify-end" : "justify-start",
       )}
     >
-      {excludedPaths.map((path) => {
-        const enabled = overrides[path] ?? true;
+      {excludedPaths.map((item, index) => {
         return (
           <button
-            key={path}
+            key={item.path}
             type="button"
-            onClick={() => void setPathEnabled(path, !enabled)}
+            onClick={() => {
+              const updated = excludedPaths.map((p, i) =>
+                i === index ? { ...p, enabled: !p.enabled } : p,
+              );
+              setConfig("excludedPaths", updated);
+            }}
             title={
-              enabled
-                ? `Excluding ${path} — click to include`
-                : `Including ${path} — click to exclude`
+              item.enabled
+                ? `Excluding ${item.path} — click to include`
+                : `Including ${item.path} — click to exclude`
             }
             className={cn(
               "rounded-full border px-3 py-1 text-xs transition-colors",
-              enabled
+              item.enabled
                 ? "bg-primary text-primary-foreground border-primary"
                 : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground line-through",
             )}
           >
-            {path}
+            {item.path}
           </button>
         );
       })}

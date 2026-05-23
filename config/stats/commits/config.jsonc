@@ -1,0 +1,13 @@
+// @hash bc5d497b28de
+{
+  // File path prefixes excluded from line-change stats.
+  "excludedPaths": [
+    { "path": "research/", "enabled": true },
+    { "path": "server/src/db/migrations/meta/", "enabled": true },
+    { "path": "artifacts/", "enabled": true },
+    { "path": "v1/", "enabled": true },
+    { "path": "plugins/database/plugins/migrations/data/", "enabled": true },
+    { "path": "plugins/primitives/plugins/avatar/web/internal/icon-metadata.json", "enabled": true }
+  ],
+  "filterRebases": false
+}

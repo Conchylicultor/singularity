@@ -4,9 +4,4 @@ export {
   getCommitsRate,
   getCommitsLinesCumulative,
   getCommitsLinesRate,
-  getExcludedPathState,
-  patchExcludedPathState,
-  deleteExcludedPathState,
-  PatchExcludedPathStateBodySchema,
 } from "./endpoints";
-export type { PatchExcludedPathStateBody } from "./endpoints";

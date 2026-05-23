@@ -1,7 +1,6 @@
-import { readConfig } from "@plugins/config/server";
+import { getConfig } from "@plugins/config_v2/server";
 import { commitsConfig } from "../../shared/config";
 import { deduplicateByPushId, getCommits, getCommitsExcludingPaths, getGitLogTiming } from "./commit-timestamps";
-import { activeExcludedPaths } from "./excluded-paths";
 import { buildCategoryMap, categoryFor, getConfigCategoryOrder } from "./category-map";
 
 function commitsTimingHeader(handlerMs: number): string {
@@ -18,8 +17,8 @@ function shouldDedup(req: Request): boolean {
 }
 
 async function resolveCommits(req: Request): Promise<Awaited<ReturnType<typeof getCommits>>> {
-  const { excludedPaths } = await readConfig(commitsConfig);
-  const active = await activeExcludedPaths(excludedPaths);
+  const { excludedPaths } = getConfig(commitsConfig);
+  const active = excludedPaths.filter(p => p.enabled).map(p => p.path);
   let commits = active.length === 0 ? await getCommits() : await getCommitsExcludingPaths(active);
   if (shouldDedup(req)) commits = deduplicateByPushId(commits);
   return commits;

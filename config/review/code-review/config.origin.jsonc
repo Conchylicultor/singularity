@@ -1,0 +1,9 @@
+// @hash a03269e2c498
+{
+  // Path prefixes that require no special attention during review.
+  "safePaths": [{"path":"plugins/"},{"path":"docs/"},{"path":"e2e/"},{"path":"research/"},{"path":"sidequests/"},{"path":"bun.lock"}],
+  // Path prefixes that deserve extra care.
+  "carefulPaths": [{"path":"web/src/plugins.ts"},{"path":"server/src/db/migrations/meta/"}],
+  // Named groups of file patterns for organizing code review.
+  "sections": [{"name":"Auto-generated","patterns":[{"pattern":"**/CLAUDE.md"},{"pattern":"docs/plugins-compact.md"},{"pattern":"docs/plugins-details.md"},{"pattern":"server/src/db/migrations/"}]}]
+}

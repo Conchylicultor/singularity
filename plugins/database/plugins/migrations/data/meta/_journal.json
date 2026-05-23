@@ -715,6 +715,13 @@
       "tag": "20260522_091801_1da8cc8e__drop_category_colors_table",
       "hash": "1da8cc8e",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1779547958000,
+      "tag": "20260523_145238_346ac79a__drop_config_v1_tables",
+      "hash": "346ac79a",
+      "breakpoints": true
     }
   ]
 }

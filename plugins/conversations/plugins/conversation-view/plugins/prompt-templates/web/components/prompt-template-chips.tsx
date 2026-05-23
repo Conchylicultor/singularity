@@ -5,25 +5,26 @@ import {
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/floating-action/web";
 import { ResponsiveOverflow } from "@plugins/primitives/plugins/responsive-overflow/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation, useConversationById } from "@plugins/conversations/web";
 import { postConversationTurn } from "@plugins/conversations/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/notifications/web";
-import { useConfigValues } from "@plugins/config/web";
-import { usePromptTemplate } from "../../shared/endpoints";
-import { promptTemplatesResource } from "../../shared/resources";
-import type { PromptTemplate } from "../../shared/resources";
+import { useConfig } from "@plugins/config_v2/web";
 import { promptTemplatesConfig } from "../../shared/config";
 
+interface TemplateItem {
+  id: string;
+  title: string;
+  prompt: string;
+}
+
 function applyTemplate(
-  t: PromptTemplate,
+  t: TemplateItem,
   insertText: (text: string) => void,
 ) {
   insertText(t.prompt);
-  void fetch(`/api/prompt-templates/${t.id}/use`, { method: "POST" });
 }
 
 function TemplateChip({
@@ -34,10 +35,10 @@ function TemplateChip({
   canSend,
   sending,
 }: {
-  template: PromptTemplate;
+  template: TemplateItem;
   insertText: (text: string) => void;
   pinned?: boolean;
-  onSend: (t: PromptTemplate) => void;
+  onSend: (t: TemplateItem) => void;
   canSend: boolean;
   sending: boolean;
 }) {
@@ -80,24 +81,22 @@ export function FloatingTemplateChips({
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
   const live = useConversation(convId) ?? conversation;
-  const templatesResult = useResource(promptTemplatesResource);
+  const { templates, pinnedCount } = useConfig(promptTemplatesConfig);
   const [sendingId, setSendingId] = useState<string | null>(null);
-  const { pinnedCount } = useConfigValues(promptTemplatesConfig, "conversation-prompt-templates");
 
   const canSend = live?.status === "waiting" && sendingId === null;
 
   const pinnedTemplates = useMemo(
-    () => templatesResult.pending ? [] : templatesResult.data.slice(0, pinnedCount),
-    [templatesResult, pinnedCount],
+    () => templates.slice(0, pinnedCount),
+    [templates, pinnedCount],
   );
 
-  async function sendTemplate(t: PromptTemplate) {
+  async function sendTemplate(t: TemplateItem) {
     if (!canSend) return;
     setSendingId(t.id);
     try {
       const existing = getContent().trim();
       const text = existing ? `${t.prompt}\n\n${existing}` : t.prompt;
-      void fetchEndpoint(usePromptTemplate, { id: t.id });
       await fetchEndpoint(postConversationTurn, { id: convId }, { body: { text } });
       clearContent();
     } catch (err) {
@@ -111,8 +110,6 @@ export function FloatingTemplateChips({
     }
   }
 
-  if (templatesResult.pending) return null;
-  const templates = templatesResult.data;
   if (templates.length === 0) return null;
 
   return (

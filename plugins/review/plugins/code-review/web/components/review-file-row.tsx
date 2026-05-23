@@ -2,7 +2,7 @@ import { MdWarning } from "react-icons/md";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
-import { useConfigValues } from "@plugins/config/web";
+import { useConfig } from "@plugins/config_v2/web";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import { getFileWarningLevel } from "../core-files";
 import { reviewConfig } from "../../shared/config";
@@ -62,8 +62,12 @@ export function ReviewFileRow({
   const dir = slash >= 0 ? file.path.slice(0, slash + 1) : "";
   const basename = slash >= 0 ? file.path.slice(slash + 1) : file.path;
   const from = file.from && file.from !== file.path ? file.from : null;
-  const { safePaths, carefulPaths } = useConfigValues(reviewConfig, "review-code-review");
-  const level = getFileWarningLevel(file.path, safePaths, carefulPaths);
+  const config = useConfig(reviewConfig);
+  const level = getFileWarningLevel(
+    file.path,
+    config.safePaths.map((p) => p.path),
+    config.carefulPaths.map((p) => p.path),
+  );
   return (
     <div className="border-b border-border last:border-b-0">
       <button

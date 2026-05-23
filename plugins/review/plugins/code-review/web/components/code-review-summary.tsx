@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { MdWarning } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { useConfigValues } from "@plugins/config/web";
+import { useConfig } from "@plugins/config_v2/web";
 import { pushesResource } from "@plugins/tasks/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -21,7 +21,9 @@ export function CodeReviewSummary({
 }) {
   const conversation = useConversationById(conversationId);
   const { files } = useEditedFiles(conversationId);
-  const { safePaths, carefulPaths } = useConfigValues(reviewConfig, "review-code-review");
+  const config = useConfig(reviewConfig);
+  const safePaths = config.safePaths.map((p) => p.path);
+  const carefulPaths = config.carefulPaths.map((p) => p.path);
 
   const pushesQ = useResource(pushesResource);
   const hasPastPushes = useMemo(

@@ -459,8 +459,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Sidebar` "Settings" → `component`
   - Server:
     - Uses: `database.db`
-  - Imported by: `auth`, `code-review`, `commits`, `google`, `launch-prompts`, `notion`, `prompt-templates`, `setup-wizard`, `theme-customizer`
-  - Slot contributors: `code-review`, `commits`, `launch-prompts`, `prompt-templates`, `theme-customizer`
+  - Imported by: `auth`, `google`, `notion`, `setup-wizard`, `theme-customizer`
+  - Slot contributors: `theme-customizer`
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Exports (core):
@@ -471,7 +471,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useSetConfig`
   - Exports (server):
     - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getConfig`, `getRawFileContent`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-  - Imported by: `avatar`, `backup`, `build`, `chart`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `conversations`, `cost`, `enum`, `google-drive`, `list`, `local`, `model-provider`, `multiline-text`, `object`, `primitives`, `segmented-progress-bar`, `settings`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
+  - Imported by: `avatar`, `backup`, `build`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `conversations`, `cost`, `enum`, `google-drive`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `object`, `primitives`, `prompt-templates`, `segmented-progress-bar`, `settings`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
@@ -810,17 +810,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Contributes:
                 - `JsonlViewer.EventRenderer` "user-text" → `UserTextRow`
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
-          - Defines:
-            - DB schema: `plugins/conversations/plugins/conversation-view/plugins/launch-prompts/server/internal/tables-attachments.ts`
-            - DB schema: `plugins/conversations/plugins/conversation-view/plugins/launch-prompts/server/internal/tables.ts`
           - Exports (shared):
-            - Types: `LaunchPrompt`
-            - Values: `createLaunchPrompt`, `deleteLaunchPrompt`, `launchPromptsResource`, `listLaunchPrompts`, `updateLaunchPrompt`
+            - Values: `launchPromptsConfig`
           - Contributes:
             - `Conversation.PromptBar` "Launch" → `LaunchPromptsButton`
-            - `Config.Section` "Launch Prompts" → `LaunchPromptsSettings`
+            - `ConfigV2.WebRegister`
           - Server:
-            - Uses: `database.db`
+            - Uses: `config_v2.ConfigV2`
         - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, inline code enhancements, and image proxying.
           - Contributes:
             - `MarkdownEnhancerSlot`
@@ -851,18 +847,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Conversation.PromptInput` → `PromptInput`
         - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Named template chips that prepend text to the conversation prompt editor for editing before sending.
-          - Defines:
-            - DB schema: `plugins/conversations/plugins/conversation-view/plugins/prompt-templates/server/internal/tables-attachments.ts`
-            - DB schema: `plugins/conversations/plugins/conversation-view/plugins/prompt-templates/server/internal/tables.ts`
           - Exports (shared):
-            - Types: `PromptTemplate`
-            - Values: `createPromptTemplate`, `deletePromptTemplate`, `listPromptTemplates`, `promptTemplatesResource`, `updatePromptTemplate`, `usePromptTemplate`
+            - Values: `promptTemplatesConfig`
           - Contributes:
             - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
-            - `Config.Spec`
-            - `Config.Section` "Prompt Templates" → `PromptTemplatesSettings`
+            - `ConfigV2.WebRegister`
           - Server:
-            - Uses: `config.Config`, `database.db`
+            - Uses: `config_v2.ConfigV2`
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
           - Exports (shared):
             - Types: `JobState`
@@ -1046,7 +1037,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Exports (server):
     - Values: `awaitDbReady`, `db`, `isTransientDbError`
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `code-review`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `launch-prompts`, `notes`, `notifications`, `plugin-health`, `prompt-templates`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Exports (server):
@@ -1392,7 +1383,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineJob('notifications.ttl-cleanup')`
     - Uses: `database.db`
     - Resources: `notifications` (push)
-  - Imported by: `auth`, `branch`, `build`, `build-logs`, `code-review`, `conversation-category`, `conversations-view`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `health`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`
+  - Imported by: `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations-view`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `health`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
@@ -1736,17 +1727,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Imported by: `code-review`, `plugin-changes`
   - Plugins:
     - **`code-review`** — File-by-file code review section for the review pane. File-by-file code review section for the review pane.
-      - Defines:
-        - DB schema: `plugins/review/plugins/code-review/server/internal/tables.ts`
       - Exports (shared):
-        - Types: `CreateReviewSectionBody`, `ReviewSection`, `UpdateReviewSectionBody`
-        - Values: `createReviewSection`, `CreateReviewSectionBodySchema`, `deleteReviewSection`, `listReviewSections`, `reviewConfig`, `reviewSectionsResource`, `updateReviewSection`, `UpdateReviewSectionBodySchema`
+        - Values: `reviewConfig`
       - Contributes:
         - `ReviewSlots.Section` "code-review" → `CodeReviewSection`
-        - `Config.Spec`
-        - `Config.Section` "Review Sections" → `ReviewSectionsSettings`
+        - `ConfigV2.WebRegister`
       - Server:
-        - Uses: `config.Config`, `database.db`
+        - Uses: `config_v2.ConfigV2`
     - **`plugin-changes`** — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
       - Exports (core):
         - Types: `DiffList`, `PluginChangedFile`, `PluginChangeDiff`, `PluginChangesResponse`, `PluginReviewProps`
@@ -1802,20 +1789,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Sidebar` "Stats" → `component`
   - Plugins:
     - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
-      - Defines:
-        - DB schema: `plugins/stats/plugins/commits/server/internal/tables.ts`
       - Exports (web):
         - Values: `axisProps`, `barCursor`, `ChartState`, `fillGaps`, `gridProps`, `lineCursor`, `tooltipContentStyle`, `tooltipLabelStyle`, `tooltipNumberFormatter`, `useFetchJson`, `yAxisFormatter`
       - Exports (shared):
-        - Types: `PatchExcludedPathStateBody`
-        - Values: `commitsConfig`, `deleteExcludedPathState`, `getCommitsCumulative`, `getCommitsLinesCumulative`, `getCommitsLinesRate`, `getCommitsRate`, `getExcludedPathState`, `patchExcludedPathState`, `PatchExcludedPathStateBodySchema`
+        - Values: `commitsConfig`, `getCommitsCumulative`, `getCommitsLinesCumulative`, `getCommitsLinesRate`, `getCommitsRate`
       - Contributes:
         - `Stats.Chart` "Commits" → `CommitsSection`
         - `Stats.Chart` "Lines changed" → `LinesChartsSection`
-        - `Config.Spec`
-        - `Config.Section` "Excluded path toggles" → `ExcludedPathToggles`
+        - `ConfigV2.WebRegister`
       - Server:
-        - Uses: `config.Config`, `config.readConfig`, `config_v2.getConfig`, `database.db`
+        - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
     - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, sourced from ccusage.
       - Exports (shared):
         - Values: `costConfig`, `getCostAvgPerConversation`, `getCostCumulative`, `getCostDaily`, `getCostDailyByFamily`, `getCostDistribution`, `getCostSessions`, `getCostTokenMix`, `getCostTotals`

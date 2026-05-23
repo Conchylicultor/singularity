@@ -1,36 +1,13 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Config } from "@plugins/config/server";
+import { ConfigV2 } from "@plugins/config_v2/server";
 import { reviewConfig } from "../shared/config";
-import { reviewSectionsServerResource } from "./internal/resources";
-import { handleList } from "./internal/handle-list";
-import { handleCreate } from "./internal/handle-create";
-import { handleUpdate } from "./internal/handle-update";
-import { handleDelete } from "./internal/handle-delete";
-import { seedDefaults } from "./internal/seed";
-import {
-  listReviewSections,
-  createReviewSection,
-  updateReviewSection,
-  deleteReviewSection,
-} from "../shared/endpoints";
 
 export default {
   id: "review-code-review",
   name: "Review: Code Review",
   description:
     "File-by-file code review section for the review pane.",
-  httpRoutes: {
-    [listReviewSections.route]: handleList,
-    [createReviewSection.route]: handleCreate,
-    [updateReviewSection.route]: handleUpdate,
-    [deleteReviewSection.route]: handleDelete,
-  },
   contributions: [
-    Config.Field(reviewConfig),
-    Resource.Declare(reviewSectionsServerResource),
+    ConfigV2.Register({ descriptor: reviewConfig }),
   ],
-  async onReady() {
-    await seedDefaults();
-  },
 } satisfies ServerPluginDefinition;

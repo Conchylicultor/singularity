@@ -1,0 +1,7 @@
+// @hash 8f5136216847
+{
+  // Number of templates shown as persistent chips in the prompt editor toolbar.
+  "pinnedCount": 5,
+  // Templates that prepend text to the prompt editor.
+  "templates": []
+}

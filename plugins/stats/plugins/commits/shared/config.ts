@@ -1,16 +1,24 @@
-import { defineConfig } from "@plugins/config/core";
+import { defineConfig } from "@plugins/config_v2/core";
+import { boolField, textField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
+import { listField } from "@plugins/config_v2/plugins/fields/plugins/list/core";
 
 export const commitsConfig = defineConfig({
-  excludedPaths: {
-    default: ["research/", "server/src/db/migrations/meta/"] as string[],
-    description:
-      "File path prefixes eligible for exclusion from line-change stats. Each folder can be toggled on/off individually from the Stats page or Settings.",
-    label: "Excluded paths (line stats)",
-  },
-  filterRebases: {
-    default: false,
-    description:
-      "When enabled, commits that share the same Singularity-Push trailer are counted as one (the last commit in the push group). Removes inflation from multi-commit pushes.",
-    label: "Filter rebases (deduplicate by push)",
+  fields: {
+    excludedPaths: listField({
+      label: "Excluded paths (line stats)",
+      description: "File path prefixes excluded from line-change stats.",
+      itemFields: {
+        path: textField({ label: "Path" }),
+        enabled: boolField({ label: "Enabled", default: true }),
+      },
+      default: [
+        { path: "research/", enabled: true },
+        { path: "server/src/db/migrations/meta/", enabled: true },
+      ],
+    }),
+    filterRebases: boolField({
+      default: false,
+      label: "Filter rebases (deduplicate by push)",
+    }),
   },
 });

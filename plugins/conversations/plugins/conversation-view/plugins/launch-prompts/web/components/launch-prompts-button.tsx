@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ListVideo } from "lucide-react";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useConfig } from "@plugins/config_v2/web";
 import { toast } from "@plugins/notifications/web";
 import {
   DropdownMenu,
@@ -9,15 +9,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { launchPromptsResource } from "../../shared/resources";
-import type { LaunchPrompt } from "../../shared/resources";
+import { launchPromptsConfig } from "../../shared/config";
 
-const MODEL_LABEL: Record<"sonnet" | "opus", string> = {
+const MODEL_LABEL: Record<string, string> = {
   sonnet: "Sonnet",
   opus: "Opus",
 };
 
-const MODEL_CLASS: Record<"sonnet" | "opus", string> = {
+const MODEL_CLASS: Record<string, string> = {
   sonnet: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
   opus:   "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
 };
@@ -27,14 +26,12 @@ export function LaunchPromptsButton({
 }: {
   conversation: ConversationRecord;
 }) {
-  const promptsResult = useResource(launchPromptsResource);
+  const { prompts } = useConfig(launchPromptsConfig);
   const [launching, setLaunching] = useState(false);
 
-  if (promptsResult.pending) return null;
-  const prompts = promptsResult.data;
   if (prompts.length === 0) return null;
 
-  async function launch(item: LaunchPrompt) {
+  async function launch(item: (typeof prompts)[number]) {
     if (launching) return;
     setLaunching(true);
     try {
@@ -79,9 +76,9 @@ export function LaunchPromptsButton({
           >
             <span>{item.title}</span>
             <span
-              className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${MODEL_CLASS[item.model]}`}
+              className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${MODEL_CLASS[item.model] ?? ""}`}
             >
-              {MODEL_LABEL[item.model]}
+              {MODEL_LABEL[item.model] ?? item.model}
             </span>
           </DropdownMenuItem>
         ))}

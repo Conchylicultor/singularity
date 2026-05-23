@@ -1,8 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Stats } from "@plugins/stats/web";
-import { Config } from "@plugins/config/web";
+import { ConfigV2 } from "@plugins/config_v2/web";
 import { CommitsSection } from "./components/commits-section";
-import { ExcludedPathToggles } from "./components/excluded-path-toggles";
 import { LinesChartsSection } from "./components/lines-charts";
 import { commitsConfig } from "../shared/config";
 
@@ -35,13 +34,6 @@ export default {
       title: "Lines changed",
       component: LinesChartsSection,
     }),
-    Config.Spec(commitsConfig),
-    Config.Section({
-      id: "excluded-path-state",
-      title: "Excluded path toggles",
-      description:
-        "Toggle each excluded path on or off. Changes recompute line stats immediately.",
-      component: ExcludedPathToggles,
-    }),
+    ConfigV2.WebRegister({ descriptor: commitsConfig }),
   ],
 } satisfies PluginDefinition;

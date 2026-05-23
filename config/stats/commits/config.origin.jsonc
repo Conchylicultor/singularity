@@ -1,0 +1,6 @@
+// @hash bc5d497b28de
+{
+  // File path prefixes excluded from line-change stats.
+  "excludedPaths": [{"path":"research/","enabled":true},{"path":"server/src/db/migrations/meta/","enabled":true}],
+  "filterRebases": false
+}

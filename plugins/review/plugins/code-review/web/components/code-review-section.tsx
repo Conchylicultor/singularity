@@ -1,12 +1,12 @@
 import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent, CollapsibleChevron, useExpandAll, ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
+import { useConfig } from "@plugins/config_v2/web";
 import type { Source } from "@plugins/review/web";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { reviewSectionsResource } from "../../shared";
+import { reviewConfig } from "../../shared/config";
 import { groupBySection, type FileSection } from "../core-files";
 import { usePushFiles } from "../use-push-files";
 import { ReviewFileRow } from "./review-file-row";
@@ -95,7 +95,16 @@ function FileList({
   head?: string;
   emptyLabel: string;
 }) {
-  const reviewSectionsResult = useResource(reviewSectionsResource);
+  const config = useConfig(reviewConfig);
+  const reviewSections = useMemo(
+    () =>
+      config.sections.map((s) => ({
+        id: s.id,
+        name: s.name,
+        patterns: s.patterns.map((p) => p.pattern),
+      })),
+    [config.sections],
+  );
 
   const sorted = useMemo(() => {
     if (!files) return null;
@@ -111,8 +120,8 @@ function FileList({
 
   const sections = useMemo((): FileSection[] | null => {
     if (!sorted) return null;
-    return groupBySection(sorted, reviewSectionsResult.pending ? [] : reviewSectionsResult.data);
-  }, [sorted, reviewSectionsResult]);
+    return groupBySection(sorted, reviewSections);
+  }, [sorted, reviewSections]);
 
   const totals = useMemo(
     () => (sorted ? sumStats(sorted) : { count: 0, additions: 0, deletions: 0 }),

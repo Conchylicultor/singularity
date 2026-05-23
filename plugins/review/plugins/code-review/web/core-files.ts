@@ -1,5 +1,10 @@
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
-import type { ReviewSection } from "../shared";
+
+export interface ReviewSection {
+  id: string;
+  name: string;
+  patterns: string[];
+}
 
 export type FileWarningLevel = "safe" | "careful" | "critical";
 

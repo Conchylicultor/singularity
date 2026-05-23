@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { setConfigValue, useConfigValues } from "@plugins/config/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { cn } from "@/lib/utils";
 import { commitsConfig } from "../../shared/config";
 import { CumulativeCommitsChart } from "./cumulative-chart";
@@ -8,10 +8,11 @@ import { CumulativeCommitsCategoryChart, CommitsRateCategoryChart } from "./comm
 
 export function CommitsSection() {
   const [byCategory, setByCategory] = useState(false);
-  const { filterRebases } = useConfigValues(commitsConfig, "stats-commits");
+  const { filterRebases } = useConfig(commitsConfig);
+  const setConfig = useSetConfig(commitsConfig);
 
   const toggle = () =>
-    void setConfigValue("stats-commits.filterRebases", !filterRebases);
+    setConfig("filterRebases", !filterRebases);
 
   return (
     <div className="flex flex-col gap-6">
