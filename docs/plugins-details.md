@@ -1400,6 +1400,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`commands`**
         - **`contributions`**
         - **`cross-refs`**
+        - **`db-schema`**
         - **`registrations`**
         - **`resources`**
         - **`routes`**

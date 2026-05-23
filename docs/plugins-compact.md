@@ -275,6 +275,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`commands`**
         - **`contributions`**
         - **`cross-refs`**
+        - **`db-schema`**
         - **`registrations`**
         - **`resources`**
         - **`routes`**
