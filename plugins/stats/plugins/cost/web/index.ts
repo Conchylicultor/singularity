@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Config } from "@plugins/config/web";
+import { ConfigV2 } from "@plugins/config_v2/web";
 import { Stats } from "@plugins/stats/web";
 import { costConfig } from "../shared/config";
 import { AvgCostPerConversationChart } from "./components/avg-cost-per-conversation-chart";
@@ -14,7 +14,7 @@ export default {
   description:
     "Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown.",
   contributions: [
-    Config.Spec(costConfig),
+    ConfigV2.WebRegister({ descriptor: costConfig }),
     Stats.Chart({
       id: "cost-overview",
       title: "Cost & Tokens",

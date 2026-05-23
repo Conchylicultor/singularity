@@ -1,5 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { ConfigV2 } from "@plugins/config_v2/web";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
+import { segmentedProgressBarConfig } from "../core";
 import { VariantPicker } from "./components/variant-picker";
 
 export { SegmentedProgressBar } from "./components/segmented-progress-bar";
@@ -13,6 +15,7 @@ export default {
   description:
     "Pluggable segmented progress bar with switchable visual variants.",
   contributions: [
+    ConfigV2.WebRegister({ descriptor: segmentedProgressBarConfig }),
     ThemeEngine.VariantGroup({
       componentId: "segmented-progress-bar",
       componentLabel: "Segmented Progress Bar",

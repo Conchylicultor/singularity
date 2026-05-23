@@ -1,0 +1,6 @@
+// @hash 1c6d60d9e265
+{
+  "enabled": true,
+  // Older backup directories are deleted automatically.
+  "keepLast": 10
+}

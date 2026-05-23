@@ -15,8 +15,9 @@
   - Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `transformValues`
 - Contributes:
   - `Core.Root` → `ThemeInjector`
+  - `ConfigV2.WebRegister`
 - Server:
-  - Uses: `config.Config`
+  - Uses: `config_v2.ConfigV2`
 - Slot contributors: `chart`, `color-adjust`, `color-palette`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `typography`
 - Sub-plugins:
   - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.

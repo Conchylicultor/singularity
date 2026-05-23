@@ -1,0 +1,5 @@
+// @hash 293a7e80a4ef
+{
+  // Automatically generate a Haiku summary of each assistant turn — shows a one-liner, caveats, and suggested actions above the prompt input.
+  "enabled": true
+}

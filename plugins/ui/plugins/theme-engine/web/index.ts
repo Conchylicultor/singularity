@@ -1,4 +1,6 @@
 import { type PluginDefinition, Core } from "@plugins/framework/plugins/web-sdk/core";
+import { ConfigV2 } from "@plugins/config_v2/web";
+import { themeEngineConfig } from "../core";
 import { ThemeInjector } from "./components/theme-injector";
 
 export { ThemeEngine } from "./slots";
@@ -19,5 +21,8 @@ export default {
   name: "UI: Theme Engine",
   description:
     "Central settings pane for switching visual variants of pluggable UI components.",
-  contributions: [Core.Root({ component: ThemeInjector })],
+  contributions: [
+    Core.Root({ component: ThemeInjector }),
+    ConfigV2.WebRegister({ descriptor: themeEngineConfig }),
+  ],
 } satisfies PluginDefinition;

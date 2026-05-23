@@ -1,0 +1,32 @@
+import { useContext, useCallback } from "react";
+import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { setConfigField } from "../../core";
+import type { ConfigDescriptor, FieldsRecord } from "../../core";
+
+export function useSetConfig<F extends FieldsRecord>(
+  descriptor: ConfigDescriptor<F>,
+): (key: keyof F & string, value: unknown) => void {
+  const ctx = useContext(PluginRuntimeContext);
+  if (!ctx) throw new Error("useSetConfig must be inside PluginProvider");
+
+  const registrations = ctx.bySlot.get("config-v2.web-register") ?? [];
+  const reg = registrations.find((c) => c.descriptor === descriptor);
+  const storePath = reg?._hierarchyPath
+    ? `${reg._hierarchyPath}/${descriptor.name}.jsonc`
+    : null;
+
+  if (!reg?._hierarchyPath) {
+    throw new Error(
+      `[config-v2] useSetConfig: descriptor "${descriptor.name}" has no web registration. ` +
+        `Add ConfigV2.WebRegister({ descriptor }) to your plugin's web contributions.`,
+    );
+  }
+
+  return useCallback(
+    (key: keyof F & string, value: unknown) => {
+      void fetchEndpoint(setConfigField, {}, { body: { storePath: storePath!, key, value } });
+    },
+    [storePath],
+  );
+}

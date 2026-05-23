@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { MdTune } from "react-icons/md";
 import { PaneChrome, openPane } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { useConfigValues, setConfigValue } from "@plugins/config/web";
+import { setConfigValue } from "@plugins/config/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { themeEngineConfig } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { themeCustomizerPane } from "../panes";
@@ -12,20 +13,16 @@ import {
   type TokenMode,
 } from "../internal/token-mode-context";
 
-const PLUGIN_ID = "ui-theme-engine";
-
 function GlobalPresetPicker() {
   const globalPresets = ThemeEngine.GlobalPreset.useContributions();
   const tokenGroups = ThemeEngine.TokenGroup.useContributions();
-  const { globalPreset: activeId } = useConfigValues(
-    themeEngineConfig,
-    PLUGIN_ID,
-  );
+  const { globalPreset: activeId } = useConfig(themeEngineConfig);
+  const setThemeEngineConfig = useSetConfig(themeEngineConfig);
 
   if (globalPresets.length === 0) return null;
 
   const handleChange = (presetId: string) => {
-    void setConfigValue(`${PLUGIN_ID}.globalPreset`, presetId);
+    setThemeEngineConfig("globalPreset", presetId);
     const preset = globalPresets.find((p) => p.id === presetId);
     if (!preset) return;
     for (const [groupId, groupPresetId] of Object.entries(preset.groups)) {

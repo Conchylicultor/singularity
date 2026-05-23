@@ -1,20 +1,15 @@
-import { useConfigValues, setConfigValue } from "@plugins/config/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { colorAdjustConfig } from "../internal/config";
 import { ColorAdjust } from "../slots";
 
-const PLUGIN_ID = "ui-tokens-color-adjust";
-
-function setField(field: string, value: string | number) {
-  void setConfigValue(`${PLUGIN_ID}.${field}`, value);
-}
-
 export function ColorAdjustPicker() {
   const presets = ColorAdjust.Preset.useContributions();
-  const config = useConfigValues(colorAdjustConfig, PLUGIN_ID);
-  const activeId = config.preset as string;
-  const hueShift = config.hueShift as number;
-  const saturationScale = config.saturationScale as number;
-  const lightnessScale = config.lightnessScale as number;
+  const config = useConfig(colorAdjustConfig);
+  const setConfig = useSetConfig(colorAdjustConfig);
+  const activeId = config.preset;
+  const hueShift = config.hueShift;
+  const saturationScale = config.saturationScale;
+  const lightnessScale = config.lightnessScale;
 
   return (
     <div className="flex flex-col gap-3">
@@ -28,10 +23,10 @@ export function ColorAdjustPicker() {
                 : "border-border text-muted-foreground hover:border-primary/50"
             }`}
             onClick={() => {
-              setField("preset", p.id);
-              setField("hueShift", p.hueShift);
-              setField("saturationScale", p.saturationScale);
-              setField("lightnessScale", p.lightnessScale);
+              setConfig("preset", p.id);
+              setConfig("hueShift", p.hueShift);
+              setConfig("saturationScale", p.saturationScale);
+              setConfig("lightnessScale", p.lightnessScale);
             }}
           >
             {p.label}
@@ -47,7 +42,7 @@ export function ColorAdjustPicker() {
             max={180}
             step={1}
             value={hueShift}
-            onChange={(e) => setField("hueShift", Number(e.target.value))}
+            onChange={(e) => setConfig("hueShift", Number(e.target.value))}
             className="flex-1"
           />
           <span className="w-10 text-right tabular-nums">{hueShift}</span>
@@ -61,7 +56,7 @@ export function ColorAdjustPicker() {
             step={0.05}
             value={saturationScale}
             onChange={(e) =>
-              setField("saturationScale", Number(e.target.value))
+              setConfig("saturationScale", Number(e.target.value))
             }
             className="flex-1"
           />
@@ -78,7 +73,7 @@ export function ColorAdjustPicker() {
             step={0.05}
             value={lightnessScale}
             onChange={(e) =>
-              setField("lightnessScale", Number(e.target.value))
+              setConfig("lightnessScale", Number(e.target.value))
             }
             className="flex-1"
           />

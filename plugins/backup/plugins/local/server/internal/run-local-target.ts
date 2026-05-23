@@ -1,6 +1,6 @@
 import { readdir, rm } from "node:fs/promises";
 import { BACKUPS_DIR } from "@plugins/infra/plugins/paths/server";
-import { readConfig } from "@plugins/config/server";
+import { getConfig } from "@plugins/config_v2/server";
 import type { BackupArchive, BackupTargetResult } from "@plugins/backup/core";
 import { localBackupConfig } from "../../shared/config";
 
@@ -9,7 +9,7 @@ const TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$/;
 export async function runLocalTarget(
   archive: BackupArchive,
 ): Promise<BackupTargetResult> {
-  const { enabled, keepLast } = await readConfig(localBackupConfig);
+  const { enabled, keepLast } = getConfig(localBackupConfig);
 
   if (!enabled) {
     return { targetId: "local", ok: true, detail: "disabled" };

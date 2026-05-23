@@ -1,0 +1,6 @@
+// @hash bacca99c7e55
+{
+  "enabled": false,
+  // Older archives in the Drive folder are deleted automatically.
+  "keepLast": 10
+}

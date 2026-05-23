@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { readConfig } from "@plugins/config/server";
+import { getConfig } from "@plugins/config_v2/server";
 import { getTokenFromCentral } from "@plugins/auth/server";
 import type { BackupArchive, BackupTargetResult } from "@plugins/backup/core";
 import { googleDriveBackupConfig } from "../../shared/config";
@@ -12,7 +12,7 @@ const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 export async function runGoogleDriveTarget(
   archive: BackupArchive,
 ): Promise<BackupTargetResult> {
-  const { enabled, keepLast } = await readConfig(googleDriveBackupConfig);
+  const { enabled, keepLast } = getConfig(googleDriveBackupConfig);
   if (!enabled) {
     return { targetId: "google-drive", ok: true, detail: "disabled" };
   }

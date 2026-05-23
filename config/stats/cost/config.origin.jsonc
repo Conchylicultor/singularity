@@ -1,0 +1,5 @@
+// @hash 34f3660f9369
+{
+  // When enabled, charts include only Claude sessions launched by Singularity (joined by claudeSessionId). When disabled, every Claude Code session on this machine is counted — including ad-hoc sessions outside Singularity.
+  "singularityOnly": true
+}

@@ -341,23 +341,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (shared):
     - Values: `listBackupRuns`, `runBackup`
   - Contributes:
+    - `ConfigV2.WebRegister`
     - `Pane.Register` "backup"
     - `DebugApp.Sidebar` "Backup" → `component`
   - Server:
     - Register: `defineJob('backup.run')`
-    - Uses: `config.Config`, `config.readConfig`, `database.db`
+    - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
   - Imported by: `google-drive`, `local`
   - Plugins:
     - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
       - Contributes:
-        - `Config.Spec`
+        - `ConfigV2.WebRegister`
       - Server:
-        - Uses: `auth.getTokenFromCentral`, `backup.BackupTarget`, `config.Config`, `config.readConfig`
+        - Uses: `auth.getTokenFromCentral`, `backup.BackupTarget`, `config_v2.ConfigV2`, `config_v2.getConfig`
     - **`local`** — Config UI for local backup target. Stores backup archives on the local filesystem.
       - Contributes:
-        - `Config.Spec`
+        - `ConfigV2.WebRegister`
       - Server:
-        - Uses: `backup.BackupTarget`, `config.Config`, `config.readConfig`
+        - Uses: `backup.BackupTarget`, `config_v2.ConfigV2`, `config_v2.getConfig`
 
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Defines:
@@ -458,19 +459,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - `Shell.Sidebar` "Settings" → `component`
   - Server:
     - Uses: `database.db`
-  - Imported by: `auth`, `backup`, `chart`, `code-review`, `color-adjust`, `color-palette`, `commits`, `cost`, `google`, `google-drive`, `launch-prompts`, `local`, `notion`, `prompt-templates`, `segmented-progress-bar`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
+  - Imported by: `auth`, `chart`, `code-review`, `color-palette`, `commits`, `google`, `launch-prompts`, `notion`, `prompt-templates`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `typography`
   - Slot contributors: `code-review`, `commits`, `launch-prompts`, `prompt-templates`, `theme-customizer`
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Exports (core):
     - Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`
-    - Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`
+    - Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`
   - Exports (web):
     - Types: `ConfigRegistration`
-    - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
+    - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useSetConfig`
   - Exports (server):
     - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getConfig`, `getRawFileContent`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-  - Imported by: `avatar`, `build`, `codegen`, `color`, `commits`, `conversation-category`, `conversations`, `enum`, `list`, `multiline-text`, `object`, `primitives`, `settings`
+  - Imported by: `avatar`, `backup`, `build`, `codegen`, `color`, `color-adjust`, `commits`, `conversation-category`, `conversations`, `cost`, `enum`, `google-drive`, `list`, `local`, `multiline-text`, `object`, `primitives`, `segmented-progress-bar`, `settings`, `theme-customizer`, `theme-engine`, `turn-summary`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
@@ -524,7 +525,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Fields.Renderer` "float" → `FloatRenderer`
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
       - Exports (core):
-        - Values: `acknowledgeConflict`, `deleteOverride`, `getConfigRawFile`, `resetConfigField`, `setConfigField`
+        - Values: `acknowledgeConflict`, `deleteOverride`, `getConfigRawFile`, `resetConfigField`
       - Contributes:
         - `Pane.Register` "config-v2-nav"
         - `Pane.Register` "config-v2-detail"
@@ -907,10 +908,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `TurnSummariesPayloadSchema`, `turnSummariesResource`, `turnSummaryConfig`, `TurnSummarySchema`
           - Contributes:
             - `Conversation.AbovePromptInput` → `TurnSummaryCard`
-            - `Config.Spec`
+            - `ConfigV2.WebRegister`
           - Server:
             - Register: `defineJob('turn-summary.generate')`
-            - Uses: `config.Config`, `config.readConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
+            - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
           - Contributes:
             - `Conversation.ActionBar` → `VscodeButton`
@@ -1800,14 +1801,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (shared):
         - Values: `costConfig`, `getCostAvgPerConversation`, `getCostCumulative`, `getCostDaily`, `getCostDailyByFamily`, `getCostDistribution`, `getCostSessions`, `getCostTokenMix`, `getCostTotals`
       - Contributes:
-        - `Config.Spec`
+        - `ConfigV2.WebRegister`
         - `Stats.Chart` "Cost & Tokens" → `CostSection`
         - `Stats.Chart` "Token mix per day" → `TokenMixChart`
         - `Stats.Chart` "Average cost per conversation" → `AvgCostPerConversationChart`
         - `Stats.Chart` "Cost distribution per conversation" → `CostDistributionChart`
         - `Stats.Chart` "Top conversations by cost" → `TopConversationsTable`
       - Server:
-        - Uses: `config.Config`, `database.db`, `tasks-core._conversations`
+        - Uses: `config_v2.ConfigV2`, `database.db`, `tasks-core._conversations`
     - **`pushes`** — Push contention stats: wait time, throughput, and step breakdown charts. Push contention stats: wait time, throughput, and step breakdown.
       - Exports (shared):
         - Values: `getPushesStepBreakdown`, `getPushesThroughput`, `getPushesWaitTime`
@@ -1954,9 +1955,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Types: `SegmentedProgressBarProps`, `SegmentedProgressBarVariantContribution`, `Step`
         - Values: `SegmentedProgressBar`, `SegmentedProgressBarSlots`
       - Contributes:
+        - `ConfigV2.WebRegister`
         - `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
       - Server:
-        - Uses: `config.Config`
+        - Uses: `config_v2.ConfigV2`
       - Plugins:
         - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
           - Contributes:
@@ -1975,8 +1977,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `transformValues`
       - Contributes:
         - `Core.Root` → `ThemeInjector`
+        - `ConfigV2.WebRegister`
       - Server:
-        - Uses: `config.Config`
+        - Uses: `config_v2.ConfigV2`
       - Slot contributors: `chart`, `color-adjust`, `color-palette`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `typography`
       - Plugins:
         - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
@@ -2018,6 +2021,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Exports (shared):
             - Values: `colorAdjustConfig`
           - Contributes:
+            - `ConfigV2.WebRegister`
             - `ColorAdjust.Preset` "Default"
             - `ColorAdjust.Preset` "Grayscale"
             - `ColorAdjust.Preset` "Muted"
@@ -2034,7 +2038,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `ThemeEngine.VariantGroup` "Color Adjust" → `ColorAdjustPicker`
             - `ThemeCustomizer.Section` "color-adjust" → `ColorAdjustSection`
           - Server:
-            - Uses: `config.Config`
+            - Uses: `config_v2.ConfigV2`
         - **`color-palette`** — Color palette token group with switchable presets.
           - Defines:
             - Slots: `ColorPalette.Preset`

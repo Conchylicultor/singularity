@@ -2,7 +2,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
-import { readConfig } from "@plugins/config/server";
+import { getConfig } from "@plugins/config_v2/server";
 import { backupConfig } from "../../shared/config";
 import { assembleArchive } from "./assemble-archive";
 import { BackupTarget } from "./contribution";
@@ -70,7 +70,7 @@ export const backupRunJob = defineJob({
       .where(eq(_backupRuns.id, runId));
 
     if (input.trigger === "periodic") {
-      const { periodicIntervalHours } = await readConfig(backupConfig);
+      const { periodicIntervalHours } = getConfig(backupConfig);
       if (periodicIntervalHours > 0) {
         const runAt = new Date(
           Date.now() + periodicIntervalHours * 3_600_000,

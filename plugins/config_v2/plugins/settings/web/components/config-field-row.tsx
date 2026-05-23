@@ -4,7 +4,8 @@ import { cn } from "@/lib/utils";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { FieldDef } from "@plugins/config_v2/core";
-import { setConfigField, resetConfigField } from "../../core";
+import { setConfigField } from "@plugins/config_v2/core";
+import { resetConfigField } from "../../core";
 
 function isFieldModified(field: FieldDef, value: unknown, defaultValue: unknown): boolean {
   if ("itemFields" in field && Array.isArray(value) && Array.isArray(defaultValue)) {

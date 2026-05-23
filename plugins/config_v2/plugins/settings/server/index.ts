@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { setConfigField, resetConfigField, acknowledgeConflict, deleteOverride, getConfigRawFile } from "../core";
+import { setConfigField } from "@plugins/config_v2/core";
+import { resetConfigField, acknowledgeConflict, deleteOverride, getConfigRawFile } from "../core";
 import { handleSetField, handleResetField, handleAcknowledgeConflict, handleDeleteOverride, handleGetRawFile } from "./internal/handlers";
 
 export default {

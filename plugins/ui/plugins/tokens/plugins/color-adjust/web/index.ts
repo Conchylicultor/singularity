@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
-import { useConfigValues } from "@plugins/config/web";
+import { useConfig, ConfigV2 } from "@plugins/config_v2/web";
 import { colorAdjustConfig } from "./internal/config";
 import { ColorAdjust } from "./slots";
 import { ColorAdjustPicker } from "./components/color-adjust-picker";
@@ -17,17 +17,15 @@ export default {
   description:
     "Cross-cutting color adjustment transform for all color token groups.",
   contributions: [
+    ConfigV2.WebRegister({ descriptor: colorAdjustConfig }),
     ...builtInPresets.map((p) => ColorAdjust.Preset(p)),
     ThemeEngine.ColorTransform({
       useAdjustment: () => {
-        const vals = useConfigValues(
-          colorAdjustConfig,
-          "ui-tokens-color-adjust",
-        );
+        const vals = useConfig(colorAdjustConfig);
         return {
-          hueShift: vals.hueShift as number,
-          saturationScale: vals.saturationScale as number,
-          lightnessScale: vals.lightnessScale as number,
+          hueShift: vals.hueShift,
+          saturationScale: vals.saturationScale,
+          lightnessScale: vals.lightnessScale,
         };
       },
     }),

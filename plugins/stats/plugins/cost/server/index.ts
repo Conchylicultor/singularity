@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Config } from "@plugins/config/server";
+import { ConfigV2 } from "@plugins/config_v2/server";
 import { costConfig } from "../shared/config";
 import {
   handleAvgPerConversation,
@@ -28,7 +28,7 @@ export default {
   name: "Stats: Cost & tokens",
   description:
     "Token usage and dollar cost across Claude Code sessions, sourced from ccusage.",
-  contributions: [Config.Field(costConfig)],
+  contributions: [ConfigV2.Register({ descriptor: costConfig })],
   httpRoutes: {
     [getCostDaily.route]: handleDaily,
     [getCostDailyByFamily.route]: handleDailyByFamily,

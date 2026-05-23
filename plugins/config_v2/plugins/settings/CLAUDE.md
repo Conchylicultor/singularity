@@ -6,7 +6,7 @@
 
 - Description: Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
 - Exports (core):
-  - Values: `acknowledgeConflict`, `deleteOverride`, `getConfigRawFile`, `resetConfigField`, `setConfigField`
+  - Values: `acknowledgeConflict`, `deleteOverride`, `getConfigRawFile`, `resetConfigField`
 - Contributes:
   - `Pane.Register` "config-v2-nav"
   - `Pane.Register` "config-v2-detail"

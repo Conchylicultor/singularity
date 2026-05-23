@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { readConfig } from "@plugins/config/server";
+import { getConfig } from "@plugins/config_v2/server";
 import { readConversationTurns } from "@plugins/conversations/server";
 import { getConversation } from "@plugins/tasks-core/server";
 import {
@@ -58,7 +58,7 @@ export const generateTurnSummaryJob = defineJob({
   dedup: "none",
   maxAttempts: 2,
   run: async ({ event }) => {
-    const { enabled } = await readConfig(turnSummaryConfig);
+    const { enabled } = getConfig(turnSummaryConfig);
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; config value is boolean at runtime
     if (!enabled) return;
 

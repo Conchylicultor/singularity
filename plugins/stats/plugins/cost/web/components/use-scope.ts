@@ -1,4 +1,4 @@
-import { setConfigValue, useConfigValues } from "@plugins/config/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { costConfig } from "../../shared/config";
 
 export type Scope = "all" | "singularity";
@@ -8,13 +8,13 @@ export function useScope(): {
   singularityOnly: boolean;
   toggle: () => void;
 } {
-  const { singularityOnly } = useConfigValues(costConfig, "stats-cost");
+  const { singularityOnly } = useConfig(costConfig);
+  const setConfig = useSetConfig(costConfig);
   return {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     scope: singularityOnly ? "singularity" : "all",
     singularityOnly,
-    toggle: () =>
-      void setConfigValue("stats-cost.singularityOnly", !singularityOnly),
+    toggle: () => setConfig("singularityOnly", !singularityOnly),
   };
 }
 

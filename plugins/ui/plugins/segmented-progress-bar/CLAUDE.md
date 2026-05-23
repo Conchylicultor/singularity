@@ -14,9 +14,10 @@
   - Types: `SegmentedProgressBarProps`, `SegmentedProgressBarVariantContribution`, `Step`
   - Values: `SegmentedProgressBar`, `SegmentedProgressBarSlots`
 - Contributes:
+  - `ConfigV2.WebRegister`
   - `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
 - Server:
-  - Uses: `config.Config`
+  - Uses: `config_v2.ConfigV2`
 - Sub-plugins:
   - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
   - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.

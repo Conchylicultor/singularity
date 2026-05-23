@@ -1,5 +1,8 @@
-import { defineConfig } from "@plugins/config/core";
+import { defineConfig } from "@plugins/config_v2/core";
+import { textField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
 
 export const themeEngineConfig = defineConfig({
-  globalPreset: { default: "default", label: "Theme" },
+  fields: {
+    globalPreset: textField({ default: "default", label: "Theme" }),
+  },
 });

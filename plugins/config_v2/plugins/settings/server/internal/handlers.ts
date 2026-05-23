@@ -1,6 +1,7 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { setConfigByPath, resetConfigByPath, acknowledgeConflictByPath, deleteOverrideByPath, getRawFileContent } from "@plugins/config_v2/server";
-import { setConfigField, resetConfigField, acknowledgeConflict, deleteOverride, getConfigRawFile } from "../../core";
+import { setConfigField } from "@plugins/config_v2/core";
+import { resetConfigField, acknowledgeConflict, deleteOverride, getConfigRawFile } from "../../core";
 
 export const handleSetField = implement(setConfigField, async ({ body }) => {
   try {

@@ -37,3 +37,4 @@ export {
   propagate,
   readTypedConfig,
 } from "./internal/tier-logic";
+export { setConfigField } from "./internal/endpoints";

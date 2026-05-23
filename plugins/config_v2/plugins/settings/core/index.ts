@@ -1,5 +1,4 @@
 export {
-  setConfigField,
   resetConfigField,
   acknowledgeConflict,
   deleteOverride,

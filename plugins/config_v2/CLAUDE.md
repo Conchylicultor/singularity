@@ -97,13 +97,13 @@ Overwrites are **full copies**, not deltas. `setConfig` writes `{ ...currentValu
 - Description: Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 - Exports (core):
   - Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`
-  - Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`
+  - Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`
 - Exports (web):
   - Types: `ConfigRegistration`
-  - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`
+  - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useSetConfig`
 - Exports (server):
   - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getConfig`, `getRawFileContent`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-- Imported by: `avatar`, `build`, `codegen`, `color`, `commits`, `conversation-category`, `conversations`, `enum`, `list`, `multiline-text`, `object`, `primitives`, `settings`
+- Imported by: `avatar`, `backup`, `build`, `codegen`, `color`, `color-adjust`, `commits`, `conversation-category`, `conversations`, `cost`, `enum`, `google-drive`, `list`, `local`, `multiline-text`, `object`, `primitives`, `segmented-progress-bar`, `settings`, `theme-customizer`, `theme-engine`, `turn-summary`
 - Sub-plugins:
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
   - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
