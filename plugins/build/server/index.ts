@@ -1,7 +1,7 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { isNull } from "drizzle-orm";
-import { deleteTriggersFor, trigger } from "@plugins/infra/plugins/events/server";
+import { Trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { ConfigV2, getConfig } from "@plugins/config_v2/server";
@@ -20,7 +20,7 @@ import { triggerBuildEndpoint } from "../core/endpoints";
 export default {
   id: "build",
   name: "Build",
-  contributions: [ConfigV2.Register({ descriptor: buildConfig }), Resource.Declare(mainAheadCountResource), Resource.Declare(buildHistoryResource), Resource.Declare(frontendHashResource)],
+  contributions: [ConfigV2.Register({ descriptor: buildConfig }), Resource.Declare(mainAheadCountResource), Resource.Declare(buildHistoryResource), Resource.Declare(frontendHashResource), Trigger({ on: refAdvanced.where({ refName: "refs/heads/main" }), do: buildRunJob, with: {}, oneShot: false })],
   httpRoutes: {
     [triggerBuildEndpoint.route]: handleBuild,
   },
@@ -35,15 +35,7 @@ export default {
       buildHistoryResource.notify();
     }
 
-    await deleteTriggersFor(buildRunJob);
     if (!isMain()) return;
-
-    await trigger({
-      on: refAdvanced.where({ refName: "refs/heads/main" }),
-      do: buildRunJob,
-      with: {},
-      oneShot: false,
-    });
 
     const { autoBuild } = getConfig(buildConfig);
     if (autoBuild) {
