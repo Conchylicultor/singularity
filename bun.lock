@@ -981,6 +981,10 @@
       "name": "@singularity/plugin-plugin-meta-facets-commands",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/facets/plugins/contributions": {
+      "name": "@singularity/plugin-plugin-meta-facets-contributions",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/facets/plugins/cross-refs": {
       "name": "@singularity/plugin-plugin-meta-facets-cross-refs",
       "version": "0.0.1",
@@ -2444,6 +2448,8 @@
     "@singularity/plugin-plugin-meta-facets": ["@singularity/plugin-plugin-meta-facets@workspace:plugins/plugin-meta/plugins/facets"],
 
     "@singularity/plugin-plugin-meta-facets-commands": ["@singularity/plugin-plugin-meta-facets-commands@workspace:plugins/plugin-meta/plugins/facets/plugins/commands"],
+
+    "@singularity/plugin-plugin-meta-facets-contributions": ["@singularity/plugin-plugin-meta-facets-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/contributions"],
 
     "@singularity/plugin-plugin-meta-facets-cross-refs": ["@singularity/plugin-plugin-meta-facets-cross-refs@workspace:plugins/plugin-meta/plugins/facets/plugins/cross-refs"],
 

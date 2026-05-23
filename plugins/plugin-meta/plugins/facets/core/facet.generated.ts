@@ -14,6 +14,7 @@ export interface CollectedEntry {
 
 export const facetEntries: CollectedEntry[] = [
   { pluginPath: "plugin-meta/plugins/facets/plugins/commands", hierarchyPath: "plugin-meta/facets/commands", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/commands/facet"), dependsOn: [] },
+  { pluginPath: "plugin-meta/plugins/facets/plugins/contributions", hierarchyPath: "plugin-meta/facets/contributions", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/contributions/facet"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/facets/plugins/cross-refs", hierarchyPath: "plugin-meta/facets/cross-refs", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/cross-refs/facet"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/facets/plugins/registrations", hierarchyPath: "plugin-meta/facets/registrations", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/registrations/facet"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/facets/plugins/resources", hierarchyPath: "plugin-meta/facets/resources", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/resources/facet"), dependsOn: [] },

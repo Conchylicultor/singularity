@@ -27,6 +27,7 @@ See `plugins/commands/` for the reference implementation.
   - Values: `createFacet`, `defineFacet`, `facetCollectedDir`, `getFacet`, `loadFacets`, `setFacet`
 - Sub-plugins:
   - **`commands`**
+  - **`contributions`**
   - **`cross-refs`**
   - **`registrations`**
   - **`resources`**
