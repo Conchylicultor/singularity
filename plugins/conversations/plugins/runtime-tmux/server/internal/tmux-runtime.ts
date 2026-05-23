@@ -2,7 +2,8 @@ import type {
   ConversationRuntime,
   RuntimeInfo,
 } from "@plugins/conversations/server";
-import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import { resolveCliFlag } from "@plugins/conversations/plugins/model-provider/server";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import { CLAUDE, TMUX } from "@plugins/infra/plugins/paths/server";
 import { recordCrash } from "@plugins/crashes/server";
 import { resolveSessionState, type SessionState } from "./claude-session";
@@ -231,7 +232,7 @@ export const tmuxRuntime: ConversationRuntime = {
     if (!parentHost) {
       throw new Error("tmux runtime requires SINGULARITY_WORKTREE to route MCP back to the parent server");
     }
-    const cliFlag = opts?.model ? MODEL_REGISTRY[opts.model].cliFlag : undefined;
+    const cliFlag = opts?.model ? resolveCliFlag(opts.model) : undefined;
     const claudeBase = cliFlag ? `${CLAUDE} --model ${cliFlag}` : CLAUDE;
     const cmdParts: string[] = [claudeBase];
     if (opts?.resumeSessionId) {

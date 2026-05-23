@@ -471,7 +471,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useSetConfig`
   - Exports (server):
     - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getConfig`, `getRawFileContent`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-  - Imported by: `avatar`, `backup`, `build`, `codegen`, `color`, `color-adjust`, `commits`, `conversation-category`, `conversations`, `cost`, `enum`, `google-drive`, `list`, `local`, `multiline-text`, `object`, `primitives`, `segmented-progress-bar`, `settings`, `theme-customizer`, `theme-engine`, `turn-summary`
+  - Imported by: `avatar`, `backup`, `build`, `codegen`, `color`, `color-adjust`, `commits`, `conversation-category`, `conversations`, `cost`, `enum`, `google-drive`, `list`, `local`, `model-provider`, `multiline-text`, `object`, `primitives`, `segmented-progress-bar`, `settings`, `theme-customizer`, `theme-engine`, `turn-summary`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
@@ -958,6 +958,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (core):
         - Types: `ConversationModel`, `ModelMeta`
         - Values: `ConversationModelSchema`, `DEFAULT_MODEL`, `MODEL_REGISTRY`
+      - Exports (server):
+        - Values: `resolveCliFlag`
+      - Contributes:
+        - `ConfigV2.WebRegister`
+      - Server:
+        - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`
     - **`pane-restore`** — Saves and restores the miller pane chain per conversation using localStorage.
       - Exports (web):
         - Values: `loadChainForConversation`
