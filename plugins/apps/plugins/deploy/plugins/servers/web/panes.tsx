@@ -23,11 +23,18 @@ export const addServerPane = Pane.define({
   width: 400,
 });
 
+function useResolveServer({ serverId }: { serverId: string }) {
+  const result = useResource(serversResource);
+  if (result.pending) return { pending: true, found: false };
+  return { pending: false, found: result.data.some((s) => s.id === serverId) };
+}
+
 export const serverDetailPane = Pane.define({
   id: "deploy-server-detail",
   defaultAncestors: [serversRootPane],
   segment: "s/:serverId",
   component: ServerDetailBody,
+  resolve: useResolveServer,
 });
 
 function ServersRoot() {

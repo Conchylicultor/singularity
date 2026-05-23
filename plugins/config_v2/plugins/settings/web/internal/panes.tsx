@@ -16,6 +16,7 @@ export const configDetailPane = Pane.define({
   segment: "cd/:configPath",
   component: ConfigDetailBody,
   width: 500,
+  resolve: false,
 });
 
 function ConfigNavBody() {

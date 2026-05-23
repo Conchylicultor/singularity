@@ -1,6 +1,8 @@
 import { type ReactElement } from "react";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Tasks } from "@plugins/tasks/plugins/task-list/web";
+import { tasksResource } from "@plugins/tasks/core";
 import { useTask } from "@plugins/tasks/web";
 import { TaskDetailFlushProvider } from "./context";
 import { TaskDetail } from "./components/task-detail";
@@ -18,12 +20,19 @@ export const tasksRootPane = Pane.define({
   width: 320,
 });
 
+function useResolveTask({ taskId }: { taskId: string }) {
+  const result = useResource(tasksResource);
+  if (result.pending) return { pending: true, found: false };
+  return { pending: false, found: result.data.some((t) => t.id === taskId) };
+}
+
 export const taskDetailPane = Pane.define({
   id: "task-detail",
   defaultAncestors: [tasksRootPane],
   segment: "t/:taskId",
   component: TaskDetailBody,
   width: 480,
+  resolve: useResolveTask,
 });
 
 function TasksRoot(): ReactElement {

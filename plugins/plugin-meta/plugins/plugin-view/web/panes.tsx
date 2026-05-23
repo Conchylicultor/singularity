@@ -8,6 +8,7 @@ export const pluginViewPane = Pane.define({
   segment: "p/:pluginId",
   component: PluginViewBody,
   width: 600,
+  resolve: false,
 });
 
 type LoadState =

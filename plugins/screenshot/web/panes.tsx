@@ -5,6 +5,7 @@ export const screenshotPane = Pane.define({
   id: "screenshot",
   segment: "screenshot/:id",
   component: ScreenshotBody,
+  resolve: false,
 });
 
 function ScreenshotBody() {

@@ -18,12 +18,19 @@ export const agentsRootPane = Pane.define({
   width: 320,
 });
 
+function useResolveAgent({ id }: { id: string }) {
+  const result = useResource(agentsResource);
+  if (result.pending) return { pending: true, found: false };
+  return { pending: false, found: result.data.some((a) => a.id === id) };
+}
+
 export const agentDetailPane = Pane.define({
   id: "agent-detail",
   defaultAncestors: [agentsRootPane],
   segment: "ag/:id",
   component: AgentDetailBody,
   width: 360,
+  resolve: useResolveAgent,
 });
 
 export const systemAgentDetailPane = Pane.define({
@@ -31,6 +38,7 @@ export const systemAgentDetailPane = Pane.define({
   defaultAncestors: [agentsRootPane],
   segment: "system/:systemId",
   component: SystemAgentDetailBody,
+  resolve: false,
 });
 
 export const agentSidePane = Pane.define({
@@ -41,6 +49,7 @@ export const agentSidePane = Pane.define({
     history: false,
     promote: false,
   },
+  resolve: false,
 });
 
 function AgentsRoot(): ReactElement {

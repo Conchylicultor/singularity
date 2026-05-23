@@ -1,6 +1,7 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import {
   PaneLayoutContext,
+  PaneResolveGuard,
   type MatchEntry,
 } from "@plugins/primitives/plugins/pane/web";
 import { useColumnCollapse } from "../hooks/use-column-collapse";
@@ -49,6 +50,15 @@ export function Column({ entry, isLast, dragHandleProps }: ColumnProps) {
     }
   }, [isLast, paneId]);
 
+  const Component = useMemo(() => {
+    if (entry.pane.resolve === undefined) return entry.pane.component;
+    const pane = entry.pane;
+    const params = entry.params;
+    return function PaneGuard() {
+      return <PaneResolveGuard pane={pane} params={params} />;
+    };
+  }, [entry.pane, entry.params]);
+
   // Some other column is maximized → collapse this one (overrides isLast guard).
   const forcedCollapse = !isMaximized && getMaximizedId() !== null;
   if (forcedCollapse) {
@@ -64,8 +74,6 @@ export function Column({ entry, isLast, dragHandleProps }: ColumnProps) {
 
   // Maximized column fills all available space regardless of its position.
   const expandFull = isLast || isMaximized;
-
-  const Component = entry.pane.component;
 
   // When keepMounted is true and the column is collapsed, the body div stays
   // mounted at tree position 0 (hidden via display:none) so the component

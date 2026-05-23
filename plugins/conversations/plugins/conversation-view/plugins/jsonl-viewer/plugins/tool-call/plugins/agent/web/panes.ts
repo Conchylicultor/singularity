@@ -8,4 +8,5 @@ export const agentReportPane = Pane.define({
   component: AgentReportPaneBody,
   chrome: { history: false },
   width: 600,
+  resolve: false,
 });

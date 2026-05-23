@@ -6,6 +6,7 @@ export const tableDetailPane = Pane.define({
   segment: "t/:pluginId/:tableName",
   component: TableDetailBody,
   width: 600,
+  resolve: false,
 });
 
 function TableDetailBody() {

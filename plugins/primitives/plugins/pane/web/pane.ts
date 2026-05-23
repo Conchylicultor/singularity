@@ -26,6 +26,20 @@ type ExtractParams<Path extends string> = Path extends `${infer Seg}/${infer Res
 export type InferParams<Path extends string> =
   ExtractParams<Path> extends infer O ? { [K in keyof O]: O[K] } : never;
 
+// ---------------------------------------------------------------------------
+// Resolve hook — mandatory for parameterized panes, opt-out with `false`.
+// ---------------------------------------------------------------------------
+
+export type ResolveHook<Params extends Record<string, string>> =
+  (params: Params) => { pending: boolean; found: boolean };
+
+type HasParams<Path extends string> = keyof InferParams<Path> extends never ? false : true;
+
+type ResolveField<Path extends string> =
+  HasParams<Path> extends true
+    ? { resolve: ResolveHook<InferParams<Path>> | false }
+    : { resolve?: never };
+
 let nextInstanceId = 0;
 
 export interface PaneSlot {
@@ -109,6 +123,7 @@ export interface PaneInternal {
   /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
   width?: number;
   actionsSlot: Slot<{ component: ComponentType; position?: "left" | "right" }>;
+  resolve?: ResolveHook<Record<string, string>> | false;
 }
 
 // Populated synchronously via useSyncPaneRegistry (called by MillerColumns).
@@ -771,7 +786,7 @@ function normalizeChrome<Params>(
 // ParentParams defaults to `{}` so that top-level panes (no parent) end up
 // with `{} & InferParams<Path>` = `InferParams<Path>`. Using
 // `Record<string, never>` as the default would clash with any own params.
-interface DefineArgs<Path extends string, ParentParams, Input> {
+type DefineArgs<Path extends string, ParentParams, Input> = {
   id: string;
   /** Optional default ancestors to prepend when opening this pane from scratch (no caller context). */
   defaultAncestors?: Array<PaneObject<any, any, any>>;
@@ -786,7 +801,7 @@ interface DefineArgs<Path extends string, ParentParams, Input> {
    * columns). The leaf column ignores this and flex-grows. Defaults to 400.
    */
   width?: number;
-}
+} & ResolveField<Path>;
 
 function define<
   Path extends string = "",
@@ -817,6 +832,8 @@ function define<
     position?: "left" | "right";
   }>(`pane.${args.id}.actions`);
 
+  const resolve = "resolve" in args ? (args.resolve as PaneInternal["resolve"]) : undefined;
+
   const internal: PaneInternal = {
     id: args.id,
     defaultAncestors,
@@ -825,6 +842,7 @@ function define<
     chrome: normalizeChrome(args.chrome),
     width: args.width,
     actionsSlot,
+    resolve,
   };
 
   return makePaneObject(internal) as PaneObject<

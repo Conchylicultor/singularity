@@ -16,6 +16,7 @@ export const filePeekPane = Pane.define({
   component: FilePeekPaneBody,
   chrome: { history: false },
   width: 600,
+  resolve: false,
 });
 
 function FilePeekPaneBody() {

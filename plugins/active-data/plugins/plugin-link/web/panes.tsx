@@ -12,6 +12,7 @@ export const pluginConvSidePane = Pane.define({
   component: PluginConvSideBody,
   width: 600,
   chrome: { history: false },
+  resolve: false,
 });
 
 type TreeState =

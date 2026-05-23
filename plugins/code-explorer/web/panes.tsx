@@ -6,6 +6,7 @@ export const globalFileTreePane = Pane.define({
   id: "global-file-tree",
   segment: "code/:worktree",
   component: GlobalFileTreeChromedBody,
+  resolve: false,
 });
 
 export const convFileTreePane = Pane.define({

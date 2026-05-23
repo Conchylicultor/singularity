@@ -19,6 +19,7 @@ export const convCommitDiffPane = Pane.define({
   input: type<{ convId: string }>(),
   component: ConvCommitDiffBody,
   width: 720,
+  resolve: false,
 });
 
 function ConvCommitsGraphBody() {

@@ -13,6 +13,7 @@ export const logChannelPane = Pane.define({
   defaultAncestors: [logsPane],
   segment: "ch/:channel",
   component: LogsChannelBody,
+  resolve: false,
 });
 
 function LogsBody(): ReactElement {

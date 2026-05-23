@@ -15,6 +15,7 @@ export const buildDetailPane = Pane.define({
   segment: "r/:runId",
   component: BuildDetailBody,
   width: 480,
+  resolve: false,
 });
 
 function BuildPaneBody(): ReactElement {
