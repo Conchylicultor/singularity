@@ -10,13 +10,20 @@ export { profilingPane } from "./panes";
 export type { Span, PhaseConfig, ProfilingContextValue } from "./components/shared";
 export {
   GanttSection,
+  PhaseGroup,
+  SpanRow,
   SpanDetail,
-  TimeAxis,
   ProfilingContext,
   useProfilingContext,
-  formatDuration,
   groupByPhase,
 } from "./components/shared";
+export type { GanttContainerContextValue } from "./components/gantt-container";
+export {
+  GanttContainer,
+  useGanttContainerContext,
+  TimeAxis,
+  formatDuration,
+} from "./components/gantt-container";
 export { useGanttZoom } from "./components/use-gantt-zoom";
 export type { ZoomWindow } from "./components/use-gantt-zoom";
 export { DragSelection } from "./components/drag-selection";

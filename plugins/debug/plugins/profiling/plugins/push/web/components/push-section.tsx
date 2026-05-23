@@ -2,19 +2,15 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
-  type PointerEvent,
   type ReactElement,
 } from "react";
 import {
   formatDuration,
-  TimeAxis,
   useProfilingContext,
-  useGanttZoom,
-  DragSelection,
+  GanttContainer,
+  useGanttContainerContext,
   type Span,
-  type DragState,
 } from "@plugins/debug/plugins/profiling/web";
 import { attemptPane } from "@plugins/attempt-view/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -84,17 +80,9 @@ const BUILD_COLOR = "bg-sky-400 dark:bg-sky-500";
 const BUILD_FAILED_COLOR = "bg-sky-700 dark:bg-sky-800";
 const BUILD_CRASHED_COLOR = "bg-red-400 dark:bg-red-500";
 
-
-const LABEL_WIDTH = 160;
-const DURATION_WIDTH = 64;
-const MIN_DRAG_PX = 4;
-
 export function PushSection(): ReactElement | null {
   const { refreshKey } = useProfilingContext();
   const [data, setData] = useState<PushData | null>(null);
-  const zoom = useGanttZoom();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [drag, setDrag] = useState<DragState | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -113,95 +101,24 @@ export function PushSection(): ReactElement | null {
 
   if (!data || data.groups.length === 0) return null;
 
-  function getBarBounds(): { left: number; width: number } | null {
-    const el = containerRef.current;
-    if (!el) return null;
-    const rect = el.getBoundingClientRect();
-    const left = rect.left + LABEL_WIDTH;
-    const width = rect.width - LABEL_WIDTH - DURATION_WIDTH;
-    return width > 0 ? { left, width } : null;
-  }
-
-  function handlePointerDown(e: PointerEvent): void {
-    if (e.button !== 0) return;
-    const bounds = getBarBounds();
-    if (!bounds) return;
-    if (e.clientX < bounds.left || e.clientX > bounds.left + bounds.width)
-      return;
-
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const start = (e.clientX - bounds.left) / bounds.width;
-    setDrag({ start, current: start });
-
-    const target = e.currentTarget as HTMLElement;
-    const onMove = (me: Event): void => {
-      const pe = me as globalThis.PointerEvent;
-      const frac = Math.max(
-        0,
-        Math.min(1, (pe.clientX - bounds.left) / bounds.width),
-      );
-      setDrag((prev) => (prev ? { ...prev, current: frac } : null));
-    };
-    const onUp = (ue: Event): void => {
-      target.releasePointerCapture((ue as globalThis.PointerEvent).pointerId);
-      target.removeEventListener("pointermove", onMove);
-      target.removeEventListener("pointerup", onUp);
-      target.removeEventListener("pointercancel", onUp);
-      setDrag((prev) => {
-        if (!prev) return null;
-        const pxDelta = Math.abs(prev.current - prev.start) * bounds.width;
-        if (pxDelta >= MIN_DRAG_PX) {
-          zoom.zoomTo(prev.start, prev.current, data!.totalMs);
-        }
-        return null;
-      });
-    };
-    target.addEventListener("pointermove", onMove);
-    target.addEventListener("pointerup", onUp);
-    target.addEventListener("pointercancel", onUp);
-  }
-
   return (
-    <div
-      ref={containerRef}
-      className="relative select-none"
-      onPointerDown={handlePointerDown}
-      onDoubleClick={zoom.isZoomed ? zoom.reset : undefined}
-    >
-      <TimeAxis
-        title="Push & Build"
-        totalMs={data.totalMs}
-        zoomWindow={zoom.zoomWindow}
-        onZoomReset={zoom.reset}
-      />
+    <GanttContainer title="Push & Build" totalMs={data.totalMs}>
       <div className="border-b">
         {data.groups.map((group) => (
-          <PushAttemptRow
-            key={group.worktree}
-            group={group}
-            totalMs={data.totalMs}
-            toLeftPct={zoom.toLeftPct}
-            toWidthPct={zoom.toWidthPct}
-          />
+          <PushAttemptRow key={group.worktree} group={group} />
         ))}
       </div>
-      <DragSelection drag={drag} />
-    </div>
+    </GanttContainer>
   );
 }
 
 function PushAttemptRow({
   group,
-  totalMs,
-  toLeftPct,
-  toWidthPct,
 }: {
   group: WorktreeGroup;
-  totalMs: number;
-  toLeftPct: (ms: number, totalMs: number) => string;
-  toWidthPct: (durationMs: number, totalMs: number) => string;
 }): ReactElement {
   const { hovered, setHovered } = useProfilingContext();
+  const { toLeftPct, toWidthPct, totalMs } = useGanttContainerContext();
   const openPane = useOpenPane();
 
   const lastPush = group.pushes[group.pushes.length - 1];
