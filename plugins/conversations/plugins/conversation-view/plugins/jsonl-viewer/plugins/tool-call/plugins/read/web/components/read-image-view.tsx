@@ -7,7 +7,7 @@ export function ReadImageView({
   worktree: string;
   filePath: string;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const src = `/api/code/${encodeURIComponent(worktree)}/image?path=${encodeURIComponent(filePath)}`;
   const alt = filePath.slice(filePath.lastIndexOf("/") + 1);
 

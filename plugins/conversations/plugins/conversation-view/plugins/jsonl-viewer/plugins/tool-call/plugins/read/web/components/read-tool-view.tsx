@@ -58,8 +58,10 @@ export function ReadToolView({ event }: ToolRendererProps) {
     </span>
   );
 
+  const isImage = isImagePath(file_path);
+
   return (
-    <ToolCallCard event={event} summary={summary} defaultOpen={false}>
+    <ToolCallCard event={event} summary={summary} defaultOpen={isImage}>
       {event.result && (
         <div className="mt-2">
           {event.result.isError ? (
