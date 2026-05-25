@@ -136,7 +136,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
       - `/api/tweakcn/themes (GET, POST)`
       - `/api/tweakcn/themes/:id (DELETE)`
       - Plugins:
-        - **`community-browser`** — Community theme catalog and apply endpoints for tweakcn.
+        - **`community-browser`** — Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.
           - `/api/tweakcn/community/catalog (GET)`
           - `/api/tweakcn/community/apply (POST)`
 

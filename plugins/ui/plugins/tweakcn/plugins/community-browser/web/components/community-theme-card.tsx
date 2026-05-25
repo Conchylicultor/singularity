@@ -1,0 +1,74 @@
+import { cn } from "@/lib/utils";
+import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
+import type { CatalogTheme } from "../../shared";
+
+const COLOR_BARS = [
+  "primary",
+  "secondary",
+  "accent",
+  "muted",
+  "border",
+  "card",
+] as const;
+
+function getColor(
+  theme: CatalogTheme,
+  key: string,
+  dark: boolean,
+): string | undefined {
+  return dark ? theme.cssVars.dark[key] : theme.cssVars.light[key];
+}
+
+export function CommunityThemeCard({
+  theme,
+  isPending,
+  onApply,
+}: {
+  theme: CatalogTheme;
+  isPending: boolean;
+  onApply: () => void;
+}) {
+  const dark = useDarkMode();
+  const bg = getColor(theme, "background", dark);
+  const fg = getColor(theme, "foreground", dark);
+
+  return (
+    <button
+      type="button"
+      onClick={onApply}
+      disabled={isPending}
+      className={cn(
+        "flex flex-col overflow-hidden rounded-lg border border-border text-left transition-all",
+        "hover:ring-1 hover:ring-primary/40 hover:shadow-sm",
+        isPending && "opacity-50 cursor-wait",
+      )}
+    >
+      <div
+        className="flex items-end justify-center gap-1 px-3 py-3 h-16"
+        style={{ backgroundColor: bg }}
+      >
+        {COLOR_BARS.map((key) => (
+          <div
+            key={key}
+            className="flex-1 h-8 rounded-sm"
+            style={{ backgroundColor: getColor(theme, key, dark) }}
+          />
+        ))}
+      </div>
+
+      <div className="flex items-center gap-1.5 border-t border-border px-2 py-1.5">
+        <span
+          className="flex-1 truncate text-xs font-medium"
+          style={{ color: fg }}
+        >
+          {theme.name}
+        </span>
+        {theme.source === "registry" && (
+          <span className="shrink-0 rounded-full bg-primary/10 px-1.5 text-[10px] uppercase tracking-wide text-primary">
+            curated
+          </span>
+        )}
+      </div>
+    </button>
+  );
+}

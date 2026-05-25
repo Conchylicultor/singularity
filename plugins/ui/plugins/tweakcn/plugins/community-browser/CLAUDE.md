@@ -4,7 +4,10 @@
 
 ## Plugin reference
 
-- Description: Community theme catalog and apply endpoints for tweakcn.
+- Description: Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.
+- Web:
+  - Contributes: `ThemeCustomizer.Section` "community-browser" → `CommunityBrowserSection`
+  - Uses: `config_v2.useConfigRegistrations`
 - Server:
   - Uses: `database.db`
   - Routes: `GET /api/tweakcn/community/catalog`, `POST /api/tweakcn/community/apply`
