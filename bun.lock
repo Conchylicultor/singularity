@@ -1013,6 +1013,14 @@
       "name": "@singularity/plugin-packages-retry",
       "version": "0.0.1",
     },
+    "plugins/page": {
+      "name": "@singularity/plugin-page",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/editor": {
+      "name": "@singularity/plugin-page-editor",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta": {
       "name": "@singularity/plugin-plugin-meta",
       "version": "0.0.1",
@@ -2538,6 +2546,10 @@
     "@singularity/plugin-packages": ["@singularity/plugin-packages@workspace:plugins/packages"],
 
     "@singularity/plugin-packages-retry": ["@singularity/plugin-packages-retry@workspace:plugins/packages/plugins/retry"],
+
+    "@singularity/plugin-page": ["@singularity/plugin-page@workspace:plugins/page"],
+
+    "@singularity/plugin-page-editor": ["@singularity/plugin-page-editor@workspace:plugins/page/plugins/editor"],
 
     "@singularity/plugin-plugin-meta": ["@singularity/plugin-plugin-meta@workspace:plugins/plugin-meta"],
 

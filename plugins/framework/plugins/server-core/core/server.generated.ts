@@ -96,6 +96,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/secrets", hierarchyPath: "infra/secrets", loader: () => import("@plugins/infra/plugins/secrets/server"), dependsOn: [] },
   { pluginPath: "infra/plugins/worktree", hierarchyPath: "infra/worktree", loader: () => import("@plugins/infra/plugins/worktree/server"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "notifications", hierarchyPath: "notifications", loader: () => import("@plugins/notifications/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/jobs"] },
+  { pluginPath: "page/plugins/editor", hierarchyPath: "page/editor", loader: () => import("@plugins/page/plugins/editor/server"), dependsOn: ["database", "infra/plugins/endpoints", "primitives/plugins/rank"] },
   { pluginPath: "plugin-meta/plugins/plugin-health", hierarchyPath: "plugin-meta/plugin-health", loader: () => import("@plugins/plugin-meta/plugins/plugin-health/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/entity-extensions", "infra/plugins/mcp", "infra/plugins/paths", "infra/plugins/worktree", "tasks-core"] },
   { pluginPath: "plugin-meta/plugins/plugin-view", hierarchyPath: "plugin-meta/plugin-view", loader: () => import("@plugins/plugin-meta/plugins/plugin-view/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/paths"] },
   { pluginPath: "primitives/plugins/avatar", hierarchyPath: "primitives/avatar", loader: () => import("@plugins/primitives/plugins/avatar/server"), dependsOn: ["config_v2"] },

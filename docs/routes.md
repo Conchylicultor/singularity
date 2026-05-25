@@ -81,6 +81,19 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
       - `/api/secrets/meta (POST)` _(central)_
       - `/api/secrets/list (POST)` _(central)_
 
+- **`page`** — Block-based page editor.
+  - Plugins:
+    - **`editor`** — Block-based document editor — tables, routes, and live state.
+      - `/api/documents (GET, POST)`
+      - `/api/documents/:id (GET, PATCH, DELETE)`
+      - `/api/documents/:documentId/blocks (GET, POST)`
+      - `/api/blocks/:id (PATCH, DELETE)`
+      - `/api/blocks/:id/move (POST)`
+      - `/api/blocks/:id/split (POST)`
+      - `/api/blocks/:id/merge (POST)`
+      - `/api/blocks/:id/indent (POST)`
+      - `/api/blocks/:id/outdent (POST)`
+
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.

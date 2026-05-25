@@ -960,7 +960,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`, `tweakcn`
+    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`, `tweakcn`
   - Core:
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Server:
@@ -1262,6 +1262,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`retry`**
       - Core:
         - Exports: Types: `DelayStrategy`; Values: `exponential`, `fixed`, `RetryDeadlineError`, `retryUntil`, `withJitter`
+
+- **`page`** — Block-based page editor.
+  - Plugins:
+    - **`editor`** — Block-based document editor — tables, routes, and live state.
+      - Server:
+        - Uses: `database.db`
+        - DB schema: `plugins/page/plugins/editor/server/internal/tables.ts`
+        - Exports: Types: `Block`, `Document`; Values: `_blocks`, `_documents`, `BlockSchema`, `blocksLiveResource`, `DocumentSchema`, `documentsLiveResource`
+        - Routes: `GET /api/documents`, `POST /api/documents`, `GET /api/documents/:id`, `PATCH /api/documents/:id`, `DELETE /api/documents/:id`, `GET /api/documents/:documentId/blocks`, `POST /api/documents/:documentId/blocks`, `PATCH /api/blocks/:id`, `DELETE /api/blocks/:id`, `POST /api/blocks/:id/move`, `POST /api/blocks/:id/split`, `POST /api/blocks/:id/merge`, `POST /api/blocks/:id/indent`, `POST /api/blocks/:id/outdent`
+      - Core:
+        - Exports: Types: `Block`, `CreateBlockBody`, `CreateDocumentBody`, `Document`, `MoveBlockBody`, `SplitBlockBody`, `UpdateBlockBody`, `UpdateDocumentBody`; Values: `BlockSchema`, `blocksResource`, `createBlock`, `CreateBlockBodySchema`, `createDocument`, `CreateDocumentBodySchema`, `deleteBlock`, `deleteDocument`, `DocumentSchema`, `documentsResource`, `getDocument`, `indentBlock`, `listBlocks`, `listDocuments`, `mergeBlocks`, `moveBlock`, `MoveBlockBodySchema`, `outdentBlock`, `splitBlock`, `SplitBlockBodySchema`, `updateBlock`, `UpdateBlockBodySchema`, `updateDocument`, `UpdateDocumentBodySchema`
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:

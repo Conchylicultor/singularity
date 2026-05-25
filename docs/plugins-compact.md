@@ -235,6 +235,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`retry`**
 
+- **`page`** — Block-based page editor.
+  - Plugins:
+    - **`editor`** — Block-based document editor — tables, routes, and live state.
+
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
     - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
