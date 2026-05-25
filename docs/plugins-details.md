@@ -666,7 +666,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
                 - Exports: Types: `AttachmentRendererContribution`; Values: `JsonlViewerAttachment`
               - Cross-plugin:
-                - Slot contributors: `deferred-tools-delta`, `nested-memory`, `task-reminder`
+                - Slot contributors: `deferred-tools-delta`, `nested-memory`, `skill-listing`, `task-reminder`
               - Core:
                 - Exports: Types: `AttachmentEvent`, `AttachmentRendererProps`
               - Plugins:
@@ -676,6 +676,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`nested-memory`** — Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "nested_memory" → `NestedMemoryAttachmentView`
+                - **`skill-listing`** — Renders skill-listing attachment events showing skills available in the current session.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "skill_listing" → `SkillListingView`
                 - **`task-reminder`** — Renders task-reminder attachment events showing periodic task list injections.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "task_reminder" → `TaskReminderAttachmentView`

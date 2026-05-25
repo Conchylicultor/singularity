@@ -439,6 +439,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/skill-listing": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-skill-listing",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/task-reminder": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-task-reminder",
       "version": "0.0.1",
@@ -2272,6 +2276,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-deferred-tools-delta": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-deferred-tools-delta@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/deferred-tools-delta"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/nested-memory"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-skill-listing": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-skill-listing@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/skill-listing"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-task-reminder": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-task-reminder@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/task-reminder"],
 
