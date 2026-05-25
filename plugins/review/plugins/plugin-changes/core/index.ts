@@ -1,3 +1,4 @@
+export type { DiffRenderer } from "./diff-renderer";
 export type {
   DiffList,
   PluginChangedFile,
