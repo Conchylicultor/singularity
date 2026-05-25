@@ -13,10 +13,12 @@ type UserTextEvent = Extract<JsonlEvent, { kind: "user-text" }>;
 
 const COLLAPSE_CHAR_THRESHOLD = 800;
 const COLLAPSE_LINE_THRESHOLD = 14;
+const LINES_PER_IMAGE = 8;
 
-function isLong(text: string): boolean {
+function isLong(text: string, imageCount = 0): boolean {
   if (text.length > COLLAPSE_CHAR_THRESHOLD) return true;
-  let lines = 1;
+  let lines = 1 + imageCount * LINES_PER_IMAGE;
+  if (lines > COLLAPSE_LINE_THRESHOLD) return true;
   for (let i = 0; i < text.length; i++) {
     if (text.charCodeAt(i) === 10 && ++lines > COLLAPSE_LINE_THRESHOLD) return true;
   }
@@ -76,7 +78,8 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
   const openPane = useOpenPane();
-  const collapsible = isLong(e.text);
+  const imageCount = e.segments?.filter((s) => s.kind !== "text").length ?? 0;
+  const collapsible = isLong(e.text, imageCount);
   const [expanded, setExpanded] = useState(false);
   const reportSticky = useStickyReport();
   const showCollapsed = collapsible && !expanded;
