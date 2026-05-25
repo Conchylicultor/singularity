@@ -22,11 +22,10 @@ export default createFacet<CommandDef[]>({
     );
   },
 
-  renderDoc(data, ctx) {
+  renderDoc(data) {
     if (data.length === 0) return [];
-    const subIndent = `${ctx.bodyIndent}  `;
     return [
-      `${subIndent}- Commands: ${data.map((c) => `\`${c.groupName}.${c.memberName}\``).join(", ")}`,
+      { folder: "web", key: "Commands", values: data.map((c) => `\`${c.groupName}.${c.memberName}\``) },
     ];
   },
 });

@@ -5,24 +5,21 @@
 ## Plugin reference
 
 - Description: Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.
-- Defines:
-  - DB schema: `plugins/backup/server/internal/tables.ts`
-- Exports (core):
-  - Types: `BackupArchive`, `BackupManifest`, `BackupTargetResult`
-- Exports (web):
-  - Values: `backupPane`
-- Exports (server):
-  - Values: `_backupRuns`, `BackupTarget`
-- Exports (shared):
-  - Values: `listBackupRuns`, `runBackup`
-- Contributes:
-  - `ConfigV2.WebRegister`
-  - `Pane.Register` "backup"
-  - `DebugApp.Sidebar` "Backup" → `component`
+- Web:
+  - Contributes: `ConfigV2.WebRegister`, `Pane.Register` "backup", `DebugApp.Sidebar` "Backup" → `component`
+  - Uses: `config_v2.ConfigV2`
+  - Exports: Values: `backupPane`
 - Server:
-  - Register: `defineJob('backup.run')`
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
-- Imported by: `google-drive`, `local`
+  - DB schema: `plugins/backup/server/internal/tables.ts`
+  - Exports: Values: `_backupRuns`, `BackupTarget`
+  - Register: `defineJob('backup.run')`
+- Cross-plugin:
+  - Imported by: `google-drive`, `local`
+- Core:
+  - Exports: Types: `BackupArchive`, `BackupManifest`, `BackupTargetResult`
+- Shared:
+  - Exports: Values: `listBackupRuns`, `runBackup`
 - Sub-plugins:
   - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
   - **`local`** — Config UI for local backup target. Stores backup archives on the local filesystem.

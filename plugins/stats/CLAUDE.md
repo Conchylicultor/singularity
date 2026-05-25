@@ -5,11 +5,10 @@
 ## Plugin reference
 
 - Description: Root plugin hosting stacked chart contributions from child plugins.
-- Exports (web):
-  - Values: `Stats`, `statsPane`, `useShowEmptyDays`
-- Contributes:
-  - `Pane.Register` "stats"
-  - `Shell.Sidebar` "Stats" → `component`
+- Web:
+  - Contributes: `Pane.Register` "stats", `Shell.Sidebar` "Stats" → `component`
+  - Uses: `shell.Shell`
+  - Exports: Values: `Stats`, `statsPane`, `useShowEmptyDays`
 - Sub-plugins:
   - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
   - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, sourced from ccusage.

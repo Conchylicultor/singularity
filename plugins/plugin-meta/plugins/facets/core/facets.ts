@@ -10,15 +10,21 @@ export interface ExtractContext {
   importedModules?: { mod: Record<string, unknown>; runtime: "web" | "server" | "central" }[];
 }
 
+export interface DocFact {
+  folder: string;
+  key: string;
+  values: string[];
+}
+
 export interface RenderDocContext {
-  bodyIndent: string;
+  root: string;
 }
 
 export interface Facet {
   def: FacetDef<unknown>;
   extract: (ctx: ExtractContext) => unknown;
   relate?: (ctx: unknown) => void;
-  renderDoc: (data: unknown, ctx: RenderDocContext) => string[];
+  renderDoc: (data: unknown, ctx: RenderDocContext) => DocFact[];
 }
 
 export function defineFacet<T>(id: string): FacetDef<T> {
@@ -29,7 +35,7 @@ export function createFacet<T>(impl: {
   def: FacetDef<T>;
   extract: (ctx: ExtractContext) => T;
   relate?: (ctx: unknown) => void;
-  renderDoc: (data: T, ctx: RenderDocContext) => string[];
+  renderDoc: (data: T, ctx: RenderDocContext) => DocFact[];
 }): Facet {
   return impl as Facet;
 }

@@ -17,12 +17,9 @@ served by the plugin-meta/plugin-view plugin.
 ## Plugin reference
 
 - Description: Sidebar entry and filterable tree pane for pre-publish plugin review.
-- Exports (web):
-  - Types: `TreeRowBadgeContribution`
-  - Values: `Publish`, `usePluginTree`
-- Contributes:
-  - `Pane.Register` "publish"
-  - `Forge.Sidebar` "Publish" → `component`
+- Web:
+  - Contributes: `Pane.Register` "publish", `Forge.Sidebar` "Publish" → `component`
+  - Exports: Types: `TreeRowBadgeContribution`; Values: `Publish`, `usePluginTree`
 - Sub-plugins:
   - **`child-count`** — Recursive child count badge in the publish plugin tree row.
   - **`expand-collapse`** — Expand/collapse all descendants button in the publish plugin tree row.

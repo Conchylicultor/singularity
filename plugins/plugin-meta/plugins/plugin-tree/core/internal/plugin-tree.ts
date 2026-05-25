@@ -4,7 +4,7 @@ import {
   registerBarrelStubs,
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
-import { loadFacets, setFacet } from "@plugins/plugin-meta/plugins/facets/core";
+import { loadFacets, setFacet, type Facet } from "@plugins/plugin-meta/plugins/facets/core";
 export {
   readIfExists,
   stripTypes,
@@ -27,7 +27,7 @@ import {
 // ── Re-exports from facet cores (backward compat) ──────────────────
 export type { SlotDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
 export type { CommandDef } from "@plugins/plugin-meta/plugins/facets/plugins/commands/core";
-export type { RouteDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
+export type { RouteDef, RoutesData } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
 export type { ResourceDef } from "@plugins/plugin-meta/plugins/facets/plugins/resources/core";
 export { parseResources } from "@plugins/plugin-meta/plugins/facets/plugins/resources/core";
 export type { EntityExtension, EntityExtensionRef, TableDef } from "@plugins/plugin-meta/plugins/facets/plugins/db-schema/core";
@@ -37,7 +37,7 @@ export type { DocMetaRegistration } from "@plugins/plugin-meta/plugins/facets/pl
 // ── Imports from facet cores (used locally by PluginNode & populateCompatFields) ──
 import type { SlotDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
 import type { CommandDef } from "@plugins/plugin-meta/plugins/facets/plugins/commands/core";
-import type { RouteDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
+import type { RoutesData } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
 import type { ResourceDef } from "@plugins/plugin-meta/plugins/facets/plugins/resources/core";
 import type { EntityExtension, EntityExtensionRef, TableDef } from "@plugins/plugin-meta/plugins/facets/plugins/db-schema/core";
 import type { Contribution, ContributionsFacetData, DocMetaContribution } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
@@ -93,6 +93,7 @@ export interface PluginTree {
   pluginsRoot: string;
   byDir: Map<string, PluginNode>;
   roots: PluginNode[];
+  facets: Facet[];
 }
 
 // ── Walk ────────────────────────────────────────────────────────────
@@ -294,7 +295,7 @@ export async function buildPluginTree(
 
   computeHierarchyIds(roots, "");
 
-  const tree: PluginTree = { pluginsRoot, byDir, roots };
+  const tree: PluginTree = { pluginsRoot, byDir, roots, facets: [] };
 
   // Step 4: barrel import + facet pipeline (unless skipped)
   if (!opts?.skipBarrelImport) {
@@ -331,6 +332,7 @@ export async function buildPluginTree(
 
     // 4b: facet extract
     const facets = await loadFacets();
+    tree.facets = facets;
     for (const node of byDir.values()) {
       const nodeModules = importedModules.get(node.dir) ?? [];
       for (const facet of facets) {
@@ -375,8 +377,9 @@ function populateCompatFields(tree: PluginTree): void {
       };
     }
 
-    const routes = f(node)["routes"] as RouteDef[] | undefined;
-    if (routes) {
+    const routesData = f(node)["routes"] as RoutesData | undefined;
+    if (routesData) {
+      const routes = routesData.routes;
       node.server.httpRoutes = routes.filter(r => r.runtime === "server" && r.type === "http").map(r => r.route);
       node.server.wsRoutes = routes.filter(r => r.runtime === "server" && r.type === "ws").map(r => r.route);
       node.central.httpRoutes = routes.filter(r => r.runtime === "central" && r.type === "http").map(r => r.route);

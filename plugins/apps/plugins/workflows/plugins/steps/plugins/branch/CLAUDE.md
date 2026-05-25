@@ -5,8 +5,8 @@
 ## Plugin reference
 
 - Description: Branch step type for workflows. Routes execution based on a field value from the previous step's output. Branch step type for workflows. Routes execution based on a field value from the previous step's output.
-- Contributes:
-  - `Workflows.StepType` "Branch"
+- Web:
+  - Contributes: `Workflows.StepType` "Branch"
 - Server:
   - Register: `defineStepExecutor('branch')`
 

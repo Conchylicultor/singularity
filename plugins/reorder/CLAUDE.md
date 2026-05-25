@@ -47,19 +47,16 @@ Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The
 
 - Description: Generic reorder primitive. Slots opt in via defineRenderSlot reorder config; DnD is automatic via middleware. Generic reorder primitive: per-worktree storage of slot contribution ranks.
 - Load-bearing: yes
-- Defines:
-  - DB schema: `plugins/reorder/server/internal/tables.ts`
-  - DB schema: `plugins/reorder/server/schema.ts`
-- Exports (web):
-  - Values: `getEditMode`, `setEditMode`, `useEditMode`
-- Exports (server):
-  - Values: `_reorderPrefs`, `reorderPrefsResource`
-- Exports (shared):
-  - Types: `PatchSlotBody`, `ReorderSlotPrefs`
-  - Values: `deleteContribution`, `getSlot`, `patchSlot`, `patchSlotBodySchema`, `reorderPrefsResource`, `ReorderSlotPrefsSchema`
 - Server:
   - Uses: `database.db`
-- Imported by: `edit-mode`
+  - DB schema: `plugins/reorder/server/internal/tables.ts`, `plugins/reorder/server/schema.ts`
+  - Exports: Values: `_reorderPrefs`, `reorderPrefsResource`
+- Cross-plugin:
+  - Imported by: `edit-mode`
+- Web:
+  - Exports: Values: `getEditMode`, `setEditMode`, `useEditMode`
+- Shared:
+  - Exports: Types: `PatchSlotBody`, `ReorderSlotPrefs`; Values: `deleteContribution`, `getSlot`, `patchSlot`, `patchSlotBodySchema`, `reorderPrefsResource`, `ReorderSlotPrefsSchema`
 - Sub-plugins:
   - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
   - **`groups`** — User-created groups within reorderable areas. Drag items onto each other to form groups.

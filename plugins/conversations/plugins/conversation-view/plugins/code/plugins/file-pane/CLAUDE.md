@@ -5,14 +5,12 @@
 ## Plugin reference
 
 - Description: Hosts the file-peek pane and the FilePane.Renderer slot.
-- Defines:
+- Web:
   - Slots: `FilePane.Renderer`
-- Exports (web):
-  - Types: `FileContentState`, `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`
-  - Values: `FileContent`, `FilePane`, `FilePaneView`, `filePeekPane`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileRenderers`
-- Contributes:
-  - `Pane.Register` "file-peek"
-- Slot contributors: `diff`, `image`, `markdown`, `raw`
+  - Contributes: `Pane.Register` "file-peek"
+  - Exports: Types: `FileContentState`, `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`; Values: `FileContent`, `FilePane`, `FilePaneView`, `filePeekPane`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileRenderers`
+- Cross-plugin:
+  - Slot contributors: `diff`, `image`, `markdown`, `raw`
 - Sub-plugins:
   - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
   - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.

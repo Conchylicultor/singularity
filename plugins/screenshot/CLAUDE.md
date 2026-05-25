@@ -5,14 +5,14 @@
 ## Plugin reference
 
 - Description: Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
-- Exports (web):
-  - Values: `captureApp`, `screenshotPane`
-- Exports (shared):
-  - Values: `createScreenshot`, `getScreenshot`, `saveScreenshotFile`
-- Contributes:
-  - `Pane.Register` "screenshot"
-  - `Shell.Toolbar` → `ScreenshotButton`
-- Imported by: `draw-on-app`
+- Web:
+  - Contributes: `Pane.Register` "screenshot", `Shell.Toolbar` → `ScreenshotButton`
+  - Uses: `notifications.toast`, `shell.Shell`
+  - Exports: Values: `captureApp`, `screenshotPane`
+- Cross-plugin:
+  - Imported by: `draw-on-app`
+- Shared:
+  - Exports: Values: `createScreenshot`, `getScreenshot`, `saveScreenshotFile`
 - Sub-plugins:
   - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.
   - **`draw-on-app`** — Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.

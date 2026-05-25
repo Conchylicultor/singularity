@@ -3,8 +3,8 @@ import type { PluginTree, PluginNode } from "@plugins/plugin-meta/plugins/plugin
 import {
   createFacet,
   getFacet,
+  type DocFact,
   type ExtractContext,
-  type RenderDocContext,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import { slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
 import { readIfExists, stripTypes } from "@plugins/plugin-meta/plugins/parse-utils/core";
@@ -88,7 +88,7 @@ export default createFacet<ContributionsFacetData>({
       }
     }
 
-    return { static: staticContributions, runtime: runtimeContributions };
+    return { static: staticContributions, runtime: runtimeContributions, slotContributors: [] };
   },
 
   relate(rawCtx) {
@@ -145,20 +145,29 @@ export default createFacet<ContributionsFacetData>({
       }
     }
     for (const info of tree.byDir.values()) info.slotContributors.sort();
+
+    // Copy computed slotContributors into facet data for renderDoc
+    for (const info of tree.byDir.values()) {
+      const data = getFacet(info, contributionsFacetDef);
+      if (data) data.slotContributors = [...info.slotContributors];
+    }
   },
 
-  renderDoc(data: ContributionsFacetData, ctx: RenderDocContext): string[] {
-    if (data.runtime.length === 0) return [];
-    const indent = `${ctx.bodyIndent}  `;
-    const subIndent = `${ctx.bodyIndent}    `;
-    const lines: string[] = [`${indent}- Contributes:`];
-    for (const c of data.runtime) {
-      const parts = [`\`${c.slotDisplayName ?? c.slotId}\``];
-      if (c.doc.label) parts.push(`"${c.doc.label}"`);
-      if (c.doc.detail) parts.push(`(${c.doc.detail})`);
-      if (c.componentName) parts.push(`→ \`${c.componentName}\``);
-      lines.push(`${subIndent}- ${parts.join(" ")}`);
+  renderDoc(data: ContributionsFacetData) {
+    const facts: DocFact[] = [];
+    if (data.runtime.length > 0) {
+      const values = data.runtime.map((c) => {
+        const parts = [`\`${c.slotDisplayName ?? c.slotId}\``];
+        if (c.doc.label) parts.push(`"${c.doc.label}"`);
+        if (c.doc.detail) parts.push(`(${c.doc.detail})`);
+        if (c.componentName) parts.push(`→ \`${c.componentName}\``);
+        return parts.join(" ");
+      });
+      facts.push({ folder: "web", key: "Contributes", values });
     }
-    return lines;
+    if (data.slotContributors.length > 0) {
+      facts.push({ folder: "cross-plugin", key: "Slot contributors", values: data.slotContributors.map((n) => `\`${n}\``) });
+    }
+    return facts;
   },
 });

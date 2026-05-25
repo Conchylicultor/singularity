@@ -19,9 +19,8 @@ editing surfaces use `TextEditor` directly.
 ## Plugin reference
 
 - Description: Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).
-- Exports (web):
-  - Types: `PromptEditorActionProps`
-  - Values: `PromptEditor`, `PromptEditorSlots`
+- Web:
+  - Exports: Types: `PromptEditorActionProps`; Values: `PromptEditor`, `PromptEditorSlots`
 - Sub-plugins:
   - **`voice-input`** — Voice dictation for the prompt editor via the Web Speech API.
 

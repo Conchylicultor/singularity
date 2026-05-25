@@ -4,6 +4,7 @@ import { relative } from "path";
 import {
   createFacet,
   getFacet,
+  type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
@@ -11,9 +12,6 @@ import {
   stripTypes,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type DbSchemaFacetData, dbSchemaFacetDef } from "../core";
-
-// Repo root — 7 levels up from this facet file
-const REPO_ROOT = join(import.meta.dirname, "../../../../../../..");
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -172,21 +170,16 @@ export default createFacet<DbSchemaFacetData>({
   },
 
   renderDoc(data, ctx) {
-    const subIndent = `${ctx.bodyIndent}  `;
-    const lines: string[] = [];
-    for (const f of data.dbFiles) {
-      lines.push(`${subIndent}- DB schema: \`${relative(REPO_ROOT, f)}\``);
+    const facts: DocFact[] = [];
+    if (data.dbFiles.length > 0) {
+      facts.push({ folder: "server", key: "DB schema", values: data.dbFiles.map((f) => `\`${relative(ctx.root, f)}\``) });
     }
-    for (const ext of data.entityExtensions) {
-      lines.push(
-        `${subIndent}- Entity extension of: \`${ext.parentPlugin}\` (table \`${ext.tableName}\`)`,
-      );
+    if (data.entityExtensions.length > 0) {
+      facts.push({ folder: "server", key: "Entity extension of", values: data.entityExtensions.map((ext) => `\`${ext.parentPlugin}\` (table \`${ext.tableName}\`)`) });
     }
-    for (const e of data.extendedBy) {
-      lines.push(
-        `${ctx.bodyIndent}- Extended by: \`${e.childPlugin}\` (table \`${e.tableName}\`)`,
-      );
+    if (data.extendedBy.length > 0) {
+      facts.push({ folder: "cross-plugin", key: "Extended by", values: data.extendedBy.map((e) => `\`${e.childPlugin}\` (table \`${e.tableName}\`)`) });
     }
-    return lines;
+    return facts;
   },
 });

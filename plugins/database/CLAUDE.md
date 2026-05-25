@@ -32,12 +32,21 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
 
 - Description: Core database infrastructure. Connection pooling and DB readiness.
 - Load-bearing: yes
+<<<<<<< .merge_file_xblZUB
 - Exports (core):
   - Types: `DatabaseConfig`, `DatabaseProvider`
   - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
 - Exports (server):
   - Values: `awaitDbReady`, `db`, `isTransientDbError`
 - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+=======
+- Cross-plugin:
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+- Core:
+  - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
+- Server:
+  - Exports: Values: `awaitDbReady`, `db`, `isTransientDbError`
+>>>>>>> .merge_file_tidOIz
 - Sub-plugins:
   - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
   - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.

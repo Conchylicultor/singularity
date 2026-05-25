@@ -5,13 +5,10 @@
 ## Plugin reference
 
 - Description: Sidebar list of all conversations.
-- Exports (web):
-  - Types: `ViewProps`
-  - Values: `ConversationsView`, `useGoneConversationsPagination`
-- Contributes:
-  - `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
-  - `Core.Root` → `ForkErrorWatcher`
-  - `Core.Root` → `AutoLaunchWatcher`
+- Web:
+  - Contributes: `Shell.Sidebar` "Conversations" → `ConversationsSidebar`, `Core.Root` → `ForkErrorWatcher`, `Core.Root` → `AutoLaunchWatcher`
+  - Uses: `conversations.GonePageSchema`, `conversations.useConversations`, `notifications.toast`, `shell.Shell`
+  - Exports: Types: `ViewProps`; Values: `ConversationsView`, `useGoneConversationsPagination`
 - Sub-plugins:
   - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
   - **`history`** — All conversations in historical order of creation.

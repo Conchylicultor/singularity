@@ -5,16 +5,14 @@
 ## Plugin reference
 
 - Description: Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
-- Exports (core):
-  - Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`
-  - Values: `editedFilesResource`
-- Exports (web):
-  - Values: `useEditedFiles`
-- Exports (server):
-  - Values: `getEditedFiles`
 - Server:
   - Uses: `tasks-core.getConversation`
+  - Exports: Values: `getEditedFiles`
   - Resources: `edited-files` (invalidate)
+- Core:
+  - Exports: Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`; Values: `editedFilesResource`
+- Web:
+  - Exports: Values: `useEditedFiles`
 - Sub-plugins:
   - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
   - **`file-pane`** — Hosts the file-peek pane and the FilePane.Renderer slot.

@@ -24,13 +24,12 @@ contributions: [
 ## Plugin reference
 
 - Description: Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
-- Exports (web):
-  - Types: `ReviewProps`, `Source`
-  - Values: `convReviewPane`, `ReviewSlots`
-- Contributes:
-  - `Pane.Register` "conv-review"
-  - `Conversation.ActionBar` → `ReviewButton`
-- Imported by: `code-review`, `plugin-changes`
+- Web:
+  - Contributes: `Pane.Register` "conv-review", `Conversation.ActionBar` → `ReviewButton`
+  - Uses: `conversations.useConversationById`
+  - Exports: Types: `ReviewProps`, `Source`; Values: `convReviewPane`, `ReviewSlots`
+- Cross-plugin:
+  - Imported by: `code-review`, `plugin-changes`
 - Sub-plugins:
   - **`code-review`** — File-by-file code review section for the review pane. File-by-file code review section for the review pane.
   - **`plugin-changes`** — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.

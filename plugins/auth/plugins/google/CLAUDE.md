@@ -5,15 +5,15 @@
 ## Plugin reference
 
 - Description: Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
-- Exports (shared):
-  - Values: `GOOGLE_DEFAULT_SCOPES`, `googleAuthConfig`
-- Contributes:
-  - `Auth.Provider` "Google"
-  - `ConfigV2.WebRegister`
+- Web:
+  - Contributes: `Auth.Provider` "Google", `ConfigV2.WebRegister`
+  - Uses: `auth.Auth`, `config_v2.ConfigV2`
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Central:
   - Uses: `auth.registerAuthProvider`
+- Shared:
+  - Exports: Values: `GOOGLE_DEFAULT_SCOPES`, `googleAuthConfig`
 - Sub-plugins:
   - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
 

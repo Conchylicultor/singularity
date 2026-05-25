@@ -2,6 +2,7 @@ import { join } from "path";
 import {
   createFacet,
   getFacet,
+  type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import type {
   PluginNode,
@@ -13,9 +14,9 @@ import {
   matchBracket,
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { type RouteDef, routesFacetDef } from "../core";
+import { type RouteDef, type RoutesData, routesFacetDef } from "../core";
 
-export default createFacet<RouteDef[]>({
+export default createFacet<RoutesData>({
   def: routesFacetDef,
 
   extract(ctx) {
@@ -35,7 +36,6 @@ export default createFacet<RouteDef[]>({
       let m: RegExpExecArray | null;
       while ((m = exportRe.exec(src))) {
         const name = m[1]!;
-        // m[0] ends with "(", so parenStart is the last char of the match
         const parenStart = m.index + m[0].length - 1;
         const parenEnd = matchBracket(src, parenStart, "(", ")");
         if (parenEnd < 0) continue;
@@ -60,7 +60,6 @@ export default createFacet<RouteDef[]>({
         if (blockEnd >= 0) {
           const block = src.slice(blockStart + 1, blockEnd);
 
-          // Computed keys: [endpointName.property]
           const computedRe = /\[\s*(\w+)\s*\.\s*\w+\s*\]/g;
           let km: RegExpExecArray | null;
           while ((km = computedRe.exec(block))) {
@@ -68,7 +67,6 @@ export default createFacet<RouteDef[]>({
             if (routeStr) routes.push({ route: routeStr, type: "http", runtime, name: km[1]! });
           }
 
-          // Literal string keys (rare legacy routes)
           const literalRe = /"([^"]+)"\s*:/g;
           while ((km = literalRe.exec(block))) {
             routes.push({ route: km[1]!, type: "http", runtime });
@@ -92,19 +90,17 @@ export default createFacet<RouteDef[]>({
       }
     }
 
-    return routes;
+    return { routes, endpointCallers: [] };
   },
 
   relate(rawCtx) {
     const { tree } = rawCtx as { tree: PluginTree };
 
-    // Build prefix → owner map using correct facet data
-    // (the monolithic apiPrefixToOwner in buildPluginTree runs on parseRouteMap
-    // output which misses all [endpoint.route] computed keys)
     const apiPrefixToOwner = new Map<string, PluginNode>();
     for (const info of tree.byDir.values()) {
-      const facetRoutes = getFacet(info, routesFacetDef) ?? [];
-      for (const r of facetRoutes) {
+      const facetData = getFacet(info, routesFacetDef);
+      if (!facetData) continue;
+      for (const r of facetData.routes) {
         if (r.type !== "http") continue;
         const pathMatch = r.route.match(/^\S+\s+\/api\/([A-Za-z0-9_-]+)/);
         if (!pathMatch) continue;
@@ -144,32 +140,30 @@ export default createFacet<RouteDef[]>({
       }
     }
     for (const info of tree.byDir.values()) info.endpointCallers.sort();
+
+    // Copy computed endpointCallers into facet data for renderDoc
+    for (const info of tree.byDir.values()) {
+      const data = getFacet(info, routesFacetDef);
+      if (data) data.endpointCallers = [...info.endpointCallers];
+    }
   },
 
-  renderDoc(data, ctx) {
-    if (data.length === 0) return [];
-    const subIndent = `${ctx.bodyIndent}  `;
-    const lines: string[] = [];
-    const serverHttp  = data.filter((r) => r.runtime === "server"  && r.type === "http");
-    const serverWs    = data.filter((r) => r.runtime === "server"  && r.type === "ws");
-    const centralHttp = data.filter((r) => r.runtime === "central" && r.type === "http");
-    const centralWs   = data.filter((r) => r.runtime === "central" && r.type === "ws");
-    if (serverHttp.length > 0 || serverWs.length > 0) {
-      lines.push(
-        `${subIndent}- Server routes: ${[
-          ...serverHttp.map((r) => `\`${r.route}\``),
-          ...serverWs.map((r) => `\`${r.route} (WS)\``),
-        ].join(", ")}`,
-      );
+  renderDoc(data) {
+    if (data.routes.length === 0 && data.endpointCallers.length === 0) return [];
+    const facts: DocFact[] = [];
+    for (const runtime of ["server", "central"] as const) {
+      const httpRoutes = data.routes.filter((r) => r.runtime === runtime && r.type === "http");
+      const wsRoutes = data.routes.filter((r) => r.runtime === runtime && r.type === "ws");
+      if (httpRoutes.length > 0 || wsRoutes.length > 0) {
+        facts.push({ folder: runtime, key: "Routes", values: [
+          ...httpRoutes.map((r) => `\`${r.route}\``),
+          ...wsRoutes.map((r) => `\`${r.route} (WS)\``),
+        ] });
+      }
     }
-    if (centralHttp.length > 0 || centralWs.length > 0) {
-      lines.push(
-        `${subIndent}- Central routes: ${[
-          ...centralHttp.map((r) => `\`${r.route}\``),
-          ...centralWs.map((r) => `\`${r.route} (WS)\``),
-        ].join(", ")}`,
-      );
+    if (data.endpointCallers.length > 0) {
+      facts.push({ folder: "cross-plugin", key: "Endpoint callers", values: data.endpointCallers.map((n) => `\`${n}\``) });
     }
-    return lines;
+    return facts;
   },
 });

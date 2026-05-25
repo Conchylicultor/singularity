@@ -13,17 +13,15 @@ sibling plugins (e.g. publish's tree component).
 ## Plugin reference
 
 - Description: Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
-- Exports (core):
-  - Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `EntityExtensionInfo`, `EntityExtensionRef`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`, `TableInfo`
-  - Values: `getPluginTree`
-- Exports (web):
-  - Types: `PluginNode`, `PluginTreePayload`
-  - Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
-- Contributes:
-  - `Pane.Register` "plugin-view"
+- Web:
+  - Contributes: `Pane.Register` "plugin-view"
+  - Exports: Types: `PluginNode`, `PluginTreePayload`; Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
+- Core:
+  - Exports: Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `EntityExtensionInfo`, `EntityExtensionRef`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`, `TableInfo`; Values: `getPluginTree`
 - Server:
-  - `GET /api/plugin-view/tree`
-- Endpoint callers: `catalog`, `plugin-link`, `publish`
+  - Routes: `GET /api/plugin-view/tree`
+- Cross-plugin:
+  - Endpoint callers: `catalog`, `plugin-link`, `publish`
 - Sub-plugins:
   - **`public-api`** — Displays the plugin's public exports, slots, routes, and consumer relationships.
   - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.

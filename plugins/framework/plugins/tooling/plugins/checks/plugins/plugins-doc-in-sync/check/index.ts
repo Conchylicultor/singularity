@@ -81,7 +81,7 @@ const check: Check = {
     for (const info of tree.byDir.values()) {
       const file = pluginClaudeMdPath(info);
       const existing = existsSync(file) ? readFileSync(file, "utf8") : null;
-      const expected = renderPluginClaudeMd(info, existing, root);
+      const expected = renderPluginClaudeMd(info, existing, root, tree.facets);
       if (existing !== expected) {
         return {
           ok: false,

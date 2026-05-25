@@ -1,9 +1,15 @@
 import {
   createFacet,
+  type DocFact,
   type ExtractContext,
-  type RenderDocContext,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import { type DocMetaRegistration, registrationsFacetDef } from "../core";
+
+function formatRegistration(r: DocMetaRegistration): string {
+  const label = r.doc.label;
+  if (!r.factory) return `\`${label ?? r.kind}\``;
+  return label ? `\`${r.factory}('${label}')\`` : `\`${r.factory}()\``;
+}
 
 export default createFacet<DocMetaRegistration[]>({
   def: registrationsFacetDef,
@@ -40,21 +46,14 @@ export default createFacet<DocMetaRegistration[]>({
     return registrations;
   },
 
-  renderDoc(data: DocMetaRegistration[], ctx: RenderDocContext): string[] {
+  renderDoc(data: DocMetaRegistration[]) {
     if (data.length === 0) return [];
-    const indent = `${ctx.bodyIndent}  `;
-    const lines: string[] = [];
+    const facts: DocFact[] = [];
     for (const runtime of ["server", "central"] as const) {
       const regs = data.filter((r) => r.runtime === runtime);
       if (regs.length === 0) continue;
-      lines.push(`${indent}- Register: ${regs.map(formatRegistration).join(", ")}`);
+      facts.push({ folder: runtime, key: "Register", values: regs.map(formatRegistration) });
     }
-    return lines;
+    return facts;
   },
 });
-
-function formatRegistration(r: DocMetaRegistration): string {
-  const label = r.doc.label;
-  if (!r.factory) return `\`${label ?? r.kind}\``;
-  return label ? `\`${r.factory}('${label}')\`` : `\`${r.factory}()\``;
-}

@@ -80,8 +80,9 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 
 - Description: Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 - Load-bearing: yes
-- Defines:
+- Web:
   - Slots: `Auth.Provider`
+<<<<<<< .merge_file_u1j5hR
 - Exports (core):
   - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `DisconnectBody`, `GetAccessTokenArgs`, `GetTokenBody`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `SetApiKeyBody`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`
   - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `disconnect`, `DisconnectBodySchema`, `getAuthState`, `getToken`, `GetTokenBodySchema`, `oauthCallback`, `oauthStart`, `setApiKey`, `SetApiKeyBodySchema`
@@ -97,16 +98,22 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 - Contributes:
   - `Pane.Register` "accounts"
   - `Shell.Sidebar` "Accounts" → `component`
+=======
+  - Contributes: `Pane.Register` "accounts", `Shell.Sidebar` "Accounts" → `component`
+  - Uses: `config.settingsPane`, `notifications.toast`, `shell.Shell`
+  - Exports: Types: `AuthProviderContribution`, `AuthProviderRowProps`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`; Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
+- Cross-plugin:
+  - Slot contributors: `google`, `notion`
+  - Imported by: `google`, `google-drive`, `notion`, `setup-wizard`
+  - Endpoint callers: `setup-wizard`
+- Core:
+  - Exports: Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `DisconnectBody`, `GetAccessTokenArgs`, `GetTokenBody`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `SetApiKeyBody`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `disconnect`, `DisconnectBodySchema`, `getAuthState`, `getToken`, `GetTokenBodySchema`, `oauthCallback`, `oauthStart`, `setApiKey`, `SetApiKeyBodySchema`
+- Server:
+  - Exports: Types: `GetAccessTokenArgs`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCentralOfflineError`, `getTokenFromCentral`
+>>>>>>> .merge_file_VE7IiY
 - Central:
-  - `GET /api/auth/start/:provider`
-  - `GET /api/auth/callback/:provider`
-  - `POST /api/auth/disconnect/:provider`
-  - `POST /api/auth/api-key/:provider`
-  - `GET /api/auth/state`
-  - `POST /api/auth/token`
-- Imported by: `google`, `google-drive`, `notion`, `setup-wizard`
-- Slot contributors: `google`, `notion`
-- Endpoint callers: `setup-wizard`
+  - Exports: Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `GetAccessTokenArgs`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `readGlobalConfig`, `registerAuthProvider`
+  - Routes: `GET /api/auth/start/:provider`, `GET /api/auth/callback/:provider`, `POST /api/auth/disconnect/:provider`, `POST /api/auth/api-key/:provider`, `GET /api/auth/state`, `POST /api/auth/token`
 - Sub-plugins:
   - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
   - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.

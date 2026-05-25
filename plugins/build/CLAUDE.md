@@ -5,29 +5,23 @@
 ## Plugin reference
 
 - Description: Trigger `./singularity build` from the toolbar.
-- Defines:
-  - DB schema: `plugins/build/server/internal/tables.ts`
-- Exports (core):
-  - Types: `BuildRun`, `FrontendHash`, `MainAheadCount`
-  - Values: `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
-- Exports (web):
-  - Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`
-- Exports (server):
-  - Values: `_buildRuns`
-- Exports (shared):
-  - Types: `BuildRun`, `FrontendHash`, `MainAheadCount`
-  - Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
-- Contributes:
-  - `Shell.Toolbar` → `BuildButton`
-  - `Pane.Register` "build"
-  - `Pane.Register` "build-detail"
-  - `ConfigV2.WebRegister`
+- Web:
+  - Contributes: `Shell.Toolbar` → `BuildButton`, `Pane.Register` "build", `Pane.Register` "build-detail", `ConfigV2.WebRegister`
+  - Uses: `config_v2.ConfigV2`, `notifications.toast`, `shell.Shell`
+  - Exports: Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`
 - Server:
-  - Register: `defineJob('build.run')`
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
+  - DB schema: `plugins/build/server/internal/tables.ts`
+  - Exports: Values: `_buildRuns`
+  - Register: `defineJob('build.run')`
   - Resources: `build.frontendHash` (push), `build.history` (push), `build.mainAheadCount` (push)
-  - `POST /api/build`
-- Endpoint callers: `build-profiling`
+  - Routes: `POST /api/build`
+- Core:
+  - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
+- Shared:
+  - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
+- Cross-plugin:
+  - Endpoint callers: `build-profiling`
 - Sub-plugins:
   - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
   - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.

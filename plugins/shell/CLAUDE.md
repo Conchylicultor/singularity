@@ -6,11 +6,9 @@
 
 - Description: Foundational app layout; defines the slots and commands most other plugins extend.
 - Load-bearing: yes
-- Defines:
+- Web:
   - Commands: `Shell.Toast`
-- Exports (web):
-  - Types: `ToastArgs`, `ToastVariant`
-  - Values: `Shell`, `ShellCommands`
+  - Exports: Types: `ToastArgs`, `ToastVariant`; Values: `Shell`, `ShellCommands`
 - Sub-plugins:
   - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.
 

@@ -5,15 +5,12 @@
 ## Plugin reference
 
 - Description: Gantt chart of build steps and server startup phases.
-- Defines:
+- Web:
   - Slots: `Profiling.Section`
-- Exports (web):
-  - Types: `DragState`, `GanttContainerContextValue`, `PhaseConfig`, `ProfilingContextValue`, `Span`, `ZoomWindow`
-  - Values: `DragSelection`, `formatDuration`, `GanttContainer`, `GanttSection`, `groupByPhase`, `PhaseGroup`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `SpanRow`, `TimeAxis`, `useGanttContainerContext`, `useGanttZoom`, `useProfilingContext`
-- Contributes:
-  - `Pane.Register` "debug-profiling"
-  - `DebugApp.Sidebar` "Profiling" → `component`
-- Slot contributors: `boot`, `build`, `push`, `stats`
+  - Contributes: `Pane.Register` "debug-profiling", `DebugApp.Sidebar` "Profiling" → `component`
+  - Exports: Types: `DragState`, `GanttContainerContextValue`, `PhaseConfig`, `ProfilingContextValue`, `Span`, `ZoomWindow`; Values: `DragSelection`, `formatDuration`, `GanttContainer`, `GanttSection`, `groupByPhase`, `PhaseGroup`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `SpanRow`, `TimeAxis`, `useGanttContainerContext`, `useGanttZoom`, `useProfilingContext`
+- Cross-plugin:
+  - Slot contributors: `boot`, `build`, `push`, `stats`
 - Sub-plugins:
   - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
   - **`build`** — Build step profiling for the Gantt debug pane. Build step profiling data endpoint.

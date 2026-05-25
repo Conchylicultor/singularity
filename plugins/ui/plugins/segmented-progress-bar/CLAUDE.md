@@ -5,8 +5,9 @@
 ## Plugin reference
 
 - Description: Pluggable segmented progress bar with switchable visual variants.
-- Defines:
+- Web:
   - Slots: `SegmentedProgressBar.Variant`
+<<<<<<< .merge_file_psMVQt
 - Exports (core):
   - Types: `SegmentedProgressBarProps`, `Step`
   - Values: `segmentedProgressBarConfig`
@@ -17,8 +18,16 @@
   - `ConfigV2.WebRegister`
   - `DynamicEnum.Options` "Progress bar variant"
   - `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
+=======
+  - Contributes: `ConfigV2.WebRegister`, `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`
+  - Exports: Types: `SegmentedProgressBarProps`, `SegmentedProgressBarVariantContribution`, `Step`; Values: `SegmentedProgressBar`, `SegmentedProgressBarSlots`
+>>>>>>> .merge_file_YMdjIF
 - Server:
   - Uses: `config_v2.ConfigV2`
+- Core:
+  - Uses: `config_v2.defineConfig`
+  - Exports: Types: `SegmentedProgressBarProps`, `Step`; Values: `segmentedProgressBarConfig`
 - Sub-plugins:
   - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
   - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.

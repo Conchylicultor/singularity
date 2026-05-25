@@ -65,25 +65,20 @@ Behavior:
 ## Plugin reference
 
 - Description: Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify(). Persistent state for inline interactive widgets — table + resource keyed by (conversationId, messageId, tag, occurrenceIndex).
-- Defines:
+- Web:
   - Slots: `ActiveData.Tag`
-  - DB schema: `plugins/active-data/server/internal/tables.ts`
-- Exports (core):
-  - Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`, `PutBindingBody`
-  - Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `deleteBinding`, `inlineBoundary`, `putBinding`, `putBindingBodySchema`
-- Exports (web):
-  - Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataCodeContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`, `CodeReplaceContrib`
-  - Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
-- Exports (server):
-  - Values: `_activeDataBindings`, `activeDataBindingsResource`
-- Contributes:
-  - `MarkdownEnhancerSlot`
+  - Contributes: `MarkdownEnhancerSlot`
+  - Exports: Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataCodeContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`, `CodeReplaceContrib`; Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
+- Cross-plugin:
+  - Slot contributors: `attempt`, `conv`, `plugin-link`, `task`, `task-link`
+  - Imported by: `assistant-text`, `attempt`, `conv`, `plugin-link`, `task`, `task-link`
 - Server:
   - Uses: `database.db`, `tasks-core._conversations`
-  - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
-  - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
-- Imported by: `assistant-text`, `attempt`, `conv`, `plugin-link`, `task`, `task-link`
-- Slot contributors: `attempt`, `conv`, `plugin-link`, `task`, `task-link`
+  - DB schema: `plugins/active-data/server/internal/tables.ts`
+  - Exports: Values: `_activeDataBindings`, `activeDataBindingsResource`
+  - Routes: `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`, `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
+- Core:
+  - Exports: Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`, `PutBindingBody`; Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `deleteBinding`, `inlineBoundary`, `putBinding`, `putBindingBodySchema`
 - Sub-plugins:
   - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed.
   - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.

@@ -5,19 +5,12 @@
 ## Plugin reference
 
 - Description: Central view of all plugin contributions aggregated by type.
-- Defines:
+- Web:
   - Slots: `Catalog.Category`
-- Exports (web):
-  - Values: `Catalog`, `countFlat`, `flattenTree`, `PluginChip`
-- Contributes:
-  - `Pane.Register` "catalog"
-  - `Forge.Sidebar` "Catalog" → `component`
-  - `Catalog.Category` "Routes" → `RoutesTable`
-  - `Catalog.Category` "Panes" → `PanesTable`
-  - `Catalog.Category` "Slots" → `SlotsTable`
-  - `Catalog.Category` "Resources" → `ResourcesTable`
-  - `Catalog.Category` "Contributions" → `ContributionsTable`
-- Slot contributors: `tables`
+  - Contributes: `Pane.Register` "catalog", `Forge.Sidebar` "Catalog" → `component`, `Catalog.Category` "Routes" → `RoutesTable`, `Catalog.Category` "Panes" → `PanesTable`, `Catalog.Category` "Slots" → `SlotsTable`, `Catalog.Category` "Resources" → `ResourcesTable`, `Catalog.Category` "Contributions" → `ContributionsTable`
+  - Exports: Values: `Catalog`, `countFlat`, `flattenTree`, `PluginChip`
+- Cross-plugin:
+  - Slot contributors: `tables`
 - Sub-plugins:
   - **`tables`** — DB tables catalog tab with an extensible per-table detail slot.
 

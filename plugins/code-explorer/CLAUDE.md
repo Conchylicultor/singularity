@@ -5,18 +5,16 @@
 ## Plugin reference
 
 - Description: Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
-- Exports (server):
-  - Values: `getRangeFiles`, `resolveParentSha`, `resolveWorktreePath`
-- Exports (shared):
-  - Values: `getCodeTree`, `getCommitFiles`, `getFileContent`, `getFileDiff`, `getImageContent`, `getPushFiles`
-- Contributes:
-  - `Pane.Register` "global-file-tree"
-  - `Pane.Register` "conv-file-tree"
-  - `Shell.Sidebar` "Explorer" → `component`
-  - `Conversation.ActionBar` → `ConvTreeButton`
+- Web:
+  - Contributes: `Pane.Register` "global-file-tree", `Pane.Register` "conv-file-tree", `Shell.Sidebar` "Explorer" → `component`, `Conversation.ActionBar` → `ConvTreeButton`
+  - Uses: `conversations.useConversationById`, `shell.Shell`
 - Server:
   - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`
-- Imported by: `file-resolve`, `plugin-changes`
+  - Exports: Values: `getRangeFiles`, `resolveParentSha`, `resolveWorktreePath`
+- Cross-plugin:
+  - Imported by: `file-resolve`, `plugin-changes`
+- Shared:
+  - Exports: Values: `getCodeTree`, `getCommitFiles`, `getFileContent`, `getFileDiff`, `getImageContent`, `getPushFiles`
 - Sub-plugins:
   - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
 

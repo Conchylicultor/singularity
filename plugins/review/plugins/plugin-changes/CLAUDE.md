@@ -5,16 +5,15 @@
 ## Plugin reference
 
 - Description: Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
-- Exports (core):
-  - Types: `DiffList`, `PluginChangedFile`, `PluginChangeDiff`, `PluginChangesResponse`, `PluginReviewProps`
-  - Values: `getPluginChanges`
-- Exports (web):
-  - Values: `PluginChangesSlots`
-- Contributes:
-  - `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
+- Web:
+  - Contributes: `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
+  - Uses: `review.ReviewSlots`
+  - Exports: Values: `PluginChangesSlots`
 - Server:
   - Uses: `code-explorer.getRangeFiles`, `code-explorer.resolveParentSha`, `tasks-core.getConversation`, `tasks-core.listPushesByPushId`
-  - `GET /api/review/plugin-changes`
+  - Routes: `GET /api/review/plugin-changes`
+- Core:
+  - Exports: Types: `DiffList`, `PluginChangedFile`, `PluginChangeDiff`, `PluginChangesResponse`, `PluginReviewProps`; Values: `getPluginChanges`
 - Sub-plugins:
   - **`api-changes`** — API surface diff section for per-plugin review cards.
   - **`file-changes`** — File-level diff section for per-plugin review cards.

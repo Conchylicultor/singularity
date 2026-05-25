@@ -7,4 +7,9 @@ export interface RouteDef {
   name?: string;
 }
 
-export const routesFacetDef = defineFacet<RouteDef[]>("routes");
+export interface RoutesData {
+  routes: RouteDef[];
+  endpointCallers: string[];
+}
+
+export const routesFacetDef = defineFacet<RoutesData>("routes");

@@ -88,9 +88,8 @@ No other file needs editing.
 ## Plugin reference
 
 - Description: Field type registry. Sub-plugins contribute field types with core factories and web renderers.
-- Exports (web):
-  - Types: `FieldRendererComponent`, `FieldRendererProps`
-  - Values: `ConfigFieldContext`, `FieldRenderer`, `Fields`
+- Web:
+  - Exports: Types: `FieldRendererComponent`, `FieldRendererProps`; Values: `ConfigFieldContext`, `FieldRenderer`, `Fields`
 - Sub-plugins:
   - **`avatar`** — Avatar field type (icon + color picker).
   - **`color`** — Color field type: hex color string with a popover color picker.

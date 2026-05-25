@@ -2,6 +2,7 @@ import { existsSync } from "fs";
 import { join } from "path";
 import {
   createFacet,
+  type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import { type ResourceFacetData, resourcesFacetDef, parseResources } from "../core";
 
@@ -17,19 +18,14 @@ export default createFacet<ResourceFacetData>({
     };
   },
 
-  renderDoc(data, ctx) {
-    const lines: string[] = [];
-    const indent = `${ctx.bodyIndent}  `;
+  renderDoc(data) {
+    const facts: DocFact[] = [];
     if (data.server.length > 0) {
-      lines.push(
-        `${indent}- Resources (server): ${data.server.map((r) => `\`${r.key}\` (${r.mode})`).join(", ")}`,
-      );
+      facts.push({ folder: "server", key: "Resources", values: data.server.map((r) => `\`${r.key}\` (${r.mode})`) });
     }
     if (data.central.length > 0) {
-      lines.push(
-        `${indent}- Resources (central): ${data.central.map((r) => `\`${r.key}\` (${r.mode})`).join(", ")}`,
-      );
+      facts.push({ folder: "central", key: "Resources", values: data.central.map((r) => `\`${r.key}\` (${r.mode})`) });
     }
-    return lines;
+    return facts;
   },
 });

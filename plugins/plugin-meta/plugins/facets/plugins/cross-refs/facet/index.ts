@@ -3,6 +3,7 @@ import { existsSync } from "fs";
 import {
   createFacet,
   getFacet,
+  type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { walkFiles, readIfExists } from "@plugins/plugin-meta/plugins/parse-utils/core";
@@ -109,17 +110,16 @@ export default createFacet<CrossRefsData>({
     }
   },
 
-  renderDoc(data, ctx) {
-    const lines: string[] = [];
-    const subIndent = `${ctx.bodyIndent}  `;
+  renderDoc(data) {
+    const facts: DocFact[] = [];
     for (const rt of RUNTIMES) {
       if (data.apiUses[rt].length > 0) {
-        lines.push(`${subIndent}- Uses (${rt}): ${data.apiUses[rt].map((n) => `\`${n}\``).join(", ")}`);
+        facts.push({ folder: rt, key: "Uses", values: data.apiUses[rt].map((n) => `\`${n}\``) });
       }
     }
     if (data.importedBy.length > 0) {
-      lines.push(`${subIndent}- Imported by: ${data.importedBy.map((n) => `\`${n}\``).join(", ")}`);
+      facts.push({ folder: "cross-plugin", key: "Imported by", values: data.importedBy.map((n) => `\`${n}\``) });
     }
-    return lines;
+    return facts;
   },
 });

@@ -5,21 +5,17 @@
 ## Plugin reference
 
 - Description: Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
-- Defines:
+- Web:
   - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.Overlay`
-- Exports (core):
-  - Types: `JsonlEventsResponse`
-  - Values: `JsonlEventsPayloadSchema`, `jsonlEventsResource`
-- Exports (web):
-  - Types: `EventRendererContribution`, `OverlayContribution`, `RowActionContribution`
-  - Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
-- Contributes:
-  - `JsonlViewer.RowAction` "timestamp" → `TimestampAction`
-  - `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
+  - Contributes: `JsonlViewer.RowAction` "timestamp" → `TimestampAction`, `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
+  - Exports: Types: `EventRendererContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
+- Cross-plugin:
+  - Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
 - Server:
   - Uses: `tasks-core.getConversationClaudeSessionId`
   - Resources: `jsonl-events` (push)
-- Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
+- Core:
+  - Exports: Types: `JsonlEventsResponse`; Values: `JsonlEventsPayloadSchema`, `jsonlEventsResource`
 - Sub-plugins:
   - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
   - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.

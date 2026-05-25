@@ -5,8 +5,9 @@
 ## Plugin reference
 
 - Description: Config UI for local backup target. Stores backup archives on the local filesystem.
-- Contributes:
-  - `ConfigV2.WebRegister`
+- Web:
+  - Contributes: `ConfigV2.WebRegister`
+  - Uses: `config_v2.ConfigV2`
 - Server:
   - Uses: `backup.BackupTarget`, `config_v2.ConfigV2`, `config_v2.getConfig`
 

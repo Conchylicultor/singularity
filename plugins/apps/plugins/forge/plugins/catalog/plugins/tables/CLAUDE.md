@@ -5,11 +5,9 @@
 ## Plugin reference
 
 - Description: DB tables catalog tab with an extensible per-table detail slot.
-- Exports (web):
-  - Values: `TableDetail`, `tableDetailPane`
-- Contributes:
-  - `Pane.Register` "table-detail"
-  - `Catalog.Category` "Tables" → `TablesTable`
+- Web:
+  - Contributes: `Pane.Register` "table-detail", `Catalog.Category` "Tables" → `TablesTable`
+  - Exports: Values: `TableDetail`, `tableDetailPane`
 - Sub-plugins:
   - **`columns`** — Table column definitions section in the table detail view.
   - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.

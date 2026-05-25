@@ -5,10 +5,8 @@
 ## Plugin reference
 
 - Description: Umbrella for CSS token group plugins. Contributes global theme presets.
-- Contributes:
-  - `ThemeEngine.GlobalPreset` "Default"
-  - `ThemeEngine.GlobalPreset` "Ocean"
-  - `ThemeEngine.GlobalPreset` "Warm"
+- Web:
+  - Contributes: `ThemeEngine.GlobalPreset` "Default", `ThemeEngine.GlobalPreset` "Ocean", `ThemeEngine.GlobalPreset` "Warm"
 - Sub-plugins:
   - **`chart`** — Chart color token group with switchable presets.
   - **`color-adjust`** — Cross-cutting color adjustment transform for all color token groups.

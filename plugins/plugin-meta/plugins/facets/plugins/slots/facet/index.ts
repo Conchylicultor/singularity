@@ -72,12 +72,11 @@ export default createFacet<SlotDef[]>({
     return slots;
   },
 
-  renderDoc(data, ctx) {
+  renderDoc(data) {
     const staticSlots = data.filter(s => !(s as SlotDef & { _runtimeOnly?: boolean })._runtimeOnly);
     if (staticSlots.length === 0) return [];
-    const subIndent = `${ctx.bodyIndent}  `;
     return [
-      `${subIndent}- Slots: ${staticSlots.map((s) => `\`${s.groupName}.${s.memberName}\``).join(", ")}`,
+      { folder: "web", key: "Slots", values: staticSlots.map((s) => `\`${s.groupName}.${s.memberName}\``) },
     ];
   },
 });

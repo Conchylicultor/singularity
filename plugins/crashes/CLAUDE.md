@@ -5,20 +5,16 @@
 ## Plugin reference
 
 - Description: Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
-- Defines:
-  - DB schema: `plugins/crashes/server/internal/schema.ts`
-  - DB schema: `plugins/crashes/server/internal/tables.ts`
-- Exports (web):
-  - Types: `CrashContext`
-  - Values: `report`
-- Exports (server):
-  - Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `recordCrash`
-- Contributes:
-  - `Core.Root` → `CrashReporter`
+- Web:
+  - Contributes: `Core.Root` → `CrashReporter`
+  - Exports: Types: `CrashContext`; Values: `report`
 - Server:
   - Uses: `database.db`, `notifications.recordNotification`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
+  - DB schema: `plugins/crashes/server/internal/schema.ts`, `plugins/crashes/server/internal/tables.ts`
+  - Exports: Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `recordCrash`
   - Resources: `crashes` (push)
-- Imported by: `conversations`, `runtime-tmux`
+- Cross-plugin:
+  - Imported by: `conversations`, `runtime-tmux`
 - Sub-plugins:
   - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
   - **`mutation-errors`** — Warning toast and persistent notification for unhandled TanStack Query mutation errors.

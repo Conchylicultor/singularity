@@ -5,8 +5,9 @@
 ## Plugin reference
 
 - Description: Central settings pane for switching visual variants of pluggable UI components.
-- Defines:
+- Web:
   - Slots: `ThemeEngine.VariantGroup`, `ThemeEngine.TokenGroup`, `ThemeEngine.GlobalPreset`, `ThemeEngine.ColorTransform`
+<<<<<<< .merge_file_cWJhor
 - Exports (core):
   - Types: `TokenGroupDescriptor`, `TokenGroupField`, `TokenGroupSchema`
   - Values: `defineTokenGroup`, `themeEngineConfig`
@@ -17,9 +18,18 @@
   - `Core.Root` → `ThemeInjector`
   - `ConfigV2.WebRegister`
   - `DynamicEnum.Options` "Theme"
+=======
+  - Contributes: `Core.Root` → `ThemeInjector`, `ConfigV2.WebRegister`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
+  - Exports: Types: `ColorAdjustment`, `ColorTransformContribution`, `GlobalPresetContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`; Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `transformValues`
+- Cross-plugin:
+  - Slot contributors: `chart`, `color-adjust`, `color-palette`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `typography`
+>>>>>>> .merge_file_Zaz72w
 - Server:
   - Uses: `config_v2.ConfigV2`
-- Slot contributors: `chart`, `color-adjust`, `color-palette`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `typography`
+- Core:
+  - Uses: `config_v2.defineConfig`
+  - Exports: Types: `TokenGroupDescriptor`, `TokenGroupField`, `TokenGroupSchema`; Values: `defineTokenGroup`, `themeEngineConfig`
 - Sub-plugins:
   - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
 

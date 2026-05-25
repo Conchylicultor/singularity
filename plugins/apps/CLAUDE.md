@@ -6,11 +6,11 @@
 
 - Description: App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
 - Load-bearing: yes
-- Exports (web):
-  - Values: `Apps`
-- Contributes:
-  - `Core.Root` → `AppsLayout`
-- Imported by: `shell`
+- Web:
+  - Contributes: `Core.Root` → `AppsLayout`
+  - Exports: Values: `Apps`
+- Cross-plugin:
+  - Imported by: `shell`
 - Sub-plugins:
   - **`agent-manager`** — Agent manager app shell and layout.
   - **`debug`** — Debug app.

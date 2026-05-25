@@ -9,10 +9,9 @@ Counts are computed server-side via `git rev-list --left-right --count main...HE
 ## Plugin reference
 
 - Description: Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
-- Contributes:
-  - `Pane.Register` "conv-commits-graph"
-  - `Pane.Register` "conv-commit-diff"
-  - `Conversation.ActionBar` → `CommitsChip`
+- Web:
+  - Contributes: `Pane.Register` "conv-commits-graph", `Pane.Register` "conv-commit-diff", `Conversation.ActionBar` → `CommitsChip`
+  - Uses: `conversations.useConversationById`
 - Server:
   - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesForAttempt`, `tasks-core.pushesResource`
   - Resources: `commits-graph.delta` (push), `commits-graph.graph` (push)

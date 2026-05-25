@@ -22,9 +22,8 @@ See `plugins/commands/` for the reference implementation.
 ## Plugin reference
 
 - Description: Facet-based plugin metadata extraction and docgen pipeline
-- Exports (core):
-  - Types: `ExtractContext`, `Facet`, `FacetDef`, `RenderDocContext`
-  - Values: `createFacet`, `defineFacet`, `facetCollectedDir`, `getFacet`, `loadFacets`, `setFacet`
+- Core:
+  - Exports: Types: `DocFact`, `ExtractContext`, `Facet`, `FacetDef`, `RenderDocContext`; Values: `createFacet`, `defineFacet`, `facetCollectedDir`, `getFacet`, `loadFacets`, `setFacet`
 - Sub-plugins:
   - **`commands`**
   - **`contributions`**

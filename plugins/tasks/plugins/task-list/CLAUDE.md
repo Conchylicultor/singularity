@@ -5,17 +5,13 @@
 ## Plugin reference
 
 - Description: Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
-- Defines:
+- Web:
   - Slots: `Tasks.TaskActions`, `Tasks.ListActions`
-- Exports (web):
-  - Types: `TaskViewProps`
-  - Values: `Tasks`
-- Contributes:
-  - `Tasks.TaskActions` "child-count" → `ChildCountAction`
-  - `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`
-  - `Tasks.TaskActions` "delete" → `DeleteTaskAction`
-  - `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
-- Slot contributors: `auto-start`, `recent`, `tree`
+  - Contributes: `Tasks.TaskActions` "child-count" → `ChildCountAction`, `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`, `Tasks.TaskActions` "delete" → `DeleteTaskAction`, `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
+  - Uses: `tasks.deleteTask`, `tasks.patchTask`
+  - Exports: Types: `TaskViewProps`; Values: `Tasks`
+- Cross-plugin:
+  - Slot contributors: `auto-start`, `recent`, `tree`
 - Sub-plugins:
   - **`recent`** — Recency-sorted flat task list tab.
   - **`tree`** — Tree-view tab for the task list.

@@ -5,17 +5,15 @@
 ## Plugin reference
 
 - Description: Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
-- Defines:
+- Web:
   - Slots: `JsonlViewerTool.Renderer`
-- Exports (core):
-  - Types: `ToolCallEvent`, `ToolRendererProps`
-- Exports (web):
-  - Types: `ToolRendererContribution`
-  - Values: `JsonlViewerTool`, `ToolCallCard`, `ToolFilePath`, `toRelativePath`
-- Contributes:
-  - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
-  - `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
-- Slot contributors: `add-task`, `agent`, `ask-user-question`, `bash`, `edit`, `flag-raise`, `read`, `skill`, `task-tools`, `write`
+  - Contributes: `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`, `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
+  - Uses: `conversations.useConversationById`
+  - Exports: Types: `ToolRendererContribution`; Values: `JsonlViewerTool`, `ToolCallCard`, `ToolFilePath`, `toRelativePath`
+- Cross-plugin:
+  - Slot contributors: `add-task`, `agent`, `ask-user-question`, `bash`, `edit`, `flag-raise`, `read`, `skill`, `task-tools`, `write`
+- Core:
+  - Exports: Types: `ToolCallEvent`, `ToolRendererProps`
 - Sub-plugins:
   - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
   - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).

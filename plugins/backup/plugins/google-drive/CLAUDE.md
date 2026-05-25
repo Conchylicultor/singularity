@@ -5,8 +5,9 @@
 ## Plugin reference
 
 - Description: Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
-- Contributes:
-  - `ConfigV2.WebRegister`
+- Web:
+  - Contributes: `ConfigV2.WebRegister`
+  - Uses: `config_v2.ConfigV2`
 - Server:
   - Uses: `auth.getTokenFromCentral`, `backup.BackupTarget`, `config_v2.ConfigV2`, `config_v2.getConfig`
 

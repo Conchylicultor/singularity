@@ -2,6 +2,7 @@ import { join } from "path";
 import {
   createFacet,
   getFacet,
+  type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import type {
   PluginNode,
@@ -76,26 +77,18 @@ export default createFacet<ExportsData>({
     }
   },
 
-  renderDoc(data, ctx) {
-    const lines: string[] = [];
-    const subIndent = `${ctx.bodyIndent}  `;
-    const renderRuntime = (rt: Runtime, symbols: ExportedSymbol[]) => {
-      if (symbols.length === 0) return;
+  renderDoc(data) {
+    const facts: DocFact[] = [];
+    for (const rt of RUNTIMES) {
+      const symbols = data[rt];
+      if (symbols.length === 0) continue;
       const types = symbols.filter((s) => s.kind === "type");
       const values = symbols.filter((s) => s.kind === "value");
-      lines.push(`${ctx.bodyIndent}- Exports (${rt}):`);
-      if (types.length > 0) {
-        lines.push(`${subIndent}- Types: ${types.map((s) => `\`${s.name}\``).join(", ")}`);
-      }
-      if (values.length > 0) {
-        lines.push(`${subIndent}- Values: ${values.map((s) => `\`${s.name}\``).join(", ")}`);
-      }
-    };
-    renderRuntime("core", data.core);
-    renderRuntime("web", data.web);
-    renderRuntime("server", data.server);
-    renderRuntime("central", data.central);
-    renderRuntime("shared", data.shared);
-    return lines;
+      const parts: string[] = [];
+      if (types.length > 0) parts.push(`Types: ${types.map((s) => `\`${s.name}\``).join(", ")}`);
+      if (values.length > 0) parts.push(`Values: ${values.map((s) => `\`${s.name}\``).join(", ")}`);
+      facts.push({ folder: rt, key: "Exports", values: [parts.join("; ")] });
+    }
+    return facts;
   },
 });
