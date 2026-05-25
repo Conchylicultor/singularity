@@ -13,10 +13,11 @@ export interface CollectedEntry {
 }
 
 export const checkEntries: CollectedEntry[] = [
+  { pluginPath: "config_v2", hierarchyPath: "config_v2", loader: () => import("@plugins/config_v2/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/boundaries", hierarchyPath: "framework/tooling/boundaries", loader: () => import("@plugins/framework/plugins/tooling/plugins/boundaries/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/allow-default-project", hierarchyPath: "framework/tooling/checks/allow-default-project", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/allow-default-project/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/barrel-stubs-in-sync", hierarchyPath: "framework/tooling/checks/barrel-stubs-in-sync", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/barrel-stubs-in-sync/check"), dependsOn: [] },
-  { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync", hierarchyPath: "framework/tooling/checks/config-origins-in-sync", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync/check"), dependsOn: [] },
+  { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync", hierarchyPath: "framework/tooling/checks/config-origins-in-sync", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync/check"), dependsOn: ["config_v2"] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/conversation-trailer", hierarchyPath: "framework/tooling/checks/conversation-trailer", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/conversation-trailer/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/eslint", hierarchyPath: "framework/tooling/checks/eslint", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/eslint/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/migrations-in-sync", hierarchyPath: "framework/tooling/checks/migrations-in-sync", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/migrations-in-sync/check"), dependsOn: ["infra/plugins/paths"] },
