@@ -397,7 +397,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Cross-plugin:
-    - Imported by: `avatar`, `backup`, `build`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `conversations`, `cost`, `dynamic-enum`, `enum`, `google`, `google-drive`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `primitives`, `prompt-templates`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
+    - Imported by: `avatar`, `backup`, `build`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `conversations`, `cost`, `dynamic-enum`, `enum`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `primitives`, `prompt-templates`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
   - Core:
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`
   - Web:
@@ -1866,11 +1866,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `Typography.Preset`
             - Contributes: `Typography.Preset` "Default", `ConfigV2.WebRegister`, `DynamicEnum.Options` "Typography preset", `ThemeEngine.TokenGroup` "Typography", `ThemeEngine.VariantGroup` "Typography" → `TypographyPicker`, `ThemeCustomizer.Section` "typography" → `TypographySection`
             - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`
-            - Exports: Types: `TypographyPresetContribution`; Values: `Typography`
+            - Exports: Types: `TypographyPresetContribution`; Values: `Typography`, `typographyConfig`
           - Server:
             - Uses: `config_v2.ConfigV2`
           - Shared:
             - Exports: Types: `TypographyTokenValues`; Values: `typographyConfig`, `typographyGroup`
+          - Plugins:
+            - **`google-fonts`** — Loads Google Fonts dynamically for typography presets referencing custom web fonts.
+              - Web:
+                - Contributes: `Core.Root` → `GoogleFontsLoader`
+                - Uses: `config_v2.useConfig`
     - **`tweakcn`** — Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
       - Web:
         - Contributes: `ThemeEngine.PresetSource` "Preset Source", `ThemeCustomizer.Section` "tweakcn" → `TweakcnSection`

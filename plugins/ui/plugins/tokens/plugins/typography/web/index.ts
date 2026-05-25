@@ -12,6 +12,7 @@ import { builtInPresets } from "./presets";
 
 export { Typography } from "./slots";
 export type { TypographyPresetContribution } from "./slots";
+export { typographyConfig } from "./internal/config";
 
 export default {
   id: "ui-tokens-typography",

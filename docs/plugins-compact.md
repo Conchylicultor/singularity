@@ -368,7 +368,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
       - Plugins:
         - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
-    - **`tokens`** [7 sub-plugins] — Umbrella for CSS token group plugins. Contributes global theme presets.
+    - **`tokens`** [8 sub-plugins] — Umbrella for CSS token group plugins. Contributes global theme presets.
     - **`tweakcn`** — Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
 
 - **`welcome`** — Landing pane shown at `/`.

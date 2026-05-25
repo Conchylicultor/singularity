@@ -1517,6 +1517,10 @@
       "name": "@singularity/plugin-ui-tokens-typography",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/typography/plugins/google-fonts": {
+      "name": "@singularity/plugin-ui-tokens-typography-google-fonts",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tweakcn": {
       "name": "@singularity/plugin-ui-tweakcn",
       "version": "0.0.1",
@@ -2770,6 +2774,8 @@
     "@singularity/plugin-ui-tokens-sidebar-palette": ["@singularity/plugin-ui-tokens-sidebar-palette@workspace:plugins/ui/plugins/tokens/plugins/sidebar-palette"],
 
     "@singularity/plugin-ui-tokens-typography": ["@singularity/plugin-ui-tokens-typography@workspace:plugins/ui/plugins/tokens/plugins/typography"],
+
+    "@singularity/plugin-ui-tokens-typography-google-fonts": ["@singularity/plugin-ui-tokens-typography-google-fonts@workspace:plugins/ui/plugins/tokens/plugins/typography/plugins/google-fonts"],
 
     "@singularity/plugin-ui-tweakcn": ["@singularity/plugin-ui-tweakcn@workspace:plugins/ui/plugins/tweakcn"],
 
