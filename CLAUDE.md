@@ -193,34 +193,33 @@ Independent projects that live in `sidequests/`, not directly related to Singula
 
 ## Instructions
 
-When working on this project, follow these instructions thoughtfully:
+### Agent Workflow Rules
 
 - Most features first require a thoughtful design phase. Use the project `plan` SKILL for this phase. This is important to correctly write the plan doc at the right location. Do NOT use `EnterPlanMode` tool.
 - New features should be implemented as plugins in `plugins/`. See [`plugins/framework/plugins/web-sdk/CLAUDE.md`](plugins/framework/plugins/web-sdk/CLAUDE.md) for how to create one.
 - When creating a new top-level app, use the `create-app` SKILL ([`.claude/skills/create-app/SKILL.md`](.claude/skills/create-app/SKILL.md)).
 - Always edit files in your worktree, not the main branch.
-- **Avoid `find` for file searches.** Claude Code's shell shim reroutes `find` to a bundled bfs that holds an unbounded directory FD frontier; broad finds against this repo (with `node_modules` + worktrees) accumulate ~65k DIR FDs and have crashed macOS. Use `rg --files -g '<glob>'` or `fd '<regex>'` — both respect `.gitignore` and have bounded FDs. Only use `find` when you need its predicates (`-mtime`, `-size`, `-perm`, etc.), and always scope it with `-prune` or `-maxdepth N`. The PreToolUse guard at `plugins/framework/plugins/tooling/plugins/guards/core/guards/find.ts` denies unbounded `find` calls.
-- **STOP on unexpected failures; never improvise around them.** If an MCP tool errors, a CLI behaves strangely, a write lands somewhere you didn't expect, a connection is refused, or any operation fails in a way you don't fully understand — surface the failure clearly and ask. Do NOT route around it (e.g. falling back to bash + curl after an MCP call fails, retrying against a different host, or "trying the next thing that looks close enough"). One real incident: a silent MCP handshake failure caused an agent to curl the main namespace and corrupt its DB. A loud failure is debuggable; a workaround built on a broken assumption is not.
-- **Prefer the clean, modern, best-practice design over the hacky one, even when it's more work.** This applies to *both* bug fixes *and* new feature design. Every concrete task — a bug, a missing behavior, a requested feature — is a toy case for a larger structural question. Ask: "what general primitive, plugin, slot, or abstraction would make this *and* future similar cases trivial?" — then build that, rather than patching the symptom or bolting the feature onto existing code. This might include refactoring or creating new plugins.
-- **Group related plugins under an umbrella.** For 2+ related plugins, prefer an umbrella parent (`plugins/<umbrella>/plugins/<child>/`) over flat top-level entries. This keeps `plugins/` readable as semantic categories rather than an unbounded flat list. The umbrella doesn't need to re-export children's APIs — each sub-plugin owns its barrel.
+- **Avoid `find` for file searches.** Unbounded `find` in this repo has crashed macOS (65k DIR FDs via the bfs shim). Use `rg --files -g '<glob>'` or `fd '<regex>'` instead. Only use `find` with `-maxdepth` or `-prune`.
+- **STOP on unexpected failures; never improvise around them.** If something fails in a way you don't fully understand, surface it and ask — do NOT route around it (e.g. falling back to curl after an MCP call fails). A loud failure is debuggable; a workaround built on a broken assumption is not.
 - **Subagents default to Sonnet.** When spawning any `Agent` call, always pass `model: "sonnet"` explicitly. Never omit the model and let it default to Opus. Only use Opus for load-bearing, complex implementation tasks — research, lookup, synthesis, and reporting are all Sonnet work.
-- **No polling — use push-based mechanisms.** Never use `setInterval`/`setTimeout` loops to check for changes. Use file watchers, DB `LISTEN/NOTIFY`, WebSocket messages, the `live-state` primitive, or the `events`/`jobs` plugin. If the upstream source has no change signal, use a `defineJob` with a schedule (not an in-process timer) and document why.
 - **On breakage, rebase to HEAD first.** When the build fails to start or something is broken in an unexpected way, rebase the worktree branch onto `main` (`git fetch origin main && git rebase origin/main`) — the issue may already be fixed upstream.
-- **Promise handling — never swallow rejections.** Two global ESLint rules enforce this (`plugins/framework/plugins/tooling/plugins/lint/core/promise-safety/`):
-  - `promise-safety/no-floating-promises` — every promise must be explicitly handled.
-  - `promise-safety/no-bare-catch` — `.catch(() => {})` and `.catch(console.error)` are banned because they silently swallow errors and hide bugs.
-
-  Correct patterns (in order of preference):
-  - `await promise` — preferred when in an async context.
-  - `promise.catch((err) => { if (err instanceof Expected) handle(err); else throw err; })` — catch specific exceptions, re-throw unknown. Use when a specific error message should reach the user (toast, error boundary).
-  - `void promise` — intentional fire-and-forget. The rejection is NOT caught — it still surfaces via the global `unhandledrejection` handler (which the `crashes` plugin reports). Use only when there is no better local handler (background refreshes, best-effort pings).
-
-  Never: bare `promise;` (floating), `.catch(() => {})` (swallowed), `.catch(console.error)` (logged but lost). These hide bugs.
 - **When the user explicitly says "Exit"**, signal the outcome via exactly one MCP tool call, then write your final wrap-up message:
   1. Call exactly one MCP tool to signal the outcome:
      - `exit_clean` — everything went smoothly, nothing I need to know. The conversation will close automatically.
      - `flag_raise({ reason })` — something needs my attention (caveats, partial outcomes, follow-ups, skipped work, or the push didn't land). Use `reason` for short bullets describing what I should know.
   2. Write your final wrap up message, including things like summary, issues encountered, existing caveats, follow ups.
+
+### Coding Style
+
+This is the single most important coding principle:
+
+- **Prefer the clean design over the hacky one, even when it's more work.** Ask: "what primitive or abstraction would make this *and* future similar cases trivial?" — then build that, rather than patching the symptom.
+
+---
+
+- **Group related plugins under an umbrella.** For 2+ related plugins, prefer an umbrella parent (`plugins/<umbrella>/plugins/<child>/`) over flat top-level entries. This keeps `plugins/` readable as semantic categories rather than an unbounded flat list. The umbrella doesn't need to re-export children's APIs — each sub-plugin owns its barrel.
+- **No polling — use push-based mechanisms.** Never use `setInterval`/`setTimeout` loops to check for changes. Use file watchers, DB `LISTEN/NOTIFY`, WebSocket messages, the `live-state` primitive, or the `events`/`jobs` plugin. If the upstream source has no change signal, use a `defineJob` with a schedule (not an in-process timer) and document why.
+- **Promise handling — never swallow rejections.** ESLint enforces `no-floating-promises` and `no-bare-catch`. Correct patterns: `await promise` (preferred), `.catch((err) => { if (err instanceof Expected) handle(err); else throw err; })` (specific handling), or `void promise` (intentional fire-and-forget). Never: bare `promise;`, `.catch(() => {})`, `.catch(console.error)`.
 ------------------------------------
 
 @docs/plugins-compact.md
