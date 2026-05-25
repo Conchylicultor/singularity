@@ -1,0 +1,14 @@
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+
+export { Editor } from "./slots";
+export type { BlockContribution } from "./slots";
+export type { BlockEditorAPI, BlockRendererProps } from "./types";
+export { BlockEditor } from "./components/block-editor";
+export { useBlockEditor } from "./block-editor-context";
+
+export default {
+  id: "page-editor",
+  name: "Page Editor",
+  description: "Block-based document editor component and slot system.",
+  contributions: [],
+} satisfies PluginDefinition;

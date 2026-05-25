@@ -33,3 +33,6 @@ export type {
   MoveBlockBody,
   SplitBlockBody,
 } from "./endpoints";
+
+export { defineBlock } from "./define-block";
+export type { BlockHandle } from "./define-block";

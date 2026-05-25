@@ -83,7 +83,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
 
 - **`page`** — Block-based page editor.
   - Plugins:
-    - **`editor`** — Block-based document editor — tables, routes, and live state.
+    - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - `/api/documents (GET, POST)`
       - `/api/documents/:id (GET, PATCH, DELETE)`
       - `/api/documents/:documentId/blocks (GET, POST)`

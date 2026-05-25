@@ -237,7 +237,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`page`** — Block-based page editor.
   - Plugins:
-    - **`editor`** — Block-based document editor — tables, routes, and live state.
+    - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
