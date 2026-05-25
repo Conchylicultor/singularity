@@ -5,20 +5,10 @@
 ## Plugin reference
 
 - Description: Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
-<<<<<<< .merge_file_VBOorZ
-- Exports (core):
-  - Values: `acknowledgeConflict`, `deleteOverride`, `getConfigRawFile`, `resetConfigField`
-- Exports (web):
-  - Values: `configNavPane`
-- Contributes:
-  - `Pane.Register` "config-v2-nav"
-  - `Pane.Register` "config-v2-detail"
-  - `Shell.Sidebar` "Config" → `ConfigSidebarButton`
-=======
 - Web:
   - Contributes: `Pane.Register` "config-v2-nav", `Pane.Register` "config-v2-detail", `Shell.Sidebar` "Config" → `ConfigSidebarButton`
   - Uses: `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `shell.Shell`
->>>>>>> .merge_file_JVTk4N
+  - Exports: Values: `configNavPane`
 - Server:
   - Uses: `config_v2.acknowledgeConflictByPath`, `config_v2.deleteOverrideByPath`, `config_v2.getRawFileContent`, `config_v2.resetConfigByPath`, `config_v2.setConfigByPath`
   - Routes: `POST /api/config-v2/reset-field`, `POST /api/config-v2/acknowledge-conflict`, `POST /api/config-v2/delete-override`, `GET /api/config-v2/raw-file`
