@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
+import { DynamicEnum } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/web";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { shapeGroup } from "../shared";
@@ -19,6 +20,7 @@ export default {
   contributions: [
     ...builtInPresets.map((p) => Shape.Preset(p)),
     ConfigV2.WebRegister({ descriptor: shapeConfig }),
+    DynamicEnum.Options({ field: shapeConfig.fields.preset, useOptions: () => Shape.Preset.useContributions().map((p) => ({ value: p.id, label: p.label })) }),
     ThemeEngine.TokenGroup({
       id: "shape",
       label: "Shape",

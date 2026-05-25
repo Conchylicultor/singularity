@@ -18,6 +18,7 @@
   - `Shadow.Preset` "None"
   - `Shadow.Preset` "Elevated"
   - `Shadow.Preset` "Heavy"
+  - `DynamicEnum.Options` "Shadow preset"
   - `ConfigV2.WebRegister`
   - `ThemeEngine.TokenGroup` "Shadow"
   - `ThemeEngine.VariantGroup` "Shadow" → `ShadowPicker`

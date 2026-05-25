@@ -16,6 +16,7 @@
 - Contributes:
   - `Core.Root` → `ThemeInjector`
   - `ConfigV2.WebRegister`
+  - `DynamicEnum.Options` "Theme"
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Slot contributors: `chart`, `color-adjust`, `color-palette`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `typography`

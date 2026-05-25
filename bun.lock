@@ -283,6 +283,9 @@
     "plugins/config_v2/plugins/fields/plugins/color": {
       "name": "@singularity/plugin-config_v2-fields-color",
     },
+    "plugins/config_v2/plugins/fields/plugins/dynamic-enum": {
+      "name": "@singularity/plugin-config_v2-fields-dynamic-enum",
+    },
     "plugins/config_v2/plugins/fields/plugins/enum": {
       "name": "@singularity/plugin-config_v2-fields-enum",
     },
@@ -2147,6 +2150,8 @@
     "@singularity/plugin-config_v2-fields-avatar": ["@singularity/plugin-config_v2-fields-avatar@workspace:plugins/config_v2/plugins/fields/plugins/avatar"],
 
     "@singularity/plugin-config_v2-fields-color": ["@singularity/plugin-config_v2-fields-color@workspace:plugins/config_v2/plugins/fields/plugins/color"],
+
+    "@singularity/plugin-config_v2-fields-dynamic-enum": ["@singularity/plugin-config_v2-fields-dynamic-enum@workspace:plugins/config_v2/plugins/fields/plugins/dynamic-enum"],
 
     "@singularity/plugin-config_v2-fields-enum": ["@singularity/plugin-config_v2-fields-enum@workspace:plugins/config_v2/plugins/fields/plugins/enum"],
 

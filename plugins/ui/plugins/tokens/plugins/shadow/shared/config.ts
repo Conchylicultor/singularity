@@ -1,10 +1,11 @@
 import { defineConfig } from "@plugins/config_v2/core";
 import { textField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
 import { objectField } from "@plugins/config_v2/plugins/fields/plugins/object/core";
+import { dynamicEnumField } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/core";
 
 export const shadowConfig = defineConfig({
   fields: {
-    preset: textField({ default: "default", label: "Shadow preset" }),
+    preset: dynamicEnumField({ default: "default", label: "Shadow preset" }),
     overrides: objectField({
       label: "Shadow parameters",
       subFields: {

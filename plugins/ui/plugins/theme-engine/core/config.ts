@@ -1,8 +1,8 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import { textField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
+import { dynamicEnumField } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/core";
 
 export const themeEngineConfig = defineConfig({
   fields: {
-    globalPreset: textField({ default: "default", label: "Theme" }),
+    globalPreset: dynamicEnumField({ default: "default", label: "Theme" }),
   },
 });

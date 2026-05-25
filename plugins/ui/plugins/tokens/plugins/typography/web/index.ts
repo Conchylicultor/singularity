@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
+import { DynamicEnum } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/web";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { typographyGroup } from "../shared";
@@ -19,6 +20,7 @@ export default {
   contributions: [
     ...builtInPresets.map((p) => Typography.Preset(p)),
     ConfigV2.WebRegister({ descriptor: typographyConfig }),
+    DynamicEnum.Options({ field: typographyConfig.fields.preset, useOptions: () => Typography.Preset.useContributions().map((p) => ({ value: p.id, label: p.label })) }),
     ThemeEngine.TokenGroup({
       id: "typography",
       label: "Typography",

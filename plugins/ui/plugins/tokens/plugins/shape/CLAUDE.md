@@ -19,6 +19,7 @@
   - `Shape.Preset` "Rounded"
   - `Shape.Preset` "Pill"
   - `ConfigV2.WebRegister`
+  - `DynamicEnum.Options` "Shape preset"
   - `ThemeEngine.TokenGroup` "Shape"
   - `ThemeEngine.VariantGroup` "Shape" → `ShapePicker`
   - `ThemeCustomizer.Section` "shape" → `ShapeSection`

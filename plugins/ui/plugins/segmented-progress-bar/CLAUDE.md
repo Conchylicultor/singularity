@@ -15,6 +15,7 @@
   - Values: `SegmentedProgressBar`, `SegmentedProgressBarSlots`
 - Contributes:
   - `ConfigV2.WebRegister`
+  - `DynamicEnum.Options` "Progress bar variant"
   - `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
 - Server:
   - Uses: `config_v2.ConfigV2`

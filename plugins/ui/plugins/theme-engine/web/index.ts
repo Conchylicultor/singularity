@@ -1,7 +1,9 @@
 import { type PluginDefinition, Core } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
+import { DynamicEnum } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/web";
 import { themeEngineConfig } from "../core";
 import { ThemeInjector } from "./components/theme-injector";
+import { ThemeEngine } from "./slots";
 
 export { ThemeEngine } from "./slots";
 export type {
@@ -24,5 +26,13 @@ export default {
   contributions: [
     Core.Root({ component: ThemeInjector }),
     ConfigV2.WebRegister({ descriptor: themeEngineConfig }),
+    DynamicEnum.Options({
+      field: themeEngineConfig.fields.globalPreset,
+      useOptions: () =>
+        ThemeEngine.GlobalPreset.useContributions().map((p) => ({
+          value: p.id,
+          label: p.label,
+        })),
+    }),
   ],
 } satisfies PluginDefinition;

@@ -482,7 +482,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Exports (server):
     - Types: `FieldStorageProvider`
     - Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `forkConfig`, `getAllDescriptors`, `getConfig`, `getFieldStorageProvider`, `getRawFileContent`, `hasFieldStorageProvider`, `registerFieldStorageProvider`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
-  - Imported by: `avatar`, `backup`, `build`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `conversations`, `cost`, `enum`, `google`, `google-drive`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `primitives`, `prompt-templates`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
+  - Imported by: `avatar`, `backup`, `build`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `conversations`, `cost`, `dynamic-enum`, `enum`, `google`, `google-drive`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `primitives`, `prompt-templates`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Exports (web):
@@ -501,6 +501,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `colorField`, `colorFieldType`
           - Contributes:
             - `Fields.Renderer` "color" → `ColorRenderer`
+        - **`dynamic-enum`** — Dynamic enum field type: options resolved at render time from slot contributions.
+          - Exports (core):
+            - Types: `DynamicEnumFieldDef`
+            - Values: `dynamicEnumField`, `dynamicEnumFieldType`
+          - Exports (web):
+            - Types: `DynamicEnumOption`, `DynamicEnumOptionsContribution`
+            - Values: `DynamicEnum`
+          - Contributes:
+            - `Fields.Renderer` "dynamic-enum" → `DynamicEnumRenderer`
         - **`enum`** — Enum field type: single-choice from a fixed set of options.
           - Exports (core):
             - Types: `EnumFieldDef`, `EnumOption`
@@ -2064,6 +2073,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `SegmentedProgressBar`, `SegmentedProgressBarSlots`
       - Contributes:
         - `ConfigV2.WebRegister`
+        - `DynamicEnum.Options` "Progress bar variant"
         - `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
       - Server:
         - Uses: `config_v2.ConfigV2`
@@ -2086,6 +2096,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Contributes:
         - `Core.Root` → `ThemeInjector`
         - `ConfigV2.WebRegister`
+        - `DynamicEnum.Options` "Theme"
       - Server:
         - Uses: `config_v2.ConfigV2`
       - Slot contributors: `chart`, `color-adjust`, `color-palette`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `typography`
@@ -2115,6 +2126,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Chart.Preset` "Default"
             - `ConfigV2.WebRegister`
+            - `DynamicEnum.Options` "Chart preset"
             - `ThemeEngine.TokenGroup` "Chart"
             - `ThemeEngine.VariantGroup` "Chart" → `ChartPicker`
             - `ThemeCustomizer.Section` "chart" → `ChartSection`
@@ -2130,6 +2142,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `colorAdjustConfig`
           - Contributes:
             - `ConfigV2.WebRegister`
+            - `DynamicEnum.Options` "Color adjust preset"
             - `ColorAdjust.Preset` "Default"
             - `ColorAdjust.Preset` "Grayscale"
             - `ColorAdjust.Preset` "Muted"
@@ -2158,6 +2171,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `colorPaletteConfig`, `colorPaletteGroup`
           - Contributes:
             - `ConfigV2.WebRegister`
+            - `DynamicEnum.Options` "Color Palette preset"
             - `ColorPalette.Preset` "Default"
             - `ColorPalette.Preset` "Ocean"
             - `ColorPalette.Preset` "Warm"
@@ -2180,6 +2194,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Shadow.Preset` "None"
             - `Shadow.Preset` "Elevated"
             - `Shadow.Preset` "Heavy"
+            - `DynamicEnum.Options` "Shadow preset"
             - `ConfigV2.WebRegister`
             - `ThemeEngine.TokenGroup` "Shadow"
             - `ThemeEngine.VariantGroup` "Shadow" → `ShadowPicker`
@@ -2201,6 +2216,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `Shape.Preset` "Rounded"
             - `Shape.Preset` "Pill"
             - `ConfigV2.WebRegister`
+            - `DynamicEnum.Options` "Shape preset"
             - `ThemeEngine.TokenGroup` "Shape"
             - `ThemeEngine.VariantGroup` "Shape" → `ShapePicker`
             - `ThemeCustomizer.Section` "shape" → `ShapeSection`
@@ -2219,6 +2235,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - `SidebarPalette.Preset` "Default"
             - `SidebarPalette.Preset` "Warm"
             - `ConfigV2.WebRegister`
+            - `DynamicEnum.Options` "Sidebar Palette preset"
             - `ThemeEngine.TokenGroup` "Sidebar Palette"
             - `ThemeEngine.VariantGroup` "Sidebar Palette" → `SidebarPalettePicker`
             - `ThemeCustomizer.Section` "sidebar-palette" → `SidebarPaletteSection`
@@ -2236,6 +2253,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Contributes:
             - `Typography.Preset` "Default"
             - `ConfigV2.WebRegister`
+            - `DynamicEnum.Options` "Typography preset"
             - `ThemeEngine.TokenGroup` "Typography"
             - `ThemeEngine.VariantGroup` "Typography" → `TypographyPicker`
             - `ThemeCustomizer.Section` "typography" → `TypographySection`

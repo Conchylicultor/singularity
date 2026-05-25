@@ -14,6 +14,7 @@
   - Values: `colorAdjustConfig`
 - Contributes:
   - `ConfigV2.WebRegister`
+  - `DynamicEnum.Options` "Color adjust preset"
   - `ColorAdjust.Preset` "Default"
   - `ColorAdjust.Preset` "Grayscale"
   - `ColorAdjust.Preset` "Muted"

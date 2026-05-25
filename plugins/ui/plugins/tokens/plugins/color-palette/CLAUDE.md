@@ -15,6 +15,7 @@
   - Values: `colorPaletteConfig`, `colorPaletteGroup`
 - Contributes:
   - `ConfigV2.WebRegister`
+  - `DynamicEnum.Options` "Color Palette preset"
   - `ColorPalette.Preset` "Default"
   - `ColorPalette.Preset` "Ocean"
   - `ColorPalette.Preset` "Warm"

@@ -16,6 +16,7 @@
 - Contributes:
   - `Chart.Preset` "Default"
   - `ConfigV2.WebRegister`
+  - `DynamicEnum.Options` "Chart preset"
   - `ThemeEngine.TokenGroup` "Chart"
   - `ThemeEngine.VariantGroup` "Chart" → `ChartPicker`
   - `ThemeCustomizer.Section` "chart" → `ChartSection`

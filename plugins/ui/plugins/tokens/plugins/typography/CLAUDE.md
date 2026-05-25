@@ -16,6 +16,7 @@
 - Contributes:
   - `Typography.Preset` "Default"
   - `ConfigV2.WebRegister`
+  - `DynamicEnum.Options` "Typography preset"
   - `ThemeEngine.TokenGroup` "Typography"
   - `ThemeEngine.VariantGroup` "Typography" → `TypographyPicker`
   - `ThemeCustomizer.Section` "typography" → `TypographySection`

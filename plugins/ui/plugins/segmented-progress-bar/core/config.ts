@@ -1,8 +1,8 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import { textField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
+import { dynamicEnumField } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/core";
 
 export const segmentedProgressBarConfig = defineConfig({
   fields: {
-    variant: textField({ default: "dots", label: "Progress bar variant" }),
+    variant: dynamicEnumField({ default: "dots", label: "Progress bar variant" }),
   },
 });

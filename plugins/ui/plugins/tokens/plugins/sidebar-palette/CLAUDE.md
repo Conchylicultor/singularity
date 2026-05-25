@@ -17,6 +17,7 @@
   - `SidebarPalette.Preset` "Default"
   - `SidebarPalette.Preset` "Warm"
   - `ConfigV2.WebRegister`
+  - `DynamicEnum.Options` "Sidebar Palette preset"
   - `ThemeEngine.TokenGroup` "Sidebar Palette"
   - `ThemeEngine.VariantGroup` "Sidebar Palette" → `SidebarPalettePicker`
   - `ThemeCustomizer.Section` "sidebar-palette" → `SidebarPaletteSection`
