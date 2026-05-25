@@ -4,6 +4,7 @@ import type { Block } from "../core";
 export interface BlockEditorAPI {
   update(data: unknown): void;
   split(position: number): void;
+  merge(): void;
   remove(): void;
   indent(): void;
   outdent(): void;

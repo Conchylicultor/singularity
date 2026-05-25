@@ -1021,6 +1021,14 @@
       "name": "@singularity/plugin-page-editor",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/text": {
+      "name": "@singularity/plugin-page-text",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
+    },
     "plugins/plugin-meta": {
       "name": "@singularity/plugin-plugin-meta",
       "version": "0.0.1",
@@ -2554,6 +2562,8 @@
     "@singularity/plugin-page": ["@singularity/plugin-page@workspace:plugins/page"],
 
     "@singularity/plugin-page-editor": ["@singularity/plugin-page-editor@workspace:plugins/page/plugins/editor"],
+
+    "@singularity/plugin-page-text": ["@singularity/plugin-page-text@workspace:plugins/page/plugins/text"],
 
     "@singularity/plugin-plugin-meta": ["@singularity/plugin-plugin-meta@workspace:plugins/plugin-meta"],
 

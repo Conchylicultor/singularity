@@ -8,6 +8,8 @@
 - Web:
   - Slots: `Editor.Block`
   - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`; Values: `BlockEditor`, `Editor`, `useBlockEditor`
+- Cross-plugin:
+  - Slot contributors: `text`
 - Server:
   - Uses: `database.db`
   - DB schema: `plugins/page/plugins/editor/server/internal/tables.ts`

@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import {
   updateBlock,
   splitBlock,
+  mergeBlocks,
   deleteBlock,
   indentBlock,
   outdentBlock,
@@ -37,10 +38,15 @@ export function BlockEditorProvider({
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const focusHandlesRef = useRef(new Map<string, { focus: () => void }>());
   const flatOrderRef = useRef<Block[]>([]);
+  const pendingFocusRef = useRef<string | null>(null);
 
   const registerFocusHandle = useCallback(
     (id: string, handle: { focus: () => void }) => {
       focusHandlesRef.current.set(id, handle);
+      if (pendingFocusRef.current === id) {
+        pendingFocusRef.current = null;
+        handle.focus();
+      }
       return () => {
         focusHandlesRef.current.delete(id);
       };
@@ -58,7 +64,26 @@ export function BlockEditorProvider({
         void fetchEndpoint(updateBlock, { id: blockId }, { body: { data } });
       },
       split(position: number) {
-        void fetchEndpoint(splitBlock, { id: blockId }, { body: { position } });
+        void (async () => {
+          const result = await fetchEndpoint(splitBlock, { id: blockId }, { body: { position } });
+          pendingFocusRef.current = result.created.id;
+          const handle = focusHandlesRef.current.get(result.created.id);
+          if (handle) {
+            pendingFocusRef.current = null;
+            handle.focus();
+          }
+        })();
+      },
+      merge() {
+        void (async () => {
+          try {
+            const merged = await fetchEndpoint(mergeBlocks, { id: blockId });
+            focusHandlesRef.current.get(merged.id)?.focus();
+          } catch (err: unknown) {
+            if (err instanceof EndpointError && err.status === 400) return;
+            throw err;
+          }
+        })();
       },
       remove() {
         void fetchEndpoint(deleteBlock, { id: blockId });
