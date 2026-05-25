@@ -44,6 +44,10 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
 
 Think carefully about the plugin's boundaries, APIs, etc. when designing plugins, as it is the load-bearing infra of the entire project.
 
+### Collection-consumer separation
+
+When a plugin collects sub-plugin contributions (e.g. facets, checks, collected dirs), consumers must use only the **generic collection API** — never import or name individual contributors. The collection plugin owns the registry and generic interface; each contributor implements the internal details. Adding or removing a contributor updates all consumers automatically with zero code changes. If a consumer needs to reference a specific contributor, the abstraction is leaking — redesign the generic API instead.
+
 ### Plugin boundary rules (enforced by `./singularity check --plugin-boundaries`)
 
 - **One barrel per runtime.** `plugins/<name>/<runtime>/index.ts` is the only cross-plugin entry point. No `api.ts`, no deep paths.

@@ -5,6 +5,23 @@ primitive and the `loadFacets()` loader. Each facet sub-plugin extracts one
 aspect of plugin metadata (exports, slots, commands, etc.) from the plugin
 tree.
 
+## Mental model
+
+The facets plugin exposes a **generic API** (`loadFacets`, `getFacet`,
+`DocFact`). Consumers (docgen, Forge UI, PR diff) use only this generic API —
+they iterate over collected facets and call `renderDoc()` / `getFacet()`
+without ever importing or naming individual facet sub-plugins.
+
+Each facet sub-plugin implements the internal details: how to extract its
+specific data, how to compute cross-references, and how to render its doc
+facts. Adding or removing a facet sub-plugin automatically updates all
+consumers with zero changes to consumer code.
+
+**Rule: consumers must never import individual facet sub-plugins.** Import
+only from `@plugins/plugin-meta/plugins/facets/core`. If a consumer needs
+to name a specific facet, the abstraction is leaking — redesign the generic
+API instead.
+
 ## Adding a facet
 
 1. Create `plugins/<name>/facet/index.ts` under this umbrella.
