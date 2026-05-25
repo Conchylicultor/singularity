@@ -36,6 +36,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const input = event.input as AddTaskInput;
   const result = parseResult(event);
   const taskId = result?.task_id;
+  const autostart = input.autostart ?? result?.autostart ?? null;
 
   const tasksResult = useResource(tasksResource);
   const { convId } = conversationPane.useParams();
@@ -54,9 +55,9 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const summary = (
     <span className="flex min-w-0 items-center gap-2">
       <span className="min-w-0 truncate">{input.title}</span>
-      {input.autostart ? (
+      {autostart ? (
         <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-          auto-launch {input.autostart}
+          auto-launch {autostart}
         </span>
       ) : (
         <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-400">
