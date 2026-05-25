@@ -1,6 +1,6 @@
 import { createContext, useContext, useLayoutEffect, useMemo } from "react";
 import { useConfig } from "@plugins/config_v2/web";
-import { ThemeEngine } from "../slots";
+import { ThemeEngine, useTokenGroupPresets } from "../slots";
 import type {
   TokenGroupContribution,
   ColorAdjustment,
@@ -47,7 +47,7 @@ function WithAdjustment({
 
 function GroupStyle({ group }: { group: TokenGroupContribution }) {
   const adjustment = useContext(ColorAdjustContext);
-  const presets = group.usePresets();
+  const presets = useTokenGroupPresets(group.id, group.usePresets());
   const config = useConfig(group.configDescriptor) as {
     preset: string;
     overrides: Record<string, unknown>;
@@ -105,7 +105,9 @@ function GroupStyle({ group }: { group: TokenGroupContribution }) {
 export function ThemeInjector() {
   const groups = ThemeEngine.TokenGroup.useContributions();
   const colorTransforms = ThemeEngine.ColorTransform.useContributions();
-  const groupStyles = groups.map((g) => <GroupStyle key={g.id} group={g} />);
+  const groupStyles = groups.map((g) => (
+    <GroupStyle key={g.id} group={g} />
+  ));
 
   const firstTransform = colorTransforms[0];
   if (!firstTransform) {

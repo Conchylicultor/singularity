@@ -44,6 +44,20 @@ export interface ColorTransformContribution {
   useAdjustment: () => ColorAdjustment;
 }
 
+export interface PresetSourceContribution {
+  usePresets: (groupId: string) => TokenGroupPreset[];
+}
+
+export function useTokenGroupPresets(
+  groupId: string,
+  staticPresets: TokenGroupPreset[],
+): TokenGroupPreset[] {
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- PresetSource contributions are static slot entries; count never changes
+  const dynamic = ThemeEngine.PresetSource.useContributions()
+    .flatMap((s) => s.usePresets(groupId));
+  return [...staticPresets, ...dynamic];
+}
+
 export const ThemeEngine = {
   VariantGroup: defineSlot<VariantGroupContribution>(
     "ui.theme-engine.variant-group",
@@ -60,5 +74,9 @@ export const ThemeEngine = {
   ColorTransform: defineSlot<ColorTransformContribution>(
     "ui.theme-engine.color-transform",
     { docLabel: () => "Color Transform" },
+  ),
+  PresetSource: defineSlot<PresetSourceContribution>(
+    "ui.theme-engine.preset-source",
+    { docLabel: () => "Preset Source" },
   ),
 };

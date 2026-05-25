@@ -5,7 +5,7 @@ import { themeEngineConfig } from "../core";
 import { ThemeInjector } from "./components/theme-injector";
 import { ThemeEngine } from "./slots";
 
-export { ThemeEngine } from "./slots";
+export { ThemeEngine, useTokenGroupPresets } from "./slots";
 export type {
   VariantGroupContribution,
   TokenGroupContribution,
@@ -13,6 +13,7 @@ export type {
   GlobalPresetContribution,
   ColorAdjustment,
   ColorTransformContribution,
+  PresetSourceContribution,
 } from "./slots";
 export { ThemeScope } from "./components/theme-scope";
 export { ColorAdjustContext } from "./components/theme-injector";

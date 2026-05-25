@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/web";
-import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeEngine, useTokenGroupPresets } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { sidebarPaletteGroup } from "../shared";
 import { sidebarPaletteConfig } from "./internal/config";
@@ -21,7 +21,9 @@ export default {
   contributions: [
     ...builtInPresets.map((p) => SidebarPalette.Preset(p)),
     ConfigV2.WebRegister({ descriptor: sidebarPaletteConfig }),
-    DynamicEnum.Options({ field: sidebarPaletteConfig.fields.preset, useOptions: () => SidebarPalette.Preset.useContributions().map((p) => ({ value: p.id, label: p.label })) }),
+    DynamicEnum.Options({ field: sidebarPaletteConfig.fields.preset, useOptions: () =>
+      useTokenGroupPresets("sidebar-palette", SidebarPalette.Preset.useContributions()).map((p) => ({ value: p.id, label: p.label }))
+    }),
     ThemeEngine.TokenGroup({
       id: "sidebar-palette",
       label: "Sidebar Palette",
