@@ -374,6 +374,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
     - **`tokens`** [8 sub-plugins] — Umbrella for CSS token group plugins. Contributes global theme presets.
     - **`tweakcn`** — Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
+      - Plugins:
+        - **`community-browser`** — Community theme browser for tweakcn
 
 - **`welcome`** — Landing pane shown at `/`.
 

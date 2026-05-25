@@ -1902,6 +1902,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `TweakcnTheme`; Values: `deleteTweakcnTheme`, `importTweakcnTheme`, `listTweakcnThemes`, `TweakcnThemeSchema`
       - Shared:
         - Exports: Values: `convertTweakcnTheme`
+      - Plugins:
+        - **`community-browser`** — Community theme browser for tweakcn
+          - Shared:
+            - Exports: Types: `CatalogTheme`
 
 - **`welcome`** — Landing pane shown at `/`.
   - Web:

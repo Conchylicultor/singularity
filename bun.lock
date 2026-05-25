@@ -1533,6 +1533,10 @@
       "name": "@singularity/plugin-ui-tweakcn",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tweakcn/plugins/community-browser": {
+      "name": "@singularity/plugin-ui-tweakcn-community-browser",
+      "version": "0.0.1",
+    },
     "plugins/welcome": {
       "name": "@singularity/plugin-welcome",
       "version": "0.0.1",
@@ -2790,6 +2794,8 @@
     "@singularity/plugin-ui-tokens-typography-google-fonts": ["@singularity/plugin-ui-tokens-typography-google-fonts@workspace:plugins/ui/plugins/tokens/plugins/typography/plugins/google-fonts"],
 
     "@singularity/plugin-ui-tweakcn": ["@singularity/plugin-ui-tweakcn@workspace:plugins/ui/plugins/tweakcn"],
+
+    "@singularity/plugin-ui-tweakcn-community-browser": ["@singularity/plugin-ui-tweakcn-community-browser@workspace:plugins/ui/plugins/tweakcn/plugins/community-browser"],
 
     "@singularity/plugin-welcome": ["@singularity/plugin-welcome@workspace:plugins/welcome"],
 
