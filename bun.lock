@@ -435,6 +435,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/task-reminder": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-task-reminder",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-counter": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter",
       "version": "0.0.1",
@@ -2258,6 +2262,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/nested-memory"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-task-reminder": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-task-reminder@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/task-reminder"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-counter"],
 

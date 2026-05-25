@@ -666,13 +666,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
                 - Exports: Types: `AttachmentRendererContribution`; Values: `JsonlViewerAttachment`
               - Cross-plugin:
-                - Slot contributors: `nested-memory`
+                - Slot contributors: `nested-memory`, `task-reminder`
               - Core:
                 - Exports: Types: `AttachmentEvent`, `AttachmentRendererProps`
               - Plugins:
                 - **`nested-memory`** — Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "nested_memory" → `NestedMemoryAttachmentView`
+                - **`task-reminder`** — Renders task-reminder attachment events showing periodic task list injections.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "task_reminder" → `TaskReminderAttachmentView`
             - **`event-counter`** — Displays the total event count in the conversation toolbar.
               - Web:
                 - Contributes: `Conversation.ActionBar` → `EventCounter`
