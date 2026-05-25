@@ -1,7 +1,6 @@
-import { homedir } from "node:os";
 import { join } from "node:path";
+import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 
-const SINGULARITY_DIR = join(homedir(), ".singularity");
 const PG_DIR = join(SINGULARITY_DIR, "postgres");
 
 export const PGBOUNCER_PORT = 6432;
