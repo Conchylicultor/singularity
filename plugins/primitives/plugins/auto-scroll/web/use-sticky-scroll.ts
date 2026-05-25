@@ -19,14 +19,14 @@ export interface UseStickyScrollOptions {
 export interface StickyScrollHandle {
   /** Attach to the scrolling viewport (`overflow: auto`). */
   scrollRef: React.RefObject<HTMLDivElement | null>;
-  /** Attach to the inner content wrapper. ResizeObserver watches this. */
-  contentRef: React.RefObject<HTMLDivElement | null>;
   /** True when the viewport is within `threshold` of the bottom. */
   isPinned: boolean;
   /** True when content has grown while unpinned. Cleared on jump or re-pin. */
   hasUnread: boolean;
   /** Smooth-scroll to the bottom. Re-pins on completion. */
   jumpToBottom: () => void;
+  /** If pinned, scroll to bottom after paint. If unpinned, set hasUnread. */
+  scrollIfPinned: () => void;
 }
 
 const DEFAULT_THRESHOLD = 50;
@@ -37,15 +37,9 @@ export function useStickyScroll(
   const { threshold = DEFAULT_THRESHOLD, forceScrollKey, resetKey } = opts;
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const contentRef = useRef<HTMLDivElement | null>(null);
   const [isPinned, setIsPinned] = useState(true);
   const [hasUnread, setHasUnread] = useState(false);
   const isPinnedRef = useRef(true);
-
-  // overflowAnchor is managed dynamically in the scroll handler below:
-  // "none" when pinned (so ResizeObserver can force-scroll to bottom unimpeded),
-  // "auto" when unpinned (so the browser anchors the user's visual position when
-  // content above them grows — e.g. a ConvChip loads and expands).
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -76,8 +70,6 @@ export function useStickyScroll(
       const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
       const pinned = distance < threshold;
       isPinnedRef.current = pinned;
-      // When pinned: disable browser anchor so ResizeObserver can force-scroll to bottom.
-      // When unpinned: enable browser anchor so content expanding above doesn't jump the view up.
       el.style.overflowAnchor = pinned ? "none" : "auto";
       setIsPinned(pinned);
       if (pinned) setHasUnread(false);
@@ -86,52 +78,16 @@ export function useStickyScroll(
     return () => el.removeEventListener("scroll", onScroll);
   }, [threshold]);
 
-  useEffect(() => {
+  const scrollIfPinned = useCallback(() => {
     const viewport = scrollRef.current;
-    const content = contentRef.current;
-    if (!viewport || !content) return;
-    let frame: number | null = null;
-    const scrollToBottom = () => {
-      if (frame !== null) cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
+    if (!viewport) return;
+    if (isPinnedRef.current) {
+      requestAnimationFrame(() => {
         viewport.scrollTop = viewport.scrollHeight;
       });
-    };
-
-    let lastHeight = content.getBoundingClientRect().height;
-    const contentObserver = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      const newHeight = entry.contentRect.height;
-      if (newHeight <= lastHeight) {
-        lastHeight = newHeight;
-        return;
-      }
-      lastHeight = newHeight;
-      if (isPinnedRef.current) {
-        scrollToBottom();
-      } else {
-        setHasUnread(true);
-      }
-    });
-    contentObserver.observe(content);
-
-    let lastWidth = viewport.clientWidth;
-    const viewportObserver = new ResizeObserver(() => {
-      const newWidth = viewport.clientWidth;
-      if (newWidth === lastWidth) return;
-      lastWidth = newWidth;
-      if (isPinnedRef.current) {
-        scrollToBottom();
-      }
-    });
-    viewportObserver.observe(viewport);
-
-    return () => {
-      contentObserver.disconnect();
-      viewportObserver.disconnect();
-      if (frame !== null) cancelAnimationFrame(frame);
-    };
+    } else {
+      setHasUnread(true);
+    }
   }, []);
 
   const jumpToBottom = useCallback(() => {
@@ -141,5 +97,5 @@ export function useStickyScroll(
     setHasUnread(false);
   }, []);
 
-  return { scrollRef, contentRef, isPinned, hasUnread, jumpToBottom };
+  return { scrollRef, isPinned, hasUnread, jumpToBottom, scrollIfPinned };
 }

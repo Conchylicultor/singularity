@@ -203,6 +203,11 @@ export function JsonlPane({
     resetKey: conversation.id,
     forceScrollKey: isWorking ? 1 : 0,
   });
+  const { scrollIfPinned } = sticky;
+
+  useEffect(() => {
+    scrollIfPinned();
+  }, [events.length, scrollIfPinned]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -212,27 +217,25 @@ export function JsonlPane({
           data-pane-scroll
           className={`h-full overflow-auto transition-opacity ${isGone ? "opacity-50" : ""}`}
         >
-          <div ref={sticky.contentRef}>
-            {eventsResult.pending ? (
-              <div className="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
-            ) : eventsResult.error ? (
-              <div className="px-3 py-2 text-xs text-destructive">
-                {eventsResult.error instanceof Error ? eventsResult.error.message : String(eventsResult.error)}
-              </div>
-            ) : events.length === 0 ? (
-              <div className="flex flex-col px-3 py-2 text-xs text-muted-foreground">
-                <span>No transcript yet. Claude may not have written its session log.</span>
+          {eventsResult.pending ? (
+            <div className="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
+          ) : eventsResult.error ? (
+            <div className="px-3 py-2 text-xs text-destructive">
+              {eventsResult.error instanceof Error ? eventsResult.error.message : String(eventsResult.error)}
+            </div>
+          ) : events.length === 0 ? (
+            <div className="flex flex-col px-3 py-2 text-xs text-muted-foreground">
+              <span>No transcript yet. Claude may not have written its session log.</span>
+              {isWorking && <WorkingIndicator startAt={workingStartAt} />}
+            </div>
+          ) : (
+            <LastAssistantProvider event={lastAssistantEvent}>
+              <EventSections events={events}>
                 {isWorking && <WorkingIndicator startAt={workingStartAt} />}
-              </div>
-            ) : (
-              <LastAssistantProvider event={lastAssistantEvent}>
-                <EventSections events={events}>
-                  {isWorking && <WorkingIndicator startAt={workingStartAt} />}
-                  {!isWorking && !!conversation.waitingFor && <PendingContentIndicator />}
-                </EventSections>
-              </LastAssistantProvider>
-            )}
-          </div>
+                {!isWorking && !!conversation.waitingFor && <PendingContentIndicator />}
+              </EventSections>
+            </LastAssistantProvider>
+          )}
         </div>
         {totals && (
           <div className="pointer-events-none absolute bottom-2 left-0 right-0 z-10">

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, type ReactElement } from "react";
+import { useState, useRef, useCallback, useEffect, type ReactElement } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { MdContentCopy, MdCheck, MdClose } from "react-icons/md";
@@ -108,6 +108,11 @@ function LiveLogs(): ReactElement {
   const lastSeqRef = useRef<number>(0);
 
   const stickyScroll = useStickyScroll({ resetKey: "build" });
+  const { scrollIfPinned } = stickyScroll;
+
+  useEffect(() => {
+    scrollIfPinned();
+  }, [entries.length, scrollIfPinned]);
 
   useReconnectingWebSocket({
     url: WS_URL,
@@ -168,30 +173,28 @@ function LiveLogs(): ReactElement {
         ref={stickyScroll.scrollRef}
         className="min-h-48 max-h-96 overflow-y-auto rounded border bg-muted/30 px-3 py-2 font-mono text-xs leading-5"
       >
-        <div ref={stickyScroll.contentRef}>
-          {entries.length === 0 && (
-            <span className="text-muted-foreground">No build logs yet</span>
-          )}
-          {entries.map((entry) => (
-            <div
-              key={entry.seq}
-              className={cn(
-                "flex gap-2",
-                entry.stream === "stderr" ? "text-destructive" : "text-foreground",
-              )}
-            >
-              <span className="shrink-0 text-muted-foreground">
-                {new Date(entry.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                  hour12: false,
-                })}
-              </span>
-              <span className="whitespace-pre-wrap break-all">{entry.line}</span>
-            </div>
-          ))}
-        </div>
+        {entries.length === 0 && (
+          <span className="text-muted-foreground">No build logs yet</span>
+        )}
+        {entries.map((entry) => (
+          <div
+            key={entry.seq}
+            className={cn(
+              "flex gap-2",
+              entry.stream === "stderr" ? "text-destructive" : "text-foreground",
+            )}
+          >
+            <span className="shrink-0 text-muted-foreground">
+              {new Date(entry.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+              })}
+            </span>
+            <span className="whitespace-pre-wrap break-all">{entry.line}</span>
+          </div>
+        ))}
       </div>
       <div className="absolute bottom-1 left-1/2 -translate-x-1/2">
         <JumpToBottomButton handle={stickyScroll} />

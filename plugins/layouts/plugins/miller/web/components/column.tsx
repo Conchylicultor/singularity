@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import {
   PaneLayoutContext,
   PaneResolveGuard,
@@ -50,15 +50,6 @@ export function Column({ entry, isLast, dragHandleProps }: ColumnProps) {
     }
   }, [isLast, paneId]);
 
-  const Component = useMemo(() => {
-    if (entry.pane.resolve === undefined) return entry.pane.component;
-    const pane = entry.pane;
-    const params = entry.params;
-    return function PaneGuard() {
-      return <PaneResolveGuard pane={pane} params={params} />;
-    };
-  }, [entry.pane, entry.params]);
-
   // Some other column is maximized → collapse this one (overrides isLast guard).
   const forcedCollapse = !isMaximized && getMaximizedId() !== null;
   if (forcedCollapse) {
@@ -92,7 +83,7 @@ export function Column({ entry, isLast, dragHandleProps }: ColumnProps) {
         }
       >
         <PaneLayoutContext.Provider value={{ onDoubleClickHeader: toggleMaximize, dragHandleProps }}>
-          <Component />
+          <PaneResolveGuard pane={entry.pane} params={entry.params} />
         </PaneLayoutContext.Provider>
       </div>
       {isCollapsed ? (

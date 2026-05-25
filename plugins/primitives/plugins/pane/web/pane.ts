@@ -403,23 +403,39 @@ export function syncChainFromUrl(pathname: string): void {
   notifyChainListeners();
 }
 
+let prevResolvedByUuid = new Map<string, MatchEntry>();
+
 function resolveChain(chain: PaneSlot[]): PaneMatch | null {
-  if (chain.length === 0) return null;
+  if (chain.length === 0) {
+    prevResolvedByUuid = new Map();
+    return null;
+  }
   const entries: MatchEntry[] = [];
   const accumulated: Record<string, string> = {};
+  let chainStable = true;
   for (const slot of chain) {
     const pane = registry.get(slot.paneId);
-    if (!pane) return null;
+    if (!pane) {
+      prevResolvedByUuid = new Map();
+      return null;
+    }
     Object.assign(accumulated, slot.params);
-    entries.push({
-      instanceId: slot.instanceId,
-      uuid: slot.uuid,
-      pane,
-      params: { ...slot.params },
-      fullParams: { ...accumulated },
-      input: { ...slot.input },
-    });
+    const prev = prevResolvedByUuid.get(slot.uuid);
+    if (chainStable && prev && prev.pane === pane) {
+      entries.push(prev);
+    } else {
+      chainStable = false;
+      entries.push({
+        instanceId: slot.instanceId,
+        uuid: slot.uuid,
+        pane,
+        params: { ...slot.params },
+        fullParams: { ...accumulated },
+        input: { ...slot.input },
+      });
+    }
   }
+  prevResolvedByUuid = new Map(entries.map(e => [e.uuid, e]));
   return { chain: entries };
 }
 
