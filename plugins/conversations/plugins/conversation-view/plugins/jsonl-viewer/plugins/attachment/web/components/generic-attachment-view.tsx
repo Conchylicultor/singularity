@@ -2,7 +2,6 @@ import {
   useCollapsible,
   CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { Timestamp } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import type { AttachmentRendererProps } from "../../core";
 
 export function GenericAttachmentView({ event }: AttachmentRendererProps) {
@@ -16,7 +15,6 @@ export function GenericAttachmentView({ event }: AttachmentRendererProps) {
       >
         <CollapsibleChevron open={open} className="size-3" />
         <span className="font-mono">attachment:{event.subtype}</span>
-        <Timestamp at={event.at} className="ml-auto tabular-nums text-muted-foreground" />
       </button>
       {open && (
         <div id={contentId} className="mt-2 border-l-2 border-muted-foreground/20 pl-3">
