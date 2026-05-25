@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { importTweakcnTheme } from "../../core/endpoints";
-import { convertTweakcnTheme } from "../../shared/convert";
+import { convertTweakcnTheme } from "../../core/convert";
 import { _tweakcnThemes } from "./tables";
 
 export const handleImport = implement(

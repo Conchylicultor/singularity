@@ -1,1 +1,1 @@
-export { convertTweakcnTheme } from "./convert";
+export {};

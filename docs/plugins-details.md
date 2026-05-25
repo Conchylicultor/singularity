@@ -960,7 +960,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`, `tweakcn`
+    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`, `tweakcn`
   - Core:
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Server:
@@ -1897,13 +1897,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`
         - DB schema: `plugins/ui/plugins/tweakcn/server/internal/tables.ts`
+        - Exports: Values: `_tweakcnThemes`
         - Routes: `GET /api/tweakcn/themes`, `POST /api/tweakcn/themes`, `DELETE /api/tweakcn/themes/:id`
       - Core:
-        - Exports: Types: `TweakcnTheme`; Values: `deleteTweakcnTheme`, `importTweakcnTheme`, `listTweakcnThemes`, `TweakcnThemeSchema`
-      - Shared:
-        - Exports: Values: `convertTweakcnTheme`
+        - Exports: Types: `TweakcnTheme`; Values: `convertTweakcnTheme`, `deleteTweakcnTheme`, `importTweakcnTheme`, `listTweakcnThemes`, `TweakcnThemeSchema`
       - Plugins:
-        - **`community-browser`** — Community theme browser for tweakcn
+        - **`community-browser`** — Community theme catalog and apply endpoints for tweakcn.
+          - Server:
+            - Uses: `database.db`
+            - Routes: `GET /api/tweakcn/community/catalog`, `POST /api/tweakcn/community/apply`
+          - Core:
+            - Exports: Values: `applyCatalogTheme`, `getCatalog`
           - Shared:
             - Exports: Types: `CatalogTheme`
 

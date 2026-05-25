@@ -8,6 +8,8 @@ import { handleList } from "./internal/handle-list";
 import { handleImport } from "./internal/handle-import";
 import { handleDelete } from "./internal/handle-delete";
 
+export { _tweakcnThemes } from "./internal/tables";
+
 export default {
   id: "ui-tweakcn",
   name: "UI: Tweakcn",

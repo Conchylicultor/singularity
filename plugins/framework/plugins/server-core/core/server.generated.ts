@@ -125,5 +125,6 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "ui/plugins/tokens/plugins/shape", hierarchyPath: "ui/tokens/shape", loader: () => import("@plugins/ui/plugins/tokens/plugins/shape/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tokens/plugins/sidebar-palette", hierarchyPath: "ui/tokens/sidebar-palette", loader: () => import("@plugins/ui/plugins/tokens/plugins/sidebar-palette/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tokens/plugins/typography", hierarchyPath: "ui/tokens/typography", loader: () => import("@plugins/ui/plugins/tokens/plugins/typography/server"), dependsOn: ["config_v2"] },
+  { pluginPath: "ui/plugins/tweakcn/plugins/community-browser", hierarchyPath: "ui/tweakcn/community-browser", loader: () => import("@plugins/ui/plugins/tweakcn/plugins/community-browser/server"), dependsOn: ["database", "infra/plugins/endpoints", "ui/plugins/tweakcn"] },
   { pluginPath: "ui/plugins/tweakcn", hierarchyPath: "ui/tweakcn", loader: () => import("@plugins/ui/plugins/tweakcn/server"), dependsOn: ["database", "infra/plugins/endpoints"] },
 ];

@@ -4,7 +4,12 @@
 
 ## Plugin reference
 
-- Description: Community theme browser for tweakcn
+- Description: Community theme catalog and apply endpoints for tweakcn.
+- Server:
+  - Uses: `database.db`
+  - Routes: `GET /api/tweakcn/community/catalog`, `POST /api/tweakcn/community/apply`
+- Core:
+  - Exports: Values: `applyCatalogTheme`, `getCatalog`
 - Shared:
   - Exports: Types: `CatalogTheme`
 
