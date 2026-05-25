@@ -22,7 +22,6 @@ export type {
   ResourceParams,
 } from "./resources";
 export type {
-  ConfigDescriptorLike,
   HttpHandler,
   Registration,
   ResourceLike,

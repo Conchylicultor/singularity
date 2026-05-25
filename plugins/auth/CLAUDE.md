@@ -37,25 +37,24 @@ A worktree backend that needs a token currently has no in-process helper — it 
 plugins/auth/plugins/<id>/
 ├── package.json
 ├── shared/
-│   ├── config.ts       # defineConfig({ clientId { secret: true }, clientSecret { secret: true } })
+│   ├── config.ts       # defineConfig("auth-<id>", { fields: { clientId: secretField(...), ... } })
 │   └── index.ts        # export the descriptor + scopes
 ├── server/
-│   └── index.ts        # tiny stub: `{ id, name, config: <descriptor> }` only — registers
-│                       #   the schema with the per-worktree config plugin's Settings UI
+│   └── index.ts        # ConfigV2.Register({ descriptor }) — surfaces fields in Settings UI
 ├── central/
 │   ├── index.ts        # default-export plugin definition + side-effect import of register.ts
 │   └── internal/
-│       ├── descriptor.ts  # defineAuthProvider(...)
+│       ├── descriptor.ts  # defineAuthProvider(...) — resolveCredentials uses readSecretConfig()
 │       └── register.ts    # registerAuthProvider(descriptor) at module top-level
 └── web/
-    └── index.ts        # Auth.Provider({ id, name, icon }) + Config.Spec(authConfig)
+    └── index.ts        # Auth.Provider({ id, name, icon }) + ConfigV2.WebRegister({ descriptor })
 ```
 
-The provider's `central/internal/register.ts` runs at module init and calls `registerAuthProvider`. Module init order in `central/src/plugins.ts` puts the auth root plugin before its providers, so the registry is populated before any provider's first OAuth request. The worktree-side `server/index.ts` exists *only* to surface the config schema to the per-worktree config plugin (which renders the Settings UI section and migrates plaintext secrets into the secrets store) — no routes, no logic, no `internal/`.
+The provider's `central/internal/register.ts` runs at module init and calls `registerAuthProvider`. Module init order in `central/src/plugins.ts` puts the auth root plugin before its providers, so the registry is populated before any provider's first OAuth request. The worktree-side `server/index.ts` registers the config descriptor with config_v2 so the Settings UI renders the fields.
 
 ## Credentials
 
-OAuth client credentials (`clientId`, `clientSecret`) are user-supplied via the Settings pane. **Both are declared `secret: true`** in `defineConfig` so they live in the central secrets store under `{ namespace: "config-fields", key: "auth-<provider>.<field>" }` — auth/central reads them directly via `readGlobalConfig` (see `plugins/auth/central/internal/global-config.ts`). This is required because central is not a worktree and has no per-worktree Postgres `config` table to consult.
+OAuth client credentials (`clientId`, `clientSecret`) are user-supplied via the Settings pane. Both use `secretField()` from config_v2, which stores values in the central secrets store under `{ namespace: "config-fields", key: "auth-<provider>.<field>" }`. Provider descriptors read them via `readSecretConfig()` from `@plugins/config_v2/plugins/fields/plugins/secret/central`.
 
 Env-var overrides for developers:
 - `SINGULARITY_AUTH_<PROVIDER>_CLIENT_ID`
@@ -94,7 +93,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
   - Values: `AuthCentralOfflineError`, `getTokenFromCentral`
 - Exports (central):
   - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `GetAccessTokenArgs`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`
-  - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `readGlobalConfig`, `registerAuthProvider`
+  - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `registerAuthProvider`
 - Contributes:
   - `Pane.Register` "accounts"
   - `Shell.Sidebar` "Accounts" → `component`

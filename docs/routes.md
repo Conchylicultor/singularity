@@ -40,11 +40,6 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
     - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.
       - `/api/build/runs/:id/logs (GET)`
 
-- **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
-  - `/api/config (GET, PATCH)`
-  - `/api/config/specs (GET)`
-  - `/api/config/:key (DELETE)`
-
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Plugins:
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.

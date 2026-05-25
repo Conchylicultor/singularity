@@ -126,7 +126,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `DebugApp`
           - Contributes:
             - `Apps.App` "Debug" → `DebugLayout`
-          - Imported by: `agents`, `auth`, `build`, `code-explorer`, `config`, `conversations-view`, `draw-on-app`, `edit-mode`, `health`, `improve`, `notifications`, `screenshot`, `settings`, `stats`, `task-detail`, `theme`, `theme-customizer`, `toaster`, `worktree-switcher`
+          - Imported by: `agents`, `auth`, `build`, `code-explorer`, `conversations-view`, `draw-on-app`, `edit-mode`, `health`, `improve`, `notifications`, `screenshot`, `settings`, `stats`, `task-detail`, `theme`, `theme-customizer`, `toaster`, `worktree-switcher`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -313,7 +313,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `AuthCentralOfflineError`, `getTokenFromCentral`
   - Exports (central):
     - Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `GetAccessTokenArgs`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`
-    - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `readGlobalConfig`, `registerAuthProvider`
+    - Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `registerAuthProvider`
   - Contributes:
     - `Pane.Register` "accounts"
     - `Shell.Sidebar` "Accounts" → `component`
@@ -472,30 +472,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Types: `CollectionDefinition`, `CollectionOptions`, `CollectionSchemas`, `CollectionTable`, `FieldInstance`, `FieldsRecord`, `InferCreateInput`, `InferRow`, `InferUpdatePatch`
     - Values: `createFieldInstance`, `defineCollection`
 
-- **`config`** — Per-worktree config. Plugins declare typed fields via defineConfig; values expose in this Settings pane. Per-worktree key/value config. Plugins declare typed fields via defineConfig; values expose in the Settings pane.
-  - Defines:
-    - Slots: `Config.Spec`, `Config.Section`
-    - DB schema: `plugins/config/server/internal/tables.ts`
-  - Exports (core):
-    - Types: `ConfigDescriptor`, `Field`, `FieldKind`, `FieldMeta`, `NormalizedField`, `PatchConfigBody`, `Schema`, `ValueOf`, `Values`
-    - Values: `defineConfig`, `deleteConfig`, `fullKey`, `getConfig`, `getConfigSpecs`, `getDefault`, `kindOf`, `normalize`, `normalizeStringList`, `patchConfig`, `patchConfigBodySchema`, `validateKind`
-  - Exports (web):
-    - Types: `SecretFieldState`, `SectionWithPlugin`, `SpecWithPlugin`
-    - Values: `Config`, `configResource`, `configSecretsResource`, `resetConfigValue`, `setConfigValue`, `settingsPane`, `useConfigValues`, `useSecretFieldSet`, `useSectionsWithPlugin`, `useSpecsWithPlugin`
-  - Exports (server):
-    - Values: `Config`, `configResource`, `configSecretsResource`, `readConfig`
-  - Contributes:
-    - `Pane.Register` "settings"
-    - `Shell.Sidebar` "Settings" → `component`
-  - Server:
-    - Uses: `database.db`
-    - `GET /api/config`
-    - `GET /api/config/specs`
-    - `PATCH /api/config`
-    - `DELETE /api/config/:key`
-  - Imported by: `auth`, `theme-customizer`
-  - Slot contributors: `theme-customizer`
-
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Exports (core):
     - Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`
@@ -571,6 +547,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
       - Exports (core):
         - Values: `acknowledgeConflict`, `deleteOverride`, `getConfigRawFile`, `resetConfigField`
+      - Exports (web):
+        - Values: `configNavPane`
       - Contributes:
         - `Pane.Register` "config-v2-nav"
         - `Pane.Register` "config-v2-detail"
@@ -1095,7 +1073,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Exports (server):
     - Values: `awaitDbReady`, `db`, `isTransientDbError`
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `config`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Exports (server):
@@ -1234,7 +1212,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Values: `centralCollectedDir`, `defineResource`, `handleResourceHttp`, `notificationsWsHandler`
     - **`server-core`**
       - Exports (core):
-        - Types: `ConfigDescriptorLike`, `DependsOnEntry`, `HttpHandler`, `PhaseId`, `Registration`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `Span`, `WsData`, `WsHandler`
+        - Types: `DependsOnEntry`, `HttpHandler`, `PhaseId`, `Registration`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `Span`, `WsData`, `WsHandler`
         - Values: `collectContributions`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `notificationsWsHandler`, `profilerStart`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `withNotifyBatch`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Exports (core):
@@ -1691,7 +1669,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Exports (web):
         - Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `ResolveHook`, `TypeMarker`
         - Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `parseUrl`, `reorderChain`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useMatchForChain`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
-      - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `config`, `conversation-view`, `conversations-recover`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `worktree-cleanup`
+      - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `worktree-cleanup`
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
       - Exports (web):
         - Values: `useDraft`
@@ -2118,7 +2096,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Values: `ThemeCustomizer`, `themeCustomizerPane`, `TokenModeContext`, `TokenRow`
           - Contributes:
             - `Pane.Register` "theme-customizer"
-            - `Config.Section` "UI Themes" → `VariantSettings`
             - `Shell.Sidebar` "Theme" → `component`
     - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
       - Contributes:

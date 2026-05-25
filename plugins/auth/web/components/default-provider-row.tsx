@@ -4,7 +4,7 @@ import { useAccountStatus } from "../hooks";
 import { Button } from "@/components/ui/button";
 import { toast } from "@plugins/notifications/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { settingsPane } from "@plugins/config/web";
+import { configNavPane } from "@plugins/config_v2/plugins/settings/web";
 import { currentWorktreeName, disconnect, startConnectFlow } from "../connect";
 
 interface Props {
@@ -125,7 +125,7 @@ export function DefaultProviderRow({ providerId }: Props) {
             onClick={() =>
               provider.configureCredentials
                 ? provider.configureCredentials()
-                : openPane(settingsPane, {}, { mode: "push" })
+                : openPane(configNavPane, {}, { mode: "push" })
             }
           >
             Configure credentials

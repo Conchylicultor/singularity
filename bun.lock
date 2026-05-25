@@ -271,10 +271,6 @@
       "name": "@singularity/plugin-collections",
       "version": "0.0.1",
     },
-    "plugins/config": {
-      "name": "@singularity/plugin-config",
-      "version": "0.0.1",
-    },
     "plugins/config_v2": {
       "name": "@singularity/plugin-config_v2",
     },
@@ -2143,8 +2139,6 @@
     "@singularity/plugin-code-explorer-file-resolve": ["@singularity/plugin-code-explorer-file-resolve@workspace:plugins/code-explorer/plugins/file-resolve"],
 
     "@singularity/plugin-collections": ["@singularity/plugin-collections@workspace:plugins/collections"],
-
-    "@singularity/plugin-config": ["@singularity/plugin-config@workspace:plugins/config"],
 
     "@singularity/plugin-config_v2": ["@singularity/plugin-config_v2@workspace:plugins/config_v2"],
 

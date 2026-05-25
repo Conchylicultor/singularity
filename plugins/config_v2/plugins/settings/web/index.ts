@@ -5,6 +5,8 @@ import { Shell } from "@plugins/shell/web";
 import { configNavPane, configDetailPane } from "./internal/panes";
 import { ConfigSidebarButton } from "./components/config-sidebar-button";
 
+export { configNavPane } from "./internal/panes";
+
 export default {
   id: "config-v2-settings",
   name: "Config v2: Settings",

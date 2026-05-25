@@ -20,11 +20,6 @@ export type HttpHandler = (
 // circular import.
 export type ResourceLike = { key: string };
 
-// Opaque handle for a config descriptor defined via `defineConfig`. The
-// concrete `ConfigDescriptor<S>` type lives in `@plugins/config/shared`.
-// biome-ignore lint/suspicious/noExplicitAny: descriptor is type-erased here.
-export type ConfigDescriptorLike = { schema: Record<string, any> };
-
 export type { DocMeta } from "@plugins/framework/plugins/web-sdk/core";
 
 import type { DocMeta } from "@plugins/framework/plugins/web-sdk/core";

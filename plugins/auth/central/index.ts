@@ -23,7 +23,6 @@ export {
 } from "./internal/token-access";
 export { registerAuthProvider } from "./internal/registry";
 export { authStateResource } from "./internal/auth-resource";
-export { readGlobalConfig } from "./internal/global-config";
 export { defineAuthProvider } from "@plugins/auth/core";
 export type {
   AuthIdentity,

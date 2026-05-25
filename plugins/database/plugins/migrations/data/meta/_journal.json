@@ -722,6 +722,13 @@
       "tag": "20260523_145238_346ac79a__drop_config_v1_tables",
       "hash": "346ac79a",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1779557145000,
+      "tag": "20260523_172545_0d77603b__drop_config_v1",
+      "hash": "0d77603b",
+      "breakpoints": true
     }
   ]
 }

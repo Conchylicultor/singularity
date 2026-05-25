@@ -190,24 +190,6 @@ export function registerBarrelStubs(_repoRoot: string): void {
       }));
 
       // ── Server plugin barrels that fail outside the real server ─────
-      const configFieldKind = Symbol("config.field");
-      build.module("@plugins/config/server", () => ({
-        exports: {
-          Config: {
-            Field: (props: unknown) => ({
-              _kind: configFieldKind,
-              _doc: {},
-              ...(props as Record<string, unknown>),
-            }),
-          },
-          configResource: { key: "config" },
-          configSecretsResource: { key: "config.secrets" },
-          readConfig: () => ({}),
-          __esModule: true,
-        },
-        loader: "object",
-      }));
-
       build.module("@plugins/database/server", () => ({
         exports: {
           db: {},
