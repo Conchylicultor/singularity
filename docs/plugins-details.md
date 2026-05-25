@@ -666,10 +666,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
                 - Exports: Types: `AttachmentRendererContribution`; Values: `JsonlViewerAttachment`
               - Cross-plugin:
-                - Slot contributors: `deferred-tools-delta`, `nested-memory`, `skill-listing`, `task-reminder`
+                - Slot contributors: `command-permissions`, `deferred-tools-delta`, `nested-memory`, `skill-listing`, `task-reminder`
               - Core:
                 - Exports: Types: `AttachmentEvent`, `AttachmentRendererProps`
               - Plugins:
+                - **`command-permissions`** — Renders command-permissions attachment events showing permission grants for the session.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "command_permissions" → `CommandPermissionsView`
                 - **`deferred-tools-delta`** — Renders deferred-tools-delta attachment events showing tools becoming available or removed mid-session.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "deferred_tools_delta" → `DeferredToolsDeltaView`

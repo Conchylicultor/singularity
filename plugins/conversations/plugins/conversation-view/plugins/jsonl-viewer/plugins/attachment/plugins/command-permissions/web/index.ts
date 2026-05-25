@@ -1,0 +1,17 @@
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { JsonlViewerAttachment } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/web";
+import { CommandPermissionsView } from "./components/command-permissions-view";
+
+export default {
+  id: "conversation-jsonl-viewer-attachment-command-permissions",
+  name: "JSONL Viewer: command-permissions attachment renderer",
+  collapsed: true,
+  description:
+    "Renders command-permissions attachment events showing permission grants for the session.",
+  contributions: [
+    JsonlViewerAttachment.Renderer({
+      subtype: "command_permissions",
+      component: CommandPermissionsView,
+    }),
+  ],
+} satisfies PluginDefinition;
