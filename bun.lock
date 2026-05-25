@@ -427,6 +427,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-thinking",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-counter": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter",
       "version": "0.0.1",
@@ -2224,6 +2228,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-text": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-text@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-thinking": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-assistant-thinking@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-thinking"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-counter"],
 

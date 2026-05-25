@@ -81,6 +81,12 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     extra: z.record(z.string()).optional(),
   }),
   z.object({
+    kind: z.literal("attachment"),
+    at: z.string(),
+    subtype: z.string(),
+    attachment: z.unknown(),
+  }),
+  z.object({
     kind: z.literal("unknown"),
     at: z.string(),
     type: z.string(),

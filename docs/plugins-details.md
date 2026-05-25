@@ -646,7 +646,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `JsonlViewer.RowAction` "timestamp" → `TimestampAction`, `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
             - Exports: Types: `EventRendererContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
           - Cross-plugin:
-            - Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
+            - Slot contributors: `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
           - Server:
             - Uses: `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
@@ -660,6 +660,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "assistant-thinking" → `AssistantThinkingRow`
+            - **`attachment`** — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
+              - Web:
+                - Slots: `JsonlViewerAttachment.Renderer`
+                - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
+                - Exports: Types: `AttachmentRendererContribution`; Values: `JsonlViewerAttachment`
+              - Core:
+                - Exports: Types: `AttachmentEvent`, `AttachmentRendererProps`
             - **`event-counter`** — Displays the total event count in the conversation toolbar.
               - Web:
                 - Contributes: `Conversation.ActionBar` → `EventCounter`

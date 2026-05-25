@@ -379,6 +379,18 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
       continue;
     }
 
+    if (type === "attachment") {
+      const att = obj.attachment;
+      if (att && typeof att === "object") {
+        const subtype =
+          typeof (att as Record<string, unknown>).type === "string"
+            ? ((att as Record<string, unknown>).type as string)
+            : "unknown";
+        events.push({ kind: "attachment", at: ts, subtype, attachment: att });
+      }
+      continue;
+    }
+
     events.push({
       kind: "unknown",
       at: ts,

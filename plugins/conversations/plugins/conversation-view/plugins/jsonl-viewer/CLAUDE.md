@@ -10,7 +10,7 @@
   - Contributes: `JsonlViewer.RowAction` "timestamp" → `TimestampAction`, `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
   - Exports: Types: `EventRendererContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
 - Cross-plugin:
-  - Slot contributors: `assistant-text`, `assistant-thinking`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
+  - Slot contributors: `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
 - Server:
   - Uses: `tasks-core.getConversationClaudeSessionId`
   - Resources: `jsonl-events` (push)
@@ -19,6 +19,7 @@
 - Sub-plugins:
   - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
   - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
+  - **`attachment`** — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
   - **`event-counter`** — Displays the total event count in the conversation toolbar.
   - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
   - **`summary`** — Renders summary separator events in the JSONL viewer.
