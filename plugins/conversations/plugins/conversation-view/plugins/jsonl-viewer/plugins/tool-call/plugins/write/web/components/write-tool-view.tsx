@@ -3,7 +3,8 @@ import {
   languageForPath,
 } from "@plugins/primitives/plugins/syntax-highlight/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import { ToolCallCard, ToolFilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 
 type WriteInput = { file_path: string; content: string };
 
@@ -11,7 +12,7 @@ export function WriteToolView({ event }: ToolRendererProps) {
   const { file_path, content } = event.input as WriteInput;
 
   return (
-    <ToolCallCard event={event} summary={<ToolFilePath filePath={file_path} />}>
+    <ToolCallCard event={event} summary={<FilePath filePath={file_path} />}>
       <div className="mt-2">
         <HighlightedCode
           code={content}

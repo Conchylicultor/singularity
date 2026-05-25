@@ -10,11 +10,11 @@ export function toRelativePath(filePath: string, attemptId: string): string {
   return idx >= 0 ? filePath.slice(idx + marker.length) : filePath;
 }
 
-interface ToolFilePathProps {
+interface FilePathProps {
   filePath: string;
 }
 
-export function ToolFilePath({ filePath }: ToolFilePathProps) {
+export function FilePath({ filePath }: FilePathProps) {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
   const openPane = useOpenPane();

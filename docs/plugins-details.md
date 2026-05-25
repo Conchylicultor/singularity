@@ -487,7 +487,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineJob('tasks.maybe-launch')`, `defineJob('tasks.maybe-launch-dependents')`, `defineTriggerEvent('conversation.created')`, `defineTriggerEvent('conversation.turn-completed')`, `defineTriggerEvent('conversation.userTurnSent')`
     - Routes: `GET /api/conversations`, `GET /api/conversations/gone`, `GET /api/conversations/:id`, `POST /api/conversations`, `DELETE /api/conversations`, `POST /api/conversations/:id/turn`, `POST /api/conversations/:id/stop`, `GET /api/conversations/:id/turns`, `POST /api/conversations/:id/close`
   - Cross-plugin:
-    - Imported by: `agents`, `attempt-view`, `code-explorer`, `code-review`, `commits-graph`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `dependent-count`, `docs-button`, `drop-and-exit`, `drop-dependents`, `exit`, `file-changes`, `fork-session`, `grouped`, `history`, `hold-and-exit`, `improve`, `markdown-extensions`, `model`, `new-child-task`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `push-profiling`, `queue`, `read`, `resume`, `review`, `runtime-api`, `runtime-tmux`, `status`, `summary`, `task`, `task-header`, `task-title`, `tasks`, `tasks-panel`, `terminal-pane`, `tool-call`, `turn-summary`, `user-text`, `vscode`, `welcome`
+    - Imported by: `agents`, `attempt-view`, `code-explorer`, `code-review`, `commits-graph`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `dependent-count`, `docs-button`, `drop-and-exit`, `drop-dependents`, `exit`, `file-changes`, `file-path`, `fork-session`, `grouped`, `history`, `hold-and-exit`, `improve`, `markdown-extensions`, `model`, `new-child-task`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `push-profiling`, `queue`, `read`, `resume`, `review`, `runtime-api`, `runtime-tmux`, `status`, `summary`, `task`, `task-header`, `task-title`, `tasks`, `tasks-panel`, `terminal-pane`, `turn-summary`, `user-text`, `vscode`, `welcome`
     - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `resume`, `transcript-api`
   - Core:
     - Exports: Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `CreateConversationBody`, `DeleteConversationQuery`, `ForkError`, `ListGoneQuery`, `ListTurnsQuery`, `PostTurnBody`; Values: `closeConversation`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `CreateConversationBodySchema`, `deleteConversation`, `DeleteConversationQuerySchema`, `forkErrorsResource`, `getConversation`, `hasLiveProcess`, `isActiveStatus`, `listConversations`, `listConversationTurns`, `listGoneConversations`, `ListGoneQuerySchema`, `ListTurnsQuerySchema`, `postConversationTurn`, `PostTurnBodySchema`, `stopConversation`
@@ -665,11 +665,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Slots: `JsonlViewerAttachment.Renderer`
                 - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
                 - Exports: Types: `AttachmentRendererContribution`; Values: `JsonlViewerAttachment`
+              - Cross-plugin:
+                - Slot contributors: `nested-memory`
               - Core:
                 - Exports: Types: `AttachmentEvent`, `AttachmentRendererProps`
+              - Plugins:
+                - **`nested-memory`** — Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "nested_memory" → `NestedMemoryAttachmentView`
             - **`event-counter`** — Displays the total event count in the conversation toolbar.
               - Web:
                 - Contributes: `Conversation.ActionBar` → `EventCounter`
+            - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
+              - Web:
+                - Uses: `conversations.useConversationById`
+                - Exports: Values: `FilePath`, `toRelativePath`
             - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
               - Web:
                 - Contributes: `JsonlViewer.Overlay` "message-toc" → `MessageToc`
@@ -686,8 +696,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Slots: `JsonlViewerTool.Renderer`
                 - Contributes: `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`, `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
-                - Uses: `conversations.useConversationById`
-                - Exports: Types: `ToolRendererContribution`; Values: `JsonlViewerTool`, `ToolCallCard`, `ToolFilePath`, `toRelativePath`
+                - Exports: Types: `ToolRendererContribution`; Values: `JsonlViewerTool`, `ToolCallCard`
               - Cross-plugin:
                 - Slot contributors: `add-task`, `agent`, `ask-user-question`, `bash`, `edit`, `flag-raise`, `read`, `skill`, `task-tools`, `write`
               - Core:

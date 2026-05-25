@@ -1,6 +1,6 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Timestamp } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { ToolFilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 
 type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;
 
@@ -27,7 +27,7 @@ export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
           {e.outputFile && (
             <>
               <span className="text-muted-foreground/60 shrink-0">output:</span>
-              <ToolFilePath filePath={e.outputFile} />
+              <FilePath filePath={e.outputFile} />
             </>
           )}
           {e.extra &&

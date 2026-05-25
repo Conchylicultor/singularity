@@ -21,6 +21,7 @@
   - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
   - **`attachment`** — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
   - **`event-counter`** — Displays the total event count in the conversation toolbar.
+  - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
   - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
   - **`summary`** — Renders summary separator events in the JSONL viewer.
   - **`system`** — Renders system events in the JSONL viewer.

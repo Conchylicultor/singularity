@@ -431,8 +431,16 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/nested-memory": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-counter": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-file-path",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/message-toc": {
@@ -2249,7 +2257,11 @@
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment"],
 
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/nested-memory"],
+
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-counter"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-file-path": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-file-path@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-message-toc": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-message-toc@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/message-toc"],
 

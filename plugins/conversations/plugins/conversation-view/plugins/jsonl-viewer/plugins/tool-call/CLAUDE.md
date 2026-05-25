@@ -8,8 +8,7 @@
 - Web:
   - Slots: `JsonlViewerTool.Renderer`
   - Contributes: `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`, `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
-  - Uses: `conversations.useConversationById`
-  - Exports: Types: `ToolRendererContribution`; Values: `JsonlViewerTool`, `ToolCallCard`, `ToolFilePath`, `toRelativePath`
+  - Exports: Types: `ToolRendererContribution`; Values: `JsonlViewerTool`, `ToolCallCard`
 - Cross-plugin:
   - Slot contributors: `add-task`, `agent`, `ask-user-question`, `bash`, `edit`, `flag-raise`, `read`, `skill`, `task-tools`, `write`
 - Core:

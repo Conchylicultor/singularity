@@ -1,8 +1,6 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
-import {
-  ToolCallCard,
-  ToolFilePath,
-} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { CodeWithLineNumbers } from "./code-with-line-numbers";
@@ -55,7 +53,7 @@ export function ReadToolView({ event }: ToolRendererProps) {
 
   const summary = (
     <span className="flex min-w-0 items-center gap-2">
-      <ToolFilePath filePath={file_path} />
+      <FilePath filePath={file_path} />
       <LineRangeBadge offset={offset} limit={limit} />
     </span>
   );
