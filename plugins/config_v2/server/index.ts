@@ -2,7 +2,7 @@ import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { initConfigWatcher, shutdownConfigWatcher } from "./internal/config-watcher";
 import { initRegistry, shutdownRegistry } from "./internal/registry";
-import { configV2ServerResource, configV2ConflictsServerResource } from "./internal/resource";
+import { configV2ServerResource, configV2ConflictsServerResource, configV2TiersServerResource } from "./internal/resource";
 
 export { ConfigV2 } from "./internal/contribution";
 export { forkConfig } from "./internal/fork";
@@ -15,7 +15,7 @@ export default {
   id: "config-v2",
   name: "Config v2",
   description: "Typed JSONC config handles for server plugins.",
-  contributions: [Resource.Declare(configV2ServerResource), Resource.Declare(configV2ConflictsServerResource)],
+  contributions: [Resource.Declare(configV2ServerResource), Resource.Declare(configV2ConflictsServerResource), Resource.Declare(configV2TiersServerResource)],
   async onReady() {
     await initConfigWatcher();
     await initRegistry();

@@ -19,8 +19,10 @@ export {
   configV2ConflictEntrySchema,
   configV2ConflictsSchema,
   configV2ConflictsResource,
+  configV2TiersSchema,
+  configV2TiersResource,
 } from "./internal/resource";
-export type { ConfigV2Values, ConfigV2Conflicts } from "./internal/resource";
+export type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers } from "./internal/resource";
 export type { ConfigProxy } from "./internal/config-proxy";
 export {
   computeHash,

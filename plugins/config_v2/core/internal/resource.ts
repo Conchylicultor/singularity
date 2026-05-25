@@ -21,3 +21,12 @@ export const configV2ConflictsResource = resourceDescriptor<ConfigV2Conflicts>(
   configV2ConflictsSchema,
   {},
 );
+
+export const configV2TiersSchema = z.record(z.enum(["default", "git", "user"]));
+export type ConfigV2Tiers = z.infer<typeof configV2TiersSchema>;
+
+export const configV2TiersResource = resourceDescriptor<ConfigV2Tiers, { path: string }>(
+  "config-v2.tiers",
+  configV2TiersSchema,
+  {},
+);

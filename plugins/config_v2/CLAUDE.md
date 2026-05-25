@@ -96,8 +96,8 @@ Overwrites are **full copies**, not deltas. `setConfig` writes `{ ...currentValu
 
 - Description: Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 - Exports (core):
-  - Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`
-  - Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`
+  - Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`
+  - Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`
 - Exports (web):
   - Types: `ConfigRegistration`
   - Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useSetConfig`

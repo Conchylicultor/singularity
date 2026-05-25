@@ -28,6 +28,11 @@ function formatOriginValue(value: unknown): string {
   return JSON.stringify(value);
 }
 
+const TIER_BADGE = {
+  git: { label: "git", className: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
+  user: { label: "user", className: "bg-primary/10 text-primary" },
+} as const;
+
 export function ConfigFieldRow({
   fieldKey,
   field,
@@ -35,6 +40,7 @@ export function ConfigFieldRow({
   defaultValue,
   storePath,
   originValue,
+  tier,
 }: {
   fieldKey: string;
   field: FieldDef;
@@ -42,6 +48,7 @@ export function ConfigFieldRow({
   defaultValue: unknown;
   storePath: string;
   originValue?: unknown;
+  tier?: "default" | "git" | "user";
 }) {
   const isModified = isFieldModified(field, value, defaultValue);
   const hasConflict =
@@ -77,6 +84,16 @@ export function ConfigFieldRow({
             <FieldRenderer field={field} value={value} onChange={handleChange} />
           </ConfigFieldContext.Provider>
         </div>
+        {tier && tier !== "default" && (
+          <span
+            className={cn(
+              "shrink-0 rounded-full px-1.5 py-px text-[10px] font-medium",
+              TIER_BADGE[tier].className,
+            )}
+          >
+            {TIER_BADGE[tier].label}
+          </span>
+        )}
         <button
           type="button"
           onClick={handleReset}

@@ -1,5 +1,5 @@
-import { useMemo, useCallback, useState } from "react";
-import { MdWarning, MdCode, MdTune } from "react-icons/md";
+import { useMemo, useCallback, useState, useEffect } from "react";
+import { MdWarning, MdCode, MdTune, MdUndo } from "react-icons/md";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { fetchEndpoint, useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useConfig, useConfigRegistrations } from "@plugins/config_v2/web";
@@ -7,6 +7,7 @@ import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/we
 import { acknowledgeConflict, deleteOverride, getConfigRawFile } from "../../core";
 import { configDetailPane } from "../internal/panes";
 import { useConflicts } from "../internal/use-conflicts";
+import { useTiers } from "../internal/use-tiers";
 import { ConfigFieldRow } from "./config-field-row";
 
 export function ConfigDetail() {
@@ -30,10 +31,16 @@ function ConfigDetailInner({
   registration: ReturnType<typeof useConfigRegistrations>[number];
 }) {
   const [showRaw, setShowRaw] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
   const values = useConfig(registration.descriptor);
   const defaults = registration.descriptor.defaults as Record<string, unknown>;
   const conflicts = useConflicts();
   const conflictEntry = conflicts[registration.storePath];
+  const tiers = useTiers(registration.storePath);
+
+  useEffect(() => {
+    setConfirmReset(false);
+  }, [registration.storePath]);
 
   const isSoftConflict = useMemo(() => {
     if (!conflictEntry) return false;
@@ -45,6 +52,13 @@ function ConfigDetailInner({
     return true;
   }, [conflictEntry, values, registration.descriptor.fields]);
 
+  const hasAnyModified = useMemo(() => {
+    for (const key of Object.keys(registration.descriptor.fields)) {
+      if (JSON.stringify(values[key]) !== JSON.stringify(defaults[key])) return true;
+    }
+    return false;
+  }, [values, defaults, registration.descriptor.fields]);
+
   const handleDismiss = useCallback(() => {
     void fetchEndpoint(acknowledgeConflict, {}, { body: { storePath: registration.storePath } });
   }, [registration.storePath]);
@@ -53,13 +67,48 @@ function ConfigDetailInner({
     void fetchEndpoint(deleteOverride, {}, { body: { storePath: registration.storePath } });
   }, [registration.storePath]);
 
+  const handleResetAll = useCallback(() => {
+    void fetchEndpoint(deleteOverride, {}, { body: { storePath: registration.storePath } });
+    setConfirmReset(false);
+  }, [registration.storePath]);
+
   const toggleIcon = showRaw
     ? <MdTune className="size-3.5" />
     : <MdCode className="size-3.5" />;
 
   return (
     <div className="flex flex-col gap-1 p-3">
-      <div className="mb-1 flex justify-end">
+      <div className="mb-1 flex items-center justify-end gap-2">
+        {hasAnyModified && !showRaw && (
+          confirmReset ? (
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-muted-foreground">Reset all fields?</span>
+              <button
+                type="button"
+                onClick={handleResetAll}
+                className="rounded-sm bg-destructive/20 px-2 py-0.5 text-xs font-medium text-destructive hover:bg-destructive/30"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmReset(false)}
+                className="rounded-sm px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmReset(true)}
+              className="flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted"
+            >
+              <MdUndo className="size-3.5" />
+              Reset all
+            </button>
+          )
+        )}
         <button
           type="button"
           onClick={() => setShowRaw((v) => !v)}
@@ -117,6 +166,7 @@ function ConfigDetailInner({
               defaultValue={defaults[key]}
               storePath={registration.storePath}
               originValue={conflictEntry?.originValues[key]}
+              tier={tiers[key]}
             />
           ))}
         </>

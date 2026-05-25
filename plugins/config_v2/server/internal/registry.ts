@@ -16,7 +16,7 @@ import { CONFIG_DIR } from "./config-dir";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
-import { configV2ServerResource, configV2ConflictsServerResource, getDescriptorByStorePath, registerDescriptorPath, setConfigGetter } from "./resource";
+import { configV2ServerResource, configV2ConflictsServerResource, configV2TiersServerResource, getDescriptorByStorePath, registerDescriptorPath, setConfigGetter } from "./resource";
 import { getFieldStorageProvider } from "./field-storage-providers";
 
 interface CacheEntry {
@@ -119,6 +119,7 @@ export async function initRegistry(): Promise<void> {
 
       configV2ServerResource.notify({ path: storePath });
       configV2ConflictsServerResource.notify();
+      configV2TiersServerResource.notify({ path: storePath });
     };
 
     const disposables: Disposable[] = [];
