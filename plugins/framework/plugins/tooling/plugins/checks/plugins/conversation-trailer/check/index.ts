@@ -77,7 +77,11 @@ const check: Check = {
         ok: false,
         message:
           `${mismatched.length} commit(s) carry a Singularity-Conversation trailer that does not match this pane (SINGULARITY_CONVERSATION_ID=${envId}):\n${list}`,
-        hint: STOP_MESSAGE,
+        hint:
+          "If the commit was created by another conversation sharing this worktree, " +
+          "you can safely uncommit (git reset HEAD~1) while keeping the changes, " +
+          "then run ./singularity push again — the new commit will carry the correct trailer for this conversation. " +
+          STOP_MESSAGE,
       };
     }
 
