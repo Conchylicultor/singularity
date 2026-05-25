@@ -69,6 +69,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "database/plugins/admin", hierarchyPath: "database/admin", loader: () => import("@plugins/database/plugins/admin/server"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "database/plugins/embedded", hierarchyPath: "database/embedded", loader: () => import("@plugins/database/plugins/embedded/server"), dependsOn: [] },
   { pluginPath: "database/plugins/migrations", hierarchyPath: "database/migrations", loader: () => import("@plugins/database/plugins/migrations/server"), dependsOn: [] },
+  { pluginPath: "database/plugins/pgbouncer", hierarchyPath: "database/pgbouncer", loader: () => import("@plugins/database/plugins/pgbouncer/server"), dependsOn: [] },
   { pluginPath: "database/plugins/query", hierarchyPath: "database/query", loader: () => import("@plugins/database/plugins/query/server"), dependsOn: ["database/plugins/admin", "infra/plugins/mcp", "tasks-core"] },
   { pluginPath: "database", hierarchyPath: "database", loader: () => import("@plugins/database/server"), dependsOn: ["database/plugins/migrations"] },
   { pluginPath: "debug/plugins/broadcasts", hierarchyPath: "debug/broadcasts", loader: () => import("@plugins/debug/plugins/broadcasts/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/worktree"] },

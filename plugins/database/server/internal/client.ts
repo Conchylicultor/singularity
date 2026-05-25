@@ -9,11 +9,17 @@ if (!worktree) {
 }
 
 const config = readDatabaseConfig();
-const conn = {
-  host: process.env.PGHOST ?? config.connection.host,
-  port: Number(process.env.PGPORT ?? config.connection.port),
-  user: process.env.PGUSER ?? config.connection.user,
-};
+const conn = config.pgbouncer
+  ? {
+      host: config.pgbouncer.host,
+      port: config.pgbouncer.port,
+      user: config.connection.user,
+    }
+  : {
+      host: process.env.PGHOST ?? config.connection.host,
+      port: Number(process.env.PGPORT ?? config.connection.port),
+      user: process.env.PGUSER ?? config.connection.user,
+    };
 
 const pool = new Pool({
   connectionString: buildConnectionString(conn, worktree),

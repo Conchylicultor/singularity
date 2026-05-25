@@ -661,6 +661,16 @@
         "drizzle-kit": "^0.28.0",
       },
     },
+    "plugins/database/plugins/pgbouncer": {
+      "name": "@singularity/plugin-database-pgbouncer",
+      "version": "0.0.1",
+      "optionalDependencies": {
+        "@equin/pgbouncer-darwin-arm64": "1.25.7",
+        "@equin/pgbouncer-darwin-x64": "1.25.7",
+        "@equin/pgbouncer-linux-arm64": "1.25.7",
+        "@equin/pgbouncer-linux-x64": "1.25.7",
+      },
+    },
     "plugins/database/plugins/query": {
       "name": "@singularity/plugin-database-query",
       "version": "0.0.1",
@@ -1601,6 +1611,14 @@
 
     "@embedded-postgres/linux-x64": ["@embedded-postgres/linux-x64@18.3.0-beta.17", "", { "os": "linux", "cpu": "x64" }, "sha512-8orSD6NNopSLtjqir4dWQBrj+g8j1eJjWd9mB60A3xbWMzIBIPQpzT7XzbacW9YFSl/DejOLnRXfff+Wr13Tgw=="],
 
+    "@equin/pgbouncer-darwin-arm64": ["@equin/pgbouncer-darwin-arm64@1.25.7", "", { "os": "darwin", "cpu": "arm64" }, "sha512-u4LS5VBeufrVuUPMQlwirOTe4aP3PU/8GMMBwem1K2h7BAATEDjt5Xol7rPBTrmtgkWX5E4cbPEAcbDcFVNdBw=="],
+
+    "@equin/pgbouncer-darwin-x64": ["@equin/pgbouncer-darwin-x64@1.25.7", "", { "os": "darwin", "cpu": "x64" }, "sha512-4zW+pIYd7208yMbKEgZQtP154Zr69bqo6NV3uN1ZxR6Mv/QZ2KrVomdsAHYql48tdJTKUH1SmU47uPhaj/5FnQ=="],
+
+    "@equin/pgbouncer-linux-arm64": ["@equin/pgbouncer-linux-arm64@1.25.7", "", { "os": "linux", "cpu": "arm64" }, "sha512-NzjPxGfB7W5l1E3T3ZFD9WWymf8PoOlRrRJNoY0bJpKlMOvYms+zUz3eJznC2vXWF9AJ9LH9dHqP4Jf57m0dkg=="],
+
+    "@equin/pgbouncer-linux-x64": ["@equin/pgbouncer-linux-x64@1.25.7", "", { "os": "linux", "cpu": "x64" }, "sha512-CuNRUASrPR5RQ1750w8MmjdtEb2mmvQv45RWtEdnyPb4qceHCUCQc3ngOjB8dvhO384+pXIlABzBWl3tmGr/Vw=="],
+
     "@esbuild-kit/core-utils": ["@esbuild-kit/core-utils@3.3.2", "", { "dependencies": { "esbuild": "~0.18.20", "source-map-support": "^0.5.21" } }, "sha512-sPRAnw9CdSsRmEtnsl2WXWdyquogVpB3yZ3dgwJfe8zrOzTsV7cJvmwrKVa+0ma5BoiGJ+BoqkMvawbayKUsqQ=="],
 
     "@esbuild-kit/esm-loader": ["@esbuild-kit/esm-loader@2.6.5", "", { "dependencies": { "@esbuild-kit/core-utils": "^3.3.2", "get-tsconfig": "^4.7.0" } }, "sha512-FxEMIkJKnodyA1OaCUoEvbYRkoZlLZ4d/eXFu9Fh8CbBBgP5EmZxrfTRyN0qpXZ4vOvqnE5YdRdcrmUUXuU+dA=="],
@@ -2342,6 +2360,8 @@
     "@singularity/plugin-database-embedded": ["@singularity/plugin-database-embedded@workspace:plugins/database/plugins/embedded"],
 
     "@singularity/plugin-database-migrations": ["@singularity/plugin-database-migrations@workspace:plugins/database/plugins/migrations"],
+
+    "@singularity/plugin-database-pgbouncer": ["@singularity/plugin-database-pgbouncer@workspace:plugins/database/plugins/pgbouncer"],
 
     "@singularity/plugin-database-query": ["@singularity/plugin-database-query@workspace:plugins/database/plugins/query"],
 

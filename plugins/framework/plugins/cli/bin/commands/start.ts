@@ -11,6 +11,7 @@ const PID_FILE = join(SINGULARITY_DIR, "gateway.pid");
 const EMBEDDED_PG_PORT = 5433;
 const EMBEDDED_PG_USER = "singularity";
 const EMBEDDED_PG_SOCKET_DIR = join(PG_DIR, "socket");
+const EMBEDDED_PGBOUNCER_PORT = 6432;
 
 function readPid(): number | null {
   try {
@@ -41,14 +42,60 @@ async function isGatewayListening(): Promise<boolean> {
   }
 }
 
+function hasPgBouncerPackage(repoRoot: string): boolean {
+  return existsSync(
+    join(repoRoot, "plugins/database/plugins/pgbouncer/node_modules/@equin"),
+  );
+}
+
+function pgbouncerService(repoRoot: string) {
+  return {
+    name: "pgbouncer",
+    start: [
+      "bun",
+      "run",
+      join(repoRoot, "plugins/database/plugins/pgbouncer/scripts/start.ts"),
+    ],
+    ready: {
+      unix: join(EMBEDDED_PG_SOCKET_DIR, `.s.PGSQL.${EMBEDDED_PGBOUNCER_PORT}`),
+    },
+    watchdog: { intervalSec: 2 },
+  };
+}
+
+function pgbouncerConnection() {
+  return { host: EMBEDDED_PG_SOCKET_DIR, port: EMBEDDED_PGBOUNCER_PORT };
+}
+
 function ensureDatabaseConfig(repoRoot: string): void {
-  if (existsSync(DATABASE_CONFIG_PATH)) return;
+  // Upgrade existing config: add pgbouncer service if packages are now installed.
+  if (existsSync(DATABASE_CONFIG_PATH)) {
+    try {
+      const existing = JSON.parse(readFileSync(DATABASE_CONFIG_PATH, "utf-8"));
+      const services: Array<{ name: string }> = existing.services ?? [];
+      const hasPgBouncer = services.some((s) => s.name === "pgbouncer");
+      if (!hasPgBouncer && hasPgBouncerPackage(repoRoot)) {
+        existing.pgbouncer = pgbouncerConnection();
+        existing.services = [...services, pgbouncerService(repoRoot)];
+        writeFileSync(
+          DATABASE_CONFIG_PATH,
+          JSON.stringify(existing, null, 2) + "\n",
+        );
+        console.log("Updated database config: added PgBouncer");
+      }
+    } catch (err) {
+      if (err instanceof SyntaxError) return;
+      throw err;
+    }
+    return;
+  }
 
   const embeddedPkgDir = join(
     repoRoot,
     "plugins/database/plugins/embedded/node_modules/@embedded-postgres",
   );
   const hasEmbedded = existsSync(embeddedPkgDir);
+  const hasPgBouncer = hasEmbedded && hasPgBouncerPackage(repoRoot);
 
   const startScript = join(
     repoRoot,
@@ -63,6 +110,7 @@ function ensureDatabaseConfig(repoRoot: string): void {
           port: EMBEDDED_PG_PORT,
           user: EMBEDDED_PG_USER,
         },
+        ...(hasPgBouncer ? { pgbouncer: pgbouncerConnection() } : {}),
         services: [
           {
             name: "postgres",
@@ -72,6 +120,7 @@ function ensureDatabaseConfig(repoRoot: string): void {
             },
             watchdog: { intervalSec: 2 },
           },
+          ...(hasPgBouncer ? [pgbouncerService(repoRoot)] : []),
         ],
       }
     : {
@@ -88,7 +137,7 @@ function ensureDatabaseConfig(repoRoot: string): void {
   writeFileSync(DATABASE_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
   console.log(
     hasEmbedded
-      ? "Generated database config (embedded Postgres)"
+      ? `Generated database config (embedded Postgres${hasPgBouncer ? " + PgBouncer" : ""})`
       : "Generated database config (system Postgres)",
   );
 }

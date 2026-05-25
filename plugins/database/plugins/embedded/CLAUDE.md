@@ -16,7 +16,7 @@ This plugin ships:
 - **PG outlives gateway and central restarts.** Because PG is detached, both `./singularity build` (which restarts central) and `./singularity start` (which rebuilds + relaunches the gateway) leave PG untouched. Worktree backends keep their pools alive across both blips. A reattach check (pidfile + socket dial) lets a freshly-started gateway pick up an already-running PG instead of trying to spawn a duplicate.
 - **Binaries from `embedded-postgres` npm.** The package vendors PG 18 binaries per platform via `@embedded-postgres/<platform>` optionalDependencies. The package only ships `postgres`, `initdb`, and `pg_ctl`. Client tools (`pg_isready`, `psql`) are replaced with `pg.Client` calls / `net.Dial` socket pings; `pg_dump`/`pg_restore`/`pg_dumpall` are PATH-resolved (relying on the user's system PG client install until we bundle our own).
 - **Lazy `dylib` symlinks.** The platform tarballs ship versioned dylibs (e.g. `libicudata.77.1.dylib`) but PG's runtime loader expects unversioned aliases. The start script reads the package's `pg-symlinks.json` manifest and creates the missing symlinks on first use.
-- **No PgBouncer (yet).** v1 ships with `max_connections=500` set via `pg_ctl -o "-c max_connections=500"`. With ~7 connections per worktree, that's headroom for ~70 active worktrees. PgBouncer is a v2 follow-up — adding it later is purely additive.
+- **PgBouncer pooling.** The sibling `plugins/database/plugins/pgbouncer/` plugin fronts this cluster with PgBouncer in transaction mode. App query pools connect through PgBouncer (port 6432); admin, worker, and subprocess connections bypass it and go direct to PG (port 5433).
 
 ## Connection routing (server-side)
 

@@ -956,6 +956,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Server:
         - Exports: Values: `runMigrations`
+    - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
+      - Server:
+        - Exports: Values: `PGBOUNCER_PORT`, `PGBOUNCER_SOCKET_DIR`
+      - Shared:
+        - Exports: Values: `PGBOUNCER_CONFIG_FILE`, `PGBOUNCER_LOG_FILE`, `PGBOUNCER_PID_FILE`, `PGBOUNCER_PORT`, `PGBOUNCER_SOCKET_DIR`, `PGBOUNCER_USERLIST_FILE`
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
       - Server:
         - Uses: `tasks-core.getConversation`

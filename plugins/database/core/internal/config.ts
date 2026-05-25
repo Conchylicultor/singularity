@@ -11,6 +11,10 @@ export interface DatabaseConfig {
     port: number;
     user: string;
   };
+  pgbouncer?: {
+    host: string;
+    port: number;
+  };
   services: Array<{
     name: string;
     start: string[];
