@@ -666,10 +666,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
                 - Exports: Types: `AttachmentRendererContribution`; Values: `JsonlViewerAttachment`
               - Cross-plugin:
-                - Slot contributors: `nested-memory`, `task-reminder`
+                - Slot contributors: `deferred-tools-delta`, `nested-memory`, `task-reminder`
               - Core:
                 - Exports: Types: `AttachmentEvent`, `AttachmentRendererProps`
               - Plugins:
+                - **`deferred-tools-delta`** — Renders deferred-tools-delta attachment events showing tools becoming available or removed mid-session.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "deferred_tools_delta" → `DeferredToolsDeltaView`
                 - **`nested-memory`** — Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "nested_memory" → `NestedMemoryAttachmentView`
