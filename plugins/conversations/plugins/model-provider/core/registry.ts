@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
 
 export const ConversationModelSchema = z.enum([
   "opus-4-8",
@@ -93,6 +94,17 @@ export function reportUnknownModel(raw: unknown): void {
     raw,
   );
 }
+
+/**
+ * THE schema for any *persisted* model id read back through a live-state resource.
+ * Tolerant by construction: a legacy/unknown stored value normalizes to a concrete
+ * model (via normalizeModel) and fires a deduped crash signal (via reportUnknownModel)
+ * instead of rejecting the whole array payload on the WS push path — which would blank
+ * the entire resource. Use this — never the raw strict `ConversationModelSchema` — for
+ * a stored model field. Request-input schemas (API bodies) stay strict so bad input is
+ * rejected loudly.
+ */
+export const StoredModelSchema = tolerantEnum(ConversationModelSchema, normalizeModel, reportUnknownModel);
 
 /** id → pinned Claude CLI flag (the one map). */
 export function cliFlagFor(id: ConversationModel): string {

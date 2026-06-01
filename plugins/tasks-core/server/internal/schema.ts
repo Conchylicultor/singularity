@@ -3,9 +3,8 @@ import { pgView } from "drizzle-orm/pg-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { _attempts, _conversations, _taskDependencies, _tasks, pushes } from "./tables";
-import { ConversationModelSchema, normalizeModel, reportUnknownModel } from "@plugins/conversations/plugins/model-provider/core";
+import { StoredModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
-import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
 import { ConversationStatusSchema } from "../../core/conversation-status";
 
 // Derived views + Zod schemas + types. All tables live in `./tables.ts` so
@@ -221,11 +220,11 @@ export type Push = z.infer<typeof PushSchema>;
 
 export const ConversationSchema = createSelectSchema(_conversations, {
   status: ConversationStatusSchema,
-  // Tolerant by construction: a legacy/unknown stored model (e.g. written by a
-  // concurrent worktree on pre-flatten code, or an id later removed from the
-  // registry) normalizes to a concrete model instead of rejecting the row —
-  // which would blank the whole conversationsResource array.
-  model: tolerantEnum(ConversationModelSchema, normalizeModel, reportUnknownModel),
+  // Tolerant by construction (see StoredModelSchema): a legacy/unknown stored
+  // model (e.g. written by a concurrent worktree on pre-flatten code, or an id
+  // later removed from the registry) normalizes to a concrete model instead of
+  // rejecting the row — which would blank the whole conversationsResource array.
+  model: StoredModelSchema,
   kind: ConversationKindSchema,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),

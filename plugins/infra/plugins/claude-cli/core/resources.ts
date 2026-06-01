@@ -1,15 +1,11 @@
 import { z } from "zod";
-import { resourceDescriptor, tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
-import {
-  ConversationModelSchema,
-  normalizeModel,
-  reportUnknownModel,
-} from "@plugins/conversations/plugins/model-provider/core";
+import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { StoredModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 
 export const ClaudeCliCallSchema = z.object({
   id: z.string().uuid(),
   createdAt: z.coerce.date(),
-  model: tolerantEnum(ConversationModelSchema, normalizeModel, reportUnknownModel),
+  model: StoredModelSchema,
   sourceName: z.string(),
   sourceContext: z.record(z.unknown()).nullable(),
   prompt: z.string(),

@@ -2,7 +2,6 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { TaskAutoStartRowSchema, type TaskAutoStartRow } from "../../shared/resources";
-import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { _tasksAutoStartExt } from "./tables";
 
 export const tasksAutoStartResource = defineResource({
@@ -14,7 +13,8 @@ export const tasksAutoStartResource = defineResource({
     return rows.map((r) => ({
       parentId: r.parentId,
       autoStartAt: r.autoStartAt,
-      autoStartModel: normalizeModel(r.autoStartModel),
+      // No normalize here: the field tolerates legacy/unknown on parse via StoredModelSchema.
+      autoStartModel: r.autoStartModel,
     }));
   },
 });

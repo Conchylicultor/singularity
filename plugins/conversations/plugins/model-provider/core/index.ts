@@ -6,6 +6,7 @@ export {
   MODEL_TIERS,
   normalizeModel,
   reportUnknownModel,
+  StoredModelSchema,
   registerModelCorruptionReporter,
   cliFlagFor,
   currentModelForTier,
