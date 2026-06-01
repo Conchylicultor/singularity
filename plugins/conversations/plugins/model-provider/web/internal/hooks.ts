@@ -1,20 +1,18 @@
 import { useCallback } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
-  MODEL_REGISTRY,
+  SELECTABLE_MODELS,
   normalizeModel,
   type ConversationModel,
 } from "../../core";
 import { modelProviderConfig } from "../../shared/config";
 
-const ALL_MODELS = Object.keys(MODEL_REGISTRY) as ConversationModel[];
-
 /** Models to show in the launch dropdown, in registry order, filtered by config. */
 export function useVisibleModels(): ConversationModel[] {
   const { visibleModels } = useConfig(modelProviderConfig);
-  const visible = ALL_MODELS.filter((id) => visibleModels[id] !== false);
-  // Never present an empty dropdown — fall back to all models if config hides everything.
-  return visible.length > 0 ? visible : ALL_MODELS;
+  const visible = SELECTABLE_MODELS.filter((id) => visibleModels[id] !== false);
+  // Never present an empty dropdown — fall back to all selectable models if config hides everything.
+  return visible.length > 0 ? visible : SELECTABLE_MODELS;
 }
 
 /** The user-chosen default model fired by the main launch button. */

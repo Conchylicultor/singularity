@@ -2,6 +2,7 @@ export {
   ConversationModelSchema,
   DEFAULT_MODEL,
   MODEL_REGISTRY,
+  SELECTABLE_MODELS,
   MODEL_TIERS,
   normalizeModel,
   reportUnknownModel,

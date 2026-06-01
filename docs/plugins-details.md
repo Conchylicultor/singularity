@@ -905,7 +905,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`
         - Exports: Values: `resolveCliFlag`
       - Core:
-        - Exports: Types: `ConversationModel`, `ModelMeta`, `ModelTier`; Values: `cliFlagFor`, `ConversationModelSchema`, `currentModelForTier`, `DEFAULT_MODEL`, `idForCliName`, `MODEL_REGISTRY`, `MODEL_TIERS`, `normalizeModel`, `registerModelCorruptionReporter`, `reportUnknownModel`
+        - Exports: Types: `ConversationModel`, `ModelMeta`, `ModelTier`; Values: `cliFlagFor`, `ConversationModelSchema`, `currentModelForTier`, `DEFAULT_MODEL`, `idForCliName`, `MODEL_REGISTRY`, `MODEL_TIERS`, `normalizeModel`, `registerModelCorruptionReporter`, `reportUnknownModel`, `SELECTABLE_MODELS`
     - **`pane-restore`** — Saves and restores the miller pane chain per conversation using localStorage.
       - Web:
         - Exports: Values: `loadChainForConversation`

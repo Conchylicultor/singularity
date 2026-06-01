@@ -2,11 +2,12 @@ import { defineConfig } from "@plugins/config_v2/core";
 import { enumField } from "@plugins/config_v2/plugins/fields/plugins/enum/core";
 import { objectField } from "@plugins/config_v2/plugins/fields/plugins/object/core";
 import { boolField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
-import { DEFAULT_MODEL, MODEL_REGISTRY } from "../core";
+import { DEFAULT_MODEL, MODEL_REGISTRY, SELECTABLE_MODELS } from "../core";
 
-// Print-only models (e.g. haiku) are valid persisted ids but are not session-selectable,
-// so they must never appear in the launch dropdown or config options.
-const modelEntries = Object.entries(MODEL_REGISTRY).filter(([, m]) => !m.printOnly);
+// SELECTABLE_MODELS already excludes print-only models (e.g. haiku), which are
+// valid persisted ids but never session-selectable — so they never appear in
+// the launch dropdown or these config options.
+const modelEntries = SELECTABLE_MODELS.map((id) => [id, MODEL_REGISTRY[id]] as const);
 
 export const modelProviderConfig = defineConfig({
   fields: {

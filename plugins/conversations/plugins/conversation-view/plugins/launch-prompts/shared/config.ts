@@ -3,7 +3,7 @@ import { textField } from "@plugins/config_v2/plugins/fields/plugins/primitives/
 import { listField } from "@plugins/config_v2/plugins/fields/plugins/list/core";
 import { multilineTextField } from "@plugins/config_v2/plugins/fields/plugins/multiline-text/core";
 import { enumField } from "@plugins/config_v2/plugins/fields/plugins/enum/core";
-import { DEFAULT_MODEL, MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";
+import { DEFAULT_MODEL, MODEL_REGISTRY, SELECTABLE_MODELS } from "@plugins/conversations/plugins/model-provider/core";
 
 export const launchPromptsConfig = defineConfig({
   fields: {
@@ -16,7 +16,7 @@ export const launchPromptsConfig = defineConfig({
         prompt: multilineTextField({ label: "Prompt" }),
         model: enumField({
           label: "Model",
-          options: Object.entries(MODEL_REGISTRY).map(([value, m]) => ({ value, label: m.label })),
+          options: SELECTABLE_MODELS.map((value) => ({ value, label: MODEL_REGISTRY[value].label })),
           default: DEFAULT_MODEL,
         }),
       },

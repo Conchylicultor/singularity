@@ -34,6 +34,19 @@ export const MODEL_REGISTRY: Record<ConversationModel, ModelMeta> = {
   "haiku-4-5": { cliFlag: "claude-haiku-4-5", label: "Haiku 4.5", family: "haiku", printOnly: true, iconSize: "size-3" },
 };
 
+/**
+ * Session-selectable models, in registry order — every user-facing model picker
+ * (launch dropdown, auto-start, task-draft, launch-prompts, agent) and the
+ * `visibleModels` config toggles derive from this list. Print-only models (e.g.
+ * haiku) are valid *persisted* ids but never session-selectable, so they are
+ * excluded here. This is THE single place the `printOnly` exclusion is applied.
+ */
+export const SELECTABLE_MODELS: ConversationModel[] = (
+  Object.entries(MODEL_REGISTRY) as [ConversationModel, ModelMeta][]
+)
+  .filter(([, meta]) => !meta.printOnly)
+  .map(([id]) => id);
+
 // Back-compat: rows written before flattening stored "opus"/"sonnet".
 const LEGACY_ALIASES: Record<string, ConversationModel> = {
   opus: "opus-4-6", // 4-6 was the pre-versioning default
