@@ -6,14 +6,9 @@
 
 - Description: Named agent definitions that launch conversations. Named agent definitions that launch conversations.
 - Web:
-  - Slots: `Agents.List`, `Agents.ListActions`, `Agents.View`, `Agents.AgentActions`, `Agents.SystemAgent`
   - Contributes: `Pane.Register` "agents-root", `Pane.Register` "agent-detail", `Pane.Register` "agent-system-detail", `Pane.Register` "agent-side", `agentSidePane.Actions` → `ExpandAgentButton`, `Shell.Sidebar` "Agents" → `component`, `Item.Avatar` → `AgentAvatarRow`, `Conversation.Header` → `AgentAvatarTitlePrefix`, `Agents.AgentActions` "expand-collapse-all" → `ExpandCollapseAllAction`, `Agents.AgentActions` "delete" → `DeleteAgentAction`
   - Uses: `conversations.useConversationById`, `shell.Shell`
   - Exports: Types: `SystemAgentDescriptor`; Values: `agentDetailPane`, `Agents`, `agentSidePane`, `agentsResource`, `agentsRootPane`, `defineSystemAgent`, `patchAgent`, `systemAgentDetailPane`
-- Cross-plugin:
-  - Slot contributors: `toggle`
-  - Imported by: `toggle`
-  - Extended by: `toggle` (table `agents_ext_auto_launch`)
 - Server:
   - Uses: `conversations.createConversation`, `database.db`, `tasks-core.conversationsLiveResource`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`
   - DB schema: `plugins/agents/server/internal/schema.ts`, `plugins/agents/server/internal/tables-attachments.ts`, `plugins/agents/server/internal/tables.ts`
@@ -23,6 +18,9 @@
 - Core:
   - Uses: `conversations.ConversationStatusSchema`
   - Exports: Types: `CreateAgentBody`, `LaunchAgentBody`, `LaunchAgentResponse`, `UpdateAgentBody`; Values: `createAgent`, `CreateAgentBodySchema`, `deleteAgent`, `getAgent`, `launchAgent`, `LaunchAgentBodySchema`, `LaunchAgentResponseSchema`, `listAgentLaunches`, `listAgents`, `updateAgent`, `UpdateAgentBodySchema`
+- Cross-plugin:
+  - Imported by: `toggle`
+  - Extended by: `toggle` (table `agents_ext_auto_launch`)
 - Sub-plugins:
   - **`auto-launch`** — Umbrella plugin for agent auto-launch. Sub-plugins contribute row actions and settings.
 

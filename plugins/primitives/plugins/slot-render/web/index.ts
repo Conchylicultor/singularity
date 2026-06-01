@@ -3,6 +3,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export {
   defineRenderSlot,
   defineDispatchSlot,
+  renderIsolated,
   RenderSlotSubIdContext,
 } from "./internal/render-slot";
 export type {

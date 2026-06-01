@@ -32,7 +32,7 @@ export default {
       configDescriptor: colorPaletteConfig,
     }),
     ThemeEngine.VariantGroup({
-      componentId: "color-palette",
+      id: "color-palette",
       componentLabel: "Color Palette",
       component: ColorPalettePicker,
     }),

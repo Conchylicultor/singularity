@@ -32,7 +32,7 @@ export default {
       },
     }),
     ThemeEngine.VariantGroup({
-      componentId: "color-adjust",
+      id: "color-adjust",
       componentLabel: "Color Adjust",
       component: ColorAdjustPicker,
     }),

@@ -10,6 +10,6 @@ export default {
   name: "Text Block",
   description: "Plain-text block type for the page editor.",
   contributions: [
-    Editor.Block({ block: textBlock, component: TextBlock }),
+    Editor.Block({ match: textBlock.type, block: textBlock, component: TextBlock }),
   ],
 } satisfies PluginDefinition;

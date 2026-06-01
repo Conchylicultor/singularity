@@ -1,5 +1,7 @@
 import { type ComponentType, type ReactNode, useMemo, useState } from "react";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { cn } from "@/lib/utils";
 
 export interface TabContribution<ViewProps> {
@@ -54,8 +56,6 @@ export function defineTabbedView<ViewProps extends object>(
       }
     };
 
-    const ActiveComponent = activeView?.component ?? null;
-
     return (
       <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
         {(header || ordered.length > 1) && (
@@ -90,9 +90,12 @@ export function defineTabbedView<ViewProps extends object>(
           </div>
         )}
         <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
-          {ActiveComponent && (
-            <ActiveComponent {...(viewProps as ViewProps)} />
-          )}
+          {activeView &&
+            renderIsolated(
+              View.id,
+              activeView as unknown as Contribution,
+              viewProps as ViewProps,
+            )}
         </div>
       </div>
     );

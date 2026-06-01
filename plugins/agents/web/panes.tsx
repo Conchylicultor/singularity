@@ -53,7 +53,6 @@ export const agentSidePane = Pane.define({
 });
 
 function AgentsRoot(): ReactElement {
-  const lists = AgentsSlots.List.useContributions();
   const selectedUserId = agentDetailPane.useChainEntry()?.params.id;
   const selectedSystemId = systemAgentDetailPane.useChainEntry()?.params.systemId;
 
@@ -63,13 +62,9 @@ function AgentsRoot(): ReactElement {
         selectedId={selectedUserId}
         selectedSystemId={selectedSystemId}
       />
-      {lists.length > 0 && (
-        <div className="mt-6 flex flex-col gap-4">
-          {lists.map((l) => (
-            <l.component key={l.id} />
-          ))}
-        </div>
-      )}
+      <div className="mt-6 flex flex-col gap-4">
+        <AgentsSlots.List.Render />
+      </div>
     </div>
   );
 }
@@ -78,23 +73,22 @@ function AgentDetailBody(): ReactElement {
   const { id } = agentDetailPane.useParams();
   const agentsResult = useResource(agentsResource);
   const agent = agentsResult.pending ? null : (agentsResult.data.find((a: Agent) => a.id === id) ?? null);
-  const views = AgentsSlots.View.useContributions();
 
   return (
     <PaneChrome pane={agentDetailPane} title={agent?.name}>
       <AgentDetail key={id} agentId={id} />
-      {views.length > 0 && (
-        <div className="flex flex-col gap-4 px-6 pb-6">
-          {views.map((v) => (
-            <section key={v.id} className="bg-card rounded-lg border p-4">
+      <div className="flex flex-col gap-4 px-6 pb-6">
+        <AgentsSlots.View.Render>
+          {(v) => (
+            <section className="bg-card rounded-lg border p-4">
               {v.title ? (
                 <h2 className="mb-4 text-sm font-medium">{v.title}</h2>
               ) : null}
               <v.component agentId={id} />
             </section>
-          ))}
-        </div>
-      )}
+          )}
+        </AgentsSlots.View.Render>
+      </div>
     </PaneChrome>
   );
 }
@@ -114,10 +108,17 @@ function SystemAgentDetailBody(): ReactElement {
     );
   }
 
-  const Component = descriptor.component ?? SystemAgentDetail;
   return (
     <PaneChrome pane={systemAgentDetailPane} title={descriptor.name}>
-      <Component descriptor={descriptor} />
+      <AgentsSlots.SystemAgent.Render>
+        {(d) =>
+          d.id === systemId
+            ? d.component
+              ? <d.component descriptor={d} />
+              : <SystemAgentDetail descriptor={d} />
+            : null
+        }
+      </AgentsSlots.SystemAgent.Render>
     </PaneChrome>
   );
 }

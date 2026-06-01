@@ -1,4 +1,7 @@
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  defineSlot,
+  type SealContributions,
+} from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 
@@ -29,13 +32,21 @@ const TIER: Record<Exclude<RendererMatch, false>, number> = {
   fallback: 1,
 };
 
+/**
+ * Sealed view of a renderer contribution as returned by `useContributions()`.
+ * Its `component` is opaque (renderable only through `renderIsolated`); every
+ * other field (`id`, `label`, `supports`) stays readable for tiering.
+ */
+export type SealedFileRendererContribution =
+  SealContributions<FileRendererContribution>;
+
 export interface ResolvedRenderer {
-  contribution: FileRendererContribution;
+  contribution: SealedFileRendererContribution;
   tier: Exclude<RendererMatch, false>;
 }
 
 export function resolveRenderers(
-  contributions: readonly FileRendererContribution[],
+  contributions: readonly SealedFileRendererContribution[],
   target: FileRendererTarget,
 ): ResolvedRenderer[] {
   const resolved: ResolvedRenderer[] = [];

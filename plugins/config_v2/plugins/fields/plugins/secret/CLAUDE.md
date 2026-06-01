@@ -6,7 +6,7 @@
 
 - Description: Secret field type: encrypted storage with set/not-set metadata. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
 - Web:
-  - Contributes: `Fields.Renderer` "secret" → `SecretRenderer`
+  - Contributes: `config-v2.fields.renderer` "secret" → `SecretRenderer`
 - Server:
   - Uses: `config_v2.getAllDescriptors`, `config_v2.hasFieldStorageProvider`, `config_v2.registerFieldStorageProvider`
 - Core:

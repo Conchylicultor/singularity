@@ -1,6 +1,7 @@
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import { defineRenderSlot, defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { ComponentType } from "react";
 import type { ConversationItemConv } from "./components/conversation-item";
+import { AvatarFallback } from "./components/avatar-fallback";
 
 // Per-row slots for the conversation item primitive.
 //
@@ -10,18 +11,21 @@ import type { ConversationItemConv } from "./components/conversation-item";
 // - `Chips`: small pills next to the title in the sidebar list. Contributions
 //   render nothing when their data is unavailable for the conversation — the
 //   slot host doesn't reserve space.
-// - `Avatar`: leftmost circular avatar. The first contribution that returns a
-//   non-null element wins; if none match, a blank placeholder of the same
-//   width is rendered so all rows align by their title.
+// - `Avatar`: leftmost circular avatar. Contributors supply a predicate
+//   `match: (props) => boolean`; the first matching contribution wins. If
+//   none match, the blank-disc fallback keeps all rows aligned by title.
 export const Item = {
-  Chips: defineSlot<{
+  Chips: defineRenderSlot<{
     component: ComponentType<{ conv: ConversationItemConv }>;
   }>("conversation-item.chips"),
-  Avatar: defineSlot<{
-    // Predicate run against the conversation. The first contribution that
-    // returns true gets rendered; if none match, the slot host renders a
-    // blank placeholder so all rows still align by their title.
-    match: (conv: ConversationItemConv) => boolean;
-    component: ComponentType<{ conv: ConversationItemConv }>;
-  }>("conversation-item.avatar"),
+  Avatar: defineDispatchSlot<{ conv: ConversationItemConv; size: "xs" | "sm" }, string>(
+    "conversation-item.avatar",
+    {
+      // No string/regexp keys are used — all contributions match via predicate.
+      // The id is a stable, unique string so the dispatch mechanism has a key
+      // to pass to exact/regexp passes (they won't match; predicate path wins).
+      key: (props) => props.conv.id,
+      fallback: AvatarFallback,
+    },
+  ),
 };

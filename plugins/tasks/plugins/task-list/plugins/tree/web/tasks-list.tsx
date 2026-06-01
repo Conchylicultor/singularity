@@ -43,7 +43,6 @@ async function createTaskRow(args: {
 }
 
 function TaskRow({ node, depth }: { node: TreeNode<Task>; depth: number }) {
-  const actions = TasksSlots.TaskActions.useContributions();
   const hasChildren = node.children.length > 0;
   const dropped = node.status === "dropped";
   const done = node.status === "done";
@@ -58,13 +57,11 @@ function TaskRow({ node, depth }: { node: TreeNode<Task>; depth: number }) {
           onClick: () => void addBelow(),
         },
       ]}
-      actions={actions.map((a) => (
-        <a.component
-          key={a.id}
-          taskId={node.id}
-          hasChildren={hasChildren}
-        />
-      ))}
+      actions={
+        <TasksSlots.TaskActions.Render>
+          {(a) => <a.component taskId={node.id} hasChildren={hasChildren} />}
+        </TasksSlots.TaskActions.Render>
+      }
     >
       <SelectionCheckbox id={node.id} />
       <StatusIcon status={node.status} />
@@ -126,7 +123,6 @@ export function TasksList({
   onSelect: (id: string) => void;
 }) {
   const result = useResource(tasksResource);
-  const listActions = TasksSlots.ListActions.useContributions();
   const [hideTerminal, setHideTerminal] = useState(true);
   const isTerminal = useCallback(
     (t: Task) => t.status === "done" || t.status === "dropped",
@@ -160,7 +156,7 @@ export function TasksList({
             value: hideTerminal,
             onValueChange: setHideTerminal,
           },
-          start: listActions.map((a) => <a.component key={a.id} />),
+          start: <TasksSlots.ListActions.Render />,
         }}
         addLabel={rootTaskId ? null : "Add"}
       />

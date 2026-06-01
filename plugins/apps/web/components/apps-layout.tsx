@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from "react";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { TooltipProvider } from "@plugins/primitives/plugins/tooltip/web";
 import { PaneBasePathContext } from "@plugins/primitives/plugins/pane/web";
 import { Apps } from "../slots";
@@ -49,7 +51,10 @@ export function AppsLayout() {
         <div className="min-w-0 flex-1">
           {activeApp && (
             <PaneBasePathContext.Provider value={basePath}>
-              <activeApp.component />
+              {renderIsolated(
+                Apps.App.id,
+                activeApp as unknown as Contribution,
+              )}
             </PaneBasePathContext.Provider>
           )}
         </div>

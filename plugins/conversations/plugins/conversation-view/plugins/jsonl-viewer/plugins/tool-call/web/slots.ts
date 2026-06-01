@@ -14,7 +14,11 @@ export const JsonlViewerTool = {
       key: (p) => p.event.name,
       fallback: GenericToolView,
       docLabel: (c) =>
-        typeof c.match === "string" ? c.match : c.match.source,
+        typeof c.match === "string"
+          ? c.match
+          : c.match instanceof RegExp
+            ? c.match.source
+            : undefined,
     },
   ),
 };

@@ -1,4 +1,4 @@
-import { useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
   MdChevronLeft,
@@ -7,7 +7,8 @@ import {
   MdMoreHoriz,
   MdOpenInFull,
 } from "react-icons/md";
-import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
+import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -154,9 +155,9 @@ export function PaneActionsSlot({
   return (
     <div className="flex items-center gap-1">
       {actions.map((a, i) => (
-        <PluginErrorBoundary key={i} slot={pane.Actions.id}>
-          <a.component />
-        </PluginErrorBoundary>
+        <Fragment key={i}>
+          {renderIsolated(pane.Actions.id, a as unknown as Contribution)}
+        </Fragment>
       ))}
     </div>
   );
@@ -273,7 +274,9 @@ function OverflowActionsBar({
             aria-hidden="true"
           >
             {slotActions.map((a, i) => (
-              <a.component key={i} />
+              <Fragment key={i}>
+                {renderIsolated(pane.Actions.id, a as unknown as Contribution)}
+              </Fragment>
             ))}
             {hasExtra && <div>{extraActions}</div>}
           </div>,
@@ -286,9 +289,9 @@ function OverflowActionsBar({
         className="flex min-w-0 flex-1 items-center justify-end gap-1 overflow-hidden"
       >
         {visibleSlot.map((a, i) => (
-          <PluginErrorBoundary key={i} slot={pane.Actions.id}>
-            <a.component />
-          </PluginErrorBoundary>
+          <Fragment key={i}>
+            {renderIsolated(pane.Actions.id, a as unknown as Contribution)}
+          </Fragment>
         ))}
         {extraVisible && extraActions}
 
@@ -307,12 +310,9 @@ function OverflowActionsBar({
             >
               <div className="flex flex-col">
                 {overflowSlot.map((a, i) => (
-                  <PluginErrorBoundary
-                    key={visibleSlot.length + i}
-                    slot={pane.Actions.id}
-                  >
-                    <a.component />
-                  </PluginErrorBoundary>
+                  <Fragment key={visibleSlot.length + i}>
+                    {renderIsolated(pane.Actions.id, a as unknown as Contribution)}
+                  </Fragment>
                 ))}
                 {extraOverflow && extraActions}
               </div>

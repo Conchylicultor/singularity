@@ -2,11 +2,12 @@ import { useContext, useMemo } from "react";
 import { PluginRuntimeContext } from "./context";
 import type { Contribution } from "./types";
 import type { ComponentType } from "react";
+import type { SealContributions } from "./sealed-component";
 
 export interface Slot<P> {
   (props: P): Contribution;
   id: string;
-  useContributions(): P[];
+  useContributions(): SealContributions<P>[];
 }
 
 const EMPTY: Contribution[] = [];
@@ -31,7 +32,11 @@ export function defineSlot<P>(
     const raw = ctx.bySlot.get(id) ?? EMPTY;
     // eslint-disable-next-line react-hooks/rules-of-hooks -- same as above
     return useMemo(
-      () => raw.map(({ _slotId: _, ...rest }: Contribution) => rest as P),
+      () =>
+        raw.map(
+          ({ _slotId: _, ...rest }: Contribution) =>
+            rest as SealContributions<P>,
+        ),
       [raw],
     );
   };

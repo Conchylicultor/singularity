@@ -50,7 +50,7 @@ export default {
       },
     }),
     ThemeEngine.VariantGroup({
-      componentId: "shadow",
+      id: "shadow",
       componentLabel: "Shadow",
       component: ShadowPicker,
     }),

@@ -1,9 +1,8 @@
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { ComponentType } from "react";
 
 export const Profiling = {
-  Section: defineSlot<{
-    id: string;
+  Section: defineRenderSlot<{
     order: number;
     component: ComponentType;
   }>("profiling.section"),

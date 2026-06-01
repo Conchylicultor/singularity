@@ -14,10 +14,9 @@ export function ConversationView() {
   const promptBarItems = Conversation.PromptBar.useContributions();
   const promptInputItems = Conversation.PromptInput.useContributions();
   const abovePromptInputItems = Conversation.AbovePromptInput.useContributions();
-  const PromptInputComponent = promptInputItems[0]?.component ?? null;
 
   const showBottomBar =
-    !!PromptInputComponent ||
+    promptInputItems.length > 0 ||
     promptBarItems.length > 0 ||
     abovePromptInputItems.length > 0;
 
@@ -50,9 +49,9 @@ export function ConversationView() {
                   <Conversation.AbovePromptInput.Render>
                     {(item) => <item.component conversation={conversation} />}
                   </Conversation.AbovePromptInput.Render>
-                  {PromptInputComponent && (
-                    <PromptInputComponent conversation={conversation} />
-                  )}
+                  <Conversation.PromptInput.Render>
+                    {(item) => <item.component conversation={conversation} />}
+                  </Conversation.PromptInput.Render>
                   {promptBarItems.length > 0 && (
                     <div className="flex justify-end">
                       <div className="flex items-center gap-1.5">

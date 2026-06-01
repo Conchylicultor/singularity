@@ -22,7 +22,7 @@ const myConfig = defineConfig("my-plugin", {
 
 - Description: Multi-line text field type.
 - Web:
-  - Contributes: `Fields.Renderer` "multiline-text" → `MultilineTextRenderer`
+  - Contributes: `config-v2.fields.renderer` "multiline-text" → `MultilineTextRenderer`
 - Core:
   - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
   - Exports: Types: `MultilineTextFieldDef`; Values: `multilineTextField`, `multilineTextFieldType`

@@ -23,7 +23,7 @@ const myConfig = defineConfig("my-plugin", {
 
 - Description: Avatar field type (icon + color picker).
 - Web:
-  - Contributes: `Fields.Renderer` "avatar" → `AvatarRenderer`
+  - Contributes: `config-v2.fields.renderer` "avatar" → `AvatarRenderer`
 - Core:
   - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`, `config_v2.getFieldResolver`
   - Exports: Types: `AvatarFieldDef`, `AvatarSpec`, `SvgNode`; Values: `avatarField`, `avatarFieldType`

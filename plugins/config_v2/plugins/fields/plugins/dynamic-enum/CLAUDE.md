@@ -6,7 +6,7 @@
 
 - Description: Dynamic enum field type: options resolved at render time from slot contributions.
 - Web:
-  - Contributes: `Fields.Renderer` "dynamic-enum" → `DynamicEnumRenderer`
+  - Contributes: `config-v2.fields.renderer` "dynamic-enum" → `DynamicEnumRenderer`
   - Exports: Types: `DynamicEnumOption`, `DynamicEnumOptionsContribution`; Values: `DynamicEnum`
 - Core:
   - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`

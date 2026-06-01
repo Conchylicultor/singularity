@@ -6,7 +6,7 @@
 
 - Description: Basic field types: bool, text, int, float.
 - Web:
-  - Contributes: `Fields.Renderer` "bool" → `BoolRenderer`, `Fields.Renderer` "text" → `TextRenderer`, `Fields.Renderer` "int" → `IntRenderer`, `Fields.Renderer` "float" → `FloatRenderer`
+  - Contributes: `config-v2.fields.renderer` "bool" → `BoolRenderer`, `config-v2.fields.renderer` "text" → `TextRenderer`, `config-v2.fields.renderer` "int" → `IntRenderer`, `config-v2.fields.renderer` "float" → `FloatRenderer`
 - Core:
   - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
   - Exports: Types: `BoolFieldDef`, `FloatFieldDef`, `IntFieldDef`, `TextFieldDef`; Values: `boolField`, `boolFieldType`, `floatField`, `floatFieldType`, `intField`, `intFieldType`, `textField`, `textFieldType`

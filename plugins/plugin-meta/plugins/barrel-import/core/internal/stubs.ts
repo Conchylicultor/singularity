@@ -146,6 +146,9 @@ export function registerBarrelStubs(_repoRoot: string): void {
   const coreExports = {
     defineSlot,
     defineCommand,
+    // Type-level seal only; at runtime the component is a plain ComponentType, so the
+    // stub unseal is an identity passthrough (mirrors the real implementation).
+    UNSAFE_unsealSlotComponent: (c: any) => c,
     Core: { Root: defineSlot("core.root") },
     PluginProvider: noop,
     PluginRuntimeContext: reactExports.createContext(null),

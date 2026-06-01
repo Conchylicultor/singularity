@@ -19,7 +19,7 @@ export default {
     Conversation.Header({ id: "category", component: CategoryChipToolbar }),
     ConfigV2.WebRegister({ descriptor: conversationCategoryConfig }),
     Item.Avatar({
-      match: (conv) => conv.kind !== "agent",
+      match: ({ conv }) => conv.kind !== "agent",
       component: CategoryAvatarRow,
     }),
   ],

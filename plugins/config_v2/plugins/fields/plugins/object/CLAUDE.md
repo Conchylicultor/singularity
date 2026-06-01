@@ -35,7 +35,7 @@ const myConfig = defineConfig({
 
 - Description: Object field type: fixed-structure named sub-fields grouped into a single value.
 - Web:
-  - Contributes: `Fields.Renderer` "object" → `ObjectRenderer`
+  - Contributes: `config-v2.fields.renderer` "object" → `ObjectRenderer`
 - Core:
   - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldType`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `config_v2.defineFieldType`
   - Exports: Types: `ObjectFieldDef`; Values: `isObjectFieldDef`, `objectField`, `objectFieldType`

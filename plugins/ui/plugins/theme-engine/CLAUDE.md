@@ -6,7 +6,7 @@
 
 - Description: Central settings pane for switching visual variants of pluggable UI components.
 - Web:
-  - Slots: `ThemeEngine.VariantGroup`, `ThemeEngine.TokenGroup`, `ThemeEngine.GlobalPreset`, `ThemeEngine.ColorTransform`, `ThemeEngine.PresetSource`
+  - Slots: `ThemeEngine.TokenGroup`, `ThemeEngine.GlobalPreset`, `ThemeEngine.ColorTransform`, `ThemeEngine.PresetSource`
   - Contributes: `Core.Root` → `ThemeInjector`, `ConfigV2.WebRegister`, `DynamicEnum.Options` "Theme"
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
   - Exports: Types: `ColorAdjustment`, `ColorTransformContribution`, `GlobalPresetContribution`, `PresetSourceContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`; Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `transformValues`, `useTokenGroupPresets`

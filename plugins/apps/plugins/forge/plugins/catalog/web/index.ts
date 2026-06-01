@@ -40,6 +40,7 @@ export default {
       }),
     }),
     Catalog.Category({
+      match: "routes",
       id: "routes",
       label: "Routes",
       icon: MdAltRoute,
@@ -47,6 +48,7 @@ export default {
       component: RoutesTable,
     }),
     Catalog.Category({
+      match: "panes",
       id: "panes",
       label: "Panes",
       icon: MdViewColumn,
@@ -57,6 +59,7 @@ export default {
       component: PanesTable,
     }),
     Catalog.Category({
+      match: "slots",
       id: "slots",
       label: "Slots",
       icon: MdExtension,
@@ -64,6 +67,7 @@ export default {
       component: SlotsTable,
     }),
     Catalog.Category({
+      match: "resources",
       id: "resources",
       label: "Resources",
       icon: MdStorage,
@@ -71,6 +75,7 @@ export default {
       component: ResourcesTable,
     }),
     Catalog.Category({
+      match: "contributions",
       id: "contributions",
       label: "Contributions",
       icon: MdLayers,

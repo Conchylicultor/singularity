@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { PluginProvider, Core, loadPlugins } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  PluginProvider,
+  Core,
+  loadPlugins,
+  UNSAFE_unsealSlotComponent,
+} from "@plugins/framework/plugins/web-sdk/core";
 import type { PluginDefinition, PluginLoadError } from "@plugins/framework/plugins/web-sdk/core";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { NotificationsProvider } from "@plugins/primitives/plugins/live-state/web";
@@ -10,11 +15,16 @@ function RootRenderer() {
   const roots = Core.Root.useContributions();
   return (
     <>
-      {roots.map((r, i) => (
-        <PluginErrorBoundary key={i} slot="core.root">
-          <r.component />
-        </PluginErrorBoundary>
-      ))}
+      {roots.map((r, i) => {
+        // UNSAFE: Core.Root is framework bootstrap; web-sdk/core can't import
+        // slot-render; isolation is the manual PluginErrorBoundary here.
+        const RootComponent = UNSAFE_unsealSlotComponent(r.component);
+        return (
+          <PluginErrorBoundary key={i} slot="core.root">
+            <RootComponent />
+          </PluginErrorBoundary>
+        );
+      })}
     </>
   );
 }

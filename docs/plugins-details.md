@@ -47,14 +47,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
   - Web:
-    - Slots: `Agents.List`, `Agents.ListActions`, `Agents.View`, `Agents.AgentActions`, `Agents.SystemAgent`
     - Contributes: `Pane.Register` "agents-root", `Pane.Register` "agent-detail", `Pane.Register` "agent-system-detail", `Pane.Register` "agent-side", `agentSidePane.Actions` → `ExpandAgentButton`, `Shell.Sidebar` "Agents" → `component`, `Item.Avatar` → `AgentAvatarRow`, `Conversation.Header` → `AgentAvatarTitlePrefix`, `Agents.AgentActions` "expand-collapse-all" → `ExpandCollapseAllAction`, `Agents.AgentActions` "delete" → `DeleteAgentAction`
     - Uses: `conversations.useConversationById`, `shell.Shell`
     - Exports: Types: `SystemAgentDescriptor`; Values: `agentDetailPane`, `Agents`, `agentSidePane`, `agentsResource`, `agentsRootPane`, `defineSystemAgent`, `patchAgent`, `systemAgentDetailPane`
-  - Cross-plugin:
-    - Slot contributors: `toggle`
-    - Imported by: `toggle`
-    - Extended by: `toggle` (table `agents_ext_auto_launch`)
   - Server:
     - Uses: `conversations.createConversation`, `database.db`, `tasks-core.conversationsLiveResource`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`
     - DB schema: `plugins/agents/server/internal/schema.ts`, `plugins/agents/server/internal/tables-attachments.ts`, `plugins/agents/server/internal/tables.ts`
@@ -64,6 +59,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Core:
     - Uses: `conversations.ConversationStatusSchema`
     - Exports: Types: `CreateAgentBody`, `LaunchAgentBody`, `LaunchAgentResponse`, `UpdateAgentBody`; Values: `createAgent`, `CreateAgentBodySchema`, `deleteAgent`, `getAgent`, `launchAgent`, `LaunchAgentBodySchema`, `LaunchAgentResponseSchema`, `listAgentLaunches`, `listAgents`, `updateAgent`, `UpdateAgentBodySchema`
+  - Cross-plugin:
+    - Imported by: `toggle`
+    - Extended by: `toggle` (table `agents_ext_auto_launch`)
   - Plugins:
     - **`auto-launch`** — Umbrella plugin for agent auto-launch. Sub-plugins contribute row actions and settings.
       - Plugins:
@@ -116,7 +114,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `CreateServerBody`, `Server`, `ServerStatus`, `UpdateServerBody`; Values: `createServer`, `CreateServerBodySchema`, `deleteServer`, `getServer`, `listServers`, `ServerSchema`, `serversResource`, `ServerStatusSchema`, `updateServer`, `UpdateServerBodySchema`
         - **`shell`** — App shell for the deploy platform.
           - Web:
-            - Slots: `Deploy.Section`
             - Contributes: `Apps.App` "Deploy" → `DeployLayout`
             - Uses: `apps.Apps`
             - Exports: Values: `Deploy`
@@ -414,56 +411,56 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`avatar`** — Avatar field type (icon + color picker).
           - Web:
-            - Contributes: `Fields.Renderer` "avatar" → `AvatarRenderer`
+            - Contributes: `config-v2.fields.renderer` "avatar" → `AvatarRenderer`
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`, `config_v2.getFieldResolver`
             - Exports: Types: `AvatarFieldDef`, `AvatarSpec`, `SvgNode`; Values: `avatarField`, `avatarFieldType`
         - **`color`** — Color field type: hex color string with a popover color picker.
           - Web:
-            - Contributes: `Fields.Renderer` "color" → `ColorRenderer`
+            - Contributes: `config-v2.fields.renderer` "color" → `ColorRenderer`
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
             - Exports: Types: `ColorFieldDef`; Values: `colorField`, `colorFieldType`
         - **`dynamic-enum`** — Dynamic enum field type: options resolved at render time from slot contributions.
           - Web:
-            - Contributes: `Fields.Renderer` "dynamic-enum" → `DynamicEnumRenderer`
+            - Contributes: `config-v2.fields.renderer` "dynamic-enum" → `DynamicEnumRenderer`
             - Exports: Types: `DynamicEnumOption`, `DynamicEnumOptionsContribution`; Values: `DynamicEnum`
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
             - Exports: Types: `DynamicEnumFieldDef`; Values: `dynamicEnumField`, `dynamicEnumFieldType`
         - **`enum`** — Enum field type: single-choice from a fixed set of options.
           - Web:
-            - Contributes: `Fields.Renderer` "enum" → `EnumRenderer`
+            - Contributes: `config-v2.fields.renderer` "enum" → `EnumRenderer`
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
             - Exports: Types: `EnumFieldDef`, `EnumOption`; Values: `enumField`, `enumFieldType`
         - **`list`** — Sortable list field type with stable UUID identity and fractional-index ordering.
           - Web:
-            - Contributes: `Fields.Renderer` "list" → `ListRenderer`
+            - Contributes: `config-v2.fields.renderer` "list" → `ListRenderer`
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldType`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `config_v2.defineFieldType`
             - Exports: Types: `ListFieldDef`, `ListItem`; Values: `isListFieldDef`, `listField`, `listFieldType`
         - **`multiline-text`** — Multi-line text field type.
           - Web:
-            - Contributes: `Fields.Renderer` "multiline-text" → `MultilineTextRenderer`
+            - Contributes: `config-v2.fields.renderer` "multiline-text" → `MultilineTextRenderer`
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
             - Exports: Types: `MultilineTextFieldDef`; Values: `multilineTextField`, `multilineTextFieldType`
         - **`object`** — Object field type: fixed-structure named sub-fields grouped into a single value.
           - Web:
-            - Contributes: `Fields.Renderer` "object" → `ObjectRenderer`
+            - Contributes: `config-v2.fields.renderer` "object" → `ObjectRenderer`
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldType`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `config_v2.defineFieldType`
             - Exports: Types: `ObjectFieldDef`; Values: `isObjectFieldDef`, `objectField`, `objectFieldType`
         - **`primitives`** — Basic field types: bool, text, int, float.
           - Web:
-            - Contributes: `Fields.Renderer` "bool" → `BoolRenderer`, `Fields.Renderer` "text" → `TextRenderer`, `Fields.Renderer` "int" → `IntRenderer`, `Fields.Renderer` "float" → `FloatRenderer`
+            - Contributes: `config-v2.fields.renderer` "bool" → `BoolRenderer`, `config-v2.fields.renderer` "text" → `TextRenderer`, `config-v2.fields.renderer` "int" → `IntRenderer`, `config-v2.fields.renderer` "float" → `FloatRenderer`
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
             - Exports: Types: `BoolFieldDef`, `FloatFieldDef`, `IntFieldDef`, `TextFieldDef`; Values: `boolField`, `boolFieldType`, `floatField`, `floatFieldType`, `intField`, `intFieldType`, `textField`, `textFieldType`
         - **`secret`** — Secret field type: encrypted storage with set/not-set metadata. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
           - Web:
-            - Contributes: `Fields.Renderer` "secret" → `SecretRenderer`
+            - Contributes: `config-v2.fields.renderer` "secret" → `SecretRenderer`
           - Server:
             - Uses: `config_v2.getAllDescriptors`, `config_v2.hasFieldStorageProvider`, `config_v2.registerFieldStorageProvider`
           - Core:
@@ -525,18 +522,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
           - Web:
-            - Slots: `Item.Chips`, `Item.Avatar`
+            - Slots: `Item.Avatar`
             - Exports: Types: `ConversationItemConv`, `ConversationItemProps`; Values: `CONV_STATUS_DOT`, `ConversationItem`, `ConvRelativeTime`, `ConvStatusDot`, `ConvSysBadge`, `ConvTitle`, `formatRelativeTime`, `Item`
           - Cross-plugin:
             - Slot contributors: `agents`, `conversation-category`, `conversation-progress`
     - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
       - Web:
-        - Slots: `Conversation.PromptInput`
         - Contributes: `Pane.Register` "conversation", `Conversation.Header` → `ConversationTitle`
         - Uses: `conversations.useConversationById`
         - Exports: Types: `ConversationRecord`; Values: `Conversation`, `conversationPane`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
-      - Cross-plugin:
-        - Slot contributors: `agents`, `allow-monitor`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `dependencies`, `dependent-count`, `docs-button`, `drop-and-exit`, `drop-dependents`, `event-counter`, `exit`, `fork-conversation`, `hold-and-exit`, `launch-prompts`, `model`, `notes`, `open-app`, `prompt-input`, `push-profiling`, `review`, `status`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
       - Plugins:
         - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
           - Web:
@@ -1029,11 +1023,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `listMemoryFiles`, `readMemoryFile`
     - **`profiling`** — Gantt chart of build steps and server startup phases.
       - Web:
-        - Slots: `Profiling.Section`
         - Contributes: `Pane.Register` "debug-profiling", `DebugApp.Sidebar` "Profiling" → `component`
         - Exports: Types: `DragState`, `GanttContainerContextValue`, `PhaseConfig`, `ProfilingContextValue`, `Span`, `ZoomWindow`; Values: `DragSelection`, `formatDuration`, `GanttContainer`, `GanttSection`, `groupByPhase`, `PhaseGroup`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `SpanRow`, `TimeAxis`, `useGanttContainerContext`, `useGanttZoom`, `useProfilingContext`
-      - Cross-plugin:
-        - Slot contributors: `boot`, `build`, `push`, `stats`
       - Plugins:
         - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
           - Web:
@@ -1142,7 +1133,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `discoverAllowDefaultProject`, `findPluginDirs`, `iconSafetyRules`, `lintCollectedDir`, `promiseSafetyRules`
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
       - Core:
-        - Exports: Types: `Contribution`, `DocMeta`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `webCollectedDir`
+        - Exports: Types: `Contribution`, `DocMeta`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Web:
@@ -1521,7 +1512,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `ShortcutDescriptor`; Values: `defineShortcut`, `formatShortcutLabel`, `Shortcuts`
     - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
       - Web:
-        - Exports: Types: `DispatchContribution`, `DispatchSlot`, `DispatchSlotConfig`, `RenderSlot`, `RenderSlotConfig`, `SlotItemMiddleware`, `SlotListMiddleware`; Values: `defineDispatchSlot`, `defineRenderSlot`, `registerSlotItemMiddleware`, `registerSlotListMiddleware`, `RenderSlotSubIdContext`
+        - Exports: Types: `DispatchContribution`, `DispatchSlot`, `DispatchSlotConfig`, `RenderSlot`, `RenderSlotConfig`, `SlotItemMiddleware`, `SlotListMiddleware`; Values: `defineDispatchSlot`, `defineRenderSlot`, `registerSlotItemMiddleware`, `registerSlotListMiddleware`, `renderIsolated`, `RenderSlotSubIdContext`
     - **`sortable-list`** — Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components.
       - Web:
         - Exports: Types: `SortableItemProps`, `SortableItemState`, `SortableListProps`; Values: `SortableItem`, `SortableList`
@@ -1745,12 +1736,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `conversations.useConversationById`, `tasks.AutoStartModel`, `tasks.patchTask`, `tasks.setAutoStart`, `tasks.useTask`
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
       - Web:
-        - Slots: `Tasks.TaskActions`, `Tasks.ListActions`
         - Contributes: `Tasks.TaskActions` "child-count" → `ChildCountAction`, `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`, `Tasks.TaskActions` "delete" → `DeleteTaskAction`, `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
         - Uses: `tasks.deleteTask`, `tasks.patchTask`
         - Exports: Types: `TaskViewProps`; Values: `Tasks`
-      - Cross-plugin:
-        - Slot contributors: `auto-start`, `recent`, `tree`
       - Plugins:
         - **`recent`** — Recency-sorted flat task list tab.
           - Web:
@@ -1817,7 +1805,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `SegmentedProgressBar.Variant` "Segmented" → `SegmentedRenderer`
     - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
       - Web:
-        - Slots: `ThemeEngine.VariantGroup`, `ThemeEngine.TokenGroup`, `ThemeEngine.GlobalPreset`, `ThemeEngine.ColorTransform`, `ThemeEngine.PresetSource`
+        - Slots: `ThemeEngine.TokenGroup`, `ThemeEngine.GlobalPreset`, `ThemeEngine.ColorTransform`, `ThemeEngine.PresetSource`
         - Contributes: `Core.Root` → `ThemeInjector`, `ConfigV2.WebRegister`, `DynamicEnum.Options` "Theme"
         - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
         - Exports: Types: `ColorAdjustment`, `ColorTransformContribution`, `GlobalPresetContribution`, `PresetSourceContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`; Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `transformValues`, `useTokenGroupPresets`

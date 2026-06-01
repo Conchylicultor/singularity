@@ -17,7 +17,7 @@ reordering and dispatches to `FieldRenderer` for each item's sub-fields.
 
 - Description: Sortable list field type with stable UUID identity and fractional-index ordering.
 - Web:
-  - Contributes: `Fields.Renderer` "list" → `ListRenderer`
+  - Contributes: `config-v2.fields.renderer` "list" → `ListRenderer`
 - Core:
   - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldType`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `config_v2.defineFieldType`
   - Exports: Types: `ListFieldDef`, `ListItem`; Values: `isListFieldDef`, `listField`, `listFieldType`

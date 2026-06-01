@@ -115,7 +115,6 @@ function DeleteSelectedAction() {
 }
 
 function AgentRow({ node, depth }: { node: TreeNode<Agent>; depth: number }) {
-  const actions = AgentsSlots.AgentActions.useContributions();
   const hasChildren = node.children.length > 0;
   return (
     <RowChrome
@@ -128,9 +127,11 @@ function AgentRow({ node, depth }: { node: TreeNode<Agent>; depth: number }) {
           onClick: () => void addBelow(),
         },
       ]}
-      actions={actions.map((act) => (
-        <act.component key={act.id} agentId={node.id} hasChildren={hasChildren} />
-      ))}
+      actions={
+        <AgentsSlots.AgentActions.Render>
+          {(act) => <act.component agentId={node.id} hasChildren={hasChildren} />}
+        </AgentsSlots.AgentActions.Render>
+      }
     >
       <SelectionCheckbox id={node.id} />
       <Avatar
@@ -160,7 +161,6 @@ export function AgentsList({
   onSelect?: (id: string) => void;
 }) {
   const result = useResource(agentsResource);
-  const listActions = AgentsSlots.ListActions.useContributions();
   const openPane = useOpenPane();
 
   if (result.pending) return <Placeholder>Loading…</Placeholder>;
@@ -187,7 +187,7 @@ export function AgentsList({
           toolbar={{
             expandAll: true,
             search: { accessor: (a) => a.name },
-            start: listActions.map((a) => <a.component key={a.id} />),
+            start: <AgentsSlots.ListActions.Render />,
           }}
           addLabel="Agent"
         />

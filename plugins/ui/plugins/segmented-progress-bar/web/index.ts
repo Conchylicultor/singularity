@@ -27,7 +27,7 @@ export default {
         })),
     }),
     ThemeEngine.VariantGroup({
-      componentId: "segmented-progress-bar",
+      id: "segmented-progress-bar",
       componentLabel: "Segmented Progress Bar",
       component: VariantPicker,
     }),

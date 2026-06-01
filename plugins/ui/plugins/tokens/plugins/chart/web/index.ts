@@ -31,7 +31,7 @@ export default {
       configDescriptor: chartConfig,
     }),
     ThemeEngine.VariantGroup({
-      componentId: "chart",
+      id: "chart",
       componentLabel: "Chart",
       component: ChartPicker,
     }),

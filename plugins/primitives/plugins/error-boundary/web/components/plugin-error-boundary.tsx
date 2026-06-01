@@ -1,4 +1,5 @@
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
+import { UNSAFE_unsealSlotComponent } from "@plugins/framework/plugins/web-sdk/core";
 import { ErrorBoundary } from "../slots";
 import { callReporter, type BoundaryErrorReport } from "../reporter";
 
@@ -89,7 +90,8 @@ function CrashFallback({
       <span className="truncate text-destructive/70">{report.error.message}</span>
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {actions.map((action, i) => {
-          const Component = action.component;
+          // UNSAFE: rendered inside the boundary's own fallback — wrapping again is circular.
+          const Component = UNSAFE_unsealSlotComponent(action.component);
           return <Component key={i} report={report} context={context} />;
         })}
         <button className="underline hover:no-underline" onClick={retry}>

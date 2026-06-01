@@ -32,7 +32,7 @@ const myConfig = defineConfig("my-plugin", {
 
 - Description: Color field type: hex color string with a popover color picker.
 - Web:
-  - Contributes: `Fields.Renderer` "color" → `ColorRenderer`
+  - Contributes: `config-v2.fields.renderer` "color" → `ColorRenderer`
 - Core:
   - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
   - Exports: Types: `ColorFieldDef`; Values: `colorField`, `colorFieldType`

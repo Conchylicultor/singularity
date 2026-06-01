@@ -16,6 +16,7 @@ export default {
   contributions: [
     Pane.Register({ pane: tableDetailPane }),
     Catalog.Category({
+      match: "tables",
       id: "tables",
       label: "Tables",
       icon: MdTableChart,

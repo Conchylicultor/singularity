@@ -35,7 +35,7 @@ const myConfig = defineConfig({
 
 - Description: Enum field type: single-choice from a fixed set of options.
 - Web:
-  - Contributes: `Fields.Renderer` "enum" → `EnumRenderer`
+  - Contributes: `config-v2.fields.renderer` "enum" → `EnumRenderer`
 - Core:
   - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
   - Exports: Types: `EnumFieldDef`, `EnumOption`; Values: `enumField`, `enumFieldType`

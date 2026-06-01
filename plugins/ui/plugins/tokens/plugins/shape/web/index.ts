@@ -31,7 +31,7 @@ export default {
       configDescriptor: shapeConfig,
     }),
     ThemeEngine.VariantGroup({
-      componentId: "shape",
+      id: "shape",
       componentLabel: "Shape",
       component: ShapePicker,
     }),

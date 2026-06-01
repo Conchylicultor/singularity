@@ -1,4 +1,3 @@
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import type { Conversation as ConversationRecord } from "@plugins/tasks-core/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
@@ -13,7 +12,7 @@ export const Conversation = {
   }>("conversation.prompt-bar", {
     docLabel: (p) => p.section,
   }),
-  PromptInput: defineSlot<{
+  PromptInput: defineRenderSlot<{
     component: ComponentType<{ conversation: ConversationRecord }>;
   }>("conversation.prompt-input"),
   AbovePromptInput: defineRenderSlot<{

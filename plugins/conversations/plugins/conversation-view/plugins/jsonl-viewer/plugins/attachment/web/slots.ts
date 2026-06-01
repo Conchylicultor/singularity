@@ -9,7 +9,11 @@ export const JsonlViewerAttachment = {
       key: (p) => p.event.subtype,
       fallback: GenericAttachmentView,
       docLabel: (c) =>
-        typeof c.match === "string" ? c.match : c.match.source,
+        typeof c.match === "string"
+          ? c.match
+          : c.match instanceof RegExp
+            ? c.match.source
+            : undefined,
     },
   ),
 };

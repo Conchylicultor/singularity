@@ -11,6 +11,7 @@ export default {
     SegmentedProgressBarSlots.Variant({
       id: "dots",
       label: "Dots",
+      match: "dots",
       component: DotsRenderer,
     }),
   ],

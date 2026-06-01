@@ -1,7 +1,13 @@
 import { useMemo } from "react";
 import type { ComponentType } from "react";
+import {
+  UNSAFE_unsealSlotComponent,
+  type SealContributions,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { ActiveData } from "../slots";
 import type { ActiveDataBlockContribution } from "../slots";
+
+type SealedBlockContribution = SealContributions<ActiveDataBlockContribution>;
 
 export type ActiveDataSegment =
   | { type: "markdown"; text: string }
@@ -25,7 +31,7 @@ function parseAttrs(attrStr: string): Record<string, string> {
 
 function buildSegments(
   rawText: string,
-  blockContribs: ActiveDataBlockContribution[],
+  blockContribs: SealedBlockContribution[],
 ): ActiveDataSegment[] {
   if (blockContribs.length === 0) {
     return rawText ? [{ type: "markdown", text: rawText }] : [];
@@ -52,7 +58,14 @@ function buildSegments(
     const attrs = attrStr ? parseAttrs(attrStr) : {};
     const contrib = blockContribs.find((c) => c.tag === tag)!;
 
-    segments.push({ type: "block", tag, component: contrib.component, content, attrs });
+    segments.push({
+      type: "block",
+      tag,
+      // UNSAFE: spliced into foreign markdown ReactNode tree.
+      component: UNSAFE_unsealSlotComponent(contrib.component),
+      content,
+      attrs,
+    });
     cursor = m.index + m[0].length;
   }
 
@@ -67,7 +80,10 @@ function buildSegments(
 export function useActiveDataSegments(rawText: string): ActiveDataSegment[] {
   const contributions = ActiveData.Tag.useContributions();
   const blockContribs = useMemo(
-    () => contributions.filter((c): c is ActiveDataBlockContribution => c.display === "block"),
+    () =>
+      contributions.filter(
+        (c): c is SealedBlockContribution => c.display === "block",
+      ),
     [contributions],
   );
   return useMemo(() => buildSegments(rawText, blockContribs), [rawText, blockContribs]);

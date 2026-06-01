@@ -7,7 +7,13 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
-import { defineSlot, PluginRuntimeContext, type Slot } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  defineSlot,
+  PluginRuntimeContext,
+  UNSAFE_unsealSlotComponent,
+  type Slot,
+  type SealedComponent,
+} from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
   getSlotItemMiddlewares,
@@ -96,15 +102,17 @@ export function defineRenderSlot<P>(
       (contribution: Contribution): ReactNode => {
         const cId = contribution.id as string | undefined;
         if (!cId) return null;
-        const clean = cleanById.get(cId);
+        const clean = cleanById.get(cId as (P & { id: string })["id"]);
         if (!clean) return null;
 
         const node: ReactNode = children
-          ? children(clean)
+          ? children(clean as unknown as P & { id: string })
           : "component" in clean &&
               typeof clean.component === "function"
             ? ((C: ComponentType) => <C />)(
-                clean.component as ComponentType,
+                UNSAFE_unsealSlotComponent(
+                  clean.component as unknown as SealedComponent,
+                ),
               )
             : null;
 
@@ -154,33 +162,43 @@ export function defineRenderSlot<P>(
 }
 
 export interface DispatchContribution<Props, Key extends string> {
-  /** Plain string = exact match; RegExp = pattern match (exact wins). */
-  match: Key | RegExp;
+  /**
+   * Plain string = exact match; RegExp = pattern match; predicate = arbitrary
+   * test against the render props. Precedence: exact string → RegExp →
+   * predicate (in registration order).
+   */
+  match: Key | RegExp | ((props: Props) => boolean);
   component: ComponentType<Props>;
 }
 
-export interface DispatchSlotConfig<Props, Key extends string> {
+export interface DispatchSlotConfig<Props, Key extends string, Extra extends object> {
   /** Project the dispatch key out of the render props. */
   key: (props: Props) => Key;
   /** Rendered (and isolated) when nothing matches. */
   fallback?: ComponentType<Props>;
-  docLabel?: (c: DispatchContribution<Props, Key>) => string | undefined;
+  docLabel?: (
+    c: DispatchContribution<Props, Key> & Extra,
+  ) => string | undefined;
 }
 
-export interface DispatchSlot<Props, Key extends string = string>
-  extends Slot<DispatchContribution<Props, Key>> {
+export interface DispatchSlot<Props, Key extends string = string, Extra extends object = {}>
+  extends Slot<DispatchContribution<Props, Key> & Extra> {
   Dispatch: ComponentType<Props>;
 }
 
-export function defineDispatchSlot<Props, Key extends string = string>(
+export function defineDispatchSlot<
+  Props,
+  Key extends string = string,
+  Extra extends object = {},
+>(
   id: string,
-  config: DispatchSlotConfig<Props, Key>,
-): DispatchSlot<Props, Key> {
-  const slot = defineSlot<DispatchContribution<Props, Key>>(id, {
+  config: DispatchSlotConfig<Props, Key, Extra>,
+): DispatchSlot<Props, Key, Extra> {
+  const slot = defineSlot<DispatchContribution<Props, Key> & Extra>(id, {
     docLabel: config.docLabel ? (c) => config.docLabel!(c) : undefined,
   });
 
-  const dispatchSlot = slot as unknown as DispatchSlot<Props, Key>;
+  const dispatchSlot = slot as unknown as DispatchSlot<Props, Key, Extra>;
 
   dispatchSlot.Dispatch = function SlotDispatch(props: Props) {
     const ctx = useContext(PluginRuntimeContext);
@@ -193,6 +211,7 @@ export function defineDispatchSlot<Props, Key extends string = string>(
 
     const key = config.key(props);
 
+    // Precedence: exact string → RegExp → predicate (registration order).
     let matchedIndex = cleanItems.findIndex(
       (c) => typeof c.match === "string" && c.match === key,
     );
@@ -201,9 +220,16 @@ export function defineDispatchSlot<Props, Key extends string = string>(
         (c) => c.match instanceof RegExp && c.match.test(key),
       );
     }
+    if (matchedIndex < 0) {
+      matchedIndex = cleanItems.findIndex(
+        (c) => typeof c.match === "function" && c.match(props),
+      );
+    }
 
     const matched = matchedIndex >= 0 ? cleanItems[matchedIndex] : undefined;
-    const Component = matched?.component ?? config.fallback;
+    const Component = matched
+      ? UNSAFE_unsealSlotComponent(matched.component as SealedComponent<Props>)
+      : config.fallback;
     // Index correspondence: both `cleanItems` and `rawContributions` come from
     // `ctx.bySlot.get(id)` (clean is a positional `.map` of raw — slots.ts:33-36),
     // so `rawContributions[matchedIndex]` is the stamped Contribution carrying
@@ -221,4 +247,25 @@ export function defineDispatchSlot<Props, Key extends string = string>(
   };
 
   return dispatchSlot;
+}
+
+/**
+ * Render one contribution's component wrapped in the registered item middlewares
+ * (error-boundary isolation). For bespoke selection that `.Render`/`.Dispatch`
+ * can't express (e.g. a tiered `supports()` probe). STILL ISOLATED — not an
+ * escape from isolation.
+ */
+export function renderIsolated(
+  slotId: string,
+  contribution: Contribution,
+  props?: object,
+): ReactNode {
+  const Component = UNSAFE_unsealSlotComponent(
+    (contribution as unknown as { component: SealedComponent }).component,
+  );
+  return applyItemMiddlewares(
+    createElement(Component as ComponentType<object>, props),
+    slotId,
+    contribution,
+  );
 }

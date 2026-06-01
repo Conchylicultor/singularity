@@ -1,7 +1,6 @@
 import type { ConversationKind } from "@plugins/tasks-core/core";
 import type { ConversationStatus } from "@plugins/conversations/core";
 import { formatRelativeTime, RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { Avatar } from "@plugins/primitives/plugins/avatar/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { cn } from "@/lib/utils";
 import { Item } from "../slots";
@@ -12,26 +11,17 @@ function ChipsSlot({ conv }: { conv: ConversationItemConv }) {
   const items = Item.Chips.useContributions();
   if (items.length === 0) return null;
   return (
-    <>
-      {items.map((item, i) => {
-        const Component = item.component;
-        return <Component key={i} conv={conv} />;
-      })}
-    </>
+    <Item.Chips.Render>
+      {(item) => <item.component conv={conv} />}
+    </Item.Chips.Render>
   );
 }
 
 // Renders the first Item.Avatar contribution whose `match` predicate returns
-// true for this conversation. Falls back to a blank-disc placeholder so the
-// title column stays aligned across rows.
+// true for this conversation. Falls back to a blank-disc placeholder (via the
+// slot's configured fallback) so the title column stays aligned across rows.
 function AvatarSlot({ conv, size }: { conv: ConversationItemConv; size: "xs" | "sm" }) {
-  const items = Item.Avatar.useContributions();
-  const matched = items.find((item) => item.match(conv));
-  if (!matched) {
-    return <Avatar size={size} statusDot={CONV_STATUS_DOT[conv.status]} />;
-  }
-  const Component = matched.component;
-  return <Component conv={conv} />;
+  return <Item.Avatar.Dispatch conv={conv} size={size} />;
 }
 
 export const CONV_STATUS_DOT: Record<ConversationStatus, string> = {

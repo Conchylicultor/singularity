@@ -32,7 +32,7 @@ export default {
       configDescriptor: sidebarPaletteConfig,
     }),
     ThemeEngine.VariantGroup({
-      componentId: "sidebar-palette",
+      id: "sidebar-palette",
       componentLabel: "Sidebar Palette",
       component: SidebarPalettePicker,
     }),

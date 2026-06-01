@@ -94,12 +94,14 @@ export function VariantSettings() {
       </div>
       {groups.length > 0 && (
         <div className="flex flex-col gap-4">
-          {groups.map((g) => (
-            <div key={g.componentId}>
-              <h4 className="text-sm font-medium mb-1">{g.componentLabel}</h4>
-              <g.component />
-            </div>
-          ))}
+          <ThemeEngine.VariantGroup.Render>
+            {(g) => (
+              <div>
+                <h4 className="text-sm font-medium mb-1">{g.componentLabel}</h4>
+                <g.component />
+              </div>
+            )}
+          </ThemeEngine.VariantGroup.Render>
         </div>
       )}
     </div>

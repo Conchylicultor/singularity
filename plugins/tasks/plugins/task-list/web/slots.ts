@@ -1,4 +1,4 @@
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import { defineTabbedView } from "@plugins/primitives/plugins/tabbed-view/web";
 import type { ComponentType } from "react";
 
@@ -13,12 +13,10 @@ const tabbedView = defineTabbedView<TaskViewProps>("tasks");
 export const Tasks = {
   View: tabbedView.View,
   Host: tabbedView.Host,
-  TaskActions: defineSlot<{
-    id: string;
+  TaskActions: defineRenderSlot<{
     component: ComponentType<{ taskId: string; hasChildren: boolean }>;
   }>("tasks.task-actions", { docLabel: (p) => p.id }),
-  ListActions: defineSlot<{
-    id: string;
+  ListActions: defineRenderSlot<{
     component: ComponentType;
   }>("tasks.list-actions", { docLabel: (p) => p.id }),
 };

@@ -1,4 +1,8 @@
 import { useMemo } from "react";
+import {
+  UNSAFE_unsealSlotComponent,
+  type SealContributions,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { ActiveData, type ActiveDataCodeContribution } from "../slots";
 
 export type CodeReplaceContrib = {
@@ -13,8 +17,12 @@ export function useActiveDataCodeReplace(): CodeReplaceContrib[] {
   return useMemo(
     () =>
       contributions
-        .filter((c): c is ActiveDataCodeContribution => c.display === "code")
-        .map((c) => ({ pattern: c.pattern, Component: c.component })),
+        .filter(
+          (c): c is SealContributions<ActiveDataCodeContribution> =>
+            c.display === "code",
+        )
+        // UNSAFE: spliced into foreign markdown ReactNode tree.
+        .map((c) => ({ pattern: c.pattern, Component: UNSAFE_unsealSlotComponent(c.component) })),
     [contributions],
   );
 }

@@ -77,19 +77,18 @@ function ServerDetailBody() {
 }
 
 function ServerDetailContent({ serverId, server }: { serverId: string; server: Server }) {
-  const sections = Deploy.Section.useContributions();
-  const sorted = [...sections].sort((a, b) => a.order - b.order);
-
   return (
     <>
       <ServerDetail server={server} />
       <div className="flex flex-col gap-4 p-4">
-        {sorted.map((s) => (
-          <section key={s.id} className="bg-card rounded-lg border p-4">
-            <h2 className="mb-3 text-sm font-medium">{s.title}</h2>
-            <s.component serverId={serverId} />
-          </section>
-        ))}
+        <Deploy.Section.Render>
+          {(s) => (
+            <section key={s.id} className="bg-card rounded-lg border p-4">
+              <h2 className="mb-3 text-sm font-medium">{s.title}</h2>
+              <s.component serverId={serverId} />
+            </section>
+          )}
+        </Deploy.Section.Render>
       </div>
     </>
   );

@@ -11,6 +11,6 @@ export default {
     "4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip.",
   contributions: [
     Conversation.Header({ id: "progress", component: ProgressBarToolbar }),
-    Item.Chips({ component: ProgressBarRow }),
+    Item.Chips({ id: "progress", component: ProgressBarRow }),
   ],
 } satisfies PluginDefinition;

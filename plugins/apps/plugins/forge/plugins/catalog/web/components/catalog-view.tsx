@@ -17,6 +17,8 @@ export function CatalogView() {
   const [state, setState] = useState<LoadState>({ kind: "loading" });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
+  // Display metadata (id, label, icon, getCount) is readable directly; only the
+  // `component` field is sealed (rendered via the slot's .Dispatch below).
   const categories = Catalog.Category.useContributions();
 
   useEffect(() => {
@@ -62,7 +64,6 @@ export function CatalogView() {
 
   const { plugins } = state.data;
   const activeId = selectedId ?? categories[0]?.id ?? null;
-  const selected = categories.find((c) => c.id === activeId);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -105,8 +106,12 @@ export function CatalogView() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {selected ? (
-          <selected.component plugins={plugins} filter={filter} />
+        {activeId != null ? (
+          <Catalog.Category.Dispatch
+            plugins={plugins}
+            filter={filter}
+            activeId={activeId}
+          />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             No categories registered

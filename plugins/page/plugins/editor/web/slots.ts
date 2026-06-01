@@ -1,16 +1,24 @@
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-import type { ComponentType } from "react";
+import { defineDispatchSlot, type DispatchContribution } from "@plugins/primitives/plugins/slot-render/web";
 import type { BlockHandle } from "../core";
 import type { BlockRendererProps } from "./types";
+import { UnknownBlock } from "./components/unknown-block";
 
-export interface BlockContribution {
+/** Block handle metadata carried alongside the dispatch fields (match, component). */
+export interface BlockMeta {
   block: BlockHandle<unknown>;
-  component: ComponentType<BlockRendererProps>;
 }
 
+/** Full contribution shape — block metadata plus dispatch fields. */
+export type BlockContribution =
+  DispatchContribution<BlockRendererProps, string> & BlockMeta;
+
 export const Editor = {
-  Block: defineSlot<BlockContribution>(
+  Block: defineDispatchSlot<BlockRendererProps, string, BlockMeta>(
     "page.editor.block",
-    { docLabel: (p) => p.block.type },
+    {
+      key: (props) => props.block.type,
+      fallback: UnknownBlock,
+      docLabel: (c) => c.block?.type,
+    },
   ),
 };

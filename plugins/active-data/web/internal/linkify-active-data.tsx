@@ -7,6 +7,10 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
+import {
+  UNSAFE_unsealSlotComponent,
+  type SealContributions,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { ActiveData, type ActiveDataInlineContribution } from "../slots";
 
 // Always skip these element types (don't linkify inside anchors)
@@ -94,8 +98,12 @@ export function useActiveDataLinkify(): (children: ReactNode) => ReactNode {
   const contribs = useMemo<PatternContrib[]>(
     () =>
       contributions
-        .filter((c): c is ActiveDataInlineContribution => c.display === "inline")
-        .map((c) => ({ pattern: c.pattern, Component: c.component })),
+        .filter(
+          (c): c is SealContributions<ActiveDataInlineContribution> =>
+            c.display === "inline",
+        )
+        // UNSAFE: spliced into foreign markdown ReactNode tree.
+        .map((c) => ({ pattern: c.pattern, Component: UNSAFE_unsealSlotComponent(c.component) })),
     [contributions],
   );
   return useMemo(() => {

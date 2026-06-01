@@ -32,7 +32,7 @@ export default {
       configDescriptor: typographyConfig,
     }),
     ThemeEngine.VariantGroup({
-      componentId: "typography",
+      id: "typography",
       componentLabel: "Typography",
       component: TypographyPicker,
     }),

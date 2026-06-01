@@ -1,10 +1,11 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { ComponentType } from "react";
 import type { TokenGroupDescriptor } from "../core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 
 export interface VariantGroupContribution {
-  componentId: string;
+  id: string;
   componentLabel: string;
   component: ComponentType;
 }
@@ -59,9 +60,9 @@ export function useTokenGroupPresets(
 }
 
 export const ThemeEngine = {
-  VariantGroup: defineSlot<VariantGroupContribution>(
+  VariantGroup: defineRenderSlot<VariantGroupContribution>(
     "ui.theme-engine.variant-group",
-    { docLabel: (p) => p.componentLabel },
+    { docLabel: (p) => p.componentLabel, reorder: false },
   ),
   TokenGroup: defineSlot<TokenGroupContribution>(
     "ui.theme-engine.token-group",

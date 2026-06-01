@@ -45,7 +45,7 @@ export default {
       ...sidebarNavItem({ title: "Agents", icon: MdPrecisionManufacturing, onClick: () => openPane(agentsRootPane, {}, { mode: "root" }) }),
     }),
     Item.Avatar({
-      match: (conv) => conv.kind === "agent",
+      match: ({ conv }) => conv.kind === "agent",
       component: AgentAvatarRow,
     }),
     Conversation.Header({ id: "agent-avatar", component: AgentAvatarTitlePrefix }),
