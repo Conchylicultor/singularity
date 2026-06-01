@@ -50,6 +50,9 @@ export function MillerColumns() {
   if (!match) return null;
 
   const itemIds = match.chain.map((e) => String(e.instanceId));
+  // Reordering only makes sense with 2+ columns. With a single pane there is
+  // nowhere to drag it, so suppress the drag handle (and its grab cursor).
+  const canReorder = match.chain.length > 1;
 
   return (
     <PaneMatchContext.Provider value={match}>
@@ -67,6 +70,7 @@ export function MillerColumns() {
                   key={entry.instanceId}
                   id={String(entry.instanceId)}
                   handle
+                  disabled={!canReorder}
                   className={(state) =>
                     `flex h-full${isLast ? " min-w-[200px] flex-1" : " shrink-0"}${state.isDragging ? " opacity-50" : ""}`
                   }
@@ -84,7 +88,7 @@ export function MillerColumns() {
                         <Column
                           entry={entry}
                           isLast={isLast}
-                          dragHandleProps={state.handleProps}
+                          dragHandleProps={canReorder ? state.handleProps : undefined}
                         />
                       </PluginErrorBoundary>
                     </PaneInstanceContext.Provider>
