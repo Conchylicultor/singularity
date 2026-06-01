@@ -31,7 +31,7 @@ const ALLOWED_PATHS = [
   "plugins/conversations/plugins/conversation-category/web/internal/colors.ts",
   "plugins/conversations/plugins/conversation-view/plugins/code/plugins/docs-button/web/components/doc-row.tsx",
   "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/agent/web/components/agent-tool-view.tsx",
-  "plugins/conversations/plugins/conversation-view/plugins/launch-prompts/web/components/launch-prompts-button.tsx",
+  "plugins/conversations/plugins/model-provider/web/internal/family-class.ts",
   "plugins/plugin-meta/plugins/plugin-view/plugins/runtimes/web/components/runtimes-section.tsx",
   "plugins/plugin-meta/plugins/plugin-view/plugins/sub-plugins/web/components/sub-plugins-section.tsx",
   "plugins/plugin-meta/plugins/plugin-view/web/components/plugin-detail.tsx",
