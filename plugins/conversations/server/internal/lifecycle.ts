@@ -73,7 +73,10 @@ export async function createConversation(
     resumeSessionId = source.claudeSessionId;
     inheritedModel = normalizeModel(source.model);
   }
-  const model = opts.model ?? inheritedModel ?? DEFAULT_MODEL;
+  // Normalize on write too: callers like the auto-start job pass a model read
+  // straight from a side-table that may still hold a legacy ("opus") value
+  // queued before model flattening. Keep persisted rows on concrete ids.
+  const model = normalizeModel(opts.model ?? inheritedModel ?? DEFAULT_MODEL);
 
   const spawnedBy = opts.spawnedBy ?? Bun.env.SINGULARITY_WORKTREE;
   if (!spawnedBy) {

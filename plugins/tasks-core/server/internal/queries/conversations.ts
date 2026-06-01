@@ -1,10 +1,22 @@
 import { and, asc, count, desc, eq, isNotNull, lt, ne, type SQL } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { _conversations } from "../tables";
 import { conversations } from "../schema";
 import type { Conversation } from "../schema";
 
 export const RECENT_GONE_LIMIT = 30;
+
+// Boundary guard for the model column. Rows written before model flattening (or
+// by a path that skipped normalization) may hold a legacy "opus"/"sonnet" value
+// the strict ConversationModelSchema enum rejects. A single such row would fail
+// the whole conversationsResource payload validation → the WebSocket push fails
+// → the sidebar silently shows zero conversations. Normalize on read so no
+// stored value can ever poison the list.
+function normalizeRowModel(row: Conversation): Conversation {
+  const model = normalizeModel(row.model);
+  return model === row.model ? row : { ...row, model };
+}
 
 // System conversations (machine-spawned automation) live in the same table but
 // never surface in the sidebar, recovery pane, or attempt-view — they're
@@ -42,7 +54,8 @@ function queryConversations(
 ): Promise<Conversation[]> {
   const orderExpr = order.dir === "asc" ? asc(order.col) : desc(order.col);
   const base = db.select().from(conversations).where(buildWhere(filters)).orderBy(orderExpr);
-  return limit !== undefined ? base.limit(limit) : base;
+  const q = limit !== undefined ? base.limit(limit) : base;
+  return q.then((rows) => rows.map(normalizeRowModel));
 }
 
 // Infra paths only: poller, turn-emitter. Returns ALL rows including system
@@ -126,7 +139,7 @@ export async function getConversation(id: string): Promise<Conversation | null> 
     .where(eq(conversations.id, id))
     .limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  return row ?? null;
+  return row ? normalizeRowModel(row) : null;
 }
 
 // Reads only the columns needed by the runtime (no join, no derived fields).
