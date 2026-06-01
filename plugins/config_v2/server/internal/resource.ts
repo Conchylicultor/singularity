@@ -48,7 +48,11 @@ function computeAllConflicts(): ConfigV2Conflicts {
       const originValues = originData
         ? (originData.content as Record<string, unknown>)
         : (descriptor.defaults as Record<string, unknown>);
-      conflicts[storePath] = { originValues };
+      const overrideData = overwrites.read();
+      const overrideValues = overrideData
+        ? (overrideData.content as Record<string, unknown>)
+        : (descriptor.defaults as Record<string, unknown>);
+      conflicts[storePath] = { originValues, overrideValues };
     }
   }
   return conflicts;

@@ -42,22 +42,36 @@ function ConfigDetailInner({
     setConfirmReset(false);
   }, [registration.storePath]);
 
+  // During a conflict the app resolves config to the origin (origin takes
+  // precedence until reconciled), so `useConfig` returns the origin values.
+  // The editor must instead surface the user's override document so they can
+  // see and fix what they configured. Fall back to the resolved value for keys
+  // absent from a partial override.
+  const valueFor = useCallback(
+    (key: string): unknown => {
+      const override = conflictEntry?.overrideValues;
+      if (override && key in override) return override[key];
+      return values[key];
+    },
+    [conflictEntry, values],
+  );
+
   const isSoftConflict = useMemo(() => {
     if (!conflictEntry) return false;
     for (const key of Object.keys(registration.descriptor.fields)) {
-      if (JSON.stringify(values[key]) !== JSON.stringify(conflictEntry.originValues[key])) {
+      if (JSON.stringify(valueFor(key)) !== JSON.stringify(conflictEntry.originValues[key])) {
         return false;
       }
     }
     return true;
-  }, [conflictEntry, values, registration.descriptor.fields]);
+  }, [conflictEntry, valueFor, registration.descriptor.fields]);
 
   const hasAnyModified = useMemo(() => {
     for (const key of Object.keys(registration.descriptor.fields)) {
-      if (JSON.stringify(values[key]) !== JSON.stringify(defaults[key])) return true;
+      if (JSON.stringify(valueFor(key)) !== JSON.stringify(defaults[key])) return true;
     }
     return false;
-  }, [values, defaults, registration.descriptor.fields]);
+  }, [valueFor, defaults, registration.descriptor.fields]);
 
   const handleDismiss = useCallback(() => {
     void fetchEndpoint(acknowledgeConflict, {}, { body: { storePath: registration.storePath } });
@@ -162,7 +176,7 @@ function ConfigDetailInner({
               key={key}
               fieldKey={key}
               field={field}
-              value={values[key]}
+              value={valueFor(key)}
               defaultValue={defaults[key]}
               storePath={registration.storePath}
               originValue={conflictEntry?.originValues[key]}

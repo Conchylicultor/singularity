@@ -20,8 +20,19 @@ export function jsoncConfigProxy(filePath: string): ConfigProxy {
       if (!existsSync(filePath)) return null;
       const raw = readFileSync(filePath, "utf-8");
       const match = HASH_RE.exec(raw);
-      const hash = match ? match[1]! : null;
-      const body = match ? raw.slice(match[0].length) : raw;
+      // Every config file on disk must record the origin hash it was written
+      // against (`// @hash` on line 1). The canonical writers (setConfig,
+      // propagate) always emit it; a file without one is corrupt (truncated
+      // write, bad hand-edit), not a benign "untracked" override. Fail loudly
+      // rather than silently resolving it as a no-conflict override.
+      if (!match) {
+        throw new Error(
+          `Config file is missing its "// @hash" header: ${filePath}. ` +
+            `A hashless config file is corrupt — restore the header or delete the file.`,
+        );
+      }
+      const hash = match[1]!;
+      const body = raw.slice(match[0].length);
       const content = parseJsonc(body) as JsonValue;
       return { content, hash };
     },

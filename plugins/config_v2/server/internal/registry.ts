@@ -207,8 +207,14 @@ export async function setConfig<F extends FieldsRecord, K extends keyof F & stri
     base = { ...(orig.content as Record<string, unknown>) };
     hash = computeHash(orig.content);
   } else {
-    base = { ...(descriptor.defaults as Record<string, unknown>) };
-    hash = null;
+    // ./singularity build propagates a hashed origin for every registered
+    // descriptor, so a missing origin here means the build never ran (or the
+    // file was deleted). Writing a hashless override to paper over it would
+    // produce a corrupt file that conflict detection can't anchor — fail loudly.
+    throw new Error(
+      `[config-v2] setConfig: no origin file for "${entry.storePath}" at ${entry.userOriginPath}. ` +
+        `Run ./singularity build to propagate the config origin before setting overrides.`,
+    );
   }
 
   base[key] = value;

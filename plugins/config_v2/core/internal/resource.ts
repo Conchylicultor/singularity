@@ -11,7 +11,13 @@ export const configV2Resource = resourceDescriptor<ConfigV2Values, { path: strin
 );
 
 export const configV2ConflictEntrySchema = z.object({
+  // The origin (upstream) document — this is what the running app resolves to
+  // while the conflict is unreconciled, since origin takes precedence on conflict.
   originValues: z.record(z.unknown()),
+  // The user's override document as written to disk. The settings editor binds
+  // to this so the user can see and reconcile what they configured, independent
+  // of what the app currently resolves to.
+  overrideValues: z.record(z.unknown()),
 });
 export const configV2ConflictsSchema = z.record(configV2ConflictEntrySchema);
 export type ConfigV2Conflicts = z.infer<typeof configV2ConflictsSchema>;

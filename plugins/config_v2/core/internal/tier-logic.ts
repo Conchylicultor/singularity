@@ -7,11 +7,22 @@ export function effective(
   origin: ConfigProxy,
   overwrites: ConfigProxy,
 ): JsonValue | undefined {
+  const originData = origin.read();
   if (overwrites.exists()) {
     const ow = overwrites.read();
-    if (ow) return ow.content;
+    if (ow) {
+      // On a hash conflict the override was written against a now-stale
+      // origin, so the origin takes precedence until the user manually
+      // reconciles the override (acknowledge-conflict rewrites the hash,
+      // after which the override wins again). With no origin to defer to,
+      // the override still stands.
+      const stale =
+        originData !== null &&
+        ow.hash !== null &&
+        ow.hash !== computeHash(originData.content);
+      if (!stale) return ow.content;
+    }
   }
-  const originData = origin.read();
   if (!originData) return undefined;
   return originData.content;
 }
