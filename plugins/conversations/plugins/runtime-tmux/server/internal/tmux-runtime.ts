@@ -104,7 +104,7 @@ function resolvePaneStatus(
   const titleText = trimmed.replace(STATUS_PREFIX_RE, "").trim();
   const isDefault =
     !titleText ||
-    /^[a-zA-Z0-9-]+\.(local|internal|lan)$/.test(titleText) ||
+    /^[a-zA-Z0-9-]+\.(local|internal|lan|home)$/.test(titleText) ||
     SESSION_NAME_RE.test(titleText);
   const title = isDefault ? "" : titleText;
 
