@@ -771,12 +771,22 @@ export function registerBuild(program: Command) {
         writeFileSync(resolve(stagingPath, ".build-commit"), buildCommit + "\n");
       }
 
-      // Atomic publish. Brief microsecond window between rm and rename where
-      // dist doesn't exist; acceptable since both are atomic syscalls.
+      // Crash-safe publish via move-aside. The previous `rm(dist); rename(staging)`
+      // was NOT atomic: `rm -rf` is a recursive, interruptible delete, so a build
+      // killed mid-rm (e.g. an overlapping build's backend restart) left `dist`
+      // half-emptied — icons present, index.html gone — which the gateway serves
+      // as a permanent 404 on `/`. Instead move the live dir aside (atomic rename)
+      // and move the new one in (atomic rename): `dist` is always a *complete*
+      // tree, old or new, never partial. The only gap is between the two adjacent
+      // renames where `dist` is briefly absent — recoverable (the next build
+      // republishes), unlike a silently-partial dist. Leftover `dist.old.*` from a
+      // crash here is reclaimed by sweepStagingLeftovers at the next build start.
       endSpan = buildProfilerStart("atomicPublish", "build:frontend", "atomic publish");
       const livePath = resolve(webDir, "dist");
-      await rm(livePath, { recursive: true, force: true });
+      const oldPath = resolve(webDir, `${OLD_PREFIX}${process.pid}`);
+      if (existsSync(livePath)) await rename(livePath, oldPath);
       await rename(stagingPath, livePath);
+      await rm(oldPath, { recursive: true, force: true });
       endSpan();
 
       // 6. Write registry JSON

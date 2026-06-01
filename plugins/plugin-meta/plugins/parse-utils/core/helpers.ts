@@ -41,6 +41,21 @@ export function matchBracket(src: string, start: number, open: string, close: st
   let depth = 0;
   for (let i = start; i < src.length; i++) {
     const c = src[i];
+    // Skip comments before quote handling: a stray apostrophe or bracket inside a
+    // `// ...` or `/* ... */` comment must not be treated as a string delimiter or
+    // affect nesting depth (e.g. a comment mentioning a schema's row would
+    // otherwise open an unterminated single-quote string and swallow the closer).
+    if (c === "/" && src[i + 1] === "/") {
+      i += 2;
+      while (i < src.length && src[i] !== "\n") i++;
+      continue;
+    }
+    if (c === "/" && src[i + 1] === "*") {
+      i += 2;
+      while (i < src.length && !(src[i] === "*" && src[i + 1] === "/")) i++;
+      i++; // sits on '/'; the loop's i++ steps past it
+      continue;
+    }
     if (c === '"' || c === "'" || c === "`") {
       const q = c;
       i++;

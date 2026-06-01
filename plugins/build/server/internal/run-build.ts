@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { Log } from "@plugins/debug/plugins/logs/server";
 import { REPO_ROOT, SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
@@ -10,22 +10,56 @@ import { frontendHashResource } from "./frontend-hash-resource";
 
 const buildLog = Log.channel("build");
 
+// In-process re-entry guard only. The authoritative, restart-durable lock lives
+// in the DB (see isAnyBuildAlive) — `./singularity build` restarts this very
+// backend, so a boolean held in memory is wiped mid-build and the freshly-booted
+// process would happily start a second, overlapping build.
 let inflight = false;
 
-export function isBuildInflight(): boolean {
-  return inflight;
+/**
+ * Whether OS process `pid` is currently alive. `process.kill(pid, 0)` sends no
+ * signal; it throws ESRCH when the process is gone. EPERM means the process
+ * exists but is owned by another user — still alive.
+ */
+export function isPidAlive(pid: number | null): boolean {
+  if (pid == null) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+/**
+ * Durable, cross-restart build lock: a build is in-flight iff some build_runs row
+ * is unfinished AND the `./singularity build` process that owns it is still
+ * running. Because the build restarts this backend, the spawning server process
+ * is routinely killed mid-build; without this the new backend (and its on-boot
+ * re-enqueue) would start a second build that races the first, and whichever
+ * owner dies before finalizing leaves a phantom null-exit "failed" row.
+ */
+async function isAnyBuildAlive(): Promise<boolean> {
+  const rows = await db
+    .select({ pid: _buildRuns.pid })
+    .from(_buildRuns)
+    .where(isNull(_buildRuns.finishedAt));
+  return rows.some((r) => isPidAlive(r.pid));
 }
 
 export function triggerBuild(trigger: "manual" | "auto"): void {
   if (inflight) return;
   inflight = true;
-  doRunBuild(trigger)
-    .catch((err) => {
-      buildLog.publish(`Build error: ${err?.message ?? err}`, "stderr");
-    })
-    .finally(() => {
+  void (async () => {
+    try {
+      if (await isAnyBuildAlive()) return;
+      await doRunBuild(trigger);
+    } catch (err) {
+      buildLog.publish(`Build error: ${(err as Error)?.message ?? err}`, "stderr");
+    } finally {
       inflight = false;
-    });
+    }
+  })();
 }
 
 function getHeadCommit(): string | null {
@@ -39,9 +73,9 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
   const buildId = `build-${buildStartMs}-${Math.random().toString(36).slice(2, 8)}`;
   const commitHash = getHeadCommit();
 
-  await db.insert(_buildRuns).values({ id: buildId, trigger, commitHash });
-  buildHistoryResource.notify();
-
+  // Spawn before inserting so the row carries the child pid from the start: the
+  // pid is what marks this run as in-flight for the durable lock and protects it
+  // from the orphan reconciler, both of which can fire the instant the row exists.
   const proc = Bun.spawn(["./singularity", "build", "--allow-main"], {
     cwd: REPO_ROOT,
     stdout: "pipe",
@@ -49,6 +83,9 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
     detached: true,
     env: { ...process.env, SINGULARITY_BUILD_ID: buildId },
   });
+
+  await db.insert(_buildRuns).values({ id: buildId, trigger, commitHash, pid: proc.pid });
+  buildHistoryResource.notify();
 
   const allLines: Array<{ text: string; stream: "stdout" | "stderr" }> = [];
 
