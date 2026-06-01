@@ -9,7 +9,7 @@ export default {
     "Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.",
   contributions: [
     JsonlViewerTool.Renderer({
-      name: "AskUserQuestion",
+      match: "AskUserQuestion",
       component: AskUserQuestionToolView,
     }),
   ],

@@ -7,6 +7,6 @@ export default {
   name: "JSONL Viewer: User text renderer",
   description: "Renders user text events in the JSONL viewer.",
   contributions: [
-    JsonlViewer.EventRenderer({ kind: "user-text", component: UserTextRow }),
+    JsonlViewer.EventRenderer({ match: "user-text", component: UserTextRow }),
   ],
 } satisfies PluginDefinition;

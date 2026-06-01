@@ -9,7 +9,7 @@ export default {
     "Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.",
   contributions: [
     JsonlViewerTool.Renderer({
-      pattern: /add_task$/,
+      match: /add_task$/,
       component: AddTaskToolView,
     }),
   ],

@@ -9,7 +9,7 @@ export default {
     "Renders background task completion notifications in the JSONL viewer.",
   contributions: [
     JsonlViewer.EventRenderer({
-      kind: "task-notification",
+      match: "task-notification",
       component: TaskNotificationRow,
     }),
   ],

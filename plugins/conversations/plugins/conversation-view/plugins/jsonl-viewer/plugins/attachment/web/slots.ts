@@ -1,15 +1,15 @@
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-import type { ComponentType } from "react";
+import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { AttachmentRendererProps } from "../core";
-
-export interface AttachmentRendererContribution {
-  subtype: string;
-  component: ComponentType<AttachmentRendererProps>;
-}
+import { GenericAttachmentView } from "./components/generic-attachment-view";
 
 export const JsonlViewerAttachment = {
-  Renderer: defineSlot<AttachmentRendererContribution>(
+  Renderer: defineDispatchSlot<AttachmentRendererProps, string>(
     "conversation.jsonl-viewer.attachment-renderer",
-    { docLabel: (p) => p.subtype },
+    {
+      key: (p) => p.event.subtype,
+      fallback: GenericAttachmentView,
+      docLabel: (c) =>
+        typeof c.match === "string" ? c.match : c.match.source,
+    },
   ),
 };

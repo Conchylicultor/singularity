@@ -1,16 +1,20 @@
-import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-import type { ComponentType } from "react";
+import {
+  defineDispatchSlot,
+  type DispatchContribution,
+} from "@plugins/primitives/plugins/slot-render/web";
 import type { ToolRendererProps } from "../core";
+import { GenericToolView } from "./components/generic-tool-view";
 
-export interface ToolRendererContribution {
-  name?: string;
-  pattern?: RegExp;
-  component: ComponentType<ToolRendererProps>;
-}
+export type ToolRendererContribution = DispatchContribution<ToolRendererProps, string>;
 
 export const JsonlViewerTool = {
-  Renderer: defineSlot<ToolRendererContribution>(
+  Renderer: defineDispatchSlot<ToolRendererProps, string>(
     "conversation.jsonl-viewer.tool-renderer",
-    { docLabel: (p) => p.name ?? p.pattern?.source },
+    {
+      key: (p) => p.event.name,
+      fallback: GenericToolView,
+      docLabel: (c) =>
+        typeof c.match === "string" ? c.match : c.match.source,
+    },
   ),
 };

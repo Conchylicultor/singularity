@@ -7,6 +7,6 @@ export default {
   name: "JSONL Viewer: System event renderer",
   description: "Renders system events in the JSONL viewer.",
   contributions: [
-    JsonlViewer.EventRenderer({ kind: "system", component: SystemRow }),
+    JsonlViewer.EventRenderer({ match: "system", component: SystemRow }),
   ],
 } satisfies PluginDefinition;

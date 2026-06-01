@@ -1,7 +1,17 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { defineRenderSlot, RenderSlotSubIdContext } from "./internal/render-slot";
-export type { RenderSlot, RenderSlotConfig } from "./internal/render-slot";
+export {
+  defineRenderSlot,
+  defineDispatchSlot,
+  RenderSlotSubIdContext,
+} from "./internal/render-slot";
+export type {
+  RenderSlot,
+  RenderSlotConfig,
+  DispatchSlot,
+  DispatchContribution,
+  DispatchSlotConfig,
+} from "./internal/render-slot";
 export type {
   SlotItemMiddleware,
   SlotListMiddleware,

@@ -61,7 +61,7 @@ export function matchBracket(src: string, start: number, open: string, close: st
 
 export function parseDefineGroup<T>(
   src: string,
-  builder: "defineSlot" | "defineCommand",
+  builder: "defineSlot" | "defineCommand" | "defineDispatchSlot",
   make: (memberName: string, id: string, groupName: string) => T,
 ): T[] {
   const out: T[] = [];

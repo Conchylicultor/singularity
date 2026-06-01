@@ -1,4 +1,5 @@
 import {
+  createElement,
   Fragment,
   useCallback,
   useContext,
@@ -15,6 +16,34 @@ import {
 
 export interface RenderSlotConfig<P> {
   docLabel?: (props: P & { id: string }) => string | undefined;
+  /**
+   * When `false`, `.Render` applies item middlewares (error-boundary isolation)
+   * but skips list middlewares, so contributions are isolated but not
+   * draggable/reorderable. Defaults to `true`.
+   */
+  reorder?: boolean;
+}
+
+/**
+ * Wraps a rendered node in the registered item middlewares (error-boundary
+ * isolation, reorder item handle, …). Shared by `.Render` and `.Dispatch`.
+ */
+export function applyItemMiddlewares(
+  node: ReactNode,
+  slotId: string,
+  contribution: Contribution,
+): ReactNode {
+  const itemMws = getSlotItemMiddlewares();
+  for (let i = itemMws.length - 1; i >= 0; i--) {
+    const Mw = itemMws[i]!.Component;
+    const captured = node;
+    node = (
+      <Mw slotId={slotId} contribution={contribution}>
+        {captured}
+      </Mw>
+    );
+  }
+  return node;
 }
 
 interface RenderProps<P> {
@@ -44,6 +73,7 @@ export function defineRenderSlot<P>(
   );
 
   const renderSlot = slot as unknown as RenderSlot<P>;
+  const reorder = config?.reorder ?? true;
 
   renderSlot.Render = function SlotRender({
     children,
@@ -69,7 +99,7 @@ export function defineRenderSlot<P>(
         const clean = cleanById.get(cId);
         if (!clean) return null;
 
-        let node: ReactNode = children
+        const node: ReactNode = children
           ? children(clean)
           : "component" in clean &&
               typeof clean.component === "function"
@@ -78,40 +108,35 @@ export function defineRenderSlot<P>(
               )
             : null;
 
-        const itemMws = getSlotItemMiddlewares();
-        for (let i = itemMws.length - 1; i >= 0; i--) {
-          const Mw = itemMws[i]!.Component;
-          const captured = node;
-          node = (
-            <Mw slotId={id} contribution={contribution}>
-              {captured}
-            </Mw>
-          );
-        }
-
-        return <Fragment key={cId}>{node}</Fragment>;
+        return (
+          <Fragment key={cId}>
+            {applyItemMiddlewares(node, id, contribution)}
+          </Fragment>
+        );
       },
       [cleanById, children],
     );
 
-    const listMws = getSlotListMiddlewares();
     const defaultRendering = (
       <>{rawContributions.map((c) => renderItem(c))}</>
     );
 
     let result: ReactNode = defaultRendering;
-    for (let i = listMws.length - 1; i >= 0; i--) {
-      const Mw = listMws[i]!.Component;
-      const captured = result;
-      result = (
-        <Mw
-          slotId={id}
-          contributions={rawContributions}
-          renderItem={renderItem}
-        >
-          {captured}
-        </Mw>
-      );
+    if (reorder) {
+      const listMws = getSlotListMiddlewares();
+      for (let i = listMws.length - 1; i >= 0; i--) {
+        const Mw = listMws[i]!.Component;
+        const captured = result;
+        result = (
+          <Mw
+            slotId={id}
+            contributions={rawContributions}
+            renderItem={renderItem}
+          >
+            {captured}
+          </Mw>
+        );
+      }
     }
 
     if (subId !== undefined) {
@@ -126,4 +151,74 @@ export function defineRenderSlot<P>(
   };
 
   return renderSlot;
+}
+
+export interface DispatchContribution<Props, Key extends string> {
+  /** Plain string = exact match; RegExp = pattern match (exact wins). */
+  match: Key | RegExp;
+  component: ComponentType<Props>;
+}
+
+export interface DispatchSlotConfig<Props, Key extends string> {
+  /** Project the dispatch key out of the render props. */
+  key: (props: Props) => Key;
+  /** Rendered (and isolated) when nothing matches. */
+  fallback?: ComponentType<Props>;
+  docLabel?: (c: DispatchContribution<Props, Key>) => string | undefined;
+}
+
+export interface DispatchSlot<Props, Key extends string = string>
+  extends Slot<DispatchContribution<Props, Key>> {
+  Dispatch: ComponentType<Props>;
+}
+
+export function defineDispatchSlot<Props, Key extends string = string>(
+  id: string,
+  config: DispatchSlotConfig<Props, Key>,
+): DispatchSlot<Props, Key> {
+  const slot = defineSlot<DispatchContribution<Props, Key>>(id, {
+    docLabel: config.docLabel ? (c) => config.docLabel!(c) : undefined,
+  });
+
+  const dispatchSlot = slot as unknown as DispatchSlot<Props, Key>;
+
+  dispatchSlot.Dispatch = function SlotDispatch(props: Props) {
+    const ctx = useContext(PluginRuntimeContext);
+    if (!ctx) {
+      throw new Error("SlotDispatch must be used within PluginProvider");
+    }
+
+    const rawContributions = ctx.bySlot.get(id) ?? [];
+    const cleanItems = slot.useContributions();
+
+    const key = config.key(props);
+
+    let matchedIndex = cleanItems.findIndex(
+      (c) => typeof c.match === "string" && c.match === key,
+    );
+    if (matchedIndex < 0) {
+      matchedIndex = cleanItems.findIndex(
+        (c) => c.match instanceof RegExp && c.match.test(key),
+      );
+    }
+
+    const matched = matchedIndex >= 0 ? cleanItems[matchedIndex] : undefined;
+    const Component = matched?.component ?? config.fallback;
+    // Index correspondence: both `cleanItems` and `rawContributions` come from
+    // `ctx.bySlot.get(id)` (clean is a positional `.map` of raw — slots.ts:33-36),
+    // so `rawContributions[matchedIndex]` is the stamped Contribution carrying
+    // `_pluginName` for the error-boundary middleware. The fallback path has no
+    // contribution, so synthesize a minimal one with a generic boundary label.
+    const contribution: Contribution =
+      matchedIndex >= 0
+        ? rawContributions[matchedIndex]!
+        : ({ _slotId: id } as Contribution);
+
+    const node: ReactNode = Component
+      ? createElement(Component as ComponentType<object>, props as object)
+      : null;
+    return applyItemMiddlewares(node, id, contribution);
+  };
+
+  return dispatchSlot;
 }

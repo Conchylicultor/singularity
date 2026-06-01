@@ -7,6 +7,6 @@ export default {
   name: "JSONL Viewer: Summary renderer",
   description: "Renders summary separator events in the JSONL viewer.",
   contributions: [
-    JsonlViewer.EventRenderer({ kind: "summary", component: SummaryRow }),
+    JsonlViewer.EventRenderer({ match: "summary", component: SummaryRow }),
   ],
 } satisfies PluginDefinition;

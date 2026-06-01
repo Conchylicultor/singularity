@@ -9,7 +9,7 @@ export default {
     "Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.",
   contributions: [
     JsonlViewerTool.Renderer({
-      pattern: /flag_raise$/,
+      match: /flag_raise$/,
       component: FlagRaiseToolView,
     }),
   ],

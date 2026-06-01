@@ -197,8 +197,6 @@ export function JsonlPane({
   }
   const workingStartAt = workingStartAtRef.current ?? Date.now();
 
-  const overlays = JsonlViewer.Overlay.useContributions();
-
   const sticky = useStickyScroll({
     resetKey: conversation.id,
     forceScrollKey: isWorking ? 1 : 0,
@@ -249,7 +247,7 @@ export function JsonlPane({
             </div>
           </div>
         )}
-        {overlays.map((o) => <o.component key={o.id} />)}
+        <JsonlViewer.Overlay.Render />
         <JumpToBottomButton
           handle={sticky}
           className="absolute bottom-12 right-4 z-20"

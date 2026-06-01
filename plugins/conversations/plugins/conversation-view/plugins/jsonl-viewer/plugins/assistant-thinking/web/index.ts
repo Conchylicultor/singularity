@@ -7,6 +7,6 @@ export default {
   name: "JSONL Viewer: Assistant thinking renderer",
   description: "Renders assistant thinking blocks in the JSONL viewer as collapsible sections.",
   contributions: [
-    JsonlViewer.EventRenderer({ kind: "assistant-thinking", component: AssistantThinkingRow }),
+    JsonlViewer.EventRenderer({ match: "assistant-thinking", component: AssistantThinkingRow }),
   ],
 } satisfies PluginDefinition;

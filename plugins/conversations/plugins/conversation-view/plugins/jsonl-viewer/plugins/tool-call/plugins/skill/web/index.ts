@@ -8,6 +8,6 @@ export default {
   description:
     "Renders Skill tool calls with skill name, args preview, and injected context.",
   contributions: [
-    JsonlViewerTool.Renderer({ name: "Skill", component: SkillToolView }),
+    JsonlViewerTool.Renderer({ match: "Skill", component: SkillToolView }),
   ],
 } satisfies PluginDefinition;

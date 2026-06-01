@@ -15,12 +15,12 @@ export default {
   description:
     "Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.",
   contributions: [
-    JsonlViewerTool.Renderer({ name: "TaskCreate", component: TaskCreateToolView }),
-    JsonlViewerTool.Renderer({ name: "TaskUpdate", component: TaskUpdateToolView }),
-    JsonlViewerTool.Renderer({ name: "TaskGet", component: TaskGetToolView }),
-    JsonlViewerTool.Renderer({ name: "TaskList", component: TaskListToolView }),
-    JsonlViewerTool.Renderer({ name: "TaskOutput", component: TaskOutputToolView }),
-    JsonlViewerTool.Renderer({ name: "TaskStop", component: TaskStopToolView }),
+    JsonlViewerTool.Renderer({ match: "TaskCreate", component: TaskCreateToolView }),
+    JsonlViewerTool.Renderer({ match: "TaskUpdate", component: TaskUpdateToolView }),
+    JsonlViewerTool.Renderer({ match: "TaskGet", component: TaskGetToolView }),
+    JsonlViewerTool.Renderer({ match: "TaskList", component: TaskListToolView }),
+    JsonlViewerTool.Renderer({ match: "TaskOutput", component: TaskOutputToolView }),
+    JsonlViewerTool.Renderer({ match: "TaskStop", component: TaskStopToolView }),
     JsonlViewer.Overlay({ id: "task-progress", component: TaskProgressOverlay }),
   ],
 } satisfies PluginDefinition;

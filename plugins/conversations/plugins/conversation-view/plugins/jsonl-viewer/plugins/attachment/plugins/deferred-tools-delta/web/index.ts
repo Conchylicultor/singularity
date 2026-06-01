@@ -10,7 +10,7 @@ export default {
     "Renders deferred-tools-delta attachment events showing tools becoming available or removed mid-session.",
   contributions: [
     JsonlViewerAttachment.Renderer({
-      subtype: "deferred_tools_delta",
+      match: "deferred_tools_delta",
       component: DeferredToolsDeltaView,
     }),
   ],

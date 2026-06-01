@@ -8,6 +8,6 @@ export default {
   description:
     "Renders Write tool calls with syntax-highlighted file content and clickable path affordances.",
   contributions: [
-    JsonlViewerTool.Renderer({ name: "Write", component: WriteToolView }),
+    JsonlViewerTool.Renderer({ match: "Write", component: WriteToolView }),
   ],
 } satisfies PluginDefinition;

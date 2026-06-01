@@ -7,6 +7,6 @@ export default {
   name: "JSONL Viewer: Unknown event renderer",
   description: "Renders unknown JSONL event types as collapsible sections with the raw payload.",
   contributions: [
-    JsonlViewer.EventRenderer({ kind: "unknown", component: UnknownRow }),
+    JsonlViewer.EventRenderer({ match: "unknown", component: UnknownRow }),
   ],
 } satisfies PluginDefinition;

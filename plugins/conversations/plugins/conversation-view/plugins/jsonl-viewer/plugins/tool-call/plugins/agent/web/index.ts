@@ -10,7 +10,7 @@ export default {
   description:
     "Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).",
   contributions: [
-    JsonlViewerTool.Renderer({ name: "Agent", component: AgentToolView }),
+    JsonlViewerTool.Renderer({ match: "Agent", component: AgentToolView }),
     Pane.Register({ pane: agentReportPane }),
   ],
 } satisfies PluginDefinition;

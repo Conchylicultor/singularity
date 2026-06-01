@@ -10,7 +10,7 @@ export default {
     "Renders command-permissions attachment events showing permission grants for the session.",
   contributions: [
     JsonlViewerAttachment.Renderer({
-      subtype: "command_permissions",
+      match: "command_permissions",
       component: CommandPermissionsView,
     }),
   ],

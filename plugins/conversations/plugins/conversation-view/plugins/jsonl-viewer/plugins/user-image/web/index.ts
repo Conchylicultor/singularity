@@ -7,6 +7,6 @@ export default {
   name: "JSONL Viewer: User image renderer",
   description: "Renders inline image thumbnails for user-image events.",
   contributions: [
-    JsonlViewer.EventRenderer({ kind: "user-image", component: UserImageRow }),
+    JsonlViewer.EventRenderer({ match: "user-image", component: UserImageRow }),
   ],
 } satisfies PluginDefinition;

@@ -10,7 +10,7 @@ export default {
   name: "JSONL Viewer: Assistant text renderer",
   description: "Renders assistant text events in the JSONL viewer, with optional markdown rendering.",
   contributions: [
-    JsonlViewer.EventRenderer({ kind: "assistant-text", component: AssistantTextRow }),
+    JsonlViewer.EventRenderer({ match: "assistant-text", component: AssistantTextRow }),
     JsonlViewer.RowAction({ id: "stop-reason", component: StopReasonAction }),
     JsonlViewer.RowAction({ id: "markdown-toggle", component: MarkdownToggleAction }),
     JsonlViewer.RowAction({ id: "copy-assistant-text", component: CopyAssistantTextAction }),

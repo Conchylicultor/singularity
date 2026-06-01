@@ -2,14 +2,6 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 import { JsonlViewer } from "../slots";
 import { RowMarkdownProvider } from "./row-markdown-context";
 
-function UnknownEventRow({ event }: { event: JsonlEvent }) {
-  return (
-    <div className="px-3 py-1.5 text-xs text-muted-foreground font-mono">
-      <span className="text-yellow-500">Unhandled {event.kind} event.</span>
-    </div>
-  );
-}
-
 function HoverActions({ event }: { event: JsonlEvent }) {
   const actions = JsonlViewer.RowAction.useContributions();
   if (actions.length === 0) return null;
@@ -23,16 +15,10 @@ function HoverActions({ event }: { event: JsonlEvent }) {
 }
 
 export function EventRow({ event, index }: { event: JsonlEvent; index: number }) {
-  const renderers = JsonlViewer.EventRenderer.useContributions();
-  const match = renderers.find((c) => c.kind === event.kind);
   return (
     <RowMarkdownProvider>
       <div className="group/row relative" data-event-index={index}>
-        {match ? (
-          <match.component event={event} />
-        ) : (
-          <UnknownEventRow event={event} />
-        )}
+        <JsonlViewer.EventRenderer.Dispatch event={event} />
         <HoverActions event={event} />
       </div>
     </RowMarkdownProvider>

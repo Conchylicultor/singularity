@@ -646,9 +646,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `holdAndExit`
         - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
           - Web:
-            - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.Overlay`
+            - Slots: `JsonlViewer.EventRenderer`
             - Contributes: `JsonlViewer.RowAction` "timestamp" → `TimestampAction`, `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
-            - Exports: Types: `EventRendererContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
+            - Exports: Types: `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
           - Cross-plugin:
             - Slot contributors: `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
           - Server:
@@ -668,7 +668,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Slots: `JsonlViewerAttachment.Renderer`
                 - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
-                - Exports: Types: `AttachmentRendererContribution`; Values: `JsonlViewerAttachment`
+                - Exports: Values: `JsonlViewerAttachment`
               - Cross-plugin:
                 - Slot contributors: `command-permissions`, `deferred-tools-delta`, `nested-memory`, `skill-listing`, `task-reminder`
               - Core:
@@ -1517,7 +1517,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `ShortcutDescriptor`; Values: `defineShortcut`, `formatShortcutLabel`, `Shortcuts`
     - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
       - Web:
-        - Exports: Types: `RenderSlot`, `RenderSlotConfig`, `SlotItemMiddleware`, `SlotListMiddleware`; Values: `defineRenderSlot`, `registerSlotItemMiddleware`, `registerSlotListMiddleware`, `RenderSlotSubIdContext`
+        - Exports: Types: `DispatchContribution`, `DispatchSlot`, `DispatchSlotConfig`, `RenderSlot`, `RenderSlotConfig`, `SlotItemMiddleware`, `SlotListMiddleware`; Values: `defineDispatchSlot`, `defineRenderSlot`, `registerSlotItemMiddleware`, `registerSlotListMiddleware`, `RenderSlotSubIdContext`
     - **`sortable-list`** — Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components.
       - Web:
         - Exports: Types: `SortableItemProps`, `SortableItemState`, `SortableListProps`; Values: `SortableItem`, `SortableList`

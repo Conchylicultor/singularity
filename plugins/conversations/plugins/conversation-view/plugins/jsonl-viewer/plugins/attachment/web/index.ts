@@ -3,7 +3,6 @@ import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/pl
 import { AttachmentRow } from "./components/attachment-row";
 
 export { JsonlViewerAttachment } from "./slots";
-export type { AttachmentRendererContribution } from "./slots";
 
 export default {
   id: "conversation-jsonl-viewer-attachment",
@@ -12,6 +11,6 @@ export default {
   description:
     "Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.",
   contributions: [
-    JsonlViewer.EventRenderer({ kind: "attachment", component: AttachmentRow }),
+    JsonlViewer.EventRenderer({ match: "attachment", component: AttachmentRow }),
   ],
 } satisfies PluginDefinition;

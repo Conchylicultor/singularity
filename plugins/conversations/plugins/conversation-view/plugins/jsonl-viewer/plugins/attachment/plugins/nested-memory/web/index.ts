@@ -10,7 +10,7 @@ export default {
     "Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.",
   contributions: [
     JsonlViewerAttachment.Renderer({
-      subtype: "nested_memory",
+      match: "nested_memory",
       component: NestedMemoryAttachmentView,
     }),
   ],

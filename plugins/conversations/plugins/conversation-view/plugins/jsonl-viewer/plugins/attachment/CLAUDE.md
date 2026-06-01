@@ -8,7 +8,7 @@
 - Web:
   - Slots: `JsonlViewerAttachment.Renderer`
   - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
-  - Exports: Types: `AttachmentRendererContribution`; Values: `JsonlViewerAttachment`
+  - Exports: Values: `JsonlViewerAttachment`
 - Cross-plugin:
   - Slot contributors: `command-permissions`, `deferred-tools-delta`, `nested-memory`, `skill-listing`, `task-reminder`
 - Core:

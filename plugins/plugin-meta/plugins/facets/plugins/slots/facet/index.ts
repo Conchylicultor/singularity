@@ -51,9 +51,15 @@ export default createFacet<SlotDef[]>({
 
     const src = readIfExists(join(ctx.dir, "web", "slots.ts"));
     if (src) {
+      const stripped = stripTypes(src);
       slots.push(...parseDefineGroup(
-        stripTypes(src),
+        stripped,
         "defineSlot",
+        (memberName, slotId, groupName) => ({ memberName, slotId, groupName }),
+      ));
+      slots.push(...parseDefineGroup(
+        stripped,
+        "defineDispatchSlot",
         (memberName, slotId, groupName) => ({ memberName, slotId, groupName }),
       ));
     }

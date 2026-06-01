@@ -8,6 +8,6 @@ export default {
   description:
     "Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.",
   contributions: [
-    JsonlViewerTool.Renderer({ name: "Bash", component: BashToolView }),
+    JsonlViewerTool.Renderer({ match: "Bash", component: BashToolView }),
   ],
 } satisfies PluginDefinition;

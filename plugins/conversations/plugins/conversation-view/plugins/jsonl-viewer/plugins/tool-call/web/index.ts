@@ -14,7 +14,7 @@ export default {
   description:
     "Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.",
   contributions: [
-    JsonlViewer.EventRenderer({ kind: "tool-call", component: ToolCallRow }),
+    JsonlViewer.EventRenderer({ match: "tool-call", component: ToolCallRow }),
     JsonlViewer.RowAction({ id: "copy-tool-result", component: CopyToolResultAction }),
   ],
 } satisfies PluginDefinition;

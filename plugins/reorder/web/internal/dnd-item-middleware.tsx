@@ -14,6 +14,7 @@ export function ReorderItemMiddleware({
 }) {
   const editMode = useEditMode();
   const ctx = useContext(ReorderAreaContext);
+  if (!ctx) return <>{children}</>;
 
   const key = contributionKey(contribution);
   if (!key) return <>{children}</>;
@@ -31,7 +32,7 @@ export function ReorderItemMiddleware({
   return (
     <SortableReorderItem
       itemKey={key}
-      storageId={ctx?.storageId ?? ""}
+      storageId={ctx.storageId}
       editMode={editMode}
       label={label}
       wrapperClassName={wrapperClassName}

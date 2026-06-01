@@ -10,7 +10,7 @@ export default {
     "Renders task-reminder attachment events showing periodic task list injections.",
   contributions: [
     JsonlViewerAttachment.Renderer({
-      subtype: "task_reminder",
+      match: "task_reminder",
       component: TaskReminderAttachmentView,
     }),
   ],

@@ -8,6 +8,6 @@ export default {
   description:
     "Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.",
   contributions: [
-    JsonlViewerTool.Renderer({ name: "Read", component: ReadToolView }),
+    JsonlViewerTool.Renderer({ match: "Read", component: ReadToolView }),
   ],
 } satisfies PluginDefinition;

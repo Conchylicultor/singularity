@@ -8,7 +8,7 @@ export default {
   name: "JSONL Viewer: Edit tool renderer",
   description: "Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.",
   contributions: [
-    JsonlViewerTool.Renderer({ name: "Edit", component: EditView }),
-    JsonlViewerTool.Renderer({ name: "MultiEdit", component: MultiEditView }),
+    JsonlViewerTool.Renderer({ match: "Edit", component: EditView }),
+    JsonlViewerTool.Renderer({ match: "MultiEdit", component: MultiEditView }),
   ],
 } satisfies PluginDefinition;

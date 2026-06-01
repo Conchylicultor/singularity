@@ -10,7 +10,7 @@ export default {
     "Renders skill-listing attachment events showing skills available in the current session.",
   contributions: [
     JsonlViewerAttachment.Renderer({
-      subtype: "skill_listing",
+      match: "skill_listing",
       component: SkillListingView,
     }),
   ],
