@@ -20,10 +20,9 @@ export function FilePath({ filePath }: FilePathProps) {
   const openPane = useOpenPane();
 
   if (!conversation) return null;
+  if (!filePath) return null;
 
   const relativePath = toRelativePath(filePath, conversation.attemptId);
-
-  if (!filePath) return null;
 
   const openFile = (e: React.MouseEvent) => {
     e.stopPropagation();

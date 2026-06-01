@@ -9,7 +9,7 @@ import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugi
 type WriteInput = { file_path: string; content: string };
 
 export function WriteToolView({ event }: ToolRendererProps) {
-  const { file_path, content } = event.input as WriteInput;
+  const { file_path = "", content = "" } = (event.input ?? {}) as Partial<WriteInput>;
 
   return (
     <ToolCallCard event={event} summary={<FilePath filePath={file_path} />}>

@@ -45,7 +45,7 @@ function LineRangeBadge({
 }
 
 export function ReadToolView({ event }: ToolRendererProps) {
-  const { file_path, offset, limit } = event.input as ReadInput;
+  const { file_path = "", offset, limit } = (event.input ?? {}) as Partial<ReadInput>;
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
 

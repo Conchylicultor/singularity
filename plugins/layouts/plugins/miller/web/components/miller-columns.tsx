@@ -73,11 +73,20 @@ export function MillerColumns() {
                 >
                   {(state) => (
                     <PaneInstanceContext.Provider value={entry.instanceId}>
-                      <Column
-                        entry={entry}
-                        isLast={isLast}
-                        dragHandleProps={state.handleProps}
-                      />
+                      {/* Per-column boundary: a crash inside one pane is
+                          contained to that column; sibling panes survive.
+                          The outer boundary remains as a backstop for the
+                          row scaffolding (SortableList, drag). */}
+                      <PluginErrorBoundary
+                        slot="layouts.miller"
+                        label={entry.pane.id}
+                      >
+                        <Column
+                          entry={entry}
+                          isLast={isLast}
+                          dragHandleProps={state.handleProps}
+                        />
+                      </PluginErrorBoundary>
                     </PaneInstanceContext.Provider>
                   )}
                 </SortableItem>
