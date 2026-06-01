@@ -36,10 +36,32 @@ export function LaunchFixButton({
       placeholder="Extra context (optional) — e.g. what you were doing, expected behaviour…"
       align="end"
       disabled={disabled}
-      getRequest={(userText) => ({
-        taskId: taskId ?? undefined,
-        prompt: userText.trim() || undefined,
-      })}
+      getRequest={(userText) => {
+        const parts: string[] = [];
+        parts.push(`## Crash report\n`);
+        if (report.slot || report.label) {
+          parts.push(
+            `**Location:** ${[report.slot, report.label].filter(Boolean).join(" / ")}`,
+          );
+        }
+        parts.push(`**Error:** ${report.error.message}`);
+        if (report.error.stack) {
+          parts.push(`\n\`\`\`\n${report.error.stack}\n\`\`\``);
+        }
+        if (report.componentStack) {
+          parts.push(
+            `\n**Component stack:**\n\`\`\`\n${report.componentStack.trim()}\n\`\`\``,
+          );
+        }
+        const extra = userText.trim();
+        if (extra) {
+          parts.push(`\n## Context\n\n${extra}`);
+        }
+        return {
+          taskId: taskId ?? undefined,
+          prompt: parts.join("\n"),
+        };
+      }}
     />
   );
 }
