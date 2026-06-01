@@ -139,7 +139,7 @@ function EditorShell({
       className={cn(
         "w-full min-w-0 rounded-md border transition-colors",
         "border-input",
-        "has-[:focus-visible]:border-ring has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
+        "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
         disabled
           ? "bg-input/50 dark:bg-input/80"
           : "bg-transparent dark:bg-input/30",
