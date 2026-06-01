@@ -27,9 +27,14 @@ export async function resolveAttachmentRefs(text: string): Promise<{
       if (att) pathById.set(id, att.diskPath);
     }),
   );
+  // Trailing space is load-bearing: two adjacent image nodes serialize as
+  // `![](url1)![](url2)` with no separator. Without the space they'd fuse into
+  // `@path1@path2`, which Claude's `@`-reference expansion (and our transcript
+  // parser) both read as a single bogus path — so only the first image, or
+  // neither, gets attached. The space keeps each `@<path>` a distinct token.
   const rewritten = rewriteAttachmentMarkdown(text, (id) => {
     const path = pathById.get(id);
-    return path ? `@${path}` : "";
+    return path ? `@${path} ` : "";
   });
   return { text: rewritten, attachmentIds: Array.from(pathById.keys()) };
 }

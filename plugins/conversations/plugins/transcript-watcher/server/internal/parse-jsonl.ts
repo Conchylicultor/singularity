@@ -79,7 +79,11 @@ async function pushTextWithImages(text: string, at: string, out: JsonlEvent[]): 
   // Local regex instance — the g flag stores match state in lastIndex, so a
   // shared module-level regex gets corrupted when concurrent async calls
   // (from the file watcher) interleave at await points.
-  const re = /@(\/\S+\.(?:png|jpg|jpeg|gif|webp|svg|bmp|tiff))/gi;
+  // `[^\s@]` (not `\S`) excludes `@` from the path body so two concatenated
+  // refs (`@path1.png@path2.png`, from legacy transcripts written before the
+  // attachment rewrite added separators) parse as two tokens instead of the
+  // greedy match fusing them into one non-existent path.
+  const re = /@(\/[^\s@]+\.(?:png|jpg|jpeg|gif|webp|svg|bmp|tiff))/gi;
 
   const segments: Segment[] = [];
   let last = 0;
