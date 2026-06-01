@@ -11,22 +11,10 @@ const WEB_INTERNAL = resolve(HERE, "../web/internal");
 const GENERATED_PATH = join(SERVER_INTERNAL, "icon-svg-map.generated.ts");
 const METADATA_PATH = join(WEB_INTERNAL, "icon-metadata.json");
 
-const CURATED_ALIASES: Record<string, string> = {
-  robot: "MdPrecisionManufacturing", bug: "MdBugReport", database: "MdStorage",
-  server: "MdDns", data: "MdDataObject", brain: "MdPsychology",
-  sparkle: "MdAutoAwesome", fire: "MdLocalFireDepartment", trending: "MdTrendingUp",
-  music: "MdMusicNote", video: "MdVideocam", emoji: "MdEmojiObjects",
-  doc: "MdDescription", grid: "MdGridView", table: "MdTableChart",
-  calendar: "MdCalendarToday", clock: "MdAccessTime", account: "MdManageAccounts",
-  globe: "MdLanguage", play: "MdPlayArrow", chart: "MdBarChart",
-  pie: "MdPieChart", currency: "MdAttachMoney",
-};
-
 function computeInputsHash(metadataContent: string, reactIconsVersion: string): string {
   const h = createHash("sha256");
   h.update(metadataContent);
   h.update(reactIconsVersion);
-  h.update(JSON.stringify(CURATED_ALIASES));
   return h.digest("hex").slice(0, 16);
 }
 

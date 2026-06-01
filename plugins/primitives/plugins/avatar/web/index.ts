@@ -12,7 +12,6 @@ export {
   DEFAULT_AGENT_AVATAR,
   extractSvgNodes,
   loadFullIconSet,
-  type AvatarIconCategory,
   type FullIconSet,
   type FullIconEntry,
   type FullIconCategory,

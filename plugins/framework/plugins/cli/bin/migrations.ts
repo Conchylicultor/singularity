@@ -549,8 +549,19 @@ export function renameMigrations(migrationsDir: string): RenameResult {
 
     const sqlPath = join(migrationsDir, file);
     const sql = readFileSync(sqlPath, "utf8");
-    const hash = createHash("sha256").update(sql).digest("hex").slice(0, 8);
     const ts = timestampNow();
+    // Fold the unique timestamp and source filename into the hash input so two
+    // migrations with identical bodies can't collide on the same 8-char hash.
+    // Every `--custom` migration is born with the same placeholder body, so a
+    // content-only hash made them all share one value (`b3cc75fa`); the runner
+    // keys applied-state by this hash (PRIMARY KEY) and silently skips the
+    // later migration. `ts` plus the drizzle source filename (unique within a
+    // batch) guarantees a distinct hash per migration.
+    const hash = createHash("sha256")
+      .update(`${ts}\n${file}\n`)
+      .update(sql)
+      .digest("hex")
+      .slice(0, 8);
     const newName = `${ts}_${hash}__${name}.sql`;
 
     renameSync(sqlPath, join(migrationsDir, newName));

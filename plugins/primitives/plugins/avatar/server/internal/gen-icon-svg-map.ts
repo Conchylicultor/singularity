@@ -15,17 +15,6 @@ const WEB_INTERNAL = resolve(HERE, "../../web/internal");
 const METADATA_PATH = join(WEB_INTERNAL, "icon-metadata.json");
 const OUTPUT_PATH = join(HERE, "icon-svg-map.generated.ts");
 
-const CURATED_ALIASES: Record<string, string> = {
-  robot: "MdPrecisionManufacturing", bug: "MdBugReport", database: "MdStorage",
-  server: "MdDns", data: "MdDataObject", brain: "MdPsychology",
-  sparkle: "MdAutoAwesome", fire: "MdLocalFireDepartment", trending: "MdTrendingUp",
-  music: "MdMusicNote", video: "MdVideocam", emoji: "MdEmojiObjects",
-  doc: "MdDescription", grid: "MdGridView", table: "MdTableChart",
-  calendar: "MdCalendarToday", clock: "MdAccessTime", account: "MdManageAccounts",
-  globe: "MdLanguage", play: "MdPlayArrow", chart: "MdBarChart",
-  pie: "MdPieChart", currency: "MdAttachMoney",
-};
-
 interface SvgNode {
   tag: string;
   attr: Record<string, string>;
@@ -57,7 +46,6 @@ function computeInputsHash(metadataContent: string, reactIconsVersion: string): 
   const h = createHash("sha256");
   h.update(metadataContent);
   h.update(reactIconsVersion);
-  h.update(JSON.stringify(CURATED_ALIASES));
   return h.digest("hex").slice(0, 16);
 }
 
@@ -82,18 +70,6 @@ async function main() {
     const nodes = extractChildren(el.props.children);
     if (nodes.length > 0) {
       map[mdName] = nodes;
-      count++;
-    }
-  }
-
-  for (const [alias, reactKey] of Object.entries(CURATED_ALIASES)) {
-    if (map[alias]) continue;
-    const Icon = mdModule[reactKey] as ((props: Record<string, never>) => { props: { children: unknown } }) | undefined;
-    if (!Icon) continue;
-    const el = Icon({});
-    const nodes = extractChildren(el.props.children);
-    if (nodes.length > 0) {
-      map[alias] = nodes;
       count++;
     }
   }

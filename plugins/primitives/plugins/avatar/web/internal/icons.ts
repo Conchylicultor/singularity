@@ -40,7 +40,7 @@ function extractChildren(children: unknown): SvgNode[] {
 // ---------------------------------------------------------------------------
 
 export const DEFAULT_AGENT_AVATAR: { icon: string; color: string; svgNodes: SvgNode[] } = {
-  icon: "robot",
+  icon: "precision_manufacturing",
   color: "violet",
   svgNodes: [{
     tag: "path",
@@ -59,8 +59,6 @@ export const CATEGORY_LABELS: Record<string, string> = {
   hardware: "Hardware", image: "Images", maps: "Maps", navigation: "Navigation",
   notification: "Notifications", social: "Social", toggle: "Toggle",
 };
-
-export interface AvatarIconCategory { label: string; keys: string[] }
 
 // ---------------------------------------------------------------------------
 // Full icon set — dynamically loaded on demand (react-icons/md + metadata JSON).
