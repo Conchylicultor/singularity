@@ -128,15 +128,85 @@ function resolvePaneStatus(
 // unambiguous even though pane titles can contain arbitrary characters.
 const SEP = "\t";
 
+// pasteTurn() submit-verification poll. The CLI is an async (Ink/React) TUI:
+// when tmux writes the bracketed paste and Enter into the PTY in one read
+// chunk, the paste handler schedules a React state update but the trailing
+// Enter is processed in the SAME tick — before the paste commits to state — so
+// it fires against an empty draft and submits nothing (the user then has to
+// press Enter manually). A fixed inter-key delay only papers over this: under
+// concurrent load the render can lag past any constant.
+//
+// Instead we verify against the rendered input box, the same self-healing shape
+// answerPrompt() uses for Escape. The Claude idle input is a `❯` prompt line
+// bounded by full-width `─` rules; its draft content is everything between the
+// prompt glyph and the next rule. We (1) poll until that draft is non-empty —
+// proof the paste committed — then (2) send Enter and poll until the draft
+// clears again, RE-SENDING Enter on SUBMIT_ENTER_RETRY_MS if it lingers (a
+// dropped/early keystroke). A second Enter on an already-empty box is a no-op,
+// so retry is safe. Timeouts are generous because many concurrent agents slow
+// tmux/Ink.
+const SUBMIT_POLL_INTERVAL_MS = 75;
+const SUBMIT_ENTER_RETRY_MS = 500;
+const PASTE_COMMIT_TIMEOUT_MS = 5_000;
+const SUBMIT_TIMEOUT_MS = 5_000;
+// Used only when the input box can't be parsed (unrecognized CLI render): the
+// proven fixed delay between a committed paste and Enter, the pre-chaining
+// mitigation. Strictly better than firing Enter in the same chunk as the paste.
+const FALLBACK_SUBMIT_DELAY_MS = 150;
+
+const RULE_RE = /^─{10,}$/;
+const PROMPT_GLYPH = "❯";
+
 /**
- * Paste `text` into the pane's idle input and submit it with Enter, in one
- * atomic tmux invocation.
- *
- * `paste-buffer -p` wraps the content in bracketed-paste markers
- * (\e[200~/\e[201~). Chaining paste-buffer and send-keys Enter with ";" makes
- * tmux process them in a single event-loop iteration — back-to-back with no
- * inter-process gap — so Enter cannot arrive before the CLI exits paste mode
- * and be swallowed as a literal newline.
+ * Extract the current draft text from the pane's idle input box, or null when
+ * the box can't be located (unrecognized render). The box is the `❯` prompt
+ * line plus any continuation lines, up to the next full-width `─` rule below
+ * it. We anchor on the bottom-most `❯` (always the live input prompt; transcript
+ * rules/glyphs sit above it) and strip the glyph + surrounding whitespace, so
+ * an empty box returns "" and a box holding the pasted draft returns non-empty.
+ */
+async function captureInputDraft(conversationId: string): Promise<string | null> {
+  const proc = Bun.spawn(
+    [TMUX, "capture-pane", "-p", "-S", "-50", "-t", conversationId],
+    { stdout: "pipe", stderr: "pipe" },
+  );
+  const stdout = await new Response(proc.stdout).text();
+  await proc.exited;
+  const lines = stdout.split("\n");
+  let promptIdx = -1;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i]!.includes(PROMPT_GLYPH)) {
+      promptIdx = i;
+      break;
+    }
+  }
+  if (promptIdx === -1) return null;
+  let end = lines.length;
+  for (let i = promptIdx + 1; i < lines.length; i++) {
+    if (RULE_RE.test(lines[i]!.trim())) {
+      end = i;
+      break;
+    }
+  }
+  return lines
+    .slice(promptIdx, end)
+    .join("\n")
+    .split(PROMPT_GLYPH)
+    .join("")
+    .trim();
+}
+
+async function sendEnter(conversationId: string): Promise<void> {
+  await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Enter"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  }).exited;
+}
+
+/**
+ * Paste `text` into the pane's idle input and submit it, verifying submission
+ * against the rendered input box rather than firing Enter blindly (see the
+ * SUBMIT_* comment block for the async-TUI race this avoids).
  *
  * Shared verbatim by send() and answerPrompt() so both submit identically.
  * The pane must already be at the idle input prompt (callers clear copy mode
@@ -156,22 +226,71 @@ async function pasteTurn(conversationId: string, text: string): Promise<void> {
       `tmux load-buffer for ${conversationId} failed (exit ${loadExit}): ${stderr.trim() || "<no stderr>"}`,
     );
   }
-  const pasteAndEnter = Bun.spawn(
-    [
-      TMUX,
-      "paste-buffer", "-d", "-p", "-b", bufferName, "-t", conversationId,
-      ";",
-      "send-keys", "-t", conversationId, "Enter",
-    ],
+  const paste = Bun.spawn(
+    [TMUX, "paste-buffer", "-d", "-p", "-b", bufferName, "-t", conversationId],
     { stdout: "pipe", stderr: "pipe" },
   );
-  const exitCode = await pasteAndEnter.exited;
-  if (exitCode !== 0) {
-    const stderr = await new Response(pasteAndEnter.stderr).text();
+  const pasteExit = await paste.exited;
+  if (pasteExit !== 0) {
+    const stderr = await new Response(paste.stderr).text();
     throw new Error(
-      `tmux paste+enter for ${conversationId} failed (exit ${exitCode}): ${stderr.trim() || "<no stderr>"}`,
+      `tmux paste-buffer for ${conversationId} failed (exit ${pasteExit}): ${stderr.trim() || "<no stderr>"}`,
     );
   }
+
+  // Phase 1: wait until the paste commits to the input box (draft non-empty).
+  // Sending Enter before this either no-ops (paste not yet in state) or, if the
+  // CLI is still in paste mode, appends a literal newline to the draft.
+  const commitDeadline = Date.now() + PASTE_COMMIT_TIMEOUT_MS;
+  let committed = false;
+  let everObserved = false;
+  for (;;) {
+    const draft = await captureInputDraft(conversationId);
+    if (draft !== null) {
+      everObserved = true;
+      if (draft.length > 0) {
+        committed = true;
+        break;
+      }
+    }
+    if (Date.now() + SUBMIT_POLL_INTERVAL_MS >= commitDeadline) break;
+    await Bun.sleep(SUBMIT_POLL_INTERVAL_MS);
+  }
+
+  if (!committed) {
+    // Either the box render is unrecognized (never observed) or the paste never
+    // surfaced. Fall back to the proven fixed-delay submit — strictly better
+    // than chaining Enter into the same PTY chunk as the paste.
+    if (everObserved) {
+      void recordCrash({
+        source: "server-caught",
+        errorType: "TmuxSubmitError",
+        message: `tmux pasteTurn for ${conversationId}: paste did not surface in input box within ${PASTE_COMMIT_TIMEOUT_MS}ms; using fixed-delay fallback`,
+        label: "tmux-runtime.pasteTurn",
+      });
+    }
+    await Bun.sleep(FALLBACK_SUBMIT_DELAY_MS);
+    await sendEnter(conversationId);
+    return;
+  }
+
+  // Phase 2: submit and verify. Re-send Enter until the box clears (a cleared
+  // box, after a confirmed non-empty draft, is a real submission).
+  const submitDeadline = Date.now() + SUBMIT_TIMEOUT_MS;
+  let nextEnterAt = 0;
+  for (;;) {
+    if (Date.now() >= nextEnterAt) {
+      await sendEnter(conversationId);
+      nextEnterAt = Date.now() + SUBMIT_ENTER_RETRY_MS;
+    }
+    const draft = await captureInputDraft(conversationId);
+    if (draft === "") return; // box cleared → submitted
+    if (Date.now() + SUBMIT_POLL_INTERVAL_MS >= submitDeadline) break;
+    await Bun.sleep(SUBMIT_POLL_INTERVAL_MS);
+  }
+  throw new Error(
+    `tmux pasteTurn for ${conversationId}: draft did not clear within ${SUBMIT_TIMEOUT_MS}ms despite repeated Enter`,
+  );
 }
 
 async function listPanes(): Promise<
