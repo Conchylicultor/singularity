@@ -750,6 +750,13 @@
       "tag": "20260601_075128_f92210eb__conversation_model_default_opus_4_8",
       "hash": "f92210eb",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780347600000,
+      "tag": "20260601_130000_b4c0f111__backfill_conversation_model_aliases",
+      "hash": "b4c0f111",
+      "breakpoints": true
     }
   ]
 }
