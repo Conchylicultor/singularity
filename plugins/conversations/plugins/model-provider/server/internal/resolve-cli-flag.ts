@@ -5,6 +5,7 @@ import { modelProviderConfig } from "../../shared/config";
 const OPUS_CLI_FLAGS: Record<string, string> = {
   "4-6": "claude-opus-4-6",
   "4-7": "claude-opus-4-7",
+  "4-8": "claude-opus-4-8",
 };
 
 export function resolveCliFlag(model: ConversationModel): string {

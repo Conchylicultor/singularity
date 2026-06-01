@@ -9,6 +9,7 @@ export const modelProviderConfig = defineConfig({
       options: [
         { value: "4-6", label: "Opus 4.6" },
         { value: "4-7", label: "Opus 4.7" },
+        { value: "4-8", label: "Opus 4.8" },
       ],
       default: "4-6",
     }),
