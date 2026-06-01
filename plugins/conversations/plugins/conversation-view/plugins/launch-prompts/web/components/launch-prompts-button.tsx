@@ -10,12 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
+import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { launchPromptsConfig } from "../../shared/config";
-
-const FAMILY_CHIP: Record<"opus" | "sonnet", string> = {
-  opus: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
-  sonnet: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-};
 
 export function LaunchPromptsButton({
   conversation,
@@ -75,7 +71,7 @@ export function LaunchPromptsButton({
               const meta = MODEL_REGISTRY[normalizeModel(item.model)];
               return (
                 <span
-                  className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${FAMILY_CHIP[meta.family]}`}
+                  className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${familyClass(meta.family)}`}
                 >
                   {meta.label}
                 </span>

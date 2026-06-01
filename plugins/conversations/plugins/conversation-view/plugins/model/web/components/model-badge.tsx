@@ -1,11 +1,7 @@
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
-
-const FAMILY_CLASSES: Record<"opus" | "sonnet", string> = {
-  opus: "bg-muted text-muted-foreground",
-  sonnet: "bg-muted text-muted-foreground",
-};
+import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 
 export function ModelBadge() {
   const { convId } = conversationPane.useParams();
@@ -15,7 +11,7 @@ export function ModelBadge() {
   const meta = MODEL_REGISTRY[model];
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${FAMILY_CLASSES[meta.family]}`}
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${familyClass(meta.family)}`}
     >
       {meta.label}
     </span>

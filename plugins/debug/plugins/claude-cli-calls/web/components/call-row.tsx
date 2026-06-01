@@ -1,17 +1,14 @@
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/core";
+import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";
+import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { cn } from "@/lib/utils";
 
-const MODEL_STYLES: Record<ClaudeCliCall["model"], string> = {
-  haiku: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
-  sonnet: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200",
-  opus: "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-200",
-};
-
 export function CallRow({ call }: { call: ClaudeCliCall }) {
   const { open, triggerProps, contentId } = useCollapsible();
+  const modelMeta = MODEL_REGISTRY[call.model];
   const isError = call.error !== null;
   const previewText = isError
     ? call.error ?? "<error>"
@@ -28,8 +25,8 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className={cn("rounded px-1.5 py-0.5 font-medium", MODEL_STYLES[call.model])}>
-              {call.model}
+            <span className={cn("rounded px-1.5 py-0.5 font-medium", familyClass(modelMeta.family))}>
+              {modelMeta.label}
             </span>
             <span className="rounded bg-muted px-1.5 py-0.5 font-mono">{call.sourceName}</span>
             <SourceContextChip context={call.sourceContext} />

@@ -35,7 +35,7 @@ current payloads are small and parse cost is negligible.
 - Description: Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
 - Load-bearing: yes
 - Core:
-  - Exports: Types: `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `resourceDescriptor`
+  - Exports: Types: `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `resourceDescriptor`, `tolerantEnum`
 - Web:
   - Exports: Types: `ChannelStatuses`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`; Values: `centralResourceDescriptor`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useNotificationsChannelStatuses`, `useNotificationsStatus`, `useResource`
 

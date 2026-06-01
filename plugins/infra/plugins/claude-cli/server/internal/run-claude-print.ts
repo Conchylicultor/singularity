@@ -1,5 +1,10 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { CLAUDE as CLAUDE_BIN } from "@plugins/infra/plugins/paths/server";
+import {
+  cliFlagFor,
+  currentModelForTier,
+  type ModelTier,
+} from "@plugins/conversations/plugins/model-provider/core";
 import { recordClaudeCliCall } from "./record-call";
 
 // Strip inherited Claude Code env vars so one-shot `claude --print` calls
@@ -10,16 +15,8 @@ for (const [k, v] of Object.entries(process.env)) {
   if (v !== undefined && !k.startsWith("CLAUDE_CODE_")) cleanEnv[k] = v;
 }
 
-const MODEL_IDS: Record<ClaudePrintModel, string> = {
-  haiku: "claude-haiku-4-5",
-  sonnet: "claude-sonnet-4-6",
-  opus: "claude-opus-4-7",
-};
-
-export type ClaudePrintModel = "haiku" | "sonnet" | "opus";
-
 export interface RunClaudePrintInput {
-  model: ClaudePrintModel;
+  tier: ModelTier;
   prompt: string;
   system?: string;
   timeoutMs?: number;
@@ -40,6 +37,8 @@ export class ClaudeCliError extends Error {
 
 export async function runClaudePrint(input: RunClaudePrintInput): Promise<string> {
   const timeoutMs = input.timeoutMs ?? 15_000;
+  const resolvedModel = currentModelForTier(input.tier);
+  const cliFlag = cliFlagFor(resolvedModel);
   // `--tools ""` disables every tool so the model can't go off and plan/edit;
   // `--system-prompt` replaces (not appends) the default system prompt so the
   // project's CLAUDE.md context doesn't leak in and bias output away from the
@@ -48,7 +47,7 @@ export async function runClaudePrint(input: RunClaudePrintInput): Promise<string
   const args = [
     "--print",
     "--model",
-    MODEL_IDS[input.model],
+    cliFlag,
     "--tools",
     "",
     "--no-session-persistence",
@@ -101,7 +100,7 @@ export async function runClaudePrint(input: RunClaudePrintInput): Promise<string
       });
     }
     void recordClaudeCliCall({
-      model: input.model,
+      model: resolvedModel,
       sourceName: input.source.name,
       sourceContext: input.source.context ?? null,
       prompt: input.prompt,

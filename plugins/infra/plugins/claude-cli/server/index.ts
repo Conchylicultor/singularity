@@ -3,7 +3,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { claudeCliCallsResource } from "./internal/resources";
 
 export { runClaudePrint, ClaudeCliError } from "./internal/run-claude-print";
-export type { ClaudePrintModel, RunClaudePrintInput } from "./internal/run-claude-print";
+export type { RunClaudePrintInput } from "./internal/run-claude-print";
 export { _claudeCliCalls } from "./internal/tables";
 export { claudeCliCallsResource } from "./internal/resources";
 

@@ -4,7 +4,9 @@ import { objectField } from "@plugins/config_v2/plugins/fields/plugins/object/co
 import { boolField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
 import { DEFAULT_MODEL, MODEL_REGISTRY } from "../core";
 
-const modelEntries = Object.entries(MODEL_REGISTRY);
+// Print-only models (e.g. haiku) are valid persisted ids but are not session-selectable,
+// so they must never appear in the launch dropdown or config options.
+const modelEntries = Object.entries(MODEL_REGISTRY).filter(([, m]) => !m.printOnly);
 
 export const modelProviderConfig = defineConfig({
   fields: {

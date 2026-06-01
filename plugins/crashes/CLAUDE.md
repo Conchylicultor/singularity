@@ -14,7 +14,7 @@
   - Exports: Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `recordCrash`
   - Resources: `crashes` (push)
 - Cross-plugin:
-  - Imported by: `conversations`, `runtime-tmux`
+  - Imported by: `conversations`, `model-provider`, `runtime-tmux`
 - Sub-plugins:
   - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
   - **`mutation-errors`** — Warning toast and persistent notification for unhandled TanStack Query mutation errors.

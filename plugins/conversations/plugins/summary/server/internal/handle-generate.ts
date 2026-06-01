@@ -7,6 +7,7 @@ import { getConversation } from "@plugins/tasks-core/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { generateConversationSummary } from "../../shared/endpoints";
 import { buildSummarizePayload } from "./prompt";
+import { SUMMARY_MODEL_ID } from "./mcp-tools";
 
 // Cap how long the summarising conversation may live before we reap it.
 const CLEANUP_AFTER_MS = 5 * 60 * 1000;
@@ -31,7 +32,7 @@ export const handleGenerate = implement(generateConversationSummary, async ({ pa
 
   const conv = await createConversation({
     prompt: payload.prompt,
-    model: "sonnet-4-6",
+    model: SUMMARY_MODEL_ID,
     kind: "system",
     spawnedBy: "conversation-summary",
     attemptId: parent.attemptId,

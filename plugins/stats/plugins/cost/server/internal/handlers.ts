@@ -1,8 +1,11 @@
 import type { DailyUsage } from "ccusage/data-loader";
 import { canonicalModel, getBundleTiming, loadBundle, parseScope, type PerSession, type Scope } from "./load-usage";
+import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
 function modelFamily(canonical: string): string {
-  return canonical.split("-")[0] ?? canonical;
+  const meta = MODEL_REGISTRY[canonical as ConversationModel];
+  return meta ? meta.family : (canonical.split("-")[0] ?? canonical);
 }
 
 function filterDaily(

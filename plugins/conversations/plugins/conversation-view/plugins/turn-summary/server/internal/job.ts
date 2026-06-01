@@ -91,7 +91,7 @@ export const generateTurnSummaryJob = defineJob({
     let raw: string;
     try {
       raw = await runClaudePrint({
-        model: "haiku",
+        tier: "haiku",
         system: SYSTEM_PROMPT,
         prompt: buildPrompt(userText, assistantText),
         timeoutMs: HAIKU_TIMEOUT_MS,

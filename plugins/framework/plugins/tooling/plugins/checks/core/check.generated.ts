@@ -14,6 +14,7 @@ export interface CollectedEntry {
 
 export const checkEntries: CollectedEntry[] = [
   { pluginPath: "config_v2", hierarchyPath: "config_v2", loader: () => import("@plugins/config_v2/check"), dependsOn: [] },
+  { pluginPath: "conversations/plugins/model-provider", hierarchyPath: "conversations/model-provider", loader: () => import("@plugins/conversations/plugins/model-provider/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/boundaries", hierarchyPath: "framework/tooling/boundaries", loader: () => import("@plugins/framework/plugins/tooling/plugins/boundaries/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/allow-default-project", hierarchyPath: "framework/tooling/checks/allow-default-project", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/allow-default-project/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/barrel-stubs-in-sync", hierarchyPath: "framework/tooling/checks/barrel-stubs-in-sync", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/barrel-stubs-in-sync/check"), dependsOn: [] },

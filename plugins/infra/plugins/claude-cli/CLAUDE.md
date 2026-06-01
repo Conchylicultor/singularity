@@ -33,7 +33,7 @@ Throws `ClaudeCliError` on non-zero exit or timeout. Callers that need graceful 
 - Server:
   - Uses: `database.db`
   - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
-  - Exports: Types: `ClaudePrintModel`, `RunClaudePrintInput`; Values: `_claudeCliCalls`, `claudeCliCallsResource`, `ClaudeCliError`, `runClaudePrint`
+  - Exports: Types: `RunClaudePrintInput`; Values: `_claudeCliCalls`, `claudeCliCallsResource`, `ClaudeCliError`, `runClaudePrint`
   - Resources: `claude-cli-calls` (push)
 - Core:
   - Exports: Types: `ClaudeCliCall`; Values: `ClaudeCliCallSchema`, `claudeCliCallsResource`

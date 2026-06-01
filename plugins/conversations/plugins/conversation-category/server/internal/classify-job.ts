@@ -103,7 +103,7 @@ export const classifyConversationJob = defineJob({
     let raw: string;
     try {
       raw = await runClaudePrint({
-        model: "haiku",
+        tier: "haiku",
         system: buildSystemPrompt(categories),
         prompt: buildTranscriptDigest(turns),
         timeoutMs: HAIKU_TIMEOUT_MS,

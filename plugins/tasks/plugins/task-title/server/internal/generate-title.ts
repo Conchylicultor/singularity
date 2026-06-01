@@ -32,7 +32,7 @@ export async function generateTaskTitle(
   if (!description.trim()) return fallback;
   try {
     const out = await runClaudePrint({
-      model: "haiku",
+      tier: "haiku",
       prompt: buildPrompt(description),
       system: SYSTEM_PROMPT,
       timeoutMs: 30_000,

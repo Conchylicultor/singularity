@@ -898,14 +898,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `QueueData`, `QueueRankRow`; Values: `demoteQueue`, `promoteQueue`, `queueRanksResource`, `reorderQueue`, `rerankQueue`, `stepDownQueue`
     - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
       - Web:
-        - Contributes: `ConfigV2.WebRegister`
-        - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`
-        - Exports: Values: `useDefaultModel`, `useSetDefaultModel`, `useVisibleModels`
+        - Contributes: `ConfigV2.WebRegister`, `Core.Root` → `ModelCorruptionReporter`
+        - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `crashes.report`
+        - Exports: Values: `familyClass`, `useDefaultModel`, `useSetDefaultModel`, `useVisibleModels`
       - Server:
         - Uses: `config_v2.ConfigV2`
         - Exports: Values: `resolveCliFlag`
       - Core:
-        - Exports: Types: `ConversationModel`, `ModelMeta`; Values: `ConversationModelSchema`, `DEFAULT_MODEL`, `MODEL_REGISTRY`, `normalizeModel`
+        - Exports: Types: `ConversationModel`, `ModelMeta`, `ModelTier`; Values: `cliFlagFor`, `ConversationModelSchema`, `currentModelForTier`, `DEFAULT_MODEL`, `idForCliName`, `MODEL_REGISTRY`, `MODEL_TIERS`, `normalizeModel`, `registerModelCorruptionReporter`, `reportUnknownModel`
     - **`pane-restore`** — Saves and restores the miller pane chain per conversation using localStorage.
       - Web:
         - Exports: Values: `loadChainForConversation`
@@ -958,7 +958,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `recordCrash`
     - Resources: `crashes` (push)
   - Cross-plugin:
-    - Imported by: `conversations`, `runtime-tmux`
+    - Imported by: `conversations`, `model-provider`, `runtime-tmux`
   - Plugins:
     - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
       - Web:
@@ -1176,7 +1176,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`
         - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
-        - Exports: Types: `ClaudePrintModel`, `RunClaudePrintInput`; Values: `_claudeCliCalls`, `claudeCliCallsResource`, `ClaudeCliError`, `runClaudePrint`
+        - Exports: Types: `RunClaudePrintInput`; Values: `_claudeCliCalls`, `claudeCliCallsResource`, `ClaudeCliError`, `runClaudePrint`
         - Resources: `claude-cli-calls` (push)
       - Core:
         - Exports: Types: `ClaudeCliCall`; Values: `ClaudeCliCallSchema`, `claudeCliCallsResource`
@@ -1453,7 +1453,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `LaunchAgentPopoverProps`, `LaunchControlProps`, `LaunchRequest`; Values: `LaunchAgentPopover`, `LaunchControl`, `useLaunchConversation`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
       - Core:
-        - Exports: Types: `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `resourceDescriptor`
+        - Exports: Types: `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `resourceDescriptor`, `tolerantEnum`
       - Web:
         - Exports: Types: `ChannelStatuses`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`; Values: `centralResourceDescriptor`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useNotificationsChannelStatuses`, `useNotificationsStatus`, `useResource`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.

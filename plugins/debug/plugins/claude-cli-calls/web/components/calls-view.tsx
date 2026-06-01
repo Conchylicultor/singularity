@@ -3,9 +3,19 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { FilterChip, FilterGroup, useChipFilter } from "@plugins/primitives/plugins/filter-chips/web";
 import { claudeCliCallsResource } from "@plugins/infra/plugins/claude-cli/core";
 import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/core";
+import {
+  MODEL_TIERS,
+  MODEL_REGISTRY,
+  type ModelTier,
+} from "@plugins/conversations/plugins/model-provider/core";
 import { CallRow } from "./call-row";
 
-type ModelFilter = "all" | "haiku" | "sonnet" | "opus";
+type ModelFilter = "all" | ModelTier;
+
+function callMatchesTier(call: ClaudeCliCall, tier: ModelTier): boolean {
+  const meta = MODEL_REGISTRY[call.model as keyof typeof MODEL_REGISTRY];
+  return meta?.family === tier;
+}
 
 export function CallsView() {
   const result = useResource(claudeCliCallsResource);
@@ -27,7 +37,7 @@ export function CallsView() {
     () =>
       calls.filter(
         (c) =>
-          modelChip.matches(c.model as ModelFilter) &&
+          (modelChip.value === "all" || callMatchesTier(c, modelChip.value)) &&
           sourceChip.matches(c.sourceName),
       ),
     [calls, modelChip, sourceChip],
@@ -40,15 +50,15 @@ export function CallsView() {
           <FilterChip active={modelChip.value === "all"} onClick={() => modelChip.setValue("all")}>
             all
           </FilterChip>
-          <FilterChip active={modelChip.value === "haiku"} onClick={() => modelChip.setValue("haiku")}>
-            haiku
-          </FilterChip>
-          <FilterChip active={modelChip.value === "sonnet"} onClick={() => modelChip.setValue("sonnet")}>
-            sonnet
-          </FilterChip>
-          <FilterChip active={modelChip.value === "opus"} onClick={() => modelChip.setValue("opus")}>
-            opus
-          </FilterChip>
+          {MODEL_TIERS.map((tier) => (
+            <FilterChip
+              key={tier}
+              active={modelChip.value === tier}
+              onClick={() => modelChip.setValue(tier)}
+            >
+              {tier}
+            </FilterChip>
+          ))}
         </FilterGroup>
         {sources.length > 0 && (
           <FilterGroup label="Source">

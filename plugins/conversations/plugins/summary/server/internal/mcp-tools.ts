@@ -3,11 +3,14 @@ import { db } from "@plugins/database/server";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { readConversationTurns } from "@plugins/conversations/server";
 import { getConversation } from "@plugins/tasks-core/server";
+import { cliFlagFor } from "@plugins/conversations/plugins/model-provider/core";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import { _conversationSummaries } from "./tables";
 import { conversationSummariesResource } from "./resources";
 import { PhaseSchema } from "../../shared/resources";
 
-export const SUMMARY_MODEL = "claude-sonnet-4-6";
+export const SUMMARY_MODEL_ID: ConversationModel = "sonnet-4-6";
+export const SUMMARY_MODEL = cliFlagFor(SUMMARY_MODEL_ID);
 
 function newSummaryId(): string {
   return `summary-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;

@@ -6,6 +6,7 @@ import { db } from "@plugins/database/server";
 import { _conversations } from "@plugins/tasks-core/server";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
+import { idForCliName } from "@plugins/conversations/plugins/model-provider/core";
 
 const TTL_MS = 5 * 60_000;
 
@@ -309,9 +310,7 @@ async function aggregateOneFile(o: AggOpts): Promise<PerSession | null> {
   };
 }
 
-// "claude-opus-4-7-20250101" → "opus-4-7"; falls back to the original name.
+// CLI model name (e.g. "opus-4-7-20250101") → registry id "opus-4-7"; falls back to the original name for historical/unknown models.
 export function canonicalModel(name: string): string {
-  const m = /^claude-([a-z]+)-(\d+)-(\d+)/.exec(name);
-  if (!m) return name;
-  return `${m[1]}-${m[2]}-${m[3]}`;
+  return idForCliName(name) ?? name;
 }
