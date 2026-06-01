@@ -38,6 +38,22 @@ export interface ConversationRuntime {
   list(): Promise<Map<string, RuntimeInfo>>;
   send(conversationId: string, text: string): Promise<void>;
   interrupt(conversationId: string): Promise<void>;
+  /**
+   * Answer a pending interactive prompt form (e.g. AskUserQuestion) by
+   * sending `text` as a turn. This is a single ATOMIC operation:
+   *   1. dismiss the active prompt form,
+   *   2. WAIT until the form has actually cleared,
+   *   3. send `text` as a normal turn.
+   *
+   * The wait in step 2 is load-bearing and the whole reason this is a
+   * dedicated runtime method rather than a back-to-back interrupt()+send():
+   * dismissing the form is not instantaneous, and if the still-live form is
+   * fed the keystrokes it auto-selects a wrong option and fabricates an
+   * answer (losing the user's text). Implementers MUST verify the form has
+   * cleared before sending, and MUST throw if it never clears rather than
+   * sending into a live form.
+   */
+  answerPrompt(conversationId: string, text: string): Promise<void>;
 }
 
 const registry = new Map<string, ConversationRuntime>();
@@ -79,6 +95,12 @@ export async function interruptConversation(id: string): Promise<void> {
   const row = await getConversationRuntime(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
   await Runtime.get(row.runtime).interrupt(id);
+}
+
+export async function answerPrompt(id: string, text: string): Promise<void> {
+  const row = await getConversationRuntime(id);
+  if (!row) throw new Error(`Conversation ${id} not found`);
+  await Runtime.get(row.runtime).answerPrompt(id, text);
 }
 
 export async function getConversationRow(id: string): Promise<{

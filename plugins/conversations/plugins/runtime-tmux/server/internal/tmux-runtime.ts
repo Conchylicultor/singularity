@@ -15,8 +15,19 @@ const SPINNER_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈]\s*/;
 const READY_RE = /^✳\s*/;
 const STATUS_PREFIX_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈✳]\s*/;
 
-// CLI bug workaround: AskUserQuestion keeps spinner + status:"busy" despite
-// being idle. Probe pane content every PROBE_INTERVAL_MS to detect it.
+// AskUserQuestion menus must be detected regardless of how the pane otherwise
+// reads, because the CLI signature changed across versions:
+//   - Old CLI: the menu kept the spinner + session status:"busy", so the pane
+//     looked `working` while actually waiting. (still handled below)
+//   - CLI v2.1.159: the menu presents as an IDLE pane — `✳` ready title prefix,
+//     session file status:"waiting" / waitingFor:"permission prompt". Nothing
+//     in the title or session file distinguishes it from an ordinary idle/
+//     permission state, so the only reliable signal is the menu's
+//     "Enter to select" footer in the pane content.
+// We therefore probe EVERY non-dead pane (not just working ones) and, on a
+// match, override the verdict to {working:false, waitingFor:"question"} — the
+// signal the AskUserQuestion web form gates on. Throttled to one capture-pane
+// per pane every PROBE_INTERVAL_MS to keep the cost bounded.
 const PROBE_INTERVAL_MS = 5_000;
 const WAITING_PATTERN_RE = /Enter to select/;
 const probeCache = new Map<string, { at: number; waiting: boolean }>();
@@ -39,6 +50,15 @@ async function isProbeWaiting(id: string): Promise<boolean> {
   probeCache.set(id, { at: now, waiting });
   return waiting;
 }
+
+// answerPrompt() form-dismissal poll. After Escape the TUI takes ~210ms to
+// re-render from the prompt menu back to the idle input. Sending into a live
+// menu makes it auto-select a wrong option and fabricate an answer, so we
+// poll the pane with a FRESH capture each iteration (never the throttled
+// isProbeWaiting cache) until "Enter to select" is gone. ~75ms cadence clears
+// in 2-5 iterations; 3000ms cap then throw — never send into a live form.
+const FORM_CLEAR_POLL_INTERVAL_MS = 75;
+const FORM_CLEAR_TIMEOUT_MS = 3_000;
 
 interface ResolvedPaneStatus {
   title: string;
@@ -96,6 +116,52 @@ function resolvePaneStatus(
 // Field separator: tab (not present in pane paths or titles) keeps splits
 // unambiguous even though pane titles can contain arbitrary characters.
 const SEP = "\t";
+
+/**
+ * Paste `text` into the pane's idle input and submit it with Enter, in one
+ * atomic tmux invocation.
+ *
+ * `paste-buffer -p` wraps the content in bracketed-paste markers
+ * (\e[200~/\e[201~). Chaining paste-buffer and send-keys Enter with ";" makes
+ * tmux process them in a single event-loop iteration — back-to-back with no
+ * inter-process gap — so Enter cannot arrive before the CLI exits paste mode
+ * and be swallowed as a literal newline.
+ *
+ * Shared verbatim by send() and answerPrompt() so both submit identically.
+ * The pane must already be at the idle input prompt (callers clear copy mode
+ * and partial input first).
+ */
+async function pasteTurn(conversationId: string, text: string): Promise<void> {
+  const bufferName = `singularity-send-${conversationId}`;
+  const load = Bun.spawn([TMUX, "load-buffer", "-b", bufferName, "-"], {
+    stdin: Buffer.from(text),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const loadExit = await load.exited;
+  if (loadExit !== 0) {
+    const stderr = await new Response(load.stderr).text();
+    throw new Error(
+      `tmux load-buffer for ${conversationId} failed (exit ${loadExit}): ${stderr.trim() || "<no stderr>"}`,
+    );
+  }
+  const pasteAndEnter = Bun.spawn(
+    [
+      TMUX,
+      "paste-buffer", "-d", "-p", "-b", bufferName, "-t", conversationId,
+      ";",
+      "send-keys", "-t", conversationId, "Enter",
+    ],
+    { stdout: "pipe", stderr: "pipe" },
+  );
+  const exitCode = await pasteAndEnter.exited;
+  if (exitCode !== 0) {
+    const stderr = await new Response(pasteAndEnter.stderr).text();
+    throw new Error(
+      `tmux paste+enter for ${conversationId} failed (exit ${exitCode}): ${stderr.trim() || "<no stderr>"}`,
+    );
+  }
+}
 
 async function listPanes(): Promise<
   Map<
@@ -189,13 +255,18 @@ export const tmuxRuntime: ConversationRuntime = {
       });
     });
 
-    // Probe panes that look "working" — the CLI sometimes keeps the spinner
-    // during AskUserQuestion prompts. Throttled to one capture-pane per pane
-    // every PROBE_INTERVAL_MS.
-    const workingIds = ids.filter((id) => out.get(id)!.working && !out.get(id)!.dead);
-    if (workingIds.length > 0) {
-      const probeResults = await Promise.all(workingIds.map((id) => isProbeWaiting(id)));
-      workingIds.forEach((id, i) => {
+    // Probe every non-dead pane for the AskUserQuestion menu's "Enter to
+    // select" footer. The menu can present as either working (old CLI spinner
+    // bug) or idle (CLI v2.1.159, see PROBE_INTERVAL_MS comment), so we cannot
+    // pre-filter on `working` — that workaround skipped idle menus and left the
+    // interactive answer form dormant. A match overrides whatever the title /
+    // session file said (including waitingFor:"permission prompt") to
+    // {working:false, waitingFor:"question"}. Each capture-pane stays throttled
+    // per pane via isProbeWaiting's PROBE_INTERVAL_MS cache.
+    const probeIds = ids.filter((id) => !out.get(id)!.dead);
+    if (probeIds.length > 0) {
+      const probeResults = await Promise.all(probeIds.map((id) => isProbeWaiting(id)));
+      probeIds.forEach((id, i) => {
         if (probeResults[i]) {
           const info = out.get(id)!;
           out.set(id, { ...info, working: false, waitingFor: "question" });
@@ -328,44 +399,55 @@ export const tmuxRuntime: ConversationRuntime = {
       stdout: "pipe",
       stderr: "pipe",
     }).exited;
-    // Bracketed paste + Enter in one atomic tmux invocation.
-    //
-    // `paste-buffer -p` wraps the content in \e[200~/\e[201~ markers.
-    // Previously, `send-keys Enter` was a separate process spawn after a
-    // heuristic sleep — if Enter arrived before the CLI exited paste mode,
-    // it was swallowed as a literal newline.
-    //
-    // Fix: chain both commands with ";" so tmux processes them in one event
-    // loop iteration. paste-buffer writes markers + content, then send-keys
-    // writes Enter — back-to-back with no inter-process gap.
-    const bufferName = `singularity-send-${conversationId}`;
-    const load = Bun.spawn([TMUX, "load-buffer", "-b", bufferName, "-"], {
-      stdin: Buffer.from(text),
+    // Bracketed paste + Enter in one atomic tmux invocation (see pasteTurn).
+    await pasteTurn(conversationId, text);
+  },
+
+  async answerPrompt(conversationId: string, text: string): Promise<void> {
+    // Dismiss the active prompt form, wait until it has actually cleared, then
+    // send `text` as a turn. The wait is the whole point: Escape does not clear
+    // the form instantly (the TUI re-renders to the idle input in ~210ms), and
+    // pasting into a still-live menu makes it auto-select a wrong option and
+    // fabricate an answer — losing the user's text. See ConversationRuntime
+    // interface docs.
+
+    // 1. Dismiss the form with Escape (same as interrupt()): exit copy mode
+    //    first so the key reaches Claude rather than tmux's vi bindings.
+    await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
       stdout: "pipe",
       stderr: "pipe",
-    });
-    const loadExit = await load.exited;
-    if (loadExit !== 0) {
-      const stderr = await new Response(load.stderr).text();
+    }).exited;
+    await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Escape"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
+
+    // 2. Bounded poll until the form has cleared. FRESH capture each iteration
+    //    via probeWaiting() — NOT the throttled isProbeWaiting cache, whose 5s
+    //    window would not reflect the form clearing within this 3s budget.
+    const deadline = Date.now() + FORM_CLEAR_TIMEOUT_MS;
+    let cleared = false;
+    for (;;) {
+      if (!(await probeWaiting(conversationId))) {
+        cleared = true;
+        break;
+      }
+      if (Date.now() + FORM_CLEAR_POLL_INTERVAL_MS >= deadline) break;
+      await Bun.sleep(FORM_CLEAR_POLL_INTERVAL_MS);
+    }
+    if (!cleared) {
+      // Never send into a live form — that fabricates a wrong answer.
       throw new Error(
-        `tmux load-buffer for ${conversationId} failed (exit ${loadExit}): ${stderr.trim() || "<no stderr>"}`,
+        `tmux answerPrompt for ${conversationId}: prompt form did not clear ` +
+          `within ${FORM_CLEAR_TIMEOUT_MS}ms after Escape; refusing to send`,
       );
     }
-    const pasteAndEnter = Bun.spawn(
-      [
-        TMUX,
-        "paste-buffer", "-d", "-p", "-b", bufferName, "-t", conversationId,
-        ";",
-        "send-keys", "-t", conversationId, "Enter",
-      ],
-      { stdout: "pipe", stderr: "pipe" },
-    );
-    const exitCode = await pasteAndEnter.exited;
-    if (exitCode !== 0) {
-      const stderr = await new Response(pasteAndEnter.stderr).text();
-      throw new Error(
-        `tmux paste+enter for ${conversationId} failed (exit ${exitCode}): ${stderr.trim() || "<no stderr>"}`,
-      );
-    }
+
+    // 3. Clear any partial input, then paste + Enter (same as send()).
+    await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "C-c"], {
+      stdout: "pipe",
+      stderr: "pipe",
+    }).exited;
+    await pasteTurn(conversationId, text);
   },
 };

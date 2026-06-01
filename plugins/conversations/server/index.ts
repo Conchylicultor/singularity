@@ -42,6 +42,7 @@ export { createConversation, deleteConversation, resumeConversation } from "./in
 export type { Turn } from "./internal/claude-transcript";
 export {
   Runtime,
+  answerPrompt,
   getConversationRow,
   interruptConversation,
   readConversationTurns,

@@ -24,4 +24,7 @@ export const apiRuntime: ConversationRuntime = {
   async interrupt(): Promise<void> {
     throw new Error("api runtime: interrupt() not implemented");
   },
+  async answerPrompt(): Promise<void> {
+    throw new Error("api runtime: answerPrompt() not implemented");
+  },
 };

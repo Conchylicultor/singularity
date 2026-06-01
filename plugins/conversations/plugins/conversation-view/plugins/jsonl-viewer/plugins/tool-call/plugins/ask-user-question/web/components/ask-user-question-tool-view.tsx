@@ -1,13 +1,18 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { useConversationById } from "@plugins/conversations/web";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { AnswerForm } from "./answer-form";
 
-interface QuestionOption {
+export interface QuestionOption {
   label: string;
   description: string;
   preview?: string;
 }
 
-interface Question {
+export interface Question {
   question: string;
   header: string;
   options: QuestionOption[];
@@ -102,7 +107,7 @@ function parseSelectedLabels(
   return { selected: new Set(), otherText: answer };
 }
 
-function Indicator({
+export function Indicator({
   selected,
   multi,
 }: {
@@ -130,27 +135,8 @@ function Indicator({
   );
 }
 
-export function AskUserQuestionToolView({ event }: ToolRendererProps) {
-  const input = event.input as AskUserQuestionInput;
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; input is `as`-cast from unknown
-  const questions = Array.isArray(input?.questions) ? input.questions : [];
-
-  const resultContent = event.result?.content;
-  const answerMap =
-    resultContent && !event.result?.isError
-      ? parseAnswerMap(resultContent, questions)
-      : null;
-
-  const questionSelections = questions.map((q) =>
-    parseSelectedLabels(answerMap?.[q.question], q.options),
-  );
-
-  const firstSel = questionSelections[0];
-  const firstAnswerParts = firstSel
-    ? [...firstSel.selected, ...(firstSel.otherText ? [firstSel.otherText] : [])]
-    : [];
-
-  const summary = (
+function summaryFor(questions: Question[], firstAnswerParts: string[]) {
+  return (
     <span className="flex min-w-0 items-center gap-1.5">
       {questions.length > 0 ? (
         questions.map((q, i) => (
@@ -181,6 +167,58 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
       )}
     </span>
   );
+}
+
+export function AskUserQuestionToolView({ event }: ToolRendererProps) {
+  const input = event.input as AskUserQuestionInput;
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; input is `as`-cast from unknown
+  const questions = Array.isArray(input?.questions) ? input.questions : [];
+
+  const { convId } = conversationPane.useParams();
+  const conversation = useConversationById(convId);
+  const eventsResult = useResource(jsonlEventsResource, { id: convId });
+  const events = eventsResult.pending ? undefined : eventsResult.data;
+  // Find the last tool-call event (backwards loop; the repo's tsconfig target
+  // predates Array.prototype.findLast — mirror the jsonl-pane precedent).
+  let lastToolCall: NonNullable<typeof events>[number] | undefined;
+  if (events) {
+    for (let i = events.length - 1; i >= 0; i--) {
+      if (events[i]?.kind === "tool-call") {
+        lastToolCall = events[i];
+        break;
+      }
+    }
+  }
+  const isLive =
+    event.result == null &&
+    conversation?.waitingFor === "question" &&
+    lastToolCall?.kind === "tool-call" &&
+    lastToolCall.toolUseId === event.toolUseId;
+
+  if (isLive) {
+    return (
+      <ToolCallCard event={event} summary={summaryFor(questions, [])} defaultOpen>
+        <AnswerForm questions={questions} convId={convId} />
+      </ToolCallCard>
+    );
+  }
+
+  const resultContent = event.result?.content;
+  const answerMap =
+    resultContent && !event.result?.isError
+      ? parseAnswerMap(resultContent, questions)
+      : null;
+
+  const questionSelections = questions.map((q) =>
+    parseSelectedLabels(answerMap?.[q.question], q.options),
+  );
+
+  const firstSel = questionSelections[0];
+  const firstAnswerParts = firstSel
+    ? [...firstSel.selected, ...(firstSel.otherText ? [firstSel.otherText] : [])]
+    : [];
+
+  const summary = summaryFor(questions, firstAnswerParts);
 
   return (
     <ToolCallCard event={event} summary={summary} defaultOpen>
