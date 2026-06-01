@@ -40,16 +40,23 @@ function injectCollectionIds(
     const arr = result[key];
     if (!Array.isArray(arr)) continue;
     let lastRank: Rank | null = null;
-    result[key] = arr.map((item: Record<string, unknown>) => {
+    result[key] = arr.map((item: Record<string, unknown>, index: number) => {
       const out = { ...item };
-      if (!out.id || typeof out.id !== "string") {
-        out.id = crypto.randomUUID();
-      }
       if (!out.rank || typeof out.rank !== "string") {
         lastRank = Rank.between(lastRank, null);
         out.rank = lastRank.toString();
       } else {
         lastRank = Rank.from(out.rank as string);
+      }
+      if (!out.id || typeof out.id !== "string") {
+        // Deterministic id so repeated reads of the same (override-less) document
+        // are idempotent. A random uuid here changes on every read — including the
+        // unconditional watcher reconcile — which churns the React `key={item.id}`,
+        // remounts list rows, and wipes any in-progress field edit. Seed the id from
+        // the item's stable content + position; once the user edits, the value is
+        // persisted to an override and read back verbatim.
+        const { id: _id, rank: _rank, ...content } = out;
+        out.id = `auto-${computeHash([index, content] as unknown as JsonValue)}`;
       }
       return out;
     });
