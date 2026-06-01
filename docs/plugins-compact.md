@@ -34,6 +34,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
           - Plugins:
             - **`child-count`** — Recursive child count badge in the publish plugin tree row.
+            - **`collapsed`** — Collapsed badge in the publish plugin tree row.
             - **`expand-collapse`** — Expand/collapse all descendants button in the publish plugin tree row.
             - **`load-bearing`** — Load-bearing badge in the publish plugin tree row.
         - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.

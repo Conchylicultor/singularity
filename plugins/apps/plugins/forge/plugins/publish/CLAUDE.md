@@ -22,6 +22,7 @@ served by the plugin-meta/plugin-view plugin.
   - Exports: Types: `TreeRowBadgeContribution`; Values: `Publish`, `usePluginTree`
 - Sub-plugins:
   - **`child-count`** — Recursive child count badge in the publish plugin tree row.
+  - **`collapsed`** — Collapsed badge in the publish plugin tree row.
   - **`expand-collapse`** — Expand/collapse all descendants button in the publish plugin tree row.
   - **`load-bearing`** — Load-bearing badge in the publish plugin tree row.
 

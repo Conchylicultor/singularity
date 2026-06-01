@@ -185,6 +185,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`child-count`** — Recursive child count badge in the publish plugin tree row.
               - Web:
                 - Contributes: `Publish.TreeRowBadge` "child-count" → `ChildCountBadge`
+            - **`collapsed`** — Collapsed badge in the publish plugin tree row.
+              - Web:
+                - Contributes: `Publish.TreeRowBadge` "collapsed" → `CollapsedBadge`
             - **`expand-collapse`** — Expand/collapse all descendants button in the publish plugin tree row.
               - Web:
                 - Contributes: `Publish.TreeRowBadge` "expand-collapse" → `ExpandCollapseButton`
