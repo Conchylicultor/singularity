@@ -173,9 +173,17 @@ export function SpanRow({
   );
 }
 
-export function SpanDetail({ span }: { span: Span | null }): ReactElement {
+export function SpanDetail({
+  span,
+  className,
+}: {
+  span: Span | null;
+  className?: string;
+}): ReactElement {
   return (
-    <div className="border-t bg-muted/50 px-4 py-2 text-xs">
+    <div
+      className={cn("border-t bg-muted/50 px-4 py-2 text-xs", className)}
+    >
       {span ? (
         <>
           <span className="font-mono font-medium">{span.id}</span>

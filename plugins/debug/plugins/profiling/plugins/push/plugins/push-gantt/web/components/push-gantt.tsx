@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactElement } from "react";
 import {
   formatDuration,
   GanttContainer,
+  SpanDetail,
   useGanttContainerContext,
   type Span,
 } from "@plugins/debug/plugins/profiling/web";
@@ -91,20 +92,26 @@ export function PushGantt({
   const [hovered, setHovered] = useState<Span | null>(null);
 
   return (
-    <GanttContainer title={title} totalMs={totalMs}>
-      <div className="border-b">
-        {groups.map((group) => (
-          <PushAttemptRow
-            key={group.worktree}
-            group={group}
-            hovered={hovered}
-            setHovered={setHovered}
-            highlighted={group.worktree === highlightWorktree}
-            onWorktreeClick={onWorktreeClick}
-          />
-        ))}
-      </div>
-    </GanttContainer>
+    <div className="relative">
+      <GanttContainer title={title} totalMs={totalMs}>
+        <div className="border-b">
+          {groups.map((group) => (
+            <PushAttemptRow
+              key={group.worktree}
+              group={group}
+              hovered={hovered}
+              setHovered={setHovered}
+              highlighted={group.worktree === highlightWorktree}
+              onWorktreeClick={onWorktreeClick}
+            />
+          ))}
+        </div>
+      </GanttContainer>
+      <SpanDetail
+        span={hovered}
+        className="sticky bottom-0 z-10 backdrop-blur-sm"
+      />
+    </div>
   );
 }
 
