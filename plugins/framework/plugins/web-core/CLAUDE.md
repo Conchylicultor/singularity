@@ -7,8 +7,8 @@ Single-page application (SPA). No SSR, no SEO concerns.
 - **Vite** — Build tool and dev server
 - **React 19** + **TypeScript**
 - **Tailwind CSS v4** — Styling (via `@tailwindcss/vite` plugin)
-- **shadcn/ui** — UI components (Radix-based, copy-pasted into `web/components/ui/`)
-- **Lucide** — Icons
+- **shadcn/ui** — UI components (base-ui based, copy-pasted into `web/components/ui/`)
+- **react-icons** — Icons (predominantly `react-icons/md`; not Lucide despite shadcn defaults)
 
 ## Structure
 

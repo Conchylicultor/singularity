@@ -10,7 +10,7 @@
     "cssVariables": true,
     "prefix": ""
   },
-  "iconLibrary": "lucide",
+  "iconLibrary": "react-icons/md",
   "rtl": false,
   "aliases": {
     "components": "@/components",
