@@ -12,8 +12,6 @@ function toJobState(status: Status, detail: string | null): JobState {
       return { status: "running" };
     case "clean":
       return { status: "clean" };
-    case "flag":
-      return { status: "flag", text: detail ?? "" };
     case "error":
       return { status: "error", message: detail ?? "" };
   }

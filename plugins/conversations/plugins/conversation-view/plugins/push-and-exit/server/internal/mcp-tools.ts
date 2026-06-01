@@ -12,8 +12,10 @@ import { setStatus } from "./state";
 // `exit_clean` sets status synchronously and enqueues a finalize job that
 // waits for end_turn before tearing down the runtime — calling
 // `deleteConversation` here would yank the tmux session out from under a
-// still-streaming response. `flag_raise` is fire-and-forget: a status
-// write is safe mid-turn and the conversation stays open for the user.
+// still-streaming response. `flag_raise` is a pure no-op signal: the
+// conversation stays open and the flag text is rendered inline in the
+// transcript by the flag-raise tool-call renderer — there is no UI state
+// for the server to push.
 //
 // Both handlers are callable without an in-flight push-and-exit row so that
 // the model can call them in response to an explicit "Exit" instruction
@@ -53,8 +55,10 @@ Only call this in response to the push-and-exit prompt.`,
         "Short bullets describing what the user should know — caveats, partial outcomes, follow-ups, skipped work, or push failure details.",
       ),
   },
-  async handler({ reason }, { conversationId }) {
-    setStatus(conversationId, "flag", reason);
+  async handler({ reason }, _ctx) {
+    // No-op beyond acknowledging: the flag text is already rendered inline in
+    // the conversation transcript by the flag-raise tool-call renderer.
+    void reason;
     return {
       content: [{ type: "text", text: JSON.stringify({ ok: true }) }],
     };

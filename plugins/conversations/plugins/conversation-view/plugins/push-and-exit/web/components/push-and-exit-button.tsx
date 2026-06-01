@@ -11,14 +11,6 @@ import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
   pushAndExitResource,
   type JobState,
 } from "../../shared/resources";
@@ -261,39 +253,6 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     }
   }
 
-  async function onClose() {
-    try {
-      await fetch(
-        `/api/conversations/${encodeURIComponent(convId)}/close`,
-        { method: "POST" },
-      );
-      await fetch(
-        `/api/conversations/${encodeURIComponent(convId)}/push-and-exit`,
-        { method: "DELETE" },
-      );
-      toast({ type: "conversation", description: "Conversation closed", variant: "success" });
-    } catch (err) {
-      toast({
-        type: "conversation",
-        description: `Close failed: ${err instanceof Error ? err.message : String(err)}`,
-        variant: "error",
-      });
-    }
-  }
-
-  function onKeepOpen() {
-    void fetch(
-      `/api/conversations/${encodeURIComponent(convId)}/push-and-exit`,
-      { method: "DELETE" },
-    );
-  }
-
-  const showDialog = job?.status === "flag";
-  const flagText =
-    job?.status === "flag"
-      ? (job as Extract<JobState, { status: "flag" }>).text
-      : undefined;
-
   const label =
     mode === "restore"
       ? "Restore"
@@ -339,48 +298,17 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const buttonVariant = "default" as const;
 
   return (
-    <>
-      <Button
-        variant={buttonVariant}
-        size="sm"
-        title={label}
-        aria-label={label}
-        disabled={disabled}
-        onClick={onClick}
-        className={buttonClass}
-      >
-        <Icon className={`size-3.5 ${busy ? "animate-pulse" : ""}`} />
-        {label}
-      </Button>
-
-      <Sheet
-        open={showDialog}
-        onOpenChange={(open: boolean) => {
-          if (!open) onKeepOpen();
-        }}
-      >
-        <SheetContent side="right" className="w-full sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>Push complete — with notes</SheetTitle>
-            <SheetDescription>
-              Claude flagged the following. Review before closing.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="flex-1 overflow-auto px-4 pb-2">
-            <pre className="whitespace-pre-wrap text-sm font-sans">
-              {flagText}
-            </pre>
-          </div>
-          <SheetFooter className="flex-row justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={onKeepOpen}>
-              Keep open
-            </Button>
-            <Button variant="default" size="sm" onClick={onClose}>
-              Close conversation
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-    </>
+    <Button
+      variant={buttonVariant}
+      size="sm"
+      title={label}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className={buttonClass}
+    >
+      <Icon className={`size-3.5 ${busy ? "animate-pulse" : ""}`} />
+      {label}
+    </Button>
   );
 }
