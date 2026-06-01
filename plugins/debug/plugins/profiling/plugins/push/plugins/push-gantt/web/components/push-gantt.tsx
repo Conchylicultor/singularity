@@ -24,7 +24,7 @@ export interface BuildEntry {
   startMs: number;
   durationMs: number;
   success: boolean;
-  crashed: boolean;
+  interrupted: boolean;
 }
 
 export interface WorktreeGroup {
@@ -80,7 +80,7 @@ const DEFAULT_STYLE = {
 const WAIT_COLOR = "bg-amber-400 dark:bg-amber-500";
 const BUILD_COLOR = "bg-sky-400 dark:bg-sky-500";
 const BUILD_FAILED_COLOR = "bg-sky-700 dark:bg-sky-800";
-const BUILD_CRASHED_COLOR = "bg-red-400 dark:bg-red-500";
+const BUILD_INTERRUPTED_COLOR = "bg-red-400 dark:bg-red-500";
 
 export function PushGantt({
   groups,
@@ -174,13 +174,13 @@ function PushAttemptRow({
       </div>
       <div className="relative h-5 flex-1 overflow-hidden rounded bg-muted/30">
         {group.builds.map((build, i) => {
-          const buildLabel = build.crashed
-            ? "build (crashed)"
+          const buildLabel = build.interrupted
+            ? "build (interrupted)"
             : build.success
               ? "build (ok)"
               : "build (failed)";
-          const buildColor = build.crashed
-            ? BUILD_CRASHED_COLOR
+          const buildColor = build.interrupted
+            ? BUILD_INTERRUPTED_COLOR
             : build.success
               ? BUILD_COLOR
               : BUILD_FAILED_COLOR;

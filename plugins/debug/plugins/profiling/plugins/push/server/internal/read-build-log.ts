@@ -19,7 +19,13 @@ export interface BuildLogRecord {
   completedAt: string | null;
   totalMs: number;
   success: boolean;
-  crashed: boolean;
+  /**
+   * True only for builds hard-killed before any graceful exit (SIGKILL, OOM,
+   * power loss) — these leave a "started" with no "completed" and have no
+   * known end time. Ordinary build failures now write a "completed" record
+   * with `success: false` and a real duration (see build.ts finalizeBuildLog).
+   */
+  interrupted: boolean;
 }
 
 const BUILD_LOG_FILE = join(SINGULARITY_DIR, "build-log.jsonl");
@@ -46,7 +52,8 @@ export function readBuildLogRecords(): BuildLogRecord[] {
 
   // Records without a phase field are legacy "completed" records (pre-crash-tracking).
   // Merge start/completed pairs by (worktree, startedAt). Unmatched "started"
-  // entries are crashed builds — estimate duration as now minus startedAt.
+  // entries are builds hard-killed before any graceful exit — end time is
+  // unknown, so estimate duration as now minus startedAt.
   const pending = new Map<string, RawBuildLogRecord>();
   const merged: BuildLogRecord[] = [];
 
@@ -65,12 +72,12 @@ export function readBuildLogRecords(): BuildLogRecord[] {
         completedAt: r.completedAt,
         totalMs: r.totalMs,
         success: r.success,
-        crashed: false,
+        interrupted: false,
       });
     }
   }
 
-  // Any remaining pending entries are crashed builds
+  // Any remaining pending entries are interrupted builds (hard-killed)
   const nowMs = Date.now();
   for (const r of pending.values()) {
     const startMs = new Date(r.startedAt).getTime();
@@ -81,7 +88,7 @@ export function readBuildLogRecords(): BuildLogRecord[] {
       completedAt: null,
       totalMs: nowMs - startMs,
       success: false,
-      crashed: true,
+      interrupted: true,
     });
   }
 

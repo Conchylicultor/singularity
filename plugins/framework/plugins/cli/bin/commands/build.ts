@@ -554,6 +554,33 @@ export function registerBuild(program: Command) {
         success: false,
       });
 
+      // Guarantee a terminal "completed" record on every *graceful* exit
+      // path — a thrown build step, process.exit(1), or SIGINT/SIGTERM.
+      // Without this, any failure before the explicit success/failure writes
+      // below leaves a "started" with no "completed", which the profiler can
+      // only render as an ever-growing fake bar with no real end time. The
+      // exit handler captures the true end timestamp. Only a hard kill
+      // (SIGKILL/OOM/power loss) — which can't run handlers — legitimately
+      // leaves a record open; the profiler shows those as "interrupted".
+      // Mirrors the on-exit lock release in acquireBuildLock above.
+      let buildLogFinalized = false;
+      const finalizeBuildLog = (success: boolean): void => {
+        if (buildLogFinalized) return;
+        buildLogFinalized = true;
+        appendBuildLog({
+          phase: "completed",
+          worktree: name,
+          branch,
+          startedAt: buildStartedAt.toISOString(),
+          completedAt: new Date().toISOString(),
+          totalMs: Date.now() - buildStartedAt.getTime(),
+          success,
+        });
+      };
+      process.on("exit", () => finalizeBuildLog(false));
+      process.on("SIGINT", () => process.exit(130));
+      process.on("SIGTERM", () => process.exit(143));
+
       endSpan = buildProfilerStart("nameValidation", "build:preflight", "name validation");
       if (!NAME_REGEX.test(name)) {
         console.error(
@@ -748,15 +775,7 @@ export function registerBuild(program: Command) {
       if (failures.length > 0) {
         await rm(stagingPath, { recursive: true, force: true });
         writeBuildLogs(name);
-        appendBuildLog({
-          phase: "completed",
-          worktree: name,
-          branch,
-          startedAt: buildStartedAt.toISOString(),
-          completedAt: new Date().toISOString(),
-          totalMs: Date.now() - buildStartedAt.getTime(),
-          success: false,
-        });
+        finalizeBuildLog(false);
         console.error(`\nBuild failed: ${failures.join(", ")}`);
         process.exit(1);
       }
@@ -851,15 +870,7 @@ export function registerBuild(program: Command) {
       if (!opts.restart) {
         writeBuildProfile(name);
         writeBuildLogs(name);
-        appendBuildLog({
-          phase: "completed",
-          worktree: name,
-          branch,
-          startedAt: buildStartedAt.toISOString(),
-          completedAt: new Date().toISOString(),
-          totalMs: Date.now() - buildStartedAt.getTime(),
-          success: true,
-        });
+        finalizeBuildLog(true);
         console.log(`Deployed to http://${name}.localhost:9000 (restart skipped)`);
         return;
       }
@@ -897,15 +908,7 @@ export function registerBuild(program: Command) {
 
       writeBuildProfile(name);
       writeBuildLogs(name);
-      appendBuildLog({
-        phase: "completed",
-        worktree: name,
-        branch,
-        startedAt: buildStartedAt.toISOString(),
-        completedAt: new Date().toISOString(),
-        totalMs: Date.now() - buildStartedAt.getTime(),
-        success: true,
-      });
+      finalizeBuildLog(true);
       console.log(`Deployed to http://${name}.localhost:9000`);
     });
 }

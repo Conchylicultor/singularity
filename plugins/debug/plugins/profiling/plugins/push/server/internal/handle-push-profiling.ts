@@ -19,7 +19,7 @@ interface BuildEntry {
   startMs: number;
   durationMs: number;
   success: boolean;
-  crashed: boolean;
+  interrupted: boolean;
 }
 
 interface WorktreeGroup {
@@ -162,7 +162,7 @@ export const handlePushProfiling = implement(
         startMs: buildOffset,
         durationMs: record.totalMs,
         success: record.success,
-        crashed: record.crashed,
+        interrupted: record.interrupted,
       });
     }
 
