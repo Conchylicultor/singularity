@@ -7,6 +7,7 @@ import {
   getTaskDependencyIds,
 } from "@plugins/tasks-core/server";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
+import { DEFAULT_MODEL, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { armTaskAutoStart } from "./arm-auto-start";
 import { rewireDependencies } from "./rewire-dependencies";
 
@@ -38,19 +39,19 @@ Controls how the new task connects to the target:
 
 **Follow-up (the common case):**
 
-  { "title": "Add dark mode support", "description": "... Plan first.", "autostart": "opus" }
+  { "title": "Add dark mode support", "description": "... Plan first.", "autostart": "opus-4-8" }
 
 **Linear chain** — use \`target\` to chain off the previous task:
 
-  { "title": "Step 1", "autostart": "opus" }              → id: "X1"
-  { "title": "Step 2", "target": "X1", "autostart": "opus" }  → id: "X2"
-  { "title": "Step 3", "target": "X2", "autostart": "opus" }  → id: "X3"
+  { "title": "Step 1", "autostart": "opus-4-8" }              → id: "X1"
+  { "title": "Step 2", "target": "X1", "autostart": "opus-4-8" }  → id: "X2"
+  { "title": "Step 3", "target": "X2", "autostart": "opus-4-8" }  → id: "X3"
 
 If B was waiting on A, the chain auto-rewires: B → X3 → X2 → X1 → A.
 
 **Prerequisite** — insert before the current task:
 
-  { "title": "Write design doc", "relation": "prerequisite", "autostart": "opus" }
+  { "title": "Write design doc", "relation": "prerequisite", "autostart": "opus-4-8" }
 
 A now depends on the new task. A's old deps are rewired to the new task.
 
@@ -85,11 +86,11 @@ agent see the actual outcome instead of executing a stale plan.`,
         "Use a previous call's task_id to chain follow-ups linearly."
       ),
     autostart: z
-      .enum(["sonnet", "opus"])
-      .default("opus")
+      .string()
+      .default(DEFAULT_MODEL)
       .describe(
-        "Auto-launch model. Defaults to \"opus\". Use \"sonnet\" only for purely mechanical " +
-        "refactoring (no design decisions, no unknowns)."
+        "Auto-launch model id (e.g. \"opus-4-8\", \"sonnet-4-6\"). Defaults to the configured default. " +
+        "Use a Sonnet model only for purely mechanical refactoring (no design decisions, no unknowns)."
       ),
   },
   async handler(
@@ -118,7 +119,8 @@ agent see the actual outcome instead of executing a stale plan.`,
 
     const deps = relation === "followup" ? [targetId]
       : await getTaskDependencyIds(task.id);
-    await armTaskAutoStart({ taskId: task.id, model: autostart, dependencies: deps, cause: "mcp-add-task" });
+    const model = normalizeModel(autostart);
+    await armTaskAutoStart({ taskId: task.id, model, dependencies: deps, cause: "mcp-add-task" });
 
     return {
       content: [
@@ -128,7 +130,7 @@ agent see the actual outcome instead of executing a stale plan.`,
             task_id: task.id,
             relation,
             group_id: currentTaskId,
-            autostart,
+            autostart: model,
           }),
         },
       ],

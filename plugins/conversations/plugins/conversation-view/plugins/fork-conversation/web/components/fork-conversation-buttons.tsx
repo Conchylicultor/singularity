@@ -1,6 +1,6 @@
 import { GitFork } from "lucide-react";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
+import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 
 export function ForkConversationButtons({
@@ -12,7 +12,7 @@ export function ForkConversationButtons({
     <WithTooltip content="New conversation in this worktree">
       <div className="flex items-center gap-1">
         <GitFork className="size-3.5 text-muted-foreground" />
-        <LaunchButtons
+        <LaunchControl
           size="sm"
           variant="outline"
           getRequest={() => ({ attemptId: conversation.attemptId })}

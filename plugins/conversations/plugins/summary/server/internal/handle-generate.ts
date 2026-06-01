@@ -31,7 +31,7 @@ export const handleGenerate = implement(generateConversationSummary, async ({ pa
 
   const conv = await createConversation({
     prompt: payload.prompt,
-    model: "sonnet",
+    model: "sonnet-4-6",
     kind: "system",
     spawnedBy: "conversation-summary",
     attemptId: parent.attemptId,

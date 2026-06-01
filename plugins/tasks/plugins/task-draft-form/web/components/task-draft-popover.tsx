@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import { toast } from "@plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
@@ -18,7 +19,7 @@ import type {
 } from "@plugins/tasks/core";
 import { useActiveRelateContext } from "../active-relate-context";
 
-const HEAD_DEFAULT_MODEL: ChainModel = "opus";
+const HEAD_DEFAULT_MODEL: ChainModel = DEFAULT_MODEL;
 
 function freshCards(): CardDraft[] {
   return [makeCard(HEAD_DEFAULT_MODEL)];

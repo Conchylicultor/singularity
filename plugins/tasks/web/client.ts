@@ -1,6 +1,7 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { tasksResource, type Task } from "../core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
 export type TaskPatch = Partial<{
   title: string;
@@ -12,7 +13,7 @@ export type TaskPatch = Partial<{
   rank: Rank;
 }>;
 
-export type AutoStartModel = "opus" | "sonnet" | "none";
+export type AutoStartModel = ConversationModel | "none";
 
 export async function patchTask(id: string, patch: TaskPatch): Promise<void> {
   await fetch(`/api/tasks/${id}`, {

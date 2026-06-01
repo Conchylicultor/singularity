@@ -15,6 +15,8 @@ import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/
 import { Button } from "@/components/ui/button";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { launchAgent, updateAgent } from "@plugins/agents/core";
+import { useVisibleModels } from "@plugins/conversations/plugins/model-provider/web";
+import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";
 import { agentLaunchesResource, agentsResource } from "../../shared/resources";
 import { AgentLaunches } from "./agent-launches";
 
@@ -26,12 +28,6 @@ type Patch = Partial<{
   iconColor: string | null;
   iconSvgNodes: string | null;
 }>;
-
-const MODELS = [
-  { value: null, label: "Default" },
-  { value: "sonnet", label: "Sonnet" },
-  { value: "opus", label: "Opus" },
-] as const;
 
 async function patchAgent(id: string, patch: Patch) {
   await fetchEndpoint(updateAgent, { id }, { body: patch });
@@ -46,6 +42,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
   const agentsResult = useResource(agentsResource);
   const agent = agentsResult.pending ? null : (agentsResult.data.find((a) => a.id === agentId) ?? null);
   const launchesQ = useResource(agentLaunchesResource);
+  const visibleModels = useVisibleModels();
   const [model, setModel] = useState<string | null>(agent?.model ?? null);
   const [launching, setLaunching] = useState(false);
 
@@ -144,9 +141,10 @@ export function AgentDetail({ agentId }: { agentId: string }) {
           onChange={(e) => void onModelChange(e.target.value)}
           className="focus:ring-ring w-fit rounded border bg-transparent px-2 py-1 text-sm outline-none focus:ring-1"
         >
-          {MODELS.map((m) => (
-            <option key={String(m.value)} value={m.value ?? ""}>
-              {m.label}
+          <option key="" value="">Default</option>
+          {visibleModels.map((m) => (
+            <option key={m} value={m}>
+              {MODEL_REGISTRY[m].label}
             </option>
           ))}
         </select>

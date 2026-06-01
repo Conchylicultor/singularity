@@ -2,7 +2,7 @@ import { MdArrowForward } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useConversations } from "@plugins/conversations/web";
-import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
+import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { cn } from "@/lib/utils";
@@ -57,7 +57,7 @@ export function WelcomeView() {
         )}
 
         {/* New Conversation */}
-        <LaunchButtons className="w-full" />
+        <LaunchControl className="w-full" />
 
         {/* Recent Conversations */}
         {!isLoading && recentConversations.length > 0 && (

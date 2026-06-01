@@ -1,3 +1,4 @@
+import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { useTaskAutoStart } from "../hooks";
 import { setAutoStart } from "@plugins/tasks/web";
 
@@ -7,7 +8,7 @@ export function QueuedChipAction({ taskId }: { taskId: string; hasChildren: bool
 
   if (!queuedModel) return null;
 
-  const label = queuedModel === "opus" ? "Opus" : "Sonnet";
+  const label = MODEL_REGISTRY[normalizeModel(queuedModel)].label;
   return (
     <button
       type="button"

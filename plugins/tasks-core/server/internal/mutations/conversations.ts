@@ -1,5 +1,6 @@
 import { and, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import { _attempts, _conversations } from "../tables";
 import { conversations } from "../schema";
 import { conversationsLiveResource } from "../resources";
@@ -9,7 +10,7 @@ export interface InsertConversationInput {
   id: string;
   attemptId: string;
   runtime: string;
-  model: "opus" | "sonnet";
+  model: ConversationModel;
   spawnedBy: string;
   kind?: "user" | "agent" | "system";
   status?: "starting" | "working" | "waiting" | "gone" | "done";

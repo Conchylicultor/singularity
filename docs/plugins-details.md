@@ -489,11 +489,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Types: `ConversationCreatedPayload`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`, `UserTurnSentPayload`; Values: `afterTurn`, `conversationCreated`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `getConversationRow`, `hasLiveProcess`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`, `userTurnSent`
     - Register: `defineJob('tasks.maybe-launch')`, `defineJob('tasks.maybe-launch-dependents')`, `defineTriggerEvent('conversation.created')`, `defineTriggerEvent('conversation.turn-completed')`, `defineTriggerEvent('conversation.userTurnSent')`
     - Routes: `GET /api/conversations`, `GET /api/conversations/gone`, `GET /api/conversations/:id`, `POST /api/conversations`, `DELETE /api/conversations`, `POST /api/conversations/:id/turn`, `POST /api/conversations/:id/stop`, `GET /api/conversations/:id/turns`, `POST /api/conversations/:id/close`
+  - Core:
+    - Uses: `tasks-core.ConversationSchema`
+    - Exports: Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `CreateConversationBody`, `DeleteConversationQuery`, `ForkError`, `ListGoneQuery`, `ListTurnsQuery`, `PostTurnBody`; Values: `closeConversation`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `CreateConversationBodySchema`, `deleteConversation`, `DeleteConversationQuerySchema`, `forkErrorsResource`, `getConversation`, `hasLiveProcess`, `isActiveStatus`, `listConversations`, `listConversationTurns`, `listGoneConversations`, `ListGoneQuerySchema`, `ListTurnsQuerySchema`, `postConversationTurn`, `PostTurnBodySchema`, `stopConversation`
   - Cross-plugin:
     - Imported by: `agents`, `attempt-view`, `code-explorer`, `code-review`, `commits-graph`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `dependent-count`, `docs-button`, `drop-and-exit`, `drop-dependents`, `exit`, `file-changes`, `file-path`, `fork-session`, `grouped`, `history`, `hold-and-exit`, `improve`, `markdown-extensions`, `model`, `new-child-task`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `push-profiling`, `queue`, `read`, `resume`, `review`, `runtime-api`, `runtime-tmux`, `status`, `summary`, `task`, `task-header`, `task-title`, `tasks`, `tasks-panel`, `terminal-pane`, `turn-summary`, `user-text`, `vscode`, `welcome`
-    - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `launch`, `launch-prompts`, `prompt-input`, `push-and-exit`, `resume`, `transcript-api`
-  - Core:
-    - Exports: Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `CreateConversationBody`, `DeleteConversationQuery`, `ForkError`, `ListGoneQuery`, `ListTurnsQuery`, `PostTurnBody`; Values: `closeConversation`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `CreateConversationBodySchema`, `deleteConversation`, `DeleteConversationQuerySchema`, `forkErrorsResource`, `getConversation`, `hasLiveProcess`, `isActiveStatus`, `listConversations`, `listConversationTurns`, `listGoneConversations`, `ListGoneQuerySchema`, `ListTurnsQuerySchema`, `postConversationTurn`, `PostTurnBodySchema`, `stopConversation`
+    - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `launch-prompts`, `prompt-input`, `push-and-exit`, `resume`, `transcript-api`
   - Web:
     - Exports: Values: `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
   - Plugins:
@@ -893,12 +894,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
       - Web:
         - Contributes: `ConfigV2.WebRegister`
-        - Uses: `config_v2.ConfigV2`
+        - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`
+        - Exports: Values: `useDefaultModel`, `useSetDefaultModel`, `useVisibleModels`
       - Server:
-        - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`
+        - Uses: `config_v2.ConfigV2`
         - Exports: Values: `resolveCliFlag`
       - Core:
-        - Exports: Types: `ConversationModel`, `ModelMeta`; Values: `ConversationModelSchema`, `DEFAULT_MODEL`, `MODEL_REGISTRY`
+        - Exports: Types: `ConversationModel`, `ModelMeta`; Values: `ConversationModelSchema`, `DEFAULT_MODEL`, `MODEL_REGISTRY`, `normalizeModel`
     - **`pane-restore`** — Saves and restores the miller pane chain per conversation using localStorage.
       - Web:
         - Exports: Values: `loadChainForConversation`
@@ -1440,9 +1442,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
       - Web:
         - Exports: Types: `IconButtonProps`; Values: `IconButton`
-    - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
+    - **`launch`** — Reusable split [model dropdown | launch] control for creating conversations.
       - Web:
-        - Exports: Types: `LaunchAgentPopoverProps`, `LaunchButtonsProps`, `LaunchRequest`; Values: `LaunchAgentPopover`, `LaunchButtons`, `useLaunchConversation`
+        - Exports: Types: `LaunchAgentPopoverProps`, `LaunchControlProps`, `LaunchRequest`; Values: `LaunchAgentPopover`, `LaunchControl`, `useLaunchConversation`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
       - Core:
         - Exports: Types: `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `resourceDescriptor`
@@ -1731,7 +1733,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "header" → `TaskHeader`
-        - Uses: `conversations.useConversationById`, `tasks.patchTask`, `tasks.setAutoStart`, `tasks.useTask`
+        - Uses: `conversations.useConversationById`, `tasks.AutoStartModel`, `tasks.patchTask`, `tasks.setAutoStart`, `tasks.useTask`
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
       - Web:
         - Slots: `Tasks.TaskActions`, `Tasks.ListActions`

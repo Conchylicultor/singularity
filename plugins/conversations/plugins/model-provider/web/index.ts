@@ -2,6 +2,12 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { modelProviderConfig } from "../shared/config";
 
+export {
+  useVisibleModels,
+  useDefaultModel,
+  useSetDefaultModel,
+} from "./internal/hooks";
+
 export default {
   id: "conversations-model-provider",
   name: "Model Provider",

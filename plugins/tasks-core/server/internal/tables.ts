@@ -10,7 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { rankText } from "@plugins/primitives/plugins/rank/core";
-import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import { DEFAULT_MODEL, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { ConversationStatus } from "../../core/conversation-status";
 
 // Physical tables only. This file is a load-order leaf: it must NOT import
@@ -117,7 +117,7 @@ export const _conversations = pgTable(
     title: text("title"),
     status: text("status").$type<ConversationStatus>().notNull().default("starting"),
     runtime: text("runtime").notNull().default("tmux"),
-    model: text("model").$type<ConversationModel>().notNull().default("opus"),
+    model: text("model").$type<ConversationModel>().notNull().default(DEFAULT_MODEL),
     kind: text("kind").$type<ConversationKind>().notNull().default("user"),
     claudeSessionId: text("claude_session_id"),
     waitingFor: text("waiting_for"),

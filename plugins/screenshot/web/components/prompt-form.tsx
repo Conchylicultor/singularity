@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { LaunchButtons, type LaunchRequest } from "@plugins/primitives/plugins/launch/web";
+import { LaunchControl, type LaunchRequest } from "@plugins/primitives/plugins/launch/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 
 export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | null | Promise<Blob | null> }) {
@@ -37,7 +37,7 @@ export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | 
         maxHeight="12rem"
         namespace="screenshot-prompt"
       />
-      <LaunchButtons size="sm" getRequest={getRequest} />
+      <LaunchControl size="sm" getRequest={getRequest} />
     </div>
   );
 }

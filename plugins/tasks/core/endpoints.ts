@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
+import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import {
   TaskChainSubmitBodySchema,
   TaskChainSubmitResponseSchema,
@@ -17,7 +18,7 @@ export const CreateTaskBodySchema = z.object({
   dependencies: z.array(z.string()).optional(),
   autoStart: z
     .object({
-      model: z.enum(["opus", "sonnet"]).optional(),
+      model: ConversationModelSchema.optional(),
     })
     .optional(),
   attachmentIds: z.array(z.string()).optional(),
@@ -43,7 +44,7 @@ export const InsertBetweenBodySchema = z.object({
 export type InsertBetweenBody = z.infer<typeof InsertBetweenBodySchema>;
 
 export const SetAutoStartBodySchema = z.object({
-  model: z.enum(["opus", "sonnet"]),
+  model: ConversationModelSchema,
 });
 export type SetAutoStartBody = z.infer<typeof SetAutoStartBodySchema>;
 

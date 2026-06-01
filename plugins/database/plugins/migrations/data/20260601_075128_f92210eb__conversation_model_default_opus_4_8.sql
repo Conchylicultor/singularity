@@ -1,0 +1,1 @@
+ALTER TABLE "conversations" ALTER COLUMN "model" SET DEFAULT 'opus-4-8';

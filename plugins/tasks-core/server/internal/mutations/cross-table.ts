@@ -1,4 +1,5 @@
 import { db } from "@plugins/database/server";
+import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import { _attempts, _conversations, _tasks } from "../tables";
 import { conversations } from "../schema";
 import { eq } from "drizzle-orm";
@@ -55,7 +56,7 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
         status: input.status,
         title: input.title ?? null,
         spawnedBy: "poller",
-        model: "opus",
+        model: DEFAULT_MODEL,
       })
       .onConflictDoNothing()
       .returning();
@@ -83,7 +84,7 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
           status: input.status,
           title: input.title ?? null,
           spawnedBy: "poller",
-          model: "opus",
+          model: DEFAULT_MODEL,
         })
         .onConflictDoNothing()
         .returning();

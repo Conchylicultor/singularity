@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { loadChainForConversation } from "@plugins/conversations/plugins/pane-restore/web";
 import { restoreChain, useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
+import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { ConversationsView } from "../slots";
 
 function activeIdFromPath(pathname: string): string | null {
@@ -47,7 +47,7 @@ export function ConversationList() {
       activeId={activeId}
       onNavigate={navigate}
       onCloseConversation={closeConversation}
-      header={<LaunchButtons variant="outline" size="sm" className="w-full" />}
+      header={<LaunchControl variant="outline" size="sm" className="w-full" />}
     />
   );
 }

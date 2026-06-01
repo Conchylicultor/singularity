@@ -12,6 +12,7 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createTask as createTaskEndpoint } from "../../core/endpoints";
 import { armTaskAutoStart } from "./arm-auto-start";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
+import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 
 export const handleCreate = implement(createTaskEndpoint, async ({ body }) => {
   const description = body.description?.trim() || null;
@@ -59,7 +60,7 @@ export const handleCreate = implement(createTaskEndpoint, async ({ body }) => {
   if (body.autoStart) {
     await armTaskAutoStart({
       taskId: row.id,
-      model: body.autoStart.model ?? "sonnet",
+      model: body.autoStart.model ?? DEFAULT_MODEL,
       dependencies,
       cause: "user-launch",
     });

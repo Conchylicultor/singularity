@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { ConversationSchema } from "@plugins/tasks-core/core";
 
 // --- Body schemas ---
 
@@ -54,6 +55,7 @@ export const getConversation = defineEndpoint({
 export const createConversation = defineEndpoint({
   route: "POST /api/conversations",
   body: CreateConversationBodySchema,
+  response: ConversationSchema,
 });
 
 export const deleteConversation = defineEndpoint({

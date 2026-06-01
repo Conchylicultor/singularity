@@ -1,4 +1,4 @@
-import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
+import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { buildTaskPrompt } from "@plugins/tasks-core/core";
 
 export function LaunchAgentAction({ taskId }: { taskId: string }) {
@@ -13,6 +13,6 @@ export function LaunchAgentAction({ taskId }: { taskId: string }) {
   };
 
   return (
-    <LaunchButtons size="icon" openAfterLaunch={false} getRequest={getRequest} />
+    <LaunchControl size="icon" openAfterLaunch={false} getRequest={getRequest} />
   );
 }

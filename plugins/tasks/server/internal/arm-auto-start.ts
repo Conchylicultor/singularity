@@ -1,6 +1,7 @@
 import { hasBlockingDep } from "@plugins/tasks-core/server";
 import { setTaskAutoStart } from "@plugins/tasks/plugins/auto-start/server";
 import { maybeLaunchTaskJob } from "@plugins/conversations/server";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
 // Mark a task as queued for auto-launch. If no deps block it, enqueue
 // immediately. If blocked, the static taskStatusChanged →
@@ -8,7 +9,7 @@ import { maybeLaunchTaskJob } from "@plugins/conversations/server";
 // will fire when deps complete and fan out to maybeLaunchTaskJob.
 export async function armTaskAutoStart(args: {
   taskId: string;
-  model: "opus" | "sonnet";
+  model: ConversationModel;
   dependencies: readonly string[];
   cause: string;
 }): Promise<void> {

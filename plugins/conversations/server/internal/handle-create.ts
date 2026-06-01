@@ -1,13 +1,13 @@
 import { notifyConversationsChanged } from "@plugins/tasks-core/server";
 import { recordCrash } from "@plugins/crashes/server";
-import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
+import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createConversation as createConversationEndpoint } from "../../core/endpoints";
 import { createConversation } from "./lifecycle";
 
 export const handleCreate = implement(createConversationEndpoint, async ({ body }) => {
   const model =
-    body.model !== undefined ? ConversationModelSchema.parse(body.model) : undefined;
+    body.model !== undefined ? normalizeModel(body.model) : undefined;
 
   let session;
   try {

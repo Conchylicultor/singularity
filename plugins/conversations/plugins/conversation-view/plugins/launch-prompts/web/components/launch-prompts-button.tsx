@@ -9,16 +9,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { launchPromptsConfig } from "../../shared/config";
 
-const MODEL_LABEL: Record<string, string> = {
-  sonnet: "Sonnet",
-  opus: "Opus",
-};
-
-const MODEL_CLASS: Record<string, string> = {
+const FAMILY_CHIP: Record<"opus" | "sonnet", string> = {
+  opus: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
   sonnet: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  opus:   "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
 };
 
 export function LaunchPromptsButton({
@@ -75,11 +71,16 @@ export function LaunchPromptsButton({
             className="flex items-center justify-between gap-6"
           >
             <span>{item.title}</span>
-            <span
-              className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${MODEL_CLASS[item.model] ?? ""}`}
-            >
-              {MODEL_LABEL[item.model] ?? item.model}
-            </span>
+            {(() => {
+              const meta = MODEL_REGISTRY[normalizeModel(item.model)];
+              return (
+                <span
+                  className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${FAMILY_CHIP[meta.family]}`}
+                >
+                  {meta.label}
+                </span>
+              );
+            })()}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

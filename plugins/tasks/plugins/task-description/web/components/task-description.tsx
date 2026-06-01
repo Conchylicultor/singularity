@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
+import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { patchTask, useTask } from "@plugins/tasks/web";
 import { getTask as getTaskEndpoint } from "@plugins/tasks/core";
@@ -41,7 +41,7 @@ export function TaskDescription({ taskId }: { taskId: string }) {
         onFileOpen={openFile}
       />
       <div className="flex justify-end">
-        <LaunchButtons
+        <LaunchControl
           size="sm"
           getRequest={buildLaunchRequest}
           disabled={!task.title.trim()}

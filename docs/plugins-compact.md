@@ -286,7 +286,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`filter-chips`** — Toggle-chip filter primitive: FilterChip, FilterGroup, and useChipFilter hook for single-select enum filtering.
     - **`floating-action`** — Hover-intent floating action: single morphing panel with JS hover intent (close delay) and pointer-events-none on close to prevent flicker.
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
-    - **`launch`** — Reusable Sonnet/Opus launch buttons for creating conversations.
+    - **`launch`** — Reusable split [model dropdown | launch] control for creating conversations.
     - **`live-state`** [load-bearing] — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
     - **`multi-select`** — Checkbox multi-select primitive: provider, hooks, and SelectionBar for list plugins.

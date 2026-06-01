@@ -3,7 +3,7 @@ import { z } from "zod";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
-import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
+import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { taskSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
 import { useActiveDataBinding } from "@plugins/active-data/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -140,7 +140,7 @@ export function TaskCard({
         >
           {creating ? "Creating…" : "Create"}
         </Button>
-        <LaunchButtons
+        <LaunchControl
           size="icon"
           disabled={disabled}
           openAfterLaunch={false}

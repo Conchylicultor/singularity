@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { LaunchButtons } from "./launch-buttons";
-import type { LaunchRequest } from "./launch-buttons";
+import { LaunchControl } from "./launch-control";
+import type { LaunchRequest } from "./launch-control";
 import type { Conversation } from "@plugins/tasks-core/core";
 
 export type LaunchAgentPopoverProps = {
@@ -49,7 +49,7 @@ export function LaunchAgentPopover({
         className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-[80px] w-full resize-y rounded-md border bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3"
         rows={3}
       />
-      <LaunchButtons
+      <LaunchControl
         size="sm"
         disabled={disabled}
         getRequest={() => getRequest(text)}

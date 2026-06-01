@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 
 export const TaskChainTargetSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("metaTask"), metaTaskId: z.string().min(1) }),
@@ -17,7 +18,7 @@ export const TaskChainRelateSchema = z.object({
 });
 export type TaskChainRelate = z.infer<typeof TaskChainRelateSchema>;
 
-export const TaskChainLaunchSchema = z.enum(["sonnet", "opus"]).nullable();
+export const TaskChainLaunchSchema = ConversationModelSchema.nullable();
 export type TaskChainLaunch = z.infer<typeof TaskChainLaunchSchema>;
 
 export const TaskChainCardSchema = z.object({

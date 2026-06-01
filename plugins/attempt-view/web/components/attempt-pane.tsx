@@ -8,7 +8,7 @@ import {
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
-import { LaunchButtons } from "@plugins/primitives/plugins/launch/web";
+import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import type { AttemptWithConversations } from "@plugins/tasks/core";
 import { attemptsResource } from "@plugins/tasks/core";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
@@ -99,7 +99,7 @@ function AttemptSection({
           })}
         </ul>
       )}
-      <LaunchButtons
+      <LaunchControl
         size="sm"
         variant="outline"
         className="px-2 pt-1"

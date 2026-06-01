@@ -1,6 +1,12 @@
-// @hash 1563c0d734cf
+// @hash d6e5fbd38219
 {
-  // Claude Opus model version for new conversations.
-  // Allowed values: "4-6", "4-7", "4-8"
-  "opusVersion": "4-6"
+  // Model fired by the launch button and pre-selected in the dropdown.
+  // Allowed values: "opus-4-8", "opus-4-7", "opus-4-6", "sonnet-4-6"
+  "defaultModel": "opus-4-8",
+  "visibleModels": {
+    "opus-4-8": true,
+    "opus-4-7": false,
+    "opus-4-6": false,
+    "sonnet-4-6": true
+  }
 }

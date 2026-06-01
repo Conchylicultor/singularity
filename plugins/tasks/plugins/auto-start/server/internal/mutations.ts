@@ -3,6 +3,7 @@ import { db } from "@plugins/database/server";
 import { _tasks } from "@plugins/tasks-core/server";
 import { tasksAutoStartResource } from "./resource";
 import { tasksAutoStart, _tasksAutoStartExt } from "./tables";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
 export async function getTaskAutoStart(id: string) {
   return tasksAutoStart.get(id);
@@ -10,7 +11,7 @@ export async function getTaskAutoStart(id: string) {
 
 export async function setTaskAutoStart(
   id: string,
-  autoStart: { model: "opus" | "sonnet" } | null,
+  autoStart: { model: ConversationModel } | null,
 ): Promise<boolean> {
   const [task] = await db
     .select({ id: _tasks.id })

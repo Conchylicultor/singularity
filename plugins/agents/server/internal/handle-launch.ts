@@ -4,8 +4,8 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createTask } from "@plugins/tasks-core/server";
 import { createConversation } from "@plugins/conversations/server";
 import {
-  ConversationModelSchema,
-  type ConversationModel,
+  DEFAULT_MODEL,
+  normalizeModel,
 } from "@plugins/conversations/plugins/model-provider/core";
 import { launchAgent } from "../../core/endpoints";
 import { _agent_launches } from "./tables";
@@ -34,8 +34,7 @@ export const handleLaunch = implement(launchAgent, async ({ params, body }) => {
     throw new HttpError(400, "Agent has no prompt (folder node)");
   }
 
-  const requestedModel = body.model ?? agent.model ?? "sonnet";
-  const model: ConversationModel = ConversationModelSchema.parse(requestedModel);
+  const model = normalizeModel(body.model ?? agent.model ?? DEFAULT_MODEL);
 
   const now = new Date();
   const task = await createTask({

@@ -2,10 +2,12 @@ import { useCallback } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
-import { patchTask, setAutoStart, useTask } from "@plugins/tasks/web";
+import { patchTask, setAutoStart, useTask, type AutoStartModel } from "@plugins/tasks/web";
 import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
 import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { StatusBadge } from "@plugins/tasks/plugins/task-status/web";
+import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
+import { useVisibleModels } from "@plugins/conversations/plugins/model-provider/web";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -35,8 +37,10 @@ export function TaskHeader({ taskId }: { taskId: string }) {
     void patchTask(taskId, { hold: task.status !== "held" });
   };
 
+  const visibleModels = useVisibleModels();
+
   const onAutoStartChange = useCallback(
-    (model: "opus" | "sonnet" | "none") => setAutoStart(taskId, model),
+    (model: AutoStartModel) => setAutoStart(taskId, model),
     [taskId],
   );
 
@@ -106,9 +110,9 @@ export function TaskHeader({ taskId }: { taskId: string }) {
           Auto-start
         </SectionLabel>
         <Select
-          value={autoStart?.autoStartModel ?? "none"}
+          value={autoStart?.autoStartModel != null ? normalizeModel(autoStart.autoStartModel) : "none"}
           onValueChange={(v: string | null) => {
-            if (v) void onAutoStartChange(v as "opus" | "sonnet" | "none");
+            if (v) void onAutoStartChange(v as AutoStartModel);
           }}
         >
           <SelectTrigger className="h-7 w-32 text-xs">
@@ -116,8 +120,9 @@ export function TaskHeader({ taskId }: { taskId: string }) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">Off</SelectItem>
-            <SelectItem value="sonnet">Sonnet</SelectItem>
-            <SelectItem value="opus">Opus</SelectItem>
+            {visibleModels.map((m) => (
+              <SelectItem key={m} value={m}>{MODEL_REGISTRY[m].label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

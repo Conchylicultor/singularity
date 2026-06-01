@@ -1,12 +1,9 @@
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";
+import { useVisibleModels } from "@plugins/conversations/plugins/model-provider/web";
 import { cn } from "@/lib/utils";
 
-export type ChainModel = "queue" | "sonnet" | "opus";
-
-const MODELS: { value: ChainModel; label: string }[] = [
-  { value: "queue", label: "No" },
-  { value: "sonnet", label: "Sonnet" },
-  { value: "opus", label: "Opus" },
-];
+export type ChainModel = "queue" | ConversationModel;
 
 export interface ModelChipProps {
   value: ChainModel;
@@ -15,6 +12,11 @@ export interface ModelChipProps {
 }
 
 export function ModelChip({ value, onChange, disabled }: ModelChipProps) {
+  const visibleModels = useVisibleModels();
+  const options: { value: ChainModel; label: string }[] = [
+    { value: "queue" as const, label: "No" },
+    ...visibleModels.map((m) => ({ value: m, label: MODEL_REGISTRY[m].label })),
+  ];
   return (
     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
       <span>Auto-launch with</span>
@@ -23,7 +25,7 @@ export function ModelChip({ value, onChange, disabled }: ModelChipProps) {
         aria-label="Launch model"
         className="border-border bg-muted/40 inline-flex items-center rounded-md border p-0.5"
       >
-        {MODELS.map((m) => {
+        {options.map((m) => {
           const selected = m.value === value;
           return (
             <button

@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
+import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import { MdAdd, MdScience } from "react-icons/md";
 import {
   DndContext,
@@ -57,7 +58,7 @@ export interface TaskDraftFormProps {
   footerStart?: ReactNode;
 }
 
-const NEW_CARD_DEFAULT_MODEL: ChainModel = "opus";
+const NEW_CARD_DEFAULT_MODEL: ChainModel = DEFAULT_MODEL;
 
 function useIsAgentWorktree(): boolean {
   return useMemo(() => {

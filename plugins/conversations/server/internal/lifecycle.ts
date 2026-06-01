@@ -11,7 +11,7 @@ import {
   updateTask,
 } from "@plugins/tasks-core/server";
 import { Runtime } from "./runtime";
-import { DEFAULT_MODEL, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import { DEFAULT_MODEL, normalizeModel, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { Conversation, ConversationKind } from "@plugins/tasks-core/core";
 import { forkDatabase } from "@plugins/database/plugins/admin/server";
 import { forkConfig } from "@plugins/config_v2/server";
@@ -71,7 +71,7 @@ export async function createConversation(
     }
     attemptId = source.attemptId;
     resumeSessionId = source.claudeSessionId;
-    inheritedModel = source.model;
+    inheritedModel = normalizeModel(source.model);
   }
   const model = opts.model ?? inheritedModel ?? DEFAULT_MODEL;
 

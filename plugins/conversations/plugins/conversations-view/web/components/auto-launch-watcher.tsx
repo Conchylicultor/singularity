@@ -3,6 +3,7 @@ import { conversationsResource } from "@plugins/conversations/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { toast } from "@plugins/notifications/web";
 import { tasksResource } from "@plugins/tasks/core";
+import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 
 const CAUSALITY_VALUES = new Set(["user-launch", "dep-resolved", "mcp-add-task"]);
 
@@ -25,7 +26,7 @@ export function AutoLaunchWatcher() {
         !seenIdsRef.current.has(conv.id as string) &&
         CAUSALITY_VALUES.has(conv.spawnedBy as string)
       ) {
-        const model = conv.model === "opus" ? "Opus" : "Sonnet";
+        const model = MODEL_REGISTRY[normalizeModel(conv.model)].label;
         const tasks = tasksResult.pending ? [] : tasksResult.data;
         const task = tasks.find((t) => t.id === conv.taskId);
         const taskTitle = task?.title ?? "";

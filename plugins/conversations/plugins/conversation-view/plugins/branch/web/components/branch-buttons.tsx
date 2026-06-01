@@ -9,9 +9,11 @@ import {
   MODEL_REGISTRY,
   type ConversationModel,
 } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  useVisibleModels,
+  useDefaultModel,
+} from "@plugins/conversations/plugins/model-provider/web";
 import { Button } from "@/components/ui/button";
-
-const MODELS = Object.keys(MODEL_REGISTRY) as ConversationModel[];
 
 export function BranchButtons({
   conversation,
@@ -20,6 +22,9 @@ export function BranchButtons({
 }) {
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
+
+  const defaultModel = useDefaultModel();
+  const visibleModels = useVisibleModels();
 
   const { launch, launching } = useLaunchConversation({
     openAfterLaunch: false,
@@ -61,7 +66,7 @@ export function BranchButtons({
           value={prompt}
           onChange={setPrompt}
           onSubmit={() => {
-            if (canSubmit) void launch({} as React.MouseEvent, MODELS[0]!);
+            if (canSubmit) void launch(defaultModel);
           }}
           submitMode="cmd-enter"
           placeholder="Describe the direction to explore…"
@@ -71,14 +76,14 @@ export function BranchButtons({
           namespace="branch-prompt"
         />
         <div className="flex justify-end gap-2">
-          {MODELS.map((model) => (
+          {visibleModels.map((model: ConversationModel) => (
             <Button
               key={model}
               variant="outline"
               size="sm"
               className="gap-1"
               disabled={!canSubmit}
-              onClick={(e) => launch(e, model)}
+              onClick={(e) => void launch(model, e)}
             >
               {launching === model
                 ? "Branching…"

@@ -7,13 +7,14 @@ import { tasksResource } from "@plugins/tasks/core";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 
 type AddTaskInput = {
   title: string;
   description?: string;
   relation?: "followup" | "prerequisite" | "independent";
   target?: string;
-  autostart: "sonnet" | "opus" | null;
+  autostart: string | null;
 };
 
 type AddTaskResult = {
@@ -57,7 +58,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
       <span className="min-w-0 truncate">{input.title}</span>
       {autostart ? (
         <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-          auto-launch {autostart}
+          auto-launch {MODEL_REGISTRY[normalizeModel(autostart)].label}
         </span>
       ) : (
         <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-400">

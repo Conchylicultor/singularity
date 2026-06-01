@@ -1,38 +1,22 @@
-import { MdPlayArrow } from "react-icons/md";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import {
   useLastAssistantEvent,
-  RowActionButton,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
-import { MODEL_REGISTRY, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
-
-const MODELS = Object.keys(MODEL_REGISTRY) as ConversationModel[];
+import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 
 export function ForkSessionAction({ event }: { event: JsonlEvent }) {
   const lastAssistant = useLastAssistantEvent();
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
-  const { launch, launching } = useLaunchConversation({
-    getRequest: () => ({ forkFromConversationId: convId }),
-  });
 
   if (event !== lastAssistant || !conversation?.claudeSessionId) return null;
 
   return (
-    <>
-      {MODELS.map((model) => (
-        <RowActionButton
-          key={model}
-          title={`Fork session → ${model}`}
-          disabled={!!launching}
-          onClick={(e) => launch(e, model)}
-        >
-          <MdPlayArrow className={MODEL_REGISTRY[model].iconSize} />
-        </RowActionButton>
-      ))}
-    </>
+    <LaunchControl
+      size="icon"
+      getRequest={() => ({ forkFromConversationId: convId })}
+    />
   );
 }
