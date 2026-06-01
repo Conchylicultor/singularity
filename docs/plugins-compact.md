@@ -126,7 +126,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`summary`** — Renders summary separator events in the JSONL viewer.
             - **`system`** — Renders system events in the JSONL viewer.
             - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.
-            - **`tool-call`** [10 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
+            - **`tool-call`** [11 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
             - **`unknown`** — Renders unknown JSONL event types as collapsible sections with the raw payload.
             - **`user-image`** — Renders inline image thumbnails for user-image events.
             - **`user-text`** — Renders user text events in the JSONL viewer.

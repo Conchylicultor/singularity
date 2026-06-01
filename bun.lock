@@ -518,6 +518,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-task-tools",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-workflow",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/write": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-write",
       "version": "0.0.1",
@@ -2351,6 +2355,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-skill": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-skill@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/skill"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-task-tools": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-task-tools@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/task-tools"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-workflow": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-workflow@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-write": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-tool-call-write@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/write"],
 

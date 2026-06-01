@@ -714,7 +714,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`, `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
                 - Exports: Types: `ToolRendererContribution`; Values: `JsonlViewerTool`, `ToolCallCard`
               - Cross-plugin:
-                - Slot contributors: `add-task`, `agent`, `ask-user-question`, `bash`, `edit`, `flag-raise`, `read`, `skill`, `task-tools`, `write`
+                - Slot contributors: `add-task`, `agent`, `ask-user-question`, `bash`, `edit`, `flag-raise`, `read`, `skill`, `task-tools`, `workflow`, `write`
               - Core:
                 - Exports: Types: `ToolCallEvent`, `ToolRendererProps`
               - Plugins:
@@ -751,6 +751,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "TaskCreate" → `TaskCreateToolView`, `JsonlViewerTool.Renderer` "TaskUpdate" → `TaskUpdateToolView`, `JsonlViewerTool.Renderer` "TaskGet" → `TaskGetToolView`, `JsonlViewerTool.Renderer` "TaskList" → `TaskListToolView`, `JsonlViewerTool.Renderer` "TaskOutput" → `TaskOutputToolView`, `JsonlViewerTool.Renderer` "TaskStop" → `TaskStopToolView`, `JsonlViewer.Overlay` "task-progress" → `TaskProgressOverlay`
+                - **`workflow`** — Renders Workflow tool calls with the workflow name, description, numbered phase plan, a collapsible syntax-highlighted script, and the launched run/task ids.
+                  - Web:
+                    - Contributes: `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Write" → `WriteToolView`
