@@ -1,6 +1,6 @@
 // @hash 1563c0d734cf
 {
   // Claude Opus model version for new conversations.
-  // Allowed values: "4-6", "4-7"
+  // Allowed values: "4-6", "4-7", "4-8"
   "opusVersion": "4-6"
 }
