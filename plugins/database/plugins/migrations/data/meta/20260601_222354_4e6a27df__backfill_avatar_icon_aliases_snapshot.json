@@ -1,6 +1,6 @@
 {
-  "id": "47f485b8-98f6-441e-9e6a-448b12f648c0",
-  "prevId": "ea2a8aef-a458-461d-ab9e-98d716a36b2f",
+  "id": "816e28ad-c490-4558-8184-41eaddf0e754",
+  "prevId": "7970e845-8750-422c-a90f-f91018fa5d84",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -768,6 +768,12 @@
         },
         "exit_code": {
           "name": "exit_code",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pid": {
+          "name": "pid",
           "type": "integer",
           "primaryKey": false,
           "notNull": false

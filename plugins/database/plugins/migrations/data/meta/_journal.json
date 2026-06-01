@@ -764,6 +764,13 @@
       "tag": "20260601_153625_fd75d9b0__add_build_run_pid",
       "hash": "fd75d9b0",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780352634000,
+      "tag": "20260601_222354_4e6a27df__backfill_avatar_icon_aliases",
+      "hash": "4e6a27df",
+      "breakpoints": true
     }
   ]
 }

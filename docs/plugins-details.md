@@ -1385,7 +1385,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `JumpToBottomButtonProps`, `StickyScrollHandle`, `UseStickyScrollOptions`; Values: `JumpToBottomButton`, `useStickyScroll`
     - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
       - Web:
-        - Exports: Types: `AvatarColor`, `AvatarIconCategory`, `AvatarPickerProps`, `AvatarProps`, `AvatarSize`, `AvatarSpec`, `FullIconCategory`, `FullIconEntry`, `FullIconSet`, `SvgNode`; Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`, `extractSvgNodes`, `loadFullIconSet`
+        - Exports: Types: `AvatarColor`, `AvatarPickerProps`, `AvatarProps`, `AvatarSize`, `AvatarSpec`, `FullIconCategory`, `FullIconEntry`, `FullIconSet`, `SvgNode`; Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`, `extractSvgNodes`, `loadFullIconSet`
       - Server:
         - Exports: Values: `resolveIconSvgNodesJson`
     - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
