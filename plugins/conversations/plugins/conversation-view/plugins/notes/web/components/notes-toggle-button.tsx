@@ -1,4 +1,4 @@
-import { StickyNote } from "lucide-react";
+import { MdStickyNote2 } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationNote } from "../internal/use-conversation-note";
@@ -23,7 +23,7 @@ export function NotesToggleButton({
       aria-pressed={isVisible}
       onClick={toggleVisible}
     >
-      <StickyNote className="size-3.5" />
+      <MdStickyNote2 className="size-3.5" />
     </Button>
   );
 }

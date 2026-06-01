@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ListVideo } from "lucide-react";
+import { MdPlaylistPlay } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { toast } from "@plugins/notifications/web";
@@ -60,7 +60,7 @@ export function LaunchPromptsButton({
         className="inline-flex h-7 items-center gap-1.5 rounded-full border px-3 text-xs transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
         aria-label="Launch prompts"
       >
-        <ListVideo className="size-3" />
+        <MdPlaylistPlay className="size-3" />
         Launch
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">

@@ -1135,7 +1135,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `AllowVerdict`, `DenyVerdict`, `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`; Values: `createContext`, `defineGuard`, `GUARDS`, `parseShell`
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Core:
-            - Exports: Values: `discoverAllowDefaultProject`, `findPluginDirs`, `lintCollectedDir`, `promiseSafetyRules`
+            - Exports: Values: `discoverAllowDefaultProject`, `findPluginDirs`, `iconSafetyRules`, `lintCollectedDir`, `promiseSafetyRules`
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
       - Core:
         - Exports: Types: `Contribution`, `DocMeta`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `webCollectedDir`

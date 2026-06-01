@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRight } from "lucide-react";
+import { MdWarning, MdArrowForward } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   CollapsibleChevron,
@@ -75,7 +75,7 @@ export function TurnSummaryCard({
           {caveats.length > 0 && (
             <BulletList
               icon={
-                <AlertTriangle className="mt-0.5 size-3 shrink-0 text-amber-600 dark:text-amber-400" />
+                <MdWarning className="mt-0.5 size-3 shrink-0 text-amber-600 dark:text-amber-400" />
               }
               items={caveats}
             />
@@ -83,7 +83,7 @@ export function TurnSummaryCard({
           {actions.length > 0 && (
             <BulletList
               icon={
-                <ArrowRight className="mt-0.5 size-3 shrink-0 text-sky-600 dark:text-sky-400" />
+                <MdArrowForward className="mt-0.5 size-3 shrink-0 text-sky-600 dark:text-sky-400" />
               }
               items={actions}
             />

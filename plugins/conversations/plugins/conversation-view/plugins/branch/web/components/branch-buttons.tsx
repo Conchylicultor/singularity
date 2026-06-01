@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GitBranch } from "lucide-react";
+import { MdCallSplit } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
@@ -53,7 +53,7 @@ export function BranchButtons({
           title="Branch conversation"
           aria-label="Branch conversation"
         >
-          <GitBranch className="size-3.5" />
+          <MdCallSplit className="size-3.5" />
           Branch
         </button>
       }

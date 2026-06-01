@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { MdClose } from "react-icons/md";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { SearchInput, useTextFilter } from "@plugins/primitives/plugins/search/web";
@@ -51,7 +51,7 @@ export function DepPopoverContent({
                 className="hover:bg-destructive/10 hover:text-destructive shrink-0 rounded p-0.5"
                 aria-label="Remove"
               >
-                <X className="size-3" />
+                <MdClose className="size-3" />
               </button>
             </li>
           ))}
@@ -73,7 +73,7 @@ export function DepPopoverContent({
                   className="hover:bg-destructive/10 hover:text-destructive shrink-0 rounded p-0.5"
                   aria-label="Remove"
                 >
-                  <X className="size-3" />
+                  <MdClose className="size-3" />
                 </button>
               </li>
             );

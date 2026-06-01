@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Blocks } from "lucide-react";
+import { MdWidgets } from "react-icons/md";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type { PluginNode, PluginTreePayload } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
@@ -82,7 +82,7 @@ export function PluginLinkChip({
       className="inline-flex max-w-full items-center gap-1 rounded bg-muted px-1.5 py-0.5 align-baseline text-xs text-primary hover:bg-muted/80 hover:underline"
       title={node.description ?? resolvedId}
     >
-      <Blocks className="size-3 shrink-0 text-muted-foreground" />
+      <MdWidgets className="size-3 shrink-0 text-muted-foreground" />
       <span className="truncate font-mono">{resolvedId}</span>
     </button>
   );

@@ -4,7 +4,7 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react";
-import { ChevronRight } from "lucide-react";
+import { MdChevronRight } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { useCollapsible, type UseCollapsibleOptions } from "./use-collapsible";
 
@@ -119,7 +119,7 @@ export function CollapsibleChevron({
   const open = openProp ?? ctx?.open ?? false;
 
   return (
-    <ChevronRight
+    <MdChevronRight
       className={cn(
         "shrink-0 transition-transform duration-200",
         open && "rotate-90",

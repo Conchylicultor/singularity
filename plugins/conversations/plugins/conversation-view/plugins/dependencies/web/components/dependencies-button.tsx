@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { Link2 } from "lucide-react";
+import { MdLink } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations } from "@plugins/conversations/web";
 import { useTask } from "@plugins/tasks/web";
@@ -263,7 +263,7 @@ export function DependenciesButton({
         </InlinePopover>
 
         <div className="flex shrink-0 items-center border-x border-border/50 px-1">
-          <Link2 className="size-3 text-muted-foreground" />
+          <MdLink className="size-3 text-muted-foreground" />
         </div>
 
         <InlinePopover

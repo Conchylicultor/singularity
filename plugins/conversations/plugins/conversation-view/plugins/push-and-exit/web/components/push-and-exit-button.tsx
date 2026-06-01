@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { MdDeleteForever, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";
-import { LogOut, Play } from "lucide-react";
+import { MdDeleteForever, MdLogout, MdPlayArrow, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";
 import { isDraftEmpty, conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, useConversation, useConversationById } from "@plugins/conversations/web";
 import { isActiveStatus, hasLiveProcess } from "@plugins/conversations/core";
@@ -324,11 +323,11 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         : mode === "stop"
           ? MdStop
           : mode === "go"
-            ? Play
+            ? MdPlayArrow
             : mode === "push-and-exit"
               ? MdRocketLaunch
               : mode === "exit"
-                ? LogOut
+                ? MdLogout
                 : MdDeleteForever;
 
   const buttonClass =

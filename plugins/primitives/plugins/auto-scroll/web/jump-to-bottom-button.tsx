@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { MdExpandMore } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { StickyScrollHandle } from "./use-sticky-scroll";
@@ -26,7 +26,7 @@ export function JumpToBottomButton({
       aria-label="Jump to bottom"
       className={cn("gap-1.5 rounded-full shadow-md", className)}
     >
-      <ChevronDown className="size-4" />
+      <MdExpandMore className="size-4" />
       {label}
     </Button>
   );

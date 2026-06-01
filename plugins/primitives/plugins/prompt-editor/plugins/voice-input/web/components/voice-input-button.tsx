@@ -1,4 +1,4 @@
-import { Mic } from "lucide-react";
+import { MdMic } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ export function VoiceInputButton({ insertText }: PromptEditorActionProps) {
   return (
     <IconButton
       icon={({ className }) => (
-        <Mic className={cn(className, isListening && "animate-pulse")} />
+        <MdMic className={cn(className, isListening && "animate-pulse")} />
       )}
       label={label}
       tooltip={error ?? label}

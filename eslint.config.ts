@@ -23,6 +23,7 @@ import type { Linter } from "eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 import {
   discoverAllowDefaultProject,
+  iconSafetyRules,
   promiseSafetyRules,
 } from "./plugins/framework/plugins/tooling/plugins/lint/core";
 import { lintEntries } from "./plugins/framework/plugins/tooling/plugins/lint/core/lint.generated";
@@ -70,6 +71,7 @@ const baseConfigs: Linter.Config[] = [
     },
     plugins: {
       "@typescript-eslint": tsPlugin as unknown as Linter.Plugin,
+      "icon-safety": { rules: iconSafetyRules } as unknown as Linter.Plugin,
       "promise-safety": { rules: promiseSafetyRules } as unknown as Linter.Plugin,
       "react-hooks": reactHooks as unknown as Linter.Plugin,
     },
@@ -83,6 +85,7 @@ const baseConfigs: Linter.Config[] = [
         allowConstantLoopConditions: true,
       }],
       "@typescript-eslint/await-thenable": "error",
+      "icon-safety/no-lucide-react": "error",
       "promise-safety/no-floating-promises": "error",
       "promise-safety/no-bare-catch": "error",
       "react-hooks/rules-of-hooks": "error",

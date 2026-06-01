@@ -1,4 +1,4 @@
-import { PauseCircle } from "lucide-react";
+import { MdPauseCircle } from "react-icons/md";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
@@ -28,7 +28,7 @@ export function HoldAndExitButton({
       disabled={disabled}
       onClick={() => mutate({ params: { id: conversation.id } })}
     >
-      <PauseCircle className="size-3.5" />
+      <MdPauseCircle className="size-3.5" />
     </Button>
   );
 }

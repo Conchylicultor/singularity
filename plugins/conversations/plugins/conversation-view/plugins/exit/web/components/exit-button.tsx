@@ -1,4 +1,4 @@
-import { LogOut } from "lucide-react";
+import { MdLogout } from "react-icons/md";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
@@ -28,7 +28,7 @@ export function ExitButton({
       disabled={disabled}
       onClick={() => mutate({ params: { id: conversation.id } })}
     >
-      <LogOut className="size-3.5" />
+      <MdLogout className="size-3.5" />
     </Button>
   );
 }

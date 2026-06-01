@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { PenLine, SendHorizontal } from "lucide-react";
+import { MdEdit, MdSend } from "react-icons/md";
 import {
   FloatingAction,
   FloatingActionFadeIn,
@@ -52,7 +52,7 @@ function TemplateChip({
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => applyTemplate(template, insertText)}
       >
-        <PenLine className="size-3 shrink-0" />
+        <MdEdit className="size-3 shrink-0" />
         <span>{template.title}</span>
       </button>
       <div className="w-px h-3 bg-border" />
@@ -67,7 +67,7 @@ function TemplateChip({
         disabled={!canSend || sending}
         onClick={() => onSend(template)}
       >
-        <SendHorizontal className="size-3 shrink-0" />
+        <MdSend className="size-3 shrink-0" />
       </button>
     </div>
   );
@@ -133,7 +133,7 @@ export function FloatingTemplateChips({
         variant="ghost"
         panelClassName="flex-col-reverse items-end gap-1 p-1 group-data-hovered/fa:px-1.5 max-w-7 group-data-hovered/fa:max-w-sm max-h-7 group-data-hovered/fa:max-h-40"
       >
-        <PenLine className="size-3.5 shrink-0 text-muted-foreground/40 group-data-hovered/fa:text-muted-foreground transition-colors" />
+        <MdEdit className="size-3.5 shrink-0 text-muted-foreground/40 group-data-hovered/fa:text-muted-foreground transition-colors" />
         <FloatingActionFadeIn className="flex flex-wrap items-center gap-1">
           {templates.map((t) => (
             <TemplateChip

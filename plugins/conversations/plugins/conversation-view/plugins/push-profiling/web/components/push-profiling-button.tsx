@@ -1,4 +1,4 @@
-import { Activity } from "lucide-react";
+import { MdTimeline } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Button } from "@/components/ui/button";
 import { convPushProfilingPane } from "../panes";
@@ -20,7 +20,7 @@ export function PushProfilingButton() {
       onClick={toggle}
       className="gap-1.5"
     >
-      <Activity className="size-4" />
+      <MdTimeline className="size-4" />
     </Button>
   );
 }
