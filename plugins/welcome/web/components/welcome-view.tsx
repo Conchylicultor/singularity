@@ -57,7 +57,7 @@ export function WelcomeView() {
         )}
 
         {/* New Conversation */}
-        <LaunchControl className="w-full" />
+        <LaunchControl className="w-full" openMode="root" />
 
         {/* Recent Conversations */}
         {!isLoading && recentConversations.length > 0 && (

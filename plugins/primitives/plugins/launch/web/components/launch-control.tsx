@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MdPlayArrow, MdExpandMore, MdCheck } from "react-icons/md";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane, type PaneOpenMode } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { type Conversation } from "@plugins/tasks-core/core";
 import { createConversation } from "@plugins/conversations/core";
@@ -35,6 +35,13 @@ export type LaunchRequest = {
 export type LaunchControlProps = {
   getRequest?: () => LaunchRequest | Promise<LaunchRequest>;
   openAfterLaunch?: boolean;
+  /**
+   * How to open the freshly created conversation pane. Defaults to `"push"`
+   * (append to the right of the caller). Surfaces that launch from a root
+   * landing pane (e.g. the welcome view) pass `"root"` so the new
+   * conversation replaces the chain instead of opening a sibling column.
+   */
+  openMode?: PaneOpenMode;
   onLaunched?: (conversation: Conversation) => void;
   variant?: "default" | "outline";
   size?: "default" | "sm" | "icon";
@@ -50,8 +57,9 @@ export type LaunchControlProps = {
 export function useLaunchConversation({
   getRequest,
   openAfterLaunch = true,
+  openMode = "push",
   onLaunched,
-}: Pick<LaunchControlProps, "getRequest" | "openAfterLaunch" | "onLaunched">) {
+}: Pick<LaunchControlProps, "getRequest" | "openAfterLaunch" | "openMode" | "onLaunched">) {
   const [launching, setLaunching] = useState<ConversationModel | null>(null);
   const openPane = useOpenPane();
 
@@ -63,7 +71,7 @@ export function useLaunchConversation({
       const request = (await getRequest?.()) ?? {};
       const conversation = await fetchEndpoint(createConversation, {}, { body: { model, ...request } });
       onLaunched?.(conversation);
-      if (openAfterLaunch) openPane(conversationPane, { convId: conversation.id }, { mode: "push" });
+      if (openAfterLaunch) openPane(conversationPane, { convId: conversation.id }, { mode: openMode });
     } finally {
       setLaunching(null);
     }
@@ -81,13 +89,14 @@ export function useLaunchConversation({
 export function LaunchControl({
   getRequest,
   openAfterLaunch = true,
+  openMode = "push",
   onLaunched,
   variant = "default",
   size = "default",
   disabled,
   className,
 }: LaunchControlProps) {
-  const { launch, launching } = useLaunchConversation({ getRequest, openAfterLaunch, onLaunched });
+  const { launch, launching } = useLaunchConversation({ getRequest, openAfterLaunch, openMode, onLaunched });
   const defaultModel = useDefaultModel();
   const visibleModels = useVisibleModels();
   const setDefaultModel = useSetDefaultModel();
