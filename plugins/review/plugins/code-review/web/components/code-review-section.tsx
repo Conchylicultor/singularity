@@ -188,8 +188,8 @@ function FileSectionBlock({
         <span>{label}</span>
         <span>·</span>
         <span className="tabular-nums">{totals.count} files</span>
-        <span className="tabular-nums text-emerald-600 dark:text-emerald-400">+{totals.additions}</span>
-        <span className="tabular-nums text-red-600 dark:text-red-400">−{totals.deletions}</span>
+        <span className="tabular-nums text-success">+{totals.additions}</span>
+        <span className="tabular-nums text-destructive">−{totals.deletions}</span>
       </CollapsibleTrigger>
       <CollapsibleContent>
         {section.files.map((file) => (
@@ -227,10 +227,10 @@ function ToolbarRow({
     <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-4 py-2 backdrop-blur">
       <div className="flex items-center gap-2 text-sm font-medium">
         <span className="tabular-nums">{count} files</span>
-        <span className="text-emerald-600 tabular-nums dark:text-emerald-400">
+        <span className="text-success tabular-nums">
           +{additions}
         </span>
-        <span className="text-red-600 tabular-nums dark:text-red-400">
+        <span className="text-destructive tabular-nums">
           −{deletions}
         </span>
       </div>

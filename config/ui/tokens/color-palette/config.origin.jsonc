@@ -1,4 +1,4 @@
-// @hash 68fd75178054
+// @hash 2cbfdfb8924f
 {
   "preset": "default",
   "overrides": {
@@ -19,6 +19,12 @@
       "accentForeground": "",
       "destructive": "",
       "destructiveForeground": "",
+      "success": "",
+      "successForeground": "",
+      "warning": "",
+      "warningForeground": "",
+      "info": "",
+      "infoForeground": "",
       "border": "",
       "input": "",
       "ring": ""
@@ -40,6 +46,12 @@
       "accentForeground": "",
       "destructive": "",
       "destructiveForeground": "",
+      "success": "",
+      "successForeground": "",
+      "warning": "",
+      "warningForeground": "",
+      "info": "",
+      "infoForeground": "",
       "border": "",
       "input": "",
       "ring": ""

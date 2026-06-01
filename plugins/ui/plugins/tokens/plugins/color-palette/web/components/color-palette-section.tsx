@@ -33,6 +33,9 @@ const GROUPS: GroupDef[] = [
   { label: "Popover", keys: ["popover", "popoverForeground"] },
   { label: "Muted", keys: ["muted", "mutedForeground"] },
   { label: "Destructive", keys: ["destructive", "destructiveForeground"] },
+  { label: "Success", keys: ["success", "successForeground"] },
+  { label: "Warning", keys: ["warning", "warningForeground"] },
+  { label: "Info", keys: ["info", "infoForeground"] },
   { label: "Border & Input", keys: ["border", "input", "ring"] },
 ];
 

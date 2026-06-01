@@ -1112,6 +1112,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`conversation-trailer`**
             - **`eslint`**
             - **`migrations-in-sync`**
+            - **`no-hardcoded-colors`**
             - **`no-plugin-imports-in-core`**
             - **`no-plugin-workspace-deps`**
             - **`no-raw-event-source`**

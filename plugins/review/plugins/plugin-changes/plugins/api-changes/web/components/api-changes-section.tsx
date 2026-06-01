@@ -10,14 +10,14 @@ function DiffSection({ label, diff }: { label: string; diff: DiffList }) {
       </span>
       {diff.added.map((item) => (
         <span key={item} className="flex items-center gap-1.5 text-xs">
-          <MdAdd className="size-3 text-green-500 shrink-0" />
-          <code className="text-green-600 dark:text-green-400">{item}</code>
+          <MdAdd className="size-3 text-success shrink-0" />
+          <code className="text-success">{item}</code>
         </span>
       ))}
       {diff.removed.map((item) => (
         <span key={item} className="flex items-center gap-1.5 text-xs">
-          <MdRemove className="size-3 text-red-500 shrink-0" />
-          <code className="text-red-400">{item}</code>
+          <MdRemove className="size-3 text-destructive shrink-0" />
+          <code className="text-destructive">{item}</code>
         </span>
       ))}
     </div>

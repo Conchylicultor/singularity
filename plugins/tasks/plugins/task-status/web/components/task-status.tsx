@@ -23,15 +23,15 @@ export const STATUS_META: Record<
   },
   in_progress: {
     icon: MdTimelapse,
-    iconClassName: "text-blue-600 dark:text-blue-400",
+    iconClassName: "text-info",
     label: "In progress",
     badgeClassName: "bg-muted",
   },
   need_action: {
     icon: MdInput,
-    iconClassName: "text-orange-500 dark:text-orange-400",
+    iconClassName: "text-warning",
     label: "Need action",
-    badgeClassName: "bg-orange-500/15 text-orange-700 dark:text-orange-300",
+    badgeClassName: "bg-warning/15 text-warning",
   },
   attempted: {
     icon: MdIncompleteCircle,
@@ -41,15 +41,15 @@ export const STATUS_META: Record<
   },
   done: {
     icon: MdCheckCircle,
-    iconClassName: "text-emerald-600 dark:text-emerald-400",
+    iconClassName: "text-success",
     label: "Done",
     badgeClassName: "bg-muted",
   },
   held: {
     icon: MdPauseCircle,
-    iconClassName: "text-amber-600 dark:text-amber-400",
+    iconClassName: "text-warning",
     label: "Held",
-    badgeClassName: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+    badgeClassName: "bg-warning/15 text-warning",
   },
   dropped: {
     icon: MdCancel,
@@ -59,9 +59,9 @@ export const STATUS_META: Record<
   },
   blocked: {
     icon: MdPauseCircle,
-    iconClassName: "text-zinc-500 dark:text-zinc-400",
+    iconClassName: "text-muted-foreground",
     label: "Blocked",
-    badgeClassName: "bg-zinc-500/15 text-zinc-700 dark:text-zinc-300",
+    badgeClassName: "bg-muted text-muted-foreground",
   },
 };
 

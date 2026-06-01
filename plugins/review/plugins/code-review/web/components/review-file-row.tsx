@@ -19,9 +19,9 @@ const STATUS_LABEL: Record<EditedFileStatus, string> = {
 
 const STATUS_BADGE: Record<EditedFileStatus, string> = {
   modified: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
-  added: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
-  untracked: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
-  deleted: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30",
+  added: "bg-success/15 text-success border-success/30",
+  untracked: "bg-success/15 text-success border-success/30",
+  deleted: "bg-destructive/15 text-destructive border-destructive/30",
   renamed: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
   copied: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
   clean: "bg-muted text-muted-foreground border-border",
@@ -29,13 +29,13 @@ const STATUS_BADGE: Record<EditedFileStatus, string> = {
 
 const LEVEL_BG = {
   safe: "bg-muted",
-  careful: "bg-amber-500/10 dark:bg-amber-500/10",
-  critical: "bg-red-500/10 dark:bg-red-500/10",
+  careful: "bg-warning/10",
+  critical: "bg-destructive/10",
 };
 
 const LEVEL_ICON_CLASS = {
-  careful: "size-3.5 text-amber-500 dark:text-amber-400",
-  critical: "size-3.5 text-red-500 dark:text-red-400",
+  careful: "size-3.5 text-warning",
+  critical: "size-3.5 text-destructive",
 };
 
 const LEVEL_TOOLTIP = {
@@ -101,8 +101,8 @@ export function ReviewFileRow({
           />
         </span>
         <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
-          <span className="text-emerald-600 dark:text-emerald-400">+{file.additions}</span>
-          <span className="text-red-600 dark:text-red-400">−{file.deletions}</span>
+          <span className="text-success">+{file.additions}</span>
+          <span className="text-destructive">−{file.deletions}</span>
           {level !== "safe" && (
             <MdWarning
               className={LEVEL_ICON_CLASS[level]}

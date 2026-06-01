@@ -14,22 +14,22 @@ function formatDuration(start: Date, end: Date | null): string {
 function StatusBadge({ exitCode, finished }: { exitCode: number | null; finished: boolean }) {
   if (!finished) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-        <span className="block size-2 rounded-full bg-amber-400 animate-pulse" />
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning">
+        <span className="block size-2 rounded-full bg-warning animate-pulse" />
         Running
       </span>
     );
   }
   if (exitCode === 0) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-        <span className="block size-2 rounded-full bg-emerald-500" />
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
+        <span className="block size-2 rounded-full bg-success" />
         Success
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700 dark:bg-red-950 dark:text-red-300">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
       <span className="block size-2 rounded-full bg-destructive" />
       Failed (exit {exitCode})
     </span>

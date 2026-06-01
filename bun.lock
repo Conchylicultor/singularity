@@ -829,6 +829,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-migrations-in-sync",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/no-hardcoded-colors": {
+      "name": "@singularity/plugin-framework-tooling-checks-no-hardcoded-colors",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/no-plugin-imports-in-core": {
       "name": "@singularity/plugin-framework-tooling-checks-no-plugin-imports-in-core",
       "version": "0.0.1",
@@ -2487,6 +2491,8 @@
     "@singularity/plugin-framework-tooling-checks-eslint": ["@singularity/plugin-framework-tooling-checks-eslint@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/eslint"],
 
     "@singularity/plugin-framework-tooling-checks-migrations-in-sync": ["@singularity/plugin-framework-tooling-checks-migrations-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/migrations-in-sync"],
+
+    "@singularity/plugin-framework-tooling-checks-no-hardcoded-colors": ["@singularity/plugin-framework-tooling-checks-no-hardcoded-colors@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-hardcoded-colors"],
 
     "@singularity/plugin-framework-tooling-checks-no-plugin-imports-in-core": ["@singularity/plugin-framework-tooling-checks-no-plugin-imports-in-core@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-plugin-imports-in-core"],
 

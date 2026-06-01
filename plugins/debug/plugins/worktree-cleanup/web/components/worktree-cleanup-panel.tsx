@@ -43,11 +43,11 @@ function relativeAge(iso: string): string {
 
 function StatusBadge({ status }: { status: string }) {
   const color: Record<string, string> = {
-    done: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    dropped: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-    in_progress: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
-    need_action: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    attempted: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+    done: "bg-success/10 text-success",
+    dropped: "bg-muted text-muted-foreground",
+    in_progress: "bg-info/10 text-info",
+    need_action: "bg-warning/10 text-warning",
+    attempted: "bg-muted text-muted-foreground",
   };
   return (
     <span
@@ -60,7 +60,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function DirtyIndicator({ entry }: { entry: WorktreeEntry }) {
   if (!entry.dirExists && !entry.dbExists) {
-    return <span className="text-xs text-green-600 dark:text-green-400">fully clean</span>;
+    return <span className="text-xs text-success">fully clean</span>;
   }
   if (!entry.dirExists) {
     return <span className="text-xs text-muted-foreground italic">no dir</span>;
@@ -72,7 +72,7 @@ function DirtyIndicator({ entry }: { entry: WorktreeEntry }) {
   if (entry.unpushedCount > 0) parts.push(`${entry.unpushedCount} unpushed`);
   if (entry.isDirty) parts.push("uncommitted");
   return (
-    <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+    <span className="flex items-center gap-1 text-xs text-warning">
       <MdWarning className="size-3.5 shrink-0" />
       {parts.join(", ")}
     </span>
@@ -352,10 +352,10 @@ function EntryRow({
 
       {/* Inline confirmation for dirty worktrees */}
       {confirmOpen && (
-        <tr className="border-b bg-amber-50 dark:bg-amber-950/30">
+        <tr className="border-b bg-warning/5">
           <td colSpan={5} className="px-4 py-2">
             <div className="flex items-center justify-between gap-4">
-              <span className="text-xs text-amber-700 dark:text-amber-300">
+              <span className="text-xs text-warning">
                 This worktree has unpushed commits or uncommitted changes. Delete anyway?
               </span>
               <div className="flex items-center gap-2 shrink-0">

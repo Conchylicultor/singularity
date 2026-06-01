@@ -9,8 +9,8 @@ import { getFileWarningLevel, type FileWarningLevel } from "../core-files";
 import { reviewConfig } from "../../shared/config";
 
 const WARNING_ICON_CLASS: Record<"careful" | "critical", string> = {
-  careful: "size-3.5 text-amber-500 dark:text-amber-400",
-  critical: "size-3.5 text-red-500 dark:text-red-400",
+  careful: "size-3.5 text-warning",
+  critical: "size-3.5 text-destructive",
 };
 
 export function CodeReviewSummary({
@@ -50,8 +50,8 @@ export function CodeReviewSummary({
   return (
     <span className="flex items-center gap-1.5 text-xs tabular-nums">
       <span>{count}</span>
-      <span className="text-emerald-600 dark:text-emerald-400">+{additions}</span>
-      <span className="text-red-600 dark:text-red-400">−{deletions}</span>
+      <span className="text-success">+{additions}</span>
+      <span className="text-destructive">−{deletions}</span>
       {maxLevel !== "safe" && (
         <MdWarning className={WARNING_ICON_CLASS[maxLevel]} />
       )}

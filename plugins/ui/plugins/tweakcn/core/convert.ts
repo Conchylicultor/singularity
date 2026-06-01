@@ -40,6 +40,12 @@ const COLOR_PALETTE_MAP: Record<string, string> = {
   "accent-foreground": "accentForeground",
   destructive: "destructive",
   "destructive-foreground": "destructiveForeground",
+  success: "success",
+  "success-foreground": "successForeground",
+  warning: "warning",
+  "warning-foreground": "warningForeground",
+  info: "info",
+  "info-foreground": "infoForeground",
   border: "border",
   input: "input",
   ring: "ring",
@@ -74,7 +80,7 @@ export function convertTweakcnTheme(
 ): Record<string, PerGroupPreset> {
   const result: Record<string, PerGroupPreset> = {};
 
-  // color-palette: 19 tokens from light/dark
+  // color-palette: 25 tokens from light/dark
   result["color-palette"] = {
     light: pick(cssVars.light, COLOR_PALETTE_MAP),
     dark: pick(cssVars.dark, COLOR_PALETTE_MAP),

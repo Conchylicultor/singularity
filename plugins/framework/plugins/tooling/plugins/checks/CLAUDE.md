@@ -14,6 +14,7 @@
   - **`conversation-trailer`**
   - **`eslint`**
   - **`migrations-in-sync`**
+  - **`no-hardcoded-colors`**
   - **`no-plugin-imports-in-core`**
   - **`no-plugin-workspace-deps`**
   - **`no-raw-event-source`**

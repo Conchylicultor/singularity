@@ -201,7 +201,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
-        - **`checks`** [20 sub-plugins] — Check runner and built-in checks for ./singularity check
+        - **`checks`** [21 sub-plugins] — Check runner and built-in checks for ./singularity check
         - **`codegen`** — Plugin doc generation and registry codegen
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config

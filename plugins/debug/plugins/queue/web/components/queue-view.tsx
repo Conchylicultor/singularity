@@ -95,10 +95,10 @@ function truncate(s: string, max: number): string {
 // ─── Jobs tab ────────────────────────────────────────────────────────────
 
 const STATE_STYLES: Record<JobState, string> = {
-  pending: "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200",
-  running: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
-  retrying: "bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200",
-  dead: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200",
+  pending: "bg-info/10 text-info",
+  running: "bg-warning/10 text-warning",
+  retrying: "bg-warning/15 text-warning",
+  dead: "bg-destructive/10 text-destructive",
 };
 
 function JobsTab() {
@@ -190,7 +190,7 @@ function JobsTab() {
                     {r.attempts}/{r.maxAttempts}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">{relativeTime(r.runAt)}</td>
-                  <td className="px-3 py-2 text-xs text-red-700 dark:text-red-400">
+                  <td className="px-3 py-2 text-xs text-destructive">
                     {r.lastError ? truncate(r.lastError.split("\n")[0] ?? "", 60) : ""}
                   </td>
                   <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
@@ -257,7 +257,7 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
           </Field>
           {job.lastError && (
             <Field label="Last error">
-              <pre className="max-h-64 overflow-auto rounded bg-red-50 p-2 text-xs text-red-800 dark:bg-red-950 dark:text-red-200">
+              <pre className="max-h-64 overflow-auto rounded bg-destructive/5 p-2 text-xs text-destructive">
                 {job.lastError}
               </pre>
             </Field>
@@ -314,8 +314,8 @@ function EventsTab() {
                       className={cn(
                         "inline-block rounded px-1.5 py-0.5 text-[11px] font-medium tabular-nums",
                         r.matchedCount === 0
-                          ? "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-200"
-                          : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-success/10 text-success",
                       )}
                     >
                       {r.matchedCount}
@@ -363,7 +363,7 @@ function EmissionDrawer({
           </Field>
           <Field label="Matched triggers">
             {emission.matchedCount === 0 ? (
-              <span className="text-red-700 dark:text-red-400">
+              <span className="text-destructive">
                 0 — no trigger matched this emission.
               </span>
             ) : (
