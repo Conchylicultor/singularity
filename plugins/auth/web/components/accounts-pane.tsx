@@ -20,7 +20,7 @@ export function AccountsPane() {
       </div>
 
       {!authState.pending && authState.data.mainOffline ? (
-        <div className="rounded border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-700">
+        <div className="rounded border border-warning/50 bg-warning/10 p-3 text-sm text-warning">
           The main app is offline. Worktrees can't read tokens until it comes
           back. Visit{" "}
           <a

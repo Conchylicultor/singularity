@@ -30,8 +30,8 @@ export function PluginChangeCard({
         <span
           className={`ml-auto shrink-0 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${
             plugin.status === "added"
-              ? "bg-green-500/15 text-green-600 dark:text-green-400"
-              : "bg-blue-500/15 text-blue-600 dark:text-blue-400"
+              ? "bg-success/15 text-success"
+              : "bg-info/15 text-info"
           }`}
         >
           {plugin.status}

@@ -170,10 +170,10 @@ export function TaskDraftForm({
 
   return (
     <div
-      className={`flex w-[480px] flex-col gap-2 ${isAgentWorktree ? "rounded-lg border-2 border-red-500/60 p-3" : ""}`}
+      className={`flex w-[480px] flex-col gap-2 ${isAgentWorktree ? "rounded-lg border-2 border-destructive/60 p-3" : ""}`}
     >
       {isAgentWorktree && (
-        <div className="flex items-center gap-1.5 text-xs font-medium text-red-500">
+        <div className="flex items-center gap-1.5 text-xs font-medium text-destructive">
           <MdScience className="size-3.5" />
           Experimental — tasks target main from an agent worktree
         </div>

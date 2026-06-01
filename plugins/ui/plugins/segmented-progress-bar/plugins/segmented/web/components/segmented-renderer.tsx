@@ -23,7 +23,7 @@ export function SegmentedRenderer({
         {steps.map((step, i) => {
           const segClass =
             i < currentIndex
-              ? "bg-emerald-500/70"
+              ? "bg-success"
               : i === currentIndex
                 ? "bg-primary"
                 : "bg-muted-foreground/25";

@@ -3,10 +3,10 @@ import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 
 const STATUS_CLASS: Record<WsStatus, string> = {
-  connecting: "bg-yellow-400 animate-pulse",
-  open: "bg-green-500",
-  reconnecting: "bg-yellow-500 animate-pulse",
-  closed: "bg-red-500",
+  connecting: "bg-warning animate-pulse",
+  open: "bg-success",
+  reconnecting: "bg-warning animate-pulse",
+  closed: "bg-destructive",
 };
 
 const STATUS_VERB: Record<WsStatus, string> = {

@@ -15,9 +15,9 @@ type ContentResponse = { ok: true; content: string } | { ok: false; error: strin
 
 const TYPE_BADGE: Record<MemoryFile["type"], { label: string; classes: string }> = {
   index: { label: "index", classes: "bg-muted text-muted-foreground" },
-  feedback: { label: "feedback", classes: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" },
-  project: { label: "project", classes: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" },
-  user: { label: "user", classes: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  feedback: { label: "feedback", classes: "bg-warning/10 text-warning" },
+  project: { label: "project", classes: "bg-info/10 text-info" },
+  user: { label: "user", classes: "bg-success/10 text-success" },
   reference: { label: "ref", classes: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" },
   other: { label: "other", classes: "bg-muted text-muted-foreground" },
 };

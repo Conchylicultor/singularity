@@ -27,7 +27,7 @@ export function PluginChangesSection({
   }
   if (error) {
     return (
-      <p className="text-sm text-red-400 px-1">Error: {String(error)}</p>
+      <p className="text-sm text-destructive px-1">Error: {String(error)}</p>
     );
   }
   if (data.plugins.length === 0) {

@@ -146,10 +146,10 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
 
 function StatusDot({ run }: { run: BuildRun }) {
   if (run.finishedAt === null) {
-    return <span className="block size-2 shrink-0 rounded-full bg-amber-400 animate-pulse" />;
+    return <span className="block size-2 shrink-0 rounded-full bg-warning animate-pulse" />;
   }
   if (run.exitCode === 0) {
-    return <span className="block size-2 shrink-0 rounded-full bg-emerald-500" />;
+    return <span className="block size-2 shrink-0 rounded-full bg-success" />;
   }
   return <span className="block size-2 shrink-0 rounded-full bg-destructive" />;
 }
@@ -195,7 +195,7 @@ function BuildHistoryList({
                 "rounded px-1 py-0.5 text-[10px] font-medium",
                 run.trigger === "auto"
                   ? "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300"
-                  : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+                  : "bg-muted text-muted-foreground",
               )}
             >
               {run.trigger}

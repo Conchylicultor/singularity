@@ -1,9 +1,9 @@
 import type { ServerStatus } from "../../shared";
 
 const styles: Record<ServerStatus, { bg: string; label: string }> = {
-  online: { bg: "bg-green-500", label: "Online" },
-  offline: { bg: "bg-red-500", label: "Offline" },
-  unknown: { bg: "bg-zinc-400", label: "Unknown" },
+  online: { bg: "bg-success", label: "Online" },
+  offline: { bg: "bg-destructive", label: "Offline" },
+  unknown: { bg: "bg-muted-foreground", label: "Unknown" },
 };
 
 export function ServerStatusBadge({ status }: { status: ServerStatus }) {

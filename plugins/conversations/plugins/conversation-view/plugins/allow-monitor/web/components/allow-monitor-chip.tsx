@@ -32,7 +32,7 @@ export function AllowMonitorChip() {
       }
     >
       <button
-        className="inline-flex animate-pulse cursor-default items-center gap-1.5 rounded-md bg-red-500/90 px-2 py-1 text-xs font-semibold text-white hover:bg-red-500"
+        className="inline-flex animate-pulse cursor-default items-center gap-1.5 rounded-md bg-destructive/90 px-2 py-1 text-xs font-semibold text-white hover:bg-destructive"
         aria-label="Security bypass active"
       >
         <MdWarning className="size-3.5" />

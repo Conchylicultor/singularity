@@ -153,7 +153,7 @@ function Section({
       <div
         className={`text-[10px] uppercase tracking-wide ${
           tone === "warn"
-            ? "text-amber-600 dark:text-amber-400"
+            ? "text-warning"
             : "text-muted-foreground"
         }`}
       >

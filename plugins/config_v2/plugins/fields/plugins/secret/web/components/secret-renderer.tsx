@@ -53,7 +53,7 @@ const SecretRenderer: FieldRendererComponent<string> = ({ field, value, onChange
         {field.meta.label ? <label className="text-sm font-medium">{field.meta.label}</label> : null}
         {field.meta.description ? <p className="text-xs text-muted-foreground">{field.meta.description}</p> : null}
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1 text-xs text-emerald-700 dark:text-emerald-400">
+          <span className="flex items-center gap-1 text-xs text-success">
             <MdCheck className="size-3.5" />
             Configured
           </span>

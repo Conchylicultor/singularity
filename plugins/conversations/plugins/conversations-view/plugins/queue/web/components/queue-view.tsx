@@ -430,7 +430,7 @@ export function QueueView({
                   >
                     <ConversationItem conv={group.selected} />
                     {group.count > 1 && (
-                      <span className="ml-auto shrink-0 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-red-500">
+                      <span className="ml-auto shrink-0 rounded-full bg-destructive/20 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-destructive">
                         {group.count}
                       </span>
                     )}
@@ -622,7 +622,7 @@ function QueueRow({
         >
           <ConversationItem conv={conv} />
           {clusterSize > 1 && (
-            <span className="ml-auto shrink-0 rounded-full bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-red-500">
+            <span className="ml-auto shrink-0 rounded-full bg-destructive/20 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-destructive">
               {clusterSize}
             </span>
           )}

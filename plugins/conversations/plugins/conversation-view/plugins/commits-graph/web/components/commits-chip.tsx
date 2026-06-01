@@ -51,14 +51,14 @@ export function CommitsChip() {
       {behind > 0 ? (
         <>
           <span className="text-muted-foreground">↓</span>
-          <span className="text-amber-500">{behind}</span>
+          <span className="text-warning">{behind}</span>
         </>
       ) : null}
       {pushCount > 0 ? (
         <>
           <span className="text-muted-foreground">·</span>
-          <MdPublish className="size-3.5 text-emerald-500" />
-          <span className="text-emerald-500">{pushCount}</span>
+          <MdPublish className="size-3.5 text-success" />
+          <span className="text-success">{pushCount}</span>
         </>
       ) : null}
     </Button>

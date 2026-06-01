@@ -11,9 +11,9 @@ type TaskUpdateInput = {
 function statusBadgeClass(status: string): string {
   switch (status) {
     case "in_progress":
-      return "bg-blue-500/15 text-blue-700 dark:text-blue-400";
+      return "bg-info/15 text-info";
     case "completed":
-      return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
+      return "bg-success/15 text-success";
     default:
       return "bg-muted text-muted-foreground";
   }

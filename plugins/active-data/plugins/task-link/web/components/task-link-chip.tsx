@@ -11,12 +11,12 @@ import type { TaskStatus } from "@plugins/tasks-core/core";
 const TASK_STATUS_DOT: Record<TaskStatus, string> = {
   new: "bg-muted-foreground/60",
   in_progress: "bg-[oklch(0.58_0.1_240)]",
-  need_action: "bg-amber-500",
+  need_action: "bg-warning",
   attempted: "bg-[oklch(0.58_0.1_240)]",
-  done: "bg-green-500",
-  held: "bg-amber-500/60",
+  done: "bg-success",
+  held: "bg-warning/60",
   dropped: "bg-muted-foreground/40",
-  blocked: "bg-red-500/60",
+  blocked: "bg-destructive/60",
 };
 
 export function TaskLinkChip({ content }: { content: string; attrs: Record<string, string> }) {

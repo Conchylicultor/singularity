@@ -21,7 +21,7 @@ export function ConfigSidebarButton() {
           <span className="relative">
             <MdTune className="size-4" />
             {hasConflicts && (
-              <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-amber-500" />
+              <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-warning" />
             )}
           </span>
           <span>Config</span>

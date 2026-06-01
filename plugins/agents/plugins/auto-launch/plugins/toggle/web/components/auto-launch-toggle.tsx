@@ -28,7 +28,7 @@ export function AutoLaunchToggle({ agentId }: { agentId: string }) {
       aria-pressed={enabled}
       className={cn(
         "flex size-6 shrink-0 items-center justify-center rounded hover:bg-background/60",
-        enabled ? "text-blue-500" : "opacity-40",
+        enabled ? "text-info" : "opacity-40",
       )}
     >
       <MdRocketLaunch className="size-4" />

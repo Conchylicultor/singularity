@@ -34,9 +34,9 @@ function formatSize(bytes: number): string {
 function StatusIcon({ status }: { status: string }) {
   switch (status) {
     case "ok":
-      return <MdCheckCircle className="size-4 shrink-0 text-green-500" />;
+      return <MdCheckCircle className="size-4 shrink-0 text-success" />;
     case "partial":
-      return <MdWarning className="size-4 shrink-0 text-yellow-500" />;
+      return <MdWarning className="size-4 shrink-0 text-warning" />;
     case "failed":
       return <MdError className="size-4 shrink-0 text-destructive" />;
     default:
@@ -53,7 +53,7 @@ function TargetResultRow({ result }: { result: BackupTargetResult }) {
       <Icon className="size-4 shrink-0 text-muted-foreground" />
       <span className="font-medium capitalize">{result.targetId}</span>
       {result.ok ? (
-        <MdCheckCircle className="size-3.5 text-green-500" />
+        <MdCheckCircle className="size-3.5 text-success" />
       ) : (
         <MdError className="size-3.5 text-destructive" />
       )}

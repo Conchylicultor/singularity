@@ -23,7 +23,7 @@ export function VoiceInputButton({ insertText }: PromptEditorActionProps) {
       onClick={toggle}
       aria-pressed={isListening}
       className={cn(
-        isListening && "text-red-500 bg-red-500/10",
+        isListening && "text-destructive bg-destructive/10",
         error && "text-destructive",
       )}
     />

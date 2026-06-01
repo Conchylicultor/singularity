@@ -34,8 +34,8 @@ function Panel({
 }) {
   const border =
     side === "old"
-      ? "border-red-500/40 bg-red-500/5"
-      : "border-green-500/40 bg-green-500/5";
+      ? "border-destructive/40 bg-destructive/5"
+      : "border-success/40 bg-success/5";
   return (
     <div className={`flex flex-1 flex-col overflow-hidden rounded border ${border}`}>
       <div className="border-b px-3 py-1 text-xs font-medium text-muted-foreground">

@@ -138,32 +138,32 @@ function ConfigDetailInner({
         <>
           {conflictEntry && (
             isSoftConflict ? (
-              <div className="mb-2 flex items-center justify-between rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+              <div className="mb-2 flex items-center justify-between rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
                 <span>Defaults updated — no conflicts</span>
                 <button
                   type="button"
                   onClick={handleDismiss}
-                  className="shrink-0 rounded-sm bg-amber-500/20 px-2 py-0.5 text-xs font-medium hover:bg-amber-500/30"
+                  className="shrink-0 rounded-sm bg-warning/20 px-2 py-0.5 text-xs font-medium hover:bg-warning/30"
                 >
                   Dismiss
                 </button>
               </div>
             ) : (
-              <div className="mb-2 flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-300">
+              <div className="mb-2 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
                 <MdWarning className="size-4 shrink-0" />
                 <span className="flex-1">Upstream defaults changed</span>
                 <div className="flex shrink-0 gap-1.5">
                   <button
                     type="button"
                     onClick={handleAcceptAll}
-                    className="rounded-sm bg-amber-500/20 px-2 py-0.5 text-xs font-medium hover:bg-amber-500/30"
+                    className="rounded-sm bg-warning/20 px-2 py-0.5 text-xs font-medium hover:bg-warning/30"
                   >
                     Accept all new defaults
                   </button>
                   <button
                     type="button"
                     onClick={handleDismiss}
-                    className="rounded-sm bg-amber-500/20 px-2 py-0.5 text-xs font-medium hover:bg-amber-500/30"
+                    className="rounded-sm bg-warning/20 px-2 py-0.5 text-xs font-medium hover:bg-warning/30"
                   >
                     Keep my values
                   </button>

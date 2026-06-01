@@ -167,7 +167,7 @@ export function GoogleSetupPane() {
         >
           <div className="flex flex-col gap-2">
             {credentialsSaved ? (
-              <div className="flex items-center gap-1 text-xs text-emerald-700">
+              <div className="flex items-center gap-1 text-xs text-success">
                 <MdCheck className="h-4 w-4" />
                 Credentials configured
               </div>
@@ -206,7 +206,7 @@ export function GoogleSetupPane() {
         >
           <div className="flex flex-col gap-2">
             {connected ? (
-              <div className="flex items-center gap-1 text-xs text-emerald-700">
+              <div className="flex items-center gap-1 text-xs text-success">
                 <MdCheck className="h-4 w-4" />
                 Connected
                 {status.identity?.email ? ` (${status.identity.email})` : ""}
@@ -253,7 +253,7 @@ function Step({
       <div
         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
           done
-            ? "bg-emerald-500/15 text-emerald-700"
+            ? "bg-success/15 text-success"
             : "bg-muted text-muted-foreground"
         }`}
       >

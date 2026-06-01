@@ -111,7 +111,7 @@ export function DefaultProviderRow({ providerId }: Props) {
           </details>
         ) : null}
         {status?.lastRefreshError ? (
-          <div className="mt-1 text-xs text-amber-700">
+          <div className="mt-1 text-xs text-warning">
             Last refresh failed:{" "}
             <span className="font-mono">{status.lastRefreshError.message}</span>
           </div>
@@ -184,14 +184,14 @@ function StatusPill({
   }
   if (needsReconsent) {
     return (
-      <span className="rounded bg-amber-500/15 px-1.5 py-0.5 text-xs text-amber-700">
+      <span className="rounded bg-warning/15 px-1.5 py-0.5 text-xs text-warning">
         Needs reconsent
       </span>
     );
   }
   if (connected) {
     return (
-      <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-xs text-emerald-700">
+      <span className="rounded bg-success/15 px-1.5 py-0.5 text-xs text-success">
         Connected
       </span>
     );

@@ -58,7 +58,7 @@ export function CommitsGraphBody() {
           <span className="font-mono text-foreground">{branchLabel}</span>
           <span>↑{ahead}</span>
           {behind > 0 ? (
-            <span className="text-amber-500">↓{behind}</span>
+            <span className="text-warning">↓{behind}</span>
           ) : null}
           <span className="ml-auto">vs main</span>
         </div>

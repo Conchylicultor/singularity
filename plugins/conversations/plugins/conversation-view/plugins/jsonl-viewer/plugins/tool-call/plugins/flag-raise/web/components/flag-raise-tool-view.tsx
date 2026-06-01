@@ -11,8 +11,8 @@ export function FlagRaiseToolView({ event }: ToolRendererProps) {
 
   return (
     <ToolCallCard event={event} summary="Flagged for review" defaultOpen>
-      <div className="mt-2 flex items-start gap-2 rounded border border-yellow-500/30 bg-yellow-500/10 px-3 py-2">
-        <MdFlag className="mt-0.5 size-4 shrink-0 text-yellow-500" />
+      <div className="mt-2 flex items-start gap-2 rounded border border-warning/30 bg-warning/10 px-3 py-2">
+        <MdFlag className="mt-0.5 size-4 shrink-0 text-warning" />
         <p className="text-xs whitespace-pre-wrap">{input.reason}</p>
       </div>
       {event.result?.isError && (

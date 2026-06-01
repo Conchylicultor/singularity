@@ -72,7 +72,7 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
         <CollapsibleTrigger className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted/50 transition-colors">
           <CollapsibleChevron className="size-3 text-muted-foreground" />
           {step.success ? (
-            <MdCheck className="size-3.5 text-emerald-500 shrink-0" />
+            <MdCheck className="size-3.5 text-success shrink-0" />
           ) : (
             <MdClose className="size-3.5 text-destructive shrink-0" />
           )}

@@ -10,16 +10,16 @@ import type { Notification } from "../../shared/schema";
 
 const VARIANT_BORDER: Record<Notification["variant"], string> = {
   error: "border-l-destructive",
-  warning: "border-l-amber-500",
-  info: "border-l-sky-500",
-  success: "border-l-green-500",
+  warning: "border-l-warning",
+  info: "border-l-info",
+  success: "border-l-success",
 };
 
 const VARIANT_TEXT: Record<Notification["variant"], string> = {
   error: "text-destructive",
-  warning: "text-amber-500",
-  info: "text-sky-500",
-  success: "text-green-500",
+  warning: "text-warning",
+  info: "text-info",
+  success: "text-success",
 };
 
 function navigateTo(url: string) {

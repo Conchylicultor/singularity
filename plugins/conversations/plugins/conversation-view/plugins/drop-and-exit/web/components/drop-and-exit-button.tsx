@@ -51,7 +51,7 @@ export function DropAndExitButton({
         aria-label="Complete & Exit"
         disabled={disabled}
         onClick={() => mutate({ params: { id: conversation.id } })}
-        className="border-emerald-300/70 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-300"
+        className="border-success/30 bg-success/10 text-success hover:bg-success/15 dark:border-success/40"
       >
         <MdCheckCircle className="size-3.5" />
       </Button>

@@ -101,17 +101,17 @@ export function BuildButton() {
           {building ? "Building…" : "Build"}
           {mainAheadCount > 0 ? (
             <WithTooltip content={`main is ${mainAheadCount} commit${mainAheadCount !== 1 ? "s" : ""} ahead of this worktree`}>
-              <span className="block size-2 rounded-full bg-amber-400" />
+              <span className="block size-2 rounded-full bg-warning" />
             </WithTooltip>
           ) : loaded && !staleTab ? (
             <WithTooltip content="Synced to HEAD">
-              <span className="block size-2 rounded-full bg-zinc-400" />
+              <span className="block size-2 rounded-full bg-muted-foreground" />
             </WithTooltip>
           ) : null}
           {staleTab && (
             <WithTooltip content="Server was rebuilt — click to reload this tab">
               <button
-                className="block size-2 rounded-full bg-sky-400 hover:bg-sky-500"
+                className="block size-2 rounded-full bg-info hover:opacity-80"
                 onClick={(e) => {
                   e.stopPropagation();
                   window.location.reload();

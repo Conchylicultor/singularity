@@ -18,7 +18,7 @@ export function QueuedChipAction({ taskId }: { taskId: string; hasChildren: bool
         e.stopPropagation();
         void setAutoStart(taskId, "none");
       }}
-      className="ml-1 inline-flex shrink-0 items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
+      className="ml-1 inline-flex shrink-0 items-center gap-1 rounded border border-warning/40 bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning hover:bg-warning/20"
     >
       Queued · {label}
     </button>

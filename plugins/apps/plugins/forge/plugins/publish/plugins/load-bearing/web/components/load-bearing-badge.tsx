@@ -5,7 +5,7 @@ export function LoadBearingBadge({ node }: { node: PluginNode }) {
   if (!node.loadBearing) return null;
   return (
     <MdBolt
-      className="size-3.5 shrink-0 text-amber-500/90"
+      className="size-3.5 shrink-0 text-warning"
       aria-label="Load-bearing"
     />
   );

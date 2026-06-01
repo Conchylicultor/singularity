@@ -8,13 +8,13 @@ import { convTasksPane } from "../panes";
 
 const STATUS_DOT: Record<string, string> = {
   new: "bg-muted-foreground/40",
-  in_progress: "bg-blue-500",
-  need_action: "bg-orange-500",
+  in_progress: "bg-info",
+  need_action: "bg-warning",
   attempted: "bg-muted-foreground",
-  done: "bg-emerald-500",
-  held: "bg-amber-500",
+  done: "bg-success",
+  held: "bg-warning",
   dropped: "bg-muted-foreground/30",
-  blocked: "bg-zinc-500",
+  blocked: "bg-muted-foreground",
 };
 
 export function TasksButton() {

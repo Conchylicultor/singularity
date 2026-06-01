@@ -72,10 +72,10 @@ function CommitFileList({
         <span className="text-sm font-medium tabular-nums">
           {files.length} {files.length === 1 ? "file" : "files"}
         </span>
-        <span className="text-xs tabular-nums text-emerald-600 dark:text-emerald-400">
+        <span className="text-xs tabular-nums text-success">
           +{totals.additions}
         </span>
-        <span className="text-xs tabular-nums text-red-600 dark:text-red-400">
+        <span className="text-xs tabular-nums text-destructive">
           −{totals.deletions}
         </span>
       </div>
@@ -136,10 +136,10 @@ function CommitFileRow({
           <span className="font-medium">{basename}</span>
         </span>
         <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
-          <span className="text-emerald-600 dark:text-emerald-400">
+          <span className="text-success">
             +{file.additions}
           </span>
-          <span className="text-red-600 dark:text-red-400">
+          <span className="text-destructive">
             −{file.deletions}
           </span>
         </span>

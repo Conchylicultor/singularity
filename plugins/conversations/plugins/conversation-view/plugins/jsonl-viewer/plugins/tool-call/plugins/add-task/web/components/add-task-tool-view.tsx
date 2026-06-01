@@ -57,11 +57,11 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
     <span className="flex min-w-0 items-center gap-2">
       <span className="min-w-0 truncate">{input.title}</span>
       {autostart ? (
-        <span className="shrink-0 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+        <span className="shrink-0 rounded bg-success/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-success">
           auto-launch {MODEL_REGISTRY[normalizeModel(autostart)].label}
         </span>
       ) : (
-        <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-amber-700 dark:text-amber-400">
+        <span className="shrink-0 rounded bg-warning/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-warning">
           no auto-launch
         </span>
       )}

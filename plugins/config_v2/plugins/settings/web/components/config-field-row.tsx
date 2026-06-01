@@ -29,7 +29,7 @@ function formatOriginValue(value: unknown): string {
 }
 
 const TIER_BADGE = {
-  git: { label: "git", className: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
+  git: { label: "git", className: "bg-info/10 text-info" },
   user: { label: "user", className: "bg-primary/10 text-primary" },
 } as const;
 
@@ -76,7 +76,7 @@ export function ConfigFieldRow({
         <div
           className={cn(
             "h-8 w-0.5 shrink-0 rounded-full transition-colors",
-            hasConflict ? "bg-amber-500" : isModified ? "bg-primary" : "bg-transparent",
+            hasConflict ? "bg-warning" : isModified ? "bg-primary" : "bg-transparent",
           )}
         />
         <div className="min-w-0 flex-1">
@@ -108,7 +108,7 @@ export function ConfigFieldRow({
         </button>
       </div>
       {hasConflict && (
-        <div className="ml-3 flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs text-amber-700 dark:text-amber-300">
+        <div className="ml-3 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-xs text-warning">
           <MdWarning className="size-3 shrink-0" />
           <span className="flex-1 truncate">
             Upstream: {formatOriginValue(originValue)}
@@ -116,7 +116,7 @@ export function ConfigFieldRow({
           <button
             type="button"
             onClick={handleAcceptOrigin}
-            className="shrink-0 rounded-sm bg-amber-500/20 px-1.5 py-0.5 font-medium hover:bg-amber-500/30"
+            className="shrink-0 rounded-sm bg-warning/20 px-1.5 py-0.5 font-medium hover:bg-warning/30"
           >
             Accept
           </button>

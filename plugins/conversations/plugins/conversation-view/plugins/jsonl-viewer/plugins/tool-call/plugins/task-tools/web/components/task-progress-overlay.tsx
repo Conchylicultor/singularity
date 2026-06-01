@@ -14,9 +14,9 @@ import { useTaskAggregate, type TaskEntry } from "./use-task-aggregate";
 function StatusIcon({ status }: { status: string }) {
   switch (status) {
     case "in_progress":
-      return <MdTimelapse className="size-4 shrink-0 text-blue-500" />;
+      return <MdTimelapse className="size-4 shrink-0 text-info" />;
     case "completed":
-      return <MdCheckCircle className="size-4 shrink-0 text-emerald-500" />;
+      return <MdCheckCircle className="size-4 shrink-0 text-success" />;
     case "failed":
       return <MdCancel className="size-4 shrink-0 text-destructive" />;
     case "stopped":

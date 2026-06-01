@@ -46,12 +46,12 @@ export function DeferredToolsDeltaView({ event }: AttachmentRendererProps) {
             <div className="flex flex-col gap-0.5 text-xs font-mono leading-5">
               {att.addedNames?.map((name) => (
                 <p key={name} className="text-muted-foreground">
-                  <span className="text-emerald-500">+</span> {name}
+                  <span className="text-success">+</span> {name}
                 </p>
               ))}
               {att.removedNames?.map((name) => (
                 <p key={name} className="text-muted-foreground line-through">
-                  <span className="text-red-500 no-underline">−</span> {name}
+                  <span className="text-destructive no-underline">−</span> {name}
                 </p>
               ))}
             </div>

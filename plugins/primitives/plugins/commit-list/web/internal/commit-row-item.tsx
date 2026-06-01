@@ -48,7 +48,7 @@ export function CommitRowItem({
         {commit.subject}
       </span>
       {pushed && (
-        <span className="shrink-0 rounded px-1.5 py-0.5 text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+        <span className="shrink-0 rounded px-1.5 py-0.5 text-xs bg-success/10 text-success">
           pushed
         </span>
       )}

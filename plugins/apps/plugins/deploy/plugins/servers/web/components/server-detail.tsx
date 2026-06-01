@@ -35,7 +35,7 @@ export function ServerDetail({ server }: { server: Server }) {
       <div className="flex gap-4 text-xs">
         <div>
           <span className="text-muted-foreground">SSH Key: </span>
-          <span className={server.sshKeyConfigured ? "text-green-600" : "text-orange-500"}>
+          <span className={server.sshKeyConfigured ? "text-success" : "text-warning"}>
             {server.sshKeyConfigured ? "Configured" : "Not set"}
           </span>
         </div>

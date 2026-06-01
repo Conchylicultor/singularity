@@ -61,7 +61,7 @@ export function TimeAxis({
         </SectionLabel>
         {zoomWindow ? (
           <>
-            <span className="text-[10px] font-medium tabular-nums text-blue-500 dark:text-blue-400">
+            <span className="text-[10px] font-medium tabular-nums text-info">
               {formatTickMs(zoomWindow.startMs)}–
               {formatTickMs(zoomWindow.endMs)}
             </span>

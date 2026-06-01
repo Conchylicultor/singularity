@@ -36,7 +36,7 @@ export function FileLinkText({ text, onFileOpen }: FileLinkTextProps): ReactNode
                 e.stopPropagation();
                 onFileOpen(seg.value, seg.line);
               }}
-              className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-primary dark:text-blue-400 cursor-pointer hover:underline"
+              className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-info cursor-pointer hover:underline"
             >
               {seg.line != null ? `${seg.value}:${seg.line}` : seg.value}
             </button>

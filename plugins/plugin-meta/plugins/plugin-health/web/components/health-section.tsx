@@ -32,9 +32,9 @@ function healthColor(
   const openCount = tasks.filter((t) => t.status === "open").length;
   const commits = staleness?.commitsSince ?? 0;
 
-  if (commits > 50 || openCount > 5) return "bg-red-500";
-  if (commits > 10 || openCount > 0) return "bg-yellow-500";
-  return "bg-green-500";
+  if (commits > 50 || openCount > 5) return "bg-destructive";
+  if (commits > 10 || openCount > 0) return "bg-warning";
+  return "bg-success";
 }
 
 export function HealthSection({ node }: { node: PluginNode }) {
@@ -126,7 +126,7 @@ export function HealthSection({ node }: { node: PluginNode }) {
                   <td className="py-1.5 pr-3 text-muted-foreground">
                     {r.staleness?.commitsSince ?? "—"}
                     {r.staleness?.apiChanged && (
-                      <span className="ml-1 text-yellow-500" title="API changed">
+                      <span className="ml-1 text-warning" title="API changed">
                         *
                       </span>
                     )}

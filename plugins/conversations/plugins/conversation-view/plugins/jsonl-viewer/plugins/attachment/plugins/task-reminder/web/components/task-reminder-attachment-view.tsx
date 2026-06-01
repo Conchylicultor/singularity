@@ -21,11 +21,11 @@ interface TaskReminderPayload {
 }
 
 const STATUS_DOT: Record<string, string> = {
-  in_progress: "bg-blue-500",
-  done: "bg-emerald-500",
-  completed: "bg-emerald-500",
-  blocked: "bg-red-500",
-  need_action: "bg-orange-500",
+  in_progress: "bg-info",
+  done: "bg-success",
+  completed: "bg-success",
+  blocked: "bg-destructive",
+  need_action: "bg-warning",
 };
 const DEFAULT_DOT = "bg-muted-foreground/40";
 

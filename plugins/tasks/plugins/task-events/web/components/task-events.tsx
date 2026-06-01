@@ -49,9 +49,9 @@ function formatDate(value: Date | string): string {
 
 const ATTEMPT_STATUS_CLASSES: Record<Attempt["status"], string> = {
   pending: "bg-muted text-muted-foreground",
-  in_progress: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
-  pushed: "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300",
-  completed: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  in_progress: "bg-info/15 text-info",
+  pushed: "bg-info/15 text-info",
+  completed: "bg-success/15 text-success",
   abandoned: "bg-muted text-muted-foreground italic",
 };
 

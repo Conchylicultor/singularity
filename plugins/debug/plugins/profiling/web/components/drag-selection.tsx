@@ -21,7 +21,7 @@ export function DragSelection({
       style={{ left: "10rem", right: "4rem" }}
     >
       <div
-        className="absolute inset-y-0 border-x border-blue-400/60 bg-blue-500/15"
+        className="absolute inset-y-0 border-x border-info/60 bg-info/15"
         style={{ left: `${left}%`, width: `${width}%` }}
       />
     </div>

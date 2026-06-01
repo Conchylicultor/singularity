@@ -142,13 +142,13 @@ function summaryFor(questions: Question[], firstAnswerParts: string[]) {
         questions.map((q, i) => (
           <span
             key={i}
-            className="shrink-0 rounded bg-blue-500/15 px-1.5 py-0.5 font-mono text-[11px] text-blue-700 dark:text-blue-400"
+            className="shrink-0 rounded bg-info/15 px-1.5 py-0.5 font-mono text-[11px] text-info"
           >
             {q.header}
           </span>
         ))
       ) : (
-        <span className="shrink-0 rounded bg-blue-500/15 px-1.5 py-0.5 font-mono text-[11px] text-blue-700 dark:text-blue-400">
+        <span className="shrink-0 rounded bg-info/15 px-1.5 py-0.5 font-mono text-[11px] text-info">
           question
         </span>
       )}

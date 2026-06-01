@@ -6,12 +6,12 @@ export function FileChangesSummary({ plugin }: PluginReviewProps) {
     <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
       {plugin.fileCount}f
       {plugin.additions > 0 && (
-        <span className="text-green-600 dark:text-green-400">
+        <span className="text-success">
           {" "}+{plugin.additions}
         </span>
       )}
       {plugin.deletions > 0 && (
-        <span className="text-red-400"> -{plugin.deletions}</span>
+        <span className="text-destructive"> -{plugin.deletions}</span>
       )}
     </span>
   );

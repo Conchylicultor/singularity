@@ -13,7 +13,7 @@ export function DotsRenderer({
     const isActive = i === currentIndex;
 
     let dotClass = "size-2 rounded-full shrink-0 ";
-    if (isPast) dotClass += "bg-emerald-500/70";
+    if (isPast) dotClass += "bg-success";
     else if (isActive) dotClass += "bg-primary";
     else dotClass += "border border-muted-foreground/40";
 

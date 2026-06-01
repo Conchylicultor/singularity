@@ -5,8 +5,8 @@ import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugi
 type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;
 
 const STATUS_CLASS: Record<string, string> = {
-  completed: "text-green-600 dark:text-green-400",
-  failed: "text-red-500 dark:text-red-400",
+  completed: "text-success",
+  failed: "text-destructive",
 };
 
 export function TaskNotificationRow({ event }: { event: JsonlEvent }) {

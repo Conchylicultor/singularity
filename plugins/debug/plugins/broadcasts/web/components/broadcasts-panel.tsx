@@ -18,9 +18,9 @@ type ReadResponse = { ok: true; entries: BroadcastEntry[]; path: string };
 type WriteResponse = { ok: true } | { ok: false; error: string };
 
 const SEVERITY_STYLES: Record<BroadcastSeverity, string> = {
-  error: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-  warning: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-  info: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+  error: "bg-destructive/10 text-destructive",
+  warning: "bg-warning/10 text-warning",
+  info: "bg-info/10 text-info",
 };
 
 const ALL_COMMANDS: BroadcastCommand[] = ["build", "push", "check"];
