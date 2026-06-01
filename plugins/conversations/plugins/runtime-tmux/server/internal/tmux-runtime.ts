@@ -55,10 +55,21 @@ async function isProbeWaiting(id: string): Promise<boolean> {
 // re-render from the prompt menu back to the idle input. Sending into a live
 // menu makes it auto-select a wrong option and fabricate an answer, so we
 // poll the pane with a FRESH capture each iteration (never the throttled
-// isProbeWaiting cache) until "Enter to select" is gone. ~75ms cadence clears
-// in 2-5 iterations; 3000ms cap then throw — never send into a live form.
+// isProbeWaiting cache) until "Enter to select" is gone — never send into a
+// live form.
+//
+// Crucially, a SINGLE Escape is not reliable: send-keys to a freshly-rendered
+// Claude TUI occasionally drops the keystroke, and some menu states need a
+// second Escape ("Press Escape again to cancel"). So we RE-SEND Escape every
+// FORM_CLEAR_ESCAPE_RETRY_MS until the form clears, instead of firing once and
+// throwing — dismissal is self-healing. Re-sending is safe: extra Escapes only
+// fire while the menu is still up, and the C-c before paste resets any stray
+// idle-input state. The clearance poll runs faster (FORM_CLEAR_POLL_INTERVAL_MS)
+// so a working Escape's slow re-render is observed without spamming Escape. The
+// timeout is generous because many concurrent agents can slow tmux/Ink.
 const FORM_CLEAR_POLL_INTERVAL_MS = 75;
-const FORM_CLEAR_TIMEOUT_MS = 3_000;
+const FORM_CLEAR_ESCAPE_RETRY_MS = 500;
+const FORM_CLEAR_TIMEOUT_MS = 5_000;
 
 interface ResolvedPaneStatus {
   title: string;
@@ -411,23 +422,29 @@ export const tmuxRuntime: ConversationRuntime = {
     // fabricate an answer — losing the user's text. See ConversationRuntime
     // interface docs.
 
-    // 1. Dismiss the form with Escape (same as interrupt()): exit copy mode
-    //    first so the key reaches Claude rather than tmux's vi bindings.
-    await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
-      stdout: "pipe",
-      stderr: "pipe",
-    }).exited;
-    await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Escape"], {
-      stdout: "pipe",
-      stderr: "pipe",
-    }).exited;
-
-    // 2. Bounded poll until the form has cleared. FRESH capture each iteration
-    //    via probeWaiting() — NOT the throttled isProbeWaiting cache, whose 5s
-    //    window would not reflect the form clearing within this 3s budget.
+    // 1+2. Dismiss the form, RE-SENDING Escape until it actually clears. A
+    //    single Escape is unreliable (dropped keystroke / "press again" menu
+    //    states), so we retry on FORM_CLEAR_ESCAPE_RETRY_MS while polling the
+    //    pane for clearance on the faster FORM_CLEAR_POLL_INTERVAL_MS. Each
+    //    clearance check is a FRESH capture via probeWaiting() — NOT the
+    //    throttled isProbeWaiting cache, whose 5s window would not reflect the
+    //    form clearing within this budget. Exit copy mode before each Escape so
+    //    the key reaches Claude rather than tmux's vi bindings (see send()).
     const deadline = Date.now() + FORM_CLEAR_TIMEOUT_MS;
     let cleared = false;
+    let nextEscapeAt = 0;
     for (;;) {
+      if (Date.now() >= nextEscapeAt) {
+        await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
+          stdout: "pipe",
+          stderr: "pipe",
+        }).exited;
+        await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Escape"], {
+          stdout: "pipe",
+          stderr: "pipe",
+        }).exited;
+        nextEscapeAt = Date.now() + FORM_CLEAR_ESCAPE_RETRY_MS;
+      }
       if (!(await probeWaiting(conversationId))) {
         cleared = true;
         break;
@@ -439,7 +456,7 @@ export const tmuxRuntime: ConversationRuntime = {
       // Never send into a live form — that fabricates a wrong answer.
       throw new Error(
         `tmux answerPrompt for ${conversationId}: prompt form did not clear ` +
-          `within ${FORM_CLEAR_TIMEOUT_MS}ms after Escape; refusing to send`,
+          `within ${FORM_CLEAR_TIMEOUT_MS}ms despite repeated Escape; refusing to send`,
       );
     }
 
