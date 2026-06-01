@@ -8,12 +8,14 @@ import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { setConfigField } from "@plugins/config_v2/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
+import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { listTweakcnThemes } from "@plugins/ui/plugins/tweakcn/core";
 import { getCatalog, applyCatalogTheme } from "../../core";
 import { CommunityThemeCard } from "./community-theme-card";
 
 export function CommunityBrowserSection({ search }: { search: string }) {
   const [activeTag, setActiveTag] = useState("all");
+  const [themeQuery, setThemeQuery] = useState("");
   const [applyingId, setApplyingId] = useState<string | null>(null);
 
   const { data, isLoading } = useEndpoint(getCatalog, {});
@@ -40,19 +42,24 @@ export function CommunityBrowserSection({ search }: { search: string }) {
   }, [themes]);
 
   const q = search.toLowerCase();
+  const localQ = themeQuery.toLowerCase();
+  const matchesQuery = (
+    t: { name: string; tags: string[] },
+    query: string,
+  ) =>
+    query.length === 0 ||
+    t.name.toLowerCase().includes(query) ||
+    t.tags.some((tag) => tag.toLowerCase().includes(query));
+
   const visible = useMemo(() => {
     if (!themes) return [];
     return themes.filter((t) => {
       if (activeTag !== "all" && !t.tags.includes(activeTag)) return false;
-      if (
-        q.length > 0 &&
-        !t.name.toLowerCase().includes(q) &&
-        !t.tags.some((tag) => tag.toLowerCase().includes(q))
-      )
-        return false;
+      if (!matchesQuery(t, q)) return false;
+      if (!matchesQuery(t, localQ)) return false;
       return true;
     });
-  }, [themes, activeTag, q]);
+  }, [themes, activeTag, q, localQ]);
 
   const sectionMatchesSearch =
     search.length === 0 ||
@@ -99,6 +106,14 @@ export function CommunityBrowserSection({ search }: { search: string }) {
 
   return (
     <div className="flex flex-col gap-3">
+      {themes && themes.length > 0 && (
+        <SearchInput
+          placeholder="Search themes..."
+          value={themeQuery}
+          onChange={(e) => setThemeQuery(e.target.value)}
+        />
+      )}
+
       {sortedTags.length > 0 && (
         <div className="flex gap-1 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
           <FilterChip
