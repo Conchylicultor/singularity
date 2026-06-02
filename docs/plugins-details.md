@@ -745,9 +745,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "TaskCreate" → `TaskCreateToolView`, `JsonlViewerTool.Renderer` "TaskUpdate" → `TaskUpdateToolView`, `JsonlViewerTool.Renderer` "TaskGet" → `TaskGetToolView`, `JsonlViewerTool.Renderer` "TaskList" → `TaskListToolView`, `JsonlViewerTool.Renderer` "TaskOutput" → `TaskOutputToolView`, `JsonlViewerTool.Renderer` "TaskStop" → `TaskStopToolView`, `JsonlViewer.Overlay` "task-progress" → `TaskProgressOverlay`
-                - **`workflow`** — Renders Workflow tool calls with the workflow name, description, numbered phase plan, a collapsible syntax-highlighted script, and the launched run/task ids.
+                - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`
+                    - Contributes: `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`, `Pane.Register` "workflow-node"
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Write" → `WriteToolView`
@@ -1465,7 +1465,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `Pane.Register`
         - Exports: Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `ResolveHook`, `TypeMarker`; Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `parseUrl`, `reorderChain`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useMatchForChain`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
       - Cross-plugin:
-        - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `worktree-cleanup`
+        - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `workflow`, `worktree-cleanup`
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
       - Web:
         - Exports: Values: `useDraft`

@@ -3,15 +3,21 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   parseWorkflowMeta,
   parseWorkflowResult,
 } from "../internal/parse-workflow";
+import { useWorkflowTrace } from "../internal/use-workflow-trace";
+import { WorkflowGraph } from "./workflow-graph";
+import { workflowNodePane } from "../panes";
 
 interface WorkflowInput {
   script?: string;
   scriptPath?: string;
   name?: string;
+  args?: unknown;
 }
 
 function PhaseList({
@@ -75,10 +81,23 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
   const description = meta?.description;
   const phases = meta?.phases ?? [];
 
+  const { graph, status } = useWorkflowTrace(script, input.args);
+
+  const openPane = useOpenPane();
+  const convId = conversationPane.useChainEntry()?.params.convId;
+  const openNode = (nodeId: string) => {
+    openPane(
+      workflowNodePane,
+      { toolUseId: event.toolUseId, nodeId },
+      { mode: "push", input: convId ? { convId } : undefined },
+    );
+  };
+
   const result = event.result;
   const parsedResult =
     result && !result.isError ? parseWorkflowResult(result.content) : null;
 
+  const agentCount = graph?.nodes.length ?? 0;
   const summary = (
     <span className="flex min-w-0 items-center gap-2">
       <span className="flex shrink-0 items-center gap-1 rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-[11px] text-indigo-700 dark:text-indigo-400">
@@ -88,6 +107,11 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
       {phases.length > 0 && (
         <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
           {phases.length} {phases.length === 1 ? "phase" : "phases"}
+        </span>
+      )}
+      {agentCount > 0 && (
+        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+          {agentCount} {agentCount === 1 ? "agent" : "agents"}
         </span>
       )}
       {description && (
@@ -105,7 +129,11 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
           <p className="text-muted-foreground">{description}</p>
         )}
 
-        {phases.length > 0 && <PhaseList phases={phases} />}
+        {status === "ready" && graph ? (
+          <WorkflowGraph graph={graph} onOpenNode={openNode} />
+        ) : (
+          phases.length > 0 && <PhaseList phases={phases} />
+        )}
 
         {script ? (
           <ScriptSection script={script} />
