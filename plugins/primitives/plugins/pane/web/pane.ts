@@ -131,6 +131,21 @@ export interface PaneInternal {
 // outside the sync hook.
 const registry = new Map<string, PaneInternal>();
 
+// Reverse map from a pane's internal record back to its public PaneObject.
+// Populated by makePaneObject at define time. Lets callers that only hold a
+// PaneInternal (e.g. the resolve guard, which receives MatchEntry.pane) reach
+// the object's hooks (useClose/usePromote) to reuse the standard chrome.
+const paneObjectByInternal = new WeakMap<PaneInternal, PaneObject<any, any, any>>();
+
+/** Resolve the public PaneObject for an internal pane record. */
+export function paneObjectFor(internal: PaneInternal): PaneObject<any, any, any> {
+  const obj = paneObjectByInternal.get(internal);
+  if (!obj) {
+    throw new Error(`No PaneObject registered for pane "${internal.id}".`);
+  }
+  return obj;
+}
+
 // ---------------------------------------------------------------------------
 // Path helpers.
 // ---------------------------------------------------------------------------
@@ -776,6 +791,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     Actions: actionsSlot,
     _internal: internal,
   };
+  paneObjectByInternal.set(internal, paneObject);
   return paneObject;
 }
 
