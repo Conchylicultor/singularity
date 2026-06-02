@@ -86,7 +86,7 @@ interface ResolvedPaneStatus {
  *    - Neither       → no signal (startup race, bare hostname, etc.)
  *
  * 2. Pid JSON session file (~/.claude/sessions/<pid>.json):
- *    - status: "busy" | "idle" | "waiting" (can lag behind the TUI)
+ *    - status: "busy" | "idle" | "shell" | "waiting" (can lag behind the TUI)
  *    - waitingFor: human-readable reason (only meaningful when not busy)
  *
  * The pane title is the freshest signal for busy/idle because it updates
@@ -116,8 +116,15 @@ function resolvePaneStatus(
     working = false;
   } else {
     // No title signal — fall back to session file.
-    // null = file not written yet (startup race) → treat as working.
-    working = session.status == null || session.status === "busy";
+    // null  = file not written yet (startup race) → treat as working.
+    // shell = Claude is blocked on a subprocess it spawned (a Bash tool call,
+    //         e.g. `./singularity build`). That is active work, NOT a wait on
+    //         the user — without this it would surface as "waiting" and land in
+    //         the needs-input queue while a build runs.
+    working =
+      session.status == null ||
+      session.status === "busy" ||
+      session.status === "shell";
   }
 
   const waitingFor = working ? null : (session.waitingFor ?? null);
