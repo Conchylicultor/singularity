@@ -20,9 +20,10 @@ const STATUS_DOT: Record<string, string> = {
 export function TasksButton() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
-  const { isOpen, toggle } = convTasksPane.useToggle({ convId }, { input: { convId } });
+  const taskId = conversation?.taskId;
+  const { isOpen, toggle } = convTasksPane.useToggle({ taskId: taskId ?? "" });
 
-  const task = useTask(conversation?.taskId ?? null);
+  const task = useTask(taskId ?? null);
   const dotClass = task ? STATUS_DOT[task.status] : undefined;
 
   return (
@@ -32,7 +33,10 @@ export function TasksButton() {
       title={task ? `Tasks · ${task.status.replace(/_/g, " ")}` : "Tasks"}
       aria-label="Tasks"
       aria-pressed={isOpen}
-      onClick={toggle}
+      onClick={() => {
+        if (taskId) toggle();
+      }}
+      disabled={!taskId}
       className="gap-1.5"
     >
       <MdChecklist className="size-4" />
