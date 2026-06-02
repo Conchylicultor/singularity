@@ -1088,6 +1088,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`conversation-trailer`**
             - **`data-migration-dml-only`**
             - **`eslint`**
+            - **`migration-hashes-unique`**
             - **`migrations-in-sync`**
             - **`no-hardcoded-colors`**
             - **`no-plugin-imports-in-core`**

@@ -14,6 +14,7 @@
   - **`conversation-trailer`**
   - **`data-migration-dml-only`**
   - **`eslint`**
+  - **`migration-hashes-unique`**
   - **`migrations-in-sync`**
   - **`no-hardcoded-colors`**
   - **`no-plugin-imports-in-core`**

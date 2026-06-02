@@ -305,6 +305,19 @@ const NEW_FORMAT = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 const DRIZZLE_FORMAT = /^(\d{4}|0NaN)_(.+)\.sql$/;
 const MIGRATION_NAME_REGEX = /^[a-z0-9_]+$/;
 
+// drizzle-kit --custom seeds every custom migration with this exact placeholder
+// body (no trailing newline). Because the body is byte-identical across all
+// custom migrations, so is its content hash (b3cc75fa) — and the runner keys
+// applied-state by that hash (the filename's sha8). Two custom migrations would
+// therefore claim the same hash, and the second is silently skipped by the
+// runner (the hash is a PRIMARY KEY in __singularity_migrations). Before hashing
+// in renameMigrations we rewrite the placeholder to embed the migration's unique
+// timestamp+slug, giving every custom migration a distinct content hash while
+// preserving the filename-hash == sha256(content) invariant the push-time
+// hand-edit detector relies on.
+const DRIZZLE_CUSTOM_PLACEHOLDER =
+  "-- Custom SQL migration file, put your code below! --";
+
 /**
  * Run `drizzle-kit generate`; detect whether it produced a new migration;
  * require --migration-name when it did; rename new files to the hash-based
@@ -617,9 +630,19 @@ export function renameMigrations(migrationsDir: string): RenameResult {
     const [, idx, name] = m;
 
     const sqlPath = join(migrationsDir, file);
-    const sql = readFileSync(sqlPath, "utf8");
-    const hash = createHash("sha256").update(sql).digest("hex").slice(0, 8);
     const ts = timestampNow();
+    let sql = readFileSync(sqlPath, "utf8");
+    if (sql.trim() === DRIZZLE_CUSTOM_PLACEHOLDER) {
+      // Uniquify the empty custom-migration body so its content hash is distinct
+      // (see DRIZZLE_CUSTOM_PLACEHOLDER). The marker is keyed to this file's
+      // timestamp+slug — which the filename also encodes — so hash-uniqueness
+      // tracks filename-uniqueness. The agent writes the real backfill SQL below
+      // it; the next build re-derives the hash from the edited content
+      // (rehashBranchLocalDataMigrations), so the marker only seeds the identity.
+      sql = `${DRIZZLE_CUSTOM_PLACEHOLDER}\n-- migration: ${ts}__${name} --\n`;
+      writeFileSync(sqlPath, sql);
+    }
+    const hash = createHash("sha256").update(sql).digest("hex").slice(0, 8);
     const newName = `${ts}_${hash}__${name}.sql`;
 
     renameSync(sqlPath, join(migrationsDir, newName));
