@@ -27,9 +27,37 @@ function collectFontNames(
   return [...names].sort();
 }
 
+// Discrete weights every font on Google Fonts is guaranteed to expose. A
+// `wght@100..900` range request 400-errors (font silently fails to load) for
+// fonts that don't ship the full variable axis, so we list concrete weights
+// and let the API serve the nearest available for each.
+const REQUESTED_WEIGHTS = [400, 500, 600, 700];
+
 function buildGoogleFontsUrl(familyName: string): string {
   const encoded = familyName.replace(/ /g, "+");
-  return `https://fonts.googleapis.com/css2?family=${encoded}:wght@100..900&display=swap`;
+  const weights = REQUESTED_WEIGHTS.join(";");
+  return `https://fonts.googleapis.com/css2?family=${encoded}:wght@${weights}&display=swap`;
+}
+
+// Establish the connection to the font CDN up front so the first stylesheet +
+// font-file fetch doesn't pay the DNS/TLS handshake. Google serves font files
+// from a separate crossorigin gstatic origin, hence two preconnects.
+function ensurePreconnect(): void {
+  const origins: { href: string; crossOrigin: boolean }[] = [
+    { href: "https://fonts.googleapis.com", crossOrigin: false },
+    { href: "https://fonts.gstatic.com", crossOrigin: true },
+  ];
+  for (const { href, crossOrigin } of origins) {
+    if (document.querySelector(`link[data-google-font-preconnect="${href}"]`)) {
+      continue;
+    }
+    const link = document.createElement("link");
+    link.rel = "preconnect";
+    link.href = href;
+    link.dataset.googleFontPreconnect = href;
+    if (crossOrigin) link.crossOrigin = "anonymous";
+    document.head.appendChild(link);
+  }
 }
 
 export function GoogleFontsLoader() {
@@ -60,6 +88,8 @@ export function GoogleFontsLoader() {
 
   useEffect(() => {
     const needed = new Set(fontsToLoad);
+
+    if (needed.size > 0) ensurePreconnect();
 
     const existing = new Map<string, HTMLLinkElement>();
     for (const el of document.querySelectorAll<HTMLLinkElement>(
