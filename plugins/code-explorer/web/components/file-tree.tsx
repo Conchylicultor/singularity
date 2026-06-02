@@ -6,6 +6,11 @@ import {
   MdFolderOpen,
   MdInsertDriveFile,
 } from "react-icons/md";
+import {
+  collectAllIds,
+  filterTree,
+  SearchInput,
+} from "@plugins/primitives/plugins/search/web";
 import { cn } from "@/lib/utils";
 
 interface FileTreeNode {
@@ -65,6 +70,34 @@ interface FileTreeProps {
 export function FileTree({ files, selectedPath, onSelect }: FileTreeProps) {
   const tree = useMemo(() => buildTree(files), [files]);
 
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+
+  // Filtered-tree mode: a node survives if its own name matches, or any
+  // descendant survives (recursive search across the whole worktree).
+  const filtered = useMemo(() => {
+    if (!q) return tree;
+    return filterTree(
+      tree,
+      (node) => node.name.toLowerCase().includes(q),
+      (node) => node.children,
+      (node, children) => ({ ...node, children }),
+    );
+  }, [tree, q]);
+
+  // While searching, auto-expand every surviving directory so matches deep in
+  // the tree are visible without manual expansion.
+  const autoExpanded = useMemo(() => {
+    if (!q) return null;
+    return new Set(
+      collectAllIds(
+        filtered,
+        (node) => node.path,
+        (node) => node.children,
+      ),
+    );
+  }, [filtered, q]);
+
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     const set = new Set<string>();
     if (selectedPath) {
@@ -102,19 +135,35 @@ export function FileTree({ files, selectedPath, onSelect }: FileTreeProps) {
     });
   }
 
+  const effectiveExpanded = autoExpanded ?? expanded;
+
   return (
-    <div className="py-1 text-sm">
-      {tree.map((node) => (
-        <Row
-          key={node.path}
-          node={node}
-          depth={0}
-          expanded={expanded}
-          selectedPath={selectedPath}
-          onSelect={onSelect}
-          onToggle={toggle}
+    <div className="text-sm">
+      <div className="sticky top-0 z-10 border-b bg-background p-1.5">
+        <SearchInput
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search files…"
+          aria-label="Search files"
         />
-      ))}
+      </div>
+      <div className="py-1">
+        {q && filtered.length === 0 ? (
+          <div className="px-3 py-2 text-muted-foreground">No matches.</div>
+        ) : (
+          filtered.map((node) => (
+            <Row
+              key={node.path}
+              node={node}
+              depth={0}
+              expanded={effectiveExpanded}
+              selectedPath={selectedPath}
+              onSelect={onSelect}
+              onToggle={toggle}
+            />
+          ))
+        )}
+      </div>
     </div>
   );
 }
