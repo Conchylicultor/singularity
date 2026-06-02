@@ -2,83 +2,28 @@ import { useCallback, useState, useMemo } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput, useTextFilter } from "@plugins/primitives/plugins/search/web";
 import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
+import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import type { ConfigRegistration } from "@plugins/config_v2/web";
-import { Collapsible, CollapsibleTrigger, CollapsibleContent, CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { configDetailPane } from "../internal/panes";
-import { buildConfigTree } from "../internal/build-config-tree";
-import type { ConfigTreeGroup } from "../internal/build-config-tree";
+import { pruneConfigTree } from "../internal/prune-config-tree";
+import type { ConfigTreeNode as ConfigTreeNodeData } from "../internal/prune-config-tree";
+import { ConfigTreeNode } from "./config-tree-node";
 import { ConfigNavRow } from "./config-nav-row";
 
-function ConfigNavGroup({
-  group,
-  depth,
-  expanded,
-  onToggle,
-  selectedPath,
-  onSelect,
-  showModifiedOnly,
-}: {
-  group: ConfigTreeGroup;
-  depth: number;
-  expanded: Set<string>;
-  onToggle: (id: string, open: boolean) => void;
-  selectedPath: string | undefined;
-  onSelect: (reg: ConfigRegistration) => void;
-  showModifiedOnly: boolean;
-}) {
-  const isOpen = expanded.has(group.id);
-
-  return (
-    <Collapsible open={isOpen} onOpenChange={(open) => onToggle(group.id, open)}>
-      <CollapsibleTrigger
-        className="flex w-full items-center gap-1 rounded-md py-1 text-xs font-medium text-muted-foreground hover:bg-accent"
-        style={{ paddingLeft: depth * 12 + 8 }}
-      >
-        <CollapsibleChevron className="size-3" />
-        <span className="truncate">{group.label}</span>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        {group.children.map((child) => (
-          <ConfigNavGroup
-            key={child.id}
-            group={child}
-            depth={depth + 1}
-            expanded={expanded}
-            onToggle={onToggle}
-            selectedPath={selectedPath}
-            onSelect={onSelect}
-            showModifiedOnly={showModifiedOnly}
-          />
-        ))}
-        {group.registrations.map((reg) => (
-          <ConfigNavRow
-            key={reg.storePath}
-            registration={reg}
-            selected={selectedPath === encodeURIComponent(reg.storePath)}
-            onClick={() => onSelect(reg)}
-            hideIfUnmodified={showModifiedOnly}
-            depth={depth + 1}
-          />
-        ))}
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
-function collectGroupIds(groups: ConfigTreeGroup[]): string[] {
-  const ids: string[] = [];
-  for (const g of groups) {
-    ids.push(g.id);
-    ids.push(...collectGroupIds(g.children));
-  }
-  return ids;
-}
+const hierarchyIdOf = (reg: ConfigRegistration) =>
+  reg.hierarchyPath.split("/").join(".");
 
 export function ConfigNav() {
   const registrations = useConfigRegistrations();
   const openPane = useOpenPane();
   const [showModifiedOnly, setShowModifiedOnly] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const { data: payload, isPending } = useEndpoint(getPluginTree, {});
 
   const accessor = useCallback(
     (r: ConfigRegistration) =>
@@ -93,16 +38,47 @@ export function ConfigNav() {
     accessor,
   });
 
-  const tree = useMemo(() => buildConfigTree(registrations), [registrations]);
-  const [expanded, setExpanded] = useState<Set<string>>(
-    () => new Set(collectGroupIds(tree)),
-  );
+  const byHierarchyId = useMemo(() => {
+    const m = new Map<string, ConfigRegistration>();
+    for (const reg of registrations) m.set(hierarchyIdOf(reg), reg);
+    return m;
+  }, [registrations]);
+
+  const tree = useMemo<ConfigTreeNodeData[]>(() => {
+    if (!payload) return [];
+    const matched = new Set<string>();
+    const pruned = pruneConfigTree(payload.plugins, byHierarchyId, matched);
+
+    // Defensive: a config registration should always map to a plugin-tree node
+    // (both derive from the same plugin set). If one doesn't, surface it loudly
+    // and still render it so the settings page is never silently lost.
+    const orphans = registrations.filter((r) => !matched.has(hierarchyIdOf(r)));
+    if (orphans.length > 0) {
+      console.warn(
+        "[config] registrations missing from plugin tree:",
+        orphans.map((r) => r.hierarchyPath),
+      );
+      for (const reg of orphans) {
+        const node: PluginNode = {
+          path: reg.hierarchyPath,
+          name: reg.pluginName,
+          hierarchyId: hierarchyIdOf(reg),
+          loadBearing: false,
+          collapsed: false,
+          runtimes: { web: true, server: false, central: false },
+          children: [],
+        };
+        pruned.push({ node, registration: reg, children: [] });
+      }
+    }
+    return pruned;
+  }, [payload, byHierarchyId, registrations]);
 
   const handleToggle = useCallback((id: string, open: boolean) => {
-    setExpanded((prev) => {
+    setCollapsed((prev) => {
       const next = new Set(prev);
-      if (open) next.add(id);
-      else next.delete(id);
+      if (open) next.delete(id);
+      else next.add(id);
       return next;
     });
   }, []);
@@ -146,17 +122,18 @@ export function ConfigNav() {
               hideIfUnmodified={showModifiedOnly}
             />
           ))
+        ) : isPending ? (
+          <Placeholder>Loading…</Placeholder>
         ) : (
-          tree.map((group) => (
-            <ConfigNavGroup
-              key={group.id}
-              group={group}
+          tree.map((item) => (
+            <ConfigTreeNode
+              key={item.node.hierarchyId}
+              item={item}
               depth={0}
-              expanded={expanded}
+              collapsed={collapsed}
               onToggle={handleToggle}
               selectedPath={selectedPath}
               onSelect={handleSelect}
-              showModifiedOnly={showModifiedOnly}
             />
           ))
         )}

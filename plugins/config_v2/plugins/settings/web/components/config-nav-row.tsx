@@ -1,9 +1,7 @@
-import { useMemo } from "react";
-import { MdWarning } from "react-icons/md";
 import { cn } from "@/lib/utils";
-import { useConfig } from "@plugins/config_v2/web";
 import type { ConfigRegistration } from "@plugins/config_v2/web";
-import { useConflicts } from "../internal/use-conflicts";
+import { useConfigRowState } from "../internal/use-config-row-state";
+import { ConfigRowBadge } from "./config-row-badge";
 
 export function ConfigNavRow({
   registration,
@@ -18,18 +16,7 @@ export function ConfigNavRow({
   hideIfUnmodified?: boolean;
   depth?: number;
 }) {
-  const values = useConfig(registration.descriptor);
-  const defaults = registration.descriptor.defaults as Record<string, unknown>;
-  const conflicts = useConflicts();
-  const hasConflict = registration.storePath in conflicts;
-
-  const modifiedCount = useMemo(() => {
-    let count = 0;
-    for (const key of Object.keys(registration.descriptor.fields)) {
-      if (values[key] !== defaults[key]) count++;
-    }
-    return count;
-  }, [values, defaults, registration.descriptor.fields]);
+  const { modifiedCount, hasConflict } = useConfigRowState(registration);
 
   if (hideIfUnmodified && modifiedCount === 0 && !hasConflict) return null;
 
@@ -45,15 +32,7 @@ export function ConfigNavRow({
       style={depth != null ? { paddingLeft: depth * 12 + 8, paddingRight: 8 } : undefined}
     >
       <span className="truncate">{registration.pluginName}</span>
-      {hasConflict ? (
-        <MdWarning className="ml-2 size-4 shrink-0 text-warning" />
-      ) : (
-        modifiedCount > 0 && (
-          <span className="ml-2 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-            {modifiedCount}
-          </span>
-        )
-      )}
+      <ConfigRowBadge modifiedCount={modifiedCount} hasConflict={hasConflict} />
     </button>
   );
 }
