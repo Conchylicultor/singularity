@@ -7,6 +7,13 @@ interface ToolCallCardProps {
   summary?: ReactNode;
   children?: ReactNode;
   defaultOpen?: boolean;
+  /**
+   * Override the error tone. When omitted, the card derives it from
+   * `event.result?.isError`. Renderers whose protocol-level error is an expected
+   * mechanism artifact (e.g. AskUserQuestion's cancel-to-flush interrupt) pass
+   * `false` so the card is not styled as a failure.
+   */
+  isError?: boolean;
 }
 
 export function ToolCallCard({
@@ -14,9 +21,10 @@ export function ToolCallCard({
   summary,
   children,
   defaultOpen = false,
+  isError,
 }: ToolCallCardProps) {
   const { open, triggerProps, contentId } = useCollapsible({ defaultOpen });
-  const hasError = event.result?.isError;
+  const hasError = isError ?? event.result?.isError;
   const isRunning = !event.result;
   const borderClass = hasError ? "border-destructive/60" : "border-border/60";
   const bgClass = hasError ? "bg-destructive/5" : "bg-background";

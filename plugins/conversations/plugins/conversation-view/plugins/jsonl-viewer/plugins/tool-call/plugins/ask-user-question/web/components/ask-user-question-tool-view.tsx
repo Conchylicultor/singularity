@@ -317,6 +317,9 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
     event.result != null &&
     event.result.isError === true &&
     isInterruptContent(event.result.content);
+  // The interrupt/rejection result is the cancel-to-flush answer mechanism, not a
+  // failure — only style the card as an error for a genuine (non-interrupt) error.
+  const showAsError = !resultIsInterrupt && (event.result?.isError ?? false);
   const isLastToolCall =
     lastToolCall?.kind === "tool-call" &&
     lastToolCall.toolUseId === event.toolUseId;
@@ -325,7 +328,12 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   // awaiting: cancelled (interrupt) + most recent question + no answer yet.
   if (resultIsInterrupt && isLastToolCall && answerTurn == null) {
     return (
-      <ToolCallCard event={event} summary={summaryFor(questions, [])} defaultOpen>
+      <ToolCallCard
+        event={event}
+        summary={summaryFor(questions, [])}
+        defaultOpen
+        isError={showAsError}
+      >
         <AnswerForm questions={questions} convId={convId} />
       </ToolCallCard>
     );
@@ -367,7 +375,12 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   const summary = summaryFor(questions, firstAnswerParts);
 
   return (
-    <ToolCallCard event={event} summary={summary} defaultOpen>
+    <ToolCallCard
+      event={event}
+      summary={summary}
+      defaultOpen
+      isError={showAsError}
+    >
       <div className="mt-2 space-y-3">
         {questions.map((q, qi) => {
           const { selected, otherText, notes } = questionSelections[qi] ?? {
