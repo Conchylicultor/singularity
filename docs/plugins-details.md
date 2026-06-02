@@ -110,9 +110,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`catalog`** — Central view of all plugin contributions aggregated by type.
           - Web:
-            - Slots: `Catalog.Category`
+            - Slots: `Catalog.FacetTable`, `Catalog.Category`
             - Contributes: `Pane.Register` "catalog", `Forge.Sidebar` "Catalog" → `component`, `Catalog.Category` "Routes" → `RoutesTable`, `Catalog.Category` "Panes" → `PanesTable`, `Catalog.Category` "Slots" → `SlotsTable`, `Catalog.Category` "Resources" → `ResourcesTable`, `Catalog.Category` "Contributions" → `ContributionsTable`
-            - Exports: Values: `Catalog`, `countFlat`, `flattenTree`, `PluginChip`
+            - Exports: Types: `CatalogFacetTable`, `FacetTableEntry`; Values: `Catalog`, `countFlat`, `defineFacetTable`, `flattenTree`, `PluginChip`
           - Cross-plugin:
             - Slot contributors: `tables`
           - Plugins:

@@ -23,6 +23,8 @@ export { flattenTree } from "./components/catalog-view";
 export { countFlat } from "./count";
 export { PluginChip } from "./components/plugin-chip";
 export { Catalog } from "./slots";
+export type { CatalogFacetTable, FacetTableEntry } from "./facet-table";
+export { defineFacetTable } from "./facet-table";
 
 export default {
   id: "forge-catalog",

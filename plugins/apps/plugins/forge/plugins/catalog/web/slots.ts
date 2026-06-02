@@ -1,6 +1,8 @@
 import { defineDispatchSlot, type DispatchContribution } from "@plugins/primitives/plugins/slot-render/web";
+import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import type { CatalogFacetTable } from "./facet-table";
 
 /** Props received by each category's body component. */
 export interface CatalogCategoryBodyProps {
@@ -29,5 +31,14 @@ export const Catalog = {
   >("catalog.category", {
     key: (props) => props.activeId,
     docLabel: (c) => c.label,
+  }),
+
+  /**
+   * Per-facet aggregated cross-plugin table. Each facet contributes one declarative
+   * table; the catalog host iterates contributions generically (facet-blind), slicing
+   * `node.facets[facetId]` for every plugin.
+   */
+  FacetTable: defineSlot<CatalogFacetTable>("catalog.facet-table", {
+    docLabel: (t) => t.label,
   }),
 };
