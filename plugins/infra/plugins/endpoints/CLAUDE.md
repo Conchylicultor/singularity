@@ -115,7 +115,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 - Core:
   - Exports: Types: `EndpointDef`, `ExtractParams`; Values: `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`
 - Web:
-  - Exports: Values: `EndpointError`, `fetchEndpoint`, `getEndpointErrorMessage`, `useEndpoint`, `useEndpointMutation`
+  - Exports: Types: `EndpointErrorInfo`; Values: `EndpointError`, `fetchEndpoint`, `getEndpointErrorMessage`, `registerEndpointErrorReporter`, `useEndpoint`, `useEndpointMutation`
 - Server:
   - Exports: Values: `HttpError`, `implement`
 

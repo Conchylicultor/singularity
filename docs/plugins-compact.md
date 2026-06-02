@@ -160,6 +160,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`crashes`** — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
   - Plugins:
+    - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
     - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
     - **`mutation-errors`** — Warning toast and persistent notification for unhandled TanStack Query mutation errors.
 

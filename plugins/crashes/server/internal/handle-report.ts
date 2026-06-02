@@ -7,6 +7,7 @@ const VALID_SOURCES: ReadonlySet<CrashSource> = new Set([
   "browser-error",
   "browser-rejection",
   "react-boundary",
+  "client-endpoint",
 ]);
 
 export const handleReport = implement(reportCrash, async ({ body }) => {

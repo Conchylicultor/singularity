@@ -4,7 +4,8 @@ export type CrashSource =
   | "server-caught"
   | "browser-error"
   | "browser-rejection"
-  | "react-boundary";
+  | "react-boundary"
+  | "client-endpoint";
 
 // POST /api/crashes body. Server fills in worktree + count + timestamps.
 export interface CrashReport {

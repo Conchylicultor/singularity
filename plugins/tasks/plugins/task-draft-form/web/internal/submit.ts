@@ -1,12 +1,13 @@
 import { flushSync } from "react-dom";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
+import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import type { CardDraft } from "../components/task-draft-form";
-import type {
-  TaskChainRelate,
-  TaskChainSubmitBody,
-  TaskChainSubmitResponse,
-  TaskChainTarget,
+import {
+  createTaskChain,
+  type TaskChainRelate,
+  type TaskChainSubmitBody,
+  type TaskChainTarget,
 } from "@plugins/tasks/core";
 
 export interface SubmitArgs {
@@ -76,22 +77,17 @@ export async function submitChain(args: SubmitArgs): Promise<SubmitOutcome> {
     }),
   };
 
-  const res = await fetch("/api/tasks/chain", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const msg = await res.text().catch(() => "");
+  try {
+    const json = await fetchEndpoint(createTaskChain, {}, { body });
+    return { ok: true, taskIds: json.taskIds, launchedCount, totalCount };
+  } catch (err) {
     return {
       ok: false,
-      errorMessage: `Submit failed${msg ? `: ${msg}` : ""}`,
+      errorMessage: `Submit failed: ${getEndpointErrorMessage(err)}`,
       launchedCount,
       totalCount,
     };
   }
-  const json = (await res.json()) as TaskChainSubmitResponse;
-  return { ok: true, taskIds: json.taskIds, launchedCount, totalCount };
 }
 
 export function describeOutcome(outcome: SubmitOutcome, cards: CardDraft[]): string {

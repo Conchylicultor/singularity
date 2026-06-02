@@ -937,8 +937,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `recordCrash`
     - Resources: `crashes` (push)
   - Cross-plugin:
-    - Imported by: `conversations`, `model-provider`, `runtime-tmux`
+    - Imported by: `conversations`, `endpoint-errors`, `model-provider`, `runtime-tmux`
   - Plugins:
+    - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
+      - Web:
+        - Contributes: `Core.Root` → `EndpointErrorReporter`
+        - Uses: `crashes.report`
     - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
       - Web:
         - Contributes: `ErrorBoundary.Action` → `LaunchFixButton`
@@ -1167,7 +1171,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports: Types: `EndpointDef`, `ExtractParams`; Values: `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`
       - Web:
-        - Exports: Values: `EndpointError`, `fetchEndpoint`, `getEndpointErrorMessage`, `useEndpoint`, `useEndpointMutation`
+        - Exports: Types: `EndpointErrorInfo`; Values: `EndpointError`, `fetchEndpoint`, `getEndpointErrorMessage`, `registerEndpointErrorReporter`, `useEndpoint`, `useEndpointMutation`
       - Server:
         - Exports: Values: `HttpError`, `implement`
     - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
@@ -1691,7 +1695,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Exports: Types: `AutoStartModel`, `TaskPatch`; Values: `deleteTask`, `patchTask`, `setAutoStart`, `useTask`
   - Cross-plugin:
-    - Endpoint callers: `dependencies`, `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-graph`, `task-list`, `tree`
+    - Endpoint callers: `dependencies`, `endpoints`, `task`, `task-dependencies`, `task-events`, `task-graph`, `task-list`, `tree`
   - Plugins:
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
       - Web:

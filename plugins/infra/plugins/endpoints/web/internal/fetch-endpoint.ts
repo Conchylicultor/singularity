@@ -1,5 +1,6 @@
 import type { EndpointDef } from "../../core/define-endpoint";
 import { extractMethod, interpolatePath } from "../../core/route-params";
+import { reportEndpointError } from "./error-reporter";
 
 export class EndpointError extends Error {
   constructor(
@@ -92,6 +93,7 @@ export async function fetchEndpoint<
     } catch {
       errorBody = await res.text().catch(() => null);
     }
+    reportEndpointError({ route: endpoint.route, status: res.status, body: errorBody });
     throw new EndpointError(res.status, errorBody);
   }
 

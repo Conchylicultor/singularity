@@ -16,7 +16,7 @@
 - Web:
   - Exports: Types: `AutoStartModel`, `TaskPatch`; Values: `deleteTask`, `patchTask`, `setAutoStart`, `useTask`
 - Cross-plugin:
-  - Endpoint callers: `dependencies`, `task`, `task-dependencies`, `task-draft-form`, `task-events`, `task-graph`, `task-list`, `tree`
+  - Endpoint callers: `dependencies`, `endpoints`, `task`, `task-dependencies`, `task-events`, `task-graph`, `task-list`, `tree`
 - Sub-plugins:
   - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
   - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.

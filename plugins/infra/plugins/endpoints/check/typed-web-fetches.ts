@@ -68,7 +68,6 @@ const ALLOWED = new Map<string, number>([
   ["plugins/stats/plugins/commits/web/components/excluded-path-toggles.tsx", 1],
   ["plugins/tasks/plugins/task-dependencies/web/components/task-dependencies.tsx", 2],
   ["plugins/tasks/plugins/task-dependencies/web/components/task-dependents.tsx", 1],
-  ["plugins/tasks/plugins/task-draft-form/web/internal/submit.ts", 1],
   ["plugins/tasks/plugins/task-events/web/components/task-events.tsx", 1],
   ["plugins/tasks/plugins/task-graph/web/components/insertable-edge.tsx", 1],
   ["plugins/tasks/plugins/task-graph/web/components/task-graph.tsx", 2],
