@@ -49,23 +49,23 @@ export async function hasBlockingDep(taskId: string): Promise<boolean> {
   return Boolean(row?.blocking);
 }
 
-export async function findNextRankUnder(
-  parentId: string | null,
+export async function findNextRankInFolder(
+  folderId: string | null,
   executor: RankExecutor = db,
 ): Promise<Rank> {
-  return nextRankUnder(_tasks, _tasks.parentId, parentId, executor);
+  return nextRankUnder(_tasks, _tasks.folderId, folderId, executor);
 }
 
-// True if candidateId is a descendant of ancestorId in the parent hierarchy.
-// Used to prevent circular reparenting.
+// True if candidateId is a descendant of ancestorId in the folder hierarchy.
+// Used to prevent circular re-filing.
 export async function isDescendant(
   ancestorId: string,
   candidateId: string,
 ): Promise<boolean> {
   const all = await db
-    .select({ id: _tasks.id, parentId: _tasks.parentId })
+    .select({ id: _tasks.id, folderId: _tasks.folderId })
     .from(_tasks);
-  const byId = new Map(all.map((r) => [r.id, r.parentId] as const));
+  const byId = new Map(all.map((r) => [r.id, r.folderId] as const));
   let cur: string | null = candidateId;
   const seen = new Set<string>();
   while (cur) {

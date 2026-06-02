@@ -71,7 +71,6 @@ export async function submitChain(args: SubmitArgs): Promise<SubmitOutcome> {
         launch: c.model === "queue" ? null : c.model,
         url: c.includeUrl ? args.url : undefined,
         attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined,
-        includeParentTask: i === 0 && c.includeParentTask ? true : undefined,
         linkedToPrev: i > 0 && !c.linkedToPrev ? false : undefined,
       };
     }),

@@ -22,7 +22,7 @@ export const handleCreate = implement(createTaskEndpoint, async ({ body }) => {
   const fallbackTitle = description ? synthesiseTitleFallback(description) : null;
   const title = explicitTitle ?? fallbackTitle ?? "Untitled";
   const row = await createTask({
-    parentId: body.parentId ?? null,
+    folderId: body.folderId ?? null,
     title,
     description,
     author: body.author ?? "user",

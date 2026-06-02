@@ -38,7 +38,7 @@ export const handleLaunch = implement(launchAgent, async ({ params, body }) => {
 
   const now = new Date();
   const task = await createTask({
-    parentId: AGENTS_META_TASK_ID,
+    folderId: AGENTS_META_TASK_ID,
     title: `Agent-${agent.name}-${formatLaunchTime(now)}`,
     author: "agents-plugin",
   });

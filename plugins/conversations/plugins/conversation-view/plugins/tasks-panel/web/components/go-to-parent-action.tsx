@@ -8,15 +8,15 @@ export function GoToParentAction() {
   const ctx = useContext(TasksPaneContext);
   const viewRoot = useTask(ctx?.viewRootId);
   if (!ctx) return null;
-  const parentId = viewRoot?.parentId ?? null;
-  if (!parentId) return null;
+  const folderId = viewRoot?.folderId ?? null;
+  if (!folderId) return null;
   return (
     <PaneIconAction
-      label="Go to parent task"
+      label="Go to folder task"
       icon={MdArrowUpward}
       onClick={() => {
-        ctx.setViewRootId(parentId);
-        ctx.setSelectedId(parentId);
+        ctx.setViewRootId(folderId);
+        ctx.setSelectedId(folderId);
       }}
     />
   );

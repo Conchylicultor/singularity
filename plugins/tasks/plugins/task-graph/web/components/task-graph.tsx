@@ -94,7 +94,7 @@ function layoutDag(
   // selected as root (dagre's crossing-minimization is order-sensitive).
   const sorted = [...closure].sort((a, b) => a.id.localeCompare(b.id));
   const ids = new Set(sorted.map((t) => t.id));
-  const childIds = new Set(allTasks.filter((t) => t.parentId).map((t) => t.parentId!));
+  const childIds = new Set(allTasks.filter((t) => t.folderId).map((t) => t.folderId!));
   const g = new dagre.graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
   g.setGraph({ rankdir: "LR", nodesep: 24, ranksep: 60, marginx: 12, marginy: 12 });
@@ -139,7 +139,7 @@ function layoutDag(
         data: {
           sourceTaskId: dep,
           targetTaskId: t.id,
-          targetParentId: byId.get(t.id)?.parentId ?? null,
+          targetFolderId: byId.get(t.id)?.folderId ?? null,
           onNavigate,
         },
         markerEnd: { type: MarkerType.ArrowClosed, color: stroke, width: 14, height: 14 },

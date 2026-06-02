@@ -7,7 +7,7 @@ export default {
   id: "task-dependencies",
   name: "Task: Dependencies",
   description:
-    "Lists the task's dependencies as removable chips, with a quick-add button for the parent task when applicable.",
+    "Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.",
   contributions: [
     TaskDetailSlots.Section({ id: "dependencies", label: "Dependencies", component: TaskDependencies }),
     TaskDetailSlots.Section({ id: "dependents", label: "Dependents", component: TaskDependents }),

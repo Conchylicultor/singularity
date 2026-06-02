@@ -28,6 +28,9 @@ type Task = TreeItem & {
   status: TaskStatus;
 };
 
+// The generic tree primitive speaks `parentId`; the tasks domain stores the
+// display hierarchy as `folderId`. Map at this boundary so the primitive stays
+// domain-neutral and the folder concept never leaks into it.
 async function createTaskRow(args: {
   parentId: string | null;
   rank?: Rank;
@@ -35,7 +38,7 @@ async function createTaskRow(args: {
   const res = await fetch("/api/tasks", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(args),
+    body: JSON.stringify({ folderId: args.parentId, rank: args.rank }),
   });
   if (!res.ok) return null;
   const task = (await res.json()) as Task;
@@ -124,13 +127,21 @@ export function TasksList({
 }) {
   const result = useResource(tasksResource);
   const [hideTerminal, setHideTerminal] = useState(true);
+  // Project the tasks' folder hierarchy onto the tree primitive's parentId.
+  const rows = useMemo<Task[]>(
+    () =>
+      result.pending
+        ? []
+        : result.data.map((t) => ({ ...t, parentId: t.folderId })),
+    [result],
+  );
   const isTerminal = useCallback(
     (t: Task) => t.status === "done" || t.status === "dropped",
     [],
   );
   const orderedIds = useMemo(
-    () => deriveVisibleOrder(result.pending ? [] : result.data, rootTaskId, hideTerminal ? isTerminal : undefined),
-    [result, rootTaskId, hideTerminal, isTerminal],
+    () => deriveVisibleOrder(rows, rootTaskId, hideTerminal ? isTerminal : undefined),
+    [rows, rootTaskId, hideTerminal, isTerminal],
   );
 
   if (result.pending) return <Placeholder>Loading…</Placeholder>;
@@ -139,12 +150,12 @@ export function TasksList({
     <MultiSelectProvider orderedIds={orderedIds}>
       <SelectionBar />
       <TreeList<Task>
-        rows={result.data}
+        rows={rows}
         rootId={rootTaskId}
         selectedId={selectedId}
         onSelect={onSelect}
         onToggleExpanded={(id, next) => patchTask(id, { expanded: next })}
-        onMove={(id, dest) => patchTask(id, dest)}
+        onMove={(id, dest) => patchTask(id, { folderId: dest.parentId, rank: dest.rank })}
         onCreate={createTaskRow}
         Row={TaskRow}
         dragOverlay={(t) => t.title || "Untitled"}

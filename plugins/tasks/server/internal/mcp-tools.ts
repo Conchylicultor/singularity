@@ -106,7 +106,10 @@ agent see the actual outcome instead of executing a stale plan.`,
     if (!targetTask) throw new Error(`Target task "${targetId}" not found`);
 
     const task = await createTask({
-      parentId: currentTaskId,
+      // File the new task under the current task's folder (provenance: spawned
+      // while working on it). Display-only — the actual ordering comes from the
+      // dependency wiring below (rewireDependencies), not from this folder.
+      folderId: currentTaskId,
       groupId: currentTaskId,
       title,
       description: description ?? null,

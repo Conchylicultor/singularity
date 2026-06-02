@@ -93,7 +93,7 @@ export const maybeLaunchDependentsJob = defineJob({
   event: z
     .object({
       taskId: z.string(),
-      parentId: z.string().nullable(),
+      folderId: z.string().nullable(),
       status: z.string(),
       previousStatus: z.string(),
     })

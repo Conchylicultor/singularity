@@ -13,8 +13,8 @@ import type { TaskChainTarget } from "@plugins/tasks/core";
 const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 
 function targetForSibling(task: Task): TaskChainTarget {
-  if (task.parentId) {
-    return { kind: "child", parentTaskId: task.parentId };
+  if (task.folderId) {
+    return { kind: "folder", folderTaskId: task.folderId };
   }
   return { kind: "metaTask", metaTaskId: CONVERSATIONS_META_TASK_ID };
 }
@@ -25,21 +25,21 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
 
   const deps = useMemo(() => task?.dependencies ?? [], [task?.dependencies]);
 
-  const parentCandidate = useMemo(() => {
-    if (!task?.parentId || tasksResult.pending) return null;
-    if (task.parentId === CONVERSATIONS_META_TASK_ID) return null;
-    if (deps.includes(task.parentId)) return null;
-    return tasksResult.data.find((t) => t.id === task.parentId) ?? null;
-  }, [task?.parentId, deps, tasksResult]);
+  const folderCandidate = useMemo(() => {
+    if (!task?.folderId || tasksResult.pending) return null;
+    if (task.folderId === CONVERSATIONS_META_TASK_ID) return null;
+    if (deps.includes(task.folderId)) return null;
+    return tasksResult.data.find((t) => t.id === task.folderId) ?? null;
+  }, [task?.folderId, deps, tasksResult]);
 
-  const addParentAsDep = useCallback(async () => {
-    if (!parentCandidate) return;
+  const addFolderAsDep = useCallback(async () => {
+    if (!folderCandidate) return;
     await fetch(`/api/tasks/${taskId}/dependencies`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dependsOnTaskId: parentCandidate.id }),
+      body: JSON.stringify({ dependsOnTaskId: folderCandidate.id }),
     });
-  }, [taskId, parentCandidate]);
+  }, [taskId, folderCandidate]);
 
   if (!task) return null;
 
@@ -52,9 +52,9 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
           Dependencies
         </SectionLabel>
         <div className="flex items-center gap-1">
-          {parentCandidate && (
-            <Button size="xs" variant="outline" onClick={addParentAsDep}>
-              Add parent as dep
+          {folderCandidate && (
+            <Button size="xs" variant="outline" onClick={addFolderAsDep}>
+              Add folder as dep
             </Button>
           )}
           <TaskDraftPopover
@@ -62,7 +62,6 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
             triggerClassName="text-xs px-2 py-0.5 rounded border hover:bg-muted cursor-pointer"
             target={target}
             relate={{ taskId, defaultMode: "prerequisite" }}
-            captures={["parentTask"]}
             heading="Add prerequisite"
           />
           <TaskDraftPopover
@@ -70,7 +69,6 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
             triggerClassName="text-xs px-2 py-0.5 rounded border hover:bg-muted cursor-pointer"
             target={target}
             relate={{ taskId, defaultMode: "followup" }}
-            captures={["parentTask"]}
             heading="Add follow-up"
           />
         </div>

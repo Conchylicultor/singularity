@@ -785,6 +785,13 @@
       "tag": "20260602_120829_914cd45e__merged_20260602_1208",
       "hash": "914cd45e",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780404676000,
+      "tag": "20260602_125116_23c28b54__rename_task_parent_to_folder",
+      "hash": "23c28b54",
+      "breakpoints": true
     }
   ]
 }

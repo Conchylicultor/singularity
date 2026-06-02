@@ -9,7 +9,7 @@ export type TaskPatch = Partial<{
   drop: boolean;
   hold: boolean;
   expanded: boolean;
-  parentId: string | null;
+  folderId: string | null;
   rank: Rank;
 }>;
 

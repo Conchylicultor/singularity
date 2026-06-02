@@ -14,7 +14,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
-import { TaskDraftCard, type ParentTaskPreview } from "./task-draft-card";
+import { TaskDraftCard } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";
 import type { ChildEntry } from "./insert-before-children";
 import type { ChainModel } from "./model-chip";
@@ -26,11 +26,10 @@ export interface CardDraft {
   model: ChainModel;
   includeUrl: boolean;
   includeScreenshot: boolean;
-  includeParentTask: boolean;
   linkedToPrev: boolean;
 }
 
-export type CaptureKind = "url" | "screenshot" | "parentTask";
+export type CaptureKind = "url" | "screenshot";
 
 export interface TaskDraftFormProps {
   cards: CardDraft[];
@@ -41,7 +40,6 @@ export interface TaskDraftFormProps {
   onSubmit: () => void;
   onCancel: () => void;
   captures: CaptureKind[];
-  parentTaskPreview?: ParentTaskPreview | null;
   // Head-card relate toggle (only rendered when both are supplied).
   relateMode?: TaskChainRelateMode | undefined;
   onRelateModeChange?: (next: TaskChainRelateMode | undefined) => void;
@@ -77,7 +75,6 @@ export function makeCard(model: ChainModel): CardDraft {
     model,
     includeUrl: false,
     includeScreenshot: false,
-    includeParentTask: false,
     linkedToPrev: true,
   };
 }
@@ -91,7 +88,6 @@ export function TaskDraftForm({
   onSubmit,
   onCancel,
   captures,
-  parentTaskPreview,
   relateMode,
   onRelateModeChange,
   showIndependentRelate,
@@ -122,7 +118,6 @@ export function TaskDraftForm({
   const disabled = hasEmpty || submitting;
   const supportsUrl = captures.includes("url");
   const supportsScreenshot = captures.includes("screenshot");
-  const supportsParentTask = captures.includes("parentTask");
 
   const updateCard = (idx: number, patch: Partial<CardDraft>) => {
     const next = cards.slice();
@@ -234,15 +229,6 @@ export function TaskDraftForm({
                         ? (v) => updateCard(idx, { includeScreenshot: v })
                         : undefined
                     }
-                    includeParentTask={
-                      supportsParentTask && isHead ? card.includeParentTask : undefined
-                    }
-                    onToggleParentTask={
-                      supportsParentTask && isHead
-                        ? (v) => updateCard(idx, { includeParentTask: v })
-                        : undefined
-                    }
-                    parentTaskPreview={isHead ? parentTaskPreview : null}
                     relateMode={isHead ? relateMode : undefined}
                     onRelateModeChange={isHead ? onRelateModeChange : undefined}
                     showIndependentRelate={isHead ? showIndependentRelate : undefined}

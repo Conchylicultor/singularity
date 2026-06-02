@@ -21,13 +21,13 @@ export async function readTaskStatus(taskId: string): Promise<TaskStatus | null>
   return row?.status ?? null;
 }
 
-interface ParentSnapshot {
-  parentId: string | null;
+interface FolderSnapshot {
+  folderId: string | null;
 }
 
-async function readParent(taskId: string): Promise<ParentSnapshot | null> {
+async function readFolder(taskId: string): Promise<FolderSnapshot | null> {
   const [row] = await db
-    .select({ parentId: _tasks.parentId })
+    .select({ folderId: _tasks.folderId })
     .from(_tasks)
     .where(eq(_tasks.id, taskId))
     .limit(1);
@@ -46,10 +46,10 @@ export async function emitStatusChangeIfChanged(
   const after = await readTaskStatus(taskId);
   if (after === null) return;
   if (previous !== null && previous === after) return;
-  const parent = await readParent(taskId);
+  const folder = await readFolder(taskId);
   await taskStatusChanged.emit({
     taskId,
-    parentId: parent?.parentId ?? null,
+    folderId: folder?.folderId ?? null,
     status: after,
     // First-time reads (previous null) report previousStatus = current to
     // avoid lying about a non-existent transition; subscribers that care

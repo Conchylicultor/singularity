@@ -13,7 +13,11 @@ export function ExpandCollapseAllAction({
   hasChildren: boolean;
 }) {
   const result = useResource(tasksResource);
-  const rows = result.pending ? [] : result.data;
+  // The tree primitive's ExpandableRow speaks `parentId`; project the tasks'
+  // folder hierarchy onto it at this boundary.
+  const rows = result.pending
+    ? []
+    : result.data.map((t) => ({ ...t, parentId: t.folderId }));
   const patch = useCallback(
     (id: string, expanded: boolean) => patchTask(id, { expanded }),
     [],

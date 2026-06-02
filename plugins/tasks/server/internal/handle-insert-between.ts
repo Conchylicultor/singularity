@@ -9,7 +9,7 @@ import { insertTaskBetween } from "../../core/endpoints";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 
 export const handleInsertBetween = implement(insertTaskBetween, async ({ body }) => {
-  const { sourceTaskId, targetTaskId, targetParentId } = body;
+  const { sourceTaskId, targetTaskId, targetFolderId } = body;
 
   const [sourceTask, targetTask] = await Promise.all([
     getTask(sourceTaskId),
@@ -20,7 +20,7 @@ export const handleInsertBetween = implement(insertTaskBetween, async ({ body })
 
   return withNotifyBatch(async () => {
     const row = await createTask({
-      parentId: targetParentId ?? null,
+      folderId: targetFolderId ?? null,
       groupId,
       title: "Untitled",
       author: "user",

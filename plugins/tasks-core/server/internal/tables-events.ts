@@ -20,7 +20,7 @@ export const { event: pushLanded, table: _pushLandedTriggers } =
 
 export interface TaskStatusChangedPayload {
   taskId: string;
-  parentId: string | null;
+  folderId: string | null;
   status: TaskStatus;
   previousStatus: TaskStatus;
   [key: string]: unknown;

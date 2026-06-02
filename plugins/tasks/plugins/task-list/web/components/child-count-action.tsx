@@ -12,7 +12,7 @@ export function ChildCountAction({
   const result = useResource(tasksResource);
   const count = useMemo(() => {
     if (result.pending || !hasChildren) return 0;
-    return result.data.filter((t) => t.parentId === taskId).length;
+    return result.data.filter((t) => t.folderId === taskId).length;
   }, [result, taskId, hasChildren]);
 
   if (!hasChildren) return null;

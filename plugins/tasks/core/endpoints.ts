@@ -10,7 +10,7 @@ import {
 // --- Body schemas ---
 
 export const CreateTaskBodySchema = z.object({
-  parentId: z.string().nullable().optional(),
+  folderId: z.string().nullable().optional(),
   title: z.string().optional(),
   description: z.string().nullable().optional(),
   author: z.string().optional(),
@@ -31,7 +31,7 @@ export const UpdateTaskBodySchema = z.object({
   drop: z.boolean().optional(),
   hold: z.boolean().optional(),
   expanded: z.boolean().optional(),
-  parentId: z.string().nullable().optional(),
+  folderId: z.string().nullable().optional(),
   rank: RankSchema.optional(),
 });
 export type UpdateTaskBody = z.infer<typeof UpdateTaskBodySchema>;
@@ -39,7 +39,7 @@ export type UpdateTaskBody = z.infer<typeof UpdateTaskBodySchema>;
 export const InsertBetweenBodySchema = z.object({
   sourceTaskId: z.string(),
   targetTaskId: z.string(),
-  targetParentId: z.string().nullable().optional(),
+  targetFolderId: z.string().nullable().optional(),
 });
 export type InsertBetweenBody = z.infer<typeof InsertBetweenBodySchema>;
 

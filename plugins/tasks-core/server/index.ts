@@ -60,7 +60,7 @@ export {
   listDependentIds,
   getTaskDependencyIds,
   listArmedDependentsOf,
-  findNextRankUnder,
+  findNextRankInFolder,
   isDescendant,
   taskDependsOn,
 } from "./internal/queries/tasks";

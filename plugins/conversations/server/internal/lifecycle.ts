@@ -95,10 +95,10 @@ export async function createConversation(
   } else {
     let taskId = opts.taskId;
     if (!taskId) {
-      const parentId =
+      const folderId =
         opts.kind === "system" ? SYSTEM_META_TASK_ID : CONVERSATIONS_META_TASK_ID;
       const task = await createTask({
-        parentId,
+        folderId,
         title: "Untitled",
         author: spawnedBy,
       });

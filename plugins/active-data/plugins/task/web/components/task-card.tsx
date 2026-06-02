@@ -89,7 +89,7 @@ export function TaskCard({
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ parentId: hostTaskId, description: trimmed }),
+      body: JSON.stringify({ folderId: hostTaskId, description: trimmed }),
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => "");

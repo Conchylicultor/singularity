@@ -27,7 +27,11 @@ export const _tasks = pgTable(
   "tasks",
   {
     id: text("id").primaryKey(),
-    parentId: text("parent_id").references((): AnyPgColumn => _tasks.id, {
+    // Display-only organization hierarchy: any task can act as a "folder" for
+    // tasks filed under it. This is NOT a dependency — it carries no execution
+    // semantics. Ordering between tasks comes solely from the dependency DAG
+    // (task_dependencies). Kept distinct so agents never confuse the two.
+    folderId: text("folder_id").references((): AnyPgColumn => _tasks.id, {
       onDelete: "cascade",
     }),
     groupId: text("group_id").references((): AnyPgColumn => _tasks.id, {
@@ -45,7 +49,7 @@ export const _tasks = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
-    index("tasks_parent_rank_idx").on(t.parentId, t.rank),
+    index("tasks_folder_rank_idx").on(t.folderId, t.rank),
     index("tasks_group_id_idx").on(t.groupId),
   ],
 );

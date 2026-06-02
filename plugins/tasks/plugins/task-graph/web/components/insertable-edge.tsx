@@ -10,7 +10,7 @@ import {
 export type InsertableEdgeData = {
   sourceTaskId: string;
   targetTaskId: string;
-  targetParentId: string | null;
+  targetFolderId: string | null;
   onNavigate: (taskId: string) => void;
 };
 
@@ -69,7 +69,7 @@ export function InsertableEdge({
           body: JSON.stringify({
             sourceTaskId: data.sourceTaskId,
             targetTaskId: data.targetTaskId,
-            targetParentId: data.targetParentId,
+            targetFolderId: data.targetFolderId,
           }),
         });
         if (!res.ok) return;

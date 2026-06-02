@@ -12,11 +12,6 @@ import {
 } from "./insert-before-children";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
-export interface ParentTaskPreview {
-  id: string;
-  title: string;
-}
-
 export interface TaskDraftCardProps {
   cardId: string;
   index: number;
@@ -37,9 +32,6 @@ export interface TaskDraftCardProps {
   onToggleUrl?: (v: boolean) => void;
   includeScreenshot?: boolean;
   onToggleScreenshot?: (v: boolean) => void;
-  includeParentTask?: boolean;
-  onToggleParentTask?: (v: boolean) => void;
-  parentTaskPreview?: ParentTaskPreview | null;
 
   // Head-card-only relate toggle.
   relateMode?: TaskChainRelateMode | undefined;
@@ -60,24 +52,17 @@ function ContextRow({
   onToggleUrl,
   includeScreenshot,
   onToggleScreenshot,
-  includeParentTask,
-  onToggleParentTask,
-  parentTaskPreview,
   disabled,
 }: {
   includeUrl?: boolean;
   onToggleUrl?: (v: boolean) => void;
   includeScreenshot?: boolean;
   onToggleScreenshot?: (v: boolean) => void;
-  includeParentTask?: boolean;
-  onToggleParentTask?: (v: boolean) => void;
-  parentTaskPreview?: ParentTaskPreview | null;
   disabled: boolean;
 }) {
   const showUrl = !!onToggleUrl;
   const showScreenshot = !!onToggleScreenshot;
-  const showParent = !!onToggleParentTask;
-  if (!showUrl && !showScreenshot && !showParent) return null;
+  if (!showUrl && !showScreenshot) return null;
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1.5">
       {showUrl && (
@@ -104,21 +89,6 @@ function ContextRow({
           Screenshot
         </label>
       )}
-      {showParent && (
-        <label
-          className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground"
-          title={parentTaskPreview ? `Will include: ${parentTaskPreview.title}` : undefined}
-        >
-          <input
-            type="checkbox"
-            className="h-3 w-3 cursor-pointer"
-            checked={!!includeParentTask}
-            disabled={disabled || !parentTaskPreview}
-            onChange={(e) => onToggleParentTask!(e.target.checked)}
-          />
-          Parent task
-        </label>
-      )}
     </div>
   );
 }
@@ -140,9 +110,6 @@ export function TaskDraftCard({
   onToggleUrl,
   includeScreenshot,
   onToggleScreenshot,
-  includeParentTask,
-  onToggleParentTask,
-  parentTaskPreview,
   relateMode,
   onRelateModeChange,
   showIndependentRelate,
@@ -226,9 +193,6 @@ export function TaskDraftCard({
         onToggleUrl={onToggleUrl}
         includeScreenshot={includeScreenshot}
         onToggleScreenshot={onToggleScreenshot}
-        includeParentTask={includeParentTask}
-        onToggleParentTask={onToggleParentTask}
-        parentTaskPreview={parentTaskPreview}
         disabled={disabled}
       />
       {relateTaskChildren &&

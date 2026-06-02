@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Lists the task's dependencies as removable chips, with a quick-add button for the parent task when applicable.
+- Description: Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.
 - Web:
   - Contributes: `TaskDetailSlots.Section` "dependencies" → `TaskDependencies`, `TaskDetailSlots.Section` "dependents" → `TaskDependents`
   - Uses: `tasks.useTask`

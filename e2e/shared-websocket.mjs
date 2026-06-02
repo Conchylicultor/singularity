@@ -26,7 +26,7 @@ const post = async (page) =>
     fetch("/api/tasks", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ parentId: null }),
+      body: JSON.stringify({ folderId: null }),
     }),
   );
 

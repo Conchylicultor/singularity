@@ -3,7 +3,7 @@ import { ConversationModelSchema } from "@plugins/conversations/plugins/model-pr
 
 export const TaskChainTargetSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("metaTask"), metaTaskId: z.string().min(1) }),
-  z.object({ kind: z.literal("child"), parentTaskId: z.string().min(1) }),
+  z.object({ kind: z.literal("folder"), folderTaskId: z.string().min(1) }),
 ]);
 export type TaskChainTarget = z.infer<typeof TaskChainTargetSchema>;
 
@@ -26,8 +26,6 @@ export const TaskChainCardSchema = z.object({
   launch: TaskChainLaunchSchema,
   url: z.string().optional(),
   attachmentIds: z.array(z.string()).optional(),
-  // Honored on head card only when target.kind === "child".
-  includeParentTask: z.boolean().optional(),
   // When false, this card does not block on the previous card (parallel launch).
   // Omitted means true (sequential, default). Ignored on the head card.
   linkedToPrev: z.boolean().optional(),

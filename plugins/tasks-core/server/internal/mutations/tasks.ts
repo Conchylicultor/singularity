@@ -4,7 +4,7 @@ import { _attempts, _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../schema";
 import type { TaskStatus } from "../schema";
 import { tasksResource } from "../resources";
-import { findNextRankUnder, isDescendant, taskDependsOn } from "../queries/tasks";
+import { findNextRankInFolder, isDescendant, taskDependsOn } from "../queries/tasks";
 import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 
@@ -12,7 +12,8 @@ export const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 
 export interface CreateTaskInput {
   id?: string;
-  parentId?: string | null;
+  // Folder the task is filed under (display-only hierarchy, not a dependency).
+  folderId?: string | null;
   groupId?: string | null;
   title: string;
   author?: string;
@@ -26,29 +27,30 @@ export interface UpdateTaskPatch {
   drop?: boolean;
   hold?: boolean;
   expanded?: boolean;
-  parentId?: string | null;
+  // Re-file under a different folder (display-only hierarchy, not a dependency).
+  folderId?: string | null;
   rank?: Rank;
 }
 
 export async function createTask(input: CreateTaskInput) {
   const id =
     input.id ?? `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const parentId = input.parentId ?? null;
-  const rank = input.rank ?? (await findNextRankUnder(parentId));
+  const folderId = input.folderId ?? null;
+  const rank = input.rank ?? (await findNextRankInFolder(folderId));
   await db.insert(_tasks).values({
     id,
-    parentId,
+    folderId,
     groupId: input.groupId ?? null,
     title: input.title,
     author: input.author,
     rank: rank.toJSON(),
     description: input.description ?? null,
   });
-  if (parentId) {
+  if (folderId) {
     await db
       .update(_tasks)
       .set({ expanded: true, updatedAt: new Date() })
-      .where(eq(_tasks.id, parentId));
+      .where(eq(_tasks.id, folderId));
   }
   tasksResource.notify();
   const [full] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
@@ -75,14 +77,14 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
     if (patch.hold) dbPatch.droppedAt = null;
   }
   if (typeof patch.expanded === "boolean") dbPatch.expanded = patch.expanded;
-  if (patch.parentId === null || typeof patch.parentId === "string") {
-    if (patch.parentId === id) {
-      throw new Error("Cannot parent a task to itself");
+  if (patch.folderId === null || typeof patch.folderId === "string") {
+    if (patch.folderId === id) {
+      throw new Error("Cannot file a task into itself");
     }
-    if (patch.parentId !== null && (await isDescendant(id, patch.parentId))) {
-      throw new Error("Cannot parent a task under its own descendant");
+    if (patch.folderId !== null && (await isDescendant(id, patch.folderId))) {
+      throw new Error("Cannot file a task into its own descendant");
     }
-    dbPatch.parentId = patch.parentId;
+    dbPatch.folderId = patch.folderId;
   }
   if (patch.rank instanceof Rank) {
     dbPatch.rank = patch.rank.toJSON();
@@ -97,11 +99,11 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
     .returning({ id: _tasks.id });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!updated) return null;
-  if (typeof patch.parentId === "string" && patch.parentId.length > 0) {
+  if (typeof patch.folderId === "string" && patch.folderId.length > 0) {
     await db
       .update(_tasks)
       .set({ expanded: true, updatedAt: new Date() })
-      .where(eq(_tasks.id, patch.parentId));
+      .where(eq(_tasks.id, patch.folderId));
   }
   tasksResource.notify();
   await emitStatusChangeIfChanged(id, before);
@@ -134,9 +136,9 @@ export async function deleteTask(id: string): Promise<boolean> {
   const children = await db
     .select({ id: _tasks.id })
     .from(_tasks)
-    .where(eq(_tasks.parentId, id))
+    .where(eq(_tasks.folderId, id))
     .limit(1);
-  if (children.length > 0) throw new Error("Task has children");
+  if (children.length > 0) throw new Error("Task has tasks filed under it");
 
   // Collect edges to bridge before cascade wipes them.
   const upstreamRows = await db
@@ -287,7 +289,7 @@ export async function dropTaskTree(id: string): Promise<number> {
 // Idempotently ensures the meta-task exists. Returns true iff this call
 // inserted the row (used as a one-shot signal for backfills).
 export async function ensureMetaTask(id: string, title: string): Promise<boolean> {
-  const rank = await findNextRankUnder(null);
+  const rank = await findNextRankInFolder(null);
   const rows = await db
     .insert(_tasks)
     .values({ id, title, rank: rank.toJSON() })
@@ -296,16 +298,16 @@ export async function ensureMetaTask(id: string, title: string): Promise<boolean
   return rows.length === 1;
 }
 
-// Re-parent orphan roots that have >=1 attempt under the meta task.
+// Re-file orphan roots that have >=1 attempt into the meta task's folder.
 export async function backfillMetaParent(
   metaTaskId: string,
 ): Promise<number> {
   const rows = await db
     .update(_tasks)
-    .set({ parentId: metaTaskId })
+    .set({ folderId: metaTaskId })
     .where(
       and(
-        isNull(_tasks.parentId),
+        isNull(_tasks.folderId),
         ne(_tasks.id, metaTaskId),
         sql`EXISTS (SELECT 1 FROM ${_attempts} a WHERE a.task_id = ${_tasks.id})`,
       ),

@@ -3,7 +3,7 @@ import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/cor
 import { toast } from "@plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { tasksResource, type Task } from "@plugins/tasks/core";
+import { tasksResource } from "@plugins/tasks/core";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import {
   TaskDraftForm,
@@ -28,7 +28,7 @@ function freshCards(): CardDraft[] {
 function draftScope(target: TaskChainTarget): string {
   return target.kind === "metaTask"
     ? `metaTask:${target.metaTaskId}`
-    : `child:${target.parentTaskId}`;
+    : `folder:${target.folderTaskId}`;
 }
 
 export interface TaskDraftRelate {
@@ -94,15 +94,8 @@ export function TaskDraftPopover({
   );
   const [standalone, setStandalone] = useState(false);
 
-  // Resolve the parent task for "child" target so we can render the preview
-  // ("Will include: <title>") next to the parent-task toggle.
-  const parentTaskId = target.kind === "child" ? target.parentTaskId : null;
   const tasksResult = useResource(tasksResource);
   const tasks = useMemo(() => (tasksResult.pending ? [] : tasksResult.data), [tasksResult]);
-  const parentTask: Task | null =
-    parentTaskId
-      ? tasks.find((t) => t.id === parentTaskId) ?? null
-      : null;
 
   const effectiveRelateTaskId =
     relate?.taskId ?? (hasAmbientRelate ? activeRelate?.taskId : null) ?? null;
@@ -196,7 +189,7 @@ export function TaskDraftPopover({
 
       const effectiveTarget: TaskChainTarget =
         hasAmbientRelate && ambientRelateMode
-          ? { kind: "child", parentTaskId: activeRelate!.taskId }
+          ? { kind: "folder", folderTaskId: activeRelate!.taskId }
           : target;
 
       const outcome = await submitChain({
@@ -249,9 +242,6 @@ export function TaskDraftPopover({
         onSubmit={submit}
         onCancel={() => setOpen(false)}
         captures={captures}
-        parentTaskPreview={
-          parentTask ? { id: parentTask.id, title: parentTask.title } : null
-        }
         relateMode={
           relate ? relateMode : hasAmbientRelate ? ambientRelateMode : undefined
         }

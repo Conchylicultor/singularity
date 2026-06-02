@@ -13,8 +13,8 @@ export function NewChildTaskAction() {
       trigger={<MdAdd className="size-4" />}
       triggerClassName={buttonVariants({ variant: "ghost", size: "icon" })}
       triggerTitle="New child task"
-      target={{ kind: "child", parentTaskId: conversation.taskId }}
-      captures={["url", "parentTask"]}
+      target={{ kind: "folder", folderTaskId: conversation.taskId }}
+      captures={["url"]}
       relate={{ taskId: conversation.taskId, defaultMode: "followup" }}
       heading="Create child task"
     />

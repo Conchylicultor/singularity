@@ -4,7 +4,6 @@ import {
   createTask,
   getTask,
   getTaskDependencyIds,
-  type Task,
 } from "@plugins/tasks-core/server";
 import {
   scheduleTaskTitleUpdate,
@@ -23,17 +22,17 @@ import { armTaskAutoStart } from "./arm-auto-start";
 import { rewireDependencies } from "./rewire-dependencies";
 
 export const handleCreateChain = implement(createTaskChain, async ({ body }) => {
-  // Single parentId source — server does not care which target kind it came from.
-  const parentId =
+  // Single folder source — server does not care which target kind it came from.
+  // The folder is display-only organization; it carries no execution semantics.
+  const folderId =
     body.target.kind === "metaTask"
       ? body.target.metaTaskId
-      : body.target.parentTaskId;
+      : body.target.folderTaskId;
 
-  // Verify the parent exists. For "child" targets we also need it later to
-  // inline its title/description if any head card has includeParentTask.
-  const parentTask = await getTask(parentId);
-  if (!parentTask) {
-    throw new HttpError(400, `parent task ${parentId} not found`);
+  // Verify the folder task exists.
+  const folderTask = await getTask(folderId);
+  if (!folderTask) {
+    throw new HttpError(400, `folder task ${folderId} not found`);
   }
 
   // Verify relate.taskId exists upfront so we don't half-create the chain
@@ -91,17 +90,11 @@ export const handleCreateChain = implement(createTaskChain, async ({ body }) => 
         text: card.text,
         url: card.url ?? "",
         attachments,
-        parentTaskRef:
-          isHead &&
-          card.includeParentTask &&
-          body.target.kind === "child"
-            ? parentTask
-            : null,
       });
 
       const fallbackTitle = synthesiseTitleFallback(card.text);
       const newTask = await createTask({
-        parentId,
+        folderId,
         groupId,
         title: fallbackTitle,
         description,
@@ -159,7 +152,6 @@ function renderTaskDescription(opts: {
   text: string;
   url: string;
   attachments: { id: string; filename: string }[];
-  parentTaskRef: Task | null;
 }): string {
   // Attachments already referenced inline in the text are intentionally omitted
   // from the explicit section — they're visible where the user placed them and
@@ -167,8 +159,7 @@ function renderTaskDescription(opts: {
   const inlineIds = new Set(extractAttachmentIds(opts.text));
   const extraAttachments = opts.attachments.filter((a) => !inlineIds.has(a.id));
 
-  const hasContext =
-    opts.url || extraAttachments.length > 0 || opts.parentTaskRef !== null;
+  const hasContext = opts.url || extraAttachments.length > 0;
   if (!hasContext) return opts.text;
 
   const lines: string[] = [opts.text, "", "---"];
@@ -178,16 +169,6 @@ function renderTaskDescription(opts: {
     for (const att of extraAttachments) {
       lines.push(`- ${attachmentMarkdown(att.id, att.filename)}`);
     }
-  }
-  if (opts.parentTaskRef) {
-    const t = opts.parentTaskRef;
-    const desc = t.description?.trim() || "(no description)";
-    lines.push("");
-    lines.push(`<parent-task id="${t.id}">`);
-    lines.push(`**Title:** ${t.title}`);
-    lines.push(`**Description:**`);
-    lines.push(desc);
-    lines.push(`</parent-task>`);
   }
   return lines.join("\n");
 }

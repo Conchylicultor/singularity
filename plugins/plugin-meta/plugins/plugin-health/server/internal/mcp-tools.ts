@@ -68,7 +68,7 @@ Good: "Floating promise in sidebar refresh". Bad: "Add await to line 42".`,
       .returning();
 
     const task = await createTask({
-      parentId: currentTaskId,
+      folderId: currentTaskId,
       title,
       description: description ?? null,
       author: conversationId,

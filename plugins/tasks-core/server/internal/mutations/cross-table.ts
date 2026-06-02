@@ -3,7 +3,7 @@ import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/cor
 import { _attempts, _conversations, _tasks } from "../tables";
 import { conversations } from "../schema";
 import { eq } from "drizzle-orm";
-import { findNextRankUnder } from "../queries/tasks";
+import { findNextRankInFolder } from "../queries/tasks";
 import { CONVERSATIONS_META_TASK_ID } from "./tasks";
 import { tasksResource, attemptsResource, conversationsLiveResource } from "../resources";
 import path from "path";
@@ -63,12 +63,12 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
     inserted = !!row;
   } else {
     await db.transaction(async (tx) => {
-      const rank = await findNextRankUnder(CONVERSATIONS_META_TASK_ID, tx);
+      const rank = await findNextRankInFolder(CONVERSATIONS_META_TASK_ID, tx);
       await tx
         .insert(_tasks)
         .values({
           id: taskId,
-          parentId: CONVERSATIONS_META_TASK_ID,
+          folderId: CONVERSATIONS_META_TASK_ID,
           title: input.title?.trim() || "Untitled",
           rank: rank.toJSON(),
         });

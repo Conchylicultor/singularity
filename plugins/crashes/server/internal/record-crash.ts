@@ -117,7 +117,7 @@ async function ensureTaskForCrash(
     if (!needsTask) return { taskId: latest.taskId, wasNew: false };
 
     const task = await createTask({
-      parentId: CRASHES_META_TASK_ID,
+      folderId: CRASHES_META_TASK_ID,
       title: taskTitle(latest),
       description: taskDescription(latest, recurrence),
       author: "crashes-plugin",
