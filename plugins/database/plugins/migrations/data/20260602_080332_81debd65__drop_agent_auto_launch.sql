@@ -1,0 +1,1 @@
+DROP TABLE "agents_ext_auto_launch" CASCADE;

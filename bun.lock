@@ -75,14 +75,6 @@
       "name": "@singularity/plugin-agents",
       "version": "0.0.1",
     },
-    "plugins/agents/plugins/auto-launch": {
-      "name": "@singularity/plugin-agents-auto-launch",
-      "version": "0.0.1",
-    },
-    "plugins/agents/plugins/auto-launch/plugins/toggle": {
-      "name": "@singularity/plugin-agents-auto-launch-toggle",
-      "version": "0.0.1",
-    },
     "plugins/apps": {
       "name": "@singularity/plugin-apps",
     },
@@ -2133,10 +2125,6 @@
     "@singularity/plugin-active-data-task-link": ["@singularity/plugin-active-data-task-link@workspace:plugins/active-data/plugins/task-link"],
 
     "@singularity/plugin-agents": ["@singularity/plugin-agents@workspace:plugins/agents"],
-
-    "@singularity/plugin-agents-auto-launch": ["@singularity/plugin-agents-auto-launch@workspace:plugins/agents/plugins/auto-launch"],
-
-    "@singularity/plugin-agents-auto-launch-toggle": ["@singularity/plugin-agents-auto-launch-toggle@workspace:plugins/agents/plugins/auto-launch/plugins/toggle"],
 
     "@singularity/plugin-apps": ["@singularity/plugin-apps@workspace:plugins/apps"],
 

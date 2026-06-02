@@ -14,7 +14,6 @@ export interface CollectedEntry {
 
 export const serverEntries: CollectedEntry[] = [
   { pluginPath: "active-data", hierarchyPath: "active-data", loader: () => import("@plugins/active-data/server"), dependsOn: ["database", "infra/plugins/endpoints", "tasks-core"] },
-  { pluginPath: "agents/plugins/auto-launch/plugins/toggle", hierarchyPath: "agents/auto-launch/toggle", loader: () => import("@plugins/agents/plugins/auto-launch/plugins/toggle/server"), dependsOn: ["agents", "database", "infra/plugins/endpoints", "infra/plugins/entity-extensions"] },
   { pluginPath: "agents", hierarchyPath: "agents", loader: () => import("@plugins/agents/server"), dependsOn: ["conversations", "conversations/plugins/model-provider", "database", "infra/plugins/attachments", "infra/plugins/endpoints", "primitives/plugins/avatar", "primitives/plugins/rank", "tasks-core"] },
   { pluginPath: "apps/plugins/deploy/plugins/servers", hierarchyPath: "apps/deploy/servers", loader: () => import("@plugins/apps/plugins/deploy/plugins/servers/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/secrets"] },
   { pluginPath: "apps/plugins/forge/plugins/catalog/plugins/tables/plugins/columns", hierarchyPath: "apps/forge/catalog/tables/columns", loader: () => import("@plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/columns/server"), dependsOn: ["database", "infra/plugins/endpoints"] },

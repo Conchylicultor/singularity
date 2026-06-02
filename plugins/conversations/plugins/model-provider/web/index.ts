@@ -10,6 +10,8 @@ export {
   useSetDefaultModel,
 } from "./internal/hooks";
 export { familyClass } from "./internal/family-class";
+export { ModelSelect } from "./components/model-select";
+export type { ModelSelectProps } from "./components/model-select";
 
 export default {
   id: "conversations-model-provider",

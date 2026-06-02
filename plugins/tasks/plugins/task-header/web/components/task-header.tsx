@@ -6,16 +6,9 @@ import { patchTask, setAutoStart, useTask, type AutoStartModel } from "@plugins/
 import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
 import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { StatusBadge } from "@plugins/tasks/plugins/task-status/web";
-import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
-import { useVisibleModels } from "@plugins/conversations/plugins/model-provider/web";
+import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
+import { ModelSelect } from "@plugins/conversations/plugins/model-provider/web";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { AuthorDisplay } from "./author-display";
 
 export function TaskHeader({ taskId }: { taskId: string }) {
@@ -36,8 +29,6 @@ export function TaskHeader({ taskId }: { taskId: string }) {
     if (!task) return;
     void patchTask(taskId, { hold: task.status !== "held" });
   };
-
-  const visibleModels = useVisibleModels();
 
   const onAutoStartChange = useCallback(
     (model: AutoStartModel) => setAutoStart(taskId, model),
@@ -109,22 +100,11 @@ export function TaskHeader({ taskId }: { taskId: string }) {
         <SectionLabel as="span">
           Auto-start
         </SectionLabel>
-        <Select
-          value={autoStart?.autoStartModel != null ? normalizeModel(autoStart.autoStartModel) : "none"}
-          onValueChange={(v: string | null) => {
-            if (v) void onAutoStartChange(v as AutoStartModel);
-          }}
-        >
-          <SelectTrigger className="h-7 w-32 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Off</SelectItem>
-            {visibleModels.map((m) => (
-              <SelectItem key={m} value={m}>{MODEL_REGISTRY[m].label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <ModelSelect
+          value={autoStart?.autoStartModel != null ? normalizeModel(autoStart.autoStartModel) : null}
+          onChange={(m) => void onAutoStartChange(m ?? "none")}
+          ariaLabel="Auto-start model"
+        />
       </div>
     </div>
   );

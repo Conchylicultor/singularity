@@ -17,7 +17,7 @@ Consumers import the type/registry/`normalizeModel` from `@plugins/conversations
 - Web:
   - Contributes: `ConfigV2.WebRegister`, `Core.Root` → `ModelCorruptionReporter`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `crashes.report`
-  - Exports: Values: `familyClass`, `useDefaultModel`, `useSetDefaultModel`, `useVisibleModels`
+  - Exports: Types: `ModelSelectProps`; Values: `familyClass`, `ModelSelect`, `useDefaultModel`, `useSetDefaultModel`, `useVisibleModels`
 - Server:
   - Uses: `config_v2.ConfigV2`
   - Exports: Values: `resolveCliFlag`
