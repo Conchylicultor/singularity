@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { createHash } from "crypto";
-import { readdirSync, readFileSync } from "fs";
+import { existsSync, readdirSync, readFileSync } from "fs";
 import { basename, join, resolve } from "path";
 import {
   generateMigration,
@@ -39,6 +39,12 @@ async function assertNoHandEditedBranchLocalMigrations(root: string): Promise<vo
   for (const f of readdirSync(migrationsDir)) {
     if (!f.endsWith(".sql")) continue;
     if (tracked.has(f)) continue;
+    // Data migrations (snapshot-less) are exempt: their SQL is hand-written by
+    // design and their filename hash is self-healed on every build (see
+    // rehashBranchLocalDataMigrations in migrations.ts). Only schema migrations —
+    // whose SQL must match the snapshot's DDL — trigger the hand-edit abort.
+    if (!existsSync(join(migrationsDir, "meta", `${f.slice(0, -4)}_snapshot.json`)))
+      continue;
     const m = f.match(/^\d{8}_\d{6}_([0-9a-f]{8})__/);
     if (!m) continue;
     const expected = m[1]!;

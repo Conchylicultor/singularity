@@ -1104,6 +1104,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`barrel-stubs-in-sync`**
             - **`config-origins-in-sync`**
             - **`conversation-trailer`**
+            - **`data-migration-dml-only`**
             - **`eslint`**
             - **`migrations-in-sync`**
             - **`no-hardcoded-colors`**

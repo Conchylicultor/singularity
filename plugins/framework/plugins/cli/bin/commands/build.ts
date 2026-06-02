@@ -489,11 +489,11 @@ export function registerBuild(program: Command) {
     )
     .option(
       "--reset-migration",
-      "Drop branch-local migration files (those absent from origin/main) before generating. Recovers from snapshot-chain Y-forks after rebasing onto main.",
+      "Drop branch-local SCHEMA migration files (those absent from origin/main, that carry a drizzle snapshot) before generating. Recovers from snapshot-chain Y-forks after rebasing onto main. Data/backfill migrations (snapshot-less) are preserved.",
     )
     .option(
       "--custom-migration",
-      "Pass --custom to drizzle-kit generate: creates an empty migration file and updates the snapshot without interactive prompts. Edit the generated SQL file before the next build applies it.",
+      "Create a snapshot-less DATA/BACKFILL migration (DML only). Generates an empty SQL file with no drizzle snapshot; edit it to add UPDATE/INSERT/DELETE before the next build applies it. The file is re-hashed on each build and enforced DML-only by the data-migration-dml-only check. Stays out of the snapshot chain, so it never Y-forks and is push-safe.",
     )
     .option(
       "--migration-answers <json>",

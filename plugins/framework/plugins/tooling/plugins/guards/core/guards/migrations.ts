@@ -24,8 +24,8 @@ export const migrationsGuard = defineGuard<BashInput>({
     if (/--custom-migration/.test(cmd)) {
       return {
         blocked: "Refusing to use --custom-migration without explicit approval.",
-        why: "--custom-migration creates a migration file outside drizzle-kit's normal generation flow. Files created this way are fragile: the runner tracks them by filename hash, so editing after creation silently breaks application. Agents that hit generation failures should stop and report rather than working around with --custom.",
-        hint: "If drizzle-kit failed to generate a migration, report the failure to the user.\n\nLegitimate uses of --custom-migration (data backfills, DDL drizzle can't express) require user approval. If the user approves, create .allow-migrations to bypass this guard.",
+        why: "--custom-migration creates a migration file outside drizzle-kit's normal generation flow. It is for DATA BACKFILLS ONLY (UPDATE/INSERT/DELETE) — these carry no drizzle snapshot, are re-hashed on every build to keep the runner's filename-hash identity honest, and are enforced DML-only by the `data-migration-dml-only` check (no schema changes). Agents that hit generation failures for a real schema change should stop and report, not reach for --custom.",
+        hint: "If drizzle-kit failed to generate a SCHEMA migration, report the failure to the user — do not work around it with --custom.\n\nLegitimate use of --custom-migration is a data backfill (DML only). It requires user approval: if the user approves, create .allow-migrations to bypass this guard. The backfill is push-safe — it never joins the snapshot chain, so it cannot Y-fork when main moves.",
       };
     }
 

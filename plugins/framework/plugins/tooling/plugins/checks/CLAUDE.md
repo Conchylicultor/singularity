@@ -12,6 +12,7 @@
   - **`barrel-stubs-in-sync`**
   - **`config-origins-in-sync`**
   - **`conversation-trailer`**
+  - **`data-migration-dml-only`**
   - **`eslint`**
   - **`migrations-in-sync`**
   - **`no-hardcoded-colors`**

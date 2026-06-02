@@ -825,6 +825,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-conversation-trailer",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/data-migration-dml-only": {
+      "name": "@singularity/plugin-framework-tooling-checks-data-migration-dml-only",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/eslint": {
       "name": "@singularity/plugin-framework-tooling-checks-eslint",
       "version": "0.0.1",
@@ -2493,6 +2497,8 @@
     "@singularity/plugin-framework-tooling-checks-config-origins-in-sync": ["@singularity/plugin-framework-tooling-checks-config-origins-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync"],
 
     "@singularity/plugin-framework-tooling-checks-conversation-trailer": ["@singularity/plugin-framework-tooling-checks-conversation-trailer@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/conversation-trailer"],
+
+    "@singularity/plugin-framework-tooling-checks-data-migration-dml-only": ["@singularity/plugin-framework-tooling-checks-data-migration-dml-only@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/data-migration-dml-only"],
 
     "@singularity/plugin-framework-tooling-checks-eslint": ["@singularity/plugin-framework-tooling-checks-eslint@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/eslint"],
 

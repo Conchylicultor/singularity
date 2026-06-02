@@ -338,6 +338,15 @@ export async function generateMigration(opts: {
     await resetBranchLocalMigrations(root, migrationsDir);
   }
 
+  // Self-heal the filename-hash == content-hash invariant for branch-local data
+  // migrations (snapshot-less .sql). A --custom migration freezes its hash at the
+  // empty file when first generated; once the agent hand-edits the SQL the runner
+  // (which identifies migrations by their filename hash) would otherwise silently
+  // skip the new content or diverge across DBs. Re-hashing on every build keeps
+  // the identity honest. Never touches migrations already on origin/main — their
+  // hashes are locked into every deployed DB.
+  await rehashBranchLocalDataMigrations(root, migrationsDir);
+
   const before = new Set(readdirSync(migrationsDir));
 
   // `bunx` falls back to Node when the binary's shebang is `#!/usr/bin/env node`
@@ -430,6 +439,62 @@ export async function generateMigration(opts: {
   for (const r of renameResult.renamed) {
     console.log(`  ${r.from} → ${r.to}`);
   }
+
+  // Data/backfill migrations (--custom) carry no schema delta, so they must NOT
+  // join the drizzle snapshot chain — otherwise they Y-fork against any schema
+  // migration main adds concurrently, and pushing them becomes impossible outside
+  // a quiet window. Drop the snapshot drizzle emitted; the migration stays a .sql
+  // + journal entry, applied by the runner via filename hash. drizzle bases the
+  // next migration on the last *schema* snapshot, which is correct since this one
+  // changed no schema. (The 3 oldest backfills on main already have no snapshot.)
+  if (customMigration) {
+    const metaDir = join(migrationsDir, "meta");
+    for (const r of renameResult.renamed) {
+      const snap = join(metaDir, `${r.to.slice(0, -4)}_snapshot.json`);
+      if (existsSync(snap)) {
+        rmSync(snap, { force: true });
+        console.log(`  dropped snapshot for data migration ${r.to}`);
+      }
+    }
+  }
+}
+
+/**
+ * Re-derive the filename hash from current content for branch-local data
+ * migrations — NEW_FORMAT .sql files with no sibling snapshot that are absent
+ * from origin/main. Keeps filename-hash == content-hash so the runner (which
+ * identifies migrations by filename hash) never silently skips hand-edited
+ * backfill SQL. Preserves the timestamp (and thus ordering); only the hash token
+ * changes. Schema migrations keep their snapshot and are left untouched — their
+ * SQL must match the snapshot's DDL and must never be silently re-hashed. Files
+ * already on origin/main are immutable (their hash is recorded in deployed DBs).
+ */
+async function rehashBranchLocalDataMigrations(
+  root: string,
+  migrationsDir: string,
+): Promise<void> {
+  const ref = await resolveRef(root);
+  if (!ref) return; // can't determine the branch-local set; leave files untouched
+  const tracked = await listTrackedMigrationBasenames(root, ref);
+  const metaDir = join(migrationsDir, "meta");
+
+  let renamed = false;
+  for (const f of readdirSync(migrationsDir)) {
+    const m = NEW_FORMAT.exec(f);
+    if (!m) continue;
+    if (tracked.has(f)) continue; // already on main — immutable
+    const [, date, time, oldHash, name] = m;
+    // Snapshot present => schema migration; skip (its SQL is snapshot-bound).
+    if (existsSync(join(metaDir, `${f.slice(0, -4)}_snapshot.json`))) continue;
+    const sql = readFileSync(join(migrationsDir, f), "utf8");
+    const newHash = createHash("sha256").update(sql).digest("hex").slice(0, 8);
+    if (newHash === oldHash) continue;
+    const newName = `${date}_${time}_${newHash}__${name}.sql`;
+    renameSync(join(migrationsDir, f), join(migrationsDir, newName));
+    console.log(`  rehashed data migration ${f} → ${newName}`);
+    renamed = true;
+  }
+  if (renamed) regenerateJournal(migrationsDir);
 }
 
 /**
@@ -462,6 +527,10 @@ async function resetBranchLocalMigrations(
   for (const f of readdirSync(migrationsDir)) {
     if (!f.endsWith(".sql")) continue;
     if (tracked.has(f)) continue;
+    // Preserve data migrations (snapshot-less): plain drizzle generate can't
+    // recreate their hand-written SQL, so deleting them here would lose the
+    // backfill. They never join the snapshot chain, so they don't need resetting.
+    if (!existsSync(join(metaDir, `${f.slice(0, -4)}_snapshot.json`))) continue;
     rmSync(join(migrationsDir, f), { force: true });
     removed.push(f);
   }
