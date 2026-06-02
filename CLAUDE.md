@@ -122,7 +122,7 @@ Checks also run automatically as the first step of `push`, and (unless `--skip-c
 
 Plugins can also contribute their own checks (no codegen, no registry edits — discovered at runtime):
 
-- `plugins/<name>/lint/index.ts` — default-export `{ name: "<plugin-id>", rules: { ... } }` of ESLint v9 rule modules. The root `eslint.config.ts` walks every `lint/index.ts` and enables each rule as `error` scoped to that plugin's subtree (`plugins/<name>/**`). The `eslint` built-in check runs the resulting config.
+- `plugins/<name>/lint/index.ts` — default-export `{ name: "<plugin-id>", rules: { ... } }` of ESLint v9 rule modules. The root `eslint.config.ts` walks every `lint/index.ts` and enables each rule as `error` repo-wide (`**/*.{ts,tsx}`) — a contributed lint rule applies everywhere, like a plugin-contributed check, not just within the contributing plugin's subtree. The `eslint` built-in check runs the resulting config.
 - `plugins/<name>/check/index.ts` — default-export `Check | Check[]` (the same `Check` interface as built-ins). Discovered automatically when `./singularity check` runs. Convention: id as `<plugin-name>:<check-id>` to avoid collisions with built-ins.
 
 Available built-in checks:

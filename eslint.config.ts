@@ -5,8 +5,9 @@
  * `{ name: <plugin-id>, rules: Record<string, RuleModule> }`. The codegen
  * system discovers these barrels and writes `lint.generated.ts`; this file
  * loads entries from that registry, registers each as an ESLint plugin under
- * its `name`, and enables every contributed rule as `"error"` scoped to the
- * plugin's own subtree.
+ * its `name`, and enables every contributed rule as `"error"` repo-wide
+ * (`**\/*.{ts,tsx}`) — a contributed lint rule applies everywhere, like a
+ * plugin-contributed check. Per-file exemptions are layered on afterwards.
  *
  * The CLI runs ESLint via `plugins/framework/plugins/tooling/plugins/checks/core/eslint.ts`
  * (`./singularity check --eslint`); there's no separate npm script to keep in sync.
@@ -15,8 +16,8 @@
  * registered in baseConfigs below — they apply to all `**\/*.{ts,tsx}` files.
  */
 
-import { dirname } from "path";
-import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import { fileURLToPath, pathToFileURL } from "url";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import type { Linter } from "eslint";
@@ -37,21 +38,46 @@ interface PluginContribution {
   /** ESLint plugin namespace — must match the lint barrel's `name`. */
   name: string;
   rules: Record<string, unknown>;
+  /**
+   * Per-rule exemption globs, keyed by rule id, declared by the contributing
+   * plugin. The owning plugin decides where its rule should not fire (e.g. a
+   * legacy allowlist) — this config never names a rule or path itself.
+   */
+  ignores?: Record<string, string[]>;
 }
 
 const contributions: PluginContribution[] = [];
 {
-  const results = await Promise.allSettled(lintEntries.map((e) => e.loader()));
+  // ESLint loads this config via jiti, which does NOT resolve the `@plugins/*`
+  // tsconfig path alias. lintEntries[].loader() imports through that alias, so it
+  // throws here ("Cannot find module @plugins/…"). Import each barrel by absolute
+  // path instead — using the entry's pluginPath under the plugins/ root.
+  const results = await Promise.allSettled(
+    lintEntries.map((e) =>
+      import(pathToFileURL(join(here, "plugins", e.pluginPath, "lint", "index.ts")).href),
+    ),
+  );
+  const failures: string[] = [];
   for (let i = 0; i < results.length; i++) {
     const r = results[i]!;
     const e = lintEntries[i]!;
     if (r.status === "rejected") {
-      console.warn(`[eslint] ${e.pluginPath}/lint failed`);
+      failures.push(`${e.pluginPath}/lint — ${(r.reason as Error)?.message ?? String(r.reason)}`);
       continue;
     }
-    const def = (r.value as { default?: { name?: string; rules?: Record<string, unknown> } }).default;
-    if (!def?.name || !def.rules) continue;
-    contributions.push({ relPath: e.pluginPath, name: def.name, rules: def.rules });
+    const def = (r.value as {
+      default?: { name?: string; rules?: Record<string, unknown>; ignores?: Record<string, string[]> };
+    }).default;
+    if (!def?.name || !def.rules) {
+      failures.push(`${e.pluginPath}/lint — default export missing { name, rules }`);
+      continue;
+    }
+    contributions.push({ relPath: e.pluginPath, name: def.name, rules: def.rules, ignores: def.ignores });
+  }
+  // Fail loudly: a dropped contribution means its rules silently stop being
+  // enforced (this is exactly how no-console-log went unenforced for a while).
+  if (failures.length > 0) {
+    throw new Error(`[eslint] failed to load lint contributions:\n  ${failures.join("\n  ")}`);
   }
 }
 
@@ -113,11 +139,28 @@ const baseConfigs: Linter.Config[] = [
 ];
 
 const pluginConfigs: Linter.Config[] = contributions.map((c) => ({
-  files: [`plugins/${c.relPath}/**/*.{ts,tsx}`],
+  files: ["**/*.{ts,tsx}"],
   plugins: { [c.name]: { rules: c.rules } } as unknown as Linter.Config["plugins"],
   rules: Object.fromEntries(
     Object.keys(c.rules).map((ruleId) => [`${c.name}/${ruleId}`, "error"] as const),
   ),
 }));
 
-export default [...baseConfigs, ...pluginConfigs];
+/**
+ * Per-rule exemptions, declared by each contributing plugin via its lint barrel's
+ * `ignores` map. Flat config merges matching objects in order, so each block flips
+ * exactly one contributed rule off for the declared globs — the plugin stays
+ * registered by `pluginConfigs` above, every other rule still applies. This config
+ * names no rule and no path: the owning plugin holds that knowledge.
+ */
+const exemptConfigs: Linter.Config[] = contributions.flatMap((c) =>
+  Object.entries(c.ignores ?? {}).map((entry) => {
+    const [ruleId, globs] = entry;
+    return {
+      files: globs,
+      rules: { [`${c.name}/${ruleId}`]: "off" },
+    } as Linter.Config;
+  }),
+);
+
+export default [...baseConfigs, ...pluginConfigs, ...exemptConfigs];
