@@ -7,6 +7,14 @@ Owns all database infrastructure for the Singularity server:
 - **Embedded Postgres constants & helpers** — `plugins/database/plugins/embedded/`.
 - **DB query MCP tool** — `plugins/database/plugins/query/` (read-only agent inspection tool).
 
+## Runtime query profiling
+
+`pool.query` is wrapped (in `server/internal/client.ts`) to record per-query
+timing into the runtime-profiler recorder (`db` spans). This captures all
+drizzle ORM queries and the `awaitDbReady` `SELECT 1`. **Direct
+`pool.connect()` → `client.query` paths bypass this timing** — they go through a
+checked-out client, not `pool.query`, so their durations are not recorded.
+
 ## Bootstrap
 
 `awaitPgReady` + `runMigrations` are called in the database plugin's `onReady` hook — before any other plugin's `onReady` runs. Consumers can safely use the DB in their own `onReady`.

@@ -1,5 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import type { ZodType } from "zod";
+import { recordSpan } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineServerContribution } from "./contributions";
 import { reportServerError } from "./error-reporter";
 import type { WsData, WsHandler } from "./types";
@@ -97,6 +98,16 @@ interface RegistryEntry {
 const registry = new Map<string, RegistryEntry>();
 let dagDirty = true;
 let topoOrder: RegistryEntry[] = [];
+
+// Time a resource loader call and record a `loader` span keyed by entry.key.
+async function timedLoad(entry: RegistryEntry, params: ResourceParams): Promise<unknown> {
+  const t0 = performance.now();
+  try {
+    return await entry.loader(params);
+  } finally {
+    recordSpan("loader", entry.key, performance.now() - t0);
+  }
+}
 
 function paramsKey(params: ResourceParams): string {
   const keys = Object.keys(params).sort();
@@ -300,7 +311,7 @@ async function flushNotifies(): Promise<void> {
       let valueComputed = false;
       if (needValue) {
         try {
-          value = await entry.loader(params);
+          value = await timedLoad(entry, params);
           valueComputed = true;
         } catch (err) {
           console.error(`[resources] loader failed for ${entry.key}`, err);
@@ -435,7 +446,7 @@ async function handleSub(
 
   let value: unknown;
   try {
-    value = await entry.loader(params);
+    value = await timedLoad(entry, params);
   } catch (err) {
     console.error(`[resources] loader failed for ${key}`, err);
     reportServerError(errorReport(`loader failed for ${key}`, err));
@@ -502,7 +513,7 @@ export async function handleResourceHttp(
 
   let value: unknown;
   try {
-    value = await entry.loader(resourceParams);
+    value = await timedLoad(entry, resourceParams);
   } catch (err) {
     console.error(`[resources] loader failed for ${key}`, err);
     reportServerError(errorReport(`loader failed for ${key}`, err));

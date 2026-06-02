@@ -738,6 +738,10 @@
       "name": "@singularity/plugin-debug-profiling-push-push-gantt",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/profiling/plugins/runtime": {
+      "name": "@singularity/plugin-debug-profiling-runtime",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/profiling/plugins/stats": {
       "name": "@singularity/plugin-debug-profiling-stats",
       "version": "0.0.1",
@@ -993,6 +997,10 @@
     },
     "plugins/infra/plugins/paths": {
       "name": "@singularity/plugin-infra-paths",
+    },
+    "plugins/infra/plugins/runtime-profiler": {
+      "name": "@singularity/plugin-infra-runtime-profiler",
+      "version": "0.0.1",
     },
     "plugins/infra/plugins/secrets": {
       "name": "@singularity/plugin-infra-secrets",
@@ -2468,6 +2476,8 @@
 
     "@singularity/plugin-debug-profiling-push-push-gantt": ["@singularity/plugin-debug-profiling-push-push-gantt@workspace:plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt"],
 
+    "@singularity/plugin-debug-profiling-runtime": ["@singularity/plugin-debug-profiling-runtime@workspace:plugins/debug/plugins/profiling/plugins/runtime"],
+
     "@singularity/plugin-debug-profiling-stats": ["@singularity/plugin-debug-profiling-stats@workspace:plugins/debug/plugins/profiling/plugins/stats"],
 
     "@singularity/plugin-debug-queue": ["@singularity/plugin-debug-queue@workspace:plugins/debug/plugins/queue"],
@@ -2569,6 +2579,8 @@
     "@singularity/plugin-infra-mcp": ["@singularity/plugin-infra-mcp@workspace:plugins/infra/plugins/mcp"],
 
     "@singularity/plugin-infra-paths": ["@singularity/plugin-infra-paths@workspace:plugins/infra/plugins/paths"],
+
+    "@singularity/plugin-infra-runtime-profiler": ["@singularity/plugin-infra-runtime-profiler@workspace:plugins/infra/plugins/runtime-profiler"],
 
     "@singularity/plugin-infra-secrets": ["@singularity/plugin-infra-secrets@workspace:plugins/infra/plugins/secrets"],
 

@@ -1,3 +1,4 @@
+import { recordSpan } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { EndpointDef } from "./define-endpoint";
 
 export class HttpError extends Error {
@@ -70,12 +71,14 @@ export function implement<
         query = result.data;
       }
 
+      const t0 = performance.now();
       const result = await handler({
         params: params as TParams,
         body,
         query,
         req,
       });
+      recordSpan("http", _endpoint.route, performance.now() - t0);
 
       // void/undefined/null → 204
       if (result === undefined || result === null) {

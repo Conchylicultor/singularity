@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
+import { recordSpan } from "@plugins/infra/plugins/runtime-profiler/core";
 import { readDatabaseConfig, buildConnectionString } from "@plugins/database/core";
 
 const worktree = process.env.SINGULARITY_WORKTREE;
@@ -26,6 +27,28 @@ const pool = new Pool({
   max: 5,
   idleTimeoutMillis: 20_000,
 });
+
+// Time every query that flows through pool.query (all drizzle ORM queries + the
+// awaitDbReady SELECT 1). Only the promise form is timed; the callback form is
+// passed through untouched. Direct pool.connect() → client.query paths bypass
+// this — see plugins/database/CLAUDE.md.
+const origQuery = pool.query.bind(pool);
+// biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded query signature.
+pool.query = ((...a: Parameters<typeof origQuery>): any => {
+  const first = a[0] as string | { text?: string } | undefined;
+  const text = typeof first === "string" ? first : (first?.text ?? "?");
+  const t0 = performance.now();
+  // pg's overloaded query() can be typed as returning void (callback form), so
+  // widen to unknown before the thenable check.
+  const r: unknown = origQuery(...a);
+  if (r && typeof (r as Promise<unknown>).finally === "function") {
+    return (r as Promise<unknown>).finally(() =>
+      recordSpan("db", text, performance.now() - t0),
+    );
+  }
+  return r;
+}) as typeof pool.query;
+
 export const db = drizzle(pool);
 
 export function isTransientDbError(err: unknown): boolean {
