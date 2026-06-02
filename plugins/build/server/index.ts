@@ -27,11 +27,6 @@ export default {
   },
   register: [buildRunJob],
   onReady: async () => {
-    // Finalize genuinely-orphaned builds: rows left unfinished by a build whose
-    // owning `./singularity build` process is gone (crashed or killed mid-build).
-    // Crucially, leave still-running builds untouched — this boot was very likely
-    // triggered by an in-flight build restarting the backend, and blindly nulling
-    // every unfinished row would mark that live (often succeeding) build as failed.
     const unfinished = await db
       .select({ id: _buildRuns.id, pid: _buildRuns.pid })
       .from(_buildRuns)
@@ -40,7 +35,7 @@ export default {
     if (orphanIds.length > 0) {
       await db
         .update(_buildRuns)
-        .set({ finishedAt: new Date() })
+        .set({ finishedAt: new Date(), exitCode: -1 })
         .where(inArray(_buildRuns.id, orphanIds));
       buildHistoryResource.notify();
     }

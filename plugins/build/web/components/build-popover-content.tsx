@@ -151,6 +151,9 @@ function StatusDot({ run }: { run: BuildRun }) {
   if (run.exitCode === 0) {
     return <span className="block size-2 shrink-0 rounded-full bg-success" />;
   }
+  if (run.exitCode === -1) {
+    return <span className="block size-2 shrink-0 rounded-full bg-muted-foreground/40" />;
+  }
   return <span className="block size-2 shrink-0 rounded-full bg-destructive" />;
 }
 

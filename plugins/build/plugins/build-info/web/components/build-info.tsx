@@ -28,6 +28,14 @@ function StatusBadge({ exitCode, finished }: { exitCode: number | null; finished
       </span>
     );
   }
+  if (exitCode === -1) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+        <span className="block size-2 rounded-full bg-zinc-400 dark:bg-zinc-500" />
+        Superseded
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
       <span className="block size-2 rounded-full bg-destructive" />
