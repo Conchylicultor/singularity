@@ -3,7 +3,7 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/notifications/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { answerAskUserQuestion } from "../../shared";
+import { answerAskUserQuestion, ANSWER_MARKER } from "../../shared";
 import { Indicator, type Question } from "./ask-user-question-tool-view";
 
 interface QuestionAnswer {
@@ -26,7 +26,7 @@ function serializeAnswers(
     if (trimmed.length > 0) parts.push(trimmed);
     return `- ${q.header}: ${parts.join(", ")}`;
   });
-  return `Answering your questions:\n\n${lines.join("\n")}`;
+  return `${ANSWER_MARKER}\n\n${lines.join("\n")}`;
 }
 
 export function AnswerForm({

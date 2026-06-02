@@ -27,4 +27,7 @@ export const apiRuntime: ConversationRuntime = {
   async answerPrompt(): Promise<void> {
     throw new Error("api runtime: answerPrompt() not implemented");
   },
+  async flushInteractivePrompt(): Promise<void> {
+    throw new Error("api runtime: flushInteractivePrompt() not implemented");
+  },
 };

@@ -54,6 +54,17 @@ export interface ConversationRuntime {
    * sending into a live form.
    */
   answerPrompt(conversationId: string, text: string): Promise<void>;
+  /**
+   * Dismiss a pending interactive prompt form (e.g. AskUserQuestion) WITHOUT
+   * sending any answer. Cancelling the form forces the CLI to flush the
+   * buffered assistant `tool_use` to the JSONL transcript so the web UI can
+   * render it; the user can then answer from the web form (which goes through
+   * {@link answerPrompt}). Implementers MUST verify the form has cleared and
+   * MUST throw if it never clears, exactly like {@link answerPrompt}'s
+   * dismissal step — they share the same self-healing Escape loop, this method
+   * simply stops after the form clears (no answer is sent).
+   */
+  flushInteractivePrompt(conversationId: string): Promise<void>;
 }
 
 const registry = new Map<string, ConversationRuntime>();
@@ -101,6 +112,12 @@ export async function answerPrompt(id: string, text: string): Promise<void> {
   const row = await getConversationRuntime(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
   await Runtime.get(row.runtime).answerPrompt(id, text);
+}
+
+export async function flushInteractivePrompt(id: string): Promise<void> {
+  const row = await getConversationRuntime(id);
+  if (!row) throw new Error(`Conversation ${id} not found`);
+  await Runtime.get(row.runtime).flushInteractivePrompt(id);
 }
 
 export async function getConversationRow(id: string): Promise<{

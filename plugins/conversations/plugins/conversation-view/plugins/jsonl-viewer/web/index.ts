@@ -4,7 +4,7 @@ import { RawJsonAction } from "./components/raw-json-button";
 import { TimestampAction } from "./components/timestamp-action";
 
 export { JsonlViewer } from "./slots";
-export type { OverlayContribution, RowActionContribution } from "./slots";
+export type { OverlayContribution, RowActionContribution, EventFilterContribution } from "./slots";
 export { JsonlPane } from "./components/jsonl-pane";
 export { useRowMarkdown } from "./components/row-markdown-context";
 export { useLastAssistantEvent } from "./components/last-assistant-context";

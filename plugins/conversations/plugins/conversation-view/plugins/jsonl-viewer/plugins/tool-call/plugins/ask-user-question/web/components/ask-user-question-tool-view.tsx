@@ -1,9 +1,11 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useConversationById } from "@plugins/conversations/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { ANSWER_MARKER } from "../../shared";
 import { AnswerForm } from "./answer-form";
 
 export interface QuestionOption {
@@ -134,6 +136,41 @@ function parseAnswerMap(
   return answers;
 }
 
+/**
+ * Parses the follow-up answer turn (the `Answering your questions:` message
+ * produced by `serializeAnswers`) into the same `Record<questionText,
+ * ParsedAnswer>` shape `parseAnswerMap` returns, so the existing answered-view
+ * JSX and `parseSelectedLabels` consume it unchanged.
+ *
+ * The turn body is a list of `- <header>: <value>` lines keyed by question
+ * header, so we match each question on its `header` (not its `question` text).
+ */
+function parseMarkerAnswer(
+  text: string,
+  questions: Question[],
+): Record<string, ParsedAnswer> {
+  const body = text.trim().slice(ANSWER_MARKER.length);
+
+  const byHeader: Record<string, string> = {};
+  for (const rawLine of body.split("\n")) {
+    const line = rawLine.trim();
+    if (!line.startsWith("- ")) continue;
+    const rest = line.slice(2);
+    const sep = rest.indexOf(": ");
+    if (sep === -1) continue;
+    const header = rest.slice(0, sep).trim();
+    const value = rest.slice(sep + 2).trim();
+    byHeader[header] = value;
+  }
+
+  const answers: Record<string, ParsedAnswer> = {};
+  for (const q of questions) {
+    const value = byHeader[q.header];
+    answers[q.question] = { answer: value ?? null, notes: null };
+  }
+  return answers;
+}
+
 function parseSelectedLabels(
   answer: string | undefined,
   options: QuestionOption[],
@@ -226,13 +263,38 @@ function summaryFor(questions: Question[], firstAnswerParts: string[]) {
   );
 }
 
+/**
+ * Locates the follow-up answer turn for a given AskUserQuestion tool-call:
+ * scans forward from the event's index, bounded by the next tool-call (the
+ * window for this question), and returns the first `user-text` event whose
+ * trimmed text starts with `ANSWER_MARKER`. A windowed, marker-keyed lookup —
+ * not a blind positional scan. Returns the event's text, or null.
+ */
+function findAnswerTurn(
+  events: JsonlEvent[] | undefined,
+  event: ToolRendererProps["event"],
+): string | null {
+  if (!events) return null;
+  const startIdx = events.findIndex(
+    (e) => e.kind === "tool-call" && e.toolUseId === event.toolUseId,
+  );
+  if (startIdx === -1) return null;
+  for (let i = startIdx + 1; i < events.length; i++) {
+    const e = events[i]!;
+    if (e.kind === "tool-call") break; // window boundary: next tool-call
+    if (e.kind === "user-text" && e.text.trim().startsWith(ANSWER_MARKER)) {
+      return e.text;
+    }
+  }
+  return null;
+}
+
 export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   const input = event.input as AskUserQuestionInput;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; input is `as`-cast from unknown
   const questions = Array.isArray(input?.questions) ? input.questions : [];
 
   const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
   const eventsResult = useResource(jsonlEventsResource, { id: convId });
   const events = eventsResult.pending ? undefined : eventsResult.data;
   // Find the last tool-call event (backwards loop; the repo's tsconfig target
@@ -246,13 +308,22 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
       }
     }
   }
-  const isLive =
-    event.result == null &&
-    conversation?.waitingFor === "question" &&
+
+  // State machine derived from the JSONL event stream alone (no `waitingFor`).
+  // When answered from the web, the tool is cancelled first, so its result is
+  // the interrupt sentinel (not the answer); the real answer arrives later as a
+  // separate `Answering your questions:` user turn.
+  const resultIsInterrupt =
+    event.result != null &&
+    event.result.isError === true &&
+    isInterruptContent(event.result.content);
+  const isLastToolCall =
     lastToolCall?.kind === "tool-call" &&
     lastToolCall.toolUseId === event.toolUseId;
+  const answerTurn = findAnswerTurn(events, event);
 
-  if (isLive) {
+  // awaiting: cancelled (interrupt) + most recent question + no answer yet.
+  if (resultIsInterrupt && isLastToolCall && answerTurn == null) {
     return (
       <ToolCallCard event={event} summary={summaryFor(questions, [])} defaultOpen>
         <AnswerForm questions={questions} convId={convId} />
@@ -260,11 +331,17 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
     );
   }
 
-  const resultContent = event.result?.content;
-  const answerMap =
-    resultContent && !event.result?.isError
-      ? parseAnswerMap(resultContent, questions)
-      : null;
+  // answerMap selection:
+  // - new flow: a marker answer turn was found → parse it.
+  // - legacy flow: result present, not an interrupt error → parse result.content.
+  // - otherwise (result null pre-flush, or interrupted-but-not-last historical
+  //   question with no answer turn): empty map → question rendered read-only.
+  let answerMap: Record<string, ParsedAnswer> | null = null;
+  if (answerTurn != null) {
+    answerMap = parseMarkerAnswer(answerTurn, questions);
+  } else if (event.result != null && !resultIsInterrupt && !event.result.isError) {
+    answerMap = parseAnswerMap(event.result.content, questions);
+  }
 
   const questionSelections = questions.map((q) => {
     const parsed = answerMap?.[q.question];
@@ -353,7 +430,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
             </div>
           );
         })}
-        {event.result?.isError && (
+        {event.result?.isError && !resultIsInterrupt && (
           <p className="text-xs text-destructive">{event.result.content}</p>
         )}
       </div>

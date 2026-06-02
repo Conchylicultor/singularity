@@ -43,6 +43,7 @@ export type { Turn } from "./internal/claude-transcript";
 export {
   Runtime,
   answerPrompt,
+  flushInteractivePrompt,
   getConversationRow,
   interruptConversation,
   readConversationTurns,

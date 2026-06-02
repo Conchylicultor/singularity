@@ -465,7 +465,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Uses: `config_v2.forkConfig`, `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.notifyConversationsChanged`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTask`, `tasks-core.updateTaskTitle`
     - DB schema: `plugins/conversations/server/internal/tables-created-event.ts`, `plugins/conversations/server/internal/tables-turn-completed-event.ts`, `plugins/conversations/server/internal/tables-user-turn-sent-event.ts`
-    - Exports: Types: `ConversationCreatedPayload`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`, `UserTurnSentPayload`; Values: `afterTurn`, `answerPrompt`, `conversationCreated`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `getConversationRow`, `hasLiveProcess`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`, `userTurnSent`
+    - Exports: Types: `ConversationCreatedPayload`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`, `UserTurnSentPayload`; Values: `afterTurn`, `answerPrompt`, `conversationCreated`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `flushInteractivePrompt`, `getConversationRow`, `hasLiveProcess`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`, `userTurnSent`
     - Register: `defineJob('tasks.maybe-launch')`, `defineJob('tasks.maybe-launch-dependents')`, `defineTriggerEvent('conversation.created')`, `defineTriggerEvent('conversation.turn-completed')`, `defineTriggerEvent('conversation.userTurnSent')`
     - Routes: `GET /api/conversations`, `GET /api/conversations/gone`, `GET /api/conversations/:id`, `POST /api/conversations`, `DELETE /api/conversations`, `POST /api/conversations/:id/turn`, `POST /api/conversations/:id/stop`, `GET /api/conversations/:id/turns`, `POST /api/conversations/:id/close`
   - Core:
@@ -622,11 +622,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `holdAndExit`
         - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
           - Web:
-            - Slots: `JsonlViewer.EventRenderer`
+            - Slots: `JsonlViewer.EventFilter`, `JsonlViewer.EventRenderer`, `JsonlViewer.PendingPrompt`
             - Contributes: `JsonlViewer.RowAction` "timestamp" → `TimestampAction`, `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
-            - Exports: Types: `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
+            - Exports: Types: `EventFilterContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
           - Cross-plugin:
-            - Slot contributors: `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
+            - Slot contributors: `ask-user-question`, `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
           - Server:
             - Uses: `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
@@ -702,12 +702,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Contributes: `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`, `Pane.Register` "agent-report"
                 - **`ask-user-question`** — Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`
-                    - Uses: `conversations.useConversationById`, `notifications.toast`
+                    - Contributes: `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`, `JsonlViewer.PendingPrompt` "question" → `AnswerHereButton`, `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
+                    - Uses: `notifications.toast`
                   - Server:
-                    - Uses: `conversations.answerPrompt`
+                    - Uses: `conversations.answerPrompt`, `conversations.flushInteractivePrompt`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
                   - Shared:
-                    - Exports: Values: `answerAskUserQuestion`, `AnswerAskUserQuestionBodySchema`
+                    - Exports: Values: `ANSWER_MARKER`, `answerAskUserQuestion`, `AnswerAskUserQuestionBodySchema`, `flushQuestion`
                 - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Bash" → `BashToolView`
@@ -916,7 +916,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `tasks-core.getConversationClaudeSessionId`
         - Exports: Values: `findTranscriptPath`, `readJsonlEvents`, `watchTranscript`
       - Core:
-        - Exports: Types: `JsonlEvent`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`; Values: `JsonlEventSchema`, `TokenUsageSchema`
+        - Exports: Types: `JsonlEvent`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`; Values: `isInterruptContent`, `JsonlEventSchema`, `TokenUsageSchema`
 
 - **`conversations-recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
   - Web:
@@ -1749,7 +1749,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineTriggerEvent('pushes.landed')`, `defineTriggerEvent('tasks.statusChanged')`
     - Resources: `attempts` (push), `pushes` (push)
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `allow-monitor`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `drop-dependents`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `plugin-changes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
+    - Imported by: `active-data`, `agents`, `allow-monitor`, `ask-user-question`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `drop-dependents`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `plugin-changes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
     - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`), `auto-start` (table `tasks_ext_auto_start`), `plugin-health` (table `tasks_ext_health_review`)
   - Core:
     - Exports: Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationStatus`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`; Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`

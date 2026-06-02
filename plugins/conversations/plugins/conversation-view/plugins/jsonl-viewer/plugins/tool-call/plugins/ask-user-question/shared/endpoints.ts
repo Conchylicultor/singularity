@@ -7,3 +7,8 @@ export const answerAskUserQuestion = defineEndpoint({
   route: "POST /api/conversations/:id/answer-question",
   body: AnswerAskUserQuestionBodySchema,
 });
+
+export const flushQuestion = defineEndpoint({
+  route: "POST /api/conversations/:id/flush-question",
+  response: z.object({ ok: z.boolean() }),
+});

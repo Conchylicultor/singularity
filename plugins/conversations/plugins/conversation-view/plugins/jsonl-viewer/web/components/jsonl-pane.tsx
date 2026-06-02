@@ -8,6 +8,7 @@ import {
 import type { Conversation } from "@plugins/tasks-core/core";
 import { jsonlEventsResource } from "../../core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
@@ -68,16 +69,6 @@ function WorkingIndicator({ startAt }: { startAt: number }) {
       </div>
       <span className="tabular-nums text-xs text-muted-foreground/60">
         Working for {formatElapsed(elapsed)}
-      </span>
-    </div>
-  );
-}
-
-function PendingContentIndicator() {
-  return (
-    <div className="flex items-center gap-2 px-1 py-1">
-      <span className="text-xs text-warning/70">
-        Content pending in terminal — waiting for your input
       </span>
     </div>
   );
@@ -174,6 +165,30 @@ export function JsonlPane({
     [eventsResult],
   );
   const totals = useMemo(() => aggregateUsage(events), [events]);
+  // An AskUserQuestion whose tool_use was already flushed to the JSONL and is
+  // awaiting an answer (interrupt-sentinel result). When present, the renderer
+  // shows its own answer form, so suppress the pending-prompt indicator to avoid
+  // double-up.
+  const hasAwaitingAuq = useMemo(
+    () =>
+      events.some(
+        (e) =>
+          e.kind === "tool-call" &&
+          e.name === "AskUserQuestion" &&
+          e.result != null &&
+          e.result.isError === true &&
+          isInterruptContent(e.result.content),
+      ),
+    [events],
+  );
+  // Plugin-contributed hide predicates. Computed over the full `events` so the
+  // EventFilter slot can remove individual rows (e.g. a raw answer turn already
+  // shown inside a card) that the EventRenderer's predicate tier can't suppress.
+  const filters = JsonlViewer.EventFilter.useContributions();
+  const visibleEvents = useMemo(
+    () => events.filter((e) => !filters.some((f) => f.hide(e))),
+    [events, filters],
+  );
   const lastAssistantEvent = useMemo(() => {
     for (let i = events.length - 1; i >= 0; i--) {
       if (events[i]?.kind === "assistant-text") return events[i] ?? null;
@@ -228,9 +243,14 @@ export function JsonlPane({
             </div>
           ) : (
             <LastAssistantProvider event={lastAssistantEvent}>
-              <EventSections events={events}>
+              <EventSections events={visibleEvents}>
                 {isWorking && <WorkingIndicator startAt={workingStartAt} />}
-                {!isWorking && !!conversation.waitingFor && <PendingContentIndicator />}
+                {!isWorking && !!conversation.waitingFor && !hasAwaitingAuq && (
+                  <JsonlViewer.PendingPrompt.Dispatch
+                    conversationId={conversation.id}
+                    waitingFor={conversation.waitingFor}
+                  />
+                )}
               </EventSections>
             </LastAssistantProvider>
           )}

@@ -293,6 +293,54 @@ async function pasteTurn(conversationId: string, text: string): Promise<void> {
   );
 }
 
+/**
+ * Dismiss the active prompt form, RE-SENDING Escape until it actually clears.
+ * A single Escape is unreliable (dropped keystroke / "press again" menu
+ * states), so we retry on FORM_CLEAR_ESCAPE_RETRY_MS while polling the pane for
+ * clearance on the faster FORM_CLEAR_POLL_INTERVAL_MS. Each clearance check is a
+ * FRESH capture via probeWaiting() — NOT the throttled isProbeWaiting cache,
+ * whose 5s window would not reflect the form clearing within this budget. Exit
+ * copy mode before each Escape so the key reaches Claude rather than tmux's vi
+ * bindings (see send()).
+ *
+ * Throws if the form never clears within FORM_CLEAR_TIMEOUT_MS rather than
+ * leaving the caller to send into a live form.
+ *
+ * Shared verbatim by answerPrompt() (which then C-c + pastes the answer) and
+ * flushInteractivePrompt() (which stops here, sending no answer).
+ */
+async function escapeUntilPromptCleared(conversationId: string): Promise<void> {
+  const deadline = Date.now() + FORM_CLEAR_TIMEOUT_MS;
+  let cleared = false;
+  let nextEscapeAt = 0;
+  for (;;) {
+    if (Date.now() >= nextEscapeAt) {
+      await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
+        stdout: "pipe",
+        stderr: "pipe",
+      }).exited;
+      await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Escape"], {
+        stdout: "pipe",
+        stderr: "pipe",
+      }).exited;
+      nextEscapeAt = Date.now() + FORM_CLEAR_ESCAPE_RETRY_MS;
+    }
+    if (!(await probeWaiting(conversationId))) {
+      cleared = true;
+      break;
+    }
+    if (Date.now() + FORM_CLEAR_POLL_INTERVAL_MS >= deadline) break;
+    await Bun.sleep(FORM_CLEAR_POLL_INTERVAL_MS);
+  }
+  if (!cleared) {
+    // Never send into a live form — that fabricates a wrong answer.
+    throw new Error(
+      `tmux escapeUntilPromptCleared for ${conversationId}: prompt form did not clear ` +
+        `within ${FORM_CLEAR_TIMEOUT_MS}ms despite repeated Escape; refusing to send`,
+    );
+  }
+}
+
 async function listPanes(): Promise<
   Map<
     string,
@@ -541,43 +589,10 @@ export const tmuxRuntime: ConversationRuntime = {
     // fabricate an answer — losing the user's text. See ConversationRuntime
     // interface docs.
 
-    // 1+2. Dismiss the form, RE-SENDING Escape until it actually clears. A
-    //    single Escape is unreliable (dropped keystroke / "press again" menu
-    //    states), so we retry on FORM_CLEAR_ESCAPE_RETRY_MS while polling the
-    //    pane for clearance on the faster FORM_CLEAR_POLL_INTERVAL_MS. Each
-    //    clearance check is a FRESH capture via probeWaiting() — NOT the
-    //    throttled isProbeWaiting cache, whose 5s window would not reflect the
-    //    form clearing within this budget. Exit copy mode before each Escape so
-    //    the key reaches Claude rather than tmux's vi bindings (see send()).
-    const deadline = Date.now() + FORM_CLEAR_TIMEOUT_MS;
-    let cleared = false;
-    let nextEscapeAt = 0;
-    for (;;) {
-      if (Date.now() >= nextEscapeAt) {
-        await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
-          stdout: "pipe",
-          stderr: "pipe",
-        }).exited;
-        await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "Escape"], {
-          stdout: "pipe",
-          stderr: "pipe",
-        }).exited;
-        nextEscapeAt = Date.now() + FORM_CLEAR_ESCAPE_RETRY_MS;
-      }
-      if (!(await probeWaiting(conversationId))) {
-        cleared = true;
-        break;
-      }
-      if (Date.now() + FORM_CLEAR_POLL_INTERVAL_MS >= deadline) break;
-      await Bun.sleep(FORM_CLEAR_POLL_INTERVAL_MS);
-    }
-    if (!cleared) {
-      // Never send into a live form — that fabricates a wrong answer.
-      throw new Error(
-        `tmux answerPrompt for ${conversationId}: prompt form did not clear ` +
-          `within ${FORM_CLEAR_TIMEOUT_MS}ms despite repeated Escape; refusing to send`,
-      );
-    }
+    // 1+2. Dismiss the form, RE-SENDING Escape until it actually clears (throws
+    //    if it never does). See escapeUntilPromptCleared() for the full
+    //    self-healing rationale.
+    await escapeUntilPromptCleared(conversationId);
 
     // 3. Clear any partial input, then paste + Enter (same as send()).
     await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "C-c"], {
@@ -585,5 +600,14 @@ export const tmuxRuntime: ConversationRuntime = {
       stderr: "pipe",
     }).exited;
     await pasteTurn(conversationId, text);
+  },
+
+  async flushInteractivePrompt(conversationId: string): Promise<void> {
+    // Dismiss the live prompt menu (e.g. AskUserQuestion) WITHOUT sending an
+    // answer. Cancelling the menu forces the CLI to flush the buffered
+    // assistant tool_use to the JSONL transcript so the web UI can render it.
+    // This is exactly answerPrompt()'s self-healing Escape loop minus the
+    // C-c + paste step — no answer text is ever sent.
+    await escapeUntilPromptCleared(conversationId);
   },
 };
