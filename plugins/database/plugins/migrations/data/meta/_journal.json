@@ -771,6 +771,13 @@
       "tag": "20260601_222354_4e6a27df__backfill_avatar_icon_aliases",
       "hash": "4e6a27df",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780394914000,
+      "tag": "20260602_100834_81debd65__drop_agent_auto_launch",
+      "hash": "81debd65",
+      "breakpoints": true
     }
   ]
 }

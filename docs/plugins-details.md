@@ -59,24 +59,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Core:
     - Uses: `conversations.ConversationStatusSchema`
     - Exports: Types: `CreateAgentBody`, `LaunchAgentBody`, `LaunchAgentResponse`, `UpdateAgentBody`; Values: `createAgent`, `CreateAgentBodySchema`, `deleteAgent`, `getAgent`, `launchAgent`, `LaunchAgentBodySchema`, `LaunchAgentResponseSchema`, `listAgentLaunches`, `listAgents`, `updateAgent`, `UpdateAgentBodySchema`
-  - Cross-plugin:
-    - Imported by: `toggle`
-    - Extended by: `toggle` (table `agents_ext_auto_launch`)
-  - Plugins:
-    - **`auto-launch`** — Umbrella plugin for agent auto-launch. Sub-plugins contribute row actions and settings.
-      - Plugins:
-        - **`toggle`** — Toggle on/off to activate agent auto-launch. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive. Server side of the agent auto-launch toggle. Owns the agents_ext_auto_launch side-table via the entity-extensions primitive.
-          - Web:
-            - Contributes: `Agents.AgentActions` "auto-launch" → `AutoLaunchToggle`
-            - Uses: `agents.Agents`
-          - Server:
-            - Uses: `agents._agents`, `database.db`
-            - DB schema: `plugins/agents/plugins/auto-launch/plugins/toggle/server/internal/tables.ts`
-            - Entity extension of: `agents` (table `agents_ext_auto_launch`)
-            - Exports: Values: `agentAutoLaunch`, `agentAutoLaunchResource`
-            - Resources: `agent-auto-launch` (push)
-          - Shared:
-            - Exports: Types: `AgentAutoLaunchRow`, `SetAgentAutoLaunchBody`; Values: `agentAutoLaunchResource`, `AgentAutoLaunchRowSchema`, `setAgentAutoLaunch`, `SetAgentAutoLaunchBodySchema`
 
 - **`apps`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Web:
@@ -897,7 +879,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `ConfigV2.WebRegister`, `Core.Root` → `ModelCorruptionReporter`
         - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `crashes.report`
-        - Exports: Values: `familyClass`, `useDefaultModel`, `useSetDefaultModel`, `useVisibleModels`
+        - Exports: Types: `ModelSelectProps`; Values: `familyClass`, `ModelSelect`, `useDefaultModel`, `useSetDefaultModel`, `useVisibleModels`
       - Server:
         - Uses: `config_v2.ConfigV2`
         - Exports: Values: `resolveCliFlag`
@@ -967,7 +949,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `toggle`, `turn-summary`, `tweakcn`
+    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `turn-summary`, `tweakcn`
   - Core:
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Server:
