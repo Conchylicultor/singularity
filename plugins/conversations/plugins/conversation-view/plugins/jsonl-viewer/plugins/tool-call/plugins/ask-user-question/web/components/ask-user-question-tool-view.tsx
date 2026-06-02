@@ -45,20 +45,74 @@ function extractPayload(content: string): string {
   return content;
 }
 
+// Sentinel the harness emits when the user submitted a note but picked no option.
+const NO_SELECTION = "(no option selected)";
+// Annotation markers the harness appends after the answer value. ` selected` is
+// a trailing word stamped after a quoted option that carried a preview.
+const NOTES_MARK = " notes: ";
+const PREVIEW_MARK = " preview:";
+const SELECTED_MARK = " selected";
+
+interface ParsedAnswer {
+  /** Answer value for option matching, or null when no option was selected. */
+  answer: string | null;
+  /** Free-form note the user attached to this question, if any. */
+  notes: string | null;
+}
+
+/**
+ * Splits a per-question result value into its answer portion and the optional
+ * `notes:`/`preview:` annotations the harness appends. Preview text is rendered
+ * from the tool input, so it is only used here to bound the answer and notes.
+ */
+function splitAnnotations(value: string): { answer: string; notes: string | null } {
+  const notesIdx = value.indexOf(NOTES_MARK);
+  const previewIdx = value.indexOf(PREVIEW_MARK);
+  const marks = [notesIdx, previewIdx].filter((i) => i >= 0);
+  const answerEnd = marks.length > 0 ? Math.min(...marks) : value.length;
+  const answer = value.slice(0, answerEnd).trim();
+
+  let notes: string | null = null;
+  if (notesIdx >= 0) {
+    const start = notesIdx + NOTES_MARK.length;
+    // The note runs until the next annotation marker (a later preview) or the end.
+    const notesEnd = previewIdx > notesIdx ? previewIdx : value.length;
+    notes = value.slice(start, notesEnd).trim() || null;
+  }
+
+  return { answer, notes };
+}
+
+/** Strips the trailing ` selected` word, the no-selection sentinel, and quotes. */
+function cleanAnswerPortion(answer: string): string | null {
+  let a = answer.trim();
+  if (a.endsWith(SELECTED_MARK)) a = a.slice(0, -SELECTED_MARK.length).trim();
+  if (a === "" || a === NO_SELECTION) return null;
+  if (a.length >= 2 && a.startsWith('"') && a.endsWith('"')) a = a.slice(1, -1);
+  return a;
+}
+
 function parseAnswerMap(
   content: string,
   questions: Question[],
-): Record<string, string> {
+): Record<string, ParsedAnswer> {
   const payload = extractPayload(content);
 
-  const answers: Record<string, string> = {};
-  const anchors: { question: string; valueStart: number }[] = [];
+  const answers: Record<string, ParsedAnswer> = {};
+  const anchors: { question: string; anchorStart: number; valueStart: number }[] =
+    [];
 
   for (const q of questions) {
-    const anchor = `"${q.question}"="`;
+    // Anchor on `"<question>"=` only — the value may be a quoted option or the
+    // `(no option selected)` sentinel, so we must not require a leading quote.
+    const anchor = `"${q.question}"=`;
     const idx = payload.indexOf(anchor);
     if (idx !== -1) {
-      anchors.push({ question: q.question, valueStart: idx + anchor.length });
+      anchors.push({
+        question: q.question,
+        anchorStart: idx,
+        valueStart: idx + anchor.length,
+      });
     }
   }
 
@@ -67,11 +121,14 @@ function parseAnswerMap(
   for (let i = 0; i < anchors.length; i++) {
     const cur = anchors[i]!;
     const next = anchors[i + 1];
-    const end = next != null
-      ? payload.lastIndexOf('"', next.valueStart - 1)
-      : payload.length;
-    const raw = payload.slice(cur.valueStart, end);
-    answers[cur.question] = raw.endsWith('"') ? raw.slice(0, -1) : raw;
+    // Each value runs up to the next question's anchor; the `, ` separator only
+    // exists between questions, so strip it for non-final entries only.
+    const value =
+      next != null
+        ? payload.slice(cur.valueStart, next.anchorStart).replace(/,\s*$/, "")
+        : payload.slice(cur.valueStart);
+    const { answer, notes } = splitAnnotations(value);
+    answers[cur.question] = { answer: cleanAnswerPortion(answer), notes };
   }
 
   return answers;
@@ -209,13 +266,25 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
       ? parseAnswerMap(resultContent, questions)
       : null;
 
-  const questionSelections = questions.map((q) =>
-    parseSelectedLabels(answerMap?.[q.question], q.options),
-  );
+  const questionSelections = questions.map((q) => {
+    const parsed = answerMap?.[q.question];
+    const { selected, otherText } = parseSelectedLabels(
+      parsed?.answer ?? undefined,
+      q.options,
+    );
+    return { selected, otherText, notes: parsed?.notes ?? null };
+  });
 
   const firstSel = questionSelections[0];
   const firstAnswerParts = firstSel
-    ? [...firstSel.selected, ...(firstSel.otherText ? [firstSel.otherText] : [])]
+    ? [
+        ...firstSel.selected,
+        ...(firstSel.otherText ? [firstSel.otherText] : []),
+        // Fall back to the note when the user attached one without picking an option.
+        ...(firstSel.selected.size === 0 && !firstSel.otherText && firstSel.notes
+          ? [firstSel.notes]
+          : []),
+      ]
     : [];
 
   const summary = summaryFor(questions, firstAnswerParts);
@@ -224,9 +293,10 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
     <ToolCallCard event={event} summary={summary} defaultOpen>
       <div className="mt-2 space-y-3">
         {questions.map((q, qi) => {
-          const { selected, otherText } = questionSelections[qi] ?? {
+          const { selected, otherText, notes } = questionSelections[qi] ?? {
             selected: new Set<string>(),
             otherText: null,
+            notes: null,
           };
           const hasAnswer = selected.size > 0 || otherText != null;
 
@@ -266,6 +336,16 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                     <Indicator selected multi={q.multiSelect} />
                     <p className="text-xs italic text-foreground">
                       {otherText}
+                    </p>
+                  </div>
+                )}
+                {notes != null && (
+                  <div className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 py-1 pl-2">
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      Note
+                    </p>
+                    <p className="whitespace-pre-wrap break-words text-xs text-foreground">
+                      {notes}
                     </p>
                   </div>
                 )}
