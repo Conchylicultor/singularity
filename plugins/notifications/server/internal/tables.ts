@@ -5,6 +5,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 export const _notifications = pgTable(
@@ -19,6 +20,7 @@ export const _notifications = pgTable(
     read: boolean("read").notNull().default(false),
     linkTo: text("link_to"),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+    dedupKey: text("dedup_key"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -26,5 +28,6 @@ export const _notifications = pgTable(
   (t) => [
     index("notifications_dismissed_idx").on(t.dismissed),
     index("notifications_created_at_idx").on(t.createdAt),
+    uniqueIndex("notifications_dedup_key_idx").on(t.dedupKey),
   ],
 );

@@ -68,6 +68,7 @@ export function RecoveryView() {
 
   useEffect(() => {
     if (readyData) {
+      // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab maintains its own query cache, no cross-tab write to deduplicate
       void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
     }
   }, [readyData, queryClient]);

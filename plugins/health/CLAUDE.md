@@ -7,7 +7,7 @@
 - Description: Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
 - Web:
   - Contributes: `Core.Root` → `ReconnectWatcher`, `Shell.Toolbar` → `HealthDot`
-  - Uses: `notifications.toast`, `shell.Shell`
+  - Uses: `shell.Shell`, `shell.ShellCommands`
   - Exports: Values: `getHealth`, `waitForRestart`
 - Shared:
   - Exports: Types: `HealthResponse`; Values: `getHealth`

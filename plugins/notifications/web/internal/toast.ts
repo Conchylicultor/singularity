@@ -10,6 +10,7 @@ export interface ToastArgs {
   variant?: NotificationVariant;
   linkTo?: string;
   metadata?: Record<string, unknown>;
+  dedupeKey?: string;
 }
 
 export const recentClientIds = new Set<string>();
@@ -36,6 +37,7 @@ export function toast(args: ToastArgs): void {
       variant,
       linkTo: args.linkTo ?? null,
       metadata: args.metadata ?? null,
+      dedupeKey: args.dedupeKey ?? null,
     },
   });
 }

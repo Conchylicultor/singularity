@@ -9,7 +9,7 @@
   - Contributes: `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
   - Uses: `conversations.useConversation`, `conversations.useConversationById`, `conversations.useConversations`, `notifications.toast`
 - Server:
-  - Uses: `conversations.afterTurn`, `conversations.deleteConversation`, `conversations.sendTurn`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
+  - Uses: `conversations.afterTurn`, `conversations.deleteConversation`, `conversations.sendTurn`, `notifications.recordNotification`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
   - Register: `defineJob('push_and_exit.exit_clean_finalize')`, `mcpTool('exit_clean')`, `mcpTool('flag_raise')`
   - Resources: `push-and-exit` (push)
 - Shared:

@@ -15,7 +15,7 @@ import { DEFAULT_MODEL, normalizeModel, type ConversationModel } from "@plugins/
 import type { Conversation, ConversationKind } from "@plugins/tasks-core/core";
 import { forkDatabase } from "@plugins/database/plugins/admin/server";
 import { forkConfig } from "@plugins/config_v2/server";
-import { reportForkError } from "./fork-errors";
+import { recordNotification } from "@plugins/notifications/server";
 import { setupWorktree, worktreePathFor } from "@plugins/infra/plugins/worktree/server";
 import { conversationCreated } from "./tables-created-event";
 import { SYSTEM_META_TASK_ID } from "./meta-system";
@@ -112,7 +112,18 @@ export async function createConversation(
     await setupWorktree(thisAttemptId, worktreePath);
     void forkDatabase("singularity", thisAttemptId).catch((err) => {
       console.error(`[conversations] db fork failed for ${thisAttemptId}`, err);
-      reportForkError(thisAttemptId, err);
+      const message = err instanceof Error ? err.message : String(err);
+      // Fire-and-forget: record a single deduped notification server-side so
+      // it surfaces once regardless of how many browser tabs are open. The
+      // recordNotification promise is intentionally not awaited inside this
+      // already-detached fork-error handler.
+      void recordNotification({
+        type: "db",
+        title: "DB fork failed",
+        description: `${thisAttemptId}: ${message}`,
+        variant: "error",
+        dedupeKey: `fork-error:${thisAttemptId}`,
+      });
     });
     void forkConfig(thisAttemptId);
     await createAttempt({ id: thisAttemptId, taskId, worktreePath });

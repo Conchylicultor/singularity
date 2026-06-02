@@ -35,6 +35,7 @@ export function SummaryPane() {
     lastSeenIdRef.current = latest.id;
     if (pendingSince !== null) {
       setPendingSince(null);
+      // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- per-tab user-initiated (pendingSince gating), not a cross-tab broadcast reaction.
       toast({ type: "summary", description: "Summary ready", variant: "success" });
     }
   }, [latest, pendingSince]);

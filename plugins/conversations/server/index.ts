@@ -1,4 +1,3 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleClose } from "./internal/handle-close";
 import { handleList } from "./internal/handle-list";
@@ -22,12 +21,12 @@ import {
 } from "../core/endpoints";
 import { startPoller } from "./internal/poller";
 import { startTurnEmitter } from "./internal/turn-emitter";
-import { forkErrorsResource } from "./internal/fork-errors";
 import { ensureSystemMeta } from "./internal/meta-system";
 import {
   maybeLaunchTaskJob,
   maybeLaunchDependentsJob,
 } from "./internal/auto-start-jobs";
+import { notifyConversationCreatedJob } from "./internal/notify-created-job";
 import { conversationCreated } from "./internal/tables-created-event";
 import { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 import { userTurnSent } from "./internal/tables-user-turn-sent-event";
@@ -76,12 +75,12 @@ export default {
     [listConversationTurns.route]: handleListTurns,
     [closeConversation.route]: handleClose,
   },
-  // conversationsLiveResource is mounted on tasks-core; only fork-errors stays here.
+  // conversationsLiveResource is mounted on tasks-core.
   contributions: [
-    Resource.Declare(forkErrorsResource),
     Trigger({ on: taskStatusChanged, do: maybeLaunchDependentsJob, with: {}, oneShot: false }),
+    Trigger({ on: conversationCreated, do: notifyConversationCreatedJob, with: {}, oneShot: false }),
   ],
-  register: [maybeLaunchTaskJob, maybeLaunchDependentsJob, conversationCreated, conversationTurnCompleted, userTurnSent],
+  register: [maybeLaunchTaskJob, maybeLaunchDependentsJob, notifyConversationCreatedJob, conversationCreated, conversationTurnCompleted, userTurnSent],
   onReady: async () => {
     await ensureSystemMeta();
     startPoller();

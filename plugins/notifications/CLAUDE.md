@@ -16,7 +16,7 @@
   - Register: `defineJob('notifications.ttl-cleanup')`
   - Resources: `notifications` (push)
 - Cross-plugin:
-  - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations-view`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `health`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`
+  - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`
 - Shared:
   - Exports: Values: `createNotification`, `dismissAllNotifications`, `dismissNotification`, `markAllNotificationsRead`
 

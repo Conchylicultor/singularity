@@ -11,7 +11,20 @@ export const notificationsResource = defineResource({
   schema: z.array(NotificationSchema),
   loader: async () =>
     db
-      .select()
+      // Explicit columns: dedupKey is a server-internal dedup mechanism and
+      // must not leak into the client wire payload (NotificationSchema).
+      .select({
+        id: _notifications.id,
+        type: _notifications.type,
+        title: _notifications.title,
+        description: _notifications.description,
+        variant: _notifications.variant,
+        dismissed: _notifications.dismissed,
+        read: _notifications.read,
+        linkTo: _notifications.linkTo,
+        metadata: _notifications.metadata,
+        createdAt: _notifications.createdAt,
+      })
       .from(_notifications)
       .where(eq(_notifications.dismissed, false))
       .orderBy(desc(_notifications.createdAt)),

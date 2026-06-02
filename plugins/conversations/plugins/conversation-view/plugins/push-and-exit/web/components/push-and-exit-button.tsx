@@ -73,37 +73,21 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     return hasOtherActiveInWorktree ? "exit" : "drop-and-exit";
   }, [isNotRunning, draft, files, pushesResult, active, conversationsLoading, conversation, convId, live]);
 
+  // Sanctioned idempotent client cleanup: if the conversation's process is no
+  // longer live while a job is still marked busy, DELETE the stale job row.
+  // `clearJob`/handle-cancel is an idempotent Map delete, so duplicate DELETEs
+  // across open tabs are harmless. The terminal "clean"/"error" transitions are
+  // now handled entirely server-side (notification + clearJob), so this is the
+  // only remaining client-side teardown.
   useEffect(() => {
     if (!busy || !live) return;
     if (hasLiveProcess(live.status)) return;
+    // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- idempotent client cleanup; duplicate DELETEs are harmless no-ops server-side.
     void fetch(
       `/api/conversations/${encodeURIComponent(convId)}/push-and-exit`,
       { method: "DELETE" },
     );
   }, [busy, live, convId]);
-
-  useEffect(() => {
-    if (job?.status !== "clean") return;
-    toast({ type: "conversation", description: "Pushed and closed", variant: "success" });
-    void fetch(
-      `/api/conversations/${encodeURIComponent(convId)}/push-and-exit`,
-      { method: "DELETE" },
-    );
-  }, [job?.status, convId]);
-
-  useEffect(() => {
-    if (job?.status !== "error") return;
-    const message = (job as Extract<JobState, { status: "error" }>).message;
-    toast({
-      type: "conversation",
-      description: `Push & Exit failed: ${message}`,
-      variant: "error",
-    });
-    void fetch(
-      `/api/conversations/${encodeURIComponent(convId)}/push-and-exit`,
-      { method: "DELETE" },
-    );
-  }, [job, convId]);
 
   if (!conversation || !live) return null;
 

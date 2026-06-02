@@ -29,6 +29,7 @@ export function usePushedDocFiles(attemptId: string): EditedFile[] | null {
     let cancelled = false;
     void Promise.all(
       ids.map((pushId) =>
+        // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab fetches doc files for its own display, no cross-tab write to deduplicate
         fetch(`/api/code/main/push?pushId=${encodeURIComponent(pushId)}`)
           .then((r) => (r.ok ? (r.json() as Promise<{ files: EditedFile[] }>) : Promise.resolve({ files: [] })))
           .then((data) => data.files.filter((f) => isDocFile(f.path)))

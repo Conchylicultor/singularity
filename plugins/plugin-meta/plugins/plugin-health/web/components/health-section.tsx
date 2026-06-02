@@ -56,10 +56,12 @@ export function HealthSection({ node }: { node: PluginNode }) {
 
     void (async () => {
       const [stalenessRes, ...taskResults] = await Promise.all([
+        // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab renders its own enriched view, no cross-tab write to deduplicate
         fetch(
           `/api/plugin-health/staleness/${encodeURIComponent(node.hierarchyId)}`,
         ).then((r) => r.json() as Promise<PluginStaleness[]>),
         ...reviews.map((r) =>
+          // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab renders its own enriched view, no cross-tab write to deduplicate
           fetch(`/api/plugin-health/tasks/${encodeURIComponent(r.id)}`).then(
             (res) => res.json() as Promise<ReviewTaskSummary[]>,
           ),

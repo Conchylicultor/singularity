@@ -25,6 +25,7 @@ import {
   discoverAllowDefaultProject,
   iconSafetyRules,
   promiseSafetyRules,
+  reactiveServerIoRules,
 } from "./plugins/framework/plugins/tooling/plugins/lint/core";
 import { lintEntries } from "./plugins/framework/plugins/tooling/plugins/lint/core/lint.generated";
 
@@ -73,6 +74,7 @@ const baseConfigs: Linter.Config[] = [
       "@typescript-eslint": tsPlugin as unknown as Linter.Plugin,
       "icon-safety": { rules: iconSafetyRules } as unknown as Linter.Plugin,
       "promise-safety": { rules: promiseSafetyRules } as unknown as Linter.Plugin,
+      "reactive-server-io": { rules: reactiveServerIoRules } as unknown as Linter.Plugin,
       "react-hooks": reactHooks as unknown as Linter.Plugin,
     },
     rules: {
@@ -88,6 +90,7 @@ const baseConfigs: Linter.Config[] = [
       "icon-safety/no-lucide-react": "error",
       "promise-safety/no-floating-promises": "error",
       "promise-safety/no-bare-catch": "error",
+      "reactive-server-io/no-reactive-server-io": "error",
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "error",
       "no-constant-binary-expression": "error",

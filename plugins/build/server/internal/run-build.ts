@@ -4,6 +4,7 @@ import { eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { Log } from "@plugins/debug/plugins/logs/server";
 import { REPO_ROOT, SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { recordNotification } from "@plugins/notifications/server";
 import { _buildRuns } from "./tables";
 import { buildHistoryResource } from "./build-history-resource";
 import { frontendHashResource } from "./frontend-hash-resource";
@@ -86,6 +87,15 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
 
   await db.insert(_buildRuns).values({ id: buildId, trigger, commitHash, pid: proc.pid });
   buildHistoryResource.notify();
+  if (trigger === "auto") {
+    await recordNotification({
+      type: "build",
+      title: "Auto-build triggered by new push",
+      description: "Auto-build triggered by new push",
+      variant: "info",
+      dedupeKey: `build-start:${buildId}`,
+    });
+  }
 
   const allLines: Array<{ text: string; stream: "stdout" | "stderr" }> = [];
 
@@ -142,4 +152,24 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
     .where(eq(_buildRuns.id, buildId));
   buildHistoryResource.notify();
   frontendHashResource.notify();
+  const linkTo = `/build/r/${buildId}`;
+  if (exitCode === 0) {
+    await recordNotification({
+      type: "build",
+      title: "Build succeeded",
+      description: "Build succeeded",
+      variant: "success",
+      linkTo,
+      dedupeKey: `build-finish:${buildId}`,
+    });
+  } else {
+    await recordNotification({
+      type: "build",
+      title: `Build failed (exit ${exitCode})`,
+      description: `Build failed (exit ${exitCode})`,
+      variant: "error",
+      linkTo,
+      dedupeKey: `build-finish:${buildId}`,
+    });
+  }
 }

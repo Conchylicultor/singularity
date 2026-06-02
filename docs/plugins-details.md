@@ -304,7 +304,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `config_v2.ConfigV2`, `notifications.toast`, `shell.Shell`
     - Exports: Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`
   - Server:
-    - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
+    - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `notifications.recordNotification`
     - DB schema: `plugins/build/server/internal/tables.ts`
     - Exports: Values: `_buildRuns`
     - Register: `defineJob('build.run')`
@@ -463,14 +463,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`conversations`** — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
   - Server:
-    - Uses: `config_v2.forkConfig`, `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.notifyConversationsChanged`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTask`, `tasks-core.updateTaskTitle`
+    - Uses: `config_v2.forkConfig`, `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `notifications.recordNotification`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.notifyConversationsChanged`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTask`, `tasks-core.updateTaskTitle`
     - DB schema: `plugins/conversations/server/internal/tables-created-event.ts`, `plugins/conversations/server/internal/tables-turn-completed-event.ts`, `plugins/conversations/server/internal/tables-user-turn-sent-event.ts`
     - Exports: Types: `ConversationCreatedPayload`, `ConversationRuntime`, `ConversationStatus`, `ConversationTurnCompletedPayload`, `RuntimeInfo`, `Turn`, `UserTurnSentPayload`; Values: `afterTurn`, `answerPrompt`, `conversationCreated`, `ConversationStatusSchema`, `conversationTurnCompleted`, `createConversation`, `deleteConversation`, `flushInteractivePrompt`, `getConversationRow`, `hasLiveProcess`, `interruptConversation`, `isActiveStatus`, `maybeLaunchTaskJob`, `readConversationTurns`, `resumeConversation`, `Runtime`, `sendTurn`, `SYSTEM_META_TASK_ID`, `userTurnSent`
-    - Register: `defineJob('tasks.maybe-launch')`, `defineJob('tasks.maybe-launch-dependents')`, `defineTriggerEvent('conversation.created')`, `defineTriggerEvent('conversation.turn-completed')`, `defineTriggerEvent('conversation.userTurnSent')`
+    - Register: `defineJob('tasks.maybe-launch')`, `defineJob('tasks.maybe-launch-dependents')`, `defineJob('conversations.notify-created')`, `defineTriggerEvent('conversation.created')`, `defineTriggerEvent('conversation.turn-completed')`, `defineTriggerEvent('conversation.userTurnSent')`
     - Routes: `GET /api/conversations`, `GET /api/conversations/gone`, `GET /api/conversations/:id`, `POST /api/conversations`, `DELETE /api/conversations`, `POST /api/conversations/:id/turn`, `POST /api/conversations/:id/stop`, `GET /api/conversations/:id/turns`, `POST /api/conversations/:id/close`
   - Core:
     - Uses: `tasks-core.ConversationSchema`
-    - Exports: Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `CreateConversationBody`, `DeleteConversationQuery`, `ForkError`, `ListGoneQuery`, `ListTurnsQuery`, `PostTurnBody`; Values: `closeConversation`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `CreateConversationBodySchema`, `deleteConversation`, `DeleteConversationQuerySchema`, `forkErrorsResource`, `getConversation`, `hasLiveProcess`, `isActiveStatus`, `listConversations`, `listConversationTurns`, `listGoneConversations`, `ListGoneQuerySchema`, `ListTurnsQuerySchema`, `postConversationTurn`, `PostTurnBodySchema`, `stopConversation`
+    - Exports: Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `CreateConversationBody`, `DeleteConversationQuery`, `ListGoneQuery`, `ListTurnsQuery`, `PostTurnBody`; Values: `closeConversation`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `CreateConversationBodySchema`, `deleteConversation`, `DeleteConversationQuerySchema`, `getConversation`, `hasLiveProcess`, `isActiveStatus`, `listConversations`, `listConversationTurns`, `listGoneConversations`, `ListGoneQuerySchema`, `ListTurnsQuerySchema`, `postConversationTurn`, `PostTurnBodySchema`, `stopConversation`
   - Cross-plugin:
     - Imported by: `agents`, `ask-user-question`, `attempt-view`, `code-explorer`, `code-review`, `commits-graph`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `dependent-count`, `docs-button`, `drop-and-exit`, `drop-dependents`, `exit`, `file-changes`, `file-path`, `fork-session`, `grouped`, `history`, `hold-and-exit`, `improve`, `markdown-extensions`, `model`, `new-child-task`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `push-profiling`, `queue`, `read`, `resume`, `review`, `runtime-api`, `runtime-tmux`, `status`, `summary`, `task`, `task-header`, `task-title`, `tasks`, `tasks-panel`, `terminal-pane`, `turn-summary`, `user-text`, `vscode`, `welcome`
     - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `launch-prompts`, `prompt-input`, `push-and-exit`, `resume`, `transcript-api`
@@ -793,7 +793,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
             - Uses: `conversations.useConversation`, `conversations.useConversationById`, `conversations.useConversations`, `notifications.toast`
           - Server:
-            - Uses: `conversations.afterTurn`, `conversations.deleteConversation`, `conversations.sendTurn`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
+            - Uses: `conversations.afterTurn`, `conversations.deleteConversation`, `conversations.sendTurn`, `notifications.recordNotification`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
             - Register: `defineJob('push_and_exit.exit_clean_finalize')`, `mcpTool('exit_clean')`, `mcpTool('flag_raise')`
             - Resources: `push-and-exit` (push)
           - Shared:
@@ -844,8 +844,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `conversations.useConversationById`
     - **`conversations-view`** — Sidebar list of all conversations.
       - Web:
-        - Contributes: `Shell.Sidebar` "Conversations" → `ConversationsSidebar`, `Core.Root` → `ForkErrorWatcher`, `Core.Root` → `AutoLaunchWatcher`
-        - Uses: `conversations.GonePageSchema`, `conversations.useConversations`, `notifications.toast`, `shell.Shell`
+        - Contributes: `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
+        - Uses: `conversations.GonePageSchema`, `conversations.useConversations`, `shell.Shell`
         - Exports: Types: `ViewProps`; Values: `ConversationsView`, `useGoneConversationsPagination`
       - Plugins:
         - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
@@ -1114,7 +1114,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `AllowVerdict`, `DenyVerdict`, `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`; Values: `createContext`, `defineGuard`, `GUARDS`, `parseShell`
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Core:
-            - Exports: Values: `discoverAllowDefaultProject`, `findPluginDirs`, `iconSafetyRules`, `lintCollectedDir`, `promiseSafetyRules`
+            - Exports: Values: `discoverAllowDefaultProject`, `findPluginDirs`, `iconSafetyRules`, `lintCollectedDir`, `promiseSafetyRules`, `reactiveServerIoRules`
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
       - Core:
         - Exports: Types: `Contribution`, `DocMeta`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`
@@ -1122,7 +1122,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Web:
     - Contributes: `Core.Root` → `ReconnectWatcher`, `Shell.Toolbar` → `HealthDot`
-    - Uses: `notifications.toast`, `shell.Shell`
+    - Uses: `shell.Shell`, `shell.ShellCommands`
     - Exports: Values: `getHealth`, `waitForRestart`
   - Shared:
     - Exports: Types: `HealthResponse`; Values: `getHealth`
@@ -1242,7 +1242,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineJob('notifications.ttl-cleanup')`
     - Resources: `notifications` (push)
   - Cross-plugin:
-    - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations-view`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `health`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`
+    - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`
   - Shared:
     - Exports: Values: `createNotification`, `dismissAllNotifications`, `dismissNotification`, `markAllNotificationsRead`
 

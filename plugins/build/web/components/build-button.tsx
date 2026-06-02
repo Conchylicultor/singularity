@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { toast } from "@plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { MdOpenInFull } from "react-icons/md";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
@@ -40,55 +39,6 @@ export function BuildButton() {
   const historyData = historyResult.pending ? undefined : historyResult.data;
   const latestRun = historyData?.[0];
   const building = latestRun?.finishedAt === null;
-  const trackedBuildRef = useRef<string | null>(null);
-  const initializedRef = useRef(false);
-
-  // Build completion toast
-  useEffect(() => {
-    if (!latestRun) return;
-
-    if (latestRun.finishedAt === null) {
-      trackedBuildRef.current = latestRun.id;
-      return;
-    }
-
-    if (trackedBuildRef.current === latestRun.id) {
-      trackedBuildRef.current = null;
-      const linkTo = `/build/r/${latestRun.id}`;
-      if (latestRun.exitCode === 0) {
-        toast({ type: "build", description: "Build succeeded", variant: "success", linkTo });
-      } else {
-        toast({ type: "build", description: `Build failed (exit ${latestRun.exitCode})`, variant: "error", linkTo });
-      }
-    }
-  }, [latestRun?.id, latestRun?.finishedAt]);
-
-  // Auto-build toast — detect new in-flight auto-triggered row
-  const lastSeenAutoRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!historyData) return;
-
-    // Mark initialized after first non-pending delivery to suppress toast on load
-    if (!initializedRef.current) {
-      initializedRef.current = true;
-      // Seed the ref with the current auto-build id (if any) so we don't toast on load
-      const currentAuto = historyData.find(
-        (r) => r.trigger === "auto" && r.finishedAt === null,
-      );
-      lastSeenAutoRef.current = currentAuto?.id ?? null;
-      return;
-    }
-
-    const autoRun = historyData.find(
-      (r) => r.trigger === "auto" && r.finishedAt === null,
-    );
-    if (autoRun && autoRun.id !== lastSeenAutoRef.current) {
-      lastSeenAutoRef.current = autoRun.id;
-      toast({ type: "build", description: "Auto-build triggered by new push", variant: "info" });
-    }
-  }, [historyData]);
-
   const loaded = !hashResult.pending;
 
   return (

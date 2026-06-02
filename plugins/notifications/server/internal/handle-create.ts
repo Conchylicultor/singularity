@@ -1,11 +1,9 @@
-import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { createNotification } from "../../shared/endpoints";
-import { _notifications } from "./tables";
-import { notificationsResource } from "./resources";
+import { recordNotification } from "./record-notification";
 
 export const handleCreate = implement(createNotification, async ({ body }) => {
-  await db.insert(_notifications).values({
+  const id = await recordNotification({
     id: body.id,
     type: body.type,
     title: body.title,
@@ -13,7 +11,7 @@ export const handleCreate = implement(createNotification, async ({ body }) => {
     variant: body.variant,
     linkTo: body.linkTo ?? null,
     metadata: body.metadata ?? null,
+    dedupeKey: body.dedupeKey ?? null,
   });
-  notificationsResource.notify();
-  return { id: body.id };
+  return { id };
 });

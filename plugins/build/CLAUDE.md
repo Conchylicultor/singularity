@@ -10,7 +10,7 @@
   - Uses: `config_v2.ConfigV2`, `notifications.toast`, `shell.Shell`
   - Exports: Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`
 - Server:
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `notifications.recordNotification`
   - DB schema: `plugins/build/server/internal/tables.ts`
   - Exports: Values: `_buildRuns`
   - Register: `defineJob('build.run')`

@@ -12,6 +12,7 @@ export const createNotification = defineEndpoint({
     variant: NotificationVariantSchema,
     linkTo: z.string().nullable().optional(),
     metadata: z.record(z.unknown()).nullable().optional(),
+    dedupeKey: z.string().nullable().optional(),
   }),
   response: z.object({ id: z.string() }),
 });
