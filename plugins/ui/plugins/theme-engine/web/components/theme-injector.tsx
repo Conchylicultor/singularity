@@ -47,7 +47,7 @@ function WithAdjustment({
 
 function GroupStyle({ group }: { group: TokenGroupContribution }) {
   const adjustment = useContext(ColorAdjustContext);
-  const presets = useTokenGroupPresets(group.id, group.usePresets());
+  const presets = useTokenGroupPresets(group.id);
   const config = useConfig(group.configDescriptor) as {
     preset: string;
     overrides: Record<string, unknown>;

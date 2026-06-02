@@ -1,10 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useConfig } from "@plugins/config_v2/web";
 import { useTokenGroupPresets } from "@plugins/ui/plugins/theme-engine/web";
-import {
-  Typography,
-  typographyConfig,
-} from "@plugins/ui/plugins/tokens/plugins/typography/web";
+import { typographyConfig } from "@plugins/ui/plugins/tokens/plugins/typography/web";
 import { parseFontFamilies } from "./parse-font-families";
 import { shouldLoadFont } from "./should-load-font";
 
@@ -61,10 +58,7 @@ function ensurePreconnect(): void {
 }
 
 export function GoogleFontsLoader() {
-  const presets = useTokenGroupPresets(
-    "typography",
-    Typography.Preset.useContributions(),
-  );
+  const presets = useTokenGroupPresets("typography");
   const config = useConfig(typographyConfig) as {
     preset: string;
     overrides: { light?: Record<string, string>; dark?: Record<string, string> };

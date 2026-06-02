@@ -21,7 +21,7 @@ export default {
     ...builtInPresets.map((p) => Chart.Preset(p)),
     ConfigV2.WebRegister({ descriptor: chartConfig }),
     DynamicEnum.Options({ field: chartConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresets("chart", Chart.Preset.useContributions()).map((p) => ({ value: p.id, label: p.label }))
+      useTokenGroupPresets("chart").map((p) => ({ value: p.id, label: p.label }))
     }),
     ThemeEngine.TokenGroup({
       id: "chart",

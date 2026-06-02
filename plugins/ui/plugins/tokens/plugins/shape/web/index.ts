@@ -21,7 +21,7 @@ export default {
     ...builtInPresets.map((p) => Shape.Preset(p)),
     ConfigV2.WebRegister({ descriptor: shapeConfig }),
     DynamicEnum.Options({ field: shapeConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresets("shape", Shape.Preset.useContributions()).map((p) => ({ value: p.id, label: p.label }))
+      useTokenGroupPresets("shape").map((p) => ({ value: p.id, label: p.label }))
     }),
     ThemeEngine.TokenGroup({
       id: "shape",

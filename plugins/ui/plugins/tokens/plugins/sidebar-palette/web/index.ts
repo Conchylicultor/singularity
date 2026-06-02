@@ -22,7 +22,7 @@ export default {
     ...builtInPresets.map((p) => SidebarPalette.Preset(p)),
     ConfigV2.WebRegister({ descriptor: sidebarPaletteConfig }),
     DynamicEnum.Options({ field: sidebarPaletteConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresets("sidebar-palette", SidebarPalette.Preset.useContributions()).map((p) => ({ value: p.id, label: p.label }))
+      useTokenGroupPresets("sidebar-palette").map((p) => ({ value: p.id, label: p.label }))
     }),
     ThemeEngine.TokenGroup({
       id: "sidebar-palette",

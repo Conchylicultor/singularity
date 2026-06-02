@@ -21,7 +21,7 @@ export default {
   contributions: [
     ...builtInPresets.map((p) => Shadow.Preset(p)),
     DynamicEnum.Options({ field: shadowConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresets("shadow", Shadow.Preset.useContributions()).map((p) => ({ value: p.id, label: p.label }))
+      useTokenGroupPresets("shadow").map((p) => ({ value: p.id, label: p.label }))
     }),
     ConfigV2.WebRegister({ descriptor: shadowConfig }),
     ThemeEngine.TokenGroup({

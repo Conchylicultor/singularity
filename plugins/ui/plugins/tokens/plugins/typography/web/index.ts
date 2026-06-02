@@ -22,7 +22,7 @@ export default {
     ...builtInPresets.map((p) => Typography.Preset(p)),
     ConfigV2.WebRegister({ descriptor: typographyConfig }),
     DynamicEnum.Options({ field: typographyConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresets("typography", Typography.Preset.useContributions()).map((p) => ({ value: p.id, label: p.label }))
+      useTokenGroupPresets("typography").map((p) => ({ value: p.id, label: p.label }))
     }),
     ThemeEngine.TokenGroup({
       id: "typography",

@@ -49,10 +49,11 @@ export interface PresetSourceContribution {
   usePresets: (groupId: string) => TokenGroupPreset[];
 }
 
-export function useTokenGroupPresets(
-  groupId: string,
-  staticPresets: TokenGroupPreset[],
-): TokenGroupPreset[] {
+export function useTokenGroupPresets(groupId: string): TokenGroupPreset[] {
+  const group = ThemeEngine.TokenGroup.useContributions().find(
+    (g) => g.id === groupId,
+  );
+  const staticPresets = group?.usePresets() ?? [];
   // eslint-disable-next-line react-hooks/rules-of-hooks -- PresetSource contributions are static slot entries; count never changes
   const dynamic = ThemeEngine.PresetSource.useContributions()
     .flatMap((s) => s.usePresets(groupId));

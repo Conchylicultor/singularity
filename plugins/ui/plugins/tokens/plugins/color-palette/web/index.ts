@@ -21,7 +21,7 @@ export default {
   contributions: [
     ConfigV2.WebRegister({ descriptor: colorPaletteConfig }),
     DynamicEnum.Options({ field: colorPaletteConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresets("color-palette", ColorPalette.Preset.useContributions()).map((p) => ({ value: p.id, label: p.label }))
+      useTokenGroupPresets("color-palette").map((p) => ({ value: p.id, label: p.label }))
     }),
     ...builtInPresets.map((p) => ColorPalette.Preset(p)),
     ThemeEngine.TokenGroup({
