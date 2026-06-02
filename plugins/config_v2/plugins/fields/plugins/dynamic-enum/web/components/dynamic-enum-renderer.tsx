@@ -140,8 +140,10 @@ function DropdownSelect({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const items = Object.fromEntries(options.map((opt) => [opt.value, opt.label]));
   return (
     <Select
+      items={items}
       value={value}
       onValueChange={(v) => {
         if (v !== null) onChange(v);
