@@ -63,6 +63,12 @@ export const mainWritesGuard = defineGuard<BashInput>({
         c.name === "cd" &&
         c.args.some((a) => {
           const resolved = resolve(a);
+          // The worktree lives physically nested under the repo root
+          // (<repo>/.claude/worktrees/<name>), so a cd into the worktree
+          // itself must not be mistaken for a cd into main.
+          if (resolved === ctx.cwd || resolved.startsWith(`${ctx.cwd}/`)) {
+            return false;
+          }
           return resolved === repo || resolved.startsWith(`${repo}/`);
         }),
     );
