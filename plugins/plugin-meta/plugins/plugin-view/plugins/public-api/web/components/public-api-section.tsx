@@ -10,7 +10,9 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   Section,
   pluginViewPane,
+  RUNTIME_COLORS,
   type PluginNode,
+  type ExportRuntime,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import type {
   BarrelExport,
@@ -18,7 +20,6 @@ import type {
   SlotInfo,
 } from "@plugins/plugin-meta/plugins/plugin-view/core";
 
-type ExportRuntime = "web" | "server" | "central" | "core" | "shared";
 const RUNTIMES: ExportRuntime[] = ["web", "server", "central", "core", "shared"];
 
 export function PublicApiSection({ node }: { node: PluginNode }) {
@@ -120,14 +121,6 @@ function ImportedByBanner({ names }: { names: string[] }) {
 
 // ── Runtime group ───────────────────────────────────────────────────
 
-const RUNTIME_COLORS: Record<ExportRuntime, string> = {
-  web: "text-sky-600 dark:text-sky-400",
-  server: "text-emerald-600 dark:text-emerald-400",
-  central: "text-violet-600 dark:text-violet-400",
-  core: "text-amber-600 dark:text-amber-400",
-  shared: "text-orange-600 dark:text-orange-400",
-};
-
 function RuntimeGroup({
   runtime,
   exports: exps,
@@ -173,19 +166,19 @@ const CATEGORY_STYLES: Record<
 > = {
   hook: {
     label: "hook",
-    className: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+    className: "bg-categorical-6/10 text-categorical-6",
   },
   component: {
     label: "comp",
-    className: "bg-sky-500/10 text-sky-600 dark:text-sky-400",
+    className: "bg-categorical-1/10 text-categorical-1",
   },
   type: {
     label: "type",
-    className: "bg-zinc-500/10 text-zinc-500 dark:text-zinc-400",
+    className: "bg-categorical-10/10 text-categorical-10",
   },
   value: {
     label: "val",
-    className: "bg-stone-500/10 text-stone-600 dark:text-stone-400",
+    className: "bg-categorical-9/10 text-categorical-9",
   },
 };
 
@@ -271,12 +264,12 @@ function SlotsGroup({ slots }: { slots: SlotInfo[] }) {
 // ── Routes group ────────────────────────────────────────────────────
 
 const METHOD_COLORS: Record<string, string> = {
-  GET: "text-emerald-600 dark:text-emerald-400",
-  POST: "text-blue-600 dark:text-blue-400",
-  PUT: "text-amber-600 dark:text-amber-400",
-  PATCH: "text-amber-600 dark:text-amber-400",
-  DELETE: "text-red-600 dark:text-red-400",
-  WS: "text-violet-600 dark:text-violet-400",
+  GET: "text-categorical-2",
+  POST: "text-categorical-1",
+  PUT: "text-categorical-3",
+  PATCH: "text-categorical-3",
+  DELETE: "text-categorical-4",
+  WS: "text-categorical-5",
 };
 
 function RoutesGroup({ routes }: { routes: RouteInfo[] }) {

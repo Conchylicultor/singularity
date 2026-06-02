@@ -197,7 +197,7 @@ function BuildHistoryList({
               className={cn(
                 "rounded px-1 py-0.5 text-[10px] font-medium",
                 run.trigger === "auto"
-                  ? "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300"
+                  ? "bg-info/15 text-info"
                   : "bg-muted text-muted-foreground",
               )}
             >

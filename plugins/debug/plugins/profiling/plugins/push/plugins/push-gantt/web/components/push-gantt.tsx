@@ -51,36 +51,36 @@ export interface PushGanttProps {
 
 const OUTCOME_STYLES: Record<string, { color: string; bg: string }> = {
   success: {
-    color: "bg-emerald-500",
-    bg: "bg-emerald-50 dark:bg-emerald-950/30",
+    color: "bg-success",
+    bg: "bg-success/10",
   },
   failed_rebase: {
-    color: "bg-red-500",
-    bg: "bg-red-50 dark:bg-red-950/30",
+    color: "bg-destructive",
+    bg: "bg-destructive/10",
   },
   failed_checks: {
-    color: "bg-orange-500",
-    bg: "bg-orange-50 dark:bg-orange-950/30",
+    color: "bg-warning",
+    bg: "bg-warning/10",
   },
   failed_push: {
-    color: "bg-red-600",
-    bg: "bg-red-50 dark:bg-red-950/30",
+    color: "bg-destructive",
+    bg: "bg-destructive/10",
   },
   error: {
-    color: "bg-gray-500",
-    bg: "bg-gray-50 dark:bg-gray-950/30",
+    color: "bg-muted-foreground",
+    bg: "bg-muted/50",
   },
 };
 
 const DEFAULT_STYLE = {
-  color: "bg-gray-400",
-  bg: "bg-gray-50 dark:bg-gray-950/30",
+  color: "bg-muted-foreground/60",
+  bg: "bg-muted/50",
 };
 
-const WAIT_COLOR = "bg-amber-400 dark:bg-amber-500";
-const BUILD_COLOR = "bg-sky-400 dark:bg-sky-500";
-const BUILD_FAILED_COLOR = "bg-sky-700 dark:bg-sky-800";
-const BUILD_INTERRUPTED_COLOR = "bg-red-400 dark:bg-red-500";
+const WAIT_COLOR = "bg-warning";
+const BUILD_COLOR = "bg-info";
+const BUILD_FAILED_COLOR = "bg-info/70";
+const BUILD_INTERRUPTED_COLOR = "bg-destructive";
 
 export function PushGantt({
   groups,
@@ -136,7 +136,7 @@ function PushAttemptRow({
   const lastPush = group.pushes[group.pushes.length - 1];
   const lastStyle = lastPush
     ? (OUTCOME_STYLES[lastPush.outcome] ?? DEFAULT_STYLE)
-    : { color: "bg-sky-500", bg: "bg-sky-50 dark:bg-sky-950/30" };
+    : { color: "bg-info", bg: "bg-info/10" };
   const totalDuration =
     group.pushes.reduce((sum, p) => sum + p.waitMs + p.holdMs, 0) +
     group.builds.reduce((sum, b) => sum + b.durationMs, 0);

@@ -6,7 +6,7 @@ import type { ConversationStatus } from "@plugins/conversations/core";
 // Defined here to avoid a runtime circular import (conversation-item ↔ slots).
 const STATUS_DOT: Record<ConversationStatus, string> = {
   starting: "bg-muted-foreground/60",
-  working: "bg-[oklch(0.58_0.1_240)]",
+  working: "bg-info",
   waiting: "bg-warning",
   gone: "bg-warning/40",
   done: "bg-muted-foreground/40",

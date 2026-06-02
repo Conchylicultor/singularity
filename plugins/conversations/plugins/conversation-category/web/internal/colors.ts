@@ -1,16 +1,16 @@
 const CHIP_NEUTRAL = "bg-muted text-muted-foreground";
 
 export const COLOR_PALETTE = {
-  sky:     { swatch: "bg-sky-400",     chip: CHIP_NEUTRAL },
-  emerald: { swatch: "bg-emerald-400", chip: CHIP_NEUTRAL },
-  amber:   { swatch: "bg-amber-400",   chip: CHIP_NEUTRAL },
-  rose:    { swatch: "bg-rose-400",    chip: CHIP_NEUTRAL },
-  violet:  { swatch: "bg-violet-400",  chip: CHIP_NEUTRAL },
-  indigo:  { swatch: "bg-indigo-400",  chip: CHIP_NEUTRAL },
-  teal:    { swatch: "bg-teal-400",    chip: CHIP_NEUTRAL },
-  pink:    { swatch: "bg-pink-400",    chip: CHIP_NEUTRAL },
-  orange:  { swatch: "bg-orange-400",  chip: CHIP_NEUTRAL },
-  slate:   { swatch: "bg-slate-400",   chip: CHIP_NEUTRAL },
+  sky:     { swatch: "bg-categorical-1",  chip: CHIP_NEUTRAL },
+  emerald: { swatch: "bg-categorical-2",  chip: CHIP_NEUTRAL },
+  amber:   { swatch: "bg-categorical-3",  chip: CHIP_NEUTRAL },
+  rose:    { swatch: "bg-categorical-4",  chip: CHIP_NEUTRAL },
+  violet:  { swatch: "bg-categorical-5",  chip: CHIP_NEUTRAL },
+  indigo:  { swatch: "bg-categorical-6",  chip: CHIP_NEUTRAL },
+  teal:    { swatch: "bg-categorical-7",  chip: CHIP_NEUTRAL },
+  pink:    { swatch: "bg-categorical-8",  chip: CHIP_NEUTRAL },
+  orange:  { swatch: "bg-categorical-9",  chip: CHIP_NEUTRAL },
+  slate:   { swatch: "bg-categorical-10", chip: CHIP_NEUTRAL },
 } as const;
 
 export type ColorKey = keyof typeof COLOR_PALETTE;

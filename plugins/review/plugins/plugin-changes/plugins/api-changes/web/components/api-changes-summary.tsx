@@ -16,7 +16,7 @@ export function ApiChangesSummary({ plugin }: PluginReviewProps) {
   const count = totalDiffCount(plugin);
   if (count === 0) return null;
   return (
-    <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-600 dark:text-purple-400">
+    <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-categorical-5/15 text-categorical-5">
       {count} API
     </span>
   );

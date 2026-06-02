@@ -119,6 +119,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "terminal", hierarchyPath: "terminal", loader: () => import("@plugins/terminal/server"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "ui/plugins/segmented-progress-bar", hierarchyPath: "ui/segmented-progress-bar", loader: () => import("@plugins/ui/plugins/segmented-progress-bar/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/theme-engine", hierarchyPath: "ui/theme-engine", loader: () => import("@plugins/ui/plugins/theme-engine/server"), dependsOn: ["config_v2"] },
+  { pluginPath: "ui/plugins/tokens/plugins/categorical", hierarchyPath: "ui/tokens/categorical", loader: () => import("@plugins/ui/plugins/tokens/plugins/categorical/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tokens/plugins/chart", hierarchyPath: "ui/tokens/chart", loader: () => import("@plugins/ui/plugins/tokens/plugins/chart/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tokens/plugins/color-adjust", hierarchyPath: "ui/tokens/color-adjust", loader: () => import("@plugins/ui/plugins/tokens/plugins/color-adjust/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tokens/plugins/color-palette", hierarchyPath: "ui/tokens/color-palette", loader: () => import("@plugins/ui/plugins/tokens/plugins/color-palette/server"), dependsOn: ["config_v2"] },

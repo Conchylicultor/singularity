@@ -1,0 +1,30 @@
+// @hash 9414290f8830
+{
+  "preset": "default",
+  "overrides": {
+    "light": {
+      "categorical-1": "",
+      "categorical-2": "",
+      "categorical-3": "",
+      "categorical-4": "",
+      "categorical-5": "",
+      "categorical-6": "",
+      "categorical-7": "",
+      "categorical-8": "",
+      "categorical-9": "",
+      "categorical-10": ""
+    },
+    "dark": {
+      "categorical-1": "",
+      "categorical-2": "",
+      "categorical-3": "",
+      "categorical-4": "",
+      "categorical-5": "",
+      "categorical-6": "",
+      "categorical-7": "",
+      "categorical-8": "",
+      "categorical-9": "",
+      "categorical-10": ""
+    }
+  }
+}

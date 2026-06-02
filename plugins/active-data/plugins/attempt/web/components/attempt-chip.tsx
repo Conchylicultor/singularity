@@ -8,9 +8,9 @@ import type { AttemptStatus } from "@plugins/tasks-core/core";
 
 const ATTEMPT_STATUS_DOT: Record<AttemptStatus, string> = {
   pending: "bg-muted-foreground/60",
-  in_progress: "bg-[oklch(0.58_0.1_240)]",
+  in_progress: "bg-info",
   pushed: "bg-success",
-  completed: "bg-purple-500/70",
+  completed: "bg-categorical-5",
   abandoned: "bg-muted-foreground/40",
 };
 

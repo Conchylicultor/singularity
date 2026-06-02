@@ -1,13 +1,8 @@
 import { MdAccountTree } from "react-icons/md";
 import { cn } from "@/lib/utils";
+import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
+import { MODEL_TIERS } from "@plugins/conversations/plugins/model-provider/core";
 import type { TracedNode } from "../internal/trace-types";
-
-// Same categorical palette as the Agent tool renderer's ModelBadge.
-const MODEL_COLORS: Record<string, string> = {
-  opus: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  sonnet: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
-  haiku: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-};
 
 export type NodeEmphasis = "normal" | "dim" | "dep" | "dependent" | "active";
 
@@ -30,8 +25,9 @@ export function WorkflowNodeCard({
   onOpen: (nodeId: string) => void;
   onHover: (nodeId: string | null) => void;
 }) {
+  const modelTier = node.model ? MODEL_TIERS.find((t) => node.model!.includes(t)) : undefined;
   const modelColor = node.model
-    ? (MODEL_COLORS[node.model] ?? "bg-muted text-muted-foreground")
+    ? (modelTier ? familyClass(modelTier) : "bg-muted text-muted-foreground")
     : null;
 
   return (
@@ -45,8 +41,8 @@ export function WorkflowNodeCard({
         "hover:border-foreground/40",
         emphasis === "dim" && "opacity-40",
         emphasis === "active" && "border-primary ring-2 ring-primary/30",
-        emphasis === "dep" && "border-amber-500/60 dark:border-amber-400/60",
-        emphasis === "dependent" && "border-sky-500/60 dark:border-sky-400/60",
+        emphasis === "dep" && "border-categorical-3/60",
+        emphasis === "dependent" && "border-categorical-1/60",
       )}
     >
       <span className="flex min-w-0 items-center gap-1.5">

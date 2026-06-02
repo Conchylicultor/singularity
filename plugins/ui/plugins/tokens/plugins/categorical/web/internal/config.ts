@@ -1,0 +1,1 @@
+export { categoricalConfig } from "../../shared";

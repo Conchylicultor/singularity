@@ -1,16 +1,7 @@
 import { MdArticle } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
-
-const STATUS_DOT: Record<EditedFileStatus, string> = {
-  modified: "bg-blue-500",
-  added: "bg-emerald-500",
-  untracked: "bg-amber-500",
-  deleted: "bg-muted-foreground/40",
-  renamed: "bg-violet-500",
-  copied: "bg-amber-500",
-  clean: "bg-muted-foreground/20",
-};
+import { gitStatusDot } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 
 export function DocRow({
   path,
@@ -44,7 +35,7 @@ export function DocRow({
       <span
         className={cn(
           "inline-block h-1.5 w-1.5 shrink-0 rounded-full",
-          STATUS_DOT[status],
+          gitStatusDot(status),
         )}
       />
       <MdArticle className="size-3 shrink-0 text-muted-foreground" />

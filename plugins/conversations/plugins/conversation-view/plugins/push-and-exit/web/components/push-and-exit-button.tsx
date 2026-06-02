@@ -277,8 +277,8 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     mode === "stop"
       ? "gap-1.5 bg-destructive text-destructive-foreground hover:bg-destructive/90"
       : mode === "go"
-        ? "gap-1.5 bg-[oklch(0.44_0.13_145)] hover:bg-[oklch(0.50_0.13_145)] text-white"
-        : "gap-1.5 bg-[oklch(0.44_0.09_240)] hover:bg-[oklch(0.5_0.09_240)] text-white";
+        ? "gap-1.5 bg-success hover:bg-success/90 text-success-foreground"
+        : "gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground";
   const buttonVariant = "default" as const;
 
   return (

@@ -379,7 +379,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Cross-plugin:
-    - Imported by: `avatar`, `backup`, `build`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `dynamic-enum`, `enum`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `primitives`, `prompt-templates`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
+    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `dynamic-enum`, `enum`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `primitives`, `prompt-templates`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
   - Core:
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`
   - Web:
@@ -536,7 +536,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`; Values: `editedFilesResource`
           - Web:
-            - Exports: Values: `useEditedFiles`
+            - Exports: Values: `gitStatusBadge`, `gitStatusDot`, `useEditedFiles`
           - Plugins:
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
               - Web:
@@ -1341,7 +1341,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Web:
         - Contributes: `Pane.Register` "plugin-view"
-        - Exports: Types: `PluginNode`, `PluginTreePayload`; Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `Section`
+        - Exports: Types: `ExportRuntime`, `PluginNode`, `PluginTreePayload`; Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `RUNTIME_COLORS`, `Section`
       - Core:
         - Exports: Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `EntityExtensionInfo`, `EntityExtensionRef`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`, `TableInfo`; Values: `getPluginTree`
       - Server:
@@ -1803,7 +1803,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
         - Exports: Types: `ColorAdjustment`, `ColorTransformContribution`, `GlobalPresetContribution`, `PresetSourceContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`; Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `transformValues`, `useTokenGroupPresets`
       - Cross-plugin:
-        - Slot contributors: `chart`, `color-adjust`, `color-palette`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `tweakcn`, `typography`
+        - Slot contributors: `categorical`, `chart`, `color-adjust`, `color-palette`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `tweakcn`, `typography`
       - Server:
         - Uses: `config_v2.ConfigV2`
       - Core:
@@ -1819,6 +1819,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `ThemeEngine.GlobalPreset` "Default", `ThemeEngine.GlobalPreset` "Ocean", `ThemeEngine.GlobalPreset` "Warm"
       - Plugins:
+        - **`categorical`** — Categorical color palette token group with switchable presets.
+          - Web:
+            - Slots: `Categorical.Preset`
+            - Contributes: `Categorical.Preset` "Default", `ConfigV2.WebRegister`, `DynamicEnum.Options` "Categorical preset", `ThemeEngine.TokenGroup` "Categorical", `ThemeEngine.VariantGroup` "Categorical" → `CategoricalPicker`, `ThemeCustomizer.Section` "categorical" → `CategoricalSection`
+            - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`
+            - Exports: Types: `CategoricalPresetContribution`; Values: `Categorical`
+          - Server:
+            - Uses: `config_v2.ConfigV2`
+          - Shared:
+            - Exports: Types: `CategoricalTokenValues`; Values: `categoricalConfig`, `categoricalGroup`
         - **`chart`** — Chart color token group with switchable presets.
           - Web:
             - Slots: `Chart.Preset`

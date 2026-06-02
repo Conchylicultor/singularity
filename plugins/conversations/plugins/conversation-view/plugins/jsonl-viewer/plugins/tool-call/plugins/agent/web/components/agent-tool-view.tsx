@@ -4,6 +4,8 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
+import { MODEL_TIERS } from "@plugins/conversations/plugins/model-provider/core";
 import { agentReportPane } from "../panes";
 
 interface AgentInput {
@@ -15,14 +17,9 @@ interface AgentInput {
   run_in_background?: boolean;
 }
 
-const modelColors: Record<string, string> = {
-  opus: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-  sonnet: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
-  haiku: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-};
-
 function ModelBadge({ model }: { model: string }) {
-  const colors = modelColors[model] ?? "bg-muted text-muted-foreground";
+  const tier = MODEL_TIERS.find((t) => model.includes(t));
+  const colors = tier ? familyClass(tier) : "bg-muted text-muted-foreground";
   return (
     <span
       className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] capitalize ${colors}`}
@@ -61,7 +58,7 @@ export function AgentToolView({ event }: ToolRendererProps) {
 
   const summary = (
     <span className="flex min-w-0 items-center gap-2">
-      <span className="shrink-0 rounded bg-violet-500/15 px-1.5 py-0.5 font-mono text-[11px] text-violet-700 dark:text-violet-400">
+      <span className="shrink-0 rounded bg-categorical-6/15 px-1.5 py-0.5 font-mono text-[11px] text-categorical-6">
         {agentType}
       </span>
       {input.model && <ModelBadge model={input.model} />}

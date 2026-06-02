@@ -2,16 +2,16 @@
 // muted dark bg + light text (dark mode). Keys align with the conversation-category palette.
 
 export const AVATAR_COLORS = {
-  sky: "bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300",
-  emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300",
-  amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300",
-  rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300",
-  violet: "bg-violet-100 text-violet-700 dark:bg-violet-900/60 dark:text-violet-300",
-  indigo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300",
-  teal: "bg-teal-100 text-teal-700 dark:bg-teal-900/60 dark:text-teal-300",
-  pink: "bg-pink-100 text-pink-700 dark:bg-pink-900/60 dark:text-pink-300",
-  orange: "bg-orange-100 text-orange-700 dark:bg-orange-900/60 dark:text-orange-300",
-  slate: "bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300",
+  sky:     "bg-categorical-1/15 text-categorical-1",
+  emerald: "bg-categorical-2/15 text-categorical-2",
+  amber:   "bg-categorical-3/15 text-categorical-3",
+  rose:    "bg-categorical-4/15 text-categorical-4",
+  violet:  "bg-categorical-5/15 text-categorical-5",
+  indigo:  "bg-categorical-6/15 text-categorical-6",
+  teal:    "bg-categorical-7/15 text-categorical-7",
+  pink:    "bg-categorical-8/15 text-categorical-8",
+  orange:  "bg-categorical-9/15 text-categorical-9",
+  slate:   "bg-categorical-10/15 text-categorical-10",
 } as const;
 
 export type AvatarColor = keyof typeof AVATAR_COLORS;

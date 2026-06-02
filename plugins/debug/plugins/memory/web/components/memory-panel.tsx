@@ -18,7 +18,7 @@ const TYPE_BADGE: Record<MemoryFile["type"], { label: string; classes: string }>
   feedback: { label: "feedback", classes: "bg-warning/10 text-warning" },
   project: { label: "project", classes: "bg-info/10 text-info" },
   user: { label: "user", classes: "bg-success/10 text-success" },
-  reference: { label: "ref", classes: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400" },
+  reference: { label: "ref", classes: "bg-categorical-5/15 text-categorical-5" },
   other: { label: "other", classes: "bg-muted text-muted-foreground" },
 };
 

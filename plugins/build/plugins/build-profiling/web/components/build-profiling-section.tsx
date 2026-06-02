@@ -25,14 +25,14 @@ const PHASE_ORDER = [
 ];
 
 const PHASE_CONFIG: Record<string, PhaseConfig> = {
-  "build:preflight": { label: "Preflight", color: "bg-rose-500", bg: "bg-rose-50 dark:bg-rose-950/30" },
-  "build:setup": { label: "Setup", color: "bg-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30" },
-  "build:codegen": { label: "Codegen", color: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30" },
-  "build:database": { label: "Database", color: "bg-yellow-500", bg: "bg-yellow-50 dark:bg-yellow-950/30" },
-  "build:validation": { label: "Validation", color: "bg-lime-500", bg: "bg-lime-50 dark:bg-lime-950/30" },
-  "build:checks": { label: "Checks", color: "bg-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
-  "build:frontend": { label: "Frontend", color: "bg-green-500", bg: "bg-green-50 dark:bg-green-950/30" },
-  "build:deploy": { label: "Deploy", color: "bg-teal-500", bg: "bg-teal-50 dark:bg-teal-950/30" },
+  "build:preflight": { label: "Preflight", color: "bg-categorical-1", bg: "bg-categorical-1/10" },
+  "build:setup": { label: "Setup", color: "bg-categorical-2", bg: "bg-categorical-2/10" },
+  "build:codegen": { label: "Codegen", color: "bg-categorical-3", bg: "bg-categorical-3/10" },
+  "build:database": { label: "Database", color: "bg-categorical-4", bg: "bg-categorical-4/10" },
+  "build:validation": { label: "Validation", color: "bg-categorical-5", bg: "bg-categorical-5/10" },
+  "build:checks": { label: "Checks", color: "bg-categorical-6", bg: "bg-categorical-6/10" },
+  "build:frontend": { label: "Frontend", color: "bg-categorical-7", bg: "bg-categorical-7/10" },
+  "build:deploy": { label: "Deploy", color: "bg-categorical-8", bg: "bg-categorical-8/10" },
 };
 
 export function BuildProfilingSection({ runId }: { runId: string }): ReactElement | null {

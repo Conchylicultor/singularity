@@ -8,6 +8,7 @@
 - Web:
   - Contributes: `ThemeEngine.GlobalPreset` "Default", `ThemeEngine.GlobalPreset` "Ocean", `ThemeEngine.GlobalPreset` "Warm"
 - Sub-plugins:
+  - **`categorical`** — Categorical color palette token group with switchable presets.
   - **`chart`** — Chart color token group with switchable presets.
   - **`color-adjust`** — Cross-cutting color adjustment transform for all color token groups.
   - **`color-palette`** — Color palette token group with switchable presets.

@@ -75,7 +75,7 @@ export function WelcomeView() {
                   onClick={() => openConversation(conversation.id)}
                 >
                   <StatusDot
-                    colorClass={conversation.active ? "bg-[oklch(0.58_0.1_240)]" : "bg-muted-foreground/40"}
+                    colorClass={conversation.active ? "bg-info" : "bg-muted-foreground/40"}
                   />
                   <div className="flex flex-col gap-0.5 overflow-hidden flex-1">
                     <span

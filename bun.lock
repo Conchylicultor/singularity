@@ -1520,6 +1520,10 @@
       "name": "@singularity/plugin-ui-tokens",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/categorical": {
+      "name": "@singularity/plugin-ui-tokens-categorical",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/chart": {
       "name": "@singularity/plugin-ui-tokens-chart",
       "version": "0.0.1",
@@ -2809,6 +2813,8 @@
     "@singularity/plugin-ui-theme-engine-theme-customizer": ["@singularity/plugin-ui-theme-engine-theme-customizer@workspace:plugins/ui/plugins/theme-engine/plugins/theme-customizer"],
 
     "@singularity/plugin-ui-tokens": ["@singularity/plugin-ui-tokens@workspace:plugins/ui/plugins/tokens"],
+
+    "@singularity/plugin-ui-tokens-categorical": ["@singularity/plugin-ui-tokens-categorical@workspace:plugins/ui/plugins/tokens/plugins/categorical"],
 
     "@singularity/plugin-ui-tokens-chart": ["@singularity/plugin-ui-tokens-chart@workspace:plugins/ui/plugins/tokens/plugins/chart"],
 

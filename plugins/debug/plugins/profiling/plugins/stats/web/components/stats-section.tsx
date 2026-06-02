@@ -19,9 +19,9 @@ const PHASE_ORDER = [
 ];
 
 const PHASE_CONFIG: Record<string, PhaseConfig> = {
-  "stats:commits": { label: "Commits", color: "bg-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30" },
-  "stats:cost": { label: "Cost", color: "bg-purple-500", bg: "bg-purple-50 dark:bg-purple-950/30" },
-  "stats:tasks": { label: "Tasks", color: "bg-green-500", bg: "bg-green-50 dark:bg-green-950/30" },
+  "stats:commits": { label: "Commits", color: "bg-categorical-1", bg: "bg-categorical-1/10" },
+  "stats:cost": { label: "Cost", color: "bg-categorical-2", bg: "bg-categorical-2/10" },
+  "stats:tasks": { label: "Tasks", color: "bg-categorical-3", bg: "bg-categorical-3/10" },
 };
 
 export function StatsSection(): ReactElement | null {

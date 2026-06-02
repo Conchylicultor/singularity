@@ -105,7 +105,7 @@ export function LaunchControl({
   const btnVariant = variant === "default" ? "default" : "outline";
   const blue =
     variant === "default"
-      ? "bg-[oklch(0.44_0.09_240)] hover:bg-[oklch(0.5_0.09_240)] text-white"
+      ? "bg-primary hover:bg-primary/90 text-primary-foreground"
       : "";
 
   const onMenuKeyDown = (e: React.KeyboardEvent) => {

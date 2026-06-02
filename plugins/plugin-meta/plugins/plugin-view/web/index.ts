@@ -7,6 +7,8 @@ export { PluginDetail } from "./components/plugin-detail";
 export { Section } from "./components/section";
 export { PluginView as PluginViewSlots } from "./slots";
 export type { PluginNode, PluginTreePayload } from "../core/types";
+export { RUNTIME_COLORS } from "./runtime-colors";
+export type { ExportRuntime } from "./runtime-colors";
 
 export default {
   id: "plugin-view",

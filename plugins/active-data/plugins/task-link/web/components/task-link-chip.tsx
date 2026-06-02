@@ -10,9 +10,9 @@ import type { TaskStatus } from "@plugins/tasks-core/core";
 
 const TASK_STATUS_DOT: Record<TaskStatus, string> = {
   new: "bg-muted-foreground/60",
-  in_progress: "bg-[oklch(0.58_0.1_240)]",
+  in_progress: "bg-info",
   need_action: "bg-warning",
-  attempted: "bg-[oklch(0.58_0.1_240)]",
+  attempted: "bg-info",
   done: "bg-success",
   held: "bg-warning/60",
   dropped: "bg-muted-foreground/40",

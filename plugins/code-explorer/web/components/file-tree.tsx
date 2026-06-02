@@ -208,9 +208,9 @@ function Row({
               <MdChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
             )}
             {isOpen ? (
-              <MdFolderOpen className="size-3.5 shrink-0 text-sky-500" />
+              <MdFolderOpen className="size-3.5 shrink-0 text-info" />
             ) : (
-              <MdFolder className="size-3.5 shrink-0 text-sky-500" />
+              <MdFolder className="size-3.5 shrink-0 text-info" />
             )}
           </>
         ) : (

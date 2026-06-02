@@ -100,7 +100,7 @@ export function WorkflowGraph({
       {(graph.truncated || graph.dynamic) && (
         <div className="flex flex-col gap-1">
           {graph.truncated && (
-            <div className="flex items-center gap-1.5 rounded bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-400">
+            <div className="flex items-center gap-1.5 rounded bg-warning/10 px-2 py-1 text-[11px] text-warning">
               <MdWarningAmber className="size-3.5 shrink-0" />
               Graph truncated at the preview cap — see full script below.
             </div>
@@ -117,7 +117,7 @@ export function WorkflowGraph({
         <div key={lane.title || `lane-${i}`}>
           {lane.title && (
             <div className="mb-1.5 flex items-baseline gap-2">
-              <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 font-mono text-[10px] text-indigo-700 dark:text-indigo-400">
+              <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-categorical-6/15 font-mono text-[10px] text-categorical-6">
                 {lane.numberLabel}
               </span>
               <span className="text-xs font-medium text-foreground">

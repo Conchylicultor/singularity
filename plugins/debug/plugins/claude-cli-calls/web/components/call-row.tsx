@@ -37,7 +37,7 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
               {call.durationMs}ms
             </span>
             {isError && (
-              <span className="rounded bg-red-100 px-1.5 py-0.5 font-medium text-red-800 dark:bg-red-950 dark:text-red-200">
+              <span className="rounded bg-destructive/10 px-1.5 py-0.5 font-medium text-destructive">
                 error
               </span>
             )}
@@ -45,7 +45,7 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
           <div
             className={cn(
               "truncate text-sm",
-              isError ? "text-red-700 dark:text-red-400" : "text-foreground",
+              isError ? "text-destructive" : "text-foreground",
             )}
           >
             {previewText || <span className="text-muted-foreground">&lt;empty&gt;</span>}
@@ -75,7 +75,7 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
           </Section>
           {isError ? (
             <Section label="Error">
-              <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-red-50 p-2 text-xs text-red-800 dark:bg-red-950 dark:text-red-200">
+              <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-destructive/10 p-2 text-xs text-destructive">
                 {call.error}
               </pre>
             </Section>

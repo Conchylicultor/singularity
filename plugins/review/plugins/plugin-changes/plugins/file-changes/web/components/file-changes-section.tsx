@@ -3,6 +3,7 @@ import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web"
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
+import { gitStatusBadge } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PluginChangedFile, PluginChangeDiff, PluginReviewProps } from "@plugins/review/plugins/plugin-changes/core";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -13,16 +14,6 @@ const STATUS_LABEL: Record<string, string> = {
   renamed: "moved",
   copied: "branched",
   clean: "clean",
-};
-
-const STATUS_BADGE: Record<string, string> = {
-  modified: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
-  added: "bg-success/15 text-success border-success/30",
-  untracked: "bg-success/15 text-success border-success/30",
-  deleted: "bg-destructive/15 text-destructive border-destructive/30",
-  renamed: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
-  copied: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
-  clean: "bg-muted text-muted-foreground border-border",
 };
 
 function FileRow({
@@ -37,7 +28,7 @@ function FileRow({
   const dir = slash >= 0 ? file.path.slice(0, slash + 1) : "";
   const basename = slash >= 0 ? file.path.slice(slash + 1) : file.path;
   const from = file.from && file.from !== file.path ? file.from : null;
-  const badge = STATUS_BADGE[file.status] ?? STATUS_BADGE.modified;
+  const badge = gitStatusBadge(file.status);
   const label = STATUS_LABEL[file.status] ?? file.status;
 
   return (

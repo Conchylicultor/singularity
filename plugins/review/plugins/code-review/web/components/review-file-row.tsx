@@ -2,6 +2,7 @@ import { MdWarning } from "react-icons/md";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
+import { gitStatusBadge } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import { getFileWarningLevel } from "../core-files";
@@ -15,16 +16,6 @@ const STATUS_LABEL: Record<EditedFileStatus, string> = {
   renamed: "moved",
   copied: "branched",
   clean: "clean",
-};
-
-const STATUS_BADGE: Record<EditedFileStatus, string> = {
-  modified: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
-  added: "bg-success/15 text-success border-success/30",
-  untracked: "bg-success/15 text-success border-success/30",
-  deleted: "bg-destructive/15 text-destructive border-destructive/30",
-  renamed: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
-  copied: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
-  clean: "bg-muted text-muted-foreground border-border",
 };
 
 const LEVEL_BG = {
@@ -79,7 +70,7 @@ export function ReviewFileRow({
       >
         <CollapsibleChevron open={expanded} className="size-4 shrink-0 text-muted-foreground" />
         <span
-          className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${STATUS_BADGE[file.status]}`}
+          className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${gitStatusBadge(file.status)}`}
         >
           {STATUS_LABEL[file.status]}
         </span>

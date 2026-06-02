@@ -30,8 +30,8 @@ function StatusBadge({ exitCode, finished }: { exitCode: number | null; finished
   }
   if (exitCode === -1) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-        <span className="block size-2 rounded-full bg-zinc-400 dark:bg-zinc-500" />
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+        <span className="block size-2 rounded-full bg-muted-foreground/60" />
         Superseded
       </span>
     );
@@ -69,8 +69,8 @@ export function BuildInfo({ runId }: { runId: string }) {
           className={cn(
             "rounded px-1.5 py-0.5 text-xs font-medium",
             run.trigger === "auto"
-              ? "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-300"
-              : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300",
+              ? "bg-info/15 text-info"
+              : "bg-muted text-muted-foreground",
           )}
         >
           {run.trigger}

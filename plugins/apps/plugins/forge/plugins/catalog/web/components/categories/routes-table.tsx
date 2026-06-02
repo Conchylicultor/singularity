@@ -11,12 +11,12 @@ import { PluginChip } from "../plugin-chip";
 type RouteRow = { item: RouteInfo; plugin: PluginNode };
 
 const METHOD_COLORS: Record<string, string> = {
-  GET: "text-emerald-600 dark:text-emerald-400",
-  POST: "text-blue-600 dark:text-blue-400",
-  PUT: "text-amber-600 dark:text-amber-400",
-  PATCH: "text-amber-600 dark:text-amber-400",
-  DELETE: "text-red-600 dark:text-red-400",
-  WS: "text-violet-600 dark:text-violet-400",
+  GET: "text-categorical-2",
+  POST: "text-categorical-1",
+  PUT: "text-categorical-3",
+  PATCH: "text-categorical-3",
+  DELETE: "text-categorical-4",
+  WS: "text-categorical-5",
 };
 
 function parseRoute(route: string) {

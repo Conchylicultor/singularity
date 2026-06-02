@@ -129,8 +129,8 @@ function layoutDag(
       const depTask = byId.get(dep)!;
       const satisfied = isNonBlocking(depTask);
       const stroke = satisfied
-        ? "var(--color-emerald-500, #10b981)"
-        : "var(--color-zinc-400, #a1a1aa)";
+        ? "var(--success)"
+        : "var(--muted-foreground)";
       edges.push({
         id: `${dep}->${t.id}`,
         source: dep,
@@ -271,10 +271,10 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
 }
 
 const GROUP_PALETTE = [
-  { bg: "bg-sky-500/8", border: "border-sky-500/30", text: "text-sky-600/70" },
-  { bg: "bg-violet-500/8", border: "border-violet-500/30", text: "text-violet-600/70" },
-  { bg: "bg-amber-500/8", border: "border-amber-500/30", text: "text-amber-600/70" },
-  { bg: "bg-teal-500/8", border: "border-teal-500/30", text: "text-teal-600/70" },
+  { bg: "bg-categorical-1/8", border: "border-categorical-1/30", text: "text-categorical-1/70" },
+  { bg: "bg-categorical-2/8", border: "border-categorical-2/30", text: "text-categorical-2/70" },
+  { bg: "bg-categorical-3/8", border: "border-categorical-3/30", text: "text-categorical-3/70" },
+  { bg: "bg-categorical-4/8", border: "border-categorical-4/30", text: "text-categorical-4/70" },
 ];
 
 function GroupBackground({ data }: NodeProps<GroupBgNode>) {

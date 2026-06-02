@@ -22,12 +22,12 @@ const PHASE_ORDER = [
 ];
 
 const PHASE_CONFIG: Record<string, PhaseConfig> = {
-  register: { label: "Register (sequential)", color: "bg-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30" },
-  awaitPgReady: { label: "Await PG Ready", color: "bg-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30" },
-  runMigrations: { label: "Run Migrations", color: "bg-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30" },
-  routePopulation: { label: "Route Population", color: "bg-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
-  socketBind: { label: "Socket Bind", color: "bg-purple-500", bg: "bg-purple-50 dark:bg-purple-950/30" },
-  onReady: { label: "onReady (parallel)", color: "bg-sky-500", bg: "bg-sky-50 dark:bg-sky-950/30" },
+  register: { label: "Register (sequential)", color: "bg-categorical-1", bg: "bg-categorical-1/10" },
+  awaitPgReady: { label: "Await PG Ready", color: "bg-categorical-2", bg: "bg-categorical-2/10" },
+  runMigrations: { label: "Run Migrations", color: "bg-categorical-3", bg: "bg-categorical-3/10" },
+  routePopulation: { label: "Route Population", color: "bg-categorical-4", bg: "bg-categorical-4/10" },
+  socketBind: { label: "Socket Bind", color: "bg-categorical-5", bg: "bg-categorical-5/10" },
+  onReady: { label: "onReady (parallel)", color: "bg-categorical-6", bg: "bg-categorical-6/10" },
 };
 
 export function BootSection(): ReactElement | null {

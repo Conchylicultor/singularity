@@ -12,7 +12,7 @@
 - Core:
   - Exports: Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`; Values: `editedFilesResource`
 - Web:
-  - Exports: Values: `useEditedFiles`
+  - Exports: Values: `gitStatusBadge`, `gitStatusDot`, `useEditedFiles`
 - Sub-plugins:
   - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
   - **`file-pane`** — Hosts the file-peek pane and the FilePane.Renderer slot.

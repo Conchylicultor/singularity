@@ -70,7 +70,7 @@ function PluginTreeNode({
         )}
         <span className="truncate">{node.name}</span>
         {node.loadBearing && (
-          <MdBolt className="size-3 shrink-0 text-amber-500/90" />
+          <MdBolt className="size-3 shrink-0 text-warning" />
         )}
       </div>
       {expanded &&

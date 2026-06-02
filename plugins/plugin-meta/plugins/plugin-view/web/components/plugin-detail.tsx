@@ -32,7 +32,7 @@ export function PluginDetail({ node }: PluginDetailProps) {
               }))}
               actions={
                 node.loadBearing ? (
-                  <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                  <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">
                     <MdBolt className="size-3" />
                     Load-bearing
                   </span>

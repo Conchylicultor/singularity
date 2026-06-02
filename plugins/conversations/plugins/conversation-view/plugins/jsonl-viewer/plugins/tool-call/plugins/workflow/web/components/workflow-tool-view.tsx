@@ -29,7 +29,7 @@ function PhaseList({
     <ol className="space-y-1.5">
       {phases.map((phase, i) => (
         <li key={i} className="flex gap-2 text-xs">
-          <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-indigo-500/15 font-mono text-[10px] text-indigo-700 dark:text-indigo-400">
+          <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-categorical-6/15 font-mono text-[10px] text-categorical-6">
             {i + 1}
           </span>
           <div className="min-w-0">
@@ -100,7 +100,7 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
   const agentCount = graph?.nodes.length ?? 0;
   const summary = (
     <span className="flex min-w-0 items-center gap-2">
-      <span className="flex shrink-0 items-center gap-1 rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-[11px] text-indigo-700 dark:text-indigo-400">
+      <span className="flex shrink-0 items-center gap-1 rounded bg-categorical-6/15 px-1.5 py-0.5 font-mono text-[11px] text-categorical-6">
         <MdAccountTree className="size-3" />
         {name ?? "workflow"}
       </span>
