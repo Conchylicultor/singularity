@@ -185,6 +185,25 @@
     z-index: 9999;
 }
 
+/* Centralized focus-ring treatment — the single source of truth for the
+ * neutral focus indicator. Controls apply `focus-ring` (or `focus-ring-within`
+ * for wrappers that ring when a child is focused). The border is NEVER flipped
+ * to the ring hue: doing so doubled the stroke under saturated theme `--ring`
+ * values. Keep the resting `border-*` class on the control; the ring alone
+ * signals focus. */
+@utility focus-ring {
+  @apply outline-none;
+  &:focus-visible {
+    @apply ring-3 ring-ring/50;
+  }
+}
+
+@utility focus-ring-within {
+  &:has(:focus-visible) {
+    @apply ring-3 ring-ring/50;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

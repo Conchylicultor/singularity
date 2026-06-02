@@ -46,7 +46,7 @@ export function LaunchAgentPopover({
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={placeholder}
-        className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 min-h-[80px] w-full resize-y rounded-md border bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3"
+        className="focus-ring border-input placeholder:text-muted-foreground min-h-[80px] w-full resize-y rounded-md border bg-transparent px-2.5 py-1.5 text-sm"
         rows={3}
       />
       <LaunchControl

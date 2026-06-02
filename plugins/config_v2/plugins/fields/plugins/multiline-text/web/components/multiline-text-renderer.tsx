@@ -54,7 +54,7 @@ const MultilineTextRenderer: FieldRendererComponent<string> = ({
           if (local !== value) onChange(local);
         }}
         onChange={(e) => setLocal(e.target.value)}
-        className="w-full resize-y rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm leading-relaxed placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+        className="focus-ring w-full resize-y rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-sm leading-relaxed placeholder:text-muted-foreground dark:bg-input/30"
       />
     </div>
   );
