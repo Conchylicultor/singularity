@@ -110,21 +110,23 @@ function resolvePaneStatus(
 
   // Resolve working status.
   let working: boolean;
-  if (SPINNER_RE.test(trimmed)) {
+  if (session.status === "shell") {
+    // Claude is blocked on a subprocess it spawned (a Bash tool call such as
+    // `./singularity build`). This is active work, NOT a wait on the user —
+    // and crucially the TUI keeps rendering the ✳ ready mark in the pane title
+    // while the subprocess runs, so the title is misleading here. The session
+    // file is authoritative for this state, so it must override the title;
+    // otherwise the worktree surfaces as "waiting" and lands in the
+    // needs-input queue for the entire duration of the build.
+    working = true;
+  } else if (SPINNER_RE.test(trimmed)) {
     working = true;
   } else if (READY_RE.test(trimmed)) {
     working = false;
   } else {
     // No title signal — fall back to session file.
-    // null  = file not written yet (startup race) → treat as working.
-    // shell = Claude is blocked on a subprocess it spawned (a Bash tool call,
-    //         e.g. `./singularity build`). That is active work, NOT a wait on
-    //         the user — without this it would surface as "waiting" and land in
-    //         the needs-input queue while a build runs.
-    working =
-      session.status == null ||
-      session.status === "busy" ||
-      session.status === "shell";
+    // null = file not written yet (startup race) → treat as working.
+    working = session.status == null || session.status === "busy";
   }
 
   const waitingFor = working ? null : (session.waitingFor ?? null);
