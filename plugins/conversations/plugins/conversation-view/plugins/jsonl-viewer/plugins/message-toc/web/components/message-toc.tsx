@@ -55,7 +55,7 @@ export function MessageToc() {
 
   return (
     <FloatingAction
-      className="absolute top-2 right-3 z-10"
+      className="absolute top-2 right-3 z-30"
       anchor="top-right"
       panelClassName="flex-col w-[3.25rem] group-data-hovered/fa:w-56 max-h-[1.625rem] group-data-hovered/fa:max-h-80"
     >
