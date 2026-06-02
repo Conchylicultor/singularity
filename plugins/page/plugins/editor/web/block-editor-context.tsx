@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   updateBlock,
   splitBlock,
@@ -7,6 +8,7 @@ import {
   deleteBlock,
   indentBlock,
   outdentBlock,
+  moveBlock,
   type Block,
 } from "../core";
 import type { BlockEditorAPI } from "./types";
@@ -18,6 +20,7 @@ interface BlockEditorContextValue {
   registerFocusHandle: (id: string, handle: { focus: () => void }) => () => void;
   makeBlockAPI: (blockId: string) => BlockEditorAPI;
   setFlatOrder: (blocks: Block[]) => void;
+  move: (id: string, dest: { parentId: string | null; rank: Rank }) => void;
 }
 
 const BlockEditorContext = createContext<BlockEditorContextValue | null>(null);
@@ -58,6 +61,17 @@ export function BlockEditorProvider({
     flatOrderRef.current = blocks;
   }, []);
 
+  const move = useCallback(
+    (id: string, dest: { parentId: string | null; rank: Rank }) => {
+      void fetchEndpoint(
+        moveBlock,
+        { id },
+        { body: { parentId: dest.parentId, rank: dest.rank } },
+      );
+    },
+    [],
+  );
+
   const makeBlockAPI = useCallback(
     (blockId: string): BlockEditorAPI => ({
       update(data: unknown) {
@@ -89,10 +103,26 @@ export function BlockEditorProvider({
         void fetchEndpoint(deleteBlock, { id: blockId });
       },
       indent() {
-        void fetchEndpoint(indentBlock, { id: blockId });
+        void (async () => {
+          try {
+            await fetchEndpoint(indentBlock, { id: blockId });
+          } catch (err: unknown) {
+            // 400 = no previous sibling to indent under; benign no-op.
+            if (err instanceof EndpointError && err.status === 400) return;
+            throw err;
+          }
+        })();
       },
       outdent() {
-        void fetchEndpoint(outdentBlock, { id: blockId });
+        void (async () => {
+          try {
+            await fetchEndpoint(outdentBlock, { id: blockId });
+          } catch (err: unknown) {
+            // 400 = already at top level; benign no-op.
+            if (err instanceof EndpointError && err.status === 400) return;
+            throw err;
+          }
+        })();
       },
       focusUp() {
         const flat = flatOrderRef.current;
@@ -126,6 +156,7 @@ export function BlockEditorProvider({
         registerFocusHandle,
         makeBlockAPI,
         setFlatOrder,
+        move,
       }}
     >
       {children}

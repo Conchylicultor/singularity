@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import type { Block } from "../core";
 
 export interface BlockEditorAPI {
@@ -16,6 +15,5 @@ export interface BlockEditorAPI {
 export interface BlockRendererProps {
   block: Block;
   isFocused: boolean;
-  children: ReactNode;
   editor: BlockEditorAPI;
 }

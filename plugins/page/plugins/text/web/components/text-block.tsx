@@ -23,7 +23,7 @@ function EditorRefPlugin({ editorRef }: { editorRef: React.MutableRefObject<Lexi
   return null;
 }
 
-export function TextBlock({ block, editor, children }: BlockRendererProps) {
+export function TextBlock({ block, editor }: BlockRendererProps) {
   const data = textBlock.parse(block.data);
   const { registerFocusHandle } = useBlockEditor();
   const lexicalEditorRef = useRef<LexicalEditor | null>(null);
@@ -50,27 +50,24 @@ export function TextBlock({ block, editor, children }: BlockRendererProps) {
   }, [block.id, registerFocusHandle]);
 
   return (
-    <>
-      <LexicalComposer initialConfig={initialConfig}>
-        <PlainTextPlugin
-          contentEditable={
-            <ContentEditable
-              className="outline-none px-3 py-1 text-sm leading-6"
-              onFocus={() => {
-                field.onFocus();
-                editor.onFocus();
-              }}
-              onBlur={field.onBlur}
-            />
-          }
-          ErrorBoundary={LexicalErrorBoundary}
-        />
-        <HistoryPlugin />
-        <ValueSyncPlugin value={field.value} onChange={field.onChange} />
-        <KeyboardPlugin editor={editor} />
-        <EditorRefPlugin editorRef={lexicalEditorRef} />
-      </LexicalComposer>
-      {children}
-    </>
+    <LexicalComposer initialConfig={initialConfig}>
+      <PlainTextPlugin
+        contentEditable={
+          <ContentEditable
+            className="outline-none px-3 py-1 text-sm leading-6"
+            onFocus={() => {
+              field.onFocus();
+              editor.onFocus();
+            }}
+            onBlur={field.onBlur}
+          />
+        }
+        ErrorBoundary={LexicalErrorBoundary}
+      />
+      <HistoryPlugin />
+      <ValueSyncPlugin value={field.value} onChange={field.onChange} />
+      <KeyboardPlugin editor={editor} />
+      <EditorRefPlugin editorRef={lexicalEditorRef} />
+    </LexicalComposer>
   );
 }
