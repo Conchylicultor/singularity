@@ -83,6 +83,8 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
 
 - **`page`** — Block-based page editor.
   - Plugins:
+    - **`debug`** — Debug harness for the block-based page editor. Debug harness for the block-based page editor.
+      - `/api/page-debug/ensure (POST)`
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - `/api/documents (GET, POST)`
       - `/api/documents/:id (GET, PATCH, DELETE)`
