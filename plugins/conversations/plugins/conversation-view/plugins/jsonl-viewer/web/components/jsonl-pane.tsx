@@ -8,7 +8,6 @@ import {
 import type { Conversation } from "@plugins/tasks-core/core";
 import { jsonlEventsResource } from "../../core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
@@ -165,22 +164,6 @@ export function JsonlPane({
     [eventsResult],
   );
   const totals = useMemo(() => aggregateUsage(events), [events]);
-  // An AskUserQuestion whose tool_use was already flushed to the JSONL and is
-  // awaiting an answer (interrupt-sentinel result). When present, the renderer
-  // shows its own answer form, so suppress the pending-prompt indicator to avoid
-  // double-up.
-  const hasAwaitingAuq = useMemo(
-    () =>
-      events.some(
-        (e) =>
-          e.kind === "tool-call" &&
-          e.name === "AskUserQuestion" &&
-          e.result != null &&
-          e.result.isError === true &&
-          isInterruptContent(e.result.content),
-      ),
-    [events],
-  );
   // Plugin-contributed hide predicates. Computed over the full `events` so the
   // EventFilter slot can remove individual rows (e.g. a raw answer turn already
   // shown inside a card) that the EventRenderer's predicate tier can't suppress.
@@ -245,7 +228,7 @@ export function JsonlPane({
             <LastAssistantProvider event={lastAssistantEvent}>
               <EventSections events={visibleEvents}>
                 {isWorking && <WorkingIndicator startAt={workingStartAt} />}
-                {!isWorking && !!conversation.waitingFor && !hasAwaitingAuq && (
+                {!isWorking && !!conversation.waitingFor && (
                   <JsonlViewer.PendingPrompt.Dispatch
                     conversationId={conversation.id}
                     waitingFor={conversation.waitingFor}

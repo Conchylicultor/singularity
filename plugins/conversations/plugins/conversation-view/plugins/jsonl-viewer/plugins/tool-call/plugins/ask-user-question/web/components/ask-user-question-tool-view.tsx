@@ -3,10 +3,10 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { ANSWER_MARKER } from "../../shared";
 import { AnswerForm } from "./answer-form";
+import { findAnswerTurn } from "./awaiting";
 
 export interface QuestionOption {
   label: string;
@@ -263,32 +263,6 @@ function summaryFor(questions: Question[], firstAnswerParts: string[]) {
   );
 }
 
-/**
- * Locates the follow-up answer turn for a given AskUserQuestion tool-call:
- * scans forward from the event's index, bounded by the next tool-call (the
- * window for this question), and returns the first `user-text` event whose
- * trimmed text starts with `ANSWER_MARKER`. A windowed, marker-keyed lookup —
- * not a blind positional scan. Returns the event's text, or null.
- */
-function findAnswerTurn(
-  events: JsonlEvent[] | undefined,
-  event: ToolRendererProps["event"],
-): string | null {
-  if (!events) return null;
-  const startIdx = events.findIndex(
-    (e) => e.kind === "tool-call" && e.toolUseId === event.toolUseId,
-  );
-  if (startIdx === -1) return null;
-  for (let i = startIdx + 1; i < events.length; i++) {
-    const e = events[i]!;
-    if (e.kind === "tool-call") break; // window boundary: next tool-call
-    if (e.kind === "user-text" && e.text.trim().startsWith(ANSWER_MARKER)) {
-      return e.text;
-    }
-  }
-  return null;
-}
-
 export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   const input = event.input as AskUserQuestionInput;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; input is `as`-cast from unknown
@@ -323,7 +297,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
   const isLastToolCall =
     lastToolCall?.kind === "tool-call" &&
     lastToolCall.toolUseId === event.toolUseId;
-  const answerTurn = findAnswerTurn(events, event);
+  const answerTurn = findAnswerTurn(events, event.toolUseId);
 
   // awaiting: cancelled (interrupt) + most recent question + no answer yet.
   if (resultIsInterrupt && isLastToolCall && answerTurn == null) {
