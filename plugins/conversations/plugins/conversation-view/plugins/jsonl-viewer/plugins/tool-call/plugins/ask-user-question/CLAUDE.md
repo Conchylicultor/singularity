@@ -11,7 +11,7 @@ Expanded: for each question, shows the full question text and a vertical option 
 
 - Description: Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.
 - Web:
-  - Contributes: `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`, `JsonlViewer.PendingPrompt` "question" → `AnswerHereButton`, `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
+  - Contributes: `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`, `JsonlViewer.PendingPrompt` "question" → `AnswerHereButton`, `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn", `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
   - Uses: `notifications.toast`
 - Server:
   - Uses: `conversations.answerPrompt`, `conversations.flushInteractivePrompt`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`

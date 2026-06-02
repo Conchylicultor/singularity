@@ -702,7 +702,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Contributes: `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`, `Pane.Register` "agent-report"
                 - **`ask-user-question`** — Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.
                   - Web:
-                    - Contributes: `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`, `JsonlViewer.PendingPrompt` "question" → `AnswerHereButton`, `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn"
+                    - Contributes: `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`, `JsonlViewer.PendingPrompt` "question" → `AnswerHereButton`, `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn", `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
                     - Uses: `notifications.toast`
                   - Server:
                     - Uses: `conversations.answerPrompt`, `conversations.flushInteractivePrompt`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
