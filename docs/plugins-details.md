@@ -180,11 +180,36 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `Forge`
     - **`sonata`** — Sonata — extensible piano and music app.
       - Plugins:
-        - **`shell`** — App shell for Sonata. Registers the /sonata app entry and defines the Sonata.Section slot.
+        - **`piano-roll`** — Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays.
           - Web:
+            - Contributes: `Sonata.Display` "Piano Roll" → `PianoRoll`
+        - **`rich`** — Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.
+          - Plugins:
+            - **`chord-analyzer`** — Sonata Analyzer: derives chord annotations from the score's notes. Slices the score at every onset, runs interval-set chord detection over each window, and emits coalesced source:"derived" chord annotations.
+              - Web:
+                - Contributes: `Sonata.Analyzer` "chord-analyzer"
+            - **`chord-overlay`** — Sonata Overlay: labels chord annotations along the timeline. Requires the time-axis capability, so it renders on the piano roll and any future time-based display.
+              - Web:
+                - Contributes: `Sonata.Overlay` "chord-overlay" → `ChordOverlay`
+            - **`chord-readout`** — Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the shared Score + cursor from useSonata().
+              - Web:
+                - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
+        - **`score`**
+          - Core:
+            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeySignature`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `bars`, `beatToSeconds`, `emptyScore`, `mergeAnnotations`, `mergeScores`
+        - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Section} slots.
+          - Web:
+            - Slots: `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.Instrument`, `Sonata.Display`
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses: `apps.Apps`
-            - Exports: Values: `Sonata`
+            - Exports: Types: `SonataContextValue`; Values: `Sonata`, `SonataProvider`, `useSonata`
+          - Cross-plugin:
+            - Slot contributors: `chord-analyzer`, `chord-overlay`, `chord-readout`, `midi`, `piano-roll`
+        - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
+          - Plugins:
+            - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi.
+              - Web:
+                - Contributes: `Sonata.Source` "MIDI File"
     - **`workflows`** — Workflows app.
       - Plugins:
         - **`engine`** — Core engine infrastructure. Defines the Workflows.StepType slot. Core backend infrastructure for the workflows app. Owns DB tables, step executor registry, durable run job, trigger event, HTTP API, and live-state resources.

@@ -4,12 +4,13 @@ import { MdPiano } from "react-icons/md";
 import { SonataLayout } from "./components/sonata-layout";
 
 export { Sonata } from "./slots";
+export { useSonata, SonataProvider, type SonataContextValue } from "./context";
 
 export default {
   id: "sonata-shell",
   name: "Sonata: Shell",
   description:
-    "App shell for Sonata. Registers the /sonata app entry and defines the Sonata.Section slot.",
+    "App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Section} slots.",
   contributions: [
     Apps.App({
       id: "sonata",

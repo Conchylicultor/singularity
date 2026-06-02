@@ -174,9 +174,44 @@
       "name": "@singularity/plugin-apps-sonata",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/piano-roll": {
+      "name": "@singularity/plugin-apps-sonata-piano-roll",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/rich": {
+      "name": "@singularity/plugin-apps-sonata-rich",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/rich/plugins/chord-analyzer": {
+      "name": "@singularity/plugin-apps-sonata-rich-chord-analyzer",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/rich/plugins/chord-overlay": {
+      "name": "@singularity/plugin-apps-sonata-rich-chord-overlay",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/rich/plugins/chord-readout": {
+      "name": "@singularity/plugin-apps-sonata-rich-chord-readout",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/score": {
+      "name": "@singularity/plugin-apps-sonata-score",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/shell": {
       "name": "@singularity/plugin-apps-sonata-shell",
       "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/sources": {
+      "name": "@singularity/plugin-apps-sonata-sources",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/sources/plugins/midi": {
+      "name": "@singularity/plugin-apps-sonata-sources-midi",
+      "version": "0.0.1",
+      "dependencies": {
+        "@tonejs/midi": "^2.0.28",
+      },
     },
     "plugins/apps/plugins/workflows": {
       "name": "@singularity/plugin-apps-workflows",
@@ -2200,7 +2235,23 @@
 
     "@singularity/plugin-apps-sonata": ["@singularity/plugin-apps-sonata@workspace:plugins/apps/plugins/sonata"],
 
+    "@singularity/plugin-apps-sonata-piano-roll": ["@singularity/plugin-apps-sonata-piano-roll@workspace:plugins/apps/plugins/sonata/plugins/piano-roll"],
+
+    "@singularity/plugin-apps-sonata-rich": ["@singularity/plugin-apps-sonata-rich@workspace:plugins/apps/plugins/sonata/plugins/rich"],
+
+    "@singularity/plugin-apps-sonata-rich-chord-analyzer": ["@singularity/plugin-apps-sonata-rich-chord-analyzer@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/chord-analyzer"],
+
+    "@singularity/plugin-apps-sonata-rich-chord-overlay": ["@singularity/plugin-apps-sonata-rich-chord-overlay@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/chord-overlay"],
+
+    "@singularity/plugin-apps-sonata-rich-chord-readout": ["@singularity/plugin-apps-sonata-rich-chord-readout@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/chord-readout"],
+
+    "@singularity/plugin-apps-sonata-score": ["@singularity/plugin-apps-sonata-score@workspace:plugins/apps/plugins/sonata/plugins/score"],
+
     "@singularity/plugin-apps-sonata-shell": ["@singularity/plugin-apps-sonata-shell@workspace:plugins/apps/plugins/sonata/plugins/shell"],
+
+    "@singularity/plugin-apps-sonata-sources": ["@singularity/plugin-apps-sonata-sources@workspace:plugins/apps/plugins/sonata/plugins/sources"],
+
+    "@singularity/plugin-apps-sonata-sources-midi": ["@singularity/plugin-apps-sonata-sources-midi@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/midi"],
 
     "@singularity/plugin-apps-workflows": ["@singularity/plugin-apps-workflows@workspace:plugins/apps/plugins/workflows"],
 
@@ -2900,6 +2951,8 @@
 
     "@testing-library/react": ["@testing-library/react@16.3.2", "", { "dependencies": { "@babel/runtime": "^7.12.5" }, "peerDependencies": { "@testing-library/dom": "^10.0.0", "@types/react": "^18.0.0 || ^19.0.0", "@types/react-dom": "^18.0.0 || ^19.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-XU5/SytQM+ykqMnAnvB2umaJNIOsLF3PVv//1Ew4CTcpz0/BRyy/af40qqrt7SjKpDdT1saBMc42CUok5gaw+g=="],
 
+    "@tonejs/midi": ["@tonejs/midi@2.0.28", "", { "dependencies": { "array-flatten": "^3.0.0", "midi-file": "^1.2.2" } }, "sha512-RII6YpInPsOZ5t3Si/20QKpNqB1lZ2OCFJSOzJxz38YdY/3zqDr3uaml4JuCWkdixuPqP1/TBnXzhQ39csyoVg=="],
+
     "@ts-morph/common": ["@ts-morph/common@0.27.0", "", { "dependencies": { "fast-glob": "^3.3.3", "minimatch": "^10.0.1", "path-browserify": "^1.0.1" } }, "sha512-Wf29UqxWDpc+i61k3oIOzcUfQt79PIT9y/MWfAGlrkjg6lBC1hwDECLXPVJAhWjiGbfBCxZd65F/LIZF3+jeJQ=="],
 
     "@types/aria-query": ["@types/aria-query@5.0.4", "", {}, "sha512-rfT93uj5s0PRL7EzccGMs3brplhcrghnDoV26NqKhCAS1hVo+WdNsPvE/yb6ilfr5hi2MEk6d5EWJTKdxg8jVw=="],
@@ -3053,6 +3106,8 @@
     "aria-query": ["aria-query@5.3.2", "", {}, "sha512-COROpnaoap1E2F000S62r6A60uHZnmlvomhfyT2DlTcrY1OrBKn2UhH7qn5wTC9zMvD0AY7csdPSNwKP+7WiQw=="],
 
     "array-buffer-byte-length": ["array-buffer-byte-length@1.0.2", "", { "dependencies": { "call-bound": "^1.0.3", "is-array-buffer": "^3.0.5" } }, "sha512-LHE+8BuR7RYGDKvnrmcuSq3tDcKv9OFEXQt/HpbZhY7V6h0zlUXutnAD82GiFx9rdieCMjkvtcsPqBwgUl1Iiw=="],
+
+    "array-flatten": ["array-flatten@3.0.0", "", {}, "sha512-zPMVc3ZYlGLNk4mpK1NzP2wg0ml9t7fUgDsayR5Y5rSzxQilzR9FGu/EH2jQOcKSAeAfWeylyW8juy3OkWRvNA=="],
 
     "array-includes": ["array-includes@3.1.9", "", { "dependencies": { "call-bind": "^1.0.8", "call-bound": "^1.0.4", "define-properties": "^1.2.1", "es-abstract": "^1.24.0", "es-object-atoms": "^1.1.1", "get-intrinsic": "^1.3.0", "is-string": "^1.1.1", "math-intrinsics": "^1.1.0" } }, "sha512-FmeCCAenzH0KH381SPT5FZmiA/TmpndpcaShhfgEN9eCVjnFBqq3l1xrI42y8+PPLI6hypzou4GXw00WHmPBLQ=="],
 
@@ -3817,6 +3872,8 @@
     "micromark-util-types": ["micromark-util-types@2.0.2", "", {}, "sha512-Yw0ECSpJoViF1qTU4DC6NwtC4aWGt1EkzaQB8KPPyCRR8z9TWeV0HbEFGTO+ZY1wB22zmxnJqhPyTpOVCpeHTA=="],
 
     "micromatch": ["micromatch@4.0.8", "", { "dependencies": { "braces": "^3.0.3", "picomatch": "^2.3.1" } }, "sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA=="],
+
+    "midi-file": ["midi-file@1.2.4", "", {}, "sha512-B5SnBC6i2bwJIXTY9MElIydJwAmnKx+r5eJ1jknTLetzLflEl0GWveuBB6ACrQpecSRkOB6fhTx1PwXk2BVxnA=="],
 
     "mime-db": ["mime-db@1.54.0", "", {}, "sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ=="],
 
