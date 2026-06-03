@@ -185,7 +185,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, with an instrument picker, master volume, and load status.
               - Web:
                 - Contributes: `Sonata.Section` "Audio" → `AudioPanel`
-            - **`piano`** — Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback.
+            - **`piano`** — Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback. Registers the splendid-grand-piano asset mirror so the acoustic piano's samples are served same-origin (offline-capable) rather than streamed from the remote CDN.
               - Web:
                 - Contributes: `Sonata.Instrument` "Acoustic Piano"
         - **`controls`** — Keyboard transport for Sonata: Space toggles play/pause, ←/→ seek the playhead, ↑/↓ speed up / slow down tempo.
@@ -1205,6 +1205,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:
+    - **`asset-mirror`** — Generic server-side asset mirror: plugins declare a remote asset source via defineAssetMirror; files are lazily downloaded on first request, cached on local disk, and served same-origin thereafter (offline-capable after one warm-up).
+      - Core:
+        - Exports: Values: `ASSET_MIRROR_PREFIX`, `assetMirrorUrl`
+      - Server:
+        - Exports: Types: `AssetMirrorSpec`; Values: `defineAssetMirror`
     - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
       - Server:
         - Uses: `database.db`

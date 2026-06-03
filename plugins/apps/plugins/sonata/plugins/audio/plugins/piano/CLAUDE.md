@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback.
+- Description: Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback. Registers the splendid-grand-piano asset mirror so the acoustic piano's samples are served same-origin (offline-capable) rather than streamed from the remote CDN.
 - Web:
   - Contributes: `Sonata.Instrument` "Acoustic Piano"
 

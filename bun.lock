@@ -1024,6 +1024,10 @@
       "name": "@singularity/plugin-infra",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/asset-mirror": {
+      "name": "@singularity/plugin-infra-asset-mirror",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/attachments": {
       "name": "@singularity/plugin-infra-attachments",
       "version": "0.0.1",
@@ -2678,6 +2682,8 @@
     "@singularity/plugin-improve": ["@singularity/plugin-improve@workspace:plugins/improve"],
 
     "@singularity/plugin-infra": ["@singularity/plugin-infra@workspace:plugins/infra"],
+
+    "@singularity/plugin-infra-asset-mirror": ["@singularity/plugin-infra-asset-mirror@workspace:plugins/infra/plugins/asset-mirror"],
 
     "@singularity/plugin-infra-attachments": ["@singularity/plugin-infra-attachments@workspace:plugins/infra/plugins/attachments"],
 

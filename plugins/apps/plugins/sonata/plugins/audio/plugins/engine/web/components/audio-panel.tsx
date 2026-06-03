@@ -41,6 +41,7 @@ export function AudioPanel() {
 
   const [volume, setVolume] = useState(DEFAULT_VOLUME);
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // --- Web Audio graph: AudioContext + master gain, owned in refs. ----------
   const ctxRef = useRef<AudioContext | null>(null);
@@ -97,14 +98,26 @@ export function AudioPanel() {
     if (!ctx || !master || !activeInstrument) return;
 
     setReady(false);
+    setLoadError(null);
     const next = activeInstrument.createVoices(ctx, master);
     voicesRef.current = next;
     setVoices(next);
 
     let cancelled = false;
-    void next.loaded.then(() => {
-      if (!cancelled) setReady(true);
-    });
+    // Surface a rejected load instead of spinning "Loading…" forever (and
+    // leaving the rejection floating). Note: smplr resolves `loaded` even when
+    // individual samples 404 — the loud signal for the offline-uncached case is
+    // server-side (the asset-mirror 502 + log), not this rejection arm.
+    void next.loaded.then(
+      () => {
+        if (!cancelled) setReady(true);
+      },
+      (err: unknown) => {
+        if (!cancelled) {
+          setLoadError(err instanceof Error ? err.message : String(err));
+        }
+      },
+    );
 
     return () => {
       cancelled = true;
@@ -197,11 +210,18 @@ export function AudioPanel() {
       </label>
 
       {/* Sample-load status line. */}
-      <div className="mt-3 text-xs text-muted-foreground">
+      <div
+        className={cn(
+          "mt-3 text-xs",
+          loadError ? "text-destructive" : "text-muted-foreground",
+        )}
+      >
         {activeInstrument
-          ? ready
-            ? "Ready"
-            : "Loading instrument…"
+          ? loadError
+            ? `Failed to load: ${loadError}`
+            : ready
+              ? "Ready"
+              : "Loading instrument…"
           : "No instrument selected"}
       </div>
     </div>
